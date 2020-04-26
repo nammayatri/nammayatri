@@ -1,0 +1,116 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: cd31c51f2ec2e298443bae2b9c1eda7f3dae6ca8e17233b8d35d0f3febf0efcd
+
+name:           beckn-epass
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://bitbucket.org/juspay/beckn-epass#readme>
+homepage:       https://github.com/juspay/beckn-epass#readme
+bug-reports:    https://github.com/juspay/beckn-epass/issues
+author:         Aravind Gopal Mallapureddy
+maintainer:     aravind.mallapureddy@juspay.in
+copyright:      2020 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/juspay/beckn-epass
+
+library
+  exposed-modules:
+      Beckn.App
+      Beckn.App.Routes
+      Beckn.App.Server
+      Beckn.Constants.APIErrorCode
+      Beckn.Storage.DB.Config
+      Beckn.Types.API.Common
+      Beckn.Types.App
+      Beckn.Utils.Storage
+  other-modules:
+      Paths_beckn_epass
+  hs-source-dirs:
+      src
+  default-extensions: ConstraintKinds DataKinds DefaultSignatures DeriveAnyClass DeriveFunctor DeriveGeneric DuplicateRecordFields ExplicitNamespaces FlexibleContexts FlexibleInstances FunctionalDependencies GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings PatternSynonyms PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns BlockArguments
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , bytestring
+    , euler-hs
+    , http-client
+    , http-types
+    , servant
+    , servant-server
+    , text
+    , vault
+    , wai
+    , warp
+  default-language: Haskell2010
+
+executable beckn-epass-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_beckn_epass
+  hs-source-dirs:
+      app
+  default-extensions: ConstraintKinds DataKinds DefaultSignatures DeriveAnyClass DeriveFunctor DeriveGeneric DuplicateRecordFields ExplicitNamespaces FlexibleContexts FlexibleInstances FunctionalDependencies GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings PatternSynonyms PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns BlockArguments
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beckn-epass
+    , bytestring
+    , euler-hs
+    , http-client
+    , http-types
+    , servant
+    , servant-server
+    , text
+    , vault
+    , wai
+    , warp
+  default-language: Haskell2010
+
+test-suite beckn-epass-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_beckn_epass
+  hs-source-dirs:
+      test
+  default-extensions: ConstraintKinds DataKinds DefaultSignatures DeriveAnyClass DeriveFunctor DeriveGeneric DuplicateRecordFields ExplicitNamespaces FlexibleContexts FlexibleInstances FunctionalDependencies GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings PatternSynonyms PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns BlockArguments
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beckn-epass
+    , bytestring
+    , euler-hs
+    , hspec
+    , hspec-core
+    , hspec-wai
+    , http-client
+    , http-client-tls
+    , http-types
+    , servant
+    , servant-client
+    , servant-server
+    , text
+    , vault
+    , wai
+    , warp
+  default-language: Haskell2010
