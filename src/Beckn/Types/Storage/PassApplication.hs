@@ -1,17 +1,21 @@
-{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.PassApplication where
 
-import           Beckn.Types.App
-import qualified Data.Text                 as T
-import           Data.Time.LocalTime
-import qualified Database.Beam             as B
-import           Database.Beam.Backend.SQL
-import           Database.Beam.MySQL
-import           EulerHS.Prelude
+import Beckn.Types.App
+import qualified Data.Text as T
+import Data.Time.LocalTime
+import qualified Database.Beam as B
+import Database.Beam.Backend.SQL
+import Database.Beam.MySQL
+import EulerHS.Prelude
 
-data Status = PENDING | APPROVED | REJECTED | EXPIRED
+data Status
+  = PENDING
+  | APPROVED
+  | REJECTED
+  | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
@@ -20,7 +24,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data PassType = INDIVIDUAL | ORGANIZATION
+data PassType
+  = INDIVIDUAL
+  | ORGANIZATION
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
@@ -29,25 +35,24 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
 instance FromBackendRow MySQL PassType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-
 data PassApplicationT f =
   PassApplication
-    { _id             :: B.C f PassApplicationId
-    , _CustomerId     :: B.C f CustomerId
-    , _status         :: B.C f Status
-    , _fromDate       :: B.C f LocalTime
-    , _toDate         :: B.C f LocalTime
-    , _type           :: B.C f PassType
+    { _id :: B.C f PassApplicationId
+    , _CustomerId :: B.C f CustomerId
+    , _status :: B.C f Status
+    , _fromDate :: B.C f LocalTime
+    , _toDate :: B.C f LocalTime
+    , _type :: B.C f PassType
     , _FromLocationId :: B.C f LocationId
-    , _ToLocationId   :: B.C f LocationId
-    , _CreatedBy      :: B.C f CustomerId
-    , _AssignedTo     :: B.C f UserId
-    , _count          :: B.C f Int
-    , _approvedCount  :: B.C f Int
-    , _remarks        :: B.C f Text
-    , _info           :: B.C f Text
-    , _createdAt      :: B.C f LocalTime
-    , _updatedAt      :: B.C f LocalTime
+    , _ToLocationId :: B.C f LocationId
+    , _CreatedBy :: B.C f CustomerId
+    , _AssignedTo :: B.C f UserId
+    , _count :: B.C f Int
+    , _approvedCount :: B.C f Int
+    , _remarks :: B.C f Text
+    , _info :: B.C f Text
+    , _createdAt :: B.C f LocalTime
+    , _updatedAt :: B.C f LocalTime
     }
   deriving (Generic, B.Beamable)
 
@@ -56,22 +61,25 @@ type PassApplication = PassApplicationT Identity
 type PassApplicationPrimaryKey = B.PrimaryKey PassApplicationT Identity
 
 instance B.Table PassApplicationT where
-  data PrimaryKey PassApplicationT f = PassApplicationPrimaryKey (B.C f PassApplicationId)
-                               deriving (Generic, B.Beamable)
+  data PrimaryKey PassApplicationT f = PassApplicationPrimaryKey (B.C
+                                                                  f
+                                                                  PassApplicationId)
+                                       deriving (Generic, B.Beamable)
   primaryKey = PassApplicationPrimaryKey . _id
 
 deriving instance Show PassApplication
 
 deriving instance Eq PassApplication
 
-deriving instance ToJSON PassApplication
+instance ToJSON PassApplication where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
-deriving instance FromJSON PassApplication
+instance FromJSON PassApplication where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 insertExpression customer = insertExpressions [customer]
 
 insertExpressions customers = B.insertValues customers
-
 
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PassApplicationT)

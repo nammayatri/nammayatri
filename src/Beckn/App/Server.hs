@@ -25,4 +25,13 @@ epassServer env key = hoistServer epassAPIs (f env) (epassServer' key)
         Right res -> pure res
 
 epassServer' :: V.Key (HashMap Text Text) -> FlowServer
-epassServer' key = healthCheckApp
+epassServer' key =
+  (healthCheckApp
+  :<|> (initiateLogin
+       :<|> login
+       )
+   :<|> (\h -> createPassApplication h
+        :<|> listPassApplication h
+        :<|> getPassApplicationById h
+        )
+  )
