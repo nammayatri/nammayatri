@@ -51,6 +51,8 @@ fieldEMod =
       _maxAllowed = "max_allowed"
       , _EntityId = "entity_id"
       , _entityType = "entity_type"
+      , _startTime = "start_time"
+      , _endTime = "end_time"
       , _createdAt = "created_at"
       , _updatedAt = "updated_at"
       }
