@@ -1,32 +1,27 @@
 module Beckn.App where
 
-import qualified Data.Aeson as Aeson
-import qualified Data.Vault.Lazy as V
-import EulerHS.Prelude
-import qualified Network.HTTP.Client as Client
-import Network.Wai
-import Network.Wai.Handler.Warp
-  ( Settings
-  , defaultSettings
-  , run
-  , runSettings
-  , setOnExceptionResponse
-  , setPort
-  )
-import Servant.Server
-import Servant
-import qualified Data.ByteString.Char8 as BS
-import qualified EulerHS.Interpreters as R
-import qualified EulerHS.Runtime as R
-import qualified EulerHS.Language as L
-import qualified EulerHS.Types as T
-import qualified Network.HTTP.Types as H
-import qualified Beckn.App.Server as App
-import qualified Beckn.Types.App as App
-import qualified System.Environment as SE
-import Beckn.Storage.DB.Config
-import Beckn.Utils.Storage
-import Beckn.Constants.APIErrorCode
+import qualified Beckn.App.Server             as App
+import           Beckn.Constants.APIErrorCode
+import           Beckn.Storage.DB.Config
+import qualified Beckn.Types.App              as App
+import           Beckn.Utils.Storage
+import qualified Data.Aeson                   as Aeson
+import qualified Data.ByteString.Char8        as BS
+import qualified Data.Vault.Lazy              as V
+import qualified EulerHS.Interpreters         as R
+import qualified EulerHS.Language             as L
+import           EulerHS.Prelude
+import qualified EulerHS.Runtime              as R
+import qualified EulerHS.Types                as T
+import qualified Network.HTTP.Client          as Client
+import qualified Network.HTTP.Types           as H
+import           Network.Wai
+import           Network.Wai.Handler.Warp     (Settings, defaultSettings, run,
+                                               runSettings,
+                                               setOnExceptionResponse, setPort)
+import           Servant
+import           Servant.Server
+import qualified System.Environment           as SE
 
 runBecknBackendApp :: IO ()
 runBecknBackendApp = do
@@ -47,7 +42,7 @@ runBecknBackendApp' port settings = do
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
-    let prepare = prepareDBConnections :: L.Flow ()
+    let prepare = prepareDBConnections
     try (R.runFlow flowRt prepare) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
@@ -72,22 +67,4 @@ becknExceptionResponse exception = do
         [(H.hContentType, "application/json")]
         (Aeson.encode $ internalServerErr)
 
-prepareDBConnections :: L.Flow ()
-prepareDBConnections = do
-  ePool <- L.initSqlDBConnection mysqlDBC
-  throwOnFailedWithLog
-    ePool
-    SqlDBConnectionFailedException
-    "Failed to initialize connection to Postgres."
-  conn <- L.getSqlDBConnection mysqlDBC
-  throwOnFailedWithLog
-    conn
-    SqlDBConnectionFailedException
-    "Failed to get connection to Postgres."
-  --res <- testDBConnection
-  --case res of
-    --Right _ -> pure ()
-    --Left err ->
-      --throwFailedWithLog
-        --SqlDBConnectionFailedException
-        --"Failed to test the connection to postgres"
+

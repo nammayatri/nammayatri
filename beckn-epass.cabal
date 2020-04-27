@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cd31c51f2ec2e298443bae2b9c1eda7f3dae6ca8e17233b8d35d0f3febf0efcd
+-- hash: 857300088d246d5f8cfd5f189ad5628b0cc2cb8abaee45a4f4768c581e673f5b
 
 name:           beckn-epass
 version:        0.1.0.0
@@ -32,8 +32,14 @@ library
       Beckn.App.Server
       Beckn.Constants.APIErrorCode
       Beckn.Storage.DB.Config
+      Beckn.Storage.Queries
+      Beckn.Storage.Queries.User
       Beckn.Types.API.Common
       Beckn.Types.App
+      Beckn.Types.Config
+      Beckn.Types.Domain.User
+      Beckn.Types.Storage.DB
+      Beckn.Types.Storage.User
       Beckn.Utils.Storage
   other-modules:
       Paths_beckn_epass
@@ -52,6 +58,7 @@ library
     , servant
     , servant-server
     , text
+    , time
     , vault
     , wai
     , warp
@@ -78,6 +85,7 @@ executable beckn-epass-exe
     , servant
     , servant-server
     , text
+    , time
     , vault
     , wai
     , warp
@@ -110,6 +118,7 @@ test-suite beckn-epass-test
     , servant-client
     , servant-server
     , text
+    , time
     , vault
     , wai
     , warp
