@@ -6,6 +6,7 @@ import           EulerHS.Prelude                       hiding (id)
 
 import qualified Beckn.Types.Storage.AllocatedQuota    as AllocatedQuota
 import qualified Beckn.Types.Storage.Customer          as Customer
+import qualified Beckn.Types.Storage.CustomerDetails   as CustomerDetails
 import qualified Beckn.Types.Storage.LocationBlacklist as LocationBlacklist
 import qualified Beckn.Types.Storage.Quota             as Quota
 import qualified Beckn.Types.Storage.User              as User
@@ -19,8 +20,9 @@ data BecknDb f =
     { _user   :: f (B.TableEntity User.UserT)
      , _quota :: f (B.TableEntity Quota.QuotaT)
      , _locationBlacklist  :: f (B.TableEntity LocationBlacklist.LocationBlacklistT)
-     ,  _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT)
+     , _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT)
      , _customer :: f (B.TableEntity Customer.CustomerT)
+     , _customerDetails :: f (B.TableEntity CustomerDetails.CustomerDetailsT)
      }
   deriving (Generic, B.Database be)
 
@@ -33,4 +35,5 @@ becknDb =
         , _locationBlacklist = LocationBlacklist.fieldEMod
         , _allocatedQuota = AllocatedQuota.fieldEMod
         , _customer = Customer.fieldEMod
+        , _customerDetails = CustomerDetails.fieldEMod
         }
