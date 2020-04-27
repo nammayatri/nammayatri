@@ -20,52 +20,82 @@ data Env =
 
 type FlowHandler = ReaderT Env (ExceptT ServerError IO)
 
-newtype CustomerId = CustomerId Text
+newtype CustomerId = CustomerId { _getCustomerId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''CustomerId
 
-newtype OrganizationId = OrganizationId Text
+newtype OrganizationId = OrganizationId { _getOrganizationId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''OrganizationId
 
-newtype BusinessAddressId = BusinessAddressId Text
+newtype BusinessAddressId = BusinessAddressId { _getBusinessAddressId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''BusinessAddressId
 
-newtype PassApplicationId = PassApplicationId Text
+newtype PassApplicationId = PassApplicationId { _getPassApplicationId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''PassApplicationId
 
-newtype FromLocationId = FromLocationId Text
+newtype FromLocationId = FromLocationId { _getFromLocationId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''FromLocationId
 
-newtype ToLocationId = ToLocationId Text
+newtype ToLocationId = ToLocationId { _getToLocationId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''ToLocationId
 
-newtype AssignedTo = AssignedTo Text
+newtype AssignedTo = AssignedTo { _getAssignedTo :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''AssignedTo
 
-newtype LocationId = LocationId Text
+newtype LocationId = LocationId { _getLocationId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''LocationId
 
-newtype QuotaId = QuotaId Text
+newtype QuotaId = QuotaId { _getQuotaId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''QuotaId
 
-newtype BlacklistedBy = BlacklistedBy Text
+newtype BlacklistedBy = BlacklistedBy { _getBlacklistedBy :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''BlacklistedBy
+
+newtype CustomerDetailsId = CustomerDetailsId { _getCustomerDetailsId :: Text }
+  deriving stock (Show)
+
+deriveIdentifierInstances ''CustomerDetailsId
+
+newtype PassId = PassId { _getPassId :: Text }
+  deriving stock (Show)
+
+deriveIdentifierInstances ''PassId
+
+newtype UserId = UserId { _getUserId :: Text }
+  deriving stock (Show)
+
+deriveIdentifierInstances ''UserId
+
+newtype RegistrationTokenId = RegistrationTokenId { _getRegistrationTokenId :: Text }
+  deriving stock (Show)
+
+deriveIdentifierInstances ''RegistrationTokenId
+
+newtype LocationBlacklistId = LocationBlacklistId { _getLocationBlacklistId :: Text }
+  deriving stock (Show)
+
+deriveIdentifierInstances ''LocationBlacklistId
+
+newtype AllocatedQuotaId = AllocatedQuotaId { _getAllocatedQuotaId :: Text }
+  deriving stock (Show)
+
+deriveIdentifierInstances ''AllocatedQuotaId
