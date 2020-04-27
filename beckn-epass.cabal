@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f4fa4bc9183e587820341395a343de1f19bd2d9e0b71e085e984577b8aad6c78
+-- hash: dda8ffce9d72b02d82c6eb5e580c81ad58f0d8258e17b2e56b2f686d130e49d3
 
 name:           beckn-epass
 version:        0.1.0.0
@@ -33,6 +33,7 @@ library
       Beckn.Constants.APIErrorCode
       Beckn.Storage.DB.Config
       Beckn.Storage.Queries
+      Beckn.Storage.Queries.AllocatedQuota
       Beckn.Storage.Queries.Customer
       Beckn.Storage.Queries.LocationBlacklist
       Beckn.Storage.Queries.Quota
@@ -40,10 +41,12 @@ library
       Beckn.Types.API.Common
       Beckn.Types.App
       Beckn.Types.Config
-      Beckn.Types.Domain.Customer
+      Beckn.Types.Domain.AllocatedQuota
       Beckn.Types.Domain.LocationBlacklist
       Beckn.Types.Domain.Quota
       Beckn.Types.Domain.User
+      Beckn.Types.Storage.AllocatedQuota
+      Beckn.Types.Domain.Customer
       Beckn.Types.Storage.Customer
       Beckn.Types.Storage.DB
       Beckn.Types.Storage.LocationBlacklist
