@@ -34,6 +34,7 @@ library
       Beckn.Storage.DB.Config
       Beckn.Storage.Queries
       Beckn.Storage.Queries.AllocatedQuota
+      Beckn.Storage.Queries.Customer
       Beckn.Storage.Queries.LocationBlacklist
       Beckn.Storage.Queries.Quota
       Beckn.Storage.Queries.User
@@ -45,11 +46,14 @@ library
       Beckn.Types.Domain.Quota
       Beckn.Types.Domain.User
       Beckn.Types.Storage.AllocatedQuota
+      Beckn.Types.Domain.Customer
+      Beckn.Types.Storage.Customer
       Beckn.Types.Storage.DB
       Beckn.Types.Storage.LocationBlacklist
       Beckn.Types.Storage.Quota
       Beckn.Types.Storage.User
       Beckn.Utils.Storage
+      Beckn.Utils.TH
   other-modules:
       Paths_beckn_epass
   hs-source-dirs:
@@ -66,6 +70,7 @@ library
     , http-types
     , servant
     , servant-server
+    , template-haskell
     , text
     , time
     , vault
@@ -93,6 +98,7 @@ executable beckn-epass-exe
     , http-types
     , servant
     , servant-server
+    , template-haskell
     , text
     , time
     , vault
@@ -126,6 +132,7 @@ test-suite beckn-epass-test
     , servant
     , servant-client
     , servant-server
+    , template-haskell
     , text
     , time
     , vault
