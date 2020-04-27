@@ -33,5 +33,16 @@ epassServer' key =
    :<|> (\h -> createPassApplication h
         :<|> listPassApplication h
         :<|> getPassApplicationById h
+        :<|> updatePassApplication h
+        )
+   :<|> (\h -> createOrganization h
+        :<|> getOrganization h
+        :<|> listOrganization h
+        :<|> updateOrganization h
+        )
+   :<|> getCustomerInfo
+   :<|> (\h -> getPassById h
+        :<|> updatePass h
+        :<|> listPass h
         )
   )

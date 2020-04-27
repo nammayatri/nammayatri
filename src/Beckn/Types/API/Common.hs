@@ -42,3 +42,14 @@ data TravellerIDType
 
 instance Default TravellerIDType where
   def = MOBILE
+
+data PassAction
+  = REVOKE
+  | EXPIRE
+  deriving (Generic, FromJSON)
+
+data PassIDType
+  = MOBILENUMBER
+  | CUSTOMERID
+  | PASSAPPLICATIONID
+  deriving (Generic, FromJSON)

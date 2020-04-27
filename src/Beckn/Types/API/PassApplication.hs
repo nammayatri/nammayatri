@@ -46,3 +46,13 @@ data ListPassApplicationRes =
     { passApplications :: [PassApplication]
     }
   deriving (Generic, ToJSON)
+
+data UpdatePassApplicationReq =
+  UpdatePassApplicationReq
+    { _status :: Status
+    , _approvedCount :: Int
+    , _remarks :: Text
+    } deriving (Generic)
+
+instance FromJSON UpdatePassApplicationReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
