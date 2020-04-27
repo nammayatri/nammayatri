@@ -11,6 +11,7 @@ import qualified Beckn.Types.Storage.Location          as Location
 import qualified Beckn.Types.Storage.LocationBlacklist as LocationBlacklist
 import qualified Beckn.Types.Storage.Organization      as Organization
 import qualified Beckn.Types.Storage.Pass              as Pass
+import qualified Beckn.Types.Storage.PassApplication   as PassApplication
 import qualified Beckn.Types.Storage.Quota             as Quota
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Beckn.Types.Storage.User              as User
@@ -31,6 +32,7 @@ data BecknDb f =
      , _customerDetails :: f (B.TableEntity CustomerDetails.CustomerDetailsT)
      , _organization :: f (B.TableEntity Organization.OrganizationT)
      , _pass :: f (B.TableEntity Pass.PassT)
+     , _passApplication :: f (B.TableEntity PassApplication.PassApplicationT)
      }
   deriving (Generic, B.Database be)
 
@@ -48,4 +50,5 @@ becknDb =
         , _customerDetails = CustomerDetails.fieldEMod
         , _organization = Organization.fieldEMod
         , _pass = Pass.fieldEMod
+        , _passApplication = PassApplication.fieldEMod
         }
