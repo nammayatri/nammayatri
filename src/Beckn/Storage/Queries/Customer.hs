@@ -11,8 +11,8 @@ import qualified Beckn.Types.Storage.DB       as DB
 import qualified Database.Beam                as B
 import qualified EulerHS.Language             as L
 
-dbTable :: B.DatabaseEntity be DB.BecknDB (B.TableEntity C.CustomerT)
-dbTable = DB._customer DB.becknDB
+dbTable :: B.DatabaseEntity be DB.BecknDb (B.TableEntity C.CustomerT)
+dbTable = DB._customer DB.becknDb
 
 create :: CD.Customer -> L.Flow ()
 create CD.Customer{..} =
