@@ -9,6 +9,7 @@ import qualified Beckn.Types.Storage.Customer          as Customer
 import qualified Beckn.Types.Storage.CustomerDetails   as CustomerDetails
 import qualified Beckn.Types.Storage.Location          as Location
 import qualified Beckn.Types.Storage.LocationBlacklist as LocationBlacklist
+import qualified Beckn.Types.Storage.Organization      as Organization
 import qualified Beckn.Types.Storage.Quota             as Quota
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Beckn.Types.Storage.User              as User
@@ -27,6 +28,7 @@ data BecknDb f =
      , _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT)
      , _customer :: f (B.TableEntity Customer.CustomerT)
      , _customerDetails :: f (B.TableEntity CustomerDetails.CustomerDetailsT)
+     , _organization :: f (B.TableEntity Organization.OrganizationT)
      }
   deriving (Generic, B.Database be)
 
@@ -42,4 +44,5 @@ becknDb =
         , _allocatedQuota = AllocatedQuota.fieldEMod
         , _customer = Customer.fieldEMod
         , _customerDetails = CustomerDetails.fieldEMod
+        , _organization = Organization.fieldEMod
         }
