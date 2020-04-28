@@ -8,8 +8,10 @@ import           Beckn.Types.Common
 import qualified Beckn.Types.Common                    as Location (Location (..),
                                                                     LocationType)
 import           Beckn.Types.Storage.PassApplication
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
+import           Beckn.Utils.Storage
 import           Data.Aeson
 import qualified EulerHS.Language                      as L
 import           EulerHS.Prelude
@@ -18,8 +20,9 @@ import           Servant
 createPassApplication ::
   Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes
 createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ do
+  token <- verifyToken regToken
   id <- generateGUID
-  passAppInfo <- (getPassAppInfo id)
+  passAppInfo <- (getPassAppInfo id token)
   DB.create passAppInfo
   earea <- DB.findById id
   case earea of
@@ -29,14 +32,14 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
   where
     getPassType SELF          = INDIVIDUAL
     getPassType SPONSOROR     = INDIVIDUAL
-    getPassType BULKSPONSOROR = INDIVIDUAL
+    getPassType BULKSPONSOROR = ORGANIZATION
 
     getCount SELF _ = return 1
     getCount SPONSOROR _ = return 1
     getCount BULKSPONSOROR (Just c) = return c
     getCount BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
 
-    getPassAppInfo id = do
+    getPassAppInfo id token = do
       currTime <- getCurrTime
       count <- getCount _type _count
       return $ PassApplication
@@ -67,7 +70,7 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
               , _createdAt = currTime
               , _updatedAt = currTime
               , _status = PENDING
-              , _CreatedBy = CustomerId "-" -- TODO: fix this
+              , _CreatedBy = CustomerId (RegistrationToken._CustomerId token)
               , _AssignedTo = UserId "admin" -- TODO: fix this
               , _count = count
               , _approvedCount = 0
@@ -84,6 +87,7 @@ listPassApplication ::
   -> [PassType]
   -> FlowHandler ListPassApplicationRes
 listPassApplication regToken offsetM limitM status passType = withFlowHandler $ do
+  verifyToken regToken
   DB.findAllWithLimitOffsetWhere status passType limitM offsetM
   >>= \case
       Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
@@ -91,6 +95,7 @@ listPassApplication regToken offsetM limitM status passType = withFlowHandler $ 
 
 getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler PassApplicationRes
 getPassApplicationById regToken applicationId = withFlowHandler $ do
+  verifyToken regToken
   DB.findById applicationId
   >>= \case
     Right (Just v) -> return $ PassApplicationRes v
@@ -103,6 +108,7 @@ updatePassApplication ::
   UpdatePassApplicationReq ->
   FlowHandler PassApplicationRes
 updatePassApplication regToken passApplicationId UpdatePassApplicationReq{..} = withFlowHandler $ do
+  verifyToken regToken
   eres <- DB.update passApplicationId _status _approvedCount _remarks
   case eres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
