@@ -3,7 +3,7 @@ module Beckn.Product.Registration where
 import qualified Beckn.Data.Accessor as Lens
 import qualified Beckn.Storage.Queries.Customer as QC
 import qualified Beckn.Storage.Queries.RegistrationToken as QR
-import Beckn.Types.API.Common
+import Beckn.Types.Common
 import Beckn.Types.API.Registration
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Customer as SC

@@ -9,7 +9,6 @@ module Beckn.Types.Storage.RegistrationToken where
 import           Data.Aeson
 import           Data.Time
 import           EulerHS.Prelude
-import           Beckn.Types.API.Common
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import qualified Data.Text       as T
