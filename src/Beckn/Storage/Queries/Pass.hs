@@ -25,18 +25,18 @@ create Storage.Pass {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Pass {..}) >>=
   either DB.throwDBError pure
 
-findPassById :: PassId -> L.Flow (Maybe Storage.Pass)
+findPassById :: Text -> L.Flow (Maybe Storage.Pass)
 findPassById id = do
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
-    predicate Storage.Pass {..} = (_id ==. B.val_ id)
+    predicate Storage.Pass {..} = (_ShortId ==. B.val_ id)
 
-updatePassStatus :: Storage.Status -> PassId -> L.Flow ()
+updatePassStatus :: Storage.Status -> Text -> L.Flow ()
 updatePassStatus action id = do
   DB.update dbTable (setClause action) (predicate id) >>=
     either DB.throwDBError pure
   where
-    predicate i Storage.Pass {..} = (_id ==. B.val_ i)
+    predicate i Storage.Pass {..} = (_ShortId ==. B.val_ i)
     setClause s Storage.Pass {..} = mconcat [ _status <-. B.val_ s ]
 
 listAllPassesWithOffset :: Integer -> Integer -> ListById -> [Storage.Status]-> L.Flow [Storage.Pass]

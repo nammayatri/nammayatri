@@ -37,6 +37,7 @@ data PassT f =
   Pass
     { _id                :: B.C f PassId
     , _CustomerId        :: B.C f CustomerId
+    , _ShortId           :: B.C f Text
     , _OrganizationId    :: B.C f (Maybe OrganizationId)
     , _status            :: B.C f Status
     , _fromDate          :: B.C f LocalTime
@@ -84,6 +85,7 @@ fieldEMod =
   B.modifyTableFields
     B.tableModification
       { _OrganizationId = "organization_id"
+      , _ShortId = "short_id"
       , _CustomerId = "customer_id"
       , _fromDate = "from_date"
       , _toDate = "to_date"

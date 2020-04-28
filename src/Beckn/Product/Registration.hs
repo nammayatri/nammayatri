@@ -54,6 +54,7 @@ initiateSms req = do
         Nothing
         now
         now
+
     makeSession uuidR uuidRt uuid now otp a =
       SR.RegistrationToken
         uuidR
@@ -67,9 +68,12 @@ initiateSms req = do
         uuid
         now
         now
+        Nothing
+
     generateOTPCode :: L.Flow Text
     generateOTPCode =
       L.runIO $ padLeft 4 '0' . show <$> Cryptonite.generateBetween 1 9999
+
     padLeft n c txt =
       let prefix = replicate (max 0 $ n - length txt) c
        in T.pack prefix <> txt

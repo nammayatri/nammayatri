@@ -20,7 +20,7 @@ getPassById :: Maybe Text -> Text -> FlowHandler PassRes
 getPassById regToken passId =
   withFlowHandler $ do
     reg <- verifyToken regToken
-    QP.findPassById (PassId passId) >>=
+    QP.findPassById passId >>=
       maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
         (return . PassRes)
@@ -30,9 +30,9 @@ updatePass regToken passId req =
   withFlowHandler $ do
     reg <- verifyToken regToken
     pass <-
-      QP.findPassById (PassId passId) >>=
+      QP.findPassById passId >>=
       maybe (L.throwException $ err400 {errBody = "INVALID_DATA"}) return
-    QP.updatePassStatus (action req) (PassId passId)
+    QP.updatePassStatus (action req) passId
     return $ PassRes (pass {_status = action req})
 
 listPass ::
