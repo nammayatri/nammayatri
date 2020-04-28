@@ -163,7 +163,7 @@ type QuotaAPIS
         :> Post '[JSON] Quota.CreateRes
       :<|> Capture "quotaId" QuotaId
         :> ReqBody '[JSON] Quota.UpdateReq
-        :> Post '[JSON] Quota.UpdateRes
+        :> Put '[JSON] Quota.UpdateRes
       :<|> "list"
         :> QueryParam "type" Text
         :> QueryParam "limit" Int

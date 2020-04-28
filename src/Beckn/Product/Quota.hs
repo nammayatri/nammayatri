@@ -14,7 +14,7 @@ create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  pure $ def CreateRes
 
 update :: Maybe RegistrationToken -> QuotaId -> UpdateReq -> FlowHandler UpdateRes
-update mRegToken id UpdateReq {..} = error "Not implemented"
+update mRegToken id UpdateReq {..} =  pure $ def UpdateRes
 
 list ::
   Maybe RegistrationToken
