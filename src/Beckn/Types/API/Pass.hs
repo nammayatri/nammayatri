@@ -3,16 +3,17 @@ module Beckn.Types.API.Pass where
 import EulerHS.Prelude
 import Beckn.Types.Storage.Pass
 import Beckn.Types.API.Common
+import Data.Swagger
 
 data PassRes =
   PassRes
     { pass :: Pass
-    } deriving (Generic, ToJSON)
+    } deriving (Generic, ToJSON, ToSchema)
 
 data UpdatePassReq =
   UpdatePassReq
     { action :: PassAction
-    } deriving (Generic, FromJSON)
+    } deriving (Generic, FromJSON, ToSchema)
 
 data ListPassReq =
   ListPassReq
@@ -21,7 +22,7 @@ data ListPassReq =
     , _limit :: Int
     , _offset :: Int
     , __type ::  PassType
-    } deriving (Generic)
+    } deriving (Generic, ToSchema)
 
 instance FromJSON ListPassReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -29,4 +30,4 @@ instance FromJSON ListPassReq where
 data ListPassRes =
   ListPassRes
     { passes :: [Pass]
-    } deriving (Generic, ToJSON)
+    } deriving (Generic, ToJSON, ToSchema)

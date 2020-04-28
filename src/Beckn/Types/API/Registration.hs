@@ -3,6 +3,8 @@ module Beckn.Types.API.Registration where
 import Beckn.Types.API.Common
 import Beckn.Types.Storage.Customer
 import EulerHS.Prelude
+import Servant.Swagger
+import Data.Swagger
 
 data InitiateLoginReq =
   InitiateLoginReq
@@ -10,7 +12,7 @@ data InitiateLoginReq =
     , __type :: LoginType
     , __value :: Text
     }
-  deriving (Generic)
+  deriving (Generic, ToSchema)
 
 instance FromJSON InitiateLoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -20,7 +22,7 @@ data InitiateLoginRes =
     { tokenId :: Text
     , attemps :: Int
     }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 ---------- Verify Login --------
 data LoginReq =
@@ -30,7 +32,7 @@ data LoginReq =
     , __value :: String
     , _action :: LoginMode
     }
-  deriving (Generic)
+  deriving (Generic, ToSchema)
 
 instance FromJSON LoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -40,4 +42,4 @@ data LoginRes =
     { registrationToken :: Text
     , customer :: Customer
     }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)

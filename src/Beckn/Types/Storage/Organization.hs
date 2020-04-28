@@ -10,9 +10,10 @@ import qualified Database.Beam             as B
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
+import           Data.Swagger
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -48,9 +49,13 @@ deriving instance Show Organization
 
 deriving instance Eq Organization
 
-deriving instance ToJSON Organization
+instance ToJSON Organization where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
-deriving instance FromJSON Organization
+instance FromJSON Organization where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToSchema Organization
 
 insertExpression customer = insertExpressions [customer]
 

@@ -2,6 +2,7 @@ module Beckn.Types.API.Organization where
 
 import Beckn.Types.Storage.Organization
 import EulerHS.Prelude
+import Data.Swagger
 
 data CreateOrganizationReq =
   CreateOrganizationReq
@@ -13,7 +14,7 @@ data CreateOrganizationReq =
     , _pincode :: Text
     , _address :: Text
     }
-  deriving (Generic)
+  deriving (Generic, ToSchema)
 
 instance FromJSON CreateOrganizationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -22,14 +23,14 @@ data OrganizationRes =
   OrganizationRes
     { organization :: Organization
     }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 data ListOrganizationReq =
   ListOrganizationReq
    { _limit :: Int
    , _offset :: Int
    , __type :: Text
-   } deriving (Generic)
+   } deriving (Generic, ToSchema)
 
 instance FromJSON ListOrganizationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -37,9 +38,9 @@ instance FromJSON ListOrganizationReq where
 data ListOrganizationRes =
   ListOrganizationRes
    { organizations :: [Organization]
-   } deriving (Generic, ToJSON)
+   } deriving (Generic, ToJSON, ToSchema)
 
 data UpdateOrganizationReq =
   UpdateOrganizationReq
     { status :: Status
-    } deriving (Generic, FromJSON)
+    } deriving (Generic, FromJSON, ToSchema)

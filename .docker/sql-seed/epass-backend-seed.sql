@@ -1,0 +1,285 @@
+-- MySQL dump 10.13  Distrib 8.0.18, for Linux (x86_64)
+--
+-- Host: localhost    Database: atlasdb
+-- ------------------------------------------------------
+-- Server version	8.0.18
+GRANT ALL PRIVILEGES ON atlasdb.* TO 'atlas'@'%';
+
+
+DROP TABLE IF EXISTS `customer`;
+DROP TABLE IF EXISTS `customer_detail`;
+DROP TABLE IF EXISTS `organization`;
+DROP TABLE IF EXISTS `pass`;
+DROP TABLE IF EXISTS `pass_application`;
+DROP TABLE IF EXISTS `user`;
+DROP TABLE IF EXISTS `location`;
+DROP TABLE IF EXISTS `registration_token`;
+DROP TABLE IF EXISTS `quota`;
+DROP TABLE IF EXISTS `allocated_quota`;
+DROP TABLE IF EXISTS `location_blacklist`;
+
+
+
+
+CREATE TABLE `customer` (
+  `id` char(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `organization_id` char(36) NULL,
+  `verified` boolean NOT NULL,
+  `role` varchar(255) NOT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`organization_id`)
+);
+
+CREATE TABLE `customer_detail` (
+  `id` char(36) NOT NULL,
+  `customer_id` char(36) NOT NULL,
+  `unique_identifier` varchar(255) NULL,
+  `identifier_type` varchar(255) NULL,
+  `value` TEXT NULL,
+  `verified` boolean NOT NULL,
+  `primary_identifier` boolean NOT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`customer_id`),
+  INDEX (`unique_identifier`)
+);
+
+CREATE TABLE `organization` (
+  `id` char(36) NOT NULL,
+  `name` varchar(255) NULL,
+  `gstin` varchar(255) NULL,
+  `status` varchar(255) NULL,
+  `verified` boolean NOT NULL,
+  `location_type` varchar(255) NULL,
+  `lat` double NULL,
+  `long` double NULL,
+  `ward` varchar(255) NULL,
+  `district` varchar(255) NULL,
+  `city` varchar(255) NULL,
+  `state` varchar(255) NULL,
+  `country` varchar(255) NULL,
+  `pincode` integer NULL,
+  `address` varchar(1024) NULL,
+  `bound` TEXT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`ward`),
+  INDEX (`district`),
+  INDEX (`city`),
+  INDEX (`pincode`)
+);
+
+CREATE TABLE `pass` (
+  `id` char(36) NOT NULL,
+  `customer_id` char(36) NOT NULL,
+  `organization_id` char(36) NOT NULL,
+  `status` varchar(255) NULL,
+  `from_date` datetime NOT NULL,
+  `to_date` datetime NOT NULL,
+  `pass_type` varchar(255) NULL,
+  `pass_application_id` char(36) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `from_location_type` varchar(255) NULL,
+  `from_lat` double NULL,
+  `from_long` double NULL,
+  `from_ward` varchar(255) NULL,
+  `from_district` varchar(255) NULL,
+  `from_city` varchar(255) NULL,
+  `from_state` varchar(255) NULL,
+  `from_country` varchar(255) NULL,
+  `from_pincode` integer NULL,
+  `from_address` varchar(1024) NULL,
+  `from_bound` TEXT NULL,
+  `to_location_type` varchar(255) NULL,
+  `to_lat` double NULL,
+  `to_long` double NULL,
+  `to_ward` varchar(255) NULL,
+  `to_district` varchar(255) NULL,
+  `to_city` varchar(255) NULL,
+  `to_state` varchar(255) NULL,
+  `to_country` varchar(255) NULL,
+  `to_pincode` integer NULL,
+  `to_address` varchar(1024) NULL,
+  `to_bound` TEXT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`customer_id`),
+  INDEX (`organization_id`),
+  INDEX (`pass_application_id`),
+  INDEX (`from_ward`),
+  INDEX (`from_district`),
+  INDEX (`from_city`),
+  INDEX (`from_pincode`),
+  INDEX (`to_ward`),
+  INDEX (`to_district`),
+  INDEX (`to_city`),
+  INDEX (`to_pincode`)
+);
+          
+
+CREATE TABLE `pass_application` (
+  `id` char(36) NOT NULL,
+  `customer_id` char(36) NOT NULL,
+  `pass_type` varchar(255) NULL,
+  `from_date` datetime NOT NULL,
+  `to_date` datetime NOT NULL,
+  `count` integer NOT NULL,
+  `approved_count` integer NOT NULL,
+  `status` varchar(255) NULL,
+  `assigned_to` char(36) NULL,
+  `created_by` char(36) NULL,
+  `remarks` varchar(255) NULL,
+  `from_location_type` varchar(255) NULL,
+  `from_lat` double NULL,
+  `from_long` double NULL,
+  `from_ward` varchar(255) NULL,
+  `from_district` varchar(255) NULL,
+  `from_city` varchar(255) NULL,
+  `from_state` varchar(255) NULL,
+  `from_country` varchar(255) NULL,
+  `from_pincode` integer NULL,
+  `from_address` varchar(1024) NULL,
+  `from_bound` TEXT NULL,
+  `to_location_type` varchar(255) NULL,
+  `to_lat` double NULL,
+  `to_long` double NULL,
+  `to_ward` varchar(255) NULL,
+  `to_district` varchar(255) NULL,
+  `to_city` varchar(255) NULL,
+  `to_state` varchar(255) NULL,
+  `to_country` varchar(255) NULL,
+  `to_pincode` integer NULL,
+  `to_address` varchar(1024) NULL,
+  `to_bound` TEXT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`customer_id`),
+  INDEX (`assigned_to`),
+  INDEX (`from_ward`),
+  INDEX (`from_district`),
+  INDEX (`from_city`),
+  INDEX (`from_pincode`),
+  INDEX (`to_ward`),
+  INDEX (`to_district`),
+  INDEX (`to_city`),
+  INDEX (`to_pincode`)
+);
+
+CREATE TABLE `user` (
+  `id` char(36) NOT NULL,
+  `organization_id` char(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `password` varchar(1024) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `role` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL,
+  `verified` boolean NOT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`organization_id`),
+  INDEX (`username`)
+);
+
+
+CREATE TABLE `location` (
+  `id` char(36) NOT NULL,
+  `location_type` varchar(255) NULL,
+  `lat` double NULL,
+  `long` double NULL,
+  `ward` varchar(255) NULL,
+  `district` varchar(255) NULL,
+  `city` varchar(255) NULL,
+  `state` varchar(255) NULL,
+  `country` varchar(255) NULL,
+  `pincode` integer NULL,
+  `address` varchar(1024) NULL,
+  `bound` TEXT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `registration_token` (
+  `id` char(36) NOT NULL,
+  `auth_medium` varchar(255) NOT NULL,
+  `auth_type` varchar(255) NOT NULL,
+  `auth_value_hash` varchar(1024) NOT NULL,
+  `verified` boolean NOT NULL,
+  `auth_expiry` integer NOT NULL,
+  `token_expiry` integer NOT NULL,
+  `customer_id` char(36) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`customer_id`)
+);
+
+CREATE TABLE `quota` (
+  `id` char(36) NOT NULL,
+  `type` varchar(255) NOT NULL,
+  `max_allowed` integer NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`start_time`),
+  INDEX (`end_time`)
+);
+
+CREATE TABLE `allocated_quota` (
+  `id` char(36) NOT NULL,
+  `quota_id` char(36) NOT NULL,
+  `allocated_count` integer NOT NULL,
+  `version` integer NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`quota_id`),
+  INDEX (`start_time`),
+  INDEX (`end_time`)
+);
+
+CREATE TABLE `location_blacklist` (
+  `id` char(36) NOT NULL,
+  `blacklisted_by` char(36) NOT NULL,
+  `remarks` varchar(255) NOT NULL,
+  `type` varchar(255) NOT NULL,
+  `bound` TEXT NULL,
+  `ward` varchar(255) NULL,
+  `district` varchar(255) NULL,
+  `city` varchar(255) NULL,
+  `state` varchar(255) NULL,
+  `country` varchar(255) NULL,
+  `pincode` integer NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`ward`),
+  INDEX (`district`),
+  INDEX (`city`),
+  INDEX (`pincode`)
+);
+
+

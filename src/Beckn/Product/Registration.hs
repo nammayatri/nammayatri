@@ -10,7 +10,7 @@ import           EulerHS.Prelude
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin loginRes = undefined
 
-login :: Text -> LoginReq -> FlowHandler Value
+login :: Text -> LoginReq -> FlowHandler a
 login tokenId req = do
   case req ^. Accessor.action of
     VERIFY -> undefined
