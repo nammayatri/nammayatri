@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS `location_blacklist`;
 
 CREATE TABLE `customer` (
   `id` char(36) NOT NULL,
-  `name` varchar(255) NOT NULL,
+  `name` varchar(255) NULL,
   `organization_id` char(36) NULL,
   `verified` boolean NOT NULL,
   `role` varchar(255) NOT NULL,

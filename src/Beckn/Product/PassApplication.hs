@@ -11,6 +11,7 @@ import           Beckn.Types.Storage.PassApplication
 import           Beckn.Utils.Common
 import           Data.Aeson
 import           EulerHS.Prelude
+import           Beckn.Utils.Routes
 
 createPassApplication ::
   Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes

@@ -5,22 +5,37 @@ import           Beckn.Types.Storage.Customer
 import           Data.Swagger
 import           EulerHS.Prelude
 import           Servant.Swagger
+import           Beckn.Types.Storage.RegistrationToken
 
 data InitiateLoginReq =
   InitiateLoginReq
     { _medium :: Medium
     , __type  :: LoginType
     , __value :: Text
+    , _role :: CustomerRole
     }
   deriving (Generic, ToSchema)
 
 instance FromJSON InitiateLoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+data ReInitiateLoginReq =
+  ReInitiateLoginReq
+    { _medium :: Medium
+    , __type :: LoginType
+    , __value :: Text
+    , _action :: LoginMode
+    , _hash :: Text
+    }
+  deriving (Generic, ToSchema)
+
+instance FromJSON ReInitiateLoginReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
 data InitiateLoginRes =
   InitiateLoginRes
     { tokenId :: Text
-    , attemps :: Int
+    , attempts :: Int
     }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -28,9 +43,10 @@ data InitiateLoginRes =
 data LoginReq =
   LoginReq
     { _medium :: Medium
-    , __type  :: LoginType
-    , __value :: String
+    , __type :: LoginType
+    , __value :: Text
     , _action :: LoginMode
+    , _hash :: Text
     }
   deriving (Generic, ToSchema)
 

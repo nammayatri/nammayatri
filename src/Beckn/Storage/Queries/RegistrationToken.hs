@@ -16,9 +16,15 @@ dbTable ::
      B.DatabaseEntity be DB.BecknDb (B.TableEntity Storage.RegistrationTokenT)
 dbTable = DB._registrationToken DB.becknDb
 
+create ::
+  Storage.RegistrationToken -> L.Flow ()
+create Storage.RegistrationToken {..} =
+  DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..}) >>=
+  either DB.throwDBError pure
+
 findRegistrationToken ::
-     Text -> L.Flow (T.DBResult (Maybe Storage.RegistrationToken))
+     Text -> L.Flow (Maybe Storage.RegistrationToken)
 findRegistrationToken id = do
-  DB.findOne dbTable predicate
+  DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)

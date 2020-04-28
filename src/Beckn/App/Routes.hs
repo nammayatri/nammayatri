@@ -51,7 +51,7 @@ type RegistrationAPIs
           :> ReqBody '[ JSON] LoginReq
           :> Post '[ JSON] LoginRes
       :<|> Capture "tokenId" Text
-          :> ReqBody '[ JSON] LoginReq
+          :> ReqBody '[ JSON] ReInitiateLoginReq
           :> Post '[ JSON] InitiateLoginRes
       )
 
@@ -59,7 +59,7 @@ registrationFlow :: FlowServer RegistrationAPIs
 registrationFlow =
   Registration.initiateLogin
   :<|> Registration.login
-  :<|> Registration.login
+  :<|> Registration.reInitiateLogin
 -------------------------------
 
 ---- Pass Application Flow ------
