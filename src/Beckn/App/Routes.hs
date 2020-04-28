@@ -6,12 +6,14 @@ import qualified Beckn.Product.HealthCheck       as HealthCheck
 import qualified Beckn.Product.Organization      as Organization
 import qualified Beckn.Product.Pass              as Pass
 import qualified Beckn.Product.PassApplication   as PassApplication
+import qualified Beckn.Product.Quota             as Quota
 import qualified Beckn.Product.Registration      as Registration
 import           Beckn.Types.API.Common
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
+import qualified Beckn.Types.API.Quota           as Quota
 import           Beckn.Types.API.Registration
 import           Beckn.Types.App
 import           Data.Aeson
@@ -119,3 +121,24 @@ passFlow registrationToken =
   Pass.getPassById registrationToken
   :<|> Pass.updatePass registrationToken
   :<|> Pass.listPass registrationToken
+
+------ Quota Flow ----------
+type QuotaAPIS
+  = "quota"
+  :> Header "registrationToken" RegistrationToken
+  :> ( ReqBody '[JSON] Quota.CreateReq
+        :> Post '[JSON] Quota.CreateRes
+      :<|> Capture "quotaId" QuotaId
+        :> ReqBody '[JSON] Quota.UpdateReq
+        :> Post '[JSON] Quota.UpdateRes
+      :<|> "list"
+        :> QueryParam "type" Text
+        :> QueryParam "limit" Int
+        :> QueryParam "offset" Int
+        :> Get '[JSON] Quota.ListRes
+      )
+
+quotaFlow registrationToken =
+  Quota.create registrationToken
+  :<|> Quota.update registrationToken
+  :<|> Quota.list registrationToken

@@ -101,3 +101,9 @@ newtype AllocatedQuotaId = AllocatedQuotaId { _getAllocatedQuotaId :: Text }
   deriving stock (Show)
 
 deriveIdentifierInstances ''AllocatedQuotaId
+
+type RegistrationToken = Text
+
+type Limit = Int
+
+type Offset = Int
