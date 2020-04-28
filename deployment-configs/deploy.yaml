@@ -29,7 +29,7 @@ spec:
         - /bin/bash
         - -c
         args:
-        - "echo \"starting app server\" && /opt/app/app-backend-exe"
+        - "echo \"starting app server\" && /opt/app/beckn-epass-exe"
         env:
         - name: POD_NAME
           valueFrom:
