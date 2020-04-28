@@ -10,9 +10,11 @@ import qualified Database.Beam             as B
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
+import           Servant.Swagger
+import           Data.Swagger
 
 data CustomerRole = BUSINESSADMIN | INDIVIDUAL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CustomerRole where
   sqlValueSyntax = autoSqlValueSyntax
@@ -50,6 +52,8 @@ deriving instance Eq Customer
 deriving instance ToJSON Customer
 
 deriving instance FromJSON Customer
+
+instance ToSchema Customer
 
 insertExpression customer = insertExpressions [customer]
 
