@@ -15,8 +15,12 @@ getOrganization :: Maybe Text -> Text -> FlowHandler OrganizationRes
 getOrganization regToken orgId = undefined
 
 listOrganization ::
-  Maybe Text -> ListOrganizationReq -> FlowHandler ListOrganizationRes
-listOrganization regToken req = undefined
+  Maybe Text
+  -> Maybe Int
+  -> Maybe Int
+  -> Maybe Text
+  -> FlowHandler ListOrganizationRes
+listOrganization regToken limitM offsetM typeM = undefined
 
 updateOrganization ::
   Maybe Text -> Text -> UpdateOrganizationReq -> FlowHandler OrganizationRes
