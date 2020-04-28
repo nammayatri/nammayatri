@@ -3,9 +3,9 @@ module Beckn.Product.Registration where
 import qualified Beckn.Data.Accessor as Lens
 import qualified Beckn.Storage.Queries.Customer as QC
 import qualified Beckn.Storage.Queries.RegistrationToken as QR
-import Beckn.Types.Common
 import Beckn.Types.API.Registration
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Customer as SC
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Extra
@@ -31,7 +31,7 @@ initiateLogin req =
             now
             now
     QC.create cust
-    hash <- undefined -- sendOTPToUser
+    hash <- return "emptyhash" -- sendOTPToUser
     uuidR <- L.generateGUID
     let regToken =
           SR.RegistrationToken
@@ -52,25 +52,29 @@ initiateLogin req =
         }
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
-login tokenId req = withFlowHandler $ do
-  rep <-
-    runMaybeT $ do
-      SR.RegistrationToken {..} <- MaybeT $ QR.findRegistrationToken tokenId
-      cust <- MaybeT $ QC.findCustomerById $ CustomerId _CustomerId
-      MaybeT $
-        if _authMedium == req ^. Lens.medium &&
-           _authType ==  req ^. Lens._type &&
-           _authValueHash == req ^. Lens.hash
-          then return $ Just $ LoginRes tokenId cust
-          else Just <$> (L.throwException $ err400 {errBody = "INVALID_VALUE"})
-  maybe (L.throwException $ err400 {errBody = "INVALID_TOKEN"}) pure rep
+login tokenId req =
+  withFlowHandler $ do
+    rep <-
+      runMaybeT $ do
+        SR.RegistrationToken {..} <- MaybeT $ QR.findRegistrationToken tokenId
+        cust <- MaybeT $ QC.findCustomerById $ CustomerId _CustomerId
+        MaybeT $
+          if _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type &&
+             _authValueHash ==
+             req ^.
+             Lens.hash
+            then return $ Just $ LoginRes tokenId cust
+            else Just <$>
+                 (L.throwException $ err400 {errBody = "INVALID_VALUE"})
+    maybe (L.throwException $ err400 {errBody = "INVALID_TOKEN"}) pure rep
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
-reInitiateLogin tokenId req = withFlowHandler $ do
-  rep <-
-    runMaybeT $ do
-      SR.RegistrationToken {..} <- MaybeT $ QR.findRegistrationToken tokenId
-      cust <- MaybeT $ QC.findCustomerById $ CustomerId _CustomerId
-      MaybeT $ undefined -- sendSameOTPToUser _authValueHash
-      MaybeT $ return $ Just $ InitiateLoginRes tokenId 2
-  maybe (L.throwException $ err400 {errBody = "INVALID_TOKEN"}) pure rep
+reInitiateLogin tokenId req =
+  withFlowHandler $ do
+    rep <-
+      runMaybeT $ do
+        SR.RegistrationToken {..} <- MaybeT $ QR.findRegistrationToken tokenId
+        cust <- MaybeT $ QC.findCustomerById $ CustomerId _CustomerId
+      -- MaybeT $ undefined -- sendSameOTPToUser _authValueHash
+        MaybeT $ return $ Just $ InitiateLoginRes tokenId 2
+    maybe (L.throwException $ err400 {errBody = "INVALID_TOKEN"}) pure rep
