@@ -5,7 +5,9 @@
 
 module Beckn.Types.Storage.User where
 
+import           Beckn.Utils.Common
 import           Data.Aeson
+import           Data.Default
 import qualified Data.Text                 as T
 import           Data.Time
 import qualified Database.Beam             as B
@@ -22,6 +24,17 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+
+data Role = ADMIN | MANAGER | VIEWER
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL Role where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+
 data UserT f =
   User
     { _id             :: B.C f Text
@@ -30,7 +43,7 @@ data UserT f =
     , _username       :: B.C f Text
     , _password       :: B.C f Text
     , _email          :: B.C f Text
-    , _role           :: B.C f Text
+    , _role           :: B.C f Role
     , _verified       :: B.C f Bool
     , _status         :: B.C f Status
     , _info           :: B.C f Text
@@ -48,11 +61,28 @@ instance B.Table UserT where
                                deriving (Generic, B.Beamable)
   primaryKey = UserPrimaryKey . _id
 
+instance Default User where
+  def = User
+    { _id             = ""
+    , _organizationId = ""
+    , _name           = ""
+    , _username       = ""
+    , _password       = ""
+    , _email          = ""
+    , _role           = VIEWER
+    , _verified       = False
+    , _status         = ACTIVE
+    , _info           = ""
+    , _createdAt      =  defaultLocalTime
+    , _updatedAt      =  defaultLocalTime
+    }
+
 deriving instance Show User
 
 deriving instance Eq User
 
-deriving instance ToJSON User
+instance ToJSON User where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 deriving instance FromJSON User
 

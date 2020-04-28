@@ -8,12 +8,14 @@ import qualified Beckn.Product.Pass                  as Pass
 import qualified Beckn.Product.PassApplication       as PassApplication
 import qualified Beckn.Product.Quota                 as Quota
 import qualified Beckn.Product.Registration          as Registration
+import qualified Beckn.Product.User                  as User
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
 import qualified Beckn.Types.API.Quota               as Quota
 import           Beckn.Types.API.Registration
+import qualified Beckn.Types.API.User                as User
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import           Data.Aeson
@@ -25,7 +27,7 @@ import qualified Beckn.Types.Storage.Pass            as SP
 import qualified Beckn.Types.Storage.PassApplication as PA
 
 type EPassAPIs
-   = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs)
+   = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs :<|> UserAPIS)
 
 epassAPIs :: Proxy EPassAPIs
 epassAPIs = Proxy
@@ -38,6 +40,7 @@ epassServer' key =
   :<|> organizationFlow
   :<|> customerFlow
   :<|> passFlow
+  :<|> userFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -159,3 +162,25 @@ quotaFlow registrationToken =
   Quota.create registrationToken
   :<|> Quota.update registrationToken
   :<|> Quota.list registrationToken
+
+------ User Flow ----------
+type UserAPIS
+  = "user" :> Header "registrationToken" RegistrationToken
+  :> (  ReqBody '[JSON] User.CreateReq
+        :> Post '[JSON] User.CreateRes
+      :<|> Capture "userId" UserId
+        :> ReqBody '[JSON] User.UpdateReq
+        :> Put '[JSON] User.UpdateRes
+      :<|> "list"
+        :> QueryParam "limit" Int
+        :> QueryParam "offset" Int
+        :> Get '[JSON] User.ListRes
+      :<|> Capture ":id" UserId
+        :> Get '[JSON] User.GetRes
+      )
+
+userFlow registrationToken =
+  User.create registrationToken
+  :<|> User.update registrationToken
+  :<|> User.list registrationToken
+  :<|> User.get registrationToken
