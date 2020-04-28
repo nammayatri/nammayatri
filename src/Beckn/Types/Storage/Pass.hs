@@ -3,6 +3,8 @@
 
 module Beckn.Types.Storage.Pass where
 
+import           Data.Swagger
+import           Servant.Swagger
 import           Beckn.Types.App
 import qualified Data.Text                 as T
 import qualified Data.Text.Encoding        as DT
@@ -14,9 +16,10 @@ import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
 import           Servant.API
+import           Data.Swagger
 
 data Status = ACTIVE | REVOKED | EXPIRED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -24,13 +27,14 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance ToParamSchema Status
 instance FromHttpApiData Status where
   parseUrlPiece  = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data PassType = INDIVIDUAL | ORGANIZATION
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -38,6 +42,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
 instance FromBackendRow MySQL PassType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance ToParamSchema PassType
 instance FromHttpApiData PassType where
   parseUrlPiece  = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -75,9 +80,13 @@ deriving instance Show Pass
 
 deriving instance Eq Pass
 
-deriving instance ToJSON Pass
+instance ToJSON Pass where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
-deriving instance FromJSON Pass
+instance FromJSON Pass where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToSchema Pass
 
 insertExpression customer = insertExpressions [customer]
 

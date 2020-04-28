@@ -4,6 +4,7 @@ import Beckn.Types.API.Common
 import Beckn.Types.Storage.PassApplication
 import Data.Default
 import EulerHS.Prelude
+import Data.Swagger
 
 data CreatePassApplicationReq =
   CreatePassApplicationReq
@@ -17,7 +18,7 @@ data CreatePassApplicationReq =
     , _travellerIDType :: Maybe TravellerIDType
     , __type :: PassApplicationType
     }
-  deriving (Generic)
+  deriving (Generic, ToSchema)
 
 instance FromJSON CreatePassApplicationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -26,21 +27,21 @@ data PassApplicationRes =
   PassApplicationRes
     { passApplication :: PassApplication
     }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 ------ List Pass Application ------
 data ListPassApplicationRes =
   ListPassApplicationRes
     { passApplications :: [PassApplication]
     }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 data UpdatePassApplicationReq =
   UpdatePassApplicationReq
     { _status :: Status
     , _approvedCount :: Int
     , _remarks :: Text
-    } deriving (Generic)
+    } deriving (Generic, ToSchema)
 
 instance FromJSON UpdatePassApplicationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

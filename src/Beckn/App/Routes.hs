@@ -46,12 +46,16 @@ type RegistrationAPIs
         :> Post '[ JSON] InitiateLoginRes
       :<|> Capture "tokenId" Text
           :> ReqBody '[ JSON] LoginReq
-          :> Post '[ JSON] Value
+          :> Post '[ JSON] LoginRes
+      :<|> Capture "tokenId" Text
+          :> ReqBody '[ JSON] LoginReq
+          :> Post '[ JSON] InitiateLoginRes
       )
 
 registrationFlow :: FlowServer RegistrationAPIs
 registrationFlow =
   Registration.initiateLogin
+  :<|> Registration.login
   :<|> Registration.login
 -------------------------------
 

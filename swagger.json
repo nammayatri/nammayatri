@@ -1,0 +1,1292 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "0.1",
+        "title": "EPass API",
+        "license": {
+            "url": "http://localhost/",
+            "name": "MIT"
+        },
+        "description": "This is an API that tests swagger integration"
+    },
+    "definitions": {
+        "PassId": {
+            "required": [
+                "_getPassId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getPassId": {
+                    "type": "string"
+                }
+            }
+        },
+        "Status": {
+            "type": "string",
+            "enum": [
+                "ACTIVE",
+                "REVOKED",
+                "EXPIRED"
+            ]
+        },
+        "InitiateLoginRes": {
+            "required": [
+                "tokenId",
+                "attemps"
+            ],
+            "type": "object",
+            "properties": {
+                "tokenId": {
+                    "type": "string"
+                },
+                "attemps": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            }
+        },
+        "PassApplicationT": {
+            "required": [
+                "_id",
+                "_CustomerId",
+                "_status",
+                "_fromDate",
+                "_toDate",
+                "_type",
+                "_FromLocationId",
+                "_ToLocationId",
+                "_CreatedBy",
+                "_AssignedTo",
+                "_count",
+                "_approvedCount",
+                "_remarks",
+                "_info",
+                "_createdAt",
+                "_updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "_CreatedBy": {
+                    "$ref": "#/definitions/CustomerId"
+                },
+                "_ToLocationId": {
+                    "$ref": "#/definitions/LocationId"
+                },
+                "_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "_type": {
+                    "$ref": "#/definitions/PassType"
+                },
+                "_approvedCount": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "_createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_id": {
+                    "$ref": "#/definitions/PassApplicationId"
+                },
+                "_toDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_CustomerId": {
+                    "$ref": "#/definitions/CustomerId"
+                },
+                "_remarks": {
+                    "type": "string"
+                },
+                "_AssignedTo": {
+                    "$ref": "#/definitions/UserId"
+                },
+                "_updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_fromDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_status": {
+                    "$ref": "#/definitions/Status"
+                },
+                "_info": {
+                    "type": "string"
+                },
+                "_FromLocationId": {
+                    "$ref": "#/definitions/LocationId"
+                }
+            }
+        },
+        "PassAction": {
+            "type": "string",
+            "enum": [
+                "REVOKE",
+                "EXPIRE"
+            ]
+        },
+        "ListPassRes": {
+            "required": [
+                "passes"
+            ],
+            "type": "object",
+            "properties": {
+                "passes": {
+                    "items": {
+                        "$ref": "#/definitions/PassT"
+                    },
+                    "type": "array"
+                }
+            }
+        },
+        "LoginRes": {
+            "required": [
+                "registrationToken",
+                "customer"
+            ],
+            "type": "object",
+            "properties": {
+                "registrationToken": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/CustomerT"
+                }
+            }
+        },
+        "OrganizationRes": {
+            "required": [
+                "organization"
+            ],
+            "type": "object",
+            "properties": {
+                "organization": {
+                    "$ref": "#/definitions/OrganizationT"
+                }
+            }
+        },
+        "ListOrganizationRes": {
+            "required": [
+                "organizations"
+            ],
+            "type": "object",
+            "properties": {
+                "organizations": {
+                    "items": {
+                        "$ref": "#/definitions/OrganizationT"
+                    },
+                    "type": "array"
+                }
+            }
+        },
+        "BusinessAddressId": {
+            "required": [
+                "_getBusinessAddressId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getBusinessAddressId": {
+                    "type": "string"
+                }
+            }
+        },
+        "PassRes": {
+            "required": [
+                "pass"
+            ],
+            "type": "object",
+            "properties": {
+                "pass": {
+                    "$ref": "#/definitions/PassT"
+                }
+            }
+        },
+        "Medium": {
+            "type": "string",
+            "enum": [
+                "SMS",
+                "EMAIL"
+            ]
+        },
+        "CustomerRole": {
+            "type": "string",
+            "enum": [
+                "BUSINESSADMIN",
+                "INDIVIDUAL"
+            ]
+        },
+        "CustomerT": {
+            "required": [
+                "_id",
+                "_name",
+                "_OrganizationId",
+                "_verified",
+                "_role",
+                "_info",
+                "_createdAt",
+                "_updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "_createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_id": {
+                    "$ref": "#/definitions/CustomerId"
+                },
+                "_name": {
+                    "type": "string"
+                },
+                "_role": {
+                    "$ref": "#/definitions/CustomerRole"
+                },
+                "_verified": {
+                    "type": "boolean"
+                },
+                "_updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_info": {
+                    "type": "string"
+                },
+                "_OrganizationId": {
+                    "$ref": "#/definitions/OrganizationId"
+                }
+            }
+        },
+        "LocalTime": {
+            "example": "2016-07-22T07:40:00",
+            "format": "yyyy-mm-ddThh:MM:ss",
+            "type": "string"
+        },
+        "LoginType": {
+            "type": "string",
+            "enum": [
+                "OTP",
+                "PASSWORD"
+            ]
+        },
+        "InitiateLoginReq": {
+            "required": [
+                "_medium",
+                "__type",
+                "__value"
+            ],
+            "type": "object",
+            "properties": {
+                "__type": {
+                    "$ref": "#/definitions/LoginType"
+                },
+                "_medium": {
+                    "$ref": "#/definitions/Medium"
+                },
+                "__value": {
+                    "type": "string"
+                }
+            }
+        },
+        "PassApplicationId": {
+            "required": [
+                "_getPassApplicationId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getPassApplicationId": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdatePassReq": {
+            "required": [
+                "action"
+            ],
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/PassAction"
+                }
+            }
+        },
+        "CustomerId": {
+            "required": [
+                "_getCustomerId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getCustomerId": {
+                    "type": "string"
+                }
+            }
+        },
+        "CreateOrganizationReq": {
+            "required": [
+                "_name",
+                "_gstin",
+                "_city",
+                "_state",
+                "_country",
+                "_pincode",
+                "_address"
+            ],
+            "type": "object",
+            "properties": {
+                "_country": {
+                    "type": "string"
+                },
+                "_pincode": {
+                    "type": "string"
+                },
+                "_city": {
+                    "type": "string"
+                },
+                "_gstin": {
+                    "type": "string"
+                },
+                "_name": {
+                    "type": "string"
+                },
+                "_state": {
+                    "type": "string"
+                },
+                "_address": {
+                    "type": "string"
+                }
+            }
+        },
+        "PassType": {
+            "type": "string",
+            "enum": [
+                "INDIVIDUAL",
+                "ORGANIZATION"
+            ]
+        },
+        "UserId": {
+            "required": [
+                "_getUserId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getUserId": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateOrganizationReq": {
+            "required": [
+                "status"
+            ],
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/Status"
+                }
+            }
+        },
+        "UpdatePassApplicationReq": {
+            "required": [
+                "_status",
+                "_approvedCount",
+                "_remarks"
+            ],
+            "type": "object",
+            "properties": {
+                "_approvedCount": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "_remarks": {
+                    "type": "string"
+                },
+                "_status": {
+                    "$ref": "#/definitions/Status"
+                }
+            }
+        },
+        "PassApplicationRes": {
+            "required": [
+                "passApplication"
+            ],
+            "type": "object",
+            "properties": {
+                "passApplication": {
+                    "$ref": "#/definitions/PassApplicationT"
+                }
+            }
+        },
+        "OrganizationT": {
+            "required": [
+                "_id",
+                "_name",
+                "_gstin",
+                "_status",
+                "_verified",
+                "_BusinessAddressId",
+                "_info",
+                "_createdAt",
+                "_updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "_createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_BusinessAddressId": {
+                    "$ref": "#/definitions/BusinessAddressId"
+                },
+                "_id": {
+                    "$ref": "#/definitions/OrganizationId"
+                },
+                "_gstin": {
+                    "type": "string"
+                },
+                "_name": {
+                    "type": "string"
+                },
+                "_verified": {
+                    "type": "boolean"
+                },
+                "_updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_status": {
+                    "$ref": "#/definitions/Status"
+                },
+                "_info": {
+                    "type": "string"
+                }
+            }
+        },
+        "ListPassApplicationRes": {
+            "required": [
+                "passApplications"
+            ],
+            "type": "object",
+            "properties": {
+                "passApplications": {
+                    "items": {
+                        "$ref": "#/definitions/PassApplicationT"
+                    },
+                    "type": "array"
+                }
+            }
+        },
+        "LoginReq": {
+            "required": [
+                "_medium",
+                "__type",
+                "__value",
+                "_action"
+            ],
+            "type": "object",
+            "properties": {
+                "__type": {
+                    "$ref": "#/definitions/LoginType"
+                },
+                "_action": {
+                    "$ref": "#/definitions/LoginMode"
+                },
+                "_medium": {
+                    "$ref": "#/definitions/Medium"
+                },
+                "__value": {
+                    "type": "string"
+                }
+            }
+        },
+        "PassT": {
+            "required": [
+                "_id",
+                "_CustomerId",
+                "_OrganizationId",
+                "_status",
+                "_fromDate",
+                "_toDate",
+                "_type",
+                "_PassApplicationId",
+                "_FromLocationId",
+                "_ToLocationId",
+                "_CreatedBy",
+                "_info",
+                "_createdAt",
+                "_updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "_CreatedBy": {
+                    "$ref": "#/definitions/CustomerId"
+                },
+                "_ToLocationId": {
+                    "$ref": "#/definitions/LocationId"
+                },
+                "_type": {
+                    "$ref": "#/definitions/PassType"
+                },
+                "_createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_id": {
+                    "$ref": "#/definitions/PassId"
+                },
+                "_toDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_CustomerId": {
+                    "$ref": "#/definitions/CustomerId"
+                },
+                "_updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_fromDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "_status": {
+                    "$ref": "#/definitions/Status"
+                },
+                "_info": {
+                    "type": "string"
+                },
+                "_PassApplicationId": {
+                    "$ref": "#/definitions/PassApplicationId"
+                },
+                "_FromLocationId": {
+                    "$ref": "#/definitions/LocationId"
+                },
+                "_OrganizationId": {
+                    "$ref": "#/definitions/OrganizationId"
+                }
+            }
+        },
+        "LocationId": {
+            "required": [
+                "_getLocationId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getLocationId": {
+                    "type": "string"
+                }
+            }
+        },
+        "LoginMode": {
+            "type": "string",
+            "enum": [
+                "VERIFY",
+                "RESEND"
+            ]
+        },
+        "PassApplicationType": {
+            "type": "string",
+            "enum": [
+                "SELF",
+                "SPONSOROR",
+                "BULKSPONSOROR"
+            ]
+        },
+        "GetCustomerRes": {
+            "required": [
+                "customer"
+            ],
+            "type": "object",
+            "properties": {
+                "customer": {
+                    "$ref": "#/definitions/CustomerT"
+                }
+            }
+        },
+        "OrganizationId": {
+            "required": [
+                "_getOrganizationId"
+            ],
+            "type": "object",
+            "properties": {
+                "_getOrganizationId": {
+                    "type": "string"
+                }
+            }
+        },
+        "TravellerIDType": {
+            "type": "string",
+            "enum": [
+                "MOBILE",
+                "AADHAR"
+            ]
+        },
+        "CreatePassApplicationReq": {
+            "required": [
+                "__CustomerId",
+                "_fromDate",
+                "_toDate",
+                "_toLocation",
+                "__type"
+            ],
+            "type": "object",
+            "properties": {
+                "_fromLocation": {
+                    "type": "string"
+                },
+                "_toDate": {
+                    "type": "string"
+                },
+                "__type": {
+                    "$ref": "#/definitions/PassApplicationType"
+                },
+                "_travellerIDType": {
+                    "$ref": "#/definitions/TravellerIDType"
+                },
+                "_fromDate": {
+                    "type": "string"
+                },
+                "_travellerName": {
+                    "type": "string"
+                },
+                "__CustomerId": {
+                    "type": "string"
+                },
+                "_travellerID": {
+                    "type": "string"
+                },
+                "_toLocation": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "paths": {
+        "/v1/passApplication/{passApplicationId}": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "404": {
+                        "description": "`passApplicationId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/PassApplicationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "passApplicationId",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdatePassApplicationReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            },
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`passApplicationId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/PassApplicationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "passApplicationId",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/v1/token/{tokenId}": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "404": {
+                        "description": "`tokenId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/InitiateLoginRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "tokenId",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/LoginReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
+        "/v1/pass/list": {
+            "post": {
+                "responses": {
+                    "400": {
+                        "description": "Invalid `type` or `status` or `offset` or `limit` or `identifier` or `identifierType` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/ListPassRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "identifierType",
+                        "type": "string",
+                        "enum": [
+                            "MOBILENUMBER",
+                            "CUSTOMERID",
+                            "PASSAPPLICATIONID"
+                        ]
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "identifier",
+                        "type": "string"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "limit",
+                        "type": "integer"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "offset",
+                        "type": "integer"
+                    },
+                    {
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "ACTIVE",
+                                "REVOKED",
+                                "EXPIRED"
+                            ]
+                        },
+                        "in": "query",
+                        "name": "status",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "INDIVIDUAL",
+                                "ORGANIZATION"
+                            ]
+                        },
+                        "in": "query",
+                        "name": "type",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    }
+                ]
+            }
+        },
+        "/v1/passApplication": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/PassApplicationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreatePassApplicationReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            },
+            "get": {
+                "responses": {
+                    "400": {
+                        "description": "Invalid `type` or `status` or `offset` or `limit` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/ListPassApplicationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "limit",
+                        "type": "integer"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "offset",
+                        "type": "integer"
+                    },
+                    {
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "PENDING",
+                                "APPROVED",
+                                "REJECTED",
+                                "EXPIRED"
+                            ]
+                        },
+                        "in": "query",
+                        "name": "status",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "INDIVIDUAL",
+                                "ORGANIZATION"
+                            ]
+                        },
+                        "in": "query",
+                        "name": "type",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    }
+                ]
+            }
+        },
+        "/v1/organization": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/OrganizationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateOrganizationReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            },
+            "get": {
+                "responses": {
+                    "400": {
+                        "description": "Invalid `type` or `offset` or `limit` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/ListOrganizationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "limit",
+                        "type": "integer"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "offset",
+                        "type": "integer"
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "type",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/v1/token": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/InitiateLoginRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/InitiateLoginReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
+        "/v1": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ]
+            }
+        },
+        "/v1/pass/{passId}": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "404": {
+                        "description": "`passId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/PassRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "passId",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdatePassReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            },
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`passId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/PassRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "passId",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/v1/organization/{organizationId}": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "404": {
+                        "description": "`organizationId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/OrganizationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "organizationId",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateOrganizationReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            },
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`organizationId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/OrganizationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "organizationId",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/v1/customer/{customerId}": {
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`customerId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/GetCustomerRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "customerId",
+                        "type": "string"
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -3,16 +3,18 @@
 
 module Beckn.Types.Storage.PassApplication where
 
+import           Servant.Swagger
+import Data.Swagger
 import Beckn.Types.App
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Data.ByteString.Lazy as BSL
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.MySQL
 import EulerHS.Prelude
-import Data.Aeson
 import Servant.API
 
 data Status
@@ -20,7 +22,7 @@ data Status
   | APPROVED
   | REJECTED
   | EXPIRED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -29,7 +31,7 @@ instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData Status where
-  parseUrlPiece  = parseHeader . DT.encodeUtf8
+  parseUrlPiece = parseHeader . DT.encodeUtf8
     --case T.toLower x of
       --"pending" -> Right PENDING
       --"approved" -> Right APPROVED
@@ -39,11 +41,12 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
+instance ToParamSchema Status
 
 data PassType
   = INDIVIDUAL
   | ORGANIZATION
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -51,8 +54,10 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
 instance FromBackendRow MySQL PassType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance ToParamSchema PassType
+
 instance FromHttpApiData PassType where
-  parseUrlPiece  = parseHeader . DT.encodeUtf8
+  parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
@@ -91,6 +96,8 @@ instance B.Table PassApplicationT where
 deriving instance Show PassApplication
 
 deriving instance Eq PassApplication
+
+instance ToSchema PassApplication
 
 instance ToJSON PassApplication where
   toJSON = genericToJSON stripAllLensPrefixOptions

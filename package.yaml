@@ -52,6 +52,7 @@ default-extensions:
 
 dependencies:
 - aeson
+- aeson-pretty
 - base >= 4.7 && < 5
 - beam-core
 - beam-mysql
@@ -60,8 +61,11 @@ dependencies:
 - euler-hs
 - http-client
 - http-types
+- lens
 - servant
 - servant-server
+- servant-swagger
+- swagger2
 - text
 - vault
 - wai
