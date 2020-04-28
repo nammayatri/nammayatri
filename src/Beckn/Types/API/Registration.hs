@@ -1,15 +1,15 @@
 module Beckn.Types.API.Registration where
 
-import Beckn.Types.API.Common
-import Beckn.Types.Storage.Customer
-import EulerHS.Prelude
-import Servant.Swagger
-import Data.Swagger
+import           Beckn.Types.Common
+import           Beckn.Types.Storage.Customer
+import           Data.Swagger
+import           EulerHS.Prelude
+import           Servant.Swagger
 
 data InitiateLoginReq =
   InitiateLoginReq
     { _medium :: Medium
-    , __type :: LoginType
+    , __type  :: LoginType
     , __value :: Text
     }
   deriving (Generic, ToSchema)
@@ -28,7 +28,7 @@ data InitiateLoginRes =
 data LoginReq =
   LoginReq
     { _medium :: Medium
-    , __type :: LoginType
+    , __type  :: LoginType
     , __value :: String
     , _action :: LoginMode
     }
@@ -40,6 +40,6 @@ instance FromJSON LoginReq where
 data LoginRes =
   LoginRes
     { registrationToken :: Text
-    , customer :: Customer
+    , customer          :: Customer
     }
   deriving (Generic, ToJSON, ToSchema)

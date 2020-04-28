@@ -1,27 +1,27 @@
 module Beckn.App.Routes where
 
-import qualified Beckn.Data.Accessor             as Accessor
-import qualified Beckn.Product.Customer          as Customer
-import qualified Beckn.Product.HealthCheck       as HealthCheck
-import qualified Beckn.Product.Organization      as Organization
-import qualified Beckn.Product.Pass              as Pass
-import qualified Beckn.Product.PassApplication   as PassApplication
-import qualified Beckn.Product.Quota             as Quota
-import qualified Beckn.Product.Registration      as Registration
-import           Beckn.Types.API.Common
+import qualified Beckn.Data.Accessor                 as Accessor
+import qualified Beckn.Product.Customer              as Customer
+import qualified Beckn.Product.HealthCheck           as HealthCheck
+import qualified Beckn.Product.Organization          as Organization
+import qualified Beckn.Product.Pass                  as Pass
+import qualified Beckn.Product.PassApplication       as PassApplication
+import qualified Beckn.Product.Quota                 as Quota
+import qualified Beckn.Product.Registration          as Registration
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
-import qualified Beckn.Types.API.Quota           as Quota
+import qualified Beckn.Types.API.Quota               as Quota
 import           Beckn.Types.API.Registration
 import           Beckn.Types.App
+import           Beckn.Types.Common
 import           Data.Aeson
-import qualified Data.Vault.Lazy                 as V
+import qualified Data.Vault.Lazy                     as V
 import           EulerHS.Prelude
 import           Servant
 
-import qualified Beckn.Types.Storage.Pass as SP
+import qualified Beckn.Types.Storage.Pass            as SP
 import qualified Beckn.Types.Storage.PassApplication as PA
 
 type EPassAPIs
@@ -69,7 +69,7 @@ type PassApplicationAPIs
       :<|> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> QueryParams "status" PA.Status
-           :> QueryParams "type" PA.PassType
+           :> QueryParams "type" PassType
            :> Get '[ JSON] ListPassApplicationRes
       :<|> Capture "passApplicationId" Text :> Get '[ JSON] PassApplicationRes
       :<|> Capture "passApplicationId" Text
@@ -130,7 +130,7 @@ type PassAPIs
           :> QueryParam "limit" Int
           :> QueryParam "offset" Int
           :> QueryParams "status" SP.Status
-          :> QueryParams "type" SP.PassType
+          :> QueryParams "type" PassType
           :> Post '[ JSON] ListPassRes
      )
 

@@ -1,9 +1,9 @@
 module Beckn.Product.Organization where
 
 import qualified Beckn.Data.Accessor          as Accessor
-import           Beckn.Types.API.Common
 import           Beckn.Types.API.Organization
 import           Beckn.Types.App
+import           Beckn.Types.Common
 import           Data.Aeson
 import           EulerHS.Prelude
 

@@ -1,9 +1,9 @@
 module Beckn.Types.API.Pass where
 
-import EulerHS.Prelude
-import Beckn.Types.Storage.Pass
-import Beckn.Types.API.Common
-import Data.Swagger
+import           Beckn.Types.Common
+import           Beckn.Types.Storage.Pass
+import           Data.Swagger
+import           EulerHS.Prelude
 
 data PassRes =
   PassRes
@@ -18,10 +18,10 @@ data UpdatePassReq =
 data ListPassReq =
   ListPassReq
     { _identifierType :: PassIDType
-    , _identifier :: Text
-    , _limit :: Int
-    , _offset :: Int
-    , __type ::  PassType
+    , _identifier     :: Text
+    , _limit          :: Int
+    , _offset         :: Int
+    , __type          ::  PassType
     } deriving (Generic, ToSchema)
 
 instance FromJSON ListPassReq where

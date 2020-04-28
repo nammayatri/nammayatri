@@ -1,22 +1,24 @@
 module Beckn.Types.API.PassApplication where
 
-import Beckn.Types.API.Common
-import Beckn.Types.Storage.PassApplication
-import Data.Default
-import EulerHS.Prelude
-import Data.Swagger
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import           Beckn.Types.Storage.PassApplication
+import           Data.Default
+import           Data.Swagger
+import           Data.Time.LocalTime
+import           EulerHS.Prelude
 
 data CreatePassApplicationReq =
   CreatePassApplicationReq
-    { __CustomerId :: Text
-    , _fromDate :: Text
-    , _toDate :: Text
-    , _fromLocation :: Maybe Text
-    , _toLocation :: Text
-    , _travellerName :: Maybe Text
-    , _travellerID :: Maybe Text
+    { _CustomerId      :: CustomerId
+    , _fromDate        :: LocalTime
+    , _toDate          :: LocalTime
+    , _fromLocation    :: Maybe Location
+    , _toLocation      :: Location
+    , _travellerName   :: Maybe Text
+    , _travellerID     :: Maybe Text
     , _travellerIDType :: Maybe TravellerIDType
-    , __type :: PassApplicationType
+    , _type            :: PassApplicationType
     }
   deriving (Generic, ToSchema)
 
@@ -38,9 +40,9 @@ data ListPassApplicationRes =
 
 data UpdatePassApplicationReq =
   UpdatePassApplicationReq
-    { _status :: Status
+    { _status        :: Status
     , _approvedCount :: Int
-    , _remarks :: Text
+    , _remarks       :: Text
     } deriving (Generic, ToSchema)
 
 instance FromJSON UpdatePassApplicationReq where

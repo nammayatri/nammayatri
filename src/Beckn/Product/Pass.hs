@@ -1,9 +1,9 @@
 module Beckn.Product.Pass where
 
-import qualified Beckn.Data.Accessor    as Accessor
-import           Beckn.Types.API.Common
+import qualified Beckn.Data.Accessor      as Accessor
 import           Beckn.Types.API.Pass
 import           Beckn.Types.App
+import           Beckn.Types.Common
 import           Beckn.Types.Storage.Pass
 import           Data.Aeson
 import           EulerHS.Prelude
