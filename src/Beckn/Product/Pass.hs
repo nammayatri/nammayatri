@@ -4,6 +4,7 @@ import qualified Beckn.Data.Accessor    as Accessor
 import           Beckn.Types.API.Common
 import           Beckn.Types.API.Pass
 import           Beckn.Types.App
+import           Beckn.Types.Storage.Pass
 import           Data.Aeson
 import           EulerHS.Prelude
 
@@ -13,5 +14,13 @@ getPassById regToken passId = undefined
 updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId req = undefined
 
-listPass :: Maybe Text -> ListPassReq -> FlowHandler ListPassRes
-listPass regToken req = undefined
+listPass ::
+  Maybe Text
+  -> Maybe PassIDType
+  -> Maybe Text
+  -> Maybe Int
+  -> Maybe Int
+  -> [Status]
+  -> [PassType]
+  -> FlowHandler ListPassRes
+listPass regToken limitM offsetM statusM typeM = undefined

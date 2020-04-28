@@ -21,6 +21,9 @@ import qualified Data.Vault.Lazy                 as V
 import           EulerHS.Prelude
 import           Servant
 
+import qualified Beckn.Types.Storage.Pass as SP
+import qualified Beckn.Types.Storage.PassApplication as PA
+
 type EPassAPIs
    = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs)
 
@@ -59,8 +62,11 @@ type PassApplicationAPIs
    :> Header "registrationToken" Text
    :> ( ReqBody '[ JSON] CreatePassApplicationReq
         :> Post '[ JSON] PassApplicationRes
-      :<|> ReqBody '[ JSON] ListPassApplicationReq
-           :> Post '[ JSON] ListPassApplicationRes
+      :<|> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> QueryParams "status" PA.Status
+           :> QueryParams "type" PA.PassType
+           :> Get '[ JSON] ListPassApplicationRes
       :<|> Capture "passApplicationId" Text :> Get '[ JSON] PassApplicationRes
       :<|> Capture "passApplicationId" Text
            :> ReqBody '[ JSON] UpdatePassApplicationReq
@@ -80,8 +86,10 @@ type OrganizationAPIs
    :> Header "registrationToken" Text
    :> ( ReqBody '[ JSON] CreateOrganizationReq :> Post '[ JSON] OrganizationRes
        :<|> Capture "organizationId" Text :> Get '[ JSON] OrganizationRes
-       :<|> ReqBody '[ JSON] ListOrganizationReq
-            :> Post '[ JSON] ListOrganizationRes
+       :<|> QueryParam "limit" Int
+            :> QueryParam "offset" Int
+            :> QueryParam "type" Text
+            :> Get '[ JSON] ListOrganizationRes
        :<|> Capture "organizationId" Text
             :> ReqBody '[ JSON] UpdateOrganizationReq
             :> Post '[ JSON] OrganizationRes
@@ -113,7 +121,12 @@ type PassAPIs
           :> ReqBody '[ JSON] UpdatePassReq
           :> Post '[ JSON] PassRes
      :<|> "list"
-          :> ReqBody '[ JSON] ListPassReq
+          :> QueryParam "identifierType" PassIDType
+          :> QueryParam "identifier" Text
+          :> QueryParam "limit" Int
+          :> QueryParam "offset" Int
+          :> QueryParams "status" SP.Status
+          :> QueryParams "type" SP.PassType
           :> Post '[ JSON] ListPassRes
      )
 

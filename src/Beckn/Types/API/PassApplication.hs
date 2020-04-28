@@ -29,18 +29,6 @@ data PassApplicationRes =
   deriving (Generic, ToJSON)
 
 ------ List Pass Application ------
-data ListPassApplicationReq =
-  ListPassApplicationReq
-    { _limit :: Int
-    , _offset :: Int
-    , _status :: [Status] -- Empty for all kind of applications
-    , __type :: [PassType]
-    }
-  deriving (Generic)
-
-instance FromJSON ListPassApplicationReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
 data ListPassApplicationRes =
   ListPassApplicationRes
     { passApplications :: [PassApplication]

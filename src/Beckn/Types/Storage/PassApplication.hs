@@ -5,11 +5,15 @@ module Beckn.Types.Storage.PassApplication where
 
 import Beckn.Types.App
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import qualified Data.ByteString.Lazy as BSL
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.MySQL
 import EulerHS.Prelude
+import Data.Aeson
+import Servant.API
 
 data Status
   = PENDING
@@ -24,6 +28,18 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance FromHttpApiData Status where
+  parseUrlPiece  = parseHeader . DT.encodeUtf8
+    --case T.toLower x of
+      --"pending" -> Right PENDING
+      --"approved" -> Right APPROVED
+      --"rejected" -> Righ REJECTED
+      --"expired" -> Right EXPIRED
+      --_ -> Left x
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+
+
 data PassType
   = INDIVIDUAL
   | ORGANIZATION
@@ -34,6 +50,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
 
 instance FromBackendRow MySQL PassType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData PassType where
+  parseUrlPiece  = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data PassApplicationT f =
   PassApplication

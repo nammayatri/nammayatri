@@ -3,6 +3,7 @@ module Beckn.Product.PassApplication where
 import qualified Beckn.Data.Accessor             as Accessor
 import           Beckn.Types.API.Common
 import           Beckn.Types.API.PassApplication
+import           Beckn.Types.Storage.PassApplication
 import           Beckn.Types.App
 import           Data.Aeson
 import           EulerHS.Prelude
@@ -12,8 +13,13 @@ createPassApplication ::
 createPassApplication regToken req = undefined
 
 listPassApplication ::
-  Maybe Text -> ListPassApplicationReq -> FlowHandler ListPassApplicationRes
-listPassApplication regToken req = undefined
+  Maybe Text
+  -> Maybe Int
+  -> Maybe Int
+  -> [Status]
+  -> [PassType]
+  -> FlowHandler ListPassApplicationRes
+listPassApplication regToken offsetM limitM status passType = undefined
 
 getPassApplicationById :: Maybe Text -> Text -> FlowHandler PassApplicationRes
 getPassApplicationById regToken applicationId = undefined

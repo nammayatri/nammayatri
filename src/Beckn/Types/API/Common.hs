@@ -2,6 +2,11 @@ module Beckn.Types.API.Common where
 
 import Data.Default
 import EulerHS.Prelude
+import Data.Aeson
+import Servant
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import qualified Data.ByteString.Lazy as BSL
 
 data ErrorResponse =
   ErrorResponse
@@ -53,3 +58,8 @@ data PassIDType
   | CUSTOMERID
   | PASSAPPLICATIONID
   deriving (Generic, FromJSON)
+
+instance FromHttpApiData PassIDType where
+  parseUrlPiece  = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
