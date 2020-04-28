@@ -5,7 +5,7 @@
 
 module Beckn.Types.Storage.User where
 
-import           Beckn.Utils.Common
+import qualified Beckn.Utils.Defaults      as Defaults
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text                 as T
@@ -23,7 +23,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
 
 data Role = ADMIN | MANAGER | VIEWER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -46,7 +45,7 @@ data UserT f =
     , _role           :: B.C f Role
     , _verified       :: B.C f Bool
     , _status         :: B.C f Status
-    , _info           :: B.C f Text
+    , _info           :: B.C f (Maybe Text)
     , _createdAt      :: B.C f LocalTime
     , _updatedAt      :: B.C f LocalTime
     }
@@ -63,18 +62,18 @@ instance B.Table UserT where
 
 instance Default User where
   def = User
-    { _id             = ""
-    , _organizationId = ""
-    , _name           = ""
-    , _username       = ""
+    { _id             = Defaults.id
+    , _organizationId = Defaults.orgId
+    , _name           = Defaults.user
+    , _username       = Defaults.user
     , _password       = ""
-    , _email          = ""
+    , _email          = Defaults.email
     , _role           = VIEWER
     , _verified       = False
     , _status         = ACTIVE
-    , _info           = ""
-    , _createdAt      =  defaultLocalTime
-    , _updatedAt      =  defaultLocalTime
+    , _info           = Nothing
+    , _createdAt      = Defaults.localTime
+    , _updatedAt      = Defaults.localTime
     }
 
 deriving instance Show User
