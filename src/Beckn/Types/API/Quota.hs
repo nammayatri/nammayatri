@@ -19,11 +19,18 @@ data CreateReq =
   }
   deriving (Show, Generic, ToJSON)
 
+instance FromJSON CreateReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+
 data CreateRes =
   CreateRes
   { _quota :: Quota
   }
   deriving (Show, Generic, FromJSON, Default)
+
+instance ToJSON CreateRes where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 ----------
 -- Update
@@ -36,20 +43,26 @@ data UpdateReq =
   }
   deriving (Show, Generic, ToJSON)
 
+instance FromJSON UpdateReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
 data UpdateRes =
   UpdateRes
   { _quota :: Quota
   }
   deriving (Show, Generic, FromJSON, Default)
 
-----------
--- List
-----------
--- _limit, _offset and _type
--- present in queryParams
+instance ToJSON UpdateRes where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 data ListRes =
   ListRes
   { _quotas :: [Quota]
   }
   deriving (Show, Generic, FromJSON, Default)
+
+instance ToJSON ListRes where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+
+type GetRes = Quota

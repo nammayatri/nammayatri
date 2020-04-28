@@ -29,7 +29,15 @@ import qualified Beckn.Types.Storage.Pass            as SP
 import qualified Beckn.Types.Storage.PassApplication as PA
 
 type EPassAPIs
-   = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs :<|> UserAPIS :<|> LocationBlacklistAPIS)
+   = "v1" :> (Get '[ JSON] Text
+   :<|> RegistrationAPIs
+   :<|> PassApplicationAPIs
+   :<|> OrganizationAPIs
+   :<|> CustomerAPIs
+   :<|> PassAPIs
+   :<|> UserAPIS
+   :<|> QuotaAPIS
+   :<|> LocationBlacklistAPIS)
 
 epassAPIs :: Proxy EPassAPIs
 epassAPIs = Proxy
@@ -43,6 +51,7 @@ epassServer' key =
   :<|> customerFlow
   :<|> passFlow
   :<|> userFlow
+  :<|> quotaFlow
   :<|> locationBlacklistFlow
 
 ---- Registration Flow ------
@@ -160,12 +169,15 @@ type QuotaAPIS
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
         :> Get '[JSON] Quota.ListRes
+      :<|> Capture ":id" QuotaId
+        :> Get '[JSON] Quota.GetRes
       )
 
 quotaFlow registrationToken =
   Quota.create registrationToken
   :<|> Quota.update registrationToken
   :<|> Quota.list registrationToken
+  :<|> Quota.get registrationToken
 
 ------ User Flow ----------
 type UserAPIS
