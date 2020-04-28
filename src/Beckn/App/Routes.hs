@@ -175,9 +175,12 @@ type UserAPIS
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
         :> Get '[JSON] User.ListRes
+      :<|> Capture ":id" UserId
+        :> Get '[JSON] User.GetRes
       )
 
 userFlow registrationToken =
   User.create registrationToken
   :<|> User.update registrationToken
   :<|> User.list registrationToken
+  :<|> User.get registrationToken

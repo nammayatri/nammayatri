@@ -5,7 +5,9 @@
 
 module Beckn.Types.Storage.User where
 
+import           Beckn.Utils.Common
 import           Data.Aeson
+import           Data.Default
 import qualified Data.Text                 as T
 import           Data.Time
 import qualified Database.Beam             as B
@@ -59,11 +61,28 @@ instance B.Table UserT where
                                deriving (Generic, B.Beamable)
   primaryKey = UserPrimaryKey . _id
 
+instance Default User where
+  def = User
+    { _id             = ""
+    , _organizationId = ""
+    , _name           = ""
+    , _username       = ""
+    , _password       = ""
+    , _email          = ""
+    , _role           = VIEWER
+    , _verified       = False
+    , _status         = ACTIVE
+    , _info           = ""
+    , _createdAt      =  defaultLocalTime
+    , _updatedAt      =  defaultLocalTime
+    }
+
 deriving instance Show User
 
 deriving instance Eq User
 
-deriving instance ToJSON User
+instance ToJSON User where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 deriving instance FromJSON User
 

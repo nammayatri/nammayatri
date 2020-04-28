@@ -1,11 +1,10 @@
 module Beckn.Types.API.User where
 
 import           Beckn.Types.Storage.User
+import           Data.Default
 import           Data.Time.LocalTime
 import           EulerHS.Prelude
-----------
--- Create
-----------
+
 data CreateReq =
   CreateReq
   { _name     :: Text
@@ -24,11 +23,11 @@ data CreateRes =
   CreateRes
   { _user :: User
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, Default)
 
-----------
--- Update
-----------
+instance ToJSON CreateRes where
+  toJSON = genericToJSON stripLensPrefixOptions
+
 data UpdateReq =
   UpdateReq
   { _name   :: Maybe Text
@@ -45,13 +44,19 @@ data UpdateRes =
   UpdateRes
   { _user :: User
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, Default)
 
-----------
--- List
-----------
+instance ToJSON UpdateRes where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+
 data ListRes =
   ListRes
   { _users :: [User]
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON, Default)
+
+instance ToJSON ListRes where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+type GetRes = User
