@@ -18,7 +18,7 @@ email :: Text
 email = "default@juspay.in"
 
 orgId :: Text
-orgId = "default_organization_id"
+orgId = "9617486e522f44c6b6d54f6ca0d2731d"
 
 user :: Text
 user = "beckn_user"

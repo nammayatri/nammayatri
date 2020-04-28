@@ -1,6 +1,8 @@
 module Beckn.Types.API.Quota where
 
+import           Beckn.Types.Common
 import           Beckn.Types.Storage.Quota
+import           Data.Default
 import           Data.Time.LocalTime
 import           EulerHS.Prelude
 ----------
@@ -9,9 +11,9 @@ import           EulerHS.Prelude
 data CreateReq =
   CreateReq
   { _maxAllowed :: Int
-  , _type       :: Text
+  , _type       :: QuotaType
   , _EntityId   :: Text
-  , _entityType :: Text
+  , _entityType :: EntityType
   , _startTime  :: LocalTime
   , _endTime    :: LocalTime
   }
@@ -21,7 +23,7 @@ data CreateRes =
   CreateRes
   { _quota :: Quota
   }
-  deriving (Show, Generic, FromJSON)
+  deriving (Show, Generic, FromJSON, Default)
 
 ----------
 -- Update
@@ -38,7 +40,7 @@ data UpdateRes =
   UpdateRes
   { _quota :: Quota
   }
-  deriving (Show, Generic, FromJSON)
+  deriving (Show, Generic, FromJSON, Default)
 
 ----------
 -- List
@@ -50,4 +52,4 @@ data ListRes =
   ListRes
   { _quotas :: [Quota]
   }
-  deriving (Show, Generic, FromJSON)
+  deriving (Show, Generic, FromJSON, Default)

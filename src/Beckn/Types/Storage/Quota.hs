@@ -5,19 +5,23 @@
 
 module Beckn.Types.Storage.Quota where
 
+import           Beckn.Types.Common
+import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
+import           Data.Default
 import           Data.Time
 import           EulerHS.Prelude
 
-import qualified Database.Beam   as B
+
+import qualified Database.Beam        as B
 
 data QuotaT f =
   Quota
     { _id         :: B.C f Text
     , _maxAllowed :: B.C f Int
-    , _type       :: B.C f Text
+    , _type       :: B.C f QuotaType
     , _EntityId   :: B.C f Text
-    , _entityType :: B.C f Text
+    , _entityType :: B.C f EntityType
     , _startTime  :: B.C f LocalTime
     , _endTime    :: B.C f LocalTime
     , _createdAt  :: B.C f LocalTime
@@ -34,11 +38,26 @@ instance B.Table QuotaT where
                                deriving (Generic, B.Beamable)
   primaryKey = QuotaPrimaryKey . _id
 
+
+instance Default Quota where
+  def = Quota
+    { _id         = Defaults.id
+    , _maxAllowed = 1000
+    , _type       = HOURLY
+    , _EntityId   = Defaults.orgId
+    , _entityType = ORG
+    , _startTime  = Defaults.localTime
+    , _endTime    = Defaults.localTime
+    , _createdAt  = Defaults.localTime
+    , _updatedAt  = Defaults.localTime
+    }
+
+instance ToJSON Quota where
+  toJSON = genericToJSON stripLensPrefixOptions
+
 deriving instance Show Quota
 
 deriving instance Eq Quota
-
-deriving instance ToJSON Quota
 
 deriving instance FromJSON Quota
 

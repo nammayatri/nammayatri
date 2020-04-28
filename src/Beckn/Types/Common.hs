@@ -1,28 +1,28 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Beckn.Types.Common where
 
-import Beckn.Utils.TH
-import Data.Aeson
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as BSL
-import Data.Default
-import Data.Swagger
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
-import EulerHS.Prelude
-import Servant
-import Servant.Swagger
+import           Beckn.Utils.TH
+import           Data.Aeson
+import qualified Data.Aeson                as Aeson
+import qualified Data.ByteString.Lazy      as BSL
+import           Data.Default
+import           Data.Swagger
+import qualified Data.Text                 as T
+import qualified Data.Text.Encoding        as DT
+import           Database.Beam.Backend.SQL
+import           Database.Beam.MySQL
+import           EulerHS.Prelude
+import           Servant
+import           Servant.Swagger
 
 data ErrorResponse =
   ErrorResponse
-    { status :: Text
-    , responseCode :: Text
+    { status          :: Text
+    , responseCode    :: Text
     , responseMessage :: Text
     }
   deriving (Show, Generic, ToJSON, ToSchema)
@@ -104,17 +104,17 @@ instance FromHttpApiData LocationType where
 
 data Location =
   Location
-    { _type :: LocationType
-    , _lat :: Maybe Double
-    , _long :: Maybe Double
-    , _ward :: Maybe Text
+    { _type     :: LocationType
+    , _lat      :: Maybe Double
+    , _long     :: Maybe Double
+    , _ward     :: Maybe Text
     , _district :: Maybe Text
-    , _city :: Maybe Text
-    , _state :: Maybe Text
-    , _country :: Maybe Text
-    , _pincode :: Maybe Text
-    , _address :: Maybe Text
-    , _bound :: Maybe Bound
+    , _city     :: Maybe Text
+    , _state    :: Maybe Text
+    , _country  :: Maybe Text
+    , _pincode  :: Maybe Text
+    , _address  :: Maybe Text
+    , _bound    :: Maybe Bound
     }
   deriving (Show, Generic, ToSchema)
 
@@ -135,3 +135,36 @@ instance ToSchema Bound where
 deriving newtype instance HasSqlValueSyntax MysqlValueSyntax Bound
 
 deriving newtype instance FromBackendRow MySQL Bound
+
+
+data QuotaType
+  = DAILY
+  | HOURLY
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be QuotaType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL QuotaType where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData QuotaType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+
+data EntityType
+  = LOCATION
+  | ORG
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be EntityType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL EntityType where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData EntityType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
