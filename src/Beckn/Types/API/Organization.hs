@@ -7,7 +7,7 @@ import Data.Swagger
 data CreateOrganizationReq =
   CreateOrganizationReq
     { _name :: Text
-    , _gstin :: Text -- Maybe might
+    , _gstin :: Maybe Text
     , _city :: Text
     , _state :: Text
     , _country :: Text
