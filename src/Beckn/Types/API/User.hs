@@ -1,5 +1,6 @@
 module Beckn.Types.API.User where
 
+import           Beckn.Types.App
 import           Beckn.Types.Storage.User
 import           Data.Default
 import           Data.Time.LocalTime
@@ -7,10 +8,11 @@ import           EulerHS.Prelude
 
 data CreateReq =
   CreateReq
-  { _name     :: Text
-  , _username :: Text
-  , _email    :: Text
-  , _role     :: Text
+  { _name           :: Text
+  , _username       :: Text
+  , _email          :: Text
+  , _role           :: Role
+  , _organizationId :: OrganizationId
   }
   deriving (Show, Generic, ToJSON)
 
@@ -31,9 +33,9 @@ instance ToJSON CreateRes where
 data UpdateReq =
   UpdateReq
   { _name   :: Maybe Text
-  , _email  :: Text
-  , _role   :: Text
-  , _status :: Text
+  , _email  :: Maybe Text
+  , _role   :: Maybe Role
+  , _status :: Status
   }
   deriving (Show, Generic, ToJSON)
 

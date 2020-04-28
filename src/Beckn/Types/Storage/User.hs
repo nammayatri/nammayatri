@@ -5,6 +5,7 @@
 
 module Beckn.Types.Storage.User where
 
+import           Beckn.Types.App
 import qualified Beckn.Utils.Defaults      as Defaults
 import           Data.Aeson
 import           Data.Default
@@ -36,8 +37,8 @@ instance FromBackendRow MySQL Role where
 
 data UserT f =
   User
-    { _id             :: B.C f Text
-    , _organizationId :: B.C f Text
+    { _id             :: B.C f UserId
+    , _organizationId :: B.C f OrganizationId
     , _name           :: B.C f Text
     , _username       :: B.C f Text
     , _password       :: B.C f Text
@@ -56,14 +57,14 @@ type User = UserT Identity
 type UserPrimaryKey = B.PrimaryKey UserT Identity
 
 instance B.Table UserT where
-  data PrimaryKey UserT f = UserPrimaryKey (B.C f Text)
+  data PrimaryKey UserT f = UserPrimaryKey (B.C f UserId)
                                deriving (Generic, B.Beamable)
   primaryKey = UserPrimaryKey . _id
 
 instance Default User where
   def = User
-    { _id             = Defaults.id
-    , _organizationId = Defaults.orgId
+    { _id             = UserId Defaults.id
+    , _organizationId = OrganizationId Defaults.orgId
     , _name           = Defaults.user
     , _username       = Defaults.user
     , _password       = ""
@@ -84,6 +85,10 @@ instance ToJSON User where
   toJSON = genericToJSON stripLensPrefixOptions
 
 deriving instance FromJSON User
+
+insertExpression user = insertExpressions [user]
+
+insertExpressions users = B.insertValues users
 
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity UserT)
