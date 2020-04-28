@@ -51,8 +51,8 @@ pipeline {
           expression { return hasChanged("stack.yaml") }
           changeset "package.yaml"
           expression { return hasChanged("package.yaml") }
-          changeset "deployment-configs/*-deploy.yaml"
-          expression { return hasChanged("deployment-configs/*-deploy.yaml") }
+          changeset "deployment-configs/*deploy.yaml"
+          expression { return hasChanged("deployment-configs/*deploy.yaml") }
         }
       }
 
@@ -86,7 +86,7 @@ pipeline {
               steps {
                 kubernetesDeploy(
                       kubeconfigId: 'jenkins-staging-deployer',
-                      configs: 'deployment-configs/*-deploy.yaml',
+                      configs: 'deployment-configs/*deploy.yaml',
                       enableConfigSubstitution: true
                     )
               }
