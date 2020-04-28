@@ -37,7 +37,7 @@ data PassT f =
   Pass
     { _id                :: B.C f PassId
     , _CustomerId        :: B.C f CustomerId
-    , _OrganizationId    :: B.C f OrganizationId
+    , _OrganizationId    :: B.C f (Maybe OrganizationId)
     , _status            :: B.C f Status
     , _fromDate          :: B.C f LocalTime
     , _toDate            :: B.C f LocalTime

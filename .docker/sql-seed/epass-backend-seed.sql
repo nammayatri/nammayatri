@@ -80,7 +80,7 @@ CREATE TABLE `organization` (
 CREATE TABLE `pass` (
   `id` char(36) NOT NULL,
   `customer_id` char(36) NOT NULL,
-  `organization_id` char(36) NOT NULL,
+  `organization_id` char(36) NULL,
   `short_id` char(36) NOT NULL,
   `status` varchar(255) NULL,
   `from_date` datetime NOT NULL,

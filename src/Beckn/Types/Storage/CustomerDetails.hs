@@ -18,6 +18,7 @@ data IdentifierType = MOBILENUMBER | AADHAR
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 instance FromBackendRow MySQL IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 

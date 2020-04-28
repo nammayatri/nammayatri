@@ -41,3 +41,11 @@ findCustomerById customerId =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
  where
    predicate C.Customer {..} = _id ==. B.val_ customerId
+
+updateCustomerOrgId :: OrganizationId -> CustomerId -> L.Flow ()
+updateCustomerOrgId orgId customerId =
+  DB.update dbTable (setClause orgId) (predicate customerId)
+    >>= either DB.throwDBError pure
+  where
+    setClause a C.Customer {..} = mconcat [ _OrganizationId <-. B.val_ (Just a) ]
+    predicate i C.Customer {..} = _id ==. B.val_ i

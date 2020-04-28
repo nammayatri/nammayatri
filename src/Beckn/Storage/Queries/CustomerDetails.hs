@@ -26,3 +26,13 @@ findCustomerDetailsById id = do
   DB.findOne dbTable predicate
   where
     predicate Storage.CustomerDetails {..} = (_id ==. B.val_ id)
+
+findCustomerDetailsByMB ::
+  Text -> L.Flow (Maybe Storage.CustomerDetails)
+findCustomerDetailsByMB mb =
+  DB.findOne dbTable predicate >>=
+    either DB.throwDBError pure
+  where
+    predicate Storage.CustomerDetails {..} =
+      _identifierType ==. B.val_ Storage.MOBILENUMBER &&.
+      _uniqueIdentifier ==. B.val_ mb

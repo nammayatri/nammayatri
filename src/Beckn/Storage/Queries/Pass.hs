@@ -11,6 +11,12 @@ import qualified Database.Beam as B
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as T
 
+data ListById
+  = ByApplicationId PassApplicationId
+  | ById PassId
+  | ByCustomerId CustomerId
+  | ByOrganizationId OrganizationId
+
 dbTable :: B.DatabaseEntity be DB.BecknDb (B.TableEntity Storage.PassT)
 dbTable = DB._pass DB.becknDb
 
@@ -33,19 +39,31 @@ updatePassStatus action id = do
     predicate i Storage.Pass {..} = (_id ==. B.val_ i)
     setClause s Storage.Pass {..} = mconcat [ _status <-. B.val_ s ]
 
-listAllPassesWithOffset :: Integer -> Integer -> PassId -> [Storage.Status]-> L.Flow [Storage.Pass]
+listAllPassesWithOffset :: Integer -> Integer -> ListById -> [Storage.Status]-> L.Flow [Storage.Pass]
 listAllPassesWithOffset limit offset id stats = do
   DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy >>=
     either DB.throwDBError pure
   where
-    predicate i [] Storage.Pass {..} = (_id ==. B.val_ i)
-    predicate i s Storage.Pass {..} = (_id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByApplicationId i) [] Storage.Pass {..} = (_PassApplicationId ==. B.val_ i)
+    predicate (ByApplicationId i) s Storage.Pass {..} = (_PassApplicationId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByCustomerId i) [] Storage.Pass {..} = (_CustomerId ==. B.val_ i)
+    predicate (ByCustomerId i) s Storage.Pass {..} = (_CustomerId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByOrganizationId i) [] Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i))
+    predicate (ByOrganizationId i) s Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
+    predicate (ById i) [] Storage.Pass {..} = (_id ==. B.val_ i)
+    predicate (ById i) s Storage.Pass {..} = (_id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
     orderBy Storage.Pass {..} = B.desc_ _updatedAt
 
-listAllPasses :: PassId -> [Storage.Status] -> L.Flow [Storage.Pass]
+listAllPasses :: ListById -> [Storage.Status] -> L.Flow [Storage.Pass]
 listAllPasses id status = do
   DB.findAll dbTable (predicate id status) >>=
     either DB.throwDBError pure
   where
-    predicate i [] Storage.Pass {..} = (_id ==. B.val_ i)
-    predicate i s Storage.Pass {..} = (_id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByApplicationId i) [] Storage.Pass {..} = (_PassApplicationId ==. B.val_ i)
+    predicate (ByApplicationId i) s Storage.Pass {..} = (_PassApplicationId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByCustomerId i) [] Storage.Pass {..} = (_CustomerId ==. B.val_ i)
+    predicate (ByCustomerId i) s Storage.Pass {..} = (_CustomerId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByOrganizationId i) [] Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i))
+    predicate (ByOrganizationId i) s Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
+    predicate (ById i) [] Storage.Pass {..} = (_id ==. B.val_ i)
+    predicate (ById i) s Storage.Pass {..} = (_id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))

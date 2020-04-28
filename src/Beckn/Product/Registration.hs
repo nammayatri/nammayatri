@@ -38,7 +38,8 @@ initiateSms req = do
   now <- getCurrentTimeUTC
   let cust = makeCustomer uuid now
   QC.create cust
-  let attempts = 3
+  attempts <-
+    L.runIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "SMS_ATTEMPTS"
   let regToken = makeSession uuidR uuidRt uuid now otp attempts
   QR.create regToken
   return $ InitiateLoginRes {attempts = attempts, tokenId = uuidR}
@@ -66,11 +67,9 @@ initiateSms req = do
         uuid
         now
         now
-
     generateOTPCode :: L.Flow Text
     generateOTPCode =
       L.runIO $ padLeft 4 '0' . show <$> Cryptonite.generateBetween 1 9999
-
     padLeft n c txt =
       let prefix = replicate (max 0 $ n - length txt) c
        in T.pack prefix <> txt
@@ -97,7 +96,8 @@ login tokenId req =
     SR.RegistrationToken {..} <-
       QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
     cust <-
-      QC.findCustomerById (CustomerId _CustomerId) >>= fromMaybeM400 "INVALID_DATA"
+      QC.findCustomerById (CustomerId _CustomerId) >>=
+      fromMaybeM400 "INVALID_DATA"
     when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
     let verify =
           _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type &&
@@ -114,11 +114,11 @@ reInitiateLogin tokenId req =
     SR.RegistrationToken {..} <-
       QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
     cust <-
-      QC.findCustomerById (CustomerId _CustomerId) >>= fromMaybeM400 "INVALID_DATA"
+      QC.findCustomerById (CustomerId _CustomerId) >>=
+      fromMaybeM400 "INVALID_DATA"
     if _attempts > 0
       then do
         submitOtpCode (req ^. Lens._value) _authValueHash
         QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
-      else
-        L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}
+      else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}

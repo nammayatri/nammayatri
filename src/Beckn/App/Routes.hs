@@ -141,13 +141,12 @@ type PassAPIs
           :> ReqBody '[ JSON] UpdatePassReq
           :> Post '[ JSON] PassRes
      :<|> "list"
-          :> QueryParam "identifierType" PassIDType
-          :> QueryParam "identifier" Text
+          :> MandatoryQueryParam "identifierType" PassIDType
+          :> MandatoryQueryParam "identifier" Text
           :> QueryParam "limit" Int
           :> QueryParam "offset" Int
-          :> QueryParams "status" SP.Status
-          :> QueryParams "type" PassType
-          :> Post '[ JSON] ListPassRes
+          :> MandatoryQueryParam "type" PassType
+          :> Get '[ JSON] ListPassRes
      )
 
 passFlow registrationToken =
