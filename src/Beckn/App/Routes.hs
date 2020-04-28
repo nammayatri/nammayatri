@@ -54,7 +54,7 @@ type RegistrationAPIs
           :> ReqBody '[ JSON] LoginReq
           :> Post '[ JSON] LoginRes
       :<|> Capture "tokenId" Text
-          :> ReqBody '[ JSON] LoginReq
+          :> ReqBody '[ JSON] ReInitiateLoginReq
           :> Post '[ JSON] InitiateLoginRes
       )
 
@@ -62,7 +62,7 @@ registrationFlow :: FlowServer RegistrationAPIs
 registrationFlow =
   Registration.initiateLogin
   :<|> Registration.login
-  :<|> Registration.login
+  :<|> Registration.reInitiateLogin
 -------------------------------
 
 ---- Pass Application Flow ------
@@ -72,13 +72,14 @@ type PassApplicationAPIs
    :> Header "registrationToken" Text
    :> ( ReqBody '[ JSON] CreatePassApplicationReq
         :> Post '[ JSON] PassApplicationRes
-      :<|> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> QueryParams "status" PA.Status
-           :> QueryParams "type" PassType
-           :> Get '[ JSON] ListPassApplicationRes
-      :<|> Capture "passApplicationId" Text :> Get '[ JSON] PassApplicationRes
-      :<|> Capture "passApplicationId" Text
+      :<|> "list"
+        :> QueryParam "limit" Int
+        :> QueryParam "offset" Int
+        :> QueryParams "status" PA.Status
+        :> QueryParams "type" PassType
+        :> Get '[ JSON] ListPassApplicationRes
+      :<|> Capture "passApplicationId" PassApplicationId :> Get '[ JSON] PassApplicationRes
+      :<|> Capture "passApplicationId" PassApplicationId
            :> ReqBody '[ JSON] UpdatePassApplicationReq
            :> Post '[ JSON] PassApplicationRes
       )

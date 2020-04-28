@@ -19,6 +19,7 @@ data CreatePassApplicationReq =
     , _travellerID     :: Maybe Text
     , _travellerIDType :: Maybe TravellerIDType
     , _type            :: PassApplicationType
+    , _count           :: Maybe Int
     }
   deriving (Generic, ToSchema)
 

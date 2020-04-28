@@ -1,0 +1,19 @@
+FROM fpco/stack-build:lts-13.27
+RUN mkdir /opt/build
+WORKDIR /opt/build
+
+# GHC dynamically links its compilation targets to lib gmp
+RUN apt-get update \
+  && apt-get download libgmp10
+RUN mv libgmp*.deb libgmp.deb
+
+# Docker build should not use cached layer if any of these is modified
+COPY . /opt/build/
+
+COPY ./.ssh/id_rsa /root/.ssh/id_rsa
+RUN chmod 400 /root/.ssh/id_rsa
+RUN ssh-keyscan -H "bitbucket.org" >> ~/.ssh/known_hosts
+
+RUN stack build --system-ghc --dependencies-only
+
+RUN rm -f /root/.ssh/id_rsa

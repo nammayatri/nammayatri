@@ -20,8 +20,9 @@ create Storage.Organization {..} =
   either DB.throwDBError pure
 
 findOrganizationById ::
-     OrganizationId -> L.Flow (T.DBResult (Maybe Storage.Organization))
+     OrganizationId -> L.Flow (Maybe Storage.Organization)
 findOrganizationById id = do
-  DB.findOne dbTable predicate
+  DB.findOne dbTable predicate >>=
+    either DB.throwDBError pure
   where
     predicate Storage.Organization {..} = (_id ==. B.val_ id)

@@ -26,11 +26,11 @@ instance FromBackendRow MySQL CustomerRole where
 data CustomerT f =
   Customer
     { _id             :: B.C f CustomerId
-    , _name           :: B.C f Text
-    , _OrganizationId :: B.C f OrganizationId
+    , _name           :: B.C f (Maybe Text)
+    , _OrganizationId :: B.C f (Maybe OrganizationId)
     , _verified       :: B.C f Bool
     , _role           :: B.C f CustomerRole
-    , _info           :: B.C f Text
+    , _info           :: B.C f (Maybe Text)
     , _createdAt      :: B.C f LocalTime
     , _updatedAt      :: B.C f LocalTime
     }

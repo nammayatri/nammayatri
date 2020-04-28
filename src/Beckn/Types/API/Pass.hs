@@ -12,7 +12,7 @@ data PassRes =
 
 data UpdatePassReq =
   UpdatePassReq
-    { action :: PassAction
+    { action :: Status
     } deriving (Generic, FromJSON, ToSchema)
 
 data ListPassReq =
