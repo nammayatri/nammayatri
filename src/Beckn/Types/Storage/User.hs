@@ -22,6 +22,17 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+
+data Role = ADMIN | MANAGER | VIEWER
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL Role where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+
 data UserT f =
   User
     { _id             :: B.C f Text
@@ -30,7 +41,7 @@ data UserT f =
     , _username       :: B.C f Text
     , _password       :: B.C f Text
     , _email          :: B.C f Text
-    , _role           :: B.C f Text
+    , _role           :: B.C f Role
     , _verified       :: B.C f Bool
     , _status         :: B.C f Status
     , _info           :: B.C f Text
