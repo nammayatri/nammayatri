@@ -1,15 +1,26 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies       #-}
-
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.User where
 
 import           Data.Aeson
+import qualified Data.Text                 as T
 import           Data.Time
+import qualified Database.Beam             as B
+import           Database.Beam.Backend.SQL
+import           Database.Beam.MySQL
 import           EulerHS.Prelude
 
-import qualified Database.Beam   as B
+data Status = ACTIVE | INACTIVE
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL Status where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data UserT f =
   User
@@ -21,6 +32,7 @@ data UserT f =
     , _email          :: B.C f Text
     , _role           :: B.C f Text
     , _verified       :: B.C f Bool
+    , _status         :: B.C f Status
     , _info           :: B.C f Text
     , _createdAt      :: B.C f LocalTime
     , _updatedAt      :: B.C f LocalTime
