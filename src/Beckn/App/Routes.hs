@@ -195,7 +195,7 @@ type LocationBlacklistAPIS
   = "location_blacklist" :> Header "registrationToken" RegistrationToken
   :> (  ReqBody '[JSON] LocationBlacklist.CreateReq
         :> Post '[JSON] LocationBlacklist.CreateRes
-      :<|> Capture "userId" LocationBlacklistId
+      :<|> Capture "location_blacklist_id" LocationBlacklistId
         :> ReqBody '[JSON] LocationBlacklist.UpdateReq
         :> Put '[JSON] LocationBlacklist.UpdateRes
       :<|> "list"

@@ -20,7 +20,7 @@ data CreateReq =
   , _city          :: Maybe Text
   , _state         :: Maybe Text
   , _country       :: Text
-  , _pincode       :: Maybe Text
+  , _pincode       :: Maybe Int
   , _bound         :: Maybe Bound
   }
   deriving (Show, Generic, ToJSON)
@@ -50,7 +50,7 @@ data UpdateReq =
   , _city          :: Maybe Text
   , _state         :: Maybe Text
   , _country       :: Maybe Text
-  , _pincode       :: Maybe Text
+  , _pincode       :: Maybe Int
   , _bound         :: Maybe Bound
   }
   deriving (Show, Generic, ToJSON)
