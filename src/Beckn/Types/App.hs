@@ -20,6 +20,8 @@ data Env =
 
 type FlowHandler = ReaderT Env (ExceptT ServerError IO)
 
+type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
+
 newtype CustomerId = CustomerId { _getCustomerId :: Text }
   deriving stock (Show)
 

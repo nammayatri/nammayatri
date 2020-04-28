@@ -1,17 +1,23 @@
 module Beckn.App.Routes where
 
-import qualified Beckn.Data.Accessor as Accessor
-import Beckn.Types.API.Common
-import Beckn.Types.API.Customer
-import Beckn.Types.API.Pass
-import Beckn.Types.API.PassApplication
-import Beckn.Types.API.Registration
-import Beckn.Types.API.Organization
-import Beckn.Types.App
-import Data.Aeson
-import qualified Data.Vault.Lazy as V
-import EulerHS.Prelude
-import Servant
+import qualified Beckn.Data.Accessor             as Accessor
+import qualified Beckn.Product.Customer          as Customer
+import qualified Beckn.Product.HealthCheck       as HealthCheck
+import qualified Beckn.Product.Organization      as Organization
+import qualified Beckn.Product.Pass              as Pass
+import qualified Beckn.Product.PassApplication   as PassApplication
+import qualified Beckn.Product.Registration      as Registration
+import           Beckn.Types.API.Common
+import           Beckn.Types.API.Customer
+import           Beckn.Types.API.Organization
+import           Beckn.Types.API.Pass
+import           Beckn.Types.API.PassApplication
+import           Beckn.Types.API.Registration
+import           Beckn.Types.App
+import           Data.Aeson
+import qualified Data.Vault.Lazy                 as V
+import           EulerHS.Prelude
+import           Servant
 
 type EPassAPIs
    = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs)
@@ -19,10 +25,14 @@ type EPassAPIs
 epassAPIs :: Proxy EPassAPIs
 epassAPIs = Proxy
 
----------- health Flow ------
-healthCheckApp :: FlowHandler Text
-healthCheckApp = pure "App is UP"
-----------------------------
+epassServer' :: V.Key (HashMap Text Text) -> FlowServer EPassAPIs
+epassServer' key =
+  HealthCheck.healthCheckApp
+  :<|> registrationFlow
+  :<|> passApplicationFlow
+  :<|> organizationFlow
+  :<|> customerFlow
+  :<|> passFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -34,14 +44,10 @@ type RegistrationAPIs
           :> Post '[ JSON] Value
       )
 
-initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
-initiateLogin loginRes = undefined
-
-login :: Text -> LoginReq -> FlowHandler Value
-login tokenId req = do
-  case req ^. Accessor.action of
-    VERIFY -> undefined
-    RESEND -> undefined
+registrationFlow :: FlowServer RegistrationAPIs
+registrationFlow =
+  Registration.initiateLogin
+  :<|> Registration.login
 -------------------------------
 
 ---- Pass Application Flow ------
@@ -59,23 +65,11 @@ type PassApplicationAPIs
            :> Post '[ JSON] PassApplicationRes
       )
 
-createPassApplication ::
-  Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes
-createPassApplication regToken req = undefined
-
-listPassApplication ::
-  Maybe Text -> ListPassApplicationReq -> FlowHandler ListPassApplicationRes
-listPassApplication regToken req = undefined
-
-getPassApplicationById :: Maybe Text -> Text -> FlowHandler PassApplicationRes
-getPassApplicationById regToken applicationId = undefined
-
-updatePassApplication ::
-  Maybe Text ->
-  Text ->
-  UpdatePassApplicationReq ->
-  FlowHandler PassApplicationRes
-updatePassApplication regToken passApplicationId req = undefined
+passApplicationFlow registrationToken =
+  PassApplication.createPassApplication registrationToken
+  :<|> PassApplication.listPassApplication registrationToken
+  :<|> PassApplication.getPassApplicationById registrationToken
+  :<|> PassApplication.updatePassApplication registrationToken
 
 ----- Organization Flow -------
 --
@@ -91,20 +85,11 @@ type OrganizationAPIs
             :> Post '[ JSON] OrganizationRes
       )
 
-createOrganization ::
-  Maybe Text -> CreateOrganizationReq -> FlowHandler OrganizationRes
-createOrganization regToken req = undefined
-
-getOrganization :: Maybe Text -> Text -> FlowHandler OrganizationRes
-getOrganization regToken orgId = undefined
-
-listOrganization ::
-  Maybe Text -> ListOrganizationReq -> FlowHandler ListOrganizationRes
-listOrganization regToken req = undefined
-
-updateOrganization ::
-  Maybe Text -> Text -> UpdateOrganizationReq -> FlowHandler OrganizationRes
-updateOrganization regToken orgId req = undefined
+organizationFlow registrationToken =
+  Organization.createOrganization registrationToken
+  :<|> Organization.getOrganization registrationToken
+  :<|> Organization.listOrganization registrationToken
+  :<|> Organization.updateOrganization registrationToken
 ---------------------------------
 
 ----- Customer Flow -------
@@ -114,9 +99,8 @@ type CustomerAPIs
   :> Capture "customerId" Text
   :> Get '[ JSON] GetCustomerRes
 
-getCustomerInfo ::
-  Maybe Text -> Text -> FlowHandler GetCustomerRes
-getCustomerInfo regToken customerId = undefined
+customerFlow registrationToken =
+  Customer.getCustomerInfo registrationToken
 ---------------------------
 
 ------ Pass Flow ---------
@@ -131,11 +115,7 @@ type PassAPIs
           :> Post '[ JSON] ListPassRes
      )
 
-getPassById :: Maybe Text -> Text -> FlowHandler PassRes
-getPassById regToken passId = undefined
-
-updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
-updatePass regToken passId req = undefined
-
-listPass :: Maybe Text -> ListPassReq -> FlowHandler ListPassRes
-listPass regToken req = undefined
+passFlow registrationToken =
+  Pass.getPassById registrationToken
+  :<|> Pass.updatePass registrationToken
+  :<|> Pass.listPass registrationToken
