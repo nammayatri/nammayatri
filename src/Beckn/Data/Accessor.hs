@@ -8,4 +8,5 @@ import Beckn.Types.API.Organization
 
 makeFieldsNoPrefix 'LoginReq
 makeFieldsNoPrefix 'InitiateLoginReq
+makeFieldsNoPrefix 'ReInitiateLoginReq
 makeFieldsNoPrefix 'CreateOrganizationReq

@@ -191,3 +191,5 @@ type RegistrationToken = Text
 type Limit = Int
 
 type Offset = Int
+
+type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a

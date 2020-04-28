@@ -40,6 +40,8 @@ instance FromBackendRow MySQL LoginType where
 data RegistrationTokenT f =
   RegistrationToken
     { _id            :: B.C f Text
+    , _token         :: B.C f Text
+    , _attempts      :: B.C f Int
     , _authMedium    :: B.C f Medium
     , _authType      :: B.C f LoginType
     , _authValueHash :: B.C f Text

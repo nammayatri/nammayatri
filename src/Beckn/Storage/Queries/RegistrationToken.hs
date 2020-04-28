@@ -11,6 +11,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as T
+import Servant
 
 dbTable ::
      B.DatabaseEntity be DB.BecknDb (B.TableEntity Storage.RegistrationTokenT)
@@ -28,3 +29,20 @@ findRegistrationToken id = do
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)
+
+findRegistrationTokenByToken ::
+     Text -> L.Flow (Maybe Storage.RegistrationToken)
+findRegistrationTokenByToken id = do
+  DB.findOne dbTable predicate >>= either DB.throwDBError pure
+  where
+    predicate Storage.RegistrationToken {..} = (_token ==. B.val_ id)
+
+updateAttempts ::
+  Int -> Text -> L.Flow Storage.RegistrationToken
+updateAttempts attemps id = do
+  DB.update dbTable (setClause attemps) (predicate id) >>= either DB.throwDBError pure
+  findRegistrationToken id >>= maybe (L.throwException err500) pure
+  where
+    predicate i Storage.RegistrationToken {..} = (_id ==. B.val_ i)
+    setClause a Storage.RegistrationToken {..} = mconcat [ _attempts <-. B.val_ a ]
+

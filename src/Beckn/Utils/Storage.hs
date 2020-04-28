@@ -26,7 +26,7 @@ throwFailedWithLog mkException msg = do
 
 verifyToken :: Maybe Text -> L.Flow SR.RegistrationToken
 verifyToken (Just token) =
-  QR.findRegistrationToken token >>=
+  QR.findRegistrationTokenByToken token >>=
     maybe (L.throwException $ err400 {errBody = "INVALID_TOKEN"}) pure
 verifyToken _ =
   L.throwException $ err400 {errBody = "NO_TOKEN_FOUND"}
