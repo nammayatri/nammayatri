@@ -4,7 +4,6 @@
 module Beckn.Product.User where
 
 import qualified Beckn.Data.Accessor         as Accessor
-import           Beckn.Types.API.Common
 import           Beckn.Types.API.User
 import           Beckn.Types.App
 import           Beckn.Types.Storage.User
@@ -39,4 +38,3 @@ update ::
   UpdateReq ->
   FlowHandler UpdateRes
 update regToken userId req = pure $ def UpdateRes
-

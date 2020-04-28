@@ -1,6 +1,6 @@
 module Beckn.Constants.APIErrorCode where
 
-import Beckn.Types.API.Common
+import           Beckn.Types.Common
 
 internalServerErr :: ErrorResponse
 internalServerErr =

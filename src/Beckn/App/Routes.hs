@@ -9,7 +9,6 @@ import qualified Beckn.Product.PassApplication       as PassApplication
 import qualified Beckn.Product.Quota                 as Quota
 import qualified Beckn.Product.Registration          as Registration
 import qualified Beckn.Product.User                  as User
-import           Beckn.Types.API.Common
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
@@ -18,6 +17,7 @@ import qualified Beckn.Types.API.Quota               as Quota
 import           Beckn.Types.API.Registration
 import qualified Beckn.Types.API.User                as User
 import           Beckn.Types.App
+import           Beckn.Types.Common
 import           Data.Aeson
 import qualified Data.Vault.Lazy                     as V
 import           EulerHS.Prelude
@@ -72,7 +72,7 @@ type PassApplicationAPIs
       :<|> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> QueryParams "status" PA.Status
-           :> QueryParams "type" PA.PassType
+           :> QueryParams "type" PassType
            :> Get '[ JSON] ListPassApplicationRes
       :<|> Capture "passApplicationId" Text :> Get '[ JSON] PassApplicationRes
       :<|> Capture "passApplicationId" Text
@@ -133,7 +133,7 @@ type PassAPIs
           :> QueryParam "limit" Int
           :> QueryParam "offset" Int
           :> QueryParams "status" SP.Status
-          :> QueryParams "type" SP.PassType
+          :> QueryParams "type" PassType
           :> Post '[ JSON] ListPassRes
      )
 
