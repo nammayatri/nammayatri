@@ -6,7 +6,7 @@ module Beckn.Product.User where
 import qualified Beckn.Data.Accessor         as Accessor
 import           Beckn.Types.API.User
 import           Beckn.Types.App
-import           Beckn.Types.Storage.User
+import           Beckn.Types.Storage.User    as Storage
 import           Beckn.Utils.Common
 import           Data.Aeson
 import           Data.Default
@@ -27,7 +27,8 @@ list ::
   -> Maybe Int
   -> Maybe Int
   -> FlowHandler ListRes
-list regToken offsetM limitM = pure $ def ListRes
+list regToken offsetM limitM = do
+   pure $ ListRes {_users = [def Storage.User]}
 
 get :: Maybe Text -> UserId -> FlowHandler GetRes
 get regToken userId = pure $ def User
