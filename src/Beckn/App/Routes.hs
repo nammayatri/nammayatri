@@ -69,13 +69,14 @@ type PassApplicationAPIs
    :> Header "registrationToken" Text
    :> ( ReqBody '[ JSON] CreatePassApplicationReq
         :> Post '[ JSON] PassApplicationRes
-      :<|> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> QueryParams "status" PA.Status
-           :> QueryParams "type" PassType
-           :> Get '[ JSON] ListPassApplicationRes
-      :<|> Capture "passApplicationId" Text :> Get '[ JSON] PassApplicationRes
-      :<|> Capture "passApplicationId" Text
+      :<|> "list"
+        :> QueryParam "limit" Int
+        :> QueryParam "offset" Int
+        :> QueryParams "status" PA.Status
+        :> QueryParams "type" PassType
+        :> Get '[ JSON] ListPassApplicationRes
+      :<|> Capture "passApplicationId" PassApplicationId :> Get '[ JSON] PassApplicationRes
+      :<|> Capture "passApplicationId" PassApplicationId
            :> ReqBody '[ JSON] UpdatePassApplicationReq
            :> Post '[ JSON] PassApplicationRes
       )

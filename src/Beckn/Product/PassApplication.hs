@@ -9,9 +9,11 @@ import qualified Beckn.Types.Common                    as Location (Location (..
                                                                     LocationType)
 import           Beckn.Types.Storage.PassApplication
 import           Beckn.Utils.Common
-import           Data.Aeson
-import           EulerHS.Prelude
 import           Beckn.Utils.Routes
+import           Data.Aeson
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import           Servant
 
 createPassApplication ::
   Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes
@@ -23,14 +25,20 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
   case earea of
     Right (Just passApplication) ->
       return $ PassApplicationRes passApplication
-    _                 -> error "DBError" "Could not create PassApplication"
+    _                 -> L.throwException $ err500 {errBody = "Could not create PassApplication"}
   where
     getPassType SELF          = INDIVIDUAL
     getPassType SPONSOROR     = INDIVIDUAL
     getPassType BULKSPONSOROR = INDIVIDUAL
 
+    getCount SELF _ = return 1
+    getCount SPONSOROR _ = return 1
+    getCount BULKSPONSOROR (Just c) = return c
+    getCount BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
+
     getPassAppInfo id = do
       currTime <- getCurrTime
+      count <- getCount _type _count
       return $ PassApplication
               { _id = id
               , _type = getPassType _type
@@ -58,6 +66,13 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
               , _toBound = Location._bound _toLocation
               , _createdAt = currTime
               , _updatedAt = currTime
+              , _status = PENDING
+              , _CreatedBy = CustomerId "-" -- TODO: fix this
+              , _AssignedTo = UserId "admin" -- TODO: fix this
+              , _count = count
+              , _approvedCount = 0
+              , _remarks = ""
+              , _info = ""
               , ..
               }
 
@@ -68,15 +83,32 @@ listPassApplication ::
   -> [Status]
   -> [PassType]
   -> FlowHandler ListPassApplicationRes
-listPassApplication regToken offsetM limitM status passType = undefined
+listPassApplication regToken offsetM limitM status passType = withFlowHandler $ do
+  DB.findAllWithLimitOffsetWhere status passType limitM offsetM
+  >>= \case
+      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+      Right v -> return $ ListPassApplicationRes v
 
-getPassApplicationById :: Maybe Text -> Text -> FlowHandler PassApplicationRes
-getPassApplicationById regToken applicationId = undefined
+getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler PassApplicationRes
+getPassApplicationById regToken applicationId = withFlowHandler $ do
+  DB.findById applicationId
+  >>= \case
+    Right (Just v) -> return $ PassApplicationRes v
+    Right Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
+    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
 updatePassApplication ::
   Maybe Text ->
-  Text ->
+  PassApplicationId ->
   UpdatePassApplicationReq ->
   FlowHandler PassApplicationRes
-updatePassApplication regToken passApplicationId req = undefined
-
+updatePassApplication regToken passApplicationId UpdatePassApplicationReq{..} = withFlowHandler $ do
+  eres <- DB.update passApplicationId _status _approvedCount _remarks
+  case eres of
+    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Right _ ->
+      DB.findById passApplicationId
+      >>= \case
+        Right (Just v) -> return $ PassApplicationRes v
+        Right Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
+        Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
