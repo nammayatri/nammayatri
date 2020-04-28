@@ -57,12 +57,14 @@ dependencies:
 - beam-core
 - beam-mysql
 - bytestring
+- cryptonite
 - data-default
 - euler-hs
 - http-client
 - http-types
 - lens
 - servant
+- servant-client
 - servant-server
 - servant-swagger
 - swagger2
