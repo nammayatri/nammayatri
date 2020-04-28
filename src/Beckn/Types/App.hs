@@ -8,6 +8,8 @@ module Beckn.Types.App where
 import           Beckn.Utils.TH
 import           Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
 import           Database.Beam.MySQL       (MySQL, MysqlValueSyntax)
+import qualified EulerHS.Interpreters      as I
+import qualified EulerHS.Language          as L
 import           EulerHS.Prelude
 import qualified EulerHS.Runtime           as R
 import           Servant
@@ -21,6 +23,11 @@ data Env =
 type FlowHandler = ReaderT Env (ExceptT ServerError IO)
 
 type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
+
+withFlowHandler :: L.Flow a -> FlowHandler a
+withFlowHandler flow = do
+  Env flowRt <- ask
+  lift . lift . I.runFlow flowRt $ flow
 
 newtype CustomerId = CustomerId { _getCustomerId :: Text }
   deriving stock (Show)

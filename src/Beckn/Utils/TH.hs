@@ -6,6 +6,7 @@
 
 module Beckn.Utils.TH where
 
+import           Beckn.Utils.Common
 import           Data.Aeson                (FromJSON, ToJSON)
 import           Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
 import           Database.Beam.MySQL       (MySQL, MysqlValueSyntax)
@@ -22,6 +23,7 @@ deriveIdentifierInstances name = do
   [d|
     deriving stock instance Eq $tyQ
     deriving stock instance Ord $tyQ
+    deriving newtype instance GuidLike $tyQ
 
     deriving newtype instance ToJSON $tyQ
     deriving newtype instance FromJSON $tyQ
