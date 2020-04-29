@@ -5,9 +5,11 @@ module Beckn.Product.LocationBlacklist where
 
 import qualified Beckn.Data.Accessor                     as Accessor
 import qualified Beckn.Storage.Queries.LocationBlacklist as DB
+import qualified Beckn.Storage.Queries.RegistrationToken as RegToken
 import           Beckn.Types.API.LocationBlacklist
 import           Beckn.Types.App
 import           Beckn.Types.Storage.LocationBlacklist   as Storage
+import qualified Beckn.Types.Storage.RegistrationToken   as RegToken
 import           Beckn.Utils.Common
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
@@ -21,25 +23,30 @@ import           EulerHS.Prelude
 import           Servant
 
 
-
 create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
-   verifyToken mRegToken
    id <- generateGUID
-   locationBlacklist <- locationBlacklistRec id
+   regToken <- fromMaybeM400 "INVALID_TOKEN" mRegToken
+    >>= RegToken.findRegistrationTokenByToken
+    >>= fromMaybeM400 "INVALID_TOKEN"
+   case (RegToken._entityType regToken) of
+     RegToken.USER -> do
+        locationBlacklist <- locationBlacklistRec id $ RegToken._EntityId regToken
    DB.create locationBlacklist
    eres <- DB.findById id
    case eres of
      Right (Just locationBlacklistDb) -> return $ CreateRes locationBlacklistDb
      _                 -> L.throwException $ err500 {errBody = "Could not create LocationBlacklist"}
+     RegToken.CUSTOMER -> L.throwException $ err401 {errBody = "Unauthorized"}
     where
-      locationBlacklistRec id = do
+      locationBlacklistRec id userId = do
         now  <- getCurrTime
         return Storage.LocationBlacklist
           { _id         = id
           , _createdAt  = now
           , _updatedAt  = now
           , _info       = Nothing
+          , _BlacklistedBy = UserId userId
           ,..
           }
 

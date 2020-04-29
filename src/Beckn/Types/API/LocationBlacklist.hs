@@ -11,7 +11,6 @@ import           EulerHS.Prelude
 data CreateReq =
   CreateReq
   { _remarks              :: Text
-  , _BlacklistedBy        :: UserId
   , _TenantOrganizationId :: Maybe TenantOrganizationId
   , _type                 :: LocationType
   , _lat                  :: Maybe Double
@@ -42,7 +41,6 @@ instance ToJSON CreateRes where
 data UpdateReq =
   UpdateReq
   { _remarks              :: Maybe Text
-  , _BlacklistedBy        :: Maybe UserId
   , _TenantOrganizationId :: Maybe TenantOrganizationId
   , _type                 :: LocationType
   , _lat                  :: Maybe Double
