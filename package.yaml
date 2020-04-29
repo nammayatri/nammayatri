@@ -57,6 +57,7 @@ dependencies:
 - beam-core
 - beam-mysql
 - bytestring
+- containers
 - cryptonite
 - data-default
 - euler-hs
