@@ -13,6 +13,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Beckn.Utils.Routes
+import Beckn.Utils.Storage
 import qualified Crypto.Number.Generate as Cryptonite
 import Data.Aeson
 import qualified Data.Text as T
@@ -40,7 +41,11 @@ initiateSms req = do
   QC.create cust
   attempts <-
     L.runIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "SMS_ATTEMPTS"
-  let regToken = makeSession uuidR uuidRt uuid now otp attempts
+  authExpiry <-
+    L.runIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "AUTH_EXPIRY"
+  tokenExpiry <-
+    L.runIO $ fromMaybe 365 . (>>= readMaybe) <$> lookupEnv "TOKEN_EXPIRY"
+  let regToken = makeSession uuidR uuidRt uuid now otp attempts authExpiry tokenExpiry
   QR.create regToken
   return $ InitiateLoginRes {attempts = attempts, tokenId = uuidR}
   where
@@ -55,7 +60,7 @@ initiateSms req = do
         now
         now
 
-    makeSession uuidR uuidRt uuid now otp a =
+    makeSession uuidR uuidRt uuid now otp a ae te =
       SR.RegistrationToken
         uuidR
         uuidRt
@@ -64,7 +69,8 @@ initiateSms req = do
         (req ^. Lens._type)
         otp
         False
-        10000 -- :TODO Config
+        ae
+        te
         uuid
         now
         now
@@ -102,12 +108,12 @@ login tokenId req =
     cust <-
       QC.findCustomerById (CustomerId _CustomerId) >>=
       fromMaybeM400 "INVALID_DATA"
+    unlessM (isExpired (realToFrac (_authExpiry * 60)) _updatedAt) $
+      L.throwException $ err400 { errBody = "AUTH_EXPIRED" }
     when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
     let verify =
           _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type &&
-          _authValueHash ==
-          req ^.
-          Lens.hash
+          _authValueHash == req ^. Lens.hash
     if verify
       then return $ LoginRes _token cust
       else L.throwException $ err400 {errBody = "VALUE_MISMATCH"}

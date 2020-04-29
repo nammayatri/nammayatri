@@ -51,6 +51,10 @@ extra-deps:
   - git: https://github.com/graninas/beam-mysql
     commit: e5a667fe6396441c7dcf1c7755c69345f00d0eee
   - crc16-0.1.0@sha256:da3e4b82e437a054159ecc497372c997f784d77babcee641a5f657f6a0a8eb80,624
+  - time-1.9.3@sha256:8f1b5448722a12a952248b356c9eb366e351226543d9086a2da71270522d5f45,5679
+  - directory-1.3.6.1@sha256:3dc9c69c8e09ec95a7a45c6d06abe0f0d2f604439c37e5f88e5a6c335b088d71,2810
+  - process-1.6.8.2@sha256:c2c95560dab7cea7f77b190166c3916945155f0daf5928b28c20a0ac34d4ea2a,2468
+  - unix-2.7.2.2@sha256:e69269a17b9fa26cb77f3f55e86c39d0a4940ccfa0c4bc20826919d2572076ad,3496
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

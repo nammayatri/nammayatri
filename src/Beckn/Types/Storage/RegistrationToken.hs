@@ -47,6 +47,7 @@ data RegistrationTokenT f =
     , _authValueHash :: B.C f Text
     , _verified      :: B.C f Bool
     , _authExpiry    :: B.C f Int
+    , _tokenExpiry   :: B.C f Int
     , _CustomerId    :: B.C f Text
     , _createdAt     :: B.C f LocalTime
     , _updatedAt     :: B.C f LocalTime
