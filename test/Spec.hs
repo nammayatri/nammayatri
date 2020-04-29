@@ -1,25 +1,25 @@
-import Beckn.App
-import Beckn.App.Routes
-import qualified Beckn.App.Server as App
-import Beckn.Types.App
-import Data.Text.Encoding as DT
-import qualified Data.Vault.Lazy as V
-import EulerHS.Interpreters
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import EulerHS.Runtime
-import qualified EulerHS.Types as T
-import Network.HTTP.Client hiding (Proxy)
-import qualified Network.HTTP.Client as Client
-import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Network.HTTP.Types
-import Network.Wai
+import           Beckn.App
+import           Beckn.App.Routes
+import qualified Beckn.App.Server         as App
+import           Beckn.Types.App
+import           Data.Text.Encoding       as DT
+import qualified Data.Vault.Lazy          as V
+import           EulerHS.Interpreters
+import qualified EulerHS.Language         as L
+import           EulerHS.Prelude
+import           EulerHS.Runtime
+import qualified EulerHS.Types            as T
+import           Network.HTTP.Client      hiding (Proxy)
+import qualified Network.HTTP.Client      as Client
+import           Network.HTTP.Client.TLS  (tlsManagerSettings)
+import           Network.HTTP.Types
+import           Network.Wai
 import qualified Network.Wai.Handler.Warp as Warp
-import Servant.Client
-import Test.Hspec
-import qualified Test.Hspec.Core.Spec as CS
-import Test.Hspec.Wai
-import Test.Hspec.Wai.Matcher
+import           Servant.Client
+import           Test.Hspec
+import qualified Test.Hspec.Core.Spec     as CS
+import           Test.Hspec.Wai
+import           Test.Hspec.Wai.Matcher
 
 main :: IO ()
 main = hspec spec
@@ -46,7 +46,7 @@ spec = do
           it "preparedbconnections" $ do
             conE <- try $ runFlow flowRt prepareDBConnections
             case conE of
-              Right v -> 1 `shouldBe` 1
+              Right v                     -> 1 `shouldBe` 1
               Left (err :: SomeException) -> print err *> (2 `shouldBe` 1)
         hspec $
           around (withBecknApp reqHeadersKey $ env) $ do

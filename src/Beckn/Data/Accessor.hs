@@ -1,10 +1,10 @@
-{-# Language TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Beckn.Data.Accessor where
 
-import EulerHS.Prelude
-import Beckn.Types.API.PassApplication
-import Beckn.Types.API.Registration
-import Beckn.Types.API.Organization
+import           Beckn.Types.API.Organization
+import           Beckn.Types.API.PassApplication
+import           Beckn.Types.API.Registration
+import           EulerHS.Prelude
 
 makeFieldsNoPrefix 'LoginReq
 makeFieldsNoPrefix 'InitiateLoginReq

@@ -1,11 +1,11 @@
 module Beckn.External.Geo.API where
 
-import Beckn.External.Geo.Types
-import Beckn.Types.App
-import EulerHS.Prelude
-import qualified EulerHS.Types as ET
-import Servant
-import Servant.Client
+import           Beckn.External.Geo.Types
+import           Beckn.Types.App
+import           EulerHS.Prelude
+import qualified EulerHS.Types            as ET
+import           Servant
+import           Servant.Client
 
 type GeoAPI =
   "maps"
