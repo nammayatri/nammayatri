@@ -27,7 +27,7 @@ instance FromBackendRow MySQL Medium where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RTEntityType
-  = CUSTOMER
+  = CUSTOMER | USER
   deriving (Generic, FromJSON, ToJSON, ToSchema, Eq, Show, Read)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RTEntityType where
@@ -97,10 +97,12 @@ fieldEMod =
         , _authType  =  "auth_type"
         , _authValueHash = "auth_value_hash"
         , _authExpiry  = "auth_expiry"
+        , _tokenExpiry = "token_expiry"
         , _EntityId  = "entity_id"
         , _entityType  = "entity_type"
         , _createdAt = "created_at"
         , _updatedAt = "updated_at"
         }
+
 
 
