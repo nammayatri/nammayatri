@@ -1,14 +1,15 @@
 module Beckn.Storage.Queries.Customer where
 
-import Database.Beam ((&&.), (<-.), (==.))
-import EulerHS.Prelude hiding (id)
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
+import           Beckn.Types.App
 import qualified Beckn.Types.Storage.Customer as C
 import qualified Beckn.Types.Storage.DB as DB
+import           Beckn.Utils.Extra
 import qualified Database.Beam as B
+import           Database.Beam ((&&.), (<-.), (==.))
 import qualified EulerHS.Language as L
-import Servant
+import           EulerHS.Prelude hiding (id)
+import           Servant
 
 dbTable :: B.DatabaseEntity be DB.BecknDb (B.TableEntity C.CustomerT)
 dbTable = DB._customer DB.becknDb
@@ -43,9 +44,21 @@ findCustomerById customerId =
    predicate C.Customer {..} = _id ==. B.val_ customerId
 
 updateCustomerOrgId :: OrganizationId -> CustomerId -> L.Flow ()
-updateCustomerOrgId orgId customerId =
-  DB.update dbTable (setClause orgId) (predicate customerId)
+updateCustomerOrgId orgId customerId = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause orgId now) (predicate customerId)
     >>= either DB.throwDBError pure
   where
-    setClause a C.Customer {..} = mconcat [ _OrganizationId <-. B.val_ (Just a) ]
+    setClause a n C.Customer {..} =
+      mconcat [ _OrganizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n ]
+    predicate i C.Customer {..} = _id ==. B.val_ i
+
+updateStatus :: Bool -> CustomerId -> L.Flow ()
+updateStatus s customerId = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause s now) (predicate customerId)
+    >>= either DB.throwDBError pure
+  where
+    setClause a n C.Customer {..} =
+      mconcat [ _verified <-. B.val_ a, _updatedAt <-. B.val_ n ]
     predicate i C.Customer {..} = _id ==. B.val_ i
