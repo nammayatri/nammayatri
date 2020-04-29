@@ -1,10 +1,10 @@
 module Beckn.External.Geo.Flow where
 
-import qualified Beckn.External.Geo.API as API
+import qualified Beckn.External.Geo.API   as API
 import           Beckn.External.Geo.Types
-import qualified Data.Text as T
+import qualified Data.Text                as T
+import qualified EulerHS.Language         as L
 import           EulerHS.Prelude
-import qualified EulerHS.Language as L
 import           Servant.Client
 import           System.Environment
 

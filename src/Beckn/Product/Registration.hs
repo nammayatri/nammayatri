@@ -117,7 +117,9 @@ login tokenId req =
           _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type &&
           _authValueHash == req ^. Lens.hash
     if verify
-      then return $ LoginRes _token cust
+      then do
+        QC.updateStatus True (SC._id cust)
+        return $ LoginRes _token cust
       else L.throwException $ err400 {errBody = "VALUE_MISMATCH"}
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes

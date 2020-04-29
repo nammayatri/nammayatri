@@ -1,13 +1,13 @@
 module Beckn.External.FCM.API where
 
-import EulerHS.Prelude
+import           EulerHS.Prelude
 
-import Beckn.External.FCM.Types
-import Beckn.Types.App (MandatoryQueryParam)
-import qualified EulerHS.Types as ET
-import Servant
-import Servant.API.ContentTypes
-import Servant.Client
+import           Beckn.External.FCM.Types
+import           Beckn.Types.App          (MandatoryQueryParam)
+import qualified EulerHS.Types            as ET
+import           Servant
+import           Servant.API.ContentTypes
+import           Servant.Client
 
 type ServiceAPI
    = Header "Authorization" FAuth
