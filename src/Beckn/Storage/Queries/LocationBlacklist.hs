@@ -35,3 +35,32 @@ findById id = do
   DB.findOne dbTable predicate
   where
     predicate Storage.LocationBlacklist {..} = (_id ==. B.val_ id)
+
+-- findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text ->  L.Flow (T.DBResult [Storage.LocationBlacklist])
+-- findAllWithLimitOffset mlimit moffset entityType entityId =
+--   DB.findAllWithLimitOffsetWhere dbTable (pred entityType entityId) limit offset orderByDesc
+--   where
+--     limit = (toInteger $ fromMaybe 10 mlimit)
+--     offset = (toInteger $ fromMaybe 0 moffset)
+--     orderByDesc Storage.LocationBlacklist {..} = B.desc_ _createdAt
+--     pred entityType entityId Storage.LocationBlacklist {..} = (_entityType ==. (B.val_ entityType)
+--                                                   &&. _EntityId ==. (B.val_ entityId))
+
+-- update ::
+--   LocationBlacklistId
+--   -> Maybe Int
+--   -> Maybe LocalTime
+--   -> Maybe LocalTime
+--   -> L.Flow (T.DBResult ())
+-- update id maxAllowedM  startTimeM endTimeM = do
+--   (currTime :: LocalTime) <- getCurrTime
+--   DB.update dbTable
+--     (setClause maxAllowedM startTimeM endTimeM currTime)
+--     (predicate id)
+--   where
+--     predicate id Storage.LocationBlacklist {..} = _id ==. B.val_ id
+--     setClause maxAllowedM startTimeM endTimeM currTime Storage.LocationBlacklist {..} =
+--       mconcat ([_updatedAt <-. B.val_ currTime]
+--       <> maybe ([]) (return . (_startTime <-.) . B.val_) startTimeM
+--       <> maybe ([]) (return . (_endTime <-.) . B.val_) endTimeM
+--       <> maybe ([]) (return . (_maxAllowed <-.) . B.val_) maxAllowedM)

@@ -24,7 +24,7 @@ import           Servant
 
 create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
-  --  verifyToken mRegToken
+   verifyToken mRegToken
    id <- generateGUID
    locationBlacklist <- locationBlacklistRec id
    DB.create locationBlacklist
@@ -53,15 +53,22 @@ list ::
   -> Maybe Int
   -> Maybe Int
   -> FlowHandler ListRes
-list regToken maybeWard maybeDistrict maybeCity maybeState maybePincode offsetM limitM =
+list mRegToken maybeWard maybeDistrict maybeCity maybeState maybePincode offsetM limitM =
   pure $ ListRes {_location_blacklists = [def Storage.LocationBlacklist]}
 
 get :: Maybe Text -> LocationBlacklistId -> FlowHandler GetRes
-get regToken userId = pure $ def LocationBlacklist
+get mRegToken locationBlacklistId = withFlowHandler $ do
+  verifyToken mRegToken
+  DB.findById locationBlacklistId
+  >>= \case
+    Right (Just user) -> return user
+    Right Nothing -> L.throwException $ err400 {errBody = "LocationBlacklist not found"}
+    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+
 
 update ::
   Maybe Text ->
   LocationBlacklistId ->
   UpdateReq ->
   FlowHandler UpdateRes
-update regToken userId req = pure $ def UpdateRes
+update mRegToken userId req = pure $ def UpdateRes
