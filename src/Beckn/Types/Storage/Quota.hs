@@ -5,6 +5,7 @@
 
 module Beckn.Types.Storage.Quota where
 
+import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
@@ -17,7 +18,7 @@ import qualified Database.Beam        as B
 
 data QuotaT f =
   Quota
-    { _id         :: B.C f Text
+    { _id         :: B.C f QuotaId
     , _maxAllowed :: B.C f Int
     , _type       :: B.C f QuotaType
     , _EntityId   :: B.C f Text
@@ -35,14 +36,14 @@ type Quota = QuotaT Identity
 type QuotaPrimaryKey = B.PrimaryKey QuotaT Identity
 
 instance B.Table QuotaT where
-  data PrimaryKey QuotaT f = QuotaPrimaryKey (B.C f Text)
+  data PrimaryKey QuotaT f = QuotaPrimaryKey (B.C f QuotaId)
                                deriving (Generic, B.Beamable)
   primaryKey = QuotaPrimaryKey . _id
 
 
 instance Default Quota where
   def = Quota
-    { _id         = Defaults.id
+    { _id         = QuotaId Defaults.id
     , _maxAllowed = 1000
     , _type       = HOURLY
     , _EntityId   = Defaults.orgId
@@ -51,6 +52,7 @@ instance Default Quota where
     , _endTime    = Defaults.localTime
     , _createdAt  = Defaults.localTime
     , _updatedAt  = Defaults.localTime
+    , _info       = Nothing
     }
 
 instance ToJSON Quota where
@@ -61,6 +63,10 @@ deriving instance Show Quota
 deriving instance Eq Quota
 
 deriving instance FromJSON Quota
+
+insertExpression quota = insertExpressions [quota]
+
+insertExpressions quotas = B.insertValues quotas
 
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuotaT)
