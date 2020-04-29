@@ -1,20 +1,20 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module Beckn.Types.App where
 
-import Beckn.Utils.TH
-import Data.Swagger
-import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
-import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
-import Servant
-import Servant.Swagger
+import           Beckn.Utils.TH
+import           Data.Swagger
+import           Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
+import           Database.Beam.MySQL       (MySQL, MysqlValueSyntax)
+import qualified EulerHS.Interpreters      as I
+import qualified EulerHS.Language          as L
+import           EulerHS.Prelude
+import qualified EulerHS.Runtime           as R
+import           Servant
+import           Servant.Swagger
 
 -- App Types
 data Env =
@@ -45,6 +45,16 @@ newtype OrganizationId =
 instance ToSchema OrganizationId
 
 deriveIdentifierInstances ''OrganizationId
+
+newtype TenantOrganizationId =
+  TenantOrganizationId
+    { _getTenantOrganizationId :: Text
+    }
+  deriving  (Generic, Show)
+
+instance ToSchema TenantOrganizationId
+
+deriveIdentifierInstances ''TenantOrganizationId
 
 newtype BusinessAddressId =
   BusinessAddressId

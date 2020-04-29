@@ -39,42 +39,44 @@ instance FromHttpApiData Status where
 
 data PassApplicationT f =
   PassApplication
-    { _id               :: B.C f PassApplicationId
-    , _CustomerId       :: B.C f CustomerId
-    , _status           :: B.C f Status
-    , _fromDate         :: B.C f LocalTime
-    , _toDate           :: B.C f LocalTime
-    , _type             :: B.C f PassType
-    , _fromLocationType :: B.C f (Maybe LocationType)
-    , _fromLat          :: B.C f (Maybe Double)
-    , _fromLong         :: B.C f (Maybe Double)
-    , _fromWard         :: B.C f (Maybe Text)
-    , _fromDistrict     :: B.C f (Maybe Text)
-    , _fromCity         :: B.C f (Maybe Text)
-    , _fromState        :: B.C f (Maybe Text)
-    , _fromCountry      :: B.C f (Maybe Text)
-    , _fromPincode      :: B.C f (Maybe Text)
-    , _fromAddress      :: B.C f (Maybe Text)
-    , _fromBound        :: B.C f (Maybe Bound)
-    , _toLocationType   :: B.C f (Maybe LocationType)
-    , _toLat            :: B.C f (Maybe Double)
-    , _toLong           :: B.C f (Maybe Double)
-    , _toWard           :: B.C f (Maybe Text)
-    , _toDistrict       :: B.C f (Maybe Text)
-    , _toCity           :: B.C f (Maybe Text)
-    , _toState          :: B.C f (Maybe Text)
-    , _toCountry        :: B.C f (Maybe Text)
-    , _toPincode        :: B.C f (Maybe Text)
-    , _toAddress        :: B.C f (Maybe Text)
-    , _toBound          :: B.C f (Maybe Bound)
-    , _CreatedBy        :: B.C f CustomerId
-    , _AssignedTo       :: B.C f UserId
-    , _count            :: B.C f Int
-    , _approvedCount    :: B.C f Int
-    , _remarks          :: B.C f Text
-    , _info             :: B.C f Text
-    , _createdAt        :: B.C f LocalTime
-    , _updatedAt        :: B.C f LocalTime
+    { _id                   :: B.C f PassApplicationId
+    , _CustomerId           :: B.C f (Maybe CustomerId)
+    , _OrganizationId       :: B.C f (Maybe OrganizationId)
+    , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
+    , _status               :: B.C f Status
+    , _fromDate             :: B.C f LocalTime
+    , _toDate               :: B.C f LocalTime
+    , _type                 :: B.C f PassType
+    , _fromLocationType     :: B.C f (Maybe LocationType)
+    , _fromLat              :: B.C f (Maybe Double)
+    , _fromLong             :: B.C f (Maybe Double)
+    , _fromWard             :: B.C f (Maybe Text)
+    , _fromDistrict         :: B.C f (Maybe Text)
+    , _fromCity             :: B.C f (Maybe Text)
+    , _fromState            :: B.C f (Maybe Text)
+    , _fromCountry          :: B.C f (Maybe Text)
+    , _fromPincode          :: B.C f (Maybe Text)
+    , _fromAddress          :: B.C f (Maybe Text)
+    , _fromBound            :: B.C f (Maybe Bound)
+    , _toLocationType       :: B.C f (Maybe LocationType)
+    , _toLat                :: B.C f (Maybe Double)
+    , _toLong               :: B.C f (Maybe Double)
+    , _toWard               :: B.C f (Maybe Text)
+    , _toDistrict           :: B.C f (Maybe Text)
+    , _toCity               :: B.C f (Maybe Text)
+    , _toState              :: B.C f (Maybe Text)
+    , _toCountry            :: B.C f (Maybe Text)
+    , _toPincode            :: B.C f (Maybe Text)
+    , _toAddress            :: B.C f (Maybe Text)
+    , _toBound              :: B.C f (Maybe Bound)
+    , _CreatedBy            :: B.C f CustomerId
+    , _AssignedTo           :: B.C f UserId
+    , _count                :: B.C f Int
+    , _approvedCount        :: B.C f Int
+    , _remarks              :: B.C f Text
+    , _info                 :: B.C f Text
+    , _createdAt            :: B.C f LocalTime
+    , _updatedAt            :: B.C f LocalTime
     }
   deriving (Generic, B.Beamable)
 
@@ -111,6 +113,8 @@ fieldEMod =
   B.modifyTableFields
     B.tableModification
       { _CustomerId = "customer_id"
+      , _OrganizationId = "organization_id"
+      , _TenantOrganizationId = "tenant_organization_id"
       , _fromDate = "from_date"
       , _toDate = "to_date"
       , _fromLocationType = "from_locationId"

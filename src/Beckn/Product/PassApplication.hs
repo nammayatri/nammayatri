@@ -21,6 +21,8 @@ createPassApplication ::
   Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes
 createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ do
   token <- verifyToken regToken
+  checkForCustomerId _type _CustomerId
+  checkForOrgId _type _OrganizationId
   id <- generateGUID
   passAppInfo <- (getPassAppInfo id token)
   DB.create passAppInfo
@@ -30,6 +32,16 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
       return $ PassApplicationRes passApplication
     _                 -> L.throwException $ err500 {errBody = "Could not create PassApplication"}
   where
+    checkForCustomerId :: PassApplicationType -> Maybe CustomerId -> L.Flow ()
+    checkForCustomerId pAtype mCustId =
+      if (pAtype == SELF || pAtype == SPONSOROR) && mCustId == Nothing
+        then L.throwException $ err400 {errBody = "CustomerId cannot be empty"}
+        else return ()
+
+    checkForOrgId :: PassApplicationType -> Maybe OrganizationId -> L.Flow ()
+    checkForOrgId BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "CustomerId cannot be empty"}
+    checkForOrgId _ _ = return ()
+
     getPassType SELF          = INDIVIDUAL
     getPassType SPONSOROR     = INDIVIDUAL
     getPassType BULKSPONSOROR = ORGANIZATION
@@ -70,7 +82,7 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
               , _createdAt = currTime
               , _updatedAt = currTime
               , _status = PENDING
-              , _CreatedBy = CustomerId (RegistrationToken._CustomerId token)
+              , _CreatedBy = CustomerId (RegistrationToken._EntityId token)
               , _AssignedTo = UserId "admin" -- TODO: fix this
               , _count = count
               , _approvedCount = 0

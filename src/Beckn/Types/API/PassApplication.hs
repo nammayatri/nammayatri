@@ -10,16 +10,18 @@ import           EulerHS.Prelude
 
 data CreatePassApplicationReq =
   CreatePassApplicationReq
-    { _CustomerId      :: CustomerId
-    , _fromDate        :: LocalTime
-    , _toDate          :: LocalTime
-    , _fromLocation    :: Maybe Location
-    , _toLocation      :: Location
-    , _travellerName   :: Maybe Text
-    , _travellerID     :: Maybe Text
-    , _travellerIDType :: Maybe TravellerIDType
-    , _type            :: PassApplicationType
-    , _count           :: Maybe Int
+    { _CustomerId           :: Maybe CustomerId
+    , _OrganizationId       :: Maybe OrganizationId
+    , _TenantOrganizationId :: Maybe TenantOrganizationId
+    , _fromDate             :: LocalTime
+    , _toDate               :: LocalTime
+    , _fromLocation         :: Maybe Location
+    , _toLocation           :: Location
+    , _travellerName        :: Maybe Text
+    , _travellerID          :: Maybe Text
+    , _travellerIDType      :: Maybe TravellerIDType
+    , _type                 :: PassApplicationType
+    , _count                :: Maybe Int
     }
   deriving (Generic, ToSchema)
 

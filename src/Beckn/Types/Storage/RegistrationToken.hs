@@ -1,19 +1,19 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 
 module Beckn.Types.Storage.RegistrationToken where
 
 import           Data.Aeson
+import           Data.Swagger
+import qualified Data.Text                 as T
 import           Data.Time
-import           EulerHS.Prelude
+import qualified Database.Beam             as B
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
-import qualified Data.Text       as T
-import qualified Database.Beam   as B
-import           Data.Swagger
+import           EulerHS.Prelude
 
 data Medium
   = SMS
@@ -24,6 +24,16 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Medium where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow MySQL Medium where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+data RTEntityType
+  = CUSTOMER
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Eq, Show, Read)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be RTEntityType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL RTEntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data LoginType
@@ -48,7 +58,8 @@ data RegistrationTokenT f =
     , _verified      :: B.C f Bool
     , _authExpiry    :: B.C f Int
     , _tokenExpiry   :: B.C f Int
-    , _CustomerId    :: B.C f Text
+    , _EntityId      :: B.C f Text
+    , _entityType    :: B.C f RTEntityType
     , _createdAt     :: B.C f LocalTime
     , _updatedAt     :: B.C f LocalTime
     , _info          :: B.C f (Maybe Text)
@@ -86,7 +97,8 @@ fieldEMod =
         , _authType  =  "auth_type"
         , _authValueHash = "auth_value_hash"
         , _authExpiry  = "auth_expiry"
-        , _CustomerId  = "customer_id"
+        , _EntityId  = "entity_id"
+        , _entityType  = "entity_type"
         , _createdAt = "created_at"
         , _updatedAt = "updated_at"
         }

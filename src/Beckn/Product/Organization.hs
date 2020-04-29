@@ -1,27 +1,27 @@
 module Beckn.Product.Organization where
 
-import qualified Beckn.Data.Accessor as Lens
-import qualified Beckn.Storage.Queries.Customer as QC
-import qualified Beckn.Storage.Queries.Organization as QO
-import Beckn.Types.API.Organization
-import Beckn.Types.App
-import Beckn.Types.Common
+import qualified Beckn.Data.Accessor                   as Lens
+import qualified Beckn.Storage.Queries.Customer        as QC
+import qualified Beckn.Storage.Queries.Organization    as QO
+import           Beckn.Types.API.Organization
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.Organization      as SO
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Organization as SO
-import Beckn.Utils.Extra
-import Beckn.Utils.Routes
-import Beckn.Utils.Storage
-import Data.Aeson
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
+import           Beckn.Utils.Extra
+import           Beckn.Utils.Routes
+import           Beckn.Utils.Storage
+import           Data.Aeson
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import           Servant
 
 createOrganization ::
      Maybe Text -> CreateOrganizationReq -> FlowHandler OrganizationRes
 createOrganization regToken req =
   withFlowHandler $ do
     reg <- verifyToken regToken
-    customer <- QC.findCustomerById (CustomerId $ SR._CustomerId reg)
+    customer <- QC.findCustomerById (CustomerId $ SR._EntityId reg)
     uuid <- L.generateGUID
     now <- getCurrentTimeUTC
     let org =
@@ -46,7 +46,7 @@ createOrganization regToken req =
             now
             now
     QO.create org
-    QC.updateCustomerOrgId (OrganizationId uuid) (CustomerId $ SR._CustomerId reg)
+    QC.updateCustomerOrgId (OrganizationId uuid) (CustomerId $ SR._EntityId reg)
     return $ OrganizationRes org
 
 getOrganization :: Maybe Text -> Text -> FlowHandler OrganizationRes

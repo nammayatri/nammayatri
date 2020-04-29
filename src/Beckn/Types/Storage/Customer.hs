@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Customer where
 
 import           Beckn.Types.App
+import           Data.Swagger
 import qualified Data.Text                 as T
 import           Data.Time.LocalTime
 import qualified Database.Beam             as B
@@ -11,7 +12,6 @@ import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
 import           Servant.Swagger
-import           Data.Swagger
 
 data CustomerRole = BUSINESSADMIN | INDIVIDUAL
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -25,14 +25,15 @@ instance FromBackendRow MySQL CustomerRole where
 
 data CustomerT f =
   Customer
-    { _id             :: B.C f CustomerId
-    , _name           :: B.C f (Maybe Text)
-    , _OrganizationId :: B.C f (Maybe OrganizationId)
-    , _verified       :: B.C f Bool
-    , _role           :: B.C f CustomerRole
-    , _info           :: B.C f (Maybe Text)
-    , _createdAt      :: B.C f LocalTime
-    , _updatedAt      :: B.C f LocalTime
+    { _id                   :: B.C f CustomerId
+    , _name                 :: B.C f (Maybe Text)
+    , _OrganizationId       :: B.C f (Maybe OrganizationId)
+    , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
+    , _verified             :: B.C f Bool
+    , _role                 :: B.C f CustomerRole
+    , _info                 :: B.C f (Maybe Text)
+    , _createdAt            :: B.C f LocalTime
+    , _updatedAt            :: B.C f LocalTime
     }
   deriving (Generic, B.Beamable)
 
@@ -66,6 +67,7 @@ fieldEMod =
   B.modifyTableFields
     B.tableModification
       { _OrganizationId = "organization_id"
+      , _TenantOrganizationId = "tenant_organization_id"
       , _createdAt = "created_at"
       , _updatedAt = "updated_at"
       }

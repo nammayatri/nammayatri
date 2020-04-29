@@ -35,7 +35,6 @@ create regToken CreateReq {..} = withFlowHandler $ do
       now  <- getCurrTime
       return Storage.User
         { _id = id
-        , _password = ""
         , _verified = False
         , _status = INACTIVE
         , _info = Nothing

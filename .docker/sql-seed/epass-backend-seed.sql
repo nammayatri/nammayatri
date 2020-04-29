@@ -25,6 +25,7 @@ CREATE TABLE `customer` (
   `id` char(36) NOT NULL,
   `name` varchar(255) NULL,
   `organization_id` char(36) NULL,
+  `tenant_organization_id` char(36) NULL,
   `verified` boolean NOT NULL,
   `role` varchar(255) NOT NULL,
   `info` TEXT NULL,
@@ -79,8 +80,9 @@ CREATE TABLE `organization` (
 
 CREATE TABLE `pass` (
   `id` char(36) NOT NULL,
-  `customer_id` char(36) NOT NULL,
+  `customer_id` char(36) NULL,
   `organization_id` char(36) NULL,
+  `tenant_organization_id` char(36) NULL,
   `short_id` char(36) NOT NULL,
   `status` varchar(255) NULL,
   `from_date` datetime NOT NULL,
@@ -127,11 +129,13 @@ CREATE TABLE `pass` (
   INDEX (`to_city`),
   INDEX (`to_pincode`)
 );
-          
+
 
 CREATE TABLE `pass_application` (
   `id` char(36) NOT NULL,
-  `customer_id` char(36) NOT NULL,
+  `customer_id` char(36) NULL,
+  `organization_id` char(36) NULL,
+  `tenant_organization_id` char(36) NULL,
   `pass_type` varchar(255) NULL,
   `from_date` datetime NOT NULL,
   `to_date` datetime NOT NULL,
@@ -182,9 +186,10 @@ CREATE TABLE `pass_application` (
 CREATE TABLE `user` (
   `id` char(36) NOT NULL,
   `organization_id` char(36) NOT NULL,
+  `tenant_organization_id` char(36) NOT NULL,
   `name` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
-  `password` varchar(1024) NOT NULL,
+  `mobile_number` varchar(1024) NOT NULL,
   `email` varchar(255) NOT NULL,
   `role` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL,
@@ -227,12 +232,13 @@ CREATE TABLE `registration_token` (
   `auth_expiry` integer NOT NULL,
   `token_expiry` integer NOT NULL,
   `attempts` integer NOT NULL,
-  `customer_id` char(36) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` char(36) NOT NULL,
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`customer_id`)
+  INDEX (`entity_id`)
 );
 
 CREATE TABLE `quota` (
@@ -270,6 +276,7 @@ CREATE TABLE `allocated_quota` (
 CREATE TABLE `location_blacklist` (
   `id` char(36) NOT NULL,
   `blacklisted_by` char(36) NOT NULL,
+  `tenant_organization_id` char(36) NULL,
   `remarks` varchar(255) NOT NULL,
   `type` varchar(255) NOT NULL,
   `bound` TEXT NULL,

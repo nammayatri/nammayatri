@@ -1,15 +1,15 @@
 module Beckn.Storage.Queries.Pass where
 
-import Database.Beam ((&&.), (<-.), (==.))
-import EulerHS.Prelude hiding (id)
+import           Database.Beam            ((&&.), (<-.), (==.))
+import           EulerHS.Prelude          hiding (id)
 
-import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
-import qualified Beckn.Types.Storage.DB as DB
+import qualified Beckn.Storage.Queries    as DB
+import           Beckn.Types.App
+import qualified Beckn.Types.Storage.DB   as DB
 import qualified Beckn.Types.Storage.Pass as Storage
-import qualified Database.Beam as B
-import qualified EulerHS.Language as L
-import qualified EulerHS.Types as T
+import qualified Database.Beam            as B
+import qualified EulerHS.Language         as L
+import qualified EulerHS.Types            as T
 
 data ListById
   = ByApplicationId PassApplicationId
@@ -46,8 +46,8 @@ listAllPassesWithOffset limit offset id stats = do
   where
     predicate (ByApplicationId i) [] Storage.Pass {..} = (_PassApplicationId ==. B.val_ i)
     predicate (ByApplicationId i) s Storage.Pass {..} = (_PassApplicationId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
-    predicate (ByCustomerId i) [] Storage.Pass {..} = (_CustomerId ==. B.val_ i)
-    predicate (ByCustomerId i) s Storage.Pass {..} = (_CustomerId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByCustomerId i) [] Storage.Pass {..} = (_CustomerId ==. B.val_ (Just i))
+    predicate (ByCustomerId i) s Storage.Pass {..} = (_CustomerId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
     predicate (ByOrganizationId i) [] Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i))
     predicate (ByOrganizationId i) s Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
     predicate (ById i) [] Storage.Pass {..} = (_id ==. B.val_ i)
@@ -61,8 +61,8 @@ listAllPasses id status = do
   where
     predicate (ByApplicationId i) [] Storage.Pass {..} = (_PassApplicationId ==. B.val_ i)
     predicate (ByApplicationId i) s Storage.Pass {..} = (_PassApplicationId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
-    predicate (ByCustomerId i) [] Storage.Pass {..} = (_CustomerId ==. B.val_ i)
-    predicate (ByCustomerId i) s Storage.Pass {..} = (_CustomerId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByCustomerId i) [] Storage.Pass {..} = (_CustomerId ==. B.val_ (Just i))
+    predicate (ByCustomerId i) s Storage.Pass {..} = (_CustomerId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
     predicate (ByOrganizationId i) [] Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i))
     predicate (ByOrganizationId i) s Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
     predicate (ById i) [] Storage.Pass {..} = (_id ==. B.val_ i)

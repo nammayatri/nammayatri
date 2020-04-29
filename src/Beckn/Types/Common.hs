@@ -1,28 +1,28 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Beckn.Types.Common where
 
-import Beckn.Utils.TH
-import Data.Aeson
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as BSL
-import Data.Default
-import Data.Swagger
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
-import EulerHS.Prelude
-import Servant
-import Servant.Swagger
+import           Beckn.Utils.TH
+import           Data.Aeson
+import qualified Data.Aeson                as Aeson
+import qualified Data.ByteString.Lazy      as BSL
+import           Data.Default
+import           Data.Swagger
+import qualified Data.Text                 as T
+import qualified Data.Text.Encoding        as DT
+import           Database.Beam.Backend.SQL
+import           Database.Beam.MySQL
+import           EulerHS.Prelude
+import           Servant
+import           Servant.Swagger
 
 data ErrorResponse =
   ErrorResponse
-    { status :: Text
-    , responseCode :: Text
+    { status          :: Text
+    , responseCode    :: Text
     , responseMessage :: Text
     }
   deriving (Show, Generic, ToJSON, ToSchema)
@@ -36,7 +36,7 @@ data PassApplicationType
   = SELF
   | SPONSOROR
   | BULKSPONSOROR
-  deriving (Generic, FromJSON, ToSchema)
+  deriving (Eq, Generic, FromJSON, ToSchema)
 
 instance Default PassApplicationType where
   def = SELF
@@ -105,17 +105,17 @@ instance FromHttpApiData LocationType where
 
 data Location =
   Location
-    { _type :: LocationType
-    , _lat :: Maybe Double
-    , _long :: Maybe Double
-    , _ward :: Maybe Text
+    { _type     :: LocationType
+    , _lat      :: Maybe Double
+    , _long     :: Maybe Double
+    , _ward     :: Maybe Text
     , _district :: Maybe Text
-    , _city :: Maybe Text
-    , _state :: Maybe Text
-    , _country :: Maybe Text
-    , _pincode :: Maybe Text
-    , _address :: Maybe Text
-    , _bound :: Maybe Bound
+    , _city     :: Maybe Text
+    , _state    :: Maybe Text
+    , _country  :: Maybe Text
+    , _pincode  :: Maybe Text
+    , _address  :: Maybe Text
+    , _bound    :: Maybe Bound
     }
   deriving (Show, Generic, ToSchema)
 

@@ -37,18 +37,19 @@ instance FromBackendRow MySQL Role where
 
 data UserT f =
   User
-    { _id             :: B.C f UserId
-    , _organizationId :: B.C f OrganizationId
-    , _name           :: B.C f Text
-    , _username       :: B.C f Text
-    , _password       :: B.C f Text
-    , _email          :: B.C f Text
-    , _role           :: B.C f Role
-    , _verified       :: B.C f Bool
-    , _status         :: B.C f Status
-    , _info           :: B.C f (Maybe Text)
-    , _createdAt      :: B.C f LocalTime
-    , _updatedAt      :: B.C f LocalTime
+    { _id                   :: B.C f UserId
+    , _OrganizationId       :: B.C f OrganizationId
+    , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
+    , _name                 :: B.C f Text
+    , _username             :: B.C f Text
+    , _mobileNumber         :: B.C f Text
+    , _email                :: B.C f Text
+    , _role                 :: B.C f Role
+    , _verified             :: B.C f Bool
+    , _status               :: B.C f Status
+    , _info                 :: B.C f (Maybe Text)
+    , _createdAt            :: B.C f LocalTime
+    , _updatedAt            :: B.C f LocalTime
     }
   deriving (Generic, B.Beamable)
 
@@ -64,10 +65,11 @@ instance B.Table UserT where
 instance Default User where
   def = User
     { _id             = UserId Defaults.id
-    , _organizationId = OrganizationId Defaults.orgId
+    , _OrganizationId = OrganizationId Defaults.orgId
+    , _TenantOrganizationId = Nothing
     , _name           = Defaults.user
     , _username       = Defaults.user
-    , _password       = ""
+    , _mobileNumber       = ""
     , _email          = Defaults.email
     , _role           = VIEWER
     , _verified       = False
@@ -97,7 +99,9 @@ fieldEMod =
     B.tableModification
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
-      , _organizationId = "organization_id"
+      , _mobileNumber = "mobile_number"
+      , _OrganizationId = "organization_id"
+      , _TenantOrganizationId = "tenant_organization_id"
       }
 
 
