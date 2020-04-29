@@ -3,7 +3,7 @@
 -- Host: localhost    Database: atlasdb
 -- ------------------------------------------------------
 -- Server version	8.0.18
-GRANT ALL PRIVILEGES ON atlasdb.* TO 'atlas'@'%';
+GRANT ALL PRIVILEGES ON atlas_epass.* TO 'atlas'@'%';
 
 
 DROP TABLE IF EXISTS `customer`;
