@@ -79,6 +79,16 @@ spec:
             secretKeyRef:
               name: beckn-epass-secrets
               key: MYSQL_PASSWORD
+        - name: SMS_GATEWAY_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: beckn-epass-secrets
+              key: SMS_GATEWAY_USERNAME
+        - name: SMS_GATEWAY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: beckn-epass-secrets
+              key: SMS_GATEWAY_PASSWORD
         image: asia.gcr.io/jp-k8s-internal/beckn-epass-uat:$BUILD_VERSION
         name: beckn-epass-api
         ports:
