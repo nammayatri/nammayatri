@@ -223,6 +223,8 @@ type LocationBlacklistAPIS
         :> Get '[JSON] LocationBlacklist.ListRes
       :<|> Capture ":id" LocationBlacklistId
         :> Get '[JSON] LocationBlacklist.GetRes
+      :<|> Capture "id" LocationBlacklistId
+        :> Delete '[JSON] Ack
       )
 
 locationBlacklistFlow registrationToken =
@@ -230,3 +232,5 @@ locationBlacklistFlow registrationToken =
   :<|> LocationBlacklist.update registrationToken
   :<|> LocationBlacklist.list registrationToken
   :<|> LocationBlacklist.get registrationToken
+  :<|> LocationBlacklist.delete registrationToken
+
