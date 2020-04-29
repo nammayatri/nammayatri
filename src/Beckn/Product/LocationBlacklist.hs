@@ -26,6 +26,7 @@ import           Servant
 
 create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
+   verifyToken mRegToken
    id <- generateGUID
    regToken <- fromMaybeM400 "INVALID_TOKEN" mRegToken
     >>= RegToken.findRegistrationTokenByToken
