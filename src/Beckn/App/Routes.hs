@@ -1,9 +1,9 @@
 module Beckn.App.Routes where
 
 import qualified Beckn.Data.Accessor                  as Accessor
+import qualified Beckn.Product.Blacklist              as Blacklist
 import qualified Beckn.Product.Customer               as Customer
 import qualified Beckn.Product.HealthCheck            as HealthCheck
-import qualified Beckn.Product.LocationBlacklist      as LocationBlacklist
 import qualified Beckn.Product.Organization           as Organization
 import qualified Beckn.Product.Pass                   as Pass
 import qualified Beckn.Product.PassApplication.Create as PassApplication
@@ -12,8 +12,8 @@ import qualified Beckn.Product.PassApplication.Update as PassApplication
 import qualified Beckn.Product.Quota                  as Quota
 import qualified Beckn.Product.Registration           as Registration
 import qualified Beckn.Product.User                   as User
+import qualified Beckn.Types.API.Blacklist            as Blacklist
 import           Beckn.Types.API.Customer
-import qualified Beckn.Types.API.LocationBlacklist    as LocationBlacklist
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
@@ -39,7 +39,7 @@ type EPassAPIs
    :<|> PassAPIs
    :<|> UserAPIS
    :<|> QuotaAPIS
-   :<|> LocationBlacklistAPIS)
+   :<|> BlacklistAPIS)
 
 epassAPIs :: Proxy EPassAPIs
 epassAPIs = Proxy
@@ -54,7 +54,7 @@ epassServer' key =
   :<|> passFlow
   :<|> userFlow
   :<|> quotaFlow
-  :<|> locationBlacklistFlow
+  :<|> blacklistFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -205,29 +205,29 @@ userFlow registrationToken =
 
 
 ------ Location Blacklist ----------
-type LocationBlacklistAPIS
-  = "location_blacklist" :> Header "registrationToken" RegistrationToken
-  :> (  ReqBody '[JSON] LocationBlacklist.CreateReq
-        :> Post '[JSON] LocationBlacklist.CreateRes
-      :<|> Capture "location_blacklist_id" LocationBlacklistId
-        :> ReqBody '[JSON] LocationBlacklist.UpdateReq
-        :> Put '[JSON] LocationBlacklist.UpdateRes
+type BlacklistAPIS
+  = "blacklist" :> Header "registrationToken" RegistrationToken
+  :> (  ReqBody '[JSON] Blacklist.CreateReq
+        :> Post '[JSON] Blacklist.CreateRes
+      :<|> Capture "blacklist_id" BlacklistId
+        :> ReqBody '[JSON] Blacklist.UpdateReq
+        :> Put '[JSON] Blacklist.UpdateRes
       :<|> "list"
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
         :> MandatoryQueryParam "entityType" EntityType
         :> MandatoryQueryParam "entityId" Text
-        :> Get '[JSON] LocationBlacklist.ListRes
-      :<|> Capture ":id" LocationBlacklistId
-        :> Get '[JSON] LocationBlacklist.GetRes
-      :<|> Capture "id" LocationBlacklistId
+        :> Get '[JSON] Blacklist.ListRes
+      :<|> Capture ":id" BlacklistId
+        :> Get '[JSON] Blacklist.GetRes
+      :<|> Capture "id" BlacklistId
         :> Delete '[JSON] Ack
       )
 
-locationBlacklistFlow registrationToken =
-  LocationBlacklist.create registrationToken
-  :<|> LocationBlacklist.update registrationToken
-  :<|> LocationBlacklist.list registrationToken
-  :<|> LocationBlacklist.get registrationToken
-  :<|> LocationBlacklist.delete registrationToken
+blacklistFlow registrationToken =
+  Blacklist.create registrationToken
+  :<|> Blacklist.update registrationToken
+  :<|> Blacklist.list registrationToken
+  :<|> Blacklist.get registrationToken
+  :<|> Blacklist.delete registrationToken
 

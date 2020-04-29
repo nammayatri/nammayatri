@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies       #-}
 
 
-module Beckn.Types.Storage.LocationBlacklist where
+module Beckn.Types.Storage.Blacklist where
 
 import           Beckn.Types.App
 import           Beckn.Types.Common
@@ -14,9 +14,9 @@ import           Data.Time
 import qualified Database.Beam        as B
 import           EulerHS.Prelude
 
-data LocationBlacklistT f =
-  LocationBlacklist
-    { _id                   :: B.C f LocationBlacklistId
+data BlacklistT f =
+  Blacklist
+    { _id                   :: B.C f BlacklistId
     , _BlacklistedBy        :: B.C f UserId
     , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
     , _remarks              :: B.C f Text
@@ -30,14 +30,14 @@ data LocationBlacklistT f =
     }
   deriving (Generic, B.Beamable)
 
-type LocationBlacklist = LocationBlacklistT Identity
+type Blacklist = BlacklistT Identity
 
-type LocationBlacklistPrimaryKey = B.PrimaryKey LocationBlacklistT Identity
+type BlacklistPrimaryKey = B.PrimaryKey BlacklistT Identity
 
 
-instance Default LocationBlacklist where
-  def = LocationBlacklist
-    { _id                    = LocationBlacklistId Defaults.id
+instance Default Blacklist where
+  def = Blacklist
+    { _id                    = BlacklistId Defaults.id
     , _remarks               = ""
     , _BlacklistedBy         = UserId Defaults.id
     , _TenantOrganizationId  = Nothing
@@ -51,26 +51,26 @@ instance Default LocationBlacklist where
     }
 
 
-instance B.Table LocationBlacklistT where
-  data PrimaryKey LocationBlacklistT f = LocationBlacklistPrimaryKey (B.C f LocationBlacklistId)
+instance B.Table BlacklistT where
+  data PrimaryKey BlacklistT f = BlacklistPrimaryKey (B.C f BlacklistId)
                                deriving (Generic, B.Beamable)
-  primaryKey = LocationBlacklistPrimaryKey . _id
+  primaryKey = BlacklistPrimaryKey . _id
 
-deriving instance Show LocationBlacklist
+deriving instance Show Blacklist
 
-deriving instance Eq LocationBlacklist
+deriving instance Eq Blacklist
 
-deriving instance FromJSON LocationBlacklist
+deriving instance FromJSON Blacklist
 
-instance ToJSON LocationBlacklist where
+instance ToJSON Blacklist where
   toJSON = genericToJSON stripLensPrefixOptions
 
-insertExpression location_blacklist = insertExpressions [location_blacklist]
+insertExpression blacklist = insertExpressions [blacklist]
 
-insertExpressions location_blacklists = B.insertValues location_blacklists
+insertExpressions blacklists = B.insertValues blacklists
 
 fieldEMod ::
-     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LocationBlacklistT)
+     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BlacklistT)
 fieldEMod =
   B.setEntityName "blacklist" <>
     B.modifyTableFields

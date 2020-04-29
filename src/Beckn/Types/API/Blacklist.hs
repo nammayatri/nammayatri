@@ -1,8 +1,8 @@
-module Beckn.Types.API.LocationBlacklist where
+module Beckn.Types.API.Blacklist where
 
 import           Beckn.Types.App
 import           Beckn.Types.Common
-import           Beckn.Types.Storage.LocationBlacklist
+import           Beckn.Types.Storage.Blacklist
 import           Beckn.Utils.Common
 import           Data.Default
 import           Data.Time.LocalTime
@@ -27,7 +27,7 @@ instance FromJSON CreateReq where
 
 data CreateRes =
   CreateRes
-  { _location_blacklist :: LocationBlacklist
+  { _blacklist :: Blacklist
   }
   deriving (Show, Generic, FromJSON, Default)
 
@@ -51,7 +51,7 @@ instance FromJSON UpdateReq where
 
 data UpdateRes =
   UpdateRes
-  { _location_blacklist :: LocationBlacklist
+  { _blacklist :: Blacklist
   }
   deriving (Show, Generic, FromJSON, Default)
 
@@ -61,11 +61,11 @@ instance ToJSON UpdateRes where
 
 data ListRes =
   ListRes
-  { _location_blacklists :: [LocationBlacklist]
+  { _blacklists :: [Blacklist]
   }
   deriving (Show, Generic, FromJSON, Default)
 
 instance ToJSON ListRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
-type GetRes = LocationBlacklist
+type GetRes = Blacklist

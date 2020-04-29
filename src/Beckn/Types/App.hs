@@ -176,15 +176,15 @@ instance ToSchema RegistrationTokenId
 
 deriveIdentifierInstances ''RegistrationTokenId
 
-newtype LocationBlacklistId =
-  LocationBlacklistId
-    { _getLocationBlacklistId :: Text
+newtype BlacklistId =
+  BlacklistId
+    { _getBlacklistId :: Text
     }
   deriving  (Generic, Show)
 
-instance ToSchema LocationBlacklistId
+instance ToSchema BlacklistId
 
-deriveIdentifierInstances ''LocationBlacklistId
+deriveIdentifierInstances ''BlacklistId
 
 newtype AllocatedQuotaId =
   AllocatedQuotaId
