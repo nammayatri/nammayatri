@@ -25,7 +25,8 @@ data LocationBlacklistT f =
     , _district             :: B.C f (Maybe Text)
     , _city                 :: B.C f (Maybe Text)
     , _state                :: B.C f (Maybe Text)
-    , _country              :: B.C f  Text
+    , _ward                 :: B.C f (Maybe Text)
+    , _country              :: B.C f Text
     , _pincode              :: B.C f (Maybe Int)
     , _info                 :: B.C f (Maybe Text)
     , _createdAt            :: B.C f LocalTime
@@ -50,6 +51,7 @@ instance Default LocationBlacklist where
     , _district      = Just Defaults.district
     , _city          = Just Defaults.city
     , _state         = Just Defaults.state
+    , _ward          = Nothing
     , _country       = Defaults.country
     , _pincode       = Just Defaults.pincode
     , _createdAt     = Defaults.localTime

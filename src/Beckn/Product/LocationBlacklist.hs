@@ -32,11 +32,11 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
    case (RegToken._entityType regToken) of
      RegToken.USER -> do
         locationBlacklist <- locationBlacklistRec id $ RegToken._EntityId regToken
-   DB.create locationBlacklist
-   eres <- DB.findById id
-   case eres of
-     Right (Just locationBlacklistDb) -> return $ CreateRes locationBlacklistDb
-     _                 -> L.throwException $ err500 {errBody = "Could not create LocationBlacklist"}
+        DB.create locationBlacklist
+        eres <- DB.findById id
+        case eres of
+          Right (Just locationBlacklistDb) -> return $ CreateRes locationBlacklistDb
+          _                 -> L.throwException $ err500 {errBody = "Could not create LocationBlacklist"}
      RegToken.CUSTOMER -> L.throwException $ err401 {errBody = "Unauthorized"}
     where
       locationBlacklistRec id userId = do
@@ -78,4 +78,15 @@ update ::
   LocationBlacklistId ->
   UpdateReq ->
   FlowHandler UpdateRes
-update mRegToken userId req = pure $ def UpdateRes
+update mRegToken locationBlacklistId lb@UpdateReq{..} = withFlowHandler $ do
+  verifyToken mRegToken
+  eres <- DB.update locationBlacklistId lb
+  case eres of
+    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Right _ ->
+      DB.findById locationBlacklistId
+      >>= \case
+        Right (Just v) -> return $ UpdateRes v
+        Right Nothing -> L.throwException $ err400 {errBody = "LocationBlacklist not found"}
+        Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+

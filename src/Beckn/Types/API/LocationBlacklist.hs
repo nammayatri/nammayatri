@@ -13,8 +13,6 @@ data CreateReq =
   { _remarks              :: Text
   , _TenantOrganizationId :: Maybe TenantOrganizationId
   , _type                 :: LocationType
-  , _lat                  :: Maybe Double
-  , _long                 :: Maybe Double
   , _ward                 :: Maybe Text
   , _district             :: Maybe Text
   , _city                 :: Maybe Text
@@ -22,6 +20,7 @@ data CreateReq =
   , _country              :: Text
   , _pincode              :: Maybe Int
   , _bound                :: Maybe Bound
+  , _info                 :: Maybe Text
   }
   deriving (Show, Generic, ToJSON)
 
@@ -42,9 +41,7 @@ data UpdateReq =
   UpdateReq
   { _remarks              :: Maybe Text
   , _TenantOrganizationId :: Maybe TenantOrganizationId
-  , _type                 :: LocationType
-  , _lat                  :: Maybe Double
-  , _long                 :: Maybe Double
+  , _type                 :: Maybe LocationType
   , _ward                 :: Maybe Text
   , _district             :: Maybe Text
   , _city                 :: Maybe Text
@@ -52,6 +49,7 @@ data UpdateReq =
   , _country              :: Maybe Text
   , _pincode              :: Maybe Int
   , _bound                :: Maybe Bound
+  , _info                 :: Maybe Text
   }
   deriving (Show, Generic, ToJSON)
 

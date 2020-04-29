@@ -7,11 +7,14 @@ import           EulerHS.Prelude                       hiding (id)
 
 import qualified Beckn.Storage.Queries                 as DB
 import qualified Beckn.Storage.Queries                 as DB
+import qualified Beckn.Types.API.LocationBlacklist     as API
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.DB                as DB
 import qualified Beckn.Types.Storage.DB                as DB
 import qualified Beckn.Types.Storage.LocationBlacklist as Storage
+import qualified Beckn.Types.Storage.LocationBlacklist as Storage
+
 import           Beckn.Utils.Common
 import           Data.Time
 import           Data.Time.LocalTime
@@ -36,31 +39,29 @@ findById id = do
   where
     predicate Storage.LocationBlacklist {..} = (_id ==. B.val_ id)
 
--- findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text ->  L.Flow (T.DBResult [Storage.LocationBlacklist])
--- findAllWithLimitOffset mlimit moffset entityType entityId =
---   DB.findAllWithLimitOffsetWhere dbTable (pred entityType entityId) limit offset orderByDesc
---   where
---     limit = (toInteger $ fromMaybe 10 mlimit)
---     offset = (toInteger $ fromMaybe 0 moffset)
---     orderByDesc Storage.LocationBlacklist {..} = B.desc_ _createdAt
---     pred entityType entityId Storage.LocationBlacklist {..} = (_entityType ==. (B.val_ entityType)
---                                                   &&. _EntityId ==. (B.val_ entityId))
 
--- update ::
---   LocationBlacklistId
---   -> Maybe Int
---   -> Maybe LocalTime
---   -> Maybe LocalTime
---   -> L.Flow (T.DBResult ())
--- update id maxAllowedM  startTimeM endTimeM = do
---   (currTime :: LocalTime) <- getCurrTime
---   DB.update dbTable
---     (setClause maxAllowedM startTimeM endTimeM currTime)
---     (predicate id)
---   where
---     predicate id Storage.LocationBlacklist {..} = _id ==. B.val_ id
---     setClause maxAllowedM startTimeM endTimeM currTime Storage.LocationBlacklist {..} =
---       mconcat ([_updatedAt <-. B.val_ currTime]
---       <> maybe ([]) (return . (_startTime <-.) . B.val_) startTimeM
---       <> maybe ([]) (return . (_endTime <-.) . B.val_) endTimeM
---       <> maybe ([]) (return . (_maxAllowed <-.) . B.val_) maxAllowedM)
+update ::
+  LocationBlacklistId
+  -> API.UpdateReq
+  -> L.Flow (T.DBResult ())
+update id API.UpdateReq {..} = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update dbTable
+    (setClause _remarks _TenantOrganizationId _info _type  _ward _district _city _state _country _pincode _bound currTime)
+    (predicate id)
+  where
+    predicate id Storage.LocationBlacklist {..} = _id ==. B.val_ id
+    setClause remarksM tenantOrganizationIdM infoM typeM wardM districtM cityM stateM countryM pincodeM boundM currTime Storage.LocationBlacklist {..} =
+      mconcat ([_updatedAt <-. B.val_ currTime
+              ]
+              <> maybe [] (\x -> [ _remarks <-. B.val_ x ]) remarksM
+              <> maybe ([]) (return . (_district <-.) . B.val_ . Just) districtM
+              <> maybe ([]) (return . (_TenantOrganizationId <-.) . B.val_ . Just) tenantOrganizationIdM
+              <> maybe ([]) (return . (_ward <-.) . B.val_ . Just) wardM
+              <> maybe ([]) (return . (_info <-.) .  B.val_ . Just) infoM
+              <> maybe ([]) (return . (_city <-.) .  B.val_ . Just) cityM
+              <> maybe ([]) (return . (_state <-.) .  B.val_ . Just) stateM
+              <> maybe ([]) (return . (_country <-.) .  B.val_) countryM
+              <> maybe ([]) (return . (_pincode <-.) . B.val_ . Just) pincodeM
+              <> maybe ([]) (return . (_bound <-.) . B.val_ . Just) boundM
+             )
