@@ -15,10 +15,10 @@ import           System.Environment
 instance Config T.MySQLConfig where
   theConfig = T.MySQLConfig
     { connectHost     = "127.0.0.1"
-    , connectPort     = 3308
-    , connectUser     = "cloud"
-    , connectPassword = "scape"
-    , connectDatabase = "becknDb"
+    , connectPort     = 3306
+    , connectUser     = "atlas"
+    , connectPassword = "atlas"
+    , connectDatabase = "atlas_epass"
     , connectOptions  = [T.CharsetName "utf8"]
     , connectPath     = ""
     , connectSSL      = Nothing

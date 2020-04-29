@@ -62,9 +62,11 @@ type RegistrationAPIs
    :> ( ReqBody '[ JSON] InitiateLoginReq
         :> Post '[ JSON] InitiateLoginRes
       :<|> Capture "tokenId" Text
+          :> "verify"
           :> ReqBody '[ JSON] LoginReq
           :> Post '[ JSON] LoginRes
       :<|> Capture "tokenId" Text
+          :> "resend"
           :> ReqBody '[ JSON] ReInitiateLoginReq
           :> Post '[ JSON] InitiateLoginRes
       )
