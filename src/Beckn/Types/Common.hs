@@ -39,7 +39,7 @@ data PassApplicationType
   = SELF
   | SPONSOROR
   | BULKSPONSOROR
-  deriving (Generic, FromJSON, ToSchema)
+  deriving (Eq, Generic, FromJSON, ToSchema)
 
 instance Default PassApplicationType where
   def = SELF
@@ -47,7 +47,7 @@ instance Default PassApplicationType where
 data TravellerIDType
   = MOBILE
   | AADHAR
-  deriving (Generic, FromJSON, ToSchema)
+  deriving (Eq, Generic, FromJSON, ToSchema)
 
 instance Default TravellerIDType where
   def = MOBILE

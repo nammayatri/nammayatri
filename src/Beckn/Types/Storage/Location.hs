@@ -30,6 +30,7 @@ data LocationT f =
     , _city      :: B.C f Text
     , _state     :: B.C f Text
     , _country   :: B.C f Text
+    , _ward      :: B.C f Text
     , _pincode   :: B.C f Text
     , _address   :: B.C f Text
     , _info      :: B.C f Text

@@ -1,26 +1,26 @@
 module Beckn.Product.Registration where
 
-import qualified Beckn.Data.Accessor as Lens
-import qualified Beckn.External.MyValuesFirst.Flow as Sms
-import qualified Beckn.External.MyValuesFirst.Types as Sms
-import qualified Beckn.Storage.Queries.Customer as QC
+import qualified Beckn.Data.Accessor                     as Lens
+import qualified Beckn.External.MyValuesFirst.Flow       as Sms
+import qualified Beckn.External.MyValuesFirst.Types      as Sms
+import qualified Beckn.Storage.Queries.Customer          as QC
 import qualified Beckn.Storage.Queries.RegistrationToken as QR
-import Beckn.Types.API.Registration
-import Beckn.Types.App
-import Beckn.Types.Common
-import qualified Beckn.Types.Storage.Customer as SC
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
-import Beckn.Utils.Extra
-import Beckn.Utils.Routes
-import Beckn.Utils.Storage
-import qualified Crypto.Number.Generate as Cryptonite
-import Data.Aeson
-import qualified Data.Text as T
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
-import System.Environment
+import           Beckn.Types.API.Registration
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.Customer            as SC
+import qualified Beckn.Types.Storage.RegistrationToken   as SR
+import           Beckn.Utils.Common
+import           Beckn.Utils.Extra
+import           Beckn.Utils.Routes
+import           Beckn.Utils.Storage
+import qualified Crypto.Number.Generate                  as Cryptonite
+import           Data.Aeson
+import qualified Data.Text                               as T
+import qualified EulerHS.Language                        as L
+import           EulerHS.Prelude
+import           Servant
+import           System.Environment
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -54,6 +54,7 @@ initiateSms req = do
         (CustomerId uuid)
         Nothing
         Nothing
+        Nothing
         False
         (req ^. Lens.role)
         Nothing
@@ -72,6 +73,7 @@ initiateSms req = do
         ae
         te
         uuid
+        SR.CUSTOMER
         now
         now
         Nothing
@@ -106,7 +108,7 @@ login tokenId req =
     SR.RegistrationToken {..} <-
       QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
     cust <-
-      QC.findCustomerById (CustomerId _CustomerId) >>=
+      QC.findCustomerById (CustomerId _EntityId) >>=
       fromMaybeM400 "INVALID_DATA"
     unlessM (isExpired (realToFrac (_authExpiry * 60)) _updatedAt) $
       L.throwException $ err400 { errBody = "AUTH_EXPIRED" }
@@ -124,7 +126,7 @@ reInitiateLogin tokenId req =
     SR.RegistrationToken {..} <-
       QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
     cust <-
-      QC.findCustomerById (CustomerId _CustomerId) >>=
+      QC.findCustomerById (CustomerId _EntityId) >>=
       fromMaybeM400 "INVALID_DATA"
     if _attempts > 0
       then do

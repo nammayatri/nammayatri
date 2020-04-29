@@ -8,11 +8,13 @@ import           EulerHS.Prelude
 
 data CreateReq =
   CreateReq
-  { _name           :: Text
-  , _username       :: Text
-  , _email          :: Text
-  , _role           :: Role
-  , _organizationId :: OrganizationId
+  { _name                 :: Text
+  , _username             :: Text
+  , _email                :: Text
+  , _mobileNumber         :: Text
+  , _role                 :: Role
+  , _OrganizationId       :: OrganizationId
+  , _TenantOrganizationId :: Maybe TenantOrganizationId
   }
   deriving (Show, Generic, ToJSON)
 

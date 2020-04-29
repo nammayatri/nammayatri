@@ -1,20 +1,20 @@
 module Beckn.Product.Pass where
 
-import qualified Beckn.Data.Accessor as Accessor
-import qualified Beckn.Storage.Queries.CustomerDetails as QCD
-import qualified Beckn.Storage.Queries.Pass as QP
-import Beckn.Types.API.Pass
-import Beckn.Types.App
-import Beckn.Types.Common
-import qualified Beckn.Types.Storage.CustomerDetails as SCD
-import Beckn.Types.Storage.Pass
-import Beckn.Utils.Common
-import Beckn.Utils.Routes
-import Beckn.Utils.Storage
-import Data.Aeson
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
+import qualified Beckn.Data.Accessor                  as Accessor
+import qualified Beckn.Storage.Queries.CustomerDetail as QCD
+import qualified Beckn.Storage.Queries.Pass           as QP
+import           Beckn.Types.API.Pass
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.CustomerDetail   as SCD
+import           Beckn.Types.Storage.Pass
+import           Beckn.Utils.Common
+import           Beckn.Utils.Routes
+import           Beckn.Utils.Storage
+import           Data.Aeson
+import qualified EulerHS.Language                     as L
+import           EulerHS.Prelude
+import           Servant
 
 getPassById :: Maybe Text -> Text -> FlowHandler PassRes
 getPassById regToken passId =
@@ -57,10 +57,10 @@ listPass regToken passIdType passV limitM offsetM passType =
           return $ Just $ QP.ByApplicationId (PassApplicationId passV)
         CUSTOMERID -> return $ Just $ QP.ByCustomerId (CustomerId passV)
         MOBILENUMBER -> do
-          detail <- QCD.findCustomerDetailsByMB passV
+          detail <- QCD.findCustomerDetailByMB passV
           return $ (QP.ByCustomerId . SCD._CustomerId) <$> detail
 
     getPasses listBy =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
         (Just l, Just o) -> QP.listAllPassesWithOffset l o listBy []
-        _ -> QP.listAllPasses listBy []
+        _                -> QP.listAllPasses listBy []

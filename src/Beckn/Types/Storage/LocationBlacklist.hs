@@ -5,6 +5,7 @@
 
 module Beckn.Types.Storage.LocationBlacklist where
 
+import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
@@ -15,19 +16,20 @@ import           EulerHS.Prelude
 
 data LocationBlacklistT f =
   LocationBlacklist
-    { _id            :: B.C f Text
-    , _BlacklistedBy :: B.C f Text
-    , _type          :: B.C f LocationType
-    , _remarks       :: B.C f Text
-    , _bound         :: B.C f (Maybe Bound)
-    , _district      :: B.C f (Maybe Text)
-    , _city          :: B.C f (Maybe Text)
-    , _state         :: B.C f (Maybe Text)
-    , _country       :: B.C f  Text
-    , _pincode       :: B.C f (Maybe Int)
-    , _info          :: B.C f (Maybe Text)
-    , _createdAt     :: B.C f LocalTime
-    , _updatedAt     :: B.C f LocalTime
+    { _id                   :: B.C f Text
+    , _BlacklistedBy        :: B.C f Text
+    , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
+    , _type                 :: B.C f LocationType
+    , _remarks              :: B.C f Text
+    , _bound                :: B.C f (Maybe Bound)
+    , _district             :: B.C f (Maybe Text)
+    , _city                 :: B.C f (Maybe Text)
+    , _state                :: B.C f (Maybe Text)
+    , _country              :: B.C f  Text
+    , _pincode              :: B.C f (Maybe Int)
+    , _info                 :: B.C f (Maybe Text)
+    , _createdAt            :: B.C f LocalTime
+    , _updatedAt            :: B.C f LocalTime
     }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +43,7 @@ instance Default LocationBlacklist where
     { _id            = Defaults.id
     , _remarks       = ""
     , _BlacklistedBy = Defaults.id
+    , _TenantOrganizationId = Nothing
     , _type          = Defaults.locationType
     , _info          = Nothing
     , _bound         = Nothing
@@ -75,6 +78,7 @@ fieldEMod =
     B.modifyTableFields
       B.tableModification
         { _BlacklistedBy = "blacklisted_by"
+        , _TenantOrganizationId = "tenant_organization_id"
         , _createdAt = "created_at"
         , _updatedAt = "updated_at"
         }
