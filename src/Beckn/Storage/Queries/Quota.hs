@@ -56,6 +56,6 @@ update id maxAllowedM  startTimeM endTimeM = do
     predicate id Storage.Quota {..} = _id ==. B.val_ id
     setClause maxAllowedM startTimeM endTimeM currTime Storage.Quota {..} =
       mconcat ([_updatedAt <-. B.val_ currTime]
-      <> maybe ([]) (return . (_startTime <-.) . B.val_) startTimeM
-      <> maybe ([]) (return . (_endTime <-.) . B.val_) endTimeM
-      <> maybe ([]) (return . (_maxAllowed <-.) . B.val_) maxAllowedM)
+      <> maybe [] (return . (_startTime <-.) . B.val_) startTimeM
+      <> maybe [] (return . (_endTime <-.) . B.val_) endTimeM
+      <> maybe [] (return . (_maxAllowed <-.) . B.val_) maxAllowedM)

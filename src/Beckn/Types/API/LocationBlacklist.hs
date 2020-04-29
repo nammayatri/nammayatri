@@ -14,7 +14,10 @@ data CreateReq =
   , _TenantOrganizationId :: Maybe TenantOrganizationId
   , _EntityId             :: Text
   , _entityType           :: EntityType
+  , _startTime            :: LocalTime
+  , _endTime              :: LocalTime
   , _info                 :: Maybe Text
+
   }
   deriving (Show, Generic, ToJSON)
 
@@ -38,6 +41,8 @@ data UpdateReq =
   , _EntityId             :: Maybe Text
   , _entityType           :: Maybe EntityType
   , _info                 :: Maybe Text
+  , _startTime            :: Maybe LocalTime
+  , _endTime              :: Maybe LocalTime
   }
   deriving (Show, Generic, ToJSON)
 
@@ -53,7 +58,7 @@ data UpdateRes =
 instance ToJSON UpdateRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
--- List by ward district city state pincode
+
 data ListRes =
   ListRes
   { _location_blacklists :: [LocationBlacklist]

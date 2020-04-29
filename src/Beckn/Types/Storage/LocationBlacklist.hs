@@ -22,6 +22,8 @@ data LocationBlacklistT f =
     , _remarks              :: B.C f Text
     , _EntityId             :: B.C f Text
     , _entityType           :: B.C f EntityType
+    , _startTime            :: B.C f LocalTime
+    , _endTime              :: B.C f LocalTime
     , _info                 :: B.C f (Maybe Text)
     , _createdAt            :: B.C f LocalTime
     , _updatedAt            :: B.C f LocalTime
@@ -40,6 +42,8 @@ instance Default LocationBlacklist where
     , _BlacklistedBy         = UserId Defaults.id
     , _TenantOrganizationId  = Nothing
     , _info                  = Nothing
+    , _startTime             = Defaults.localTime
+    , _endTime               = Defaults.localTime
     , _EntityId              = Defaults.orgId
     , _entityType            = LOCATION
     , _createdAt             = Defaults.localTime
@@ -75,6 +79,8 @@ fieldEMod =
         , _TenantOrganizationId = "tenant_organization_id"
         , _EntityId = "entity_id"
         , _entityType = "entity_type"
+        , _startTime = "start_time"
+        , _endTime = "end_time"
         , _createdAt = "created_at"
         , _updatedAt = "updated_at"
         }

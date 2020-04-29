@@ -52,17 +52,19 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
           }
 
 list ::
-  Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Int
-  -> Maybe Int
-  -> Maybe Int
+  Maybe RegistrationToken
+  -> Maybe Limit
+  -> Maybe Offset
+  -> EntityType
+  -> Text
   -> FlowHandler ListRes
-list mRegToken maybeWard maybeDistrict maybeCity maybeState maybePincode offsetM limitM =
-  pure $ ListRes {_location_blacklists = [def Storage.LocationBlacklist]}
+list mRegToken mlimit moffset entityType entityId = withFlowHandler $ do
+  verifyToken mRegToken
+  DB.findAllWithLimitOffset mlimit moffset entityType entityId
+  >>= \case
+      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+      Right v -> return $ ListRes v
+
 
 get :: Maybe Text -> LocationBlacklistId -> FlowHandler GetRes
 get mRegToken locationBlacklistId = withFlowHandler $ do

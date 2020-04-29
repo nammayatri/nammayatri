@@ -213,13 +213,10 @@ type LocationBlacklistAPIS
         :> ReqBody '[JSON] LocationBlacklist.UpdateReq
         :> Put '[JSON] LocationBlacklist.UpdateRes
       :<|> "list"
-        :> QueryParam "ward" Text
-        :> QueryParam "district" Text
-        :> QueryParam "city" Text
-        :> QueryParam "state" Text
-        :> QueryParam "pincode" Int
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
+        :> MandatoryQueryParam "entityType" EntityType
+        :> MandatoryQueryParam "entityId" Text
         :> Get '[JSON] LocationBlacklist.ListRes
       :<|> Capture ":id" LocationBlacklistId
         :> Get '[JSON] LocationBlacklist.GetRes
