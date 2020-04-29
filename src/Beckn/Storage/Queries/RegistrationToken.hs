@@ -40,9 +40,12 @@ findRegistrationTokenByToken id = do
 updateAttempts ::
   Int -> Text -> L.Flow Storage.RegistrationToken
 updateAttempts attemps id = do
-  DB.update dbTable (setClause attemps) (predicate id) >>= either DB.throwDBError pure
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause attemps now) (predicate id)
+    >>= either DB.throwDBError pure
   findRegistrationToken id >>= maybe (L.throwException err500) pure
   where
     predicate i Storage.RegistrationToken {..} = (_id ==. B.val_ i)
-    setClause a Storage.RegistrationToken {..} = mconcat [ _attempts <-. B.val_ a ]
+    setClause a n Storage.RegistrationToken {..} =
+      mconcat [ _attempts <-. B.val_ a, _updatedAt <-. n ]
 
