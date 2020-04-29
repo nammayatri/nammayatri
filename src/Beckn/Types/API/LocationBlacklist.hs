@@ -10,18 +10,19 @@ import           EulerHS.Prelude
 
 data CreateReq =
   CreateReq
-  { _remarks       :: Text
-  , _BlacklistedBy :: UserId
-  , _type          :: LocationType
-  , _lat           :: Maybe Double
-  , _long          :: Maybe Double
-  , _ward          :: Maybe Text
-  , _district      :: Maybe Text
-  , _city          :: Maybe Text
-  , _state         :: Maybe Text
-  , _country       :: Text
-  , _pincode       :: Maybe Int
-  , _bound         :: Maybe Bound
+  { _remarks              :: Text
+  , _BlacklistedBy        :: UserId
+  , _TenantOrganizationId :: Maybe TenantOrganizationId
+  , _type                 :: LocationType
+  , _lat                  :: Maybe Double
+  , _long                 :: Maybe Double
+  , _ward                 :: Maybe Text
+  , _district             :: Maybe Text
+  , _city                 :: Maybe Text
+  , _state                :: Maybe Text
+  , _country              :: Text
+  , _pincode              :: Maybe Int
+  , _bound                :: Maybe Bound
   }
   deriving (Show, Generic, ToJSON)
 
@@ -40,18 +41,19 @@ instance ToJSON CreateRes where
 
 data UpdateReq =
   UpdateReq
-  { _remarks       :: Maybe Text
-  , _BlacklistedBy :: Maybe UserId
-  , _type          :: LocationType
-  , _lat           :: Maybe Double
-  , _long          :: Maybe Double
-  , _ward          :: Maybe Text
-  , _district      :: Maybe Text
-  , _city          :: Maybe Text
-  , _state         :: Maybe Text
-  , _country       :: Maybe Text
-  , _pincode       :: Maybe Int
-  , _bound         :: Maybe Bound
+  { _remarks              :: Maybe Text
+  , _BlacklistedBy        :: Maybe UserId
+  , _TenantOrganizationId :: Maybe TenantOrganizationId
+  , _type                 :: LocationType
+  , _lat                  :: Maybe Double
+  , _long                 :: Maybe Double
+  , _ward                 :: Maybe Text
+  , _district             :: Maybe Text
+  , _city                 :: Maybe Text
+  , _state                :: Maybe Text
+  , _country              :: Maybe Text
+  , _pincode              :: Maybe Int
+  , _bound                :: Maybe Bound
   }
   deriving (Show, Generic, ToJSON)
 

@@ -16,8 +16,8 @@ import           EulerHS.Prelude
 
 data LocationBlacklistT f =
   LocationBlacklist
-    { _id                   :: B.C f Text
-    , _BlacklistedBy        :: B.C f Text
+    { _id                   :: B.C f LocationBlacklistId
+    , _BlacklistedBy        :: B.C f UserId
     , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
     , _type                 :: B.C f LocationType
     , _remarks              :: B.C f Text
@@ -40,9 +40,9 @@ type LocationBlacklistPrimaryKey = B.PrimaryKey LocationBlacklistT Identity
 
 instance Default LocationBlacklist where
   def = LocationBlacklist
-    { _id            = Defaults.id
+    { _id            = LocationBlacklistId Defaults.id
     , _remarks       = ""
-    , _BlacklistedBy = Defaults.id
+    , _BlacklistedBy = UserId Defaults.id
     , _TenantOrganizationId = Nothing
     , _type          = Defaults.locationType
     , _info          = Nothing
@@ -58,7 +58,7 @@ instance Default LocationBlacklist where
 
 
 instance B.Table LocationBlacklistT where
-  data PrimaryKey LocationBlacklistT f = LocationBlacklistPrimaryKey (B.C f Text)
+  data PrimaryKey LocationBlacklistT f = LocationBlacklistPrimaryKey (B.C f LocationBlacklistId)
                                deriving (Generic, B.Beamable)
   primaryKey = LocationBlacklistPrimaryKey . _id
 
@@ -70,6 +70,10 @@ deriving instance FromJSON LocationBlacklist
 
 instance ToJSON LocationBlacklist where
   toJSON = genericToJSON stripLensPrefixOptions
+
+insertExpression location_blacklist = insertExpressions [location_blacklist]
+
+insertExpressions location_blacklists = B.insertValues location_blacklists
 
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LocationBlacklistT)
