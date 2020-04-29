@@ -47,23 +47,17 @@ update ::
 update id API.UpdateReq {..} = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update dbTable
-    (setClause _remarks _TenantOrganizationId _info _type  _ward _district _city _state _country _pincode _bound currTime)
+    (setClause _remarks _TenantOrganizationId _info _entityType _EntityId currTime)
     (predicate id)
   where
     predicate id Storage.LocationBlacklist {..} = _id ==. B.val_ id
-    setClause remarksM tenantOrganizationIdM infoM typeM wardM districtM cityM stateM countryM pincodeM boundM currTime Storage.LocationBlacklist {..} =
-      mconcat ([_updatedAt <-. B.val_ currTime
-              ]
+    setClause remarksM tenantOrganizationIdM infoM entityType entityId currTime Storage.LocationBlacklist {..} =
+      mconcat ([_updatedAt <-. B.val_ currTime ]
               <> maybe [] (\x -> [ _remarks <-. B.val_ x ]) remarksM
-              <> maybe ([]) (return . (_district <-.) . B.val_ . Just) districtM
               <> maybe ([]) (return . (_TenantOrganizationId <-.) . B.val_ . Just) tenantOrganizationIdM
-              <> maybe ([]) (return . (_ward <-.) . B.val_ . Just) wardM
               <> maybe ([]) (return . (_info <-.) .  B.val_ . Just) infoM
-              <> maybe ([]) (return . (_city <-.) .  B.val_ . Just) cityM
-              <> maybe ([]) (return . (_state <-.) .  B.val_ . Just) stateM
-              <> maybe ([]) (return . (_country <-.) .  B.val_) countryM
-              <> maybe ([]) (return . (_pincode <-.) . B.val_ . Just) pincodeM
-              <> maybe ([]) (return . (_bound <-.) . B.val_ . Just) boundM
+              <> maybe [] (\x -> [ _EntityId <-. B.val_ x]) entityId
+              <> maybe [] (\x -> [ _entityType <-. B.val_ x]) entityType
              )
 
 deleteById :: LocationBlacklistId -> L.Flow (T.DBResult ())
