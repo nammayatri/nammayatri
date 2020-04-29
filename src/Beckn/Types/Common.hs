@@ -44,7 +44,7 @@ instance Default PassApplicationType where
 data TravellerIDType
   = MOBILE
   | AADHAR
-  deriving (Generic, FromJSON, ToSchema)
+  deriving (Eq, Generic, FromJSON, ToSchema)
 
 instance Default TravellerIDType where
   def = MOBILE

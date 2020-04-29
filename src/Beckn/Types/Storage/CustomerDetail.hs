@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.CustomerDetails where
+module Beckn.Types.Storage.CustomerDetail where
 
 import           Beckn.Types.App
 import           Data.Aeson
@@ -22,9 +22,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 instance FromBackendRow MySQL IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CustomerDetailsT f =
-  CustomerDetails
-    { _id                :: B.C f CustomerDetailsId
+data CustomerDetailT f =
+  CustomerDetail
+    { _id                :: B.C f CustomerDetailId
     , _CustomerId        :: B.C f CustomerId
     , _uniqueIdentifier  :: B.C f Text
     , _identifierType    :: B.C f IdentifierType
@@ -37,29 +37,29 @@ data CustomerDetailsT f =
     }
   deriving (Generic, B.Beamable)
 
-type CustomerDetails = CustomerDetailsT Identity
+type CustomerDetail = CustomerDetailT Identity
 
-type CustomerDetailsPrimaryKey = B.PrimaryKey CustomerDetailsT Identity
+type CustomerDetailPrimaryKey = B.PrimaryKey CustomerDetailT Identity
 
-instance B.Table CustomerDetailsT where
-  data PrimaryKey CustomerDetailsT f = CustomerDetailsPrimaryKey (B.C f CustomerDetailsId)
+instance B.Table CustomerDetailT where
+  data PrimaryKey CustomerDetailT f = CustomerDetailPrimaryKey (B.C f CustomerDetailId)
                                deriving (Generic, B.Beamable)
-  primaryKey = CustomerDetailsPrimaryKey . _id
+  primaryKey = CustomerDetailPrimaryKey . _id
 
-deriving instance Show CustomerDetails
+deriving instance Show CustomerDetail
 
-deriving instance Eq CustomerDetails
+deriving instance Eq CustomerDetail
 
-deriving instance ToJSON CustomerDetails
+deriving instance ToJSON CustomerDetail
 
-deriving instance FromJSON CustomerDetails
+deriving instance FromJSON CustomerDetail
 
 insertExpression customer = insertExpressions [customer]
 
 insertExpressions customers = B.insertValues customers
 
 fieldEMod ::
-     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CustomerDetailsT)
+     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CustomerDetailT)
 fieldEMod =
   B.modifyTableFields
     B.tableModification

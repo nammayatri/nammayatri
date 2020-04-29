@@ -136,15 +136,15 @@ instance ToSchema BlacklistedBy
 
 deriveIdentifierInstances ''BlacklistedBy
 
-newtype CustomerDetailsId =
-  CustomerDetailsId
-    { _getCustomerDetailsId :: Text
+newtype CustomerDetailId =
+  CustomerDetailId
+    { _getCustomerDetailId :: Text
     }
   deriving  (Generic, Show)
 
-instance ToSchema CustomerDetailsId
+instance ToSchema CustomerDetailId
 
-deriveIdentifierInstances ''CustomerDetailsId
+deriveIdentifierInstances ''CustomerDetailId
 
 newtype PassId =
   PassId

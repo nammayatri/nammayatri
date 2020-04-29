@@ -1,12 +1,14 @@
-module Beckn.Product.PassApplication where
+module Beckn.Product.PassApplication.Create where
 
 import qualified Beckn.Data.Accessor                   as Accessor
+import qualified Beckn.Storage.Queries.CustomerDetail  as CustomerDetail
 import qualified Beckn.Storage.Queries.PassApplication as DB
 import           Beckn.Types.API.PassApplication
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Common                    as Location (Location (..),
                                                                     LocationType)
+import qualified Beckn.Types.Storage.CustomerDetail    as CD
 import           Beckn.Types.Storage.PassApplication
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Beckn.Utils.Common
@@ -19,7 +21,7 @@ import           Servant
 
 createPassApplication ::
   Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes
-createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ do
+createPassApplication regToken req@CreatePassApplicationReq{..} = withFlowHandler $ do
   token <- verifyToken regToken
   checkForCustomerId _type _CustomerId
   checkForOrgId _type _OrganizationId
@@ -28,29 +30,11 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
   DB.create passAppInfo
   earea <- DB.findById id
   case earea of
-    Right (Just passApplication) ->
+    Right (Just passApplication) -> do
+      createCustDetails req
       return $ PassApplicationRes passApplication
     _                 -> L.throwException $ err500 {errBody = "Could not create PassApplication"}
   where
-    checkForCustomerId :: PassApplicationType -> Maybe CustomerId -> L.Flow ()
-    checkForCustomerId pAtype mCustId =
-      if (pAtype == SELF || pAtype == SPONSOROR) && mCustId == Nothing
-        then L.throwException $ err400 {errBody = "CustomerId cannot be empty"}
-        else return ()
-
-    checkForOrgId :: PassApplicationType -> Maybe OrganizationId -> L.Flow ()
-    checkForOrgId BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "CustomerId cannot be empty"}
-    checkForOrgId _ _ = return ()
-
-    getPassType SELF          = INDIVIDUAL
-    getPassType SPONSOROR     = INDIVIDUAL
-    getPassType BULKSPONSOROR = ORGANIZATION
-
-    getCount SELF _ = return 1
-    getCount SPONSOROR _ = return 1
-    getCount BULKSPONSOROR (Just c) = return c
-    getCount BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
-
     getPassAppInfo id token = do
       currTime <- getCurrTime
       count <- getCount _type _count
@@ -91,42 +75,51 @@ createPassApplication regToken CreatePassApplicationReq{..} = withFlowHandler $ 
               , ..
               }
 
-listPassApplication ::
-  Maybe Text
-  -> Maybe Int
-  -> Maybe Int
-  -> [Status]
-  -> [PassType]
-  -> FlowHandler ListPassApplicationRes
-listPassApplication regToken offsetM limitM status passType = withFlowHandler $ do
-  verifyToken regToken
-  DB.findAllWithLimitOffsetWhere status passType limitM offsetM
-  >>= \case
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-      Right v -> return $ ListPassApplicationRes v
+checkForCustomerId :: PassApplicationType -> Maybe CustomerId -> L.Flow ()
+checkForCustomerId pAtype mCustId =
+  if (pAtype == SELF || pAtype == SPONSOROR) && mCustId == Nothing
+    then L.throwException $ err400 {errBody = "CustomerId cannot be empty"}
+    else return ()
 
-getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler PassApplicationRes
-getPassApplicationById regToken applicationId = withFlowHandler $ do
-  verifyToken regToken
-  DB.findById applicationId
-  >>= \case
-    Right (Just v) -> return $ PassApplicationRes v
-    Right Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+checkForOrgId :: PassApplicationType -> Maybe OrganizationId -> L.Flow ()
+checkForOrgId BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "CustomerId cannot be empty"}
+checkForOrgId _ _ = return ()
 
-updatePassApplication ::
-  Maybe Text ->
-  PassApplicationId ->
-  UpdatePassApplicationReq ->
-  FlowHandler PassApplicationRes
-updatePassApplication regToken passApplicationId UpdatePassApplicationReq{..} = withFlowHandler $ do
-  verifyToken regToken
-  eres <- DB.update passApplicationId _status _approvedCount _remarks
-  case eres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-    Right _ ->
-      DB.findById passApplicationId
-      >>= \case
-        Right (Just v) -> return $ PassApplicationRes v
-        Right Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
-        Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+getPassType :: PassApplicationType -> PassType
+getPassType SELF          = INDIVIDUAL
+getPassType SPONSOROR     = INDIVIDUAL
+getPassType BULKSPONSOROR = ORGANIZATION
+
+getCount :: PassApplicationType -> Maybe Int -> L.Flow Int
+getCount SELF _ = return 1
+getCount SPONSOROR _ = return 1
+getCount BULKSPONSOROR (Just c) = return c
+getCount BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
+
+createCustDetails :: CreatePassApplicationReq -> L.Flow ()
+createCustDetails CreatePassApplicationReq{..} =
+  if _type == BULKSPONSOROR then return ()
+  else if (_type == SELF || _type == SPONSOROR) && (_travellerID == Nothing || _travellerIDType == Nothing)
+    then L.throwException $ err400 {errBody = "Pass holder details cannot be empty"}
+    else do
+      id <- generateGUID
+      currTime <- getCurrTime
+      let
+        entityId = fromJust _travellerID
+        entityType = mapIdType $ fromJust _travellerIDType
+        custinfo = CD.CustomerDetail
+          { _id = id
+          , _CustomerId = fromJust _CustomerId -- already verified that CustomerId exists
+          , _uniqueIdentifier = entityId
+          , _identifierType = entityType
+          , _value = Null
+          , _verified = False
+          , _primaryIdentifier = True
+          , _info = ""
+          , _createdAt = currTime
+          , _updatedAt = currTime
+          }
+      CustomerDetail.create custinfo
+  where
+    mapIdType MOBILE = CD.MOBILENUMBER
+    mapIdType AADHAR = CD.AADHAR

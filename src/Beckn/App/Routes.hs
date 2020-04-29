@@ -1,32 +1,34 @@
 module Beckn.App.Routes where
 
-import qualified Beckn.Data.Accessor                 as Accessor
-import qualified Beckn.Product.Customer              as Customer
-import qualified Beckn.Product.HealthCheck           as HealthCheck
-import qualified Beckn.Product.LocationBlacklist     as LocationBlacklist
-import qualified Beckn.Product.Organization          as Organization
-import qualified Beckn.Product.Pass                  as Pass
-import qualified Beckn.Product.PassApplication       as PassApplication
-import qualified Beckn.Product.Quota                 as Quota
-import qualified Beckn.Product.Registration          as Registration
-import qualified Beckn.Product.User                  as User
+import qualified Beckn.Data.Accessor                  as Accessor
+import qualified Beckn.Product.Customer               as Customer
+import qualified Beckn.Product.HealthCheck            as HealthCheck
+import qualified Beckn.Product.LocationBlacklist      as LocationBlacklist
+import qualified Beckn.Product.Organization           as Organization
+import qualified Beckn.Product.Pass                   as Pass
+import qualified Beckn.Product.PassApplication.Create as PassApplication
+import qualified Beckn.Product.PassApplication.Fetch  as PassApplication
+import qualified Beckn.Product.PassApplication.Update as PassApplication
+import qualified Beckn.Product.Quota                  as Quota
+import qualified Beckn.Product.Registration           as Registration
+import qualified Beckn.Product.User                   as User
 import           Beckn.Types.API.Customer
-import qualified Beckn.Types.API.LocationBlacklist   as LocationBlacklist
+import qualified Beckn.Types.API.LocationBlacklist    as LocationBlacklist
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
-import qualified Beckn.Types.API.Quota               as Quota
+import qualified Beckn.Types.API.Quota                as Quota
 import           Beckn.Types.API.Registration
-import qualified Beckn.Types.API.User                as User
+import qualified Beckn.Types.API.User                 as User
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import           Data.Aeson
-import qualified Data.Vault.Lazy                     as V
+import qualified Data.Vault.Lazy                      as V
 import           EulerHS.Prelude
 import           Servant
 
-import qualified Beckn.Types.Storage.Pass            as SP
-import qualified Beckn.Types.Storage.PassApplication as PA
+import qualified Beckn.Types.Storage.Pass             as SP
+import qualified Beckn.Types.Storage.PassApplication  as PA
 
 type EPassAPIs
    = "v1" :> (Get '[ JSON] Text
