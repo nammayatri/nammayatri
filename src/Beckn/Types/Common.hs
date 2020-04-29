@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Beckn.Types.Common where
@@ -15,9 +16,11 @@ import qualified Data.Text                 as T
 import qualified Data.Text.Encoding        as DT
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
+import           Database.Beam.Query       (HasSqlEqualityCheck)
 import           EulerHS.Prelude
 import           Servant
 import           Servant.Swagger
+
 
 data ErrorResponse =
   ErrorResponse
@@ -157,6 +160,9 @@ data EntityType
   = LOCATION
   | ORG
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+
+deriving instance HasSqlEqualityCheck MySQL EntityType
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EntityType where
   sqlValueSyntax = autoSqlValueSyntax

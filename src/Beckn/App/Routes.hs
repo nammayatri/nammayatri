@@ -166,9 +166,10 @@ type QuotaAPIS
         :> ReqBody '[JSON] Quota.UpdateReq
         :> Put '[JSON] Quota.UpdateRes
       :<|> "list"
-        :> QueryParam "type" Text
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
+        :> MandatoryQueryParam "entityType" EntityType
+        :> MandatoryQueryParam "entityId" Text
         :> Get '[JSON] Quota.ListRes
       :<|> Capture ":id" QuotaId
         :> Get '[JSON] Quota.GetRes
