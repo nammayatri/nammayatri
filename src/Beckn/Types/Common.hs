@@ -6,7 +6,6 @@
 
 module Beckn.Types.Common where
 
-import           Beckn.Utils.TH
 import           Data.Aeson
 import qualified Data.Aeson                as Aeson
 import qualified Data.ByteString.Lazy      as BSL
@@ -20,7 +19,6 @@ import           Database.Beam.Query       (HasSqlEqualityCheck)
 import           EulerHS.Prelude
 import           Servant
 import           Servant.Swagger
-
 
 data ErrorResponse =
   ErrorResponse
@@ -174,3 +172,16 @@ instance FromHttpApiData EntityType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+
+data Ack =
+  Ack
+    { _action  :: Text
+    , _message :: Text
+    }
+  deriving (Generic, Show)
+
+instance FromJSON Ack where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Ack where
+  toJSON = genericToJSON stripLensPrefixOptions

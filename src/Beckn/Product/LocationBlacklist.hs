@@ -8,6 +8,7 @@ import qualified Beckn.Storage.Queries.LocationBlacklist as DB
 import qualified Beckn.Storage.Queries.RegistrationToken as RegToken
 import           Beckn.Types.API.LocationBlacklist
 import           Beckn.Types.App
+import           Beckn.Types.Common
 import           Beckn.Types.Storage.LocationBlacklist   as Storage
 import qualified Beckn.Types.Storage.RegistrationToken   as RegToken
 import           Beckn.Utils.Common
@@ -89,4 +90,15 @@ update mRegToken locationBlacklistId lb@UpdateReq{..} = withFlowHandler $ do
         Right (Just v) -> return $ UpdateRes v
         Right Nothing -> L.throwException $ err400 {errBody = "LocationBlacklist not found"}
         Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+
+
+
+delete :: Maybe Text -> LocationBlacklistId -> FlowHandler Ack
+delete mRegToken locationBlacklistId = withFlowHandler $ do
+  verifyToken mRegToken
+  mres <- DB.deleteById locationBlacklistId
+  case mres of
+    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Right () -> sendAck
+
 

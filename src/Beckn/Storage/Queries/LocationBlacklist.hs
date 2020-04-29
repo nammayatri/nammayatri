@@ -65,3 +65,9 @@ update id API.UpdateReq {..} = do
               <> maybe ([]) (return . (_pincode <-.) . B.val_ . Just) pincodeM
               <> maybe ([]) (return . (_bound <-.) . B.val_ . Just) boundM
              )
+
+deleteById :: LocationBlacklistId -> L.Flow (T.DBResult ())
+deleteById id =
+  DB.delete dbTable (predicate id)
+  where
+    predicate carrierId Storage.LocationBlacklist {..} = _id ==. B.val_ carrierId
