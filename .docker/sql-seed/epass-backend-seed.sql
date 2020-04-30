@@ -192,7 +192,7 @@ CREATE TABLE `pass_application` (
 CREATE TABLE `user` (
   `id` char(36) NOT NULL,
   `organization_id` char(36) NOT NULL,
-  `tenant_organization_id` char(36) NOT NULL,
+  `tenant_organization_id` char(36) NULL,
   `name` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
   `mobile_number` varchar(1024) NOT NULL,

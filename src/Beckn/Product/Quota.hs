@@ -1,38 +1,53 @@
 module Beckn.Product.Quota where
 
-import qualified Beckn.Storage.Queries.Quota as DB
+import qualified Beckn.Storage.Queries.Quota             as DB
+import qualified Beckn.Storage.Queries.RegistrationToken as RegToken
+import qualified Beckn.Storage.Queries.User              as User
 import           Beckn.Types.API.Quota
 import           Beckn.Types.App
 import           Beckn.Types.Common
-import           Beckn.Types.Storage.Quota   as Storage
+import           Beckn.Types.Storage.Quota               as Storage
+import qualified Beckn.Types.Storage.RegistrationToken   as RegToken
+import qualified Beckn.Types.Storage.User                as User
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
 import           Data.Aeson
 import           Data.Default
 import           Data.Time
-import qualified Database.Beam.Schema.Tables as B
-import qualified EulerHS.Language            as L
+import qualified Database.Beam.Schema.Tables             as B
+import qualified EulerHS.Language                        as L
 import           EulerHS.Prelude
 import           Servant
 
 create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
-   verifyToken mRegToken
+   regToken <- verifyToken mRegToken
    id <- generateGUID
-   quota <-  quotaRec id
-   DB.create quota
-   eres <- DB.findById id
-   case eres of
-     Right (Just quotaDb) -> return $ CreateRes quotaDb
-     _                 -> L.throwException $ err500 {errBody = "Could not create Quota"}
+   case (RegToken._entityType regToken) of
+     RegToken.USER -> do
+        let (userId) = RegToken._EntityId regToken
+        user <- (User.findById  $ UserId userId)
+         >>= \case
+           Just user -> return user
+           Nothing -> throwUnauthorized
+        let (OrganizationId orgId) = User._OrganizationId user
+        quota <- quotaRec id orgId
+        DB.create quota
+        eres <- DB.findById id
+        case eres of
+          Right (Just quotaDb) -> return $ CreateRes quotaDb
+          _                 -> L.throwException $ err500 {errBody = "Could not create Quota"}
+     RegToken.CUSTOMER -> throwUnauthorized
     where
-      quotaRec id = do
+      throwUnauthorized = L.throwException $ err401 {errBody = "Unauthorized"}
+      quotaRec id orgId = do
         now  <- getCurrTime
         return Storage.Quota
           { _id         = id
           , _createdAt  = now
           , _updatedAt  = now
+          , _TenantOrganizationId = TenantOrganizationId orgId
           , _info       = Nothing
           ,..
           }
