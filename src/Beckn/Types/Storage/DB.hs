@@ -6,14 +6,19 @@ import           EulerHS.Prelude                       hiding (id)
 
 import qualified Beckn.Types.Storage.AllocatedQuota    as AllocatedQuota
 import qualified Beckn.Types.Storage.Blacklist         as Blacklist
+import qualified Beckn.Types.Storage.Comment           as Comment
 import qualified Beckn.Types.Storage.Customer          as Customer
 import qualified Beckn.Types.Storage.CustomerDetail    as CustomerDetail
+import qualified Beckn.Types.Storage.Document          as Document
+import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
+import qualified Beckn.Types.Storage.EntityTag         as EntityTag
 import qualified Beckn.Types.Storage.Location          as Location
 import qualified Beckn.Types.Storage.Organization      as Organization
 import qualified Beckn.Types.Storage.Pass              as Pass
 import qualified Beckn.Types.Storage.PassApplication   as PassApplication
 import qualified Beckn.Types.Storage.Quota             as Quota
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.Tag               as Tag
 import qualified Beckn.Types.Storage.User              as User
 
 import qualified Database.Beam                         as B
@@ -31,6 +36,11 @@ data BecknDb f =
     , _organization :: f (B.TableEntity Organization.OrganizationT)
     , _pass :: f (B.TableEntity Pass.PassT)
     , _passApplication :: f (B.TableEntity PassApplication.PassApplicationT)
+    , _document :: f (B.TableEntity Document.DocumentT)
+    , _entityTag :: f (B.TableEntity EntityTag.EntityTagT)
+    , _entityDocument :: f (B.TableEntity EntityDocument.EntityDocumentT)
+    , _comment :: f (B.TableEntity Comment.CommentT)
+    , _tag :: f (B.TableEntity Tag.TagT)
     }
   deriving (Generic, B.Database be)
 
@@ -49,4 +59,9 @@ becknDb =
     , _organization = Organization.fieldEMod
     , _pass = Pass.fieldEMod
     , _passApplication = PassApplication.fieldEMod
+    , _document = Document.fieldEMod
+    , _entityTag = EntityTag.fieldEMod
+    , _entityDocument = EntityDocument.fieldEMod
+    , _comment = Comment.fieldEMod
+    , _tag = Tag.fieldEMod
     }

@@ -169,3 +169,43 @@ type Limit = Int
 type Offset = Int
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
+
+newtype TagId =
+  TagId
+    { _getTagId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''TagId
+
+newtype DocumentId =
+  DocumentId
+    { _getDocumentId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''DocumentId
+
+newtype EntityTagId =
+  EntityTagId
+    { _getEntityTagId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''EntityTagId
+
+newtype EntityDocumentId =
+  EntityDocumentId
+    { _getEntityDocumentId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''EntityDocumentId
+
+newtype CommentId =
+  CommentId
+    { _getCommentId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''CommentId
