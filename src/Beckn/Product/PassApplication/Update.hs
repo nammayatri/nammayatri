@@ -30,12 +30,15 @@ updatePassApplication regToken passApplicationId UpdatePassApplicationReq{..} = 
   verifyToken regToken
   pA <- ifNotFoundDbErr "Pass Application not found" =<< DB.findById passApplicationId
   verifyIfStatusUpdatable (PassApplication._status pA) _status
-  eres <- DB.update passApplicationId _status _approvedCount _remarks
+  approvedCount <- if (_status == REVOKED)
+                    then Pass.revokeByPassApplicationId passApplicationId *> pure 0
+                    else pure $ fromMaybe (PassApplication._count pA) _approvedCount
+  eres <- DB.update passApplicationId _status approvedCount _remarks
   case eres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
     Right _ -> do
       pA' <- ifNotFoundDbErr "Pass Application not found" =<< DB.findById passApplicationId
-      createPassesOnApproval pA'
+      createPassesOnApproval pA' approvedCount
       return $ PassApplicationRes pA'
 
 verifyIfStatusUpdatable :: Status -> Status -> L.Flow ()
@@ -46,6 +49,7 @@ verifyIfStatusUpdatable currStatus newStatus =
     (PENDING, EXPIRED) -> return ()
     (APPROVED, REJECTED) -> return ()
     (APPROVED, EXPIRED) -> return ()
+    (APPROVED, REVOKED) -> return ()
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
 
 ifNotFoundDbErr :: Text -> T.DBResult (Maybe a) -> L.Flow a
@@ -55,11 +59,11 @@ ifNotFoundDbErr errMsg dbres =
     Right Nothing -> L.throwException $ err400 {errBody = show errMsg}
     Right (Just v) -> return v
 
-createPassesOnApproval :: PassApplication -> L.Flow ()
-createPassesOnApproval pa@PassApplication {..} =
+createPassesOnApproval :: PassApplication -> Int -> L.Flow ()
+createPassesOnApproval pa@PassApplication {..} approvedCount =
   if _status /= APPROVED
     then return ()
-    else void $ replicateM _approvedCount (createPass pa)
+    else void $ replicateM approvedCount (createPass pa)
 
 createPass :: PassApplication -> L.Flow ()
 createPass PassApplication{..} = do

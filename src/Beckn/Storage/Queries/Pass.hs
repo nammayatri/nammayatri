@@ -31,6 +31,14 @@ findPassById id = do
   where
     predicate Storage.Pass {..} = (_ShortId ==. B.val_ id)
 
+revokeByPassApplicationId :: PassApplicationId -> L.Flow ()
+revokeByPassApplicationId passApplicationId = do
+  DB.update dbTable (setClause) (predicate passApplicationId) >>=
+    either DB.throwDBError pure
+  where
+    predicate i Storage.Pass {..} = (_PassApplicationId ==. B.val_ i)
+    setClause Storage.Pass {..} = mconcat [ _status <-. B.val_ Storage.REVOKED ]
+
 updatePassStatus :: Storage.Status -> Text -> L.Flow ()
 updatePassStatus action id = do
   DB.update dbTable (setClause action) (predicate id) >>=

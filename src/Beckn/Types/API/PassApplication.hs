@@ -45,7 +45,7 @@ data ListPassApplicationRes =
 data UpdatePassApplicationReq =
   UpdatePassApplicationReq
     { _status        :: Status
-    , _approvedCount :: Int
+    , _approvedCount :: Maybe Int
     , _remarks       :: Text
     } deriving (Generic, ToSchema)
 

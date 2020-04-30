@@ -24,6 +24,7 @@ data Status
   | APPROVED
   | REJECTED
   | EXPIRED
+  | REVOKED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
