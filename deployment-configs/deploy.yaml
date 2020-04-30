@@ -18,8 +18,8 @@ spec:
   template:
     metadata:
       annotations:
-        iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role
-        sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db07324894aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
+        iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
+        sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
         app: beckn-epass-api
         version: latest
@@ -178,7 +178,7 @@ spec:
         - name: ISTIO_META_INTERCEPTION_MODE
           value: REDIRECT
         - name: ISTIO_META_INCLUDE_INBOUND_PORTS
-          value: "8081"
+          value: "8012"
         - name: ISTIO_METAJSON_ANNOTATIONS
           value: |
             {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
@@ -240,7 +240,7 @@ spec:
         - -x
         - ""
         - -b
-        - "8081"
+        - "8012"
         - -d
         - "15020"
         image: docker.io/istio/proxy_init:1.2.2
