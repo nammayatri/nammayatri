@@ -162,7 +162,7 @@ newtype AllocatedQuotaId =
 
 deriveIdentifierInstances ''AllocatedQuotaId
 
-type RegistrationToken = Text
+type RegistrationTokenText = Text
 
 type Limit = Int
 

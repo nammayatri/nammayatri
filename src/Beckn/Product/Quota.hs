@@ -16,7 +16,7 @@ import qualified EulerHS.Language            as L
 import           EulerHS.Prelude
 import           Servant
 
-create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
+create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
    verifyToken mRegToken
    id <- generateGUID
@@ -37,7 +37,7 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
           ,..
           }
 
-update :: Maybe RegistrationToken -> QuotaId -> UpdateReq -> FlowHandler UpdateRes
+update :: Maybe RegistrationTokenText -> QuotaId -> UpdateReq -> FlowHandler UpdateRes
 update mRegToken id UpdateReq {..} =  withFlowHandler $ do
   verifyToken mRegToken
   eres <- DB.update id _maxAllowed _startTime _endTime
@@ -51,7 +51,7 @@ update mRegToken id UpdateReq {..} =  withFlowHandler $ do
         Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
 list ::
-  Maybe RegistrationToken
+  Maybe RegistrationTokenText
   -> Maybe Limit
   -> Maybe Offset
   -> EntityType

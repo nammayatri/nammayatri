@@ -82,7 +82,7 @@ registrationFlow =
 --
 type PassApplicationAPIs
    = "passApplication"
-   :> Header "registrationToken" Text
+   :> Header "registrationToken" RegistrationTokenText
    :> ( ReqBody '[ JSON] CreatePassApplicationReq
         :> Post '[ JSON] PassApplicationRes
       :<|> "list"
@@ -107,7 +107,7 @@ passApplicationFlow registrationToken =
 --
 type OrganizationAPIs
    = "organization"
-   :> Header "registrationToken" Text
+   :> Header "registrationToken" RegistrationTokenText
    :> ( ReqBody '[ JSON] CreateOrganizationReq :> Post '[ JSON] OrganizationRes
        :<|> Capture "organizationId" Text :> Get '[ JSON] OrganizationRes
        :<|> QueryParam "limit" Int
@@ -129,7 +129,7 @@ organizationFlow registrationToken =
 ----- Customer Flow -------
 type CustomerAPIs
   = "customer"
-  :> Header "registrationToken" Text
+  :> Header "registrationToken" RegistrationTokenText
   :> Capture "customerId" Text
   :> Get '[ JSON] GetCustomerRes
 
@@ -139,7 +139,7 @@ customerFlow registrationToken =
 
 ------ Pass Flow ---------
 type PassAPIs
-  = "pass" :> Header "registrationToken" Text
+  = "pass" :> Header "registrationToken" RegistrationTokenText
   :> (Capture "passId" Text :> Get '[ JSON] PassRes
      :<|> Capture "passId" Text
           :> ReqBody '[ JSON] UpdatePassReq
@@ -161,7 +161,7 @@ passFlow registrationToken =
 ------ Quota Flow ----------
 type QuotaAPIS
   = "quota"
-  :> Header "registrationToken" RegistrationToken
+  :> Header "registrationToken" RegistrationTokenText
   :> ( ReqBody '[JSON] Quota.CreateReq
         :> Post '[JSON] Quota.CreateRes
       :<|> Capture "quotaId" QuotaId
@@ -185,7 +185,7 @@ quotaFlow registrationToken =
 
 ------ User Flow ----------
 type UserAPIS
-  = "user" :> Header "registrationToken" RegistrationToken
+  = "user" :> Header "registrationToken" RegistrationTokenText
   :> (  ReqBody '[JSON] User.CreateReq
         :> Post '[JSON] User.CreateRes
       :<|> Capture "userId" UserId
@@ -208,7 +208,7 @@ userFlow registrationToken =
 
 ------ Location Blacklist ----------
 type BlacklistAPIS
-  = "blacklist" :> Header "registrationToken" RegistrationToken
+  = "blacklist" :> Header "registrationToken" RegistrationTokenText
   :> (  ReqBody '[JSON] Blacklist.CreateReq
         :> Post '[JSON] Blacklist.CreateRes
       :<|> Capture "blacklist_id" BlacklistId

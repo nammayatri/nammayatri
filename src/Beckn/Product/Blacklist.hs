@@ -23,7 +23,7 @@ import           EulerHS.Prelude
 import           Servant
 
 
-create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
+create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
    verifyToken mRegToken
    id <- generateGUID
@@ -52,7 +52,7 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
           }
 
 list ::
-  Maybe RegistrationToken
+  Maybe RegistrationTokenText
   -> Maybe Limit
   -> Maybe Offset
   -> EntityType
