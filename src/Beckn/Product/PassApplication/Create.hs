@@ -3,6 +3,7 @@ module Beckn.Product.PassApplication.Create where
 import qualified Beckn.Data.Accessor                   as Accessor
 import qualified Beckn.Storage.Queries.Customer        as Customer
 import qualified Beckn.Storage.Queries.CustomerDetail  as CustomerDetail
+import qualified Beckn.Storage.Queries.Organization    as QO
 import qualified Beckn.Storage.Queries.PassApplication as DB
 import           Beckn.Types.API.PassApplication
 import           Beckn.Types.App
@@ -92,7 +93,7 @@ getPassAppInfo token CreatePassApplicationReq{..} mCustId = do
   return $ PassApplication
           { _id = id
           , _CustomerId = mCustId
-          , _type = getPassType _type
+          , _passType = getPassType _type
           , _fromLocationType = Location._type <$> _fromLocation
           , _fromLat = join (Location._lat <$> _fromLocation)
           , _fromLong = join (Location._long <$> _fromLocation)

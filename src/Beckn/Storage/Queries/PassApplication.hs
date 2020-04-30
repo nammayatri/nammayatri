@@ -38,7 +38,7 @@ findAllWithLimitOffsetWhere statusArr passTypeArr mlimit moffset =
 
     orderByDesc Storage.PassApplication {..} = B.desc_ _createdAt
 
-    predicate sArr pArr Storage.PassApplication {..} = (_status `B.in_` (B.val_ <$> sArr)) &&. (_type `B.in_` (B.val_ <$> pArr))
+    predicate sArr pArr Storage.PassApplication {..} = (_status `B.in_` (B.val_ <$> sArr)) &&. (_passType `B.in_` (B.val_ <$> pArr))
 
 update :: PassApplicationId -> Storage.Status -> Int -> Text -> L.Flow (T.DBResult ())
 update id status approvedCount remarks = do

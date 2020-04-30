@@ -47,7 +47,7 @@ data PassApplicationT f =
     , _status               :: B.C f Status
     , _fromDate             :: B.C f LocalTime
     , _toDate               :: B.C f LocalTime
-    , _type                 :: B.C f PassType
+    , _passType             :: B.C f PassType
     , _fromLocationType     :: B.C f (Maybe LocationType)
     , _fromLat              :: B.C f (Maybe Double)
     , _fromLong             :: B.C f (Maybe Double)
@@ -121,7 +121,7 @@ fieldEMod =
       , _toDate = "to_date"
       , _fromLocationType = "from_location_type"
       , _fromLat = "from_lat"
-      , _type = "pass_type"
+      , _passType = "pass_type"
       , _fromLong = "from_long"
       , _fromWard = "from_ward"
       , _fromDistrict = "from_district"
