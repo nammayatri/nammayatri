@@ -157,8 +157,7 @@ instance FromHttpApiData QuotaType where
 data EntityType
   = LOCATION
   | ORG
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 deriving instance HasSqlEqualityCheck MySQL EntityType
 
@@ -178,7 +177,7 @@ data Ack =
     { _action  :: Text
     , _message :: Text
     }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON Ack where
   parseJSON = genericParseJSON stripLensPrefixOptions

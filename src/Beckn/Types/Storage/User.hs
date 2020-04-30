@@ -9,6 +9,7 @@ import           Beckn.Types.App
 import qualified Beckn.Utils.Defaults      as Defaults
 import           Data.Aeson
 import           Data.Default
+import           Data.Swagger
 import qualified Data.Text                 as T
 import           Data.Time
 import qualified Database.Beam             as B
@@ -25,6 +26,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance ToSchema Status
+instance ToParamSchema Status
+
 data Role = ADMIN | MANAGER | VIEWER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
@@ -33,6 +37,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
 
 instance FromBackendRow MySQL Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance ToSchema Role
+instance ToParamSchema Role
 
 
 data UserT f =
@@ -83,10 +90,13 @@ deriving instance Show User
 
 deriving instance Eq User
 
+instance ToSchema User
+
 instance ToJSON User where
   toJSON = genericToJSON stripLensPrefixOptions
 
-deriving instance FromJSON User
+instance FromJSON User where
+  parseJSON = genericParseJSON stripLensPrefixOptions
 
 insertExpression user = insertExpressions [user]
 

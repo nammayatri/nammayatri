@@ -38,9 +38,11 @@ deriving instance Show AllocatedQuota
 
 deriving instance Eq AllocatedQuota
 
-deriving instance ToJSON AllocatedQuota
+instance ToJSON AllocatedQuota where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
-deriving instance FromJSON AllocatedQuota
+instance FromJSON AllocatedQuota where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity AllocatedQuotaT)

@@ -8,6 +8,7 @@ module Beckn.Utils.TH where
 
 import           Beckn.Utils.Common
 import           Data.Aeson                (FromJSON, ToJSON)
+import           Data.Swagger
 import           Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
 import           Database.Beam.MySQL       (MySQL, MysqlValueSyntax)
 import           Database.Beam.Query       (HasSqlEqualityCheck)
@@ -34,4 +35,6 @@ deriveIdentifierInstances name = do
 
     deriving newtype instance ToHttpApiData $tyQ
     deriving newtype instance FromHttpApiData $tyQ
+    deriving newtype instance ToSchema $tyQ
+    deriving newtype instance ToParamSchema $tyQ
    |]

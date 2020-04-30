@@ -10,6 +10,7 @@ import           Beckn.Types.Common
 import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
 import           Data.Default
+import           Data.Swagger
 import           Data.Time
 import qualified Database.Beam        as B
 import           EulerHS.Prelude
@@ -60,10 +61,13 @@ deriving instance Show Blacklist
 
 deriving instance Eq Blacklist
 
-deriving instance FromJSON Blacklist
+instance ToSchema Blacklist
+
+instance FromJSON Blacklist where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 instance ToJSON Blacklist where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 insertExpression blacklist = insertExpressions [blacklist]
 

@@ -32,8 +32,6 @@ newtype CustomerId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema CustomerId
-
 deriveIdentifierInstances ''CustomerId
 
 newtype OrganizationId =
@@ -41,8 +39,6 @@ newtype OrganizationId =
     { _getOrganizationId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema OrganizationId
 
 deriveIdentifierInstances ''OrganizationId
 
@@ -52,8 +48,6 @@ newtype TenantOrganizationId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema TenantOrganizationId
-
 deriveIdentifierInstances ''TenantOrganizationId
 
 newtype BusinessAddressId =
@@ -61,8 +55,6 @@ newtype BusinessAddressId =
     { _getBusinessAddressId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema BusinessAddressId
 
 deriveIdentifierInstances ''BusinessAddressId
 
@@ -72,8 +64,6 @@ newtype PassApplicationId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema PassApplicationId
-
 deriveIdentifierInstances ''PassApplicationId
 
 newtype FromLocationId =
@@ -81,8 +71,6 @@ newtype FromLocationId =
     { _getFromLocationId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema FromLocationId
 
 deriveIdentifierInstances ''FromLocationId
 
@@ -92,8 +80,6 @@ newtype ToLocationId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema ToLocationId
-
 deriveIdentifierInstances ''ToLocationId
 
 newtype AssignedTo =
@@ -101,8 +87,6 @@ newtype AssignedTo =
     { _getAssignedTo :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema AssignedTo
 
 deriveIdentifierInstances ''AssignedTo
 
@@ -112,8 +96,6 @@ newtype LocationId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema LocationId
-
 deriveIdentifierInstances ''LocationId
 
 newtype QuotaId =
@@ -121,8 +103,6 @@ newtype QuotaId =
     { _getQuotaId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema QuotaId
 
 deriveIdentifierInstances ''QuotaId
 
@@ -132,8 +112,6 @@ newtype BlacklistedBy =
     }
   deriving  (Generic, Show)
 
-instance ToSchema BlacklistedBy
-
 deriveIdentifierInstances ''BlacklistedBy
 
 newtype CustomerDetailId =
@@ -141,8 +119,6 @@ newtype CustomerDetailId =
     { _getCustomerDetailId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema CustomerDetailId
 
 deriveIdentifierInstances ''CustomerDetailId
 
@@ -152,8 +128,6 @@ newtype PassId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema PassId
-
 deriveIdentifierInstances ''PassId
 
 newtype UserId =
@@ -161,8 +135,6 @@ newtype UserId =
     { _getUserId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema UserId
 
 deriveIdentifierInstances ''UserId
 
@@ -172,8 +144,6 @@ newtype RegistrationTokenId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema RegistrationTokenId
-
 deriveIdentifierInstances ''RegistrationTokenId
 
 newtype BlacklistId =
@@ -182,8 +152,6 @@ newtype BlacklistId =
     }
   deriving  (Generic, Show)
 
-instance ToSchema BlacklistId
-
 deriveIdentifierInstances ''BlacklistId
 
 newtype AllocatedQuotaId =
@@ -191,8 +159,6 @@ newtype AllocatedQuotaId =
     { _getAllocatedQuotaId :: Text
     }
   deriving  (Generic, Show)
-
-instance ToSchema AllocatedQuotaId
 
 deriveIdentifierInstances ''AllocatedQuotaId
 

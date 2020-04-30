@@ -32,6 +32,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance ToParamSchema Status
 instance FromHttpApiData Status where
   parseUrlPiece  = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
