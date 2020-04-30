@@ -21,7 +21,7 @@ data QuotaT f =
   Quota
     { _id         :: B.C f QuotaId
     , _maxAllowed :: B.C f Int
-    , _type       :: B.C f QuotaType
+    , _quota_type :: B.C f QuotaType
     , _EntityId   :: B.C f Text
     , _entityType :: B.C f EntityType
     , _startTime  :: B.C f LocalTime
@@ -46,7 +46,7 @@ instance Default Quota where
   def = Quota
     { _id         = QuotaId Defaults.id
     , _maxAllowed = 1000
-    , _type       = HOURLY
+    , _quota_type = HOURLY
     , _EntityId   = Defaults.orgId
     , _entityType = ORG
     , _startTime  = Defaults.localTime
@@ -80,6 +80,7 @@ fieldEMod =
       {
       _maxAllowed = "max_allowed"
       , _EntityId = "entity_id"
+      , _quota_type = "quota_type"
       , _entityType = "entity_type"
       , _startTime = "start_time"
       , _endTime = "end_time"
