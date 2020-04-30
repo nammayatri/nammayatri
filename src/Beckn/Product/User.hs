@@ -7,6 +7,7 @@ import qualified Beckn.Data.Accessor         as Accessor
 import qualified Beckn.Storage.Queries.User  as DB
 import           Beckn.Types.API.User
 import           Beckn.Types.App
+import           Beckn.Types.Common          (Ack)
 import           Beckn.Types.Storage.User    as Storage
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
@@ -73,3 +74,12 @@ update regToken userId UpdateReq{..} = withFlowHandler $ do
   >>= \case
     Just v -> return $ UpdateRes v
     Nothing -> L.throwException $ err400 {errBody = "User not found"}
+
+delete ::
+  Maybe RegistrationTokenText
+  -> UserId
+  -> FlowHandler Ack
+delete regToken userId = withFlowHandler $ do
+  verifyToken regToken
+  DB.deleteById userId
+  sendAck

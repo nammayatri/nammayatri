@@ -206,6 +206,8 @@ type UserAPIS
         :> Get '[JSON] User.ListRes
       :<|> Capture ":id" UserId
         :> Get '[JSON] User.GetRes
+      :<|> Capture ":id" UserId
+        :> Delete '[JSON] Ack
       )
 
 userFlow registrationToken =
@@ -213,7 +215,7 @@ userFlow registrationToken =
   :<|> User.update registrationToken
   :<|> User.list registrationToken
   :<|> User.get registrationToken
-
+  :<|> User.delete registrationToken
 
 ------ Location Blacklist ----------
 type BlacklistAPIS
