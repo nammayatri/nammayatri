@@ -12,7 +12,7 @@ import           EulerHS.Prelude
 data CreateReq =
   CreateReq
   { _maxAllowed :: Int
-  , _quota_type :: QuotaType
+  , _quotaType  :: QuotaType
   , _EntityId   :: Text
   , _entityType :: EntityType
   , _startTime  :: LocalTime

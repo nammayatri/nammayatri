@@ -19,16 +19,17 @@ import qualified Database.Beam        as B
 
 data QuotaT f =
   Quota
-    { _id         :: B.C f QuotaId
-    , _maxAllowed :: B.C f Int
-    , _quota_type :: B.C f QuotaType
-    , _EntityId   :: B.C f Text
-    , _entityType :: B.C f EntityType
-    , _startTime  :: B.C f LocalTime
-    , _endTime    :: B.C f LocalTime
-    , _createdAt  :: B.C f LocalTime
-    , _updatedAt  :: B.C f LocalTime
-    , _info       :: B.C f (Maybe Text)
+    { _id                   :: B.C f QuotaId
+    , _maxAllowed           :: B.C f Int
+    , _TenantOrganizationId :: B.C f TenantOrganizationId
+    , _quotaType            :: B.C f QuotaType
+    , _EntityId             :: B.C f Text
+    , _entityType           :: B.C f EntityType
+    , _startTime            :: B.C f LocalTime
+    , _endTime              :: B.C f LocalTime
+    , _createdAt            :: B.C f LocalTime
+    , _updatedAt            :: B.C f LocalTime
+    , _info                 :: B.C f (Maybe Text)
     }
   deriving (Generic, B.Beamable)
 
@@ -46,9 +47,10 @@ instance Default Quota where
   def = Quota
     { _id         = QuotaId Defaults.id
     , _maxAllowed = 1000
-    , _quota_type = HOURLY
+    , _quotaType = HOURLY
     , _EntityId   = Defaults.orgId
     , _entityType = ORG
+    , _TenantOrganizationId = TenantOrganizationId Defaults.orgId
     , _startTime  = Defaults.localTime
     , _endTime    = Defaults.localTime
     , _createdAt  = Defaults.localTime
@@ -80,7 +82,8 @@ fieldEMod =
       {
       _maxAllowed = "max_allowed"
       , _EntityId = "entity_id"
-      , _quota_type = "quota_type"
+      , _quotaType = "quota_type"
+      , _TenantOrganizationId = "tenant_organization_id"
       , _entityType = "entity_type"
       , _startTime = "start_time"
       , _endTime = "end_time"
