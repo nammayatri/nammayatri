@@ -44,7 +44,7 @@ data PassT f =
     , _status               :: B.C f Status
     , _fromDate             :: B.C f LocalTime
     , _toDate               :: B.C f LocalTime
-    , _type                 :: B.C f PassType
+    , _passType             :: B.C f PassType
     , _PassApplicationId    :: B.C f PassApplicationId
     , _CreatedBy            :: B.C f CustomerId
     , _info                 :: B.C f Text
@@ -112,6 +112,7 @@ fieldEMod =
       , _CustomerId = "customer_id"
       , _fromDate = "from_date"
       , _toDate = "to_date"
+      , _passType = "pass_type"
       , _PassApplicationId = "pass_application_id"
       , _fromLocationType = "from_location_type"
       , _fromLat = "from_lat"
