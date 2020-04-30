@@ -50,9 +50,11 @@ deriving instance Show Customer
 
 deriving instance Eq Customer
 
-deriving instance ToJSON Customer
+instance ToJSON Customer where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
-deriving instance FromJSON Customer
+instance FromJSON Customer where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 instance ToSchema Customer
 
