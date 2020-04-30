@@ -3,6 +3,7 @@ module Beckn.App.Routes where
 import qualified Beckn.Data.Accessor                  as Accessor
 import qualified Beckn.Product.Blacklist              as Blacklist
 import qualified Beckn.Product.Customer               as Customer
+import qualified Beckn.Product.Document               as Document
 import qualified Beckn.Product.HealthCheck            as HealthCheck
 import qualified Beckn.Product.Organization           as Organization
 import qualified Beckn.Product.Pass                   as Pass
@@ -25,21 +26,29 @@ import           Beckn.Types.Common
 import           Data.Aeson
 import qualified Data.Vault.Lazy                      as V
 import           EulerHS.Prelude
+import           Network.Wai.Parse
 import           Servant
+import           Servant.Multipart
 
 import qualified Beckn.Types.Storage.Pass             as SP
 import qualified Beckn.Types.Storage.PassApplication  as PA
 
+epassContext :: Context '[ MultipartOptions Mem]
+epassContext = defaultMultipartOptio (Proxy :: Proxy Mem) :. EmptyContext
+
+-- 5 MB size each and max of 3 files
+defaultMultipartOptio ::
+  MultipartBackend tag => Proxy tag -> MultipartOptions tag
+defaultMultipartOptio pTag =
+  MultipartOptions
+    { generalOptions =
+        setMaxRequestNumFiles 3 $
+        setMaxRequestFileSize (5 * 1024) defaultParseRequestBodyOptions
+    , backendOptions = defaultBackendOptions pTag
+    }
+
 type EPassAPIs
-   = "v1" :> (Get '[ JSON] Text
-   :<|> RegistrationAPIs
-   :<|> PassApplicationAPIs
-   :<|> OrganizationAPIs
-   :<|> CustomerAPIs
-   :<|> PassAPIs
-   :<|> UserAPIS
-   :<|> QuotaAPIS
-   :<|> BlacklistAPIS)
+   = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs :<|> UserAPIS :<|> QuotaAPIS :<|> BlacklistAPIS :<|> DocumentAPIs)
 
 epassAPIs :: Proxy EPassAPIs
 epassAPIs = Proxy
@@ -55,6 +64,7 @@ epassServer' key =
   :<|> userFlow
   :<|> quotaFlow
   :<|> blacklistFlow
+  :<|> documentFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -244,3 +254,12 @@ blacklistFlow registrationToken =
   :<|> Blacklist.get registrationToken
   :<|> Blacklist.delete registrationToken
 
+
+--------
+---- Document Api
+type DocumentAPIs
+   = "document"
+   :> Header "registrationToken" RegistrationTokenText
+   :> ("upload" :> MultipartForm Mem (MultipartData Mem) :> Post '[ JSON] Ack)
+
+documentFlow registrationToken = Document.upload registrationToken

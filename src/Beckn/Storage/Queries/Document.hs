@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Beckn.Storage.Queries.Document where
 
 import           Database.Beam                ((&&.), (<-.), (==.))

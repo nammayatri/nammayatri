@@ -64,14 +64,17 @@ dependencies:
 - http-client
 - http-types
 - lens
+- pureMD5
 - servant
 - servant-client
+- servant-multipart
 - servant-server
 - servant-swagger
 - swagger2
 - text
 - vault
 - wai
+- wai-extra
 - warp
 - time
 - template-haskell

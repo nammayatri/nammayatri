@@ -21,11 +21,11 @@ data DocumentT f =
     , _fileUrl   :: B.C f Text
     , _size      :: B.C f Int -- in bytes
     , _fileHash  :: B.C f Text -- md5 hash
-    , _format    :: B.C f Text
     , _fileName  :: B.C f Text
+    , _format    :: B.C f Text
+    , _info      :: B.C f (Maybe Text)
     , _createdAt :: B.C f LocalTime
     , _updatedAt :: B.C f LocalTime
-    , _info      :: B.C f (Maybe Text)
     }
   deriving (Generic, B.Beamable)
 
@@ -79,5 +79,3 @@ fieldEMod =
       , _createdAt = "created_at"
       , _updatedAt = "updated_at"
       }
-
-
