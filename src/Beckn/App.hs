@@ -36,8 +36,8 @@ runBecknBackendApp' port settings = do
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True
-          , T._logFilePath = "/tmp/newton-backend.log"
-          , T._isAsync = False
+          , T._logFilePath = "/tmp/beckn-epass.log"
+          , T._isAsync = True
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
