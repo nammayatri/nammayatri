@@ -46,4 +46,4 @@ isExpired :: NominalDiffTime -> LocalTime -> L.Flow Bool
 isExpired nominal time = do
   now <- getCurrentTimeUTC
   let addedLocalTime = DT.addLocalTime nominal time
-  return $ now < addedLocalTime
+  return $ now > addedLocalTime
