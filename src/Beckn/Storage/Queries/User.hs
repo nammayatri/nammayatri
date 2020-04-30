@@ -23,15 +23,22 @@ create Storage.User {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.User {..}) >>=
   either DB.throwDBError pure
 
-findById :: UserId -> L.Flow (T.DBResult (Maybe Storage.User))
+findById :: UserId -> L.Flow (Maybe Storage.User)
 findById id = do
-  DB.findOne dbTable predicate
+  DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.User {..} = (_id ==. B.val_ id)
 
-findAllWithLimitOffset :: Maybe Int -> Maybe Int -> L.Flow (T.DBResult [Storage.User])
+findByMobileNumber :: Text -> L.Flow (Maybe Storage.User)
+findByMobileNumber mobileNumber = do
+  DB.findOne dbTable predicate >>= either DB.throwDBError pure
+  where
+    predicate Storage.User {..} = (_mobileNumber ==. B.val_ mobileNumber)
+
+findAllWithLimitOffset :: Maybe Int -> Maybe Int -> L.Flow [Storage.User]
 findAllWithLimitOffset mlimit moffset =
   DB.findAllWithLimitOffset dbTable limit offset orderByDesc
+    >>= either DB.throwDBError pure
   where
     limit = (toInteger $ fromMaybe 10 mlimit)
     offset = (toInteger $ fromMaybe 0 moffset)
@@ -43,12 +50,13 @@ update ::
   -> Storage.Status
   -> Maybe Text
   -> Maybe Text
-  -> Maybe Storage.Role -> L.Flow (T.DBResult ())
+  -> Maybe Storage.Role -> L.Flow ()
 update id status nameM emailM roleM = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update dbTable
     (setClause status nameM emailM roleM currTime)
     (predicate id)
+    >>= either DB.throwDBError pure
   where
     setClause status nameM emailM roleM currTime Storage.User {..} =
       mconcat

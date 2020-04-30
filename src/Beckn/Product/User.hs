@@ -28,7 +28,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
   DB.create user
   eres <- DB.findById id
   case eres of
-    Right (Just user) -> return $ CreateRes user
+    Just user -> return $ CreateRes user
     _                 -> L.throwException $ err500 {errBody = "Could not create PassApplication"}
   where
     userInfo id = do
@@ -51,18 +51,15 @@ list ::
 list regToken offsetM limitM = withFlowHandler $ do
   verifyToken regToken
   DB.findAllWithLimitOffset limitM offsetM
-  >>= \case
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-      Right v -> return $ ListRes v
+    >>= return . ListRes
 
 get :: Maybe Text -> UserId -> FlowHandler GetRes
 get regToken userId = withFlowHandler $ do
   verifyToken regToken
   DB.findById userId
   >>= \case
-    Right (Just user) -> return user
-    Right Nothing -> L.throwException $ err400 {errBody = "User not found"}
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Just user -> return user
+    Nothing -> L.throwException $ err400 {errBody = "User not found"}
 
 update ::
   Maybe Text ->
@@ -71,12 +68,8 @@ update ::
   FlowHandler UpdateRes
 update regToken userId UpdateReq{..} = withFlowHandler $ do
   verifyToken regToken
-  eres <- DB.update userId _status _name _email _role
-  case eres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-    Right _ ->
-      DB.findById userId
-      >>= \case
-        Right (Just v) -> return $ UpdateRes v
-        Right Nothing -> L.throwException $ err400 {errBody = "User not found"}
-        Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+  DB.update userId _status _name _email _role
+  DB.findById userId
+  >>= \case
+    Just v -> return $ UpdateRes v
+    Nothing -> L.throwException $ err400 {errBody = "User not found"}

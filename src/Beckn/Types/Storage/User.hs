@@ -9,6 +9,7 @@ import           Beckn.Types.App
 import qualified Beckn.Utils.Defaults      as Defaults
 import           Data.Aeson
 import           Data.Default
+import           Data.Swagger
 import qualified Data.Text                 as T
 import           Data.Time
 import qualified Database.Beam             as B
@@ -17,7 +18,7 @@ import           Database.Beam.MySQL
 import           EulerHS.Prelude
 
 data Status = ACTIVE | INACTIVE
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -26,7 +27,7 @@ instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data Role = ADMIN | MANAGER | VIEWER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
@@ -87,6 +88,8 @@ instance ToJSON User where
   toJSON = genericToJSON stripLensPrefixOptions
 
 deriving instance FromJSON User
+
+instance ToSchema User
 
 insertExpression user = insertExpressions [user]
 
