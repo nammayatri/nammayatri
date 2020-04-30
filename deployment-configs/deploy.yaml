@@ -72,23 +72,23 @@ spec:
         - name: MYSQL_USER
           valueFrom:
             secretKeyRef:
-              name: beckn-epass-secrets
+              name: app-secrets
               key: MYSQL_USER
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: beckn-epass-secrets
+              name: app-secrets
               key: MYSQL_PASSWORD
         - name: SMS_GATEWAY_USERNAME
           valueFrom:
             secretKeyRef:
-              name: beckn-epass-secrets
-              key: SMS_GATEWAY_USERNAME
+              name: app-secrets
+              key: MY_VALUE_FIRST_USERNAME
         - name: SMS_GATEWAY_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: beckn-epass-secrets
-              key: SMS_GATEWAY_PASSWORD
+              name: app-secrets
+              key: MY_VALUE_FIRST_PASSWORD
         image: asia.gcr.io/jp-k8s-internal/beckn-epass-uat:$BUILD_VERSION
         name: beckn-epass-api
         ports:
