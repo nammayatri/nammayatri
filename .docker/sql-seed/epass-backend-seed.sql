@@ -48,7 +48,9 @@ CREATE TABLE `customer_detail` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
   INDEX (`customer_id`),
-  INDEX (`unique_identifier`)
+  INDEX (`unique_identifier`),
+  INDEX (`identifier_type`)
+
 );
 
 CREATE TABLE `organization` (
@@ -119,6 +121,8 @@ CREATE TABLE `pass` (
   INDEX (`customer_id`),
   INDEX (`organization_id`),
   INDEX (`pass_application_id`),
+  INDEX (`pass_type`),
+  INDEX (`status`),
   INDEX (`short_id`),
   INDEX (`from_ward`),
   INDEX (`from_district`),
@@ -173,6 +177,8 @@ CREATE TABLE `pass_application` (
   PRIMARY KEY (`id`),
   INDEX (`customer_id`),
   INDEX (`assigned_to`),
+  INDEX (`pass_type`),
+  INDEX (`status`),
   INDEX (`from_ward`),
   INDEX (`from_district`),
   INDEX (`from_city`),
@@ -219,7 +225,8 @@ CREATE TABLE `location` (
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX (`location_type`)
 );
 
 CREATE TABLE `registration_token` (
@@ -238,12 +245,13 @@ CREATE TABLE `registration_token` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`entity_id`)
+  INDEX (`entity_id`),
+  INDEX (`entity_type`)
 );
 
 CREATE TABLE `quota` (
   `id` char(36) NOT NULL,
-  `type` varchar(255) NOT NULL,
+  `quota_type` varchar(255) NOT NULL,
   `max_allowed` integer NOT NULL,
   `entity_id` char(36) NOT NULL,
   `entity_type` varchar(255) NOT NULL,
@@ -253,6 +261,8 @@ CREATE TABLE `quota` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
+  INDEX (`entity_id`),
+  INDEX (`entity_type`),
   INDEX (`start_time`),
   INDEX (`end_time`)
 );
@@ -294,4 +304,77 @@ CREATE TABLE `blacklist` (
   INDEX (`blacklisted_by`)
 );
 
+CREATE TABLE `tag` (
+  `id` char(36) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `created_by_entity_type` varchar(255) NOT NULL,
+  `tag_type` varchar(255) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`tag_type`),
+  INDEX (`value`)
+);
 
+CREATE TABLE `entity_tag` (
+  `id` char(36) NOT NULL,
+  `tagged_by` char(36) NOT NULL,
+  `tagged_by_entity_type` varchar(255) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `tag_id` char(36) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`entity_id`),
+  INDEX (`entity_type`),
+  INDEX (`tag_id`)
+);
+
+
+CREATE TABLE `document` (
+  `id` char(36) NOT NULL,
+  `file_url` varchar(1024) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `format` varchar(255) NOT NULL,
+  `size` integer NOT NULL,
+  `file_hash` varchar(1024) NOT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `entity_document` (
+  `id` char(36) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `document_id` char(36) NOT NULL,
+  `document_type` varchar(255) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `created_by_entity_type` varchar(255) NOT NULL,
+  `verified` boolean NOT NULL,
+  `verified_by` char(36) NULL,
+  `verified_by_entity_type` varchar(255) NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`entity_id`),
+  INDEX (`entity_type`),
+  INDEX (`document_id`)
+);
+
+CREATE TABLE `comment` (
+  `id` char(36) NOT NULL,
+  `primary_entity_id` char(36) NOT NULL,
+  `primary_entity_type` varchar(255) NOT NULL,
+  `commented_by` char(36) NOT NULL,
+  `commented_by_entity_type` varchar(255) NOT NULL,
+  `value` varchar(1024) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`primary_entity_id`),
+  INDEX (`primary_entity_type`)
+);
