@@ -1,14 +1,14 @@
 module Beckn.Storage.Queries.Customer where
 
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Queries        as DB
 import           Beckn.Types.App
 import qualified Beckn.Types.Storage.Customer as C
-import qualified Beckn.Types.Storage.DB as DB
+import qualified Beckn.Types.Storage.DB       as DB
 import           Beckn.Utils.Extra
-import qualified Database.Beam as B
-import           Database.Beam ((&&.), (<-.), (==.))
-import qualified EulerHS.Language as L
-import           EulerHS.Prelude hiding (id)
+import           Database.Beam                ((&&.), (<-.), (==.))
+import qualified Database.Beam                as B
+import qualified EulerHS.Language             as L
+import           EulerHS.Prelude              hiding (id)
 import           Servant
 
 dbTable :: B.DatabaseEntity be DB.BecknDb (B.TableEntity C.CustomerT)
@@ -25,8 +25,8 @@ createIfNotExists cust@C.Customer {..} = do
   resp <- DB.findOne dbTable (\C.Customer {..} -> B.val_ cid ==. _id)
   case resp of
     Right (Just x) -> return ()
-    Right Nothing -> create cust
-    Left err -> L.throwException err500
+    Right Nothing  -> create cust
+    Left err       -> L.throwException err500
 
 existsByCustomerId :: CustomerId -> L.Flow Bool
 existsByCustomerId customerId =
@@ -62,3 +62,18 @@ updateStatus s customerId = do
     setClause a n C.Customer {..} =
       mconcat [ _verified <-. B.val_ a, _updatedAt <-. B.val_ n ]
     predicate i C.Customer {..} = _id ==. B.val_ i
+
+updateDetails :: CustomerId -> Maybe Text -> Maybe OrganizationId -> L.Flow ()
+updateDetails customerId nameM orgIdM = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause nameM orgIdM now) (predicate customerId)
+    >>= either DB.throwDBError pure
+  where
+    setClause nameM orgIdM now C.Customer {..} =
+      mconcat
+        ([ _updatedAt <-. B.val_ now ]
+          <> maybe [] (\name -> [ _name <-. B.val_ (Just name) ]) nameM
+          <> maybe [] (\orgId -> [ _OrganizationId <-. B.val_ (Just orgId) ]) orgIdM
+        )
+
+    predicate id C.Customer {..} = _id ==. B.val_ id

@@ -57,7 +57,7 @@ listPass regToken passIdType passV limitM offsetM passType =
           return $ Just $ QP.ByApplicationId (PassApplicationId passV)
         CUSTOMERID -> return $ Just $ QP.ByCustomerId (CustomerId passV)
         MOBILENUMBER -> do
-          detail <- QCD.findCustomerDetailByMB passV
+          detail <- QCD.findByIdentifier SCD.MOBILENUMBER passV
           return $ (QP.ByCustomerId . SCD._CustomerId) <$> detail
 
     getPasses listBy =
