@@ -48,6 +48,7 @@ data PassApplicationT f =
     , _fromDate             :: B.C f LocalTime
     , _toDate               :: B.C f LocalTime
     , _passType             :: B.C f PassType
+    , _purpose              :: B.C f (Maybe Text)         -- TODO: make this a bounded type
     , _fromLocationType     :: B.C f (Maybe LocationType)
     , _fromLat              :: B.C f (Maybe Double)
     , _fromLong             :: B.C f (Maybe Double)

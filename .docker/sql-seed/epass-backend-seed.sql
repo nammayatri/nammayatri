@@ -141,6 +141,7 @@ CREATE TABLE `pass_application` (
   `organization_id` char(36) NULL,
   `tenant_organization_id` char(36) NULL,
   `pass_type` varchar(255) NULL,
+  `purpose` varchar(255) NULL,
   `from_date` datetime NOT NULL,
   `to_date` datetime NOT NULL,
   `count` integer NOT NULL,

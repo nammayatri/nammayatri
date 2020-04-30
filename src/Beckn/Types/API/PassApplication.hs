@@ -17,6 +17,7 @@ data CreatePassApplicationReq =
     , _toDate               :: LocalTime
     , _fromLocation         :: Maybe Location
     , _toLocation           :: Location
+    , _purpose              :: Maybe Text
     , _travellerName        :: Maybe Text
     , _travellerID          :: Maybe Text
     , _travellerIDType      :: Maybe TravellerIDType
