@@ -12,7 +12,7 @@ import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
 
-data IdentifierType = MOBILENUMBER | AADHAR
+data IdentifierType = MOBILENUMBER | AADHAAR
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType where
@@ -61,7 +61,8 @@ insertExpressions customers = B.insertValues customers
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CustomerDetailT)
 fieldEMod =
-  B.modifyTableFields
+  B.setEntityName "customer_detail" <>
+   B.modifyTableFields
     B.tableModification
       { _CustomerId = "customer_id"
       , _uniqueIdentifier = "unique_identifier"

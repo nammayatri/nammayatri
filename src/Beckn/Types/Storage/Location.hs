@@ -31,7 +31,7 @@ data LocationT f =
     , _state     :: B.C f Text
     , _country   :: B.C f Text
     , _ward      :: B.C f Text
-    , _pincode   :: B.C f Text
+    , _pincode   :: B.C f Int
     , _address   :: B.C f Text
     , _info      :: B.C f Text
     , _createdAt :: B.C f LocalTime

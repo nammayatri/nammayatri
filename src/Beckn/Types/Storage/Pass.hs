@@ -56,7 +56,7 @@ data PassT f =
     , _fromCity             :: B.C f (Maybe Text)
     , _fromState            :: B.C f (Maybe Text)
     , _fromCountry          :: B.C f (Maybe Text)
-    , _fromPincode          :: B.C f (Maybe Text)
+    , _fromPincode          :: B.C f (Maybe Int)
     , _fromAddress          :: B.C f (Maybe Text)
     , _fromBound            :: B.C f (Maybe Bound)
     , _toLocationType       :: B.C f (Maybe LocationType)
@@ -67,7 +67,7 @@ data PassT f =
     , _toCity               :: B.C f (Maybe Text)
     , _toState              :: B.C f (Maybe Text)
     , _toCountry            :: B.C f (Maybe Text)
-    , _toPincode            :: B.C f (Maybe Text)
+    , _toPincode            :: B.C f (Maybe Int)
     , _toAddress            :: B.C f (Maybe Text)
     , _toBound              :: B.C f (Maybe Bound)
     , _createdAt            :: B.C f LocalTime
@@ -113,7 +113,7 @@ fieldEMod =
       , _fromDate = "from_date"
       , _toDate = "to_date"
       , _PassApplicationId = "pass_application_id"
-      , _fromLocationType = "from_locationId"
+      , _fromLocationType = "from_location_type"
       , _fromLat = "from_lat"
       , _fromLong = "from_long"
       , _fromWard = "from_ward"
@@ -124,7 +124,7 @@ fieldEMod =
       , _fromPincode = "from_pincode"
       , _fromAddress = "from_address"
       , _fromBound = "from_bound"
-      , _toLocationType = "to_locationId"
+      , _toLocationType = "to_location_type"
       , _toLat = "to_lat"
       , _toLong = "to_long"
       , _toWard = "to_ward"

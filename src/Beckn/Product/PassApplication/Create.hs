@@ -29,9 +29,9 @@ createPassApplication regToken req@CreatePassApplicationReq{..} = withFlowHandle
 
   passAppInfo <-
     case _type of
-      SELF          -> selfFlow token req
-      SPONSOROR     -> sponsororFlow token req
-      BULKSPONSOROR -> bulkSponsorFlow token req
+      SELF        -> selfFlow token req
+      SPONSOR     -> sponsorFlow token req
+      BULKSPONSOR -> bulkSponsorFlow token req
 
   DB.create passAppInfo
   earea <- DB.findById (_id passAppInfo)
@@ -66,8 +66,8 @@ selfFlow token req@CreatePassApplicationReq{..} = do
   CustomerDetail.createIfNotExists customerId travellerIDType travellerID
   getPassAppInfo token req _CustomerId
 
-sponsororFlow :: RegistrationToken.RegistrationToken -> CreatePassApplicationReq -> L.Flow PassApplication
-sponsororFlow token req@CreatePassApplicationReq{..} = do
+sponsorFlow :: RegistrationToken.RegistrationToken -> CreatePassApplicationReq -> L.Flow PassApplication
+sponsorFlow token req@CreatePassApplicationReq{..} = do
   when (isNothing _travellerName || isNothing _travellerIDType || isNothing _travellerID)
     (L.throwException $ err400 {errBody = "travellerName, travellerIDType and travellerID cannot be empty"})
 
@@ -128,18 +128,18 @@ getPassAppInfo token CreatePassApplicationReq{..} mCustId = do
           }
 
 getPassType :: PassApplicationType -> PassType
-getPassType SELF          = INDIVIDUAL
-getPassType SPONSOROR     = INDIVIDUAL
-getPassType BULKSPONSOROR = ORGANIZATION
+getPassType SELF        = INDIVIDUAL
+getPassType SPONSOR     = INDIVIDUAL
+getPassType BULKSPONSOR = ORGANIZATION
 
 getCount :: PassApplicationType -> Maybe Int -> L.Flow Int
 getCount SELF _ = return 1
-getCount SPONSOROR _ = return 1
-getCount BULKSPONSOROR (Just c) = return c
-getCount BULKSPONSOROR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
+getCount SPONSOR _ = return 1
+getCount BULKSPONSOR (Just c) = return c
+getCount BULKSPONSOR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
 
-mapIdType MOBILE = CD.MOBILENUMBER
-mapIdType AADHAR = CD.AADHAR
+mapIdType MOBILE  = CD.MOBILENUMBER
+mapIdType AADHAAR = CD.AADHAAR
 
 createCustomer :: Text -> L.Flow Customer.Customer
 createCustomer name = do

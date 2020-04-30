@@ -35,8 +35,8 @@ data LoginMode
 
 data PassApplicationType
   = SELF
-  | SPONSOROR
-  | BULKSPONSOROR
+  | SPONSOR
+  | BULKSPONSOR
   deriving (Eq, Generic, FromJSON, ToSchema)
 
 instance Default PassApplicationType where
@@ -44,7 +44,7 @@ instance Default PassApplicationType where
 
 data TravellerIDType
   = MOBILE
-  | AADHAR
+  | AADHAAR
   deriving (Eq, Generic, FromJSON, ToSchema)
 
 instance Default TravellerIDType where
@@ -116,7 +116,7 @@ data Location =
     , _city     :: Maybe Text
     , _state    :: Maybe Text
     , _country  :: Maybe Text
-    , _pincode  :: Maybe Text
+    , _pincode  :: Maybe Int
     , _address  :: Maybe Text
     , _bound    :: Maybe Bound
     }
