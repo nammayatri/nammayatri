@@ -253,6 +253,7 @@ CREATE TABLE `quota` (
   `id` char(36) NOT NULL,
   `quota_type` varchar(255) NOT NULL,
   `max_allowed` integer NOT NULL,
+  `tenant_organization_id` char(36) NULL,
   `entity_id` char(36) NOT NULL,
   `entity_type` varchar(255) NOT NULL,
   `start_time` datetime NOT NULL,
