@@ -68,3 +68,10 @@ update id status nameM emailM roleM = do
         )
 
     predicate id Storage.User {..} = _id ==. B.val_ id
+
+deleteById :: UserId -> L.Flow ()
+deleteById id =
+  DB.delete dbTable (predicate id)
+  >>= either DB.throwDBError pure
+  where
+    predicate id Storage.User {..} = _id ==. B.val_ id
