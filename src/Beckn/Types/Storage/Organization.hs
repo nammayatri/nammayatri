@@ -6,13 +6,13 @@ module Beckn.Types.Storage.Organization where
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import           Data.Aeson
+import           Data.Swagger
 import qualified Data.Text                 as T
 import           Data.Time.LocalTime
 import qualified Database.Beam             as B
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
-import           Data.Swagger
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -39,7 +39,7 @@ data OrganizationT f =
     , _city         :: B.C f Text
     , _state        :: B.C f Text
     , _country      :: B.C f Text
-    , _pincode      :: B.C f Text
+    , _pincode      :: B.C f Int
     , _address      :: B.C f Text
     , _info         :: B.C f (Maybe Text)
     , _createdAt    :: B.C f LocalTime
@@ -80,4 +80,5 @@ fieldEMod =
     B.tableModification
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
+      , _locationType = "location_type"
       }

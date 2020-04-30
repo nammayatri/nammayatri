@@ -11,7 +11,7 @@ data CreateOrganizationReq =
     , _city    :: Text
     , _state   :: Text
     , _country :: Text
-    , _pincode :: Text
+    , _pincode :: Int
     , _address :: Text
     }
   deriving (Generic, ToSchema)
