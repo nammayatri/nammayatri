@@ -59,12 +59,23 @@ getOrganization regToken orgId =
         (return . OrganizationRes)
 
 listOrganization ::
-     Maybe Text
+  Maybe Text
   -> Maybe Int
   -> Maybe Int
+  -> Maybe Double
+  -> Maybe Double
   -> Maybe Text
+  -> Maybe LocationType
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Int
   -> FlowHandler ListOrganizationRes
-listOrganization regToken limitM offsetM typeM = undefined
+listOrganization regToken limitM offsetM latM longM wardM locationTypeM cityM districtM stateM countryM pincodeM = withFlowHandler $ do
+  verifyToken regToken
+  organizations <- QO.listOrganizations latM longM wardM locationTypeM cityM districtM stateM countryM pincodeM
+  pure $ ListOrganizationRes {organizations = organizations}
 
 updateOrganization ::
      Maybe Text -> Text -> UpdateOrganizationReq -> FlowHandler OrganizationRes

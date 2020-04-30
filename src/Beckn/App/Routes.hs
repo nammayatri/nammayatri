@@ -109,11 +109,20 @@ type OrganizationAPIs
    = "organization"
    :> Header "registrationToken" RegistrationTokenText
    :> ( ReqBody '[ JSON] CreateOrganizationReq :> Post '[ JSON] OrganizationRes
-       :<|> Capture "organizationId" Text :> Get '[ JSON] OrganizationRes
-       :<|> QueryParam "limit" Int
+       :<|> "list"
+            :> QueryParam "limit" Int
             :> QueryParam "offset" Int
-            :> QueryParam "type" Text
+            :> QueryParam "lat" Double
+            :> QueryParam "long" Double
+            :> QueryParam "ward" Text
+            :> QueryParam "locationType" LocationType
+            :> QueryParam "city" Text
+            :> QueryParam "district" Text
+            :> QueryParam "state" Text
+            :> QueryParam "country" Text
+            :> QueryParam "pincode" Int
             :> Get '[ JSON] ListOrganizationRes
+       :<|> Capture "organizationId" Text :> Get '[ JSON] OrganizationRes
        :<|> Capture "organizationId" Text
             :> ReqBody '[ JSON] UpdateOrganizationReq
             :> Post '[ JSON] OrganizationRes
@@ -121,8 +130,8 @@ type OrganizationAPIs
 
 organizationFlow registrationToken =
   Organization.createOrganization registrationToken
-  :<|> Organization.getOrganization registrationToken
   :<|> Organization.listOrganization registrationToken
+  :<|> Organization.getOrganization registrationToken
   :<|> Organization.updateOrganization registrationToken
 ---------------------------------
 

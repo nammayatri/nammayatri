@@ -91,7 +91,9 @@ data LocationType
   = POINT
   | POLYGON
   | PINCODE
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+deriving instance HasSqlEqualityCheck MySQL LocationType
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
   sqlValueSyntax = autoSqlValueSyntax
