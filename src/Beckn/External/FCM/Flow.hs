@@ -1,12 +1,12 @@
 module Beckn.External.FCM.Flow where
 
-import qualified Beckn.External.FCM.API as API
-import Beckn.External.FCM.Types
-import qualified Data.Text as T
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant.Client
-import System.Environment
+import qualified Beckn.External.FCM.API   as API
+import           Beckn.External.FCM.Types
+import qualified Data.Text                as T
+import qualified EulerHS.Language         as L
+import           EulerHS.Prelude
+import           Servant.Client
+import           System.Environment
 
 sendNotification ::
      BaseUrl -> Text -> SubmitNotification -> L.Flow (Either Text ())

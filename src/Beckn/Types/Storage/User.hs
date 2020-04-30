@@ -18,7 +18,7 @@ import           Database.Beam.MySQL
 import           EulerHS.Prelude
 
 data Status = ACTIVE | INACTIVE
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -26,14 +26,20 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance FromBackendRow MySQL Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance ToSchema Status
+instance ToParamSchema Status
+
 data Role = ADMIN | MANAGER | VIEWER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow MySQL Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance ToSchema Role
+instance ToParamSchema Role
 
 
 data UserT f =
@@ -84,12 +90,13 @@ deriving instance Show User
 
 deriving instance Eq User
 
+instance ToSchema User
+
 instance ToJSON User where
   toJSON = genericToJSON stripLensPrefixOptions
 
-deriving instance FromJSON User
-
-instance ToSchema User
+instance FromJSON User where
+  parseJSON = genericParseJSON stripLensPrefixOptions
 
 insertExpression user = insertExpressions [user]
 

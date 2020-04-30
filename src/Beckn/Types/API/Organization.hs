@@ -1,15 +1,15 @@
 module Beckn.Types.API.Organization where
 
-import Beckn.Types.Storage.Organization
-import EulerHS.Prelude
-import Data.Swagger
+import           Beckn.Types.Storage.Organization
+import           Data.Swagger
+import           EulerHS.Prelude
 
 data CreateOrganizationReq =
   CreateOrganizationReq
-    { _name :: Text
-    , _gstin :: Maybe Text
-    , _city :: Text
-    , _state :: Text
+    { _name    :: Text
+    , _gstin   :: Maybe Text
+    , _city    :: Text
+    , _state   :: Text
     , _country :: Text
     , _pincode :: Text
     , _address :: Text
@@ -27,9 +27,9 @@ data OrganizationRes =
 
 data ListOrganizationReq =
   ListOrganizationReq
-   { _limit :: Int
+   { _limit  :: Int
    , _offset :: Int
-   , __type :: Text
+   , __type  :: Text
    } deriving (Generic, ToSchema)
 
 instance FromJSON ListOrganizationReq where

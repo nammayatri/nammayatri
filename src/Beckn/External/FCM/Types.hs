@@ -8,10 +8,10 @@ import           Servant
 
 data SubmitNotification =
   SubmitNotification
-    { _token :: Text
+    { _token        :: Text
     , _notification :: Notification
-    , _name :: Text
-    , __data :: Map Text Text
+    , _name         :: Text
+    , __data        :: Map Text Text
     }
   deriving (Show, Generic)
 
@@ -21,7 +21,7 @@ instance ToJSON SubmitNotification where
 data Notification =
   Notification
     { title :: Text
-    , body :: Text
+    , body  :: Text
     , image :: Maybe Text
     } deriving (Generic, ToJSON, Show)
 

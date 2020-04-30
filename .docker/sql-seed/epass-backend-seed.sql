@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS `location`;
 DROP TABLE IF EXISTS `registration_token`;
 DROP TABLE IF EXISTS `quota`;
 DROP TABLE IF EXISTS `allocated_quota`;
-DROP TABLE IF EXISTS `location_blacklist`;
+DROP TABLE IF EXISTS `blacklist`;
 
 
 
@@ -273,27 +273,25 @@ CREATE TABLE `allocated_quota` (
   INDEX (`end_time`)
 );
 
-CREATE TABLE `location_blacklist` (
+CREATE TABLE `blacklist` (
   `id` char(36) NOT NULL,
   `blacklisted_by` char(36) NOT NULL,
   `tenant_organization_id` char(36) NULL,
   `remarks` varchar(255) NOT NULL,
-  `type` varchar(255) NOT NULL,
-  `bound` TEXT NULL,
-  `ward` varchar(255) NULL,
-  `district` varchar(255) NULL,
-  `city` varchar(255) NULL,
-  `state` varchar(255) NULL,
-  `country` varchar(255) NULL,
-  `pincode` integer NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`ward`),
-  INDEX (`district`),
-  INDEX (`city`),
-  INDEX (`pincode`)
+  INDEX (`entity_id`),
+  INDEX (`entity_type`),
+  INDEX (`start_time`),
+  INDEX (`end_time`),
+  INDEX (`tenant_organization_id`),
+  INDEX (`blacklisted_by`)
 );
 
 

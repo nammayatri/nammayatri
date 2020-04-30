@@ -1,9 +1,9 @@
 module Beckn.Types.API.Customer where
 
-import EulerHS.Prelude
-import Beckn.Types.Storage.Customer
-import Servant.Swagger
-import Data.Swagger
+import           Beckn.Types.Storage.Customer
+import           Data.Swagger
+import           EulerHS.Prelude
+import           Servant.Swagger
 
 data GetCustomerRes =
   GetCustomerRes

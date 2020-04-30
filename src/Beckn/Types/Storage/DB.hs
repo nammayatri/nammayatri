@@ -5,10 +5,10 @@ module Beckn.Types.Storage.DB where
 import           EulerHS.Prelude                       hiding (id)
 
 import qualified Beckn.Types.Storage.AllocatedQuota    as AllocatedQuota
+import qualified Beckn.Types.Storage.Blacklist         as Blacklist
 import qualified Beckn.Types.Storage.Customer          as Customer
 import qualified Beckn.Types.Storage.CustomerDetail    as CustomerDetail
 import qualified Beckn.Types.Storage.Location          as Location
-import qualified Beckn.Types.Storage.LocationBlacklist as LocationBlacklist
 import qualified Beckn.Types.Storage.Organization      as Organization
 import qualified Beckn.Types.Storage.Pass              as Pass
 import qualified Beckn.Types.Storage.PassApplication   as PassApplication
@@ -23,7 +23,7 @@ data BecknDb f =
     { _user :: f (B.TableEntity User.UserT)
     , _quota :: f (B.TableEntity Quota.QuotaT)
     , _location :: f (B.TableEntity Location.LocationT)
-    , _locationBlacklist :: f (B.TableEntity LocationBlacklist.LocationBlacklistT)
+    , _Blacklist :: f (B.TableEntity Blacklist.BlacklistT)
     , _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
     , _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT)
     , _customer :: f (B.TableEntity Customer.CustomerT)
@@ -41,7 +41,7 @@ becknDb =
     { _user = User.fieldEMod
     , _quota = Quota.fieldEMod
     , _location = Location.fieldEMod
-    , _locationBlacklist = LocationBlacklist.fieldEMod
+    , _Blacklist = Blacklist.fieldEMod
     , _registrationToken = RegistrationToken.fieldEMod
     , _allocatedQuota = AllocatedQuota.fieldEMod
     , _customer = Customer.fieldEMod

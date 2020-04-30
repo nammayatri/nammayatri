@@ -1,17 +1,16 @@
 {-# LANGUAGE TypeFamilies #-}
 
 
-module Beckn.Product.LocationBlacklist where
+module Beckn.Product.Blacklist where
 
 import qualified Beckn.Data.Accessor                     as Accessor
-import qualified Beckn.Storage.Queries.LocationBlacklist as DB
+import qualified Beckn.Storage.Queries.Blacklist         as DB
 import qualified Beckn.Storage.Queries.RegistrationToken as RegToken
-import           Beckn.Types.API.LocationBlacklist
+import           Beckn.Types.API.Blacklist
 import           Beckn.Types.App
 import           Beckn.Types.Common
-import           Beckn.Types.Storage.LocationBlacklist   as Storage
+import           Beckn.Types.Storage.Blacklist           as Storage
 import qualified Beckn.Types.Storage.RegistrationToken   as RegToken
-import           Beckn.Utils.Common
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
@@ -26,23 +25,24 @@ import           Servant
 
 create :: Maybe RegistrationToken -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} =  withFlowHandler $ do
+   verifyToken mRegToken
    id <- generateGUID
    regToken <- fromMaybeM400 "INVALID_TOKEN" mRegToken
     >>= RegToken.findRegistrationTokenByToken
     >>= fromMaybeM400 "INVALID_TOKEN"
    case (RegToken._entityType regToken) of
      RegToken.USER -> do
-        locationBlacklist <- locationBlacklistRec id $ RegToken._EntityId regToken
-        DB.create locationBlacklist
+        blacklist <- blacklistRec id $ RegToken._EntityId regToken
+        DB.create blacklist
         eres <- DB.findById id
         case eres of
-          Right (Just locationBlacklistDb) -> return $ CreateRes locationBlacklistDb
-          _                 -> L.throwException $ err500 {errBody = "Could not create LocationBlacklist"}
+          Right (Just blacklistDb) -> return $ CreateRes blacklistDb
+          _                 -> L.throwException $ err500 {errBody = "Could not create Blacklist"}
      RegToken.CUSTOMER -> L.throwException $ err401 {errBody = "Unauthorized"}
     where
-      locationBlacklistRec id userId = do
+      blacklistRec id userId = do
         now  <- getCurrTime
-        return Storage.LocationBlacklist
+        return Storage.Blacklist
           { _id         = id
           , _createdAt  = now
           , _updatedAt  = now
@@ -52,51 +52,53 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
           }
 
 list ::
-  Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Int
-  -> Maybe Int
-  -> Maybe Int
+  Maybe RegistrationToken
+  -> Maybe Limit
+  -> Maybe Offset
+  -> EntityType
+  -> Text
   -> FlowHandler ListRes
-list mRegToken maybeWard maybeDistrict maybeCity maybeState maybePincode offsetM limitM =
-  pure $ ListRes {_location_blacklists = [def Storage.LocationBlacklist]}
-
-get :: Maybe Text -> LocationBlacklistId -> FlowHandler GetRes
-get mRegToken locationBlacklistId = withFlowHandler $ do
+list mRegToken mlimit moffset entityType entityId = withFlowHandler $ do
   verifyToken mRegToken
-  DB.findById locationBlacklistId
+  DB.findAllWithLimitOffset mlimit moffset entityType entityId
+  >>= \case
+      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+      Right v -> return $ ListRes v
+
+
+get :: Maybe Text -> BlacklistId -> FlowHandler GetRes
+get mRegToken blacklistId = withFlowHandler $ do
+  verifyToken mRegToken
+  DB.findById blacklistId
   >>= \case
     Right (Just user) -> return user
-    Right Nothing -> L.throwException $ err400 {errBody = "LocationBlacklist not found"}
+    Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
 
 update ::
   Maybe Text ->
-  LocationBlacklistId ->
+  BlacklistId ->
   UpdateReq ->
   FlowHandler UpdateRes
-update mRegToken locationBlacklistId lb@UpdateReq{..} = withFlowHandler $ do
+update mRegToken blacklistId lb@UpdateReq{..} = withFlowHandler $ do
   verifyToken mRegToken
-  eres <- DB.update locationBlacklistId lb
+  eres <- DB.update blacklistId lb
   case eres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
     Right _ ->
-      DB.findById locationBlacklistId
+      DB.findById blacklistId
       >>= \case
         Right (Just v) -> return $ UpdateRes v
-        Right Nothing -> L.throwException $ err400 {errBody = "LocationBlacklist not found"}
+        Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
         Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
 
 
-delete :: Maybe Text -> LocationBlacklistId -> FlowHandler Ack
-delete mRegToken locationBlacklistId = withFlowHandler $ do
+delete :: Maybe Text -> BlacklistId -> FlowHandler Ack
+delete mRegToken blacklistId = withFlowHandler $ do
   verifyToken mRegToken
-  mres <- DB.deleteById locationBlacklistId
+  mres <- DB.deleteById blacklistId
   case mres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
     Right () -> sendAck

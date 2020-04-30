@@ -10,6 +10,7 @@ import           Beckn.Types.Common
 import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
 import           Data.Default
+import           Data.Swagger
 import           Data.Time
 import           EulerHS.Prelude
 
@@ -56,13 +57,16 @@ instance Default Quota where
     }
 
 instance ToJSON Quota where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON Quota where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 deriving instance Show Quota
 
 deriving instance Eq Quota
 
-deriving instance FromJSON Quota
+instance ToSchema Quota
 
 insertExpression quota = insertExpressions [quota]
 
