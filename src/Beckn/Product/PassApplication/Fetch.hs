@@ -17,19 +17,32 @@ import qualified EulerHS.Language                      as L
 import           EulerHS.Prelude
 import           Servant
 
+
 listPassApplication ::
   Maybe Text
   -> Maybe Int
   -> Maybe Int
+  -> [Int]
+  -> [Text]
+  -> [Text]
+  -> [Text]
+  -> [Text]
+  -> [Int]
+  -> [Text]
+  -> [Text]
+  -> [Text]
+  -> [Text]
   -> [Status]
+  -> [OrganizationId]
   -> [PassType]
   -> FlowHandler ListPassApplicationRes
-listPassApplication regToken offsetM limitM status passType = withFlowHandler $ do
-  verifyToken regToken
-  DB.findAllWithLimitOffsetWhere status passType limitM offsetM
-  >>= \case
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-      Right v -> return $ ListPassApplicationRes v
+listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType =
+   withFlowHandler $ do
+      verifyToken regToken
+      DB.findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType limitM offsetM
+      >>= \case
+          Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+          Right v -> return $ ListPassApplicationRes v
 
 getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler PassApplicationRes
 getPassApplicationById regToken applicationId = withFlowHandler $ do

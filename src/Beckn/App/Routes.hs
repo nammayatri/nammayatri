@@ -91,14 +91,25 @@ registrationFlow =
 ---- Pass Application Flow ------
 --
 type PassApplicationAPIs
-   = "passApplication"
+   = "pass_application"
    :> Header "registrationToken" RegistrationTokenText
    :> ( ReqBody '[ JSON] CreatePassApplicationReq
         :> Post '[ JSON] PassApplicationRes
       :<|> "list"
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
+        :> QueryParams "from_pincode" Int
+        :> QueryParams "from_city" Text
+        :> QueryParams "from_district" Text
+        :> QueryParams "from_ward" Text
+        :> QueryParams "from_state" Text
+        :> QueryParams "to_pincode" Int
+        :> QueryParams "to_city" Text
+        :> QueryParams "to_district" Text
+        :> QueryParams "to_ward" Text
+        :> QueryParams "to_state" Text
         :> QueryParams "status" PA.Status
+        :> QueryParams "organization" OrganizationId
         :> QueryParams "type" PassType
         :> Get '[ JSON] ListPassApplicationRes
       :<|> Capture "passApplicationId" PassApplicationId :> Get '[ JSON] PassApplicationRes
