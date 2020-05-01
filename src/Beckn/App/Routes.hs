@@ -15,6 +15,7 @@ import qualified Beckn.Product.Registration           as Registration
 import qualified Beckn.Product.User                   as User
 import qualified Beckn.Types.API.Blacklist            as Blacklist
 import           Beckn.Types.API.Customer
+import           Beckn.Types.API.Document
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
@@ -260,6 +261,12 @@ blacklistFlow registrationToken =
 type DocumentAPIs
    = "document"
    :> Header "registrationToken" RegistrationTokenText
-   :> ("upload" :> MultipartForm Mem (MultipartData Mem) :> Post '[ JSON] Ack)
+   :> (    Capture "entityType" DocumentEntity
+        :> Capture "entityId" Text
+        :> "upload"
+        :> MultipartForm Mem (MultipartData Mem)
+        :> Post '[ JSON] UpdateDocumentRes
+      )
 
-documentFlow registrationToken = Document.upload registrationToken
+documentFlow registrationToken enType enId =
+  Document.upload registrationToken enId enType
