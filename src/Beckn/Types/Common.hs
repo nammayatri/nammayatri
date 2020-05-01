@@ -203,7 +203,12 @@ instance FromBackendRow MySQL DocumentEntity where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData DocumentEntity where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseUrlPiece x =
+    case x of
+      "CUSTOMER" -> Right CUSTOMER
+      "USER" -> Right USER
+      "PASSAPPLICATION" -> Right PASSAPPLICATION
+      y -> Left y
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
@@ -221,6 +226,10 @@ instance FromBackendRow MySQL DocumentByType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData DocumentByType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseUrlPiece x =
+    case x of
+      "VERIFIER" -> Right VERIFIER
+      "CREATOR" -> Right CREATOR
+      y -> Left y
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
