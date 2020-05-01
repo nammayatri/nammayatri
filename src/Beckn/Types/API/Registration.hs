@@ -46,6 +46,7 @@ data LoginReq =
     { _medium :: Medium
     , __type  :: LoginType
     , _hash   :: Text
+    , _identifier  :: Text
     }
   deriving (Generic, ToSchema)
 
