@@ -79,6 +79,7 @@ insertExpressions tags = B.insertValues tags
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity EntityDocumentT)
 fieldEMod =
+  B.setEntityName "entity_document" <>
   B.modifyTableFields
     B.tableModification
       { _EntityId = "entity_id"

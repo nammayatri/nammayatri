@@ -12,6 +12,7 @@ import qualified Beckn.Product.PassApplication.Fetch  as PassApplication
 import qualified Beckn.Product.PassApplication.Update as PassApplication
 import qualified Beckn.Product.Quota                  as Quota
 import qualified Beckn.Product.Registration           as Registration
+import qualified Beckn.Product.Tag                    as Tag
 import qualified Beckn.Product.User                   as User
 import qualified Beckn.Types.API.Blacklist            as Blacklist
 import           Beckn.Types.API.Customer
@@ -20,6 +21,7 @@ import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
 import qualified Beckn.Types.API.Quota                as Quota
 import           Beckn.Types.API.Registration
+import qualified Beckn.Types.API.Tag                  as Tag
 import qualified Beckn.Types.API.User                 as User
 import           Beckn.Types.App
 import           Beckn.Types.Common
@@ -34,12 +36,12 @@ import qualified Beckn.Types.Storage.Pass             as SP
 import qualified Beckn.Types.Storage.PassApplication  as PA
 
 epassContext :: Context '[ MultipartOptions Mem]
-epassContext = defaultMultipartOptio (Proxy :: Proxy Mem) :. EmptyContext
+epassContext = defaultMultipartOption (Proxy :: Proxy Mem) :. EmptyContext
 
 -- 5 MB size each and max of 3 files
-defaultMultipartOptio ::
+defaultMultipartOption ::
   MultipartBackend tag => Proxy tag -> MultipartOptions tag
-defaultMultipartOptio pTag =
+defaultMultipartOption pTag =
   MultipartOptions
     { generalOptions =
         setMaxRequestNumFiles 3 $
@@ -48,7 +50,19 @@ defaultMultipartOptio pTag =
     }
 
 type EPassAPIs
-   = "v1" :> (Get '[ JSON] Text :<|> RegistrationAPIs :<|> PassApplicationAPIs :<|> OrganizationAPIs :<|> CustomerAPIs :<|> PassAPIs :<|> UserAPIS :<|> QuotaAPIS :<|> BlacklistAPIS :<|> DocumentAPIs)
+   = "v1"
+   :> (Get '[ JSON] Text
+      :<|> RegistrationAPIs
+      :<|> PassApplicationAPIs
+      :<|> OrganizationAPIs
+      :<|> CustomerAPIs
+      :<|> PassAPIs
+      :<|> UserAPIS
+      :<|> QuotaAPIS
+      :<|> BlacklistAPIS
+      :<|> DocumentAPIs
+      :<|> TagAPIs
+      )
 
 epassAPIs :: Proxy EPassAPIs
 epassAPIs = Proxy
@@ -65,6 +79,7 @@ epassServer' key =
   :<|> quotaFlow
   :<|> blacklistFlow
   :<|> documentFlow
+  :<|> tagFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -263,3 +278,24 @@ type DocumentAPIs
    :> ("upload" :> MultipartForm Mem (MultipartData Mem) :> Post '[ JSON] Ack)
 
 documentFlow registrationToken = Document.upload registrationToken
+
+--------
+---- Tag Api
+type TagAPIs
+   = "tag"
+   :> Header "registrationToken" RegistrationTokenText
+   :> (ReqBody '[JSON] Tag.CreateReq
+        :> Post '[JSON] Tag.CreateRes
+      :<|> Capture "entityType" Text
+        :> Capture "entityId" Text
+        :> "list"
+        :> Get '[JSON] Tag.ListRes
+      :<|> "entity"
+        :> ReqBody '[JSON] Tag.TagEntityReq
+        :> Post '[JSON] Tag.TagEntityRes
+      )
+
+tagFlow registrationToken =
+  Tag.create registrationToken
+  :<|> Tag.list registrationToken
+  :<|> Tag.tagEntity registrationToken

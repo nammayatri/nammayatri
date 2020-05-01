@@ -24,8 +24,9 @@ create Storage.Tag {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Tag {..}) >>=
   either DB.throwDBError pure
 
-findById :: TagId -> L.Flow (T.DBResult (Maybe Storage.Tag))
+findById :: TagId -> L.Flow (Maybe Storage.Tag)
 findById id = do
   DB.findOne dbTable predicate
+  >>= either DB.throwDBError pure
   where
     predicate Storage.Tag {..} = (_id ==. B.val_ id)
