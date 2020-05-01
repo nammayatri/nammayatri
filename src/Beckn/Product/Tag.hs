@@ -42,7 +42,8 @@ create regToken CreateReq{..} = withFlowHandler $ do
 list :: Maybe RegistrationTokenText -> Text -> Text -> FlowHandler ListRes
 list regToken entityType entityId = withFlowHandler $ do
   verifyToken regToken
-  undefined
+  Tag.findAllByEntity entityType entityId
+    >>= return . ListRes
 
 tagEntity ::  Maybe RegistrationTokenText -> TagEntityReq -> FlowHandler TagEntityRes
 tagEntity regToken TagEntityReq{..} = withFlowHandler $ do

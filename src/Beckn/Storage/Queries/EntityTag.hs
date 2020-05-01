@@ -30,3 +30,12 @@ findById id = do
     >>= either DB.throwDBError pure
   where
     predicate Storage.EntityTag {..} = (_id ==. B.val_ id)
+
+findAllByEntity :: Text -> Text -> L.Flow [Storage.EntityTag]
+findAllByEntity entityType entityId = do
+  DB.findAll dbTable (predicate entityId entityType)
+    >>= either DB.throwDBError pure
+  where
+    predicate entityId entityType Storage.EntityTag{..} =
+      _EntityId ==. B.val_ entityId &&.
+      _entityType ==. B.val_ entityType
