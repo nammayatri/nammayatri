@@ -52,13 +52,6 @@ verifyIfStatusUpdatable currStatus newStatus =
     (APPROVED, REVOKED) -> return ()
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
 
-ifNotFoundDbErr :: Text -> T.DBResult (Maybe a) -> L.Flow a
-ifNotFoundDbErr errMsg dbres =
-  case dbres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-    Right Nothing -> L.throwException $ err400 {errBody = show errMsg}
-    Right (Just v) -> return v
-
 createPassesOnApproval :: PassApplication -> Int -> L.Flow ()
 createPassesOnApproval pa@PassApplication {..} approvedCount =
   if _status /= APPROVED

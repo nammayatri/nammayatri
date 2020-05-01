@@ -3,6 +3,7 @@ module Beckn.Product.Document where
 import qualified Beckn.Storage.Queries.Customer        as QC
 import qualified Beckn.Storage.Queries.Document        as QD
 import qualified Beckn.Storage.Queries.EntityDocument  as QED
+import qualified Beckn.Storage.Queries.PassApplication as QPA
 import qualified Beckn.Storage.Queries.User            as QU
 import           Beckn.Types.API.Document
 import           Beckn.Types.App
@@ -10,6 +11,7 @@ import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Customer          as SC
 import           Beckn.Types.Storage.Document          as SD
 import           Beckn.Types.Storage.EntityDocument    as SED
+import           Beckn.Types.Storage.PassApplication   as SPA
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.User              as SU
 import           Beckn.Utils.Common
@@ -113,6 +115,14 @@ getOrgId ei eit = do
         QU.findById (UserId ei) >>=
           fromMaybeM400 "INVALID_USER_ID"
       return $ SU._OrganizationId user
+    PASSAPPLICATION -> do
+      pass <-
+        QPA.findById (PassApplicationId ei) >>=
+          ifNotFoundDbErr "INVALID_PASSAPPLICATION_ID"
+      return $
+        fromMaybe
+         (OrganizationId "individual")
+         (SPA._OrganizationId pass)
 
 storageDir :: OrganizationId -> Text -> Text
 storageDir orgId custId =

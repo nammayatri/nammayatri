@@ -17,8 +17,11 @@ DROP TABLE IF EXISTS `registration_token`;
 DROP TABLE IF EXISTS `quota`;
 DROP TABLE IF EXISTS `allocated_quota`;
 DROP TABLE IF EXISTS `blacklist`;
-
-
+DROP TABLE IF EXISTS `tag`;
+DROP TABLE IF EXISTS `entity_tag`;
+DROP TABLE IF EXISTS `document`;
+DROP TABLE IF EXISTS `entity_document`;
+DROP TABLE IF EXISTS `comment`;
 
 
 CREATE TABLE `customer` (
@@ -311,23 +314,25 @@ CREATE TABLE `tag` (
   `created_by` char(36) NOT NULL,
   `created_by_entity_type` varchar(255) NOT NULL,
   `tag_type` varchar(255) NOT NULL,
-  `value` varchar(255) NOT NULL,
+  `tag` varchar(255) NOT NULL,
+  `info` varchar(255) NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
   INDEX (`tag_type`),
-  INDEX (`value`)
+  INDEX (`tag`)
 );
 
 CREATE TABLE `entity_tag` (
   `id` char(36) NOT NULL,
   `tagged_by` char(36) NOT NULL,
-  `tagged_by_entity_type` varchar(255) NOT NULL,
+  `tagged_by_entity_id` varchar(255) NOT NULL,
   `entity_id` char(36) NOT NULL,
   `entity_type` varchar(255) NOT NULL,
   `tag_id` char(36) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
   INDEX (`entity_id`),
   INDEX (`entity_type`),
@@ -345,6 +350,7 @@ CREATE TABLE `document` (
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `info` varchar(255) NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -362,6 +368,7 @@ CREATE TABLE `entity_document` (
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
   INDEX (`entity_id`),
   INDEX (`entity_type`),
@@ -377,7 +384,16 @@ CREATE TABLE `comment` (
   `value` varchar(1024) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
   INDEX (`primary_entity_id`),
   INDEX (`primary_entity_type`)
 );
+
+-- Default Customer and RegistartionToken for dev
+INSERT INTO `customer` (`id`, `name`, `organization_id`, `tenant_organization_id`, `verified`, `role`, `info`, `created_at`, `updated_at`)
+  VALUES ('25b25106-116d-4642-bd29-92a86164500f', NULL, NULL, NULL, FALSE, 'INDIVIDUAL', NULL, '2020-05-01 10:07:30.621529', '2020-05-01 10:07:30.621529');
+
+
+INSERT INTO `registration_token` (`id`, `token`, `attempts`, `auth_medium`, `auth_type`, `auth_value_hash`, `verified`, `auth_expiry`, `token_expiry`, `entity_id`, `entity_type`, `created_at`, `updated_at`, `info`)
+  VALUES ('8b8bc9e8-b184-4ec8-8870-d3f8be644b67', '275c6e83-61ff-46c0-8f8e-488d68f88a9f', 3, 'SMS', 'OTP', '8592', FALSE, 3, 365, '25b25106-116d-4642-bd29-92a86164500f', 'CUSTOMER', '2020-05-01 10:07:30.657438', '2020-05-01 10:07:30.657438', NULL);

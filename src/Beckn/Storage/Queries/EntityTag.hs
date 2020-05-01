@@ -24,8 +24,18 @@ create Storage.EntityTag {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.EntityTag {..}) >>=
   either DB.throwDBError pure
 
-findById :: EntityTagId -> L.Flow (T.DBResult (Maybe Storage.EntityTag))
+findById :: EntityTagId -> L.Flow (Maybe Storage.EntityTag)
 findById id = do
   DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
   where
     predicate Storage.EntityTag {..} = (_id ==. B.val_ id)
+
+findAllByEntity :: Text -> Text -> L.Flow [Storage.EntityTag]
+findAllByEntity entityType entityId = do
+  DB.findAll dbTable (predicate entityId entityType)
+    >>= either DB.throwDBError pure
+  where
+    predicate entityId entityType Storage.EntityTag{..} =
+      _EntityId ==. B.val_ entityId &&.
+      _entityType ==. B.val_ entityType
