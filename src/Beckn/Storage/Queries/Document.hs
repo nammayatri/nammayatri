@@ -24,8 +24,9 @@ create Storage.Document {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Document {..}) >>=
   either DB.throwDBError pure
 
-findById :: DocumentId -> L.Flow (T.DBResult (Maybe Storage.Document))
+findById :: DocumentId -> L.Flow (Maybe Storage.Document)
 findById id = do
-  DB.findOne dbTable predicate
+  DB.findOne dbTable predicate >>=
+    either DB.throwDBError pure
   where
     predicate Storage.Document {..} = (_id ==. B.val_ id)

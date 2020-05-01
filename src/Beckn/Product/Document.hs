@@ -26,8 +26,8 @@ import           Beckn.Types.Storage.EntityDocument
 import qualified Data.Text                             as T
 
 upload ::
-  Maybe Text -> Text -> DocumentEntity -> MultipartData Mem -> FlowHandler UpdateDocumentRes
-upload regToken enId enType multipartData = withFlowHandler $ do
+  Maybe Text -> DocumentEntity -> Text -> MultipartData Mem -> FlowHandler UpdateDocumentRes
+upload regToken enType enId multipartData = withFlowHandler $ do
   reg <- verifyToken regToken
   orgId <- getOrgId enId enType
   let dir = storageDir orgId enId
@@ -38,6 +38,13 @@ upload regToken enId enType multipartData = withFlowHandler $ do
   return $
     UpdateDocumentRes $
       _getDocumentId . SD._id <$> documents
+
+getDocuments :: Maybe Text -> [Text] -> FlowHandler ListDocumentRes
+getDocuments regToken docIds = withFlowHandler $ do
+  verifyToken regToken
+  docs <-
+    traverse (QD.findById . DocumentId) docIds
+  return $ ListDocumentRes $ catMaybes docs
 
 createEntity :: Text -> DocumentEntity -> Document -> L.Flow EntityDocument
 createEntity custId enType Document {..} = do
