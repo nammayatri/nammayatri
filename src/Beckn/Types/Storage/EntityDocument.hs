@@ -4,8 +4,8 @@
 
 module Beckn.Types.Storage.EntityDocument where
 
-import           Beckn.Types.Common
 import           Beckn.Types.App
+import           Beckn.Types.Common
 import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
 import           Data.Default
@@ -80,6 +80,7 @@ insertExpressions tags = B.insertValues tags
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity EntityDocumentT)
 fieldEMod =
+  B.setEntityName "entity_document" <>
   B.modifyTableFields
     B.tableModification
       { _EntityId = "entity_id"
@@ -89,7 +90,7 @@ fieldEMod =
       , _CreatedBy = "created_by"
       , _createdByEntityType = "created_by_entity_type"
       , _VerifiedBy = "verified_by"
-      , _verifiedByEntityType = "verified_by_entity_id"
+      , _verifiedByEntityType = "verified_by_entity_type"
       , _createdAt = "created_at"
       , _updatedAt = "updated_at"
       }

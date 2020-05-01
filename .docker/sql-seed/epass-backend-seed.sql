@@ -359,6 +359,7 @@ CREATE TABLE `entity_document` (
   `verified` boolean NOT NULL,
   `verified_by` char(36) NULL,
   `verified_by_entity_type` varchar(255) NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),

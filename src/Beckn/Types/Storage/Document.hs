@@ -88,7 +88,7 @@ fieldEMod =
     B.tableModification
       { _fileUrl = "file_url"
       , _fileHash = "file_hash"
-      , _fileName = "file_name"
+      , _fileName = "filename"
       , _createdAt = "created_at"
       , _updatedAt = "updated_at"
       }
