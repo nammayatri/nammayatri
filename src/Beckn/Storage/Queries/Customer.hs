@@ -77,3 +77,12 @@ updateDetails customerId nameM orgIdM = do
         )
 
     predicate id C.Customer {..} = _id ==. B.val_ id
+
+--updateDocument :: CustomerId -> [DocumentId] -> L.Flow ()
+--updateDocument cust docs =
+  --DB.update dbTable (setClause docs) (predicate cust)
+    -- >>= either DB.throwDBError pure
+  --where
+    --setClause docs C.Customer {..} =
+      --mconcat [ _documentIds <-. B.val_ docs ]
+    --predicate i C.Customer {..} = _id ==. B.val_ i

@@ -13,7 +13,6 @@ import qualified EulerHS.Language             as L
 import           EulerHS.Prelude
 import qualified EulerHS.Runtime              as R
 import qualified EulerHS.Types                as T
-import qualified Network.HTTP.Client          as Client
 import qualified Network.HTTP.Types           as H
 import           Network.Wai
 import           Network.Wai.Handler.Warp     (Settings, defaultSettings, run,
@@ -47,9 +46,7 @@ runBecknBackendApp' port settings = do
       Right _ -> do
         putStrLn @String
           ("Runtime created. Starting server at port " <> show port)
-        runSettings settings $
-          App.run reqHeadersKey $
-          App.Env flowRt
+        runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 becknExceptionResponse :: SomeException -> Response
 becknExceptionResponse exception = do
@@ -65,5 +62,3 @@ becknExceptionResponse exception = do
         H.internalServerError500
         [(H.hContentType, "application/json")]
         (Aeson.encode $ internalServerErr)
-
-

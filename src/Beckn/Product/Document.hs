@@ -2,11 +2,16 @@ module Beckn.Product.Document where
 
 import qualified Beckn.Storage.Queries.Customer        as QC
 import qualified Beckn.Storage.Queries.Document        as QD
+import qualified Beckn.Storage.Queries.EntityDocument  as QED
+import qualified Beckn.Storage.Queries.User            as QU
+import           Beckn.Types.API.Document
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Customer          as SC
-import           Beckn.Types.Storage.Document
+import           Beckn.Types.Storage.Document          as SD
+import           Beckn.Types.Storage.EntityDocument    as SED
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.User              as SU
 import           Beckn.Utils.Common
 import           Beckn.Utils.Extra
 import           Beckn.Utils.Routes
@@ -19,22 +24,54 @@ import           EulerHS.Prelude
 import           Servant
 import           Servant.Multipart
 
+import           Beckn.Types.Storage.EntityDocument
 import qualified Data.Text                             as T
 
-upload :: Maybe Text -> MultipartData Mem -> FlowHandler Ack
-upload regToken multipartData = withFlowHandler $ do
+upload ::
+  Maybe Text -> DocumentEntity -> Text -> MultipartData Mem -> FlowHandler DocumentRes
+upload regToken enType enId multipartData = withFlowHandler $ do
   reg <- verifyToken regToken
-  cust <- QC.findCustomerById (CustomerId $ SR._EntityId reg) >>=
-          fromMaybeM400 "INVALID_DATA"
-  let orgId =
-        fromMaybe (OrganizationId "individual") (SC._OrganizationId cust)
-      dir = storageDir orgId (SR._EntityId reg)
-  docIds <-
-    forM (files multipartData) $ \file -> uploadDocument file dir orgId
-  -- :TODO link docIds to Customer
-  return $ Ack "DONE" "Uploaded documents successfully"
+  orgId <- getOrgId enId enType
+  let dir = storageDir orgId enId
+  documents <-
+    forM (files multipartData) $ \file ->
+      uploadDocument file dir orgId
+  traverse (createEntity enId enType) documents
+  return $
+    DocumentRes $
+      _getDocumentId . SD._id <$> documents
 
-uploadDocument :: FileData Mem -> Text -> OrganizationId -> L.Flow DocumentId
+getDocuments ::
+  Maybe Text -> DocumentByType -> Text -> FlowHandler DocumentRes
+getDocuments regToken dt en = withFlowHandler $ do
+  verifyToken regToken
+  eds <- QED.findAllIds en dt
+  -- if needed more inforamtion
+  -- docs <- traverse (QD.findById . DocumentId . _DocumentId) eds
+  return $ DocumentRes $ SED._DocumentId <$> eds
+
+createEntity :: Text -> DocumentEntity -> Document -> L.Flow EntityDocument
+createEntity custId enType Document {..} = do
+  uuid <- generateGUID
+  now <- getCurrentTimeUTC
+  return $
+   EntityDocument
+    { _id = uuid
+    , _EntityId = custId
+    , _entityType = enType
+    , _DocumentId = _getDocumentId _id
+    , _documentType = _format
+    , _CreatedBy = custId
+    , _createdByEntityType = enType
+    , _verified = False
+    , _VerifiedBy = Nothing
+    , _verifiedByEntityType = Nothing
+    , _createdAt = now
+    , _updatedAt = now
+    , _info = Nothing
+    }
+
+uploadDocument :: FileData Mem -> Text -> OrganizationId -> L.Flow Document
 uploadDocument file dir orgId = do
   let contentB = fdPayload file
       content = BSL.toStrict contentB
@@ -58,8 +95,26 @@ uploadDocument file dir orgId = do
           now
   QD.create doc
   L.logInfo "Uploaded Document with name: " (show fileName)
-  return uuid
+  return doc
 
+getOrgId :: Text -> DocumentEntity -> L.Flow OrganizationId
+getOrgId ei eit = do
+  case eit of
+    CUSTOMER -> do
+      cust <-
+        QC.findCustomerById (CustomerId ei) >>=
+          fromMaybeM400 "INVALID_CUSTOMER_ID"
+      return $
+        fromMaybe
+          (OrganizationId "individual")
+          (SC._OrganizationId cust)
+    USER -> do
+      user <-
+        QU.findById (UserId ei) >>=
+          fromMaybeM400 "INVALID_USER_ID"
+      return $ SU._OrganizationId user
+
+storageDir :: OrganizationId -> Text -> Text
 storageDir orgId custId =
   "/local/storage/juspay/docs/" <>
   _getOrganizationId orgId <>

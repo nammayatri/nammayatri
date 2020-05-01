@@ -4,6 +4,7 @@
 
 module Beckn.Types.Storage.EntityDocument where
 
+import           Beckn.Types.Common
 import           Beckn.Types.App
 import qualified Beckn.Utils.Defaults as Defaults
 import           Data.Aeson
@@ -19,14 +20,14 @@ data EntityDocumentT f =
   EntityDocument
     { _id                   :: B.C f EntityDocumentId
     , _EntityId             :: B.C f Text
-    , _entityType           :: B.C f Text
+    , _entityType           :: B.C f DocumentEntity
     , _DocumentId           :: B.C f Text
     , _documentType         :: B.C f Text
     , _CreatedBy            :: B.C f Text
-    , _createdByEntityType  :: B.C f Text
+    , _createdByEntityType  :: B.C f DocumentEntity
     , _verified             :: B.C f Bool
-    , _VerifiedBy           :: B.C f Text
-    , _verifiedByEntityType :: B.C f Text
+    , _VerifiedBy           :: B.C f (Maybe Text)
+    , _verifiedByEntityType :: B.C f (Maybe DocumentEntity)
     , _createdAt            :: B.C f LocalTime
     , _updatedAt            :: B.C f LocalTime
     , _info                 :: B.C f (Maybe Text)
@@ -47,14 +48,14 @@ instance Default EntityDocument where
   def = EntityDocument
     { _id         = EntityDocumentId Defaults.id
     , _EntityId = Defaults.id2
-    , _entityType = "USER"
+    , _entityType = USER
     , _DocumentId = Defaults.id3
     , _documentType = "IMAGE"
     , _CreatedBy = Defaults.id
-    , _createdByEntityType = "USER"
+    , _createdByEntityType = USER
     , _verified = False
-    , _VerifiedBy = Defaults.id
-    , _verifiedByEntityType = "USER"
+    , _VerifiedBy = Just Defaults.id
+    , _verifiedByEntityType = Just USER
     , _createdAt  = Defaults.localTime
     , _updatedAt  = Defaults.localTime
     , _info       = Nothing
