@@ -61,7 +61,7 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
          morg <- maybe (pure Nothing) (Organization.findOrganizationById) $ _OrganizationId
          mcustomer <- maybe (pure Nothing) (Customer.findCustomerById) $ _CustomerId
          let maybeCustId  = Customer._id <$> mcustomer
-         entityDocs <-(EntityDocument.findAllByPassApplicationId) _id
+         entityDocs <- EntityDocument.findAllByPassApplicationId _id
          let docIds = EntityDocument._DocumentId <$> entityDocs
          docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
          let toLocation = Location

@@ -26,15 +26,15 @@ import qualified Beckn.Types.API.Tag                  as Tag
 import qualified Beckn.Types.API.User                 as User
 import           Beckn.Types.App
 import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.Organization     as SO
+import qualified Beckn.Types.Storage.Pass             as SP
+import qualified Beckn.Types.Storage.PassApplication  as PA
 import           Data.Aeson
 import qualified Data.Vault.Lazy                      as V
 import           EulerHS.Prelude
 import           Network.Wai.Parse
 import           Servant
 import           Servant.Multipart
-
-import qualified Beckn.Types.Storage.Pass             as SP
-import qualified Beckn.Types.Storage.PassApplication  as PA
 
 epassContext :: Context '[ MultipartOptions Mem]
 epassContext = epassMultipartOptions (Proxy :: Proxy Mem) :. EmptyContext
@@ -149,15 +149,14 @@ type OrganizationAPIs
        :<|> "list"
          :> QueryParam "limit" Int
          :> QueryParam "offset" Int
-         :> QueryParam "lat" Double
-         :> QueryParam "long" Double
-         :> QueryParam "ward" Text
-         :> QueryParam "locationType" LocationType
-         :> QueryParam "city" Text
-         :> QueryParam "district" Text
-         :> QueryParam "state" Text
-         :> QueryParam "country" Text
-         :> QueryParam "pincode" Int
+         :> QueryParams "locationType" LocationType
+         :> QueryParams "pincode" Int
+         :> QueryParams "city" Text
+         :> QueryParams "district" Text
+         :> QueryParams "ward" Text
+         :> QueryParams "state" Text
+         :> QueryParams "status" SO.Status
+         :> QueryParam "verified" Bool
          :> Get '[ JSON] ListOrganizationRes
        :<|> Capture "organizationId" Text :> Get '[ JSON] OrganizationRes
        :<|> Capture "organizationId" Text

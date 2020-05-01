@@ -62,19 +62,18 @@ listOrganization ::
   Maybe Text
   -> Maybe Int
   -> Maybe Int
-  -> Maybe Double
-  -> Maybe Double
-  -> Maybe Text
-  -> Maybe LocationType
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Int
+  -> [LocationType]
+  -> [Int]
+  -> [Text]
+  -> [Text]
+  -> [Text]
+  -> [Text]
+  -> [SO.Status]
+  -> Maybe Bool
   -> FlowHandler ListOrganizationRes
-listOrganization regToken limitM offsetM latM longM wardM locationTypeM cityM districtM stateM countryM pincodeM = withFlowHandler $ do
+listOrganization regToken limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM = withFlowHandler $ do
   verifyToken regToken
-  organizations <- QO.listOrganizations latM longM wardM locationTypeM cityM districtM stateM countryM pincodeM
+  organizations <- QO.listOrganizations limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM
   pure $ ListOrganizationRes {organizations = organizations}
 
 updateOrganization ::
