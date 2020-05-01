@@ -2,12 +2,14 @@ module Beckn.Product.Document where
 
 import qualified Beckn.Storage.Queries.Customer        as QC
 import qualified Beckn.Storage.Queries.Document        as QD
+import qualified Beckn.Storage.Queries.EntityDocument  as QED
 import qualified Beckn.Storage.Queries.User            as QU
 import           Beckn.Types.API.Document
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Customer          as SC
 import           Beckn.Types.Storage.Document          as SD
+import           Beckn.Types.Storage.EntityDocument    as SED
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.User              as SU
 import           Beckn.Utils.Common
@@ -39,12 +41,14 @@ upload regToken enType enId multipartData = withFlowHandler $ do
     UpdateDocumentRes $
       _getDocumentId . SD._id <$> documents
 
-getDocuments :: Maybe Text -> [Text] -> FlowHandler ListDocumentRes
-getDocuments regToken docIds = withFlowHandler $ do
+getDocuments ::
+  Maybe Text -> Text -> FlowHandler UpdateDocumentRes
+getDocuments regToken en = withFlowHandler $ do
   verifyToken regToken
-  docs <-
-    traverse (QD.findById . DocumentId) docIds
-  return $ ListDocumentRes $ catMaybes docs
+  eds <- QED.findAllIds en
+  -- if needed more inforamtion
+  -- docs <- traverse (QD.findById . DocumentId . _DocumentId) eds
+  return $ UpdateDocumentRes $ SED._DocumentId <$> eds
 
 createEntity :: Text -> DocumentEntity -> Document -> L.Flow EntityDocument
 createEntity custId enType Document {..} = do

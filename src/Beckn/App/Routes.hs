@@ -266,8 +266,8 @@ type DocumentAPIs
         :> "upload"
         :> MultipartForm Mem (MultipartData Mem)
         :> Post '[ JSON] UpdateDocumentRes
-      :<|> CaptureAll "ids" Text
-        :> Get '[ JSON] ListDocumentRes
+      :<|> Capture "entityId" Text
+        :> Get '[ JSON] UpdateDocumentRes
       )
 
 documentFlow registrationToken =

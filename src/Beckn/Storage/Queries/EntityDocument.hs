@@ -29,3 +29,10 @@ findById id = do
   DB.findOne dbTable predicate
   where
     predicate Storage.EntityDocument {..} = (_id ==. B.val_ id)
+
+findAllIds :: Text -> L.Flow [Storage.EntityDocument]
+findAllIds entityId =
+  DB.findAll dbTable predicate >>=
+    either DB.throwDBError pure
+  where
+    predicate Storage.EntityDocument {..} = _EntityId ==. B.val_ entityId
