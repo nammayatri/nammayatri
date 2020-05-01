@@ -5,7 +5,8 @@
 module Beckn.Types.Storage.EntityTag where
 
 import           Beckn.Types.App
-import qualified Beckn.Utils.Defaults as Defaults
+import           Beckn.Types.Storage.RegistrationToken (RTEntityType (..))
+import qualified Beckn.Utils.Defaults                  as Defaults
 import           Data.Aeson
 import           Data.Default
 import           Data.Swagger
@@ -13,7 +14,7 @@ import           Data.Time
 import           EulerHS.Prelude
 
 
-import qualified Database.Beam        as B
+import qualified Database.Beam                         as B
 
 data EntityTagT f =
   EntityTag
@@ -21,7 +22,7 @@ data EntityTagT f =
     , _EntityId         :: B.C f Text
     , _entityType       :: B.C f Text
     , _TagId            :: B.C f Text
-    , _TaggedBy         :: B.C f Text
+    , _TaggedBy         :: B.C f RTEntityType
     , _taggedByEntityId :: B.C f Text
     , _createdAt        :: B.C f LocalTime
     , _updatedAt        :: B.C f LocalTime
@@ -45,7 +46,7 @@ instance Default EntityTag where
     , _EntityId = Defaults.id2
     , _entityType = "USER"
     , _TagId = Defaults.id3
-    , _TaggedBy = "USER"
+    , _TaggedBy = USER
     , _taggedByEntityId = Defaults.id
     , _createdAt  = Defaults.localTime
     , _updatedAt  = Defaults.localTime
@@ -71,6 +72,7 @@ insertExpressions tags = B.insertValues tags
 fieldEMod ::
      B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity EntityTagT)
 fieldEMod =
+  B.setEntityName "entity_tag" <>
   B.modifyTableFields
     B.tableModification
       { _EntityId = "entity_id"
