@@ -4,9 +4,9 @@ import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Customer        as SC
 import qualified Beckn.Types.Storage.Document        as SD
-import qualified Beckn.Types.Storage.EntityTag       as SE
 import qualified Beckn.Types.Storage.Organization    as SO
 import           Beckn.Types.Storage.PassApplication
+import qualified Beckn.Types.Storage.Tag             as ST
 
 import           Data.Default
 import           Data.Swagger
@@ -51,8 +51,8 @@ data PassAppInfo =
   PassAppInfo
     { _id                        :: PassApplicationId
     , _Customer                  :: (Maybe SC.Customer)
-    , _Tags                      :: (Maybe SE.EntityTag)
-    , _Documents                 :: (Maybe SD.Document)
+    , _Tags                      :: [ST.Tag]
+    , _Documents                 :: [SD.Document]
     , _Organization              :: (Maybe SO.Organization)
     , _isBlacklistedOrganization :: Bool
     , _isBlacklistedLocation     :: Bool

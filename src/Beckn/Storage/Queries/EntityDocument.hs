@@ -37,3 +37,13 @@ findAllIds entityId dt =
   where
     predicate e VERIFIER Storage.EntityDocument {..} = _VerifiedBy ==. B.val_ (Just e)
     predicate e CREATOR Storage.EntityDocument {..} = _CreatedBy ==. B.val_ e
+
+
+
+findAllByCustomerId :: CustomerId ->  L.Flow [Storage.EntityDocument]
+findAllByCustomerId (CustomerId cId) =
+  DB.findAll dbTable (predicate cId) >>=
+    either DB.throwDBError pure
+  where
+    predicate cId Storage.EntityDocument {..} = (_EntityId ==. B.val_ cId)
+                                                &&. (_entityType ==. B.val_ CUSTOMER)

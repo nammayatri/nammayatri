@@ -2,6 +2,8 @@ module Beckn.Product.PassApplication.Fetch where
 
 import qualified Beckn.Data.Accessor                   as Accessor
 import qualified Beckn.Storage.Queries.Customer        as Customer
+import qualified Beckn.Storage.Queries.Document        as Document
+import qualified Beckn.Storage.Queries.EntityDocument  as EntityDocument
 import qualified Beckn.Storage.Queries.Organization    as Organization
 import qualified Beckn.Storage.Queries.PassApplication as DB
 import qualified Beckn.Types.API.PassApplication       as API
@@ -9,6 +11,9 @@ import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Common                    as Location (Location (..),
                                                                     LocationType)
+import qualified Beckn.Types.Storage.Customer          as Customer
+import qualified Beckn.Types.Storage.Document          as Document
+import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
 import           Beckn.Types.Storage.PassApplication
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Beckn.Utils.Common
@@ -16,6 +21,7 @@ import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
 import           Data.Aeson
 import           Data.List
+import           Data.Maybe
 import qualified EulerHS.Language                      as L
 import           EulerHS.Prelude
 import           Servant
@@ -54,6 +60,10 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
        getPassAppInfo PassApplication {..} = do
          morg <- maybe (pure Nothing) (Organization.findOrganizationById) $ _OrganizationId
          mcustomer <- maybe (pure Nothing) (Customer.findCustomerById) $ _CustomerId
+         let maybeCustId  = Customer._id <$> mcustomer
+         entityDocs <- maybe (pure []) (EntityDocument.findAllByCustomerId) $ maybeCustId
+         let docIds = EntityDocument._DocumentId <$> entityDocs
+         docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
          let toLocation = Location
                           { _type     = fromMaybe PINCODE _toLocationType
                           , _lat      = _toLat
@@ -70,8 +80,8 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
 
          pure API.PassAppInfo
             { _Customer = mcustomer
-            , _Tags = Nothing
-            , _Documents  = Nothing
+            , _Tags = []
+            , _Documents  = docs
             , _Organization = morg
             , _isBlacklistedOrganization = False
             , _isBlacklistedLocation = False
