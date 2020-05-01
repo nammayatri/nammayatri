@@ -347,7 +347,6 @@ CREATE TABLE `document` (
   `format` varchar(255) NOT NULL,
   `size` integer NOT NULL,
   `file_hash` varchar(1024) NOT NULL,
-  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `info` varchar(255) NULL,
@@ -377,8 +376,8 @@ CREATE TABLE `entity_document` (
 
 CREATE TABLE `comment` (
   `id` char(36) NOT NULL,
-  `primary_entity_id` char(36) NOT NULL,
-  `primary_entity_type` varchar(255) NOT NULL,
+  `commented_on_entity_id` char(36) NOT NULL,
+  `commented_on_entity_type` varchar(255) NOT NULL,
   `commented_by` char(36) NOT NULL,
   `commented_by_entity_type` varchar(255) NOT NULL,
   `value` varchar(1024) NOT NULL,
@@ -386,8 +385,8 @@ CREATE TABLE `comment` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
-  INDEX (`primary_entity_id`),
-  INDEX (`primary_entity_type`)
+  INDEX (`commented_on_entity_id`),
+  INDEX (`commented_on_entity_type`)
 );
 
 -- Default Customer and RegistartionToken for dev

@@ -2,6 +2,7 @@ module Beckn.App.Routes where
 
 import qualified Beckn.Data.Accessor                  as Accessor
 import qualified Beckn.Product.Blacklist              as Blacklist
+import qualified Beckn.Product.Comment                as Comment
 import qualified Beckn.Product.Customer               as Customer
 import qualified Beckn.Product.Document               as Document
 import qualified Beckn.Product.HealthCheck            as HealthCheck
@@ -15,6 +16,7 @@ import qualified Beckn.Product.Registration           as Registration
 import qualified Beckn.Product.Tag                    as Tag
 import qualified Beckn.Product.User.CRUD              as User
 import qualified Beckn.Types.API.Blacklist            as Blacklist
+import qualified Beckn.Types.API.Comment              as Comment
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Document
 import           Beckn.Types.API.Organization
@@ -62,6 +64,7 @@ type EPassAPIs
              :<|> BlacklistAPIS
              :<|> DocumentAPIs
              :<|> TagAPIs
+             :<|> CommentAPIs
              )
 
 epassAPIs :: Proxy EPassAPIs
@@ -80,6 +83,7 @@ epassServer' key =
   :<|> blacklistFlow
   :<|> documentFlow
   :<|> tagFlow
+  :<|> commentFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -318,3 +322,20 @@ tagFlow registrationToken =
   Tag.create registrationToken
   :<|> Tag.list registrationToken
   :<|> Tag.tagEntity registrationToken
+
+--------
+---- Comment Api
+type CommentAPIs
+   = "comment"
+   :> Header "registrationToken" RegistrationTokenText
+   :> (ReqBody '[JSON] Comment.CreateReq
+        :> Post '[JSON] Comment.CreateRes
+      :<|> Capture "primaryEntityType" Text
+        :> Capture "primaryEntityId" Text
+        :> "list"
+        :> Get '[JSON] Comment.ListRes
+      )
+
+commentFlow registrationToken =
+  Comment.create registrationToken
+  :<|> Comment.list registrationToken
