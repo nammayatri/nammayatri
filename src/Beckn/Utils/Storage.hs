@@ -1,15 +1,16 @@
 module Beckn.Utils.Storage where
 
 import qualified Beckn.Storage.Queries.RegistrationToken as QR
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Data.Time as DT
+import qualified Beckn.Types.Storage.RegistrationToken   as SR
+import           Beckn.Utils.Common
 import           Beckn.Utils.Extra
+import qualified Data.Time                               as DT
 import           Data.Time.Clock
 import           Data.Time.LocalTime
-import qualified EulerHS.Language as L
+import qualified EulerHS.Language                        as L
 import           EulerHS.Prelude
+import qualified EulerHS.Types                           as T
 import           Servant
-import           Beckn.Utils.Common
 
 data AppException
   = SqlDBConnectionFailedException Text
@@ -47,3 +48,11 @@ isExpired nominal time = do
   now <- getCurrentTimeUTC
   let addedLocalTime = DT.addLocalTime nominal time
   return $ now > addedLocalTime
+
+ifNotFoundDbErr :: Text -> T.DBResult (Maybe a) -> L.Flow a
+ifNotFoundDbErr errMsg dbres =
+  case dbres of
+    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Right Nothing -> L.throwException $ err400 {errBody = show errMsg}
+    Right (Just v) -> return v
+

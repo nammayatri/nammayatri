@@ -190,6 +190,7 @@ instance ToJSON Ack where
 data DocumentEntity
   = CUSTOMER
   | USER
+  | PASSAPPLICATION
   -- | ORGANIZATIONS
   deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq)
 
