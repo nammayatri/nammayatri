@@ -5,7 +5,8 @@
 module Beckn.Types.Storage.Comment where
 
 import           Beckn.Types.App
-import qualified Beckn.Utils.Defaults as Defaults
+import           Beckn.Types.Storage.RegistrationToken (RTEntityType (..))
+import qualified Beckn.Utils.Defaults                  as Defaults
 import           Data.Aeson
 import           Data.Default
 import           Data.Swagger
@@ -13,16 +14,15 @@ import           Data.Time
 import           EulerHS.Prelude
 
 
-import qualified Database.Beam        as B
+import qualified Database.Beam                         as B
 
 data CommentT f =
   Comment
     { _id                    :: B.C f CommentId
-    , _PrimaryEntityId       :: B.C f Text
-    , _primaryEntityType     :: B.C f Text
-    , _CommentedEntityId     :: B.C f Text
+    , _CommentedOnEntityId   :: B.C f Text
+    , _commentedOnEntityType :: B.C f Text
     , _CommentedBy           :: B.C f Text
-    , _commentedByEntityType :: B.C f Text
+    , _commentedByEntityType :: B.C f RTEntityType
     , _value                 :: B.C f Text
     , _createdAt             :: B.C f LocalTime
     , _updatedAt             :: B.C f LocalTime
@@ -43,11 +43,10 @@ instance B.Table CommentT where
 instance Default Comment where
   def = Comment
     { _id         = CommentId Defaults.id
-    , _PrimaryEntityId = Defaults.id2
-    , _primaryEntityType = "DOCUMENT"
-    , _CommentedEntityId = Defaults.id3
+    , _CommentedOnEntityId = Defaults.id2
+    , _commentedOnEntityType = "DOCUMENT"
     , _CommentedBy = Defaults.id
-    , _commentedByEntityType = "USER"
+    , _commentedByEntityType = USER
     , _value = "comment"
     , _createdAt  = Defaults.localTime
     , _updatedAt  = Defaults.localTime
@@ -75,10 +74,9 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _PrimaryEntityId = "primary_entity_id"
-      , _primaryEntityType = "primary_entity_type"
-      , _CommentedEntityId = "commented_by_entity_id"
-      , _CommentedBy = "comment_by"
+      { _CommentedOnEntityId = "commented_on_entity_id"
+      , _commentedOnEntityType = "commented_on_entity_type"
+      , _CommentedBy = "commented_by"
       , _commentedByEntityType = "commented_by_entity_type"
       , _createdAt = "created_at"
       , _updatedAt = "updated_at"

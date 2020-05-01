@@ -24,8 +24,18 @@ create Storage.Comment {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Comment {..}) >>=
   either DB.throwDBError pure
 
-findById :: CommentId -> L.Flow (T.DBResult (Maybe Storage.Comment))
+findById :: CommentId -> L.Flow (Maybe Storage.Comment)
 findById id = do
   DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
   where
     predicate Storage.Comment {..} = (_id ==. B.val_ id)
+
+findAllByCommentedOnEntity :: Text -> Text -> L.Flow [Storage.Comment]
+findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId =
+  DB.findAll dbTable (predicate commentedOnEntityType commentedOnEntityId)
+    >>= either DB.throwDBError pure
+  where
+    predicate commentedOnEntityType commentedOnEntityId Storage.Comment{..} =
+      _commentedOnEntityType ==. B.val_ commentedOnEntityType &&.
+      _CommentedOnEntityId ==. B.val_ commentedOnEntityId
