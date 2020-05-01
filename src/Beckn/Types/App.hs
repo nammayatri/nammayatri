@@ -7,15 +7,16 @@ module Beckn.Types.App where
 
 import           Beckn.Utils.TH
 import           Data.Swagger
-import           Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
-import           Database.Beam.MySQL       (MySQL, MysqlValueSyntax)
-import qualified EulerHS.Interpreters      as I
-import qualified EulerHS.Language          as L
+import           Database.Beam.Backend.SQL     (FromBackendRow,
+                                                HasSqlValueSyntax)
+import           Database.Beam.MySQL           (MySQL, MysqlValueSyntax)
+import           Database.Beam.MySQL.FromField
+import qualified EulerHS.Interpreters          as I
+import qualified EulerHS.Language              as L
 import           EulerHS.Prelude
-import qualified EulerHS.Runtime           as R
+import qualified EulerHS.Runtime               as R
 import           Servant
 import           Servant.Swagger
-
 -- App Types
 data Env =
   Env
@@ -185,6 +186,10 @@ newtype DocumentId =
   deriving  (Generic, Show)
 
 deriveIdentifierInstances ''DocumentId
+
+instance FromField [DocumentId]
+instance FromBackendRow MySQL [DocumentId]
+instance HasSqlValueSyntax MysqlValueSyntax [DocumentId]
 
 newtype EntityTagId =
   EntityTagId

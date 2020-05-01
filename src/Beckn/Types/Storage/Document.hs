@@ -11,6 +11,7 @@ import           Data.Default
 import           Data.Swagger
 import           Data.Time
 import           EulerHS.Prelude
+import           Servant.Multipart
 
 
 import qualified Database.Beam        as B
@@ -38,6 +39,18 @@ instance B.Table DocumentT where
                                deriving (Generic, B.Beamable)
   primaryKey = DocumentPrimaryKey . _id
 
+--instance ToMultipart Mem [Document] where
+  --toMultipart docs =
+    --MultipartData
+      --[]
+      --((\Document {..} ->
+          --FileData
+            --"docs"
+            --_fileName
+            --_format
+            --_fileName
+        --) <$> docs
+      --)
 
 instance Default Document where
   def = Document

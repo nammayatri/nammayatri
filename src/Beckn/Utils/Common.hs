@@ -12,6 +12,7 @@ import           Servant
 
 class GuidLike a where
   generateGUID :: L.Flow a
+
 instance GuidLike Text where
   generateGUID = L.generateGUID
 
