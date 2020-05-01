@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 
-module Beckn.Product.User where
+module Beckn.Product.User.CRUD where
 
 import qualified Beckn.Data.Accessor         as Accessor
 import qualified Beckn.Storage.Queries.User  as DB

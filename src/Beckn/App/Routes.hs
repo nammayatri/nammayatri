@@ -12,7 +12,7 @@ import qualified Beckn.Product.PassApplication.Fetch  as PassApplication
 import qualified Beckn.Product.PassApplication.Update as PassApplication
 import qualified Beckn.Product.Quota                  as Quota
 import qualified Beckn.Product.Registration           as Registration
-import qualified Beckn.Product.User                   as User
+import qualified Beckn.Product.User.CRUD              as User
 import qualified Beckn.Types.API.Blacklist            as Blacklist
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Organization
