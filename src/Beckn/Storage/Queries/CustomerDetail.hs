@@ -2,7 +2,7 @@ module Beckn.Storage.Queries.CustomerDetail where
 
 import qualified Beckn.Storage.Queries              as DB
 import           Beckn.Types.App
-import qualified Beckn.Types.Storage.CustomerDetail as Storage
+import           Beckn.Types.Storage.CustomerDetail as Storage
 import qualified Beckn.Types.Storage.DB             as DB
 import           Beckn.Utils.Common                 (generateGUID)
 import           Beckn.Utils.Extra                  (getCurrentTimeUTC)
@@ -12,6 +12,7 @@ import qualified Database.Beam                      as B
 import qualified EulerHS.Language                   as L
 import           EulerHS.Prelude                    hiding (id)
 import qualified EulerHS.Types                      as T
+import Servant
 
 dbTable ::
      B.DatabaseEntity be DB.BecknDb (B.TableEntity Storage.CustomerDetailT)
@@ -56,6 +57,15 @@ findExact customerId idType identifier =
       _CustomerId ==. B.val_ customerId &&.
       _identifierType ==. B.val_ idType &&.
       _uniqueIdentifier ==. B.val_ identifier
+
+createIfNotExistsCustomerD :: Storage.CustomerDetail -> L.Flow ()
+createIfNotExistsCustomerD cust = do
+  let cid = _uniqueIdentifier cust
+  resp <- DB.findOne dbTable (\CustomerDetail {..} -> B.val_ cid ==. _uniqueIdentifier)
+  case resp of
+    Right (Just x) -> return ()
+    Right Nothing  -> create cust
+    Left err       -> L.throwException err500
 
 createIfNotExists :: CustomerId -> Storage.IdentifierType -> Text -> L.Flow ()
 createIfNotExists customerId idType identifier = do

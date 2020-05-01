@@ -55,4 +55,3 @@ ifNotFoundDbErr errMsg dbres =
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
     Right Nothing -> L.throwException $ err400 {errBody = show errMsg}
     Right (Just v) -> return v
-
