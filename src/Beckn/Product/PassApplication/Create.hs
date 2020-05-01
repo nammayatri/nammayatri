@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Queries.Customer        as Customer
 import qualified Beckn.Storage.Queries.CustomerDetail  as CustomerDetail
 import qualified Beckn.Storage.Queries.Organization    as QO
 import qualified Beckn.Storage.Queries.PassApplication as DB
-import           Beckn.Types.API.PassApplication
+import qualified Beckn.Types.API.PassApplication       as API
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Common                    as Location (Location (..),
@@ -24,8 +24,8 @@ import           EulerHS.Prelude
 import           Servant
 
 createPassApplication ::
-  Maybe Text -> CreatePassApplicationReq -> FlowHandler PassApplicationRes
-createPassApplication regToken req@CreatePassApplicationReq{..} = withFlowHandler $ do
+  Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes
+createPassApplication regToken req@API.CreatePassApplicationReq{..} = withFlowHandler $ do
   token <- verifyToken regToken
 
   passAppInfo <-
@@ -38,19 +38,19 @@ createPassApplication regToken req@CreatePassApplicationReq{..} = withFlowHandle
   earea <- DB.findById (_id passAppInfo)
   case earea of
     Right (Just passApplication) ->
-      return $ PassApplicationRes passApplication
+      return $ API.PassApplicationRes passApplication
     _                 -> L.throwException $ err500 {errBody = "Could not create PassApplication"}
 
-bulkSponsorFlow :: RegistrationToken.RegistrationToken -> CreatePassApplicationReq -> L.Flow PassApplication
-bulkSponsorFlow token req@CreatePassApplicationReq{..} = do
+bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
+bulkSponsorFlow token req@API.CreatePassApplicationReq{..} = do
   when (isNothing _OrganizationId)
     (L.throwException $ err400 {errBody = "OrganizationId cannot be empty"})
   when (isNothing _count || _count == Just 0)
     (L.throwException $ err400 {errBody = "Count cannot be 0"})
   getPassAppInfo token req _CustomerId
 
-selfFlow :: RegistrationToken.RegistrationToken -> CreatePassApplicationReq -> L.Flow PassApplication
-selfFlow token req@CreatePassApplicationReq{..} = do
+selfFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
+selfFlow token req@API.CreatePassApplicationReq{..} = do
   when (isNothing _CustomerId)
     (L.throwException $ err400 {errBody = "CustomerId cannot be empty"})
   when (isNothing _travellerName || isNothing _travellerIDType || isNothing _travellerID)
@@ -67,8 +67,8 @@ selfFlow token req@CreatePassApplicationReq{..} = do
   CustomerDetail.createIfNotExists customerId travellerIDType travellerID
   getPassAppInfo token req _CustomerId
 
-sponsorFlow :: RegistrationToken.RegistrationToken -> CreatePassApplicationReq -> L.Flow PassApplication
-sponsorFlow token req@CreatePassApplicationReq{..} = do
+sponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
+sponsorFlow token req@API.CreatePassApplicationReq{..} = do
   when (isNothing _travellerName || isNothing _travellerIDType || isNothing _travellerID)
     (L.throwException $ err400 {errBody = "travellerName, travellerIDType and travellerID cannot be empty"})
 
@@ -85,8 +85,8 @@ sponsorFlow token req@CreatePassApplicationReq{..} = do
       CustomerDetail.createIfNotExists customerId travellerIDType travellerID
       getPassAppInfo token req (Just customerId)
 
-getPassAppInfo :: RegistrationToken.RegistrationToken -> CreatePassApplicationReq -> Maybe CustomerId -> L.Flow PassApplication
-getPassAppInfo token CreatePassApplicationReq{..} mCustId = do
+getPassAppInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe CustomerId -> L.Flow PassApplication
+getPassAppInfo token API.CreatePassApplicationReq{..} mCustId = do
   id <- generateGUID
   currTime <- getCurrTime
   count <- getCount _type _count

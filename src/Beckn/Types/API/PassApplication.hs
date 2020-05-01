@@ -2,7 +2,12 @@ module Beckn.Types.API.PassApplication where
 
 import           Beckn.Types.App
 import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.Customer        as SC
+import qualified Beckn.Types.Storage.Document        as SD
+import qualified Beckn.Types.Storage.EntityTag       as SE
+import qualified Beckn.Types.Storage.Organization    as SO
 import           Beckn.Types.Storage.PassApplication
+
 import           Data.Default
 import           Data.Swagger
 import           Data.Time.LocalTime
@@ -38,9 +43,44 @@ data PassApplicationRes =
 ------ List Pass Application ------
 data ListPassApplicationRes =
   ListPassApplicationRes
-    { passApplications :: [PassApplication]
+    { _passApplications :: [PassAppInfo]
     }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToSchema)
+
+data PassAppInfo =
+  PassAppInfo
+    { _id                        :: PassApplicationId
+    , _Customer                  :: (Maybe SC.Customer)
+    , _Tags                      :: (Maybe SE.EntityTag)
+    , _Documents                 :: (Maybe SD.Document)
+    , _Organization              :: (Maybe SO.Organization)
+    , _isBlacklistedOrganization :: Bool
+    , _isBlacklistedLocation     :: Bool
+    , _TenantOrganizationId      :: (Maybe TenantOrganizationId)
+    , _status                    :: Status
+    , _fromDate                  :: LocalTime
+    , _toDate                    :: LocalTime
+    , _passType                  :: PassType
+    , _purpose                   :: (Maybe Text)
+    , _fromLocation              :: Maybe Location
+    , _toLocation                :: Location
+    , _CreatedBy                 :: CustomerId
+    , _AssignedTo                :: UserId
+    , _count                     :: Int
+    , _approvedCount             :: Int
+    , _remarks                   :: Text
+    , _info                      :: Text
+    , _createdAt                 :: LocalTime
+    , _updatedAt                 :: LocalTime
+    }
+      deriving (Generic, ToSchema)
+
+instance ToJSON ListPassApplicationRes where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance ToJSON PassAppInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
 
 data UpdatePassApplicationReq =
   UpdatePassApplicationReq
