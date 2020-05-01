@@ -205,3 +205,21 @@ instance FromHttpApiData DocumentEntity where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+
+data DocumentByType
+  = VERIFIER
+  | CREATOR
+  deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq)
+
+deriving instance HasSqlEqualityCheck MySQL DocumentByType
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DocumentByType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL DocumentByType where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData DocumentByType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict

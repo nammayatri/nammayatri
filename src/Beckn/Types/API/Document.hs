@@ -3,8 +3,8 @@ module Beckn.Types.API.Document where
 import EulerHS.Prelude
 import Beckn.Types.Storage.Document
 
-data UpdateDocumentRes =
-  UpdateDocumentRes
+data DocumentRes =
+  DocumentRes
     { docIds :: [Text]
     } deriving (Generic, ToJSON)
 
