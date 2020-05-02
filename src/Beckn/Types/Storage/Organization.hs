@@ -79,9 +79,9 @@ instance FromJSON Organization where
 
 instance ToSchema Organization
 
-insertExpression customer = insertExpressions [customer]
+insertExpression org = insertExpressions [org]
 
-insertExpressions customers = B.insertValues customers
+insertExpressions orgs = B.insertValues orgs
 
 
 fieldEMod ::

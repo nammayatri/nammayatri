@@ -192,7 +192,7 @@ data DocumentEntity
   = CUSTOMER
   | USER
   | PASSAPPLICATION
-  -- | ORGANIZATIONS
+  | ORGANIZATIONS -- plural to prevent naming conflict
   deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq, Enum, Bounded)
 
 deriving instance HasSqlEqualityCheck MySQL DocumentEntity

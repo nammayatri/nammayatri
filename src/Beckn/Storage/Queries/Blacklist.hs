@@ -78,3 +78,12 @@ findAllWithLimitOffset mlimit moffset entityType entityId =
     orderByDesc Storage.Blacklist {..} = B.desc_ _createdAt
     pred entityType entityId Storage.Blacklist {..} = (_entityType ==. (B.val_ entityType)
                                                   &&. _EntityId ==. (B.val_ entityId))
+
+
+findByOrgId :: OrganizationId ->  L.Flow (Maybe Storage.Blacklist)
+findByOrgId (OrganizationId eId) =
+  DB.findOne dbTable (predicate eId) >>=
+    either DB.throwDBError pure
+  where
+    predicate eId Storage.Blacklist {..} = (_EntityId ==. B.val_ eId)
+                                                &&. (_entityType ==. B.val_ ORG)

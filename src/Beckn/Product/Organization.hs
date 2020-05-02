@@ -1,13 +1,24 @@
 module Beckn.Product.Organization where
 
 import qualified Beckn.Data.Accessor                   as Lens
+import qualified Beckn.Storage.Queries.Blacklist       as Blacklist
+import qualified Beckn.Storage.Queries.Comment         as Comment
 import qualified Beckn.Storage.Queries.Customer        as QC
+import qualified Beckn.Storage.Queries.Document        as Document
+import qualified Beckn.Storage.Queries.EntityDocument  as EntityDocument
+import qualified Beckn.Storage.Queries.EntityTag       as EntityTag
 import qualified Beckn.Storage.Queries.Organization    as QO
-import           Beckn.Types.API.Organization
+import qualified Beckn.Storage.Queries.Tag             as Tag
+import qualified Beckn.Types.API.Organization          as API
 import           Beckn.Types.App
-import           Beckn.Types.Common
-import qualified Beckn.Types.Storage.Organization      as SO
+import qualified Beckn.Types.Common                    as Location (Location (..),
+                                                                    LocationType (..))
+import qualified Beckn.Types.Storage.Document          as Document
+import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
+import qualified Beckn.Types.Storage.EntityTag         as EntityTag
+import           Beckn.Types.Storage.Organization
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Tag               as Tag
 import           Beckn.Utils.Extra
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
@@ -17,7 +28,7 @@ import           EulerHS.Prelude
 import           Servant
 
 createOrganization ::
-     Maybe Text -> CreateOrganizationReq -> FlowHandler OrganizationRes
+     Maybe Text -> API.CreateOrganizationReq -> FlowHandler API.OrganizationRes
 createOrganization regToken req =
   withFlowHandler $ do
     reg <- verifyToken regToken
@@ -25,11 +36,11 @@ createOrganization regToken req =
     uuid <- L.generateGUID
     now <- getCurrentTimeUTC
     let org =
-          SO.Organization
+          Organization
             (OrganizationId uuid)
             (req ^. Lens.name)
             (req ^. Lens.gstin)
-            SO.PENDING_VERIFICATION
+            PENDING_VERIFICATION
             False
             Nothing
             Nothing
@@ -47,42 +58,77 @@ createOrganization regToken req =
             now
     QO.create org
     QC.updateCustomerOrgId (OrganizationId uuid) (CustomerId $ SR._EntityId reg)
-    return $ OrganizationRes org
+    return $ API.OrganizationRes org
 
-getOrganization :: Maybe Text -> Text -> FlowHandler OrganizationRes
+getOrganization :: Maybe Text -> Text -> FlowHandler API.OrganizationRes
 getOrganization regToken orgId =
   withFlowHandler $ do
     regToken <- verifyToken regToken
     QO.findOrganizationById (OrganizationId orgId) >>=
       maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
-        (return . OrganizationRes)
+        (return . API.OrganizationRes)
 
 listOrganization ::
   Maybe Text
   -> Maybe Int
   -> Maybe Int
-  -> [LocationType]
+  -> [Location.LocationType]
   -> [Int]
   -> [Text]
   -> [Text]
   -> [Text]
   -> [Text]
-  -> [SO.Status]
+  -> [Status]
   -> Maybe Bool
-  -> FlowHandler ListOrganizationRes
+  -> FlowHandler API.ListOrganizationRes
 listOrganization regToken limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM = withFlowHandler $ do
   verifyToken regToken
-  organizations <- QO.listOrganizations limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM
-  pure $ ListOrganizationRes {organizations = organizations}
+  organizations  <- QO.listOrganizations limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM
+  orgInfo  <- (traverse getOrgInfo organizations)
+  pure $ API.ListOrganizationRes {_organizations = orgInfo}
+ where
+   getOrgInfo :: Organization -> L.Flow API.OrgInfo
+   getOrgInfo Organization {..} = do
+    entityDocs <- EntityDocument.findAllByOrgId _id
+    let docIds = EntityDocument._DocumentId <$> entityDocs
+    docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+    entityTags <- EntityTag.findAllByEntity "ORGANIZATION" $ _getOrganizationId _id
+    let tagIds = EntityTag._TagId <$> entityTags
+    tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+    comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
+    isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
+    let toLocation = Location.Location
+                    { _type     = fromMaybe Location.PINCODE _locationType
+                    , _lat      = _lat
+                    , _long     = _long
+                    , _ward     = _ward
+                    , _district = _district
+                    , _city     = Just _city
+                    , _state    = Just _state
+                    , _country  = Just _country
+                    , _pincode  = Just _pincode
+                    , _address  = Just _address
+                    , _bound    = _bound
+                    }
+
+    pure API.OrgInfo
+      { _Tags = tags
+      , _Documents  = docs
+      , _Comments = comments
+      , _isBlacklistedOrganization = isBlacklistedOrg
+      , _isBlacklistedLocation = False
+      , _location = toLocation
+      ,..
+      }
 
 updateOrganization ::
-     Maybe Text -> Text -> UpdateOrganizationReq -> FlowHandler OrganizationRes
-updateOrganization regToken orgId UpdateOrganizationReq{..} = withFlowHandler $ do
+     Maybe Text -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
+updateOrganization regToken orgId API.UpdateOrganizationReq{..} = withFlowHandler $ do
   verifyToken regToken
   QO.update (OrganizationId orgId) _status
   QO.findOrganizationById (OrganizationId orgId)
   >>= \case
-    Just v -> return $ OrganizationRes v
+    Just v -> return $ API.OrganizationRes v
     Nothing -> L.throwException $ err400 {errBody = "Organization not found"}
 

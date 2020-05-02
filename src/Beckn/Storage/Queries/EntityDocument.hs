@@ -56,3 +56,12 @@ findAllByPassApplicationId (PassApplicationId eId) =
   where
     predicate eId Storage.EntityDocument {..} = (_EntityId ==. B.val_ eId)
                                                 &&. (_entityType ==. B.val_ PASSAPPLICATION)
+
+
+findAllByOrgId :: OrganizationId ->  L.Flow [Storage.EntityDocument]
+findAllByOrgId (OrganizationId eId) =
+  DB.findAll dbTable (predicate eId) >>=
+    either DB.throwDBError pure
+  where
+    predicate eId Storage.EntityDocument {..} = (_EntityId ==. B.val_ eId)
+                                                &&. (_entityType ==. B.val_ ORGANIZATIONS)

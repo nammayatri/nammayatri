@@ -1,8 +1,16 @@
 module Beckn.Types.API.Organization where
 
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.Comment      as SC
+import qualified Beckn.Types.Storage.Document     as SD
 import           Beckn.Types.Storage.Organization
+import qualified Beckn.Types.Storage.Tag          as ST
+import           Data.Default
 import           Data.Swagger
+import           Data.Time
 import           EulerHS.Prelude
+
 
 data CreateOrganizationReq =
   CreateOrganizationReq
@@ -37,8 +45,34 @@ instance FromJSON ListOrganizationReq where
 
 data ListOrganizationRes =
   ListOrganizationRes
-   { organizations :: [Organization]
-   } deriving (Generic, ToJSON, ToSchema)
+   { _organizations :: [OrgInfo]
+   } deriving (Generic, ToSchema)
+
+data OrgInfo =
+  OrgInfo
+    { _id                        :: OrganizationId
+    , _gstin                     :: (Maybe Text)
+    , _status                    :: Status
+    , _verified                  :: Bool
+    , _Tags                      :: [ST.Tag]
+    , _Documents                 :: [SD.Document]
+    , _Comments                  :: [SC.Comment]
+    , _isBlacklistedOrganization :: Bool
+    , _isBlacklistedLocation     :: Bool
+    , _status                    :: Status
+    , _location                  :: Location
+    , _info                      :: (Maybe Text)
+    , _createdAt                 :: LocalTime
+    , _updatedAt                 :: LocalTime
+    }
+      deriving (Generic, ToSchema)
+
+instance ToJSON ListOrganizationRes where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance ToJSON OrgInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
 
 data UpdateOrganizationReq =
   UpdateOrganizationReq
