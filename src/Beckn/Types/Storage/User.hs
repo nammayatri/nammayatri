@@ -129,6 +129,7 @@ fieldEMod =
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
       , _mobileNumber = "mobile_number"
+      , _LocationId = "location_id"
       , _OrganizationId = "organization_id"
       , _TenantOrganizationId = "tenant_organization_id"
       }
