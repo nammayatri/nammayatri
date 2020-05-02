@@ -27,19 +27,16 @@ updatePassApplication ::
   UpdatePassApplicationReq ->
   FlowHandler PassApplicationRes
 updatePassApplication regToken passApplicationId UpdatePassApplicationReq{..} = withFlowHandler $ do
-  verifyToken regToken
-  pA <- ifNotFoundDbErr "Pass Application not found" =<< DB.findById passApplicationId
+  token <- verifyToken regToken
+  pA <- fromMaybeM400 "Pass Application not found" =<< DB.findById passApplicationId
   verifyIfStatusUpdatable (PassApplication._status pA) _status
   approvedCount <- if (_status == REVOKED)
                     then Pass.revokeByPassApplicationId passApplicationId *> pure 0
                     else pure $ fromMaybe (PassApplication._count pA) _approvedCount
-  eres <- DB.update passApplicationId _status approvedCount _remarks
-  case eres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-    Right _ -> do
-      pA' <- ifNotFoundDbErr "Pass Application not found" =<< DB.findById passApplicationId
-      createPassesOnApproval pA' approvedCount
-      return $ PassApplicationRes pA'
+  DB.update passApplicationId _status approvedCount _remarks
+  pA' <- fromMaybeM400 "Pass Application not found" =<< DB.findById passApplicationId
+  createPassesOnApproval pA' approvedCount
+  return $ PassApplicationRes pA'
 
 verifyIfStatusUpdatable :: Status -> Status -> L.Flow ()
 verifyIfStatusUpdatable currStatus newStatus =

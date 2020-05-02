@@ -24,9 +24,10 @@ create Storage.PassApplication {..} =
   either DB.throwDBError pure
 
 findById ::
-     PassApplicationId -> L.Flow (T.DBResult (Maybe Storage.PassApplication))
+     PassApplicationId -> L.Flow (Maybe Storage.PassApplication)
 findById id = do
   DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
   where
     predicate Storage.PassApplication {..} = (_id ==. B.val_ id)
 
@@ -44,9 +45,10 @@ findAllWithLimitOffsetWhere ::
   -> [Storage.Status]
   -> [OrganizationId]
   -> [Storage.PassType]
-  -> Maybe Int -> Maybe Int -> L.Flow (T.DBResult [Storage.PassApplication])
+  -> Maybe Int -> Maybe Int -> L.Flow [Storage.PassApplication]
 findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType mlimit moffset =
   DB.findAllWithLimitOffsetWhere dbTable (predicate fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType) limit offset orderByDesc
+    >>= either DB.throwDBError pure
   where
     limit = (toInteger $ fromMaybe 100 mlimit)
     offset = (toInteger $ fromMaybe 0 moffset)
@@ -77,12 +79,13 @@ complementVal l
 
 
 
-update :: PassApplicationId -> Storage.Status -> Int -> Text -> L.Flow (T.DBResult ())
+update :: PassApplicationId -> Storage.Status -> Int -> Text -> L.Flow ()
 update id status approvedCount remarks = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update dbTable
     (setClause status approvedCount remarks currTime)
     (predicate id)
+    >>= either DB.throwDBError pure
   where
     setClause status approvedCount remarks currTime Storage.PassApplication {..} =
       mconcat

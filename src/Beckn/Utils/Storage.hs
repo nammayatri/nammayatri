@@ -48,10 +48,3 @@ isExpired nominal time = do
   now <- getCurrentTimeUTC
   let addedLocalTime = DT.addLocalTime nominal time
   return $ now > addedLocalTime
-
-ifNotFoundDbErr :: Text -> T.DBResult (Maybe a) -> L.Flow a
-ifNotFoundDbErr errMsg dbres =
-  case dbres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-    Right Nothing -> L.throwException $ err400 {errBody = show errMsg}
-    Right (Just v) -> return v

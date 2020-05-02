@@ -47,10 +47,7 @@ listPassApplication ::
 listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType =
    withFlowHandler $ do
       verifyToken regToken
-      passApplications <- (DB.findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType limitM offsetM
-        >>= \case
-            Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-            Right v -> pure v)
+      passApplications <- DB.findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType limitM offsetM
       let orgIds = nub $ catMaybes $ _OrganizationId <$> passApplications
           custIds = nub $ catMaybes $ _CustomerId <$> passApplications
           passAppIds =  _id <$> passApplications
@@ -94,7 +91,5 @@ getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler API.Pas
 getPassApplicationById regToken applicationId = withFlowHandler $ do
   verifyToken regToken
   DB.findById applicationId
-  >>= \case
-    Right (Just v) -> return $ API.PassApplicationRes v
-    Right Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+  >>= fromMaybeM400 "Pass Application not found"
+  >>= return . API.PassApplicationRes

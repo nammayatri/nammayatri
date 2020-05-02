@@ -35,11 +35,9 @@ createPassApplication regToken req@API.CreatePassApplicationReq{..} = withFlowHa
       BULKSPONSOR -> bulkSponsorFlow token req
 
   DB.create passAppInfo
-  earea <- DB.findById (_id passAppInfo)
-  case earea of
-    Right (Just passApplication) ->
-      return $ API.PassApplicationRes passApplication
-    _                 -> L.throwException $ err500 {errBody = "Could not create PassApplication"}
+  DB.findById (_id passAppInfo)
+    >>= fromMaybeM500 "Could not create PassApplication"
+    >>= return . API.PassApplicationRes
 
 bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
 bulkSponsorFlow token req@API.CreatePassApplicationReq{..} = do
