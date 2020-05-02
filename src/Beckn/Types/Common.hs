@@ -225,3 +225,16 @@ instance FromHttpApiData DocumentByType where
   parseUrlPiece = parseBoundedTextData
   parseQueryParam = parseBoundedTextData
   parseHeader = parseBoundedTextData . DT.decodeUtf8
+
+data LocateBy
+  = LSTATE
+  | LCITY
+  | LDISTRICT
+  | LWARD
+  | LPINCODE
+  deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq, Enum, Bounded)
+
+instance FromHttpApiData LocateBy where
+  parseUrlPiece = parseBoundedTextData
+  parseQueryParam = parseBoundedTextData
+  parseHeader = parseBoundedTextData . DT.decodeUtf8

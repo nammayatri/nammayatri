@@ -23,9 +23,9 @@ create Storage.User {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.User {..}) >>=
   either DB.throwDBError pure
 
-findById :: UserId -> L.Flow (Maybe Storage.User)
+findById :: UserId -> L.Flow Storage.User
 findById id = do
-  DB.findOne dbTable predicate >>= either DB.throwDBError pure
+  DB.findOneWithErr dbTable predicate
   where
     predicate Storage.User {..} = (_id ==. B.val_ id)
 
@@ -42,6 +42,33 @@ findAllWithLimitOffset mlimit moffset =
   where
     limit = (toInteger $ fromMaybe 10 mlimit)
     offset = (toInteger $ fromMaybe 0 moffset)
+
+    orderByDesc Storage.User {..} = B.desc_ _createdAt
+
+findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> L.Flow [Storage.User]
+findAllWithLimitOffsetByRole mlimit moffset roles =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    limit = (toInteger $ fromMaybe 10 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+
+    predicate r Storage.User {..} =
+      _role `B.in_` (B.val_ <$> r)
+
+    orderByDesc Storage.User {..} = B.desc_ _createdAt
+
+findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> Maybe Storage.Role -> [OrganizationId] -> L.Flow [Storage.User]
+findAllWithLimitOffsetBy mlimit moffset r f =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate f r) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    limit = (toInteger $ fromMaybe 10 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+
+    predicate i Nothing Storage.User {..} =
+      _OrganizationId `B.in_` (B.val_ <$> i)
+    predicate i (Just r) Storage.User {..} = _OrganizationId `B.in_` (B.val_ <$> i) &&. _role ==. B.val_ r
 
     orderByDesc Storage.User {..} = B.desc_ _createdAt
 

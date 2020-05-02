@@ -6,6 +6,7 @@ import qualified Beckn.Product.Comment                as Comment
 import qualified Beckn.Product.Customer               as Customer
 import qualified Beckn.Product.Document               as Document
 import qualified Beckn.Product.HealthCheck            as HealthCheck
+import qualified Beckn.Product.Location.CRUD          as Location
 import qualified Beckn.Product.Organization           as Organization
 import qualified Beckn.Product.Pass                   as Pass
 import qualified Beckn.Product.PassApplication.Create as PassApplication
@@ -19,6 +20,7 @@ import qualified Beckn.Types.API.Blacklist            as Blacklist
 import qualified Beckn.Types.API.Comment              as Comment
 import           Beckn.Types.API.Customer
 import           Beckn.Types.API.Document
+import           Beckn.Types.API.Location.CRUD
 import           Beckn.Types.API.Organization
 import           Beckn.Types.API.Pass
 import           Beckn.Types.API.PassApplication
@@ -30,6 +32,7 @@ import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization     as SO
 import qualified Beckn.Types.Storage.Pass             as SP
+import qualified Beckn.Types.Storage.User             as User
 import qualified Beckn.Types.Storage.PassApplication  as PA
 import           Data.Aeson
 import qualified Data.Vault.Lazy                      as V
@@ -37,6 +40,10 @@ import           EulerHS.Prelude
 import           Network.Wai.Parse
 import           Servant
 import           Servant.Multipart
+
+import qualified Beckn.Types.Storage.Pass             as SP
+import qualified Beckn.Types.Storage.PassApplication  as PA
+import qualified Beckn.Types.Storage.User             as SU
 
 epassContext :: Context '[ MultipartOptions Mem]
 epassContext = epassMultipartOptions (Proxy :: Proxy Mem) :. EmptyContext
@@ -65,6 +72,7 @@ type EPassAPIs
              :<|> DocumentAPIs
              :<|> TagAPIs
              :<|> CommentAPIs
+             :<|> LocationAPIs
              )
 
 epassAPIs :: Proxy EPassAPIs
@@ -84,6 +92,7 @@ epassServer' key =
   :<|> documentFlow
   :<|> tagFlow
   :<|> commentFlow
+  :<|> locationFlow
 
 ---- Registration Flow ------
 type RegistrationAPIs
@@ -243,11 +252,16 @@ type UserAPIS
       :<|> "list"
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
+        :> QueryParam "filterBy" LocateBy
+        :> QueryParam "filter" User.Role
+        :> QueryParams "roles" User.Role
         :> Get '[JSON] User.ListRes
       :<|> Capture ":id" UserId
         :> Get '[JSON] User.GetRes
       :<|> Capture ":id" UserId
         :> Delete '[JSON] Ack
+      :<|> "roles"
+        :> Get '[ JSON] [SU.Role]
       )
 
 userFlow registrationToken =
@@ -256,6 +270,7 @@ userFlow registrationToken =
   :<|> User.list registrationToken
   :<|> User.get registrationToken
   :<|> User.delete registrationToken
+  :<|> User.listRoles registrationToken
 
 ------ Location Blacklist ----------
 type BlacklistAPIS
@@ -307,7 +322,7 @@ documentFlow registrationToken =
 type TagAPIs
    = "tag"
    :> Header "registrationToken" RegistrationTokenText
-   :> (ReqBody '[JSON] Tag.CreateReq
+   :> (    ReqBody '[JSON] Tag.CreateReq
         :> Post '[JSON] Tag.CreateRes
       :<|> Capture "entityType" Text
         :> Capture "entityId" Text
@@ -319,7 +334,7 @@ type TagAPIs
       )
 
 tagFlow registrationToken =
-  Tag.create registrationToken
+       Tag.create registrationToken
   :<|> Tag.list registrationToken
   :<|> Tag.tagEntity registrationToken
 
@@ -328,7 +343,7 @@ tagFlow registrationToken =
 type CommentAPIs
    = "comment"
    :> Header "registrationToken" RegistrationTokenText
-   :> (ReqBody '[JSON] Comment.CreateReq
+   :> (    ReqBody '[JSON] Comment.CreateReq
         :> Post '[JSON] Comment.CreateRes
       :<|> Capture "primaryEntityType" Text
         :> Capture "primaryEntityId" Text
@@ -339,3 +354,20 @@ type CommentAPIs
 commentFlow registrationToken =
   Comment.create registrationToken
   :<|> Comment.list registrationToken
+
+--------------------------------------------
+----- Location API
+type LocationAPIs
+  = "location"
+  :> Header "registrationToken" RegistrationTokenText
+  :> (    "list"
+       :> QueryParam "limit" Int
+       :> QueryParam "offset" Int
+       :> MandatoryQueryParam "distinctBy" LocateBy -- can be null
+       :> MandatoryQueryParam "filterBy" LocateBy
+       :> MandatoryQueryParam "filter" Text
+       :> Get '[JSON] ListLocationRes
+     )
+
+locationFlow registrationToken =
+  Location.listLocation registrationToken
