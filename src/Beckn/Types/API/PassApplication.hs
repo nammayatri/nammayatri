@@ -2,6 +2,7 @@ module Beckn.Types.API.PassApplication where
 
 import           Beckn.Types.App
 import           Beckn.Types.Common
+import qualified Beckn.Types.Storage.Comment         as SCM
 import qualified Beckn.Types.Storage.Customer        as SC
 import qualified Beckn.Types.Storage.Document        as SD
 import qualified Beckn.Types.Storage.Organization    as SO
@@ -53,6 +54,7 @@ data PassAppInfo =
     , _Customer                  :: (Maybe SC.Customer)
     , _Tags                      :: [ST.Tag]
     , _Documents                 :: [SD.Document]
+    , _Comments                  :: [SCM.Comment]
     , _Organization              :: (Maybe SO.Organization)
     , _isBlacklistedOrganization :: Bool
     , _isBlacklistedLocation     :: Bool
