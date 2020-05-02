@@ -28,15 +28,35 @@ updatePassApplication ::
   FlowHandler PassApplicationRes
 updatePassApplication regToken passApplicationId UpdatePassApplicationReq{..} = withFlowHandler $ do
   token <- verifyToken regToken
+  allowOnlyUser token
+
   pA <- fromMaybeM400 "Pass Application not found" =<< DB.findById passApplicationId
   verifyIfStatusUpdatable (PassApplication._status pA) _status
-  approvedCount <- if (_status == REVOKED)
-                    then Pass.revokeByPassApplicationId passApplicationId *> pure 0
-                    else pure $ fromMaybe (PassApplication._count pA) _approvedCount
-  DB.update passApplicationId _status approvedCount _remarks
-  pA' <- fromMaybeM400 "Pass Application not found" =<< DB.findById passApplicationId
-  createPassesOnApproval pA' approvedCount
-  return $ PassApplicationRes pA'
+
+  case _status of
+    REVOKED -> do
+      Pass.revokeByPassApplicationId passApplicationId
+      -- _approvedCount remains unchanged as part of history
+      DB.update passApplicationId _status Nothing _remarks
+
+    APPROVED -> do
+      when (isNothing _approvedCount)
+        (L.throwException $ err400 {errBody = "Approved count cannot be empty"})
+      let
+        count = PassApplication._count pA
+        approvedCount = validApprovedCount count $ fromJust _approvedCount
+      -- Create passes
+      replicateM approvedCount (createPass pA)
+      DB.update passApplicationId _status (Just approvedCount) _remarks
+
+    _ -> DB.update passApplicationId _status Nothing _remarks
+
+  DB.findById passApplicationId
+    >>= fromMaybeM400 "Pass Application not found"
+    >>= return . PassApplicationRes
+  where
+    validApprovedCount count approvedCount =
+      if approvedCount > count then count else approvedCount
 
 verifyIfStatusUpdatable :: Status -> Status -> L.Flow ()
 verifyIfStatusUpdatable currStatus newStatus =
@@ -44,16 +64,10 @@ verifyIfStatusUpdatable currStatus newStatus =
     (PENDING, APPROVED) -> return ()
     (PENDING, REJECTED) -> return ()
     (PENDING, EXPIRED) -> return ()
-    (APPROVED, REJECTED) -> return ()
+    -- Blocked APPROVED going to REJECTED
     (APPROVED, EXPIRED) -> return ()
     (APPROVED, REVOKED) -> return ()
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
-
-createPassesOnApproval :: PassApplication -> Int -> L.Flow ()
-createPassesOnApproval pa@PassApplication {..} approvedCount =
-  if _status /= APPROVED
-    then return ()
-    else void $ replicateM approvedCount (createPass pa)
 
 createPass :: PassApplication -> L.Flow ()
 createPass PassApplication{..} = do
@@ -69,3 +83,10 @@ createPass PassApplication{..} = do
               , ..
               }
   Pass.create pass
+
+allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()
+allowOnlyUser RegistrationToken.RegistrationToken{..} =
+  case _entityType of
+    RegistrationToken.USER -> return ()
+    RegistrationToken.CUSTOMER ->
+      L.throwException $ err400 {errBody = "OPERATION_NOT_ALLOWED"}

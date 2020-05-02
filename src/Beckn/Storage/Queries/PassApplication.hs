@@ -79,20 +79,21 @@ complementVal l
 
 
 
-update :: PassApplicationId -> Storage.Status -> Int -> Text -> L.Flow ()
-update id status approvedCount remarks = do
+update :: PassApplicationId -> Storage.Status -> Maybe Int -> Maybe Text -> L.Flow ()
+update id status approvedCountM remarksM = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update dbTable
-    (setClause status approvedCount remarks currTime)
+    (setClause status approvedCountM remarksM currTime)
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause status approvedCount remarks currTime Storage.PassApplication {..} =
+    setClause status approvedCountM remarksM currTime Storage.PassApplication {..} =
       mconcat
-        [ _status <-. B.val_ status
-        , _approvedCount <-. B.val_ approvedCount
-        , _remarks <-. B.val_ remarks
-        , _updatedAt <-. B.val_ currTime
-        ]
+        ([ _status <-. B.val_ status
+          , _updatedAt <-. B.val_ currTime
+          ]
+          <> maybe [] (\remarks -> [ _remarks <-. B.val_ remarks ]) remarksM
+          <> maybe [] (\approvedCount -> [ _approvedCount <-. B.val_ approvedCount ]) approvedCountM
+        )
 
     predicate id Storage.PassApplication {..} = _id ==. B.val_ id
