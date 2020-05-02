@@ -45,16 +45,25 @@ findAllWithLimitOffsetWhere ::
   -> [Storage.Status]
   -> [OrganizationId]
   -> [Storage.PassType]
+  -> Maybe CustomerId
   -> Maybe Int -> Maybe Int -> L.Flow [Storage.PassApplication]
-findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType mlimit moffset =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType) limit offset orderByDesc
+findAllWithLimitOffsetWhere
+  fPins fCities fDists fWards
+  fStates toPins toCities toDists
+  toWards toStates statuses orgIds
+  passType mCreatedById mlimit moffset =
+
+  DB.findAllWithLimitOffsetWhere
+    dbTable
+    (predicate fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType mCreatedById)
+    limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     limit = (toInteger $ fromMaybe 100 mlimit)
     offset = (toInteger $ fromMaybe 0 moffset)
     orderByDesc Storage.PassApplication {..} = B.desc_ _createdAt
 
-    predicate fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds ptypes
+    predicate fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds ptypes mCreatedById
       Storage.PassApplication {..} =
         foldl (&&.)
           (B.val_ True)
@@ -71,6 +80,7 @@ findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities 
           , _fromState `B.in_` ((B.val_ . Just) <$> fStates) ||. complementVal fStates
           , _fromDistrict `B.in_` ((B.val_ . Just) <$> fDists) ||. complementVal fDists
           , _fromWard `B.in_` ((B.val_ . Just) <$> fWards) ||. complementVal fWards
+          , maybe (B.val_ True) (\custId -> ( _CreatedBy ==. B.val_ custId)) mCreatedById
           ]
 
 complementVal l

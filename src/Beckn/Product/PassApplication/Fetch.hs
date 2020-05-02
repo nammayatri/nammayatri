@@ -52,8 +52,9 @@ listPassApplication ::
   -> FlowHandler API.ListPassApplicationRes
 listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType =
    withFlowHandler $ do
-      verifyToken regToken
-      passApplications <- DB.findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType limitM offsetM
+      token <- verifyToken regToken
+      let entityId = scopeEntityAccess token
+      passApplications <- DB.findAllWithLimitOffsetWhere fPins fCities fDists fWards fStates toPins toCities toDists toWards toStates statuses orgIds passType entityId limitM offsetM
       let orgIds = nub $ catMaybes $ _OrganizationId <$> passApplications
           custIds = nub $ catMaybes $ _CustomerId <$> passApplications
           passAppIds =  _id <$> passApplications
@@ -124,3 +125,9 @@ getPassApplicationById regToken applicationId = withFlowHandler $ do
       passInfo :: API.PassAppInfo <- getPassAppInfo v
       return $ API.GetPassApplication  passInfo
     Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
+
+scopeEntityAccess :: RegistrationToken.RegistrationToken -> Maybe CustomerId
+scopeEntityAccess RegistrationToken.RegistrationToken{..} =
+  case _entityType of
+    RegistrationToken.CUSTOMER -> Just (CustomerId _EntityId)
+    RegistrationToken.USER     -> Nothing
