@@ -1,4 +1,4 @@
-name:                beckn-epass
+name:                beckn-gateway
 version:             0.1.0.0
 github:              "juspay/beckn-epass"
 license:             BSD3
@@ -8,7 +8,6 @@ copyright:           "2020 Author name here"
 
 extra-source-files:
 - README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -83,22 +82,10 @@ dependencies:
 - time
 - template-haskell
 
-library:
-  source-dirs: src
-
 executables:
-  beckn-epass-exe:
-    main:                Main.hs
-    source-dirs:         app/beckn-epass
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - beckn-epass
   beckn-gateway-exe:
     main:                Main.hs
-    source-dirs:         app/beckn-gateway
+    source-dirs:         src
     ghc-options:
     - -threaded
     - -rtsopts
@@ -107,7 +94,7 @@ executables:
     - beckn-epass
 
 tests:
-  beckn-epass-test:
+  beckn-gateway-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
