@@ -47,7 +47,7 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
           , _createdAt  = now
           , _updatedAt  = now
           , _info       = Nothing
-          , _BlacklistedBy = UserId userId
+          , __BlacklistedBy = UserId userId
           ,..
           }
 

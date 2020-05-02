@@ -18,10 +18,10 @@ import           EulerHS.Prelude
 data BlacklistT f =
   Blacklist
     { _id                   :: B.C f BlacklistId
-    , _BlacklistedBy        :: B.C f UserId
-    , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
+    , __BlacklistedBy        :: B.C f UserId
+    , __TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
     , _remarks              :: B.C f Text
-    , _EntityId             :: B.C f Text
+    , __EntityId             :: B.C f Text
     , _entityType           :: B.C f EntityType
     , _startTime            :: B.C f LocalTime
     , _endTime              :: B.C f LocalTime
@@ -40,12 +40,12 @@ instance Default Blacklist where
   def = Blacklist
     { _id                    = BlacklistId Defaults.id
     , _remarks               = ""
-    , _BlacklistedBy         = UserId Defaults.id
-    , _TenantOrganizationId  = Nothing
+    , __BlacklistedBy         = UserId Defaults.id
+    , __TenantOrganizationId  = Nothing
     , _info                  = Nothing
     , _startTime             = Defaults.localTime
     , _endTime               = Defaults.localTime
-    , _EntityId              = Defaults.orgId
+    , __EntityId              = Defaults.orgId
     , _entityType            = LOCATION
     , _createdAt             = Defaults.localTime
     , _updatedAt             = Defaults.localTime
@@ -79,9 +79,9 @@ fieldEMod =
   B.setEntityName "blacklist" <>
     B.modifyTableFields
       B.tableModification
-        { _BlacklistedBy = "blacklisted_by"
-        , _TenantOrganizationId = "tenant_organization_id"
-        , _EntityId = "entity_id"
+        { __BlacklistedBy = "blacklisted_by"
+        , __TenantOrganizationId = "tenant_organization_id"
+        , __EntityId = "entity_id"
         , _entityType = "entity_type"
         , _startTime = "start_time"
         , _endTime = "end_time"

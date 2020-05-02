@@ -10,7 +10,7 @@ import qualified Database.Beam.MySQL          as BM
 import qualified Database.Beam.Query.Internal as BI
 import qualified EulerHS.Language             as L
 import qualified EulerHS.Types                as T
-import           Servant                      (err500)
+import           Servant                      (err500, errBody)
 
 type MySqlTable table db =
     ( B.Beamable table
@@ -44,6 +44,18 @@ run query = do
   L.runDB connection query
 
 -- find queries
+findOneWithErr ::
+    RunReadableMySqlTable table db
+  => B.DatabaseEntity BM.MySQL db (B.TableEntity table)
+  -> (table (B.QExpr BM.MySQL B.QBaseScope) -> B.QExpr BM.MySQL B.QBaseScope Bool)
+  -> L.Flow (table Identity)
+findOneWithErr dbTable predicate = do
+  res <- run $ findOne' dbTable predicate
+  case res of
+    Right (Just val) -> return val
+    Right Nothing    -> L.throwException err500 {errBody = "No rec found"}
+    Left  err        -> L.throwException err500 {errBody = ("DBError: " <> show err)}
+
 findOne ::
     RunReadableMySqlTable table db
   => B.DatabaseEntity BM.MySQL db (B.TableEntity table)
@@ -58,6 +70,17 @@ findOne' ::
   -> L.SqlDB BM.MySQLM (Maybe (table Identity))
 findOne' dbTable predicate =
   L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
+
+findAllOrErr ::
+    RunReadableMySqlTable table db
+  => B.DatabaseEntity BM.MySQL db (B.TableEntity table)
+  -> (table (B.QExpr BM.MySQL B.QBaseScope) -> B.QExpr BM.MySQL B.QBaseScope Bool)
+  -> L.Flow [table Identity]
+findAllOrErr dbTable predicate = do
+  res <- run $ findAll' dbTable predicate
+  case res of
+    Right val -> return val
+    Left err  -> L.throwException err500 {errBody = ("DBError: " <> show err)}
 
 findAll ::
     RunReadableMySqlTable table db
@@ -188,13 +211,13 @@ findAllWithLimitOffset ::
 findAllWithLimitOffset dbTable limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
-findAllWithLimitOffsetWhere ::
-    RunReadableMySqlTable table db
-  => B.DatabaseEntity BM.MySQL db (B.TableEntity table)
-  -> (table (B.QExpr BM.MySQL B.QBaseScope) -> B.QExpr BM.MySQL B.QBaseScope Bool)
-  -> Integer
-  -> Integer
-  -> (table (B.QExpr BM.MySQL Scope3) -> BI.QOrd BM.MySQL Scope3 ordering)
-  -> L.Flow (T.DBResult [table Identity])
+--findAllWithLimitOffsetWhere ::
+    --RunReadableMySqlTable table db
+  -- => B.DatabaseEntity BM.MySQL db (B.TableEntity table)
+  -- -> (table (B.QExpr BM.MySQL B.QBaseScope) -> B.QExpr BM.MySQL B.QBaseScope Bool)
+  -- -> Integer
+  -- -> Integer
+  -- -> (table (B.QExpr BM.MySQL Scope3) -> BI.QOrd BM.MySQL Scope3 ordering)
+  -- -> L.Flow (T.DBResult [table Identity])
 findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
-  run $ L.findRows $ B.select $ B.filter_ predicate $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
+  run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.filter_ predicate $ B.orderBy_ orderBy $ B.all_ dbTable

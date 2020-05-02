@@ -28,9 +28,6 @@ create mRegToken CreateReq {..} =  withFlowHandler $ do
      RegToken.USER -> do
         let (userId) = RegToken._EntityId regToken
         user <- (User.findById  $ UserId userId)
-         >>= \case
-           Just user -> return user
-           Nothing -> throwUnauthorized
         let (OrganizationId orgId) = User._OrganizationId user
         quota <- quotaRec id orgId
         DB.create quota

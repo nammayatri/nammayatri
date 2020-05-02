@@ -33,6 +33,12 @@ findById id = do
   where
     predicate Storage.Tag {..} = (_id ==. B.val_ id)
 
+findAllById :: [TagId] -> L.Flow [Storage.Tag]
+findAllById ids =
+  DB.findAllOrErr dbTable (predicate ids)
+  where
+    predicate ids Storage.Tag {..} = (B.in_ _id (B.val_ <$> ids))
+
 findAllByEntity :: Text -> Text -> L.Flow [Storage.Tag]
 findAllByEntity entityType entityId = do
   etags <- EntityTag.findAllByEntity entityType entityId
@@ -42,5 +48,3 @@ findAllByEntity entityType entityId = do
   where
     predicate tagIds Storage.Tag {..} =
       _id `B.in_` (B.val_ <$> tagIds)
-
-

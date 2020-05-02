@@ -2,7 +2,7 @@
 
 module Beckn.Storage.Queries.EntityTag where
 
-import           Database.Beam                 ((&&.), (<-.), (==.))
+import           Database.Beam                 ((&&.), (<-.), (==.), in_)
 import           EulerHS.Prelude               hiding (id)
 
 import qualified Beckn.Storage.Queries         as DB
@@ -30,6 +30,12 @@ findById id = do
     >>= either DB.throwDBError pure
   where
     predicate Storage.EntityTag {..} = (_id ==. B.val_ id)
+
+findAllById :: [EntityTagId] -> L.Flow [Storage.EntityTag]
+findAllById ids =
+  DB.findAllOrErr dbTable (predicate ids)
+  where
+    predicate ids Storage.EntityTag {..} = (B.in_ _id (B.val_ <$> ids))
 
 findAllByEntity :: Text -> Text -> L.Flow [Storage.EntityTag]
 findAllByEntity entityType entityId = do
