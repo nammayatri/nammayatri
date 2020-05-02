@@ -19,6 +19,7 @@ import           Database.Beam.Query       (HasSqlEqualityCheck)
 import           EulerHS.Prelude
 import           Servant
 import           Servant.Swagger
+import           Web.HttpApiData
 
 data ErrorResponse =
   ErrorResponse
@@ -192,7 +193,7 @@ data DocumentEntity
   | USER
   | PASSAPPLICATION
   -- | ORGANIZATIONS
-  deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq)
+  deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq, Enum, Bounded)
 
 deriving instance HasSqlEqualityCheck MySQL DocumentEntity
 
@@ -203,19 +204,14 @@ instance FromBackendRow MySQL DocumentEntity where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData DocumentEntity where
-  parseUrlPiece x =
-    case x of
-      "CUSTOMER" -> Right CUSTOMER
-      "USER" -> Right USER
-      "PASSAPPLICATION" -> Right PASSAPPLICATION
-      y -> Left y
-  parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseUrlPiece = parseBoundedTextData
+  parseQueryParam = parseBoundedTextData
+  parseHeader = parseBoundedTextData . DT.decodeUtf8
 
 data DocumentByType
   = VERIFIER
   | CREATOR
-  deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq)
+  deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq, Enum, Bounded)
 
 deriving instance HasSqlEqualityCheck MySQL DocumentByType
 
@@ -226,10 +222,6 @@ instance FromBackendRow MySQL DocumentByType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData DocumentByType where
-  parseUrlPiece x =
-    case x of
-      "VERIFIER" -> Right VERIFIER
-      "CREATOR" -> Right CREATOR
-      y -> Left y
-  parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseUrlPiece = parseBoundedTextData
+  parseQueryParam = parseBoundedTextData
+  parseHeader = parseBoundedTextData . DT.decodeUtf8

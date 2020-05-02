@@ -61,6 +61,7 @@ dependencies:
 - cryptonite
 - data-default
 - euler-hs
+- http-api-data
 - http-client
 - http-types
 - lens
