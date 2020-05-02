@@ -94,5 +94,5 @@ findByOrgId (OrganizationId eId) =
   DB.findOne dbTable (predicate eId) >>=
     either DB.throwDBError pure
   where
-    predicate eId Storage.Blacklist {..} = (_EntityId ==. B.val_ eId)
+    predicate eId Storage.Blacklist {..} = (__EntityId ==. B.val_ eId)
                                                 &&. (_entityType ==. B.val_ ORG)
