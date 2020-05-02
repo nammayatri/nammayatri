@@ -97,6 +97,7 @@ instance Default User where
     , _username       = Defaults.user
     , _mobileNumber       = ""
     , _email          = Defaults.email
+    , _LocationId     = Defaults.locId
     , _role           = VIEWER
     , _verified       = False
     , _status         = ACTIVE
@@ -131,6 +132,7 @@ fieldEMod =
       , _mobileNumber = "mobile_number"
       , _OrganizationId = "organization_id"
       , _TenantOrganizationId = "tenant_organization_id"
+      , _LocationId = "location_id"
       }
 
 

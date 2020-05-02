@@ -26,6 +26,9 @@ email = "default@juspay.in"
 orgId :: Text
 orgId = "9617486e522f44c6b6d54f6ca0d2731d"
 
+locId :: Text
+locId = "fde80a10a4db455991da1bd384a72d1b"
+
 user :: Text
 user = "beckn_user"
 
