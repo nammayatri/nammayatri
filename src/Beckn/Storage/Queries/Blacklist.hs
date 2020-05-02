@@ -87,3 +87,13 @@ findByOrgId (OrganizationId eId) =
   where
     predicate eId Storage.Blacklist {..} = (_EntityId ==. B.val_ eId)
                                                 &&. (_entityType ==. B.val_ ORG)
+
+
+findByLocationId :: Text ->  L.Flow (Maybe Storage.Blacklist)
+findByLocationId eid =
+  DB.findOne dbTable (predicate eid) >>=
+    either DB.throwDBError pure
+  where
+    predicate eId Storage.Blacklist {..} = (_EntityId ==. B.val_ eId)
+                                            &&. (_entityType ==. B.val_ LOCATION)
+
