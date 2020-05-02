@@ -123,7 +123,7 @@ getOrgId ei eit = do
     PASSAPPLICATION -> do
       pass <-
         QPA.findById (PassApplicationId ei) >>=
-          ifNotFoundDbErr "INVALID_PASSAPPLICATION_ID"
+          fromMaybeM400 "INVALID_PASSAPPLICATION_ID"
       return $
         fromMaybe
          (OrganizationId "individual")

@@ -96,7 +96,7 @@ data UpdatePassApplicationReq =
   UpdatePassApplicationReq
     { _status        :: Status
     , _approvedCount :: Maybe Int
-    , _remarks       :: Text
+    , _remarks       :: Maybe Text
     } deriving (Generic, ToSchema)
 
 instance FromJSON UpdatePassApplicationReq where
