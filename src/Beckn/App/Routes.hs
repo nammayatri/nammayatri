@@ -309,9 +309,10 @@ type TagAPIs
    :> Header "registrationToken" RegistrationTokenText
    :> (ReqBody '[JSON] Tag.CreateReq
         :> Post '[JSON] Tag.CreateRes
-      :<|> Capture "entityType" Text
-        :> Capture "entityId" Text
-        :> "list"
+      :<|> "list"
+        :> QueryParams "tagId" TagId
+        :> QueryParam "entityType" Text
+        :> QueryParam "entityId" Text
         :> Get '[JSON] Tag.ListRes
       :<|> "entity"
         :> ReqBody '[JSON] Tag.TagEntityReq

@@ -39,11 +39,19 @@ create regToken CreateReq{..} = withFlowHandler $ do
         , ..
         }
 
-list :: Maybe RegistrationTokenText -> Text -> Text -> FlowHandler ListRes
-list regToken entityType entityId = withFlowHandler $ do
+list ::
+  Maybe RegistrationTokenText
+  -> [TagId]
+  -> Maybe Text -> Maybe Text
+  -> FlowHandler ListRes
+list regToken tagIds entityTypeM entityIdM = withFlowHandler $ do
   verifyToken regToken
-  Tag.findAllByEntity entityType entityId
-    >>= return . ListRes
+  res <- if not $ null tagIds
+    then Tag.findAllByIds tagIds
+    else if isJust entityTypeM && isJust entityIdM
+      then Tag.findAllByEntity (fromJust entityTypeM) (fromJust entityIdM)
+      else return []
+  return $ ListRes res
 
 tagEntity ::  Maybe RegistrationTokenText -> TagEntityReq -> FlowHandler TagEntityRes
 tagEntity regToken TagEntityReq{..} = withFlowHandler $ do

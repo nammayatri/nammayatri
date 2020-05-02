@@ -43,4 +43,12 @@ findAllByEntity entityType entityId = do
     predicate tagIds Storage.Tag {..} =
       _id `B.in_` (B.val_ <$> tagIds)
 
-
+findAllByIds :: [TagId] -> L.Flow [Storage.Tag]
+findAllByIds ids = do
+  if null ids then return []
+  else
+    DB.findAll dbTable (predicate ids)
+      >>= either DB.throwDBError pure
+  where
+    predicate ids Storage.Tag{..} =
+      _id `B.in_` (B.val_ <$> ids)
