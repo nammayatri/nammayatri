@@ -11,14 +11,16 @@ import           Data.Swagger
 import           Data.Text                  (Text)
 import           Data.Time                  (UTCTime (..), fromGregorian)
 import           Data.Typeable              (Typeable)
-import           Prelude
 import           GHC.Generics
+import           Prelude
+import qualified PSGen                      as PSGen
 import           Servant
 import           Servant.Swagger
 
 main :: IO ()
 main =
   -- writeSwaggerJSON
+  --PSGen.main
   runBecknBackendApp
 
 --todoSwagger :: Swagger

@@ -66,10 +66,13 @@ dependencies:
 - http-types
 - lens
 - pureMD5
+- purescript-bridge
 - servant
 - servant-client
 - servant-multipart
+- servant-purescript
 - servant-server
+- servant-subscriber
 - servant-swagger
 - swagger2
 - text

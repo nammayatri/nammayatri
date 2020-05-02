@@ -83,6 +83,20 @@ packages:
       sha256: c355f7924ce67e5bf8f20767462af18f09b8c0d1f7161117221cbb94c15deee3
   original:
     hackage: unix-2.7.2.2@sha256:e69269a17b9fa26cb77f3f55e86c39d0a4940ccfa0c4bc20826919d2572076ad,3496
+- completed:
+    hackage: servant-purescript-0.10.0.0@sha256:0533143282b941d2416a08ee1fd3ff4b39383587f5e5fee71ccb4dd2a8a9369e,2289
+    pantry-tree:
+      size: 708
+      sha256: e80be069dcd7edabac73a672c5e045a0c22f322c4d5f39344f93bdf3edc04bd8
+  original:
+    hackage: servant-purescript-0.10.0.0@sha256:0533143282b941d2416a08ee1fd3ff4b39383587f5e5fee71ccb4dd2a8a9369e,2289
+- completed:
+    hackage: servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
+    pantry-tree:
+      size: 859
+      sha256: 8f0a4cf5c7c340c347c6b9117c809c9dbf7c15a4c94d80d1f07bd2e3f47308c9
+  original:
+    hackage: servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
 snapshots:
 - completed:
     size: 524804
