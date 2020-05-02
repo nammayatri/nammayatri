@@ -315,7 +315,7 @@ CREATE TABLE `tag` (
   `created_by_entity_type` varchar(255) NOT NULL,
   `tag_type` varchar(255) NOT NULL,
   `tag` varchar(255) NOT NULL,
-  `info` varchar(255) NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
@@ -330,15 +330,14 @@ CREATE TABLE `entity_tag` (
   `entity_id` char(36) NOT NULL,
   `entity_type` varchar(255) NOT NULL,
   `tag_id` char(36) NOT NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
   INDEX (`entity_id`),
   INDEX (`entity_type`),
   INDEX (`tag_id`)
 );
-
 
 CREATE TABLE `document` (
   `id` char(36) NOT NULL,
@@ -347,9 +346,9 @@ CREATE TABLE `document` (
   `format` varchar(255) NOT NULL,
   `size` integer NOT NULL,
   `file_hash` varchar(1024) NOT NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `info` varchar(255) NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -367,7 +366,6 @@ CREATE TABLE `entity_document` (
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
   INDEX (`entity_id`),
   INDEX (`entity_type`),
@@ -381,9 +379,9 @@ CREATE TABLE `comment` (
   `commented_by` char(36) NOT NULL,
   `commented_by_entity_type` varchar(255) NOT NULL,
   `value` varchar(1024) NOT NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `info` varchar(255) NULL,
   PRIMARY KEY (`id`),
   INDEX (`commented_on_entity_id`),
   INDEX (`commented_on_entity_type`)

@@ -1,5 +1,6 @@
 {
     "swagger": "2.0",
+    "host": "http://localhost:8012",
     "info": {
         "version": "1.0",
         "title": "Epass API",
@@ -36,142 +37,149 @@
         },
         "PassApplicationT": {
             "required": [
-                "_id",
-                "_status",
-                "_fromDate",
-                "_toDate",
-                "_type",
-                "_CreatedBy",
-                "_AssignedTo",
-                "_count",
-                "_approvedCount",
-                "_remarks",
-                "_info",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "status",
+                "fromDate",
+                "toDate",
+                "passType",
+                "CreatedBy",
+                "AssignedTo",
+                "count",
+                "approvedCount",
+                "remarks",
+                "info",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_toWard": {
+                "toWard": {
                     "type": "string"
                 },
-                "_CreatedBy": {
+                "CreatedBy": {
                     "type": "string"
                 },
-                "_count": {
+                "count": {
                     "maximum": 9223372036854775807,
                     "minimum": -9223372036854775808,
                     "type": "integer"
                 },
-                "_type": {
+                "approvedCount": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "fromAddress": {
+                    "type": "string"
+                },
+                "fromDistrict": {
+                    "type": "string"
+                },
+                "toAddress": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "TenantOrganizationId": {
+                    "type": "string"
+                },
+                "toDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "fromLong": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "toCity": {
+                    "type": "string"
+                },
+                "toBound": {
+                    "$ref": "#/definitions/Bound"
+                },
+                "toLong": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "CustomerId": {
+                    "type": "string"
+                },
+                "passType": {
                     "$ref": "#/definitions/PassType"
                 },
-                "_approvedCount": {
+                "fromState": {
+                    "type": "string"
+                },
+                "toPincode": {
                     "maximum": 9223372036854775807,
                     "minimum": -9223372036854775808,
                     "type": "integer"
                 },
-                "_fromAddress": {
+                "remarks": {
                     "type": "string"
                 },
-                "_fromDistrict": {
+                "fromCity": {
                     "type": "string"
                 },
-                "_toAddress": {
-                    "type": "string"
-                },
-                "_createdAt": {
-                    "$ref": "#/definitions/LocalTime"
-                },
-                "_id": {
-                    "type": "string"
-                },
-                "_TenantOrganizationId": {
-                    "type": "string"
-                },
-                "_toDate": {
-                    "$ref": "#/definitions/LocalTime"
-                },
-                "_fromLong": {
-                    "format": "double",
-                    "type": "number"
-                },
-                "_toCity": {
-                    "type": "string"
-                },
-                "_toBound": {
-                    "$ref": "#/definitions/Bound"
-                },
-                "_toLong": {
-                    "format": "double",
-                    "type": "number"
-                },
-                "_CustomerId": {
-                    "type": "string"
-                },
-                "_fromState": {
-                    "type": "string"
-                },
-                "_toPincode": {
-                    "type": "string"
-                },
-                "_remarks": {
-                    "type": "string"
-                },
-                "_fromCity": {
-                    "type": "string"
-                },
-                "_toLocationType": {
+                "toLocationType": {
                     "$ref": "#/definitions/LocationType"
                 },
-                "_fromLocationType": {
+                "fromLocationType": {
                     "$ref": "#/definitions/LocationType"
                 },
-                "_AssignedTo": {
+                "AssignedTo": {
                     "type": "string"
                 },
-                "_toCountry": {
+                "toCountry": {
                     "type": "string"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_toDistrict": {
+                "toDistrict": {
                     "type": "string"
                 },
-                "_toLat": {
+                "toLat": {
                     "format": "double",
                     "type": "number"
                 },
-                "_fromDate": {
+                "fromDate": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_fromLat": {
+                "fromLat": {
                     "format": "double",
                     "type": "number"
                 },
-                "_toState": {
+                "toState": {
                     "type": "string"
                 },
-                "_fromPincode": {
-                    "type": "string"
+                "fromPincode": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
                 },
-                "_status": {
+                "status": {
                     "$ref": "#/definitions/Status"
                 },
-                "_fromBound": {
+                "fromBound": {
                     "$ref": "#/definitions/Bound"
                 },
-                "_fromCountry": {
+                "fromCountry": {
                     "type": "string"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_fromWard": {
+                "fromWard": {
                     "type": "string"
                 },
-                "_OrganizationId": {
+                "OrganizationId": {
+                    "type": "string"
+                },
+                "purpose": {
                     "type": "string"
                 }
             }
@@ -192,13 +200,15 @@
         },
         "LoginRes": {
             "required": [
-                "registrationToken",
-                "customer"
+                "registrationToken"
             ],
             "type": "object",
             "properties": {
                 "registrationToken": {
                     "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/UserT"
                 },
                 "customer": {
                     "$ref": "#/definitions/CustomerT"
@@ -221,87 +231,78 @@
         },
         "CreateReq": {
             "required": [
-                "_remarks",
-                "_EntityId",
-                "_entityType",
-                "_startTime",
-                "_endTime"
+                "CommentedOnEntityId",
+                "commentedOnEntityType",
+                "comment"
             ],
             "type": "object",
             "properties": {
-                "_startTime": {
-                    "$ref": "#/definitions/LocalTime"
-                },
-                "_TenantOrganizationId": {
+                "comment": {
                     "type": "string"
                 },
-                "_remarks": {
+                "commentedOnEntityType": {
                     "type": "string"
                 },
-                "_entityType": {
-                    "$ref": "#/definitions/EntityType"
-                },
-                "_endTime": {
-                    "$ref": "#/definitions/LocalTime"
-                },
-                "_info": {
+                "CommentedOnEntityId": {
                     "type": "string"
                 },
-                "_EntityId": {
+                "info": {
                     "type": "string"
                 }
             }
         },
         "Location": {
             "required": [
-                "_type"
+                "type"
             ],
             "type": "object",
             "properties": {
-                "_type": {
+                "type": {
                     "$ref": "#/definitions/LocationType"
                 },
-                "_ward": {
+                "ward": {
                     "type": "string"
                 },
-                "_country": {
+                "country": {
                     "type": "string"
                 },
-                "_pincode": {
-                    "type": "string"
+                "pincode": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
                 },
-                "_bound": {
+                "bound": {
                     "$ref": "#/definitions/Bound"
                 },
-                "_city": {
+                "city": {
                     "type": "string"
                 },
-                "_state": {
+                "state": {
                     "type": "string"
                 },
-                "_long": {
+                "long": {
                     "format": "double",
                     "type": "number"
                 },
-                "_lat": {
+                "lat": {
                     "format": "double",
                     "type": "number"
                 },
-                "_district": {
+                "district": {
                     "type": "string"
                 },
-                "_address": {
+                "address": {
                     "type": "string"
                 }
             }
         },
         "UpdateRes": {
             "required": [
-                "_blacklist"
+                "blacklist"
             ],
             "type": "object",
             "properties": {
-                "_blacklist": {
+                "blacklist": {
                     "$ref": "#/definitions/BlacklistT"
                 }
             }
@@ -322,60 +323,67 @@
         },
         "UserT": {
             "required": [
-                "_id",
-                "_OrganizationId",
-                "_name",
-                "_username",
-                "_mobileNumber",
-                "_email",
-                "_role",
-                "_verified",
-                "_status",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "OrganizationId",
+                "name",
+                "username",
+                "mobileNumber",
+                "email",
+                "role",
+                "verified",
+                "status",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_createdAt": {
+                "createdAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_id": {
+                "id": {
                     "type": "string"
                 },
-                "_TenantOrganizationId": {
+                "TenantOrganizationId": {
                     "type": "string"
                 },
-                "_name": {
+                "name": {
                     "type": "string"
                 },
-                "_email": {
+                "email": {
                     "type": "string"
                 },
-                "_role": {
+                "role": {
                     "$ref": "#/definitions/Role"
                 },
-                "_verified": {
+                "verified": {
                     "type": "boolean"
                 },
-                "_username": {
+                "username": {
                     "type": "string"
                 },
-                "_mobileNumber": {
+                "mobileNumber": {
                     "type": "string"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_status": {
+                "status": {
                     "$ref": "#/definitions/Status"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_OrganizationId": {
+                "OrganizationId": {
                     "type": "string"
                 }
             }
+        },
+        "RTEntityType": {
+            "type": "string",
+            "enum": [
+                "CUSTOMER",
+                "USER"
+            ]
         },
         "PassRes": {
             "required": [
@@ -395,6 +403,59 @@
                 "EMAIL"
             ]
         },
+        "TagEntityRes": {
+            "required": [
+                "entityTag"
+            ],
+            "type": "object",
+            "properties": {
+                "entityTag": {
+                    "$ref": "#/definitions/EntityTagT"
+                }
+            }
+        },
+        "EntityTagT": {
+            "required": [
+                "id",
+                "EntityId",
+                "entityType",
+                "TagId",
+                "TaggedBy",
+                "taggedByEntityId",
+                "createdAt",
+                "updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "TaggedBy": {
+                    "$ref": "#/definitions/RTEntityType"
+                },
+                "entityType": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "TagId": {
+                    "type": "string"
+                },
+                "taggedByEntityId": {
+                    "type": "string"
+                },
+                "info": {
+                    "type": "string"
+                },
+                "EntityId": {
+                    "type": "string"
+                }
+            }
+        },
         "CustomerRole": {
             "type": "string",
             "enum": [
@@ -404,39 +465,39 @@
         },
         "CustomerT": {
             "required": [
-                "_id",
-                "_verified",
-                "_role",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "verified",
+                "role",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_createdAt": {
+                "createdAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_id": {
+                "id": {
                     "type": "string"
                 },
-                "_TenantOrganizationId": {
+                "TenantOrganizationId": {
                     "type": "string"
                 },
-                "_name": {
+                "name": {
                     "type": "string"
                 },
-                "_role": {
+                "role": {
                     "$ref": "#/definitions/CustomerRole"
                 },
-                "_verified": {
+                "verified": {
                     "type": "boolean"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_OrganizationId": {
+                "OrganizationId": {
                     "type": "string"
                 }
             }
@@ -462,24 +523,27 @@
         },
         "InitiateLoginReq": {
             "required": [
-                "_medium",
-                "__type",
-                "__value",
-                "_role"
+                "medium",
+                "type",
+                "identifier",
+                "entityType"
             ],
             "type": "object",
             "properties": {
-                "__type": {
+                "type": {
                     "$ref": "#/definitions/LoginType"
                 },
-                "_role": {
+                "role": {
                     "$ref": "#/definitions/CustomerRole"
                 },
-                "_medium": {
-                    "$ref": "#/definitions/Medium"
-                },
-                "__value": {
+                "identifier": {
                     "type": "string"
+                },
+                "entityType": {
+                    "$ref": "#/definitions/RTEntityType"
+                },
+                "medium": {
+                    "$ref": "#/definitions/Medium"
                 }
             }
         },
@@ -489,6 +553,44 @@
                 "DAILY",
                 "HOURLY"
             ]
+        },
+        "TagT": {
+            "required": [
+                "id",
+                "tagType",
+                "tag",
+                "CreatedBy",
+                "createdByEntityType",
+                "createdAt",
+                "updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "CreatedBy": {
+                    "type": "string"
+                },
+                "createdByEntityType": {
+                    "$ref": "#/definitions/RTEntityType"
+                },
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "tagType": {
+                    "type": "string"
+                },
+                "info": {
+                    "type": "string"
+                }
+            }
         },
         "UpdatePassReq": {
             "required": [
@@ -503,49 +605,51 @@
         },
         "Ack": {
             "required": [
-                "_action",
-                "_message"
+                "action",
+                "message"
             ],
             "type": "object",
             "properties": {
-                "_action": {
+                "action": {
                     "type": "string"
                 },
-                "_message": {
+                "message": {
                     "type": "string"
                 }
             }
         },
         "CreateOrganizationReq": {
             "required": [
-                "_name",
-                "_city",
-                "_state",
-                "_country",
-                "_pincode",
-                "_address"
+                "name",
+                "city",
+                "state",
+                "country",
+                "pincode",
+                "address"
             ],
             "type": "object",
             "properties": {
-                "_country": {
+                "country": {
                     "type": "string"
                 },
-                "_pincode": {
+                "pincode": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "city": {
                     "type": "string"
                 },
-                "_city": {
+                "gstin": {
                     "type": "string"
                 },
-                "_gstin": {
+                "name": {
                     "type": "string"
                 },
-                "_name": {
+                "state": {
                     "type": "string"
                 },
-                "_state": {
-                    "type": "string"
-                },
-                "_address": {
+                "address": {
                     "type": "string"
                 }
             }
@@ -570,21 +674,20 @@
         },
         "UpdatePassApplicationReq": {
             "required": [
-                "_status",
-                "_approvedCount",
-                "_remarks"
+                "status",
+                "remarks"
             ],
             "type": "object",
             "properties": {
-                "_approvedCount": {
+                "approvedCount": {
                     "maximum": 9223372036854775807,
                     "minimum": -9223372036854775808,
                     "type": "integer"
                 },
-                "_remarks": {
+                "remarks": {
                     "type": "string"
                 },
-                "_status": {
+                "status": {
                     "$ref": "#/definitions/Status"
                 }
             }
@@ -600,25 +703,44 @@
         "UpdateReq": {
             "type": "object",
             "properties": {
-                "_startTime": {
+                "startTime": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_TenantOrganizationId": {
+                "TenantOrganizationId": {
                     "type": "string"
                 },
-                "_remarks": {
+                "remarks": {
                     "type": "string"
                 },
-                "_entityType": {
+                "entityType": {
                     "$ref": "#/definitions/EntityType"
                 },
-                "_endTime": {
+                "endTime": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_EntityId": {
+                "EntityId": {
+                    "type": "string"
+                }
+            }
+        },
+        "TagEntityReq": {
+            "required": [
+                "EntityId",
+                "entityType",
+                "TagId"
+            ],
+            "type": "object",
+            "properties": {
+                "entityType": {
+                    "type": "string"
+                },
+                "TagId": {
+                    "type": "string"
+                },
+                "EntityId": {
                     "type": "string"
                 }
             }
@@ -636,126 +758,174 @@
         },
         "OrganizationT": {
             "required": [
-                "_id",
-                "_name",
-                "_status",
-                "_verified",
-                "_city",
-                "_state",
-                "_country",
-                "_pincode",
-                "_address",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "name",
+                "status",
+                "verified",
+                "city",
+                "state",
+                "country",
+                "pincode",
+                "address",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_ward": {
+                "ward": {
                     "type": "string"
                 },
-                "_country": {
+                "country": {
                     "type": "string"
                 },
-                "_createdAt": {
+                "createdAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_locationType": {
+                "locationType": {
                     "$ref": "#/definitions/LocationType"
                 },
-                "_id": {
+                "id": {
                     "type": "string"
                 },
-                "_pincode": {
-                    "type": "string"
+                "pincode": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
                 },
-                "_bound": {
+                "bound": {
                     "$ref": "#/definitions/Bound"
                 },
-                "_city": {
+                "city": {
                     "type": "string"
                 },
-                "_gstin": {
+                "gstin": {
                     "type": "string"
                 },
-                "_name": {
+                "name": {
                     "type": "string"
                 },
-                "_state": {
+                "state": {
                     "type": "string"
                 },
-                "_verified": {
+                "verified": {
                     "type": "boolean"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_long": {
+                "long": {
                     "format": "double",
                     "type": "number"
                 },
-                "_status": {
+                "status": {
                     "$ref": "#/definitions/Status"
                 },
-                "_lat": {
+                "lat": {
                     "format": "double",
                     "type": "number"
                 },
-                "_district": {
+                "district": {
                     "type": "string"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_address": {
+                "address": {
+                    "type": "string"
+                }
+            }
+        },
+        "CommentT": {
+            "required": [
+                "id",
+                "CommentedOnEntityId",
+                "commentedOnEntityType",
+                "CommentedBy",
+                "commentedByEntityType",
+                "value",
+                "createdAt",
+                "updatedAt"
+            ],
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "commentedByEntityType": {
+                    "$ref": "#/definitions/RTEntityType"
+                },
+                "updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "commentedOnEntityType": {
+                    "type": "string"
+                },
+                "CommentedOnEntityId": {
+                    "type": "string"
+                },
+                "CommentedBy": {
+                    "type": "string"
+                },
+                "info": {
                     "type": "string"
                 }
             }
         },
         "QuotaT": {
             "required": [
-                "_id",
-                "_maxAllowed",
-                "_type",
-                "_EntityId",
-                "_entityType",
-                "_startTime",
-                "_endTime",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "maxAllowed",
+                "TenantOrganizationId",
+                "quotaType",
+                "EntityId",
+                "entityType",
+                "startTime",
+                "endTime",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_type": {
-                    "$ref": "#/definitions/QuotaType"
-                },
-                "_createdAt": {
+                "createdAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_startTime": {
+                "startTime": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_id": {
+                "id": {
                     "type": "string"
                 },
-                "_maxAllowed": {
+                "TenantOrganizationId": {
+                    "type": "string"
+                },
+                "maxAllowed": {
                     "maximum": 9223372036854775807,
                     "minimum": -9223372036854775808,
                     "type": "integer"
                 },
-                "_entityType": {
+                "entityType": {
                     "$ref": "#/definitions/EntityType"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_endTime": {
+                "endTime": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_EntityId": {
+                "EntityId": {
                     "type": "string"
+                },
+                "quotaType": {
+                    "$ref": "#/definitions/QuotaType"
                 }
             }
         },
@@ -767,7 +937,7 @@
             "properties": {
                 "passApplications": {
                     "items": {
-                        "$ref": "#/definitions/PassApplicationT"
+                        "$ref": "#/definitions/PassAppInfo"
                     },
                     "type": "array"
                 }
@@ -783,165 +953,169 @@
         },
         "LoginReq": {
             "required": [
-                "_medium",
-                "__type",
-                "__value",
-                "_hash"
+                "medium",
+                "type",
+                "hash",
+                "identifier"
             ],
             "type": "object",
             "properties": {
-                "__type": {
+                "type": {
                     "$ref": "#/definitions/LoginType"
                 },
-                "_medium": {
-                    "$ref": "#/definitions/Medium"
-                },
-                "_hash": {
+                "identifier": {
                     "type": "string"
                 },
-                "__value": {
+                "medium": {
+                    "$ref": "#/definitions/Medium"
+                },
+                "hash": {
                     "type": "string"
                 }
             }
         },
         "PassT": {
             "required": [
-                "_id",
-                "_ShortId",
-                "_status",
-                "_fromDate",
-                "_toDate",
-                "_type",
-                "_PassApplicationId",
-                "_CreatedBy",
-                "_info",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "ShortId",
+                "status",
+                "fromDate",
+                "toDate",
+                "passType",
+                "PassApplicationId",
+                "CreatedBy",
+                "info",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_toWard": {
+                "toWard": {
                     "type": "string"
                 },
-                "_CreatedBy": {
+                "CreatedBy": {
                     "type": "string"
                 },
-                "_type": {
+                "fromAddress": {
+                    "type": "string"
+                },
+                "fromDistrict": {
+                    "type": "string"
+                },
+                "toAddress": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "TenantOrganizationId": {
+                    "type": "string"
+                },
+                "ShortId": {
+                    "type": "string"
+                },
+                "toDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "fromLong": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "toCity": {
+                    "type": "string"
+                },
+                "toBound": {
+                    "$ref": "#/definitions/Bound"
+                },
+                "toLong": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "CustomerId": {
+                    "type": "string"
+                },
+                "passType": {
                     "$ref": "#/definitions/PassType"
                 },
-                "_fromAddress": {
+                "fromState": {
                     "type": "string"
                 },
-                "_fromDistrict": {
+                "toPincode": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "fromCity": {
                     "type": "string"
                 },
-                "_toAddress": {
-                    "type": "string"
-                },
-                "_createdAt": {
-                    "$ref": "#/definitions/LocalTime"
-                },
-                "_id": {
-                    "type": "string"
-                },
-                "_TenantOrganizationId": {
-                    "type": "string"
-                },
-                "_ShortId": {
-                    "type": "string"
-                },
-                "_toDate": {
-                    "$ref": "#/definitions/LocalTime"
-                },
-                "_fromLong": {
-                    "format": "double",
-                    "type": "number"
-                },
-                "_toCity": {
-                    "type": "string"
-                },
-                "_toBound": {
-                    "$ref": "#/definitions/Bound"
-                },
-                "_toLong": {
-                    "format": "double",
-                    "type": "number"
-                },
-                "_CustomerId": {
-                    "type": "string"
-                },
-                "_fromState": {
-                    "type": "string"
-                },
-                "_toPincode": {
-                    "type": "string"
-                },
-                "_fromCity": {
-                    "type": "string"
-                },
-                "_toLocationType": {
+                "toLocationType": {
                     "$ref": "#/definitions/LocationType"
                 },
-                "_fromLocationType": {
+                "fromLocationType": {
                     "$ref": "#/definitions/LocationType"
                 },
-                "_toCountry": {
+                "toCountry": {
                     "type": "string"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_toDistrict": {
+                "toDistrict": {
                     "type": "string"
                 },
-                "_toLat": {
+                "toLat": {
                     "format": "double",
                     "type": "number"
                 },
-                "_fromDate": {
+                "fromDate": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_fromLat": {
+                "fromLat": {
                     "format": "double",
                     "type": "number"
                 },
-                "_toState": {
+                "toState": {
                     "type": "string"
                 },
-                "_fromPincode": {
-                    "type": "string"
+                "fromPincode": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
                 },
-                "_status": {
+                "status": {
                     "$ref": "#/definitions/Status"
                 },
-                "_fromBound": {
+                "fromBound": {
                     "$ref": "#/definitions/Bound"
                 },
-                "_fromCountry": {
+                "fromCountry": {
                     "type": "string"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_PassApplicationId": {
+                "PassApplicationId": {
                     "type": "string"
                 },
-                "_fromWard": {
+                "fromWard": {
                     "type": "string"
                 },
-                "_OrganizationId": {
+                "OrganizationId": {
                     "type": "string"
                 }
             }
         },
         "CreateRes": {
             "required": [
-                "_blacklist"
+                "comment"
             ],
             "type": "object",
             "properties": {
-                "_blacklist": {
-                    "$ref": "#/definitions/BlacklistT"
+                "comment": {
+                    "$ref": "#/definitions/CommentT"
                 }
             }
         },
@@ -949,19 +1123,63 @@
             "type": "string",
             "enum": [
                 "SELF",
-                "SPONSOROR",
-                "BULKSPONSOROR"
+                "SPONSOR",
+                "BULKSPONSOR"
             ]
         },
-        "ListRes": {
+        "DocumentT": {
             "required": [
-                "_blacklists"
+                "id",
+                "fileUrl",
+                "size",
+                "fileHash",
+                "fileName",
+                "format",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_blacklists": {
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "fileUrl": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "size": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "fileHash": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "info": {
+                    "type": "string"
+                }
+            }
+        },
+        "ListRes": {
+            "required": [
+                "comments"
+            ],
+            "type": "object",
+            "properties": {
+                "comments": {
                     "items": {
-                        "$ref": "#/definitions/BlacklistT"
+                        "$ref": "#/definitions/CommentT"
                     },
                     "type": "array"
                 }
@@ -978,126 +1196,237 @@
                 }
             }
         },
-        "TravellerIDType": {
-            "type": "string",
-            "enum": [
-                "MOBILE",
-                "AADHAR"
-            ]
-        },
-        "CreatePassApplicationReq": {
+        "PassAppInfo": {
             "required": [
-                "_fromDate",
-                "_toDate",
-                "_toLocation",
-                "_type"
+                "id",
+                "Tags",
+                "Documents",
+                "isBlacklistedOrganization",
+                "isBlacklistedLocation",
+                "status",
+                "fromDate",
+                "toDate",
+                "passType",
+                "toLocation",
+                "CreatedBy",
+                "AssignedTo",
+                "count",
+                "approvedCount",
+                "remarks",
+                "info",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_fromLocation": {
+                "fromLocation": {
                     "$ref": "#/definitions/Location"
                 },
-                "_count": {
+                "Organization": {
+                    "$ref": "#/definitions/OrganizationT"
+                },
+                "CreatedBy": {
+                    "type": "string"
+                },
+                "count": {
                     "maximum": 9223372036854775807,
                     "minimum": -9223372036854775808,
                     "type": "integer"
                 },
-                "_type": {
+                "approvedCount": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "isBlacklistedOrganization": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "TenantOrganizationId": {
+                    "type": "string"
+                },
+                "toDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "Customer": {
+                    "$ref": "#/definitions/CustomerT"
+                },
+                "passType": {
+                    "$ref": "#/definitions/PassType"
+                },
+                "remarks": {
+                    "type": "string"
+                },
+                "isBlacklistedLocation": {
+                    "type": "boolean"
+                },
+                "AssignedTo": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "fromDate": {
+                    "$ref": "#/definitions/LocalTime"
+                },
+                "Documents": {
+                    "items": {
+                        "$ref": "#/definitions/DocumentT"
+                    },
+                    "type": "array"
+                },
+                "status": {
+                    "$ref": "#/definitions/Status"
+                },
+                "Tags": {
+                    "items": {
+                        "$ref": "#/definitions/TagT"
+                    },
+                    "type": "array"
+                },
+                "info": {
+                    "type": "string"
+                },
+                "toLocation": {
+                    "$ref": "#/definitions/Location"
+                },
+                "purpose": {
+                    "type": "string"
+                }
+            }
+        },
+        "TravellerIDType": {
+            "type": "string",
+            "enum": [
+                "MOBILE",
+                "AADHAAR"
+            ]
+        },
+        "CreatePassApplicationReq": {
+            "required": [
+                "fromDate",
+                "toDate",
+                "toLocation",
+                "type"
+            ],
+            "type": "object",
+            "properties": {
+                "fromLocation": {
+                    "$ref": "#/definitions/Location"
+                },
+                "count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "type": {
                     "$ref": "#/definitions/PassApplicationType"
                 },
-                "_TenantOrganizationId": {
+                "TenantOrganizationId": {
                     "type": "string"
                 },
-                "_toDate": {
+                "toDate": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_CustomerId": {
+                "CustomerId": {
                     "type": "string"
                 },
-                "_travellerIDType": {
+                "travellerIDType": {
                     "$ref": "#/definitions/TravellerIDType"
                 },
-                "_fromDate": {
+                "fromDate": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_travellerName": {
+                "travellerName": {
                     "type": "string"
                 },
-                "_OrganizationId": {
+                "OrganizationId": {
                     "type": "string"
                 },
-                "_travellerID": {
+                "travellerID": {
                     "type": "string"
                 },
-                "_toLocation": {
+                "toLocation": {
                     "$ref": "#/definitions/Location"
+                },
+                "purpose": {
+                    "type": "string"
                 }
             }
         },
         "ReInitiateLoginReq": {
             "required": [
-                "_medium",
-                "__type",
-                "__value"
+                "medium",
+                "type",
+                "identifier",
+                "entityType"
             ],
             "type": "object",
             "properties": {
-                "__type": {
+                "type": {
                     "$ref": "#/definitions/LoginType"
                 },
-                "_medium": {
-                    "$ref": "#/definitions/Medium"
-                },
-                "__value": {
+                "identifier": {
                     "type": "string"
+                },
+                "entityType": {
+                    "$ref": "#/definitions/RTEntityType"
+                },
+                "medium": {
+                    "$ref": "#/definitions/Medium"
                 }
             }
         },
         "BlacklistT": {
             "required": [
-                "_id",
-                "_BlacklistedBy",
-                "_remarks",
-                "_EntityId",
-                "_entityType",
-                "_startTime",
-                "_endTime",
-                "_createdAt",
-                "_updatedAt"
+                "id",
+                "BlacklistedBy",
+                "remarks",
+                "EntityId",
+                "entityType",
+                "startTime",
+                "endTime",
+                "createdAt",
+                "updatedAt"
             ],
             "type": "object",
             "properties": {
-                "_createdAt": {
+                "createdAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_startTime": {
+                "startTime": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_id": {
+                "id": {
                     "type": "string"
                 },
-                "_TenantOrganizationId": {
+                "TenantOrganizationId": {
                     "type": "string"
                 },
-                "_BlacklistedBy": {
+                "BlacklistedBy": {
                     "type": "string"
                 },
-                "_remarks": {
+                "remarks": {
                     "type": "string"
                 },
-                "_entityType": {
+                "entityType": {
                     "$ref": "#/definitions/EntityType"
                 },
-                "_updatedAt": {
+                "updatedAt": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_endTime": {
+                "endTime": {
                     "$ref": "#/definitions/LocalTime"
                 },
-                "_info": {
+                "info": {
                     "type": "string"
                 },
-                "_EntityId": {
+                "EntityId": {
                     "type": "string"
                 }
             }
@@ -1139,7 +1468,7 @@
                 ]
             }
         },
-        "/v1/blacklist": {
+        "/v1/comment": {
             "post": {
                 "consumes": [
                     "application/json;charset=utf-8"
@@ -1176,82 +1505,7 @@
                 ]
             }
         },
-        "/v1/user/{:id}": {
-            "get": {
-                "responses": {
-                    "404": {
-                        "description": "`:id` not found"
-                    },
-                    "400": {
-                        "description": "Invalid `registrationToken`"
-                    },
-                    "200": {
-                        "schema": {
-                            "$ref": "#/definitions/UserT"
-                        },
-                        "description": ""
-                    }
-                },
-                "produces": [
-                    "application/json;charset=utf-8"
-                ],
-                "parameters": [
-                    {
-                        "required": false,
-                        "in": "header",
-                        "name": "registrationToken",
-                        "type": "string"
-                    },
-                    {
-                        "required": true,
-                        "in": "path",
-                        "name": ":id",
-                        "type": "string"
-                    }
-                ]
-            }
-        },
-        "/v1/token/{tokenId}/verify": {
-            "post": {
-                "consumes": [
-                    "application/json;charset=utf-8"
-                ],
-                "responses": {
-                    "404": {
-                        "description": "`tokenId` not found"
-                    },
-                    "400": {
-                        "description": "Invalid `body`"
-                    },
-                    "200": {
-                        "schema": {
-                            "$ref": "#/definitions/LoginRes"
-                        },
-                        "description": ""
-                    }
-                },
-                "produces": [
-                    "application/json;charset=utf-8"
-                ],
-                "parameters": [
-                    {
-                        "required": true,
-                        "in": "path",
-                        "name": "tokenId",
-                        "type": "string"
-                    },
-                    {
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/LoginReq"
-                        },
-                        "in": "body",
-                        "name": "body"
-                    }
-                ]
-            }
-        },
-        "/v1/passApplication/{passApplicationId}": {
+        "/v1/pass_application/{passApplicationId}": {
             "post": {
                 "consumes": [
                     "application/json;charset=utf-8"
@@ -1330,6 +1584,151 @@
                 ]
             }
         },
+        "/v1/blacklist": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/CreateRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
+        "/v1/user/{:id}": {
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`:id` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/UserT"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": ":id",
+                        "type": "string"
+                    }
+                ]
+            },
+            "delete": {
+                "responses": {
+                    "404": {
+                        "description": "`:id` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/Ack"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": ":id",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/v1/token/{tokenId}/verify": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "404": {
+                        "description": "`tokenId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/LoginRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "tokenId",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/LoginReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
         "/v1/pass/list": {
             "get": {
                 "responses": {
@@ -1400,11 +1799,11 @@
                 ]
             }
         },
-        "/v1/passApplication/list": {
+        "/v1/pass_application/list": {
             "get": {
                 "responses": {
                     "400": {
-                        "description": "Invalid `type` or `status` or `offset` or `limit` or `registrationToken`"
+                        "description": "Invalid `type` or `organization` or `status` or `to_state` or `to_ward` or `to_district` or `to_city` or `to_pincode` or `from_state` or `from_ward` or `from_district` or `from_city` or `from_pincode` or `offset` or `limit` or `registrationToken`"
                     },
                     "200": {
                         "schema": {
@@ -1441,16 +1840,120 @@
                     },
                     {
                         "items": {
+                            "maximum": 9223372036854775807,
+                            "minimum": -9223372036854775808,
+                            "type": "integer"
+                        },
+                        "in": "query",
+                        "name": "from_pincode",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "from_city",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "from_district",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "from_ward",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "from_state",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "maximum": 9223372036854775807,
+                            "minimum": -9223372036854775808,
+                            "type": "integer"
+                        },
+                        "in": "query",
+                        "name": "to_pincode",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "to_city",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "to_district",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "to_ward",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "to_state",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
                             "type": "string",
                             "enum": [
                                 "PENDING",
                                 "APPROVED",
                                 "REJECTED",
-                                "EXPIRED"
+                                "EXPIRED",
+                                "REVOKED"
                             ]
                         },
                         "in": "query",
                         "name": "status",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "organization",
                         "collectionFormat": "multi",
                         "type": "array"
                     },
@@ -1466,6 +1969,166 @@
                         "name": "type",
                         "collectionFormat": "multi",
                         "type": "array"
+                    }
+                ]
+            }
+        },
+        "/v1/organization/list": {
+            "get": {
+                "responses": {
+                    "400": {
+                        "description": "Invalid `verified` or `status` or `state` or `ward` or `district` or `city` or `pincode` or `locationType` or `offset` or `limit` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/ListOrganizationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "limit",
+                        "type": "integer"
+                    },
+                    {
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "required": false,
+                        "in": "query",
+                        "name": "offset",
+                        "type": "integer"
+                    },
+                    {
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "POINT",
+                                "POLYGON",
+                                "PINCODE"
+                            ]
+                        },
+                        "in": "query",
+                        "name": "locationType",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "maximum": 9223372036854775807,
+                            "minimum": -9223372036854775808,
+                            "type": "integer"
+                        },
+                        "in": "query",
+                        "name": "pincode",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "city",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "district",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "ward",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "in": "query",
+                        "name": "state",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "PENDING_VERIFICATION",
+                                "APPROVED",
+                                "REJECTED"
+                            ]
+                        },
+                        "in": "query",
+                        "name": "status",
+                        "collectionFormat": "multi",
+                        "type": "array"
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "verified",
+                        "type": "boolean"
+                    }
+                ]
+            }
+        },
+        "/v1/tag/entity": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/TagEntityRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/TagEntityReq"
+                        },
+                        "in": "body",
+                        "name": "body"
                     }
                 ]
             }
@@ -1574,43 +2237,6 @@
                 ]
             }
         },
-        "/v1/passApplication": {
-            "post": {
-                "consumes": [
-                    "application/json;charset=utf-8"
-                ],
-                "responses": {
-                    "400": {
-                        "description": "Invalid `body` or `registrationToken`"
-                    },
-                    "200": {
-                        "schema": {
-                            "$ref": "#/definitions/PassApplicationRes"
-                        },
-                        "description": ""
-                    }
-                },
-                "produces": [
-                    "application/json;charset=utf-8"
-                ],
-                "parameters": [
-                    {
-                        "required": false,
-                        "in": "header",
-                        "name": "registrationToken",
-                        "type": "string"
-                    },
-                    {
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/CreatePassApplicationReq"
-                        },
-                        "in": "body",
-                        "name": "body"
-                    }
-                ]
-            }
-        },
         "/v1/organization": {
             "post": {
                 "consumes": [
@@ -1646,52 +2272,6 @@
                         "name": "body"
                     }
                 ]
-            },
-            "get": {
-                "responses": {
-                    "400": {
-                        "description": "Invalid `type` or `offset` or `limit` or `registrationToken`"
-                    },
-                    "200": {
-                        "schema": {
-                            "$ref": "#/definitions/ListOrganizationRes"
-                        },
-                        "description": ""
-                    }
-                },
-                "produces": [
-                    "application/json;charset=utf-8"
-                ],
-                "parameters": [
-                    {
-                        "required": false,
-                        "in": "header",
-                        "name": "registrationToken",
-                        "type": "string"
-                    },
-                    {
-                        "maximum": 9223372036854775807,
-                        "minimum": -9223372036854775808,
-                        "required": false,
-                        "in": "query",
-                        "name": "limit",
-                        "type": "integer"
-                    },
-                    {
-                        "maximum": 9223372036854775807,
-                        "minimum": -9223372036854775808,
-                        "required": false,
-                        "in": "query",
-                        "name": "offset",
-                        "type": "integer"
-                    },
-                    {
-                        "required": false,
-                        "in": "query",
-                        "name": "type",
-                        "type": "string"
-                    }
-                ]
             }
         },
         "/v1/token": {
@@ -1721,6 +2301,47 @@
                         },
                         "in": "body",
                         "name": "body"
+                    }
+                ]
+            }
+        },
+        "/v1/comment/{primaryEntityType}/{primaryEntityId}/list": {
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`primaryEntityType` or `primaryEntityId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/ListRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "primaryEntityType",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "primaryEntityId",
+                        "type": "string"
                     }
                 ]
             }
@@ -1858,6 +2479,84 @@
                 ]
             }
         },
+        "/v1/tag": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/CreateRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
+        "/v1/tag/{entityType}/{entityId}/list": {
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`entityType` or `entityId` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/ListRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "entityType",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "entityId",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
         "/v1": {
             "get": {
                 "responses": {
@@ -1870,6 +2569,43 @@
                 },
                 "produces": [
                     "application/json;charset=utf-8"
+                ]
+            }
+        },
+        "/v1/pass_application": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body` or `registrationToken`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/PassApplicationRes"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "registrationToken",
+                        "type": "string"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreatePassApplicationReq"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
                 ]
             }
         },
