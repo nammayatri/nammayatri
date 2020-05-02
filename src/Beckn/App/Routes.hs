@@ -131,7 +131,7 @@ type PassApplicationAPIs
         :> QueryParams "type" PassType
         :> Get '[ JSON] ListPassApplicationRes
       :<|> Capture "passApplicationId" PassApplicationId
-        :> Get '[ JSON] PassApplicationRes
+        :> Get '[ JSON] GetPassApplication
       :<|> Capture "passApplicationId" PassApplicationId
         :> ReqBody '[ JSON] UpdatePassApplicationReq
         :> Post '[ JSON] PassApplicationRes
@@ -162,7 +162,7 @@ type OrganizationAPIs
          :> QueryParams "status" SO.Status
          :> QueryParam "verified" Bool
          :> Get '[ JSON] ListOrganizationRes
-       :<|> Capture "organizationId" Text :> Get '[ JSON] OrganizationRes
+       :<|> Capture "organizationId" Text :> Get '[ JSON] GetOrganizationRes
        :<|> Capture "organizationId" Text
          :> ReqBody '[ JSON] UpdateOrganizationReq
          :> Post '[ JSON] OrganizationRes

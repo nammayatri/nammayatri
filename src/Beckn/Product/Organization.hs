@@ -60,14 +60,16 @@ createOrganization regToken req =
     QC.updateCustomerOrgId (OrganizationId uuid) (CustomerId $ SR._EntityId reg)
     return $ API.OrganizationRes org
 
-getOrganization :: Maybe Text -> Text -> FlowHandler API.OrganizationRes
+getOrganization :: Maybe Text -> Text -> FlowHandler API.GetOrganizationRes
 getOrganization regToken orgId =
   withFlowHandler $ do
     regToken <- verifyToken regToken
     QO.findOrganizationById (OrganizationId orgId) >>=
       maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
-        (return . API.OrganizationRes)
+        (\org-> do
+          orgInfo <- getOrgInfo  org
+          pure $ API.GetOrganizationRes orgInfo)
 
 listOrganization ::
   Maybe Text
@@ -87,40 +89,40 @@ listOrganization regToken limitM offsetM locationTypes pincodes cities districts
   organizations  <- QO.listOrganizations limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM
   orgInfo  <- (traverse getOrgInfo organizations)
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
- where
-   getOrgInfo :: Organization -> L.Flow API.OrgInfo
-   getOrgInfo Organization {..} = do
-    entityDocs <- EntityDocument.findAllByOrgId _id
-    let docIds = EntityDocument._DocumentId <$> entityDocs
-    docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
-    entityTags <- EntityTag.findAllByEntity "ORGANIZATION" $ _getOrganizationId _id
-    let tagIds = EntityTag._TagId <$> entityTags
-    tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
-    comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
-    isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
-    let toLocation = Location.Location
-                    { _type     = fromMaybe Location.PINCODE _locationType
-                    , _lat      = _lat
-                    , _long     = _long
-                    , _ward     = _ward
-                    , _district = _district
-                    , _city     = Just _city
-                    , _state    = Just _state
-                    , _country  = Just _country
-                    , _pincode  = Just _pincode
-                    , _address  = Just _address
-                    , _bound    = _bound
-                    }
 
-    pure API.OrgInfo
-      { _Tags = tags
-      , _Documents  = docs
-      , _Comments = comments
-      , _isBlacklistedOrganization = isBlacklistedOrg
-      , _isBlacklistedLocation = False
-      , _location = toLocation
-      ,..
-      }
+getOrgInfo :: Organization -> L.Flow API.OrgInfo
+getOrgInfo Organization {..} = do
+  entityDocs <- EntityDocument.findAllByOrgId _id
+  let docIds = EntityDocument._DocumentId <$> entityDocs
+  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  entityTags <- EntityTag.findAllByEntity "ORGANIZATION" $ _getOrganizationId _id
+  let tagIds = EntityTag._TagId <$> entityTags
+  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
+  isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
+  let toLocation = Location.Location
+                  { _type     = fromMaybe Location.PINCODE _locationType
+                  , _lat      = _lat
+                  , _long     = _long
+                  , _ward     = _ward
+                  , _district = _district
+                  , _city     = Just _city
+                  , _state    = Just _state
+                  , _country  = Just _country
+                  , _pincode  = Just _pincode
+                  , _address  = Just _address
+                  , _bound    = _bound
+                  }
+
+  pure API.OrgInfo
+    { _Tags = tags
+    , _Documents  = docs
+    , _Comments = comments
+    , _isBlacklistedOrganization = isBlacklistedOrg
+    , _isBlacklistedLocation = False
+    , _location = toLocation
+    ,..
+    }
 
 updateOrganization ::
      Maybe Text -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes

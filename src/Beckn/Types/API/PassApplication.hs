@@ -41,6 +41,14 @@ data PassApplicationRes =
     }
   deriving (Generic, ToJSON, ToSchema)
 
+
+data GetPassApplication =
+  GetPassApplication
+    { passApplication :: PassAppInfo
+    }
+  deriving (Generic, ToJSON, ToSchema)
+
+
 ------ List Pass Application ------
 data ListPassApplicationRes =
   ListPassApplicationRes

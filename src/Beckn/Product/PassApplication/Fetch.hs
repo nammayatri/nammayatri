@@ -62,67 +62,69 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
           passAppIds =  _id <$> passApplications
       passInfo <- (traverse getPassAppInfo passApplications)
       return $ API.ListPassApplicationRes passInfo
-     where
-       getPassAppInfo :: PassApplication -> L.Flow API.PassAppInfo
-       getPassAppInfo PassApplication {..} = do
-         morg <- maybe (pure Nothing) (Organization.findOrganizationById) $ _OrganizationId
-         mcustomer <- maybe (pure Nothing) (Customer.findCustomerById) $ _CustomerId
-         let maybeCustId  = Customer._id <$> mcustomer
-         entityDocs <- EntityDocument.findAllByPassApplicationId _id
-         let docIds = EntityDocument._DocumentId <$> entityDocs
-         docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
-         entityTags <- maybe (pure []) (\id-> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
-         let tagIds = EntityTag._TagId <$> entityTags
-         tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
-         comments <- maybe (pure []) (\id-> Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
-         isBlacklistedOrg <- maybe (pure False) (\oid-> isJust <$> (Blacklist.findByOrgId oid)) _OrganizationId
-         let toLocation = Location
-                  { _type     = fromMaybe PINCODE _toLocationType
-                  , _lat      = _toLat
-                  , _long     = _toLong
-                  , _ward     = _toWard
-                  , _district = _toDistrict
-                  , _city     = _toCity
-                  , _state    = _toState
-                  , _country  = _toCountry
-                  , _pincode  = _toPincode
-                  , _address  = _toAddress
-                  , _bound   = _toBound
-                  }
-         let fromLocation = case _fromLocationType of
-                Just locType ->
-                  Just $ Location
-                  { _type     = locType
-                  , _lat      = _fromLat
-                  , _long     = _fromLong
-                  , _ward     = _fromWard
-                  , _district = _fromDistrict
-                  , _city     = _fromCity
-                  , _state    = _fromState
-                  , _country  = _fromCountry
-                  , _pincode  = _fromPincode
-                  , _address  = _fromAddress
-                  , _bound   = _fromBound
-                  }
-                Nothing -> Nothing
-         pure API.PassAppInfo
-            { _Customer = mcustomer
-            , _Tags = tags
-            , _Comments = comments
-            , _Documents  = docs
-            , _Organization = morg
-            , _isBlacklistedOrganization = isBlacklistedOrg
-            , _isBlacklistedLocation = False
-            , _fromLocation = fromLocation
-            , _toLocation = toLocation
-            ,..
-            }
 
-getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler API.PassApplicationRes
+getPassAppInfo :: PassApplication -> L.Flow API.PassAppInfo
+getPassAppInfo PassApplication {..} = do
+  morg <- maybe (pure Nothing) (Organization.findOrganizationById) $ _OrganizationId
+  mcustomer <- maybe (pure Nothing) (Customer.findCustomerById) $ _CustomerId
+  let maybeCustId  = Customer._id <$> mcustomer
+  entityDocs <- EntityDocument.findAllByPassApplicationId _id
+  let docIds = EntityDocument._DocumentId <$> entityDocs
+  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  entityTags <- maybe (pure []) (\id-> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
+  let tagIds = EntityTag._TagId <$> entityTags
+  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  comments <- maybe (pure []) (\id-> Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
+  isBlacklistedOrg <- maybe (pure False) (\oid-> isJust <$> (Blacklist.findByOrgId oid)) _OrganizationId
+  let toLocation = Location
+          { _type     = fromMaybe PINCODE _toLocationType
+          , _lat      = _toLat
+          , _long     = _toLong
+          , _ward     = _toWard
+          , _district = _toDistrict
+          , _city     = _toCity
+          , _state    = _toState
+          , _country  = _toCountry
+          , _pincode  = _toPincode
+          , _address  = _toAddress
+          , _bound   = _toBound
+          }
+  let fromLocation = case _fromLocationType of
+        Just locType ->
+          Just $ Location
+          { _type     = locType
+          , _lat      = _fromLat
+          , _long     = _fromLong
+          , _ward     = _fromWard
+          , _district = _fromDistrict
+          , _city     = _fromCity
+          , _state    = _fromState
+          , _country  = _fromCountry
+          , _pincode  = _fromPincode
+          , _address  = _fromAddress
+          , _bound   = _fromBound
+          }
+        Nothing -> Nothing
+  pure API.PassAppInfo
+    { _Customer = mcustomer
+    , _Tags = tags
+    , _Comments = comments
+    , _Documents  = docs
+    , _Organization = morg
+    , _isBlacklistedOrganization = isBlacklistedOrg
+    , _isBlacklistedLocation = False
+    , _fromLocation = fromLocation
+    , _toLocation = toLocation
+    ,..
+    }
+
+getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler API.GetPassApplication
 getPassApplicationById regToken applicationId = withFlowHandler $ do
   verifyToken regToken
   DB.findById applicationId
   >>= \case
-    Right (Just v) -> return $ API.PassApplicationRes v
+    Right (Just v) -> do
+      passInfo :: API.PassAppInfo <- getPassAppInfo v
+      return $ API.GetPassApplication  passInfo
     Right Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}

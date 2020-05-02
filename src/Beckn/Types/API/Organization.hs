@@ -33,6 +33,13 @@ data OrganizationRes =
     }
   deriving (Generic, ToJSON, ToSchema)
 
+data GetOrganizationRes =
+  GetOrganizationRes
+    { organization :: OrgInfo
+    }
+  deriving (Generic, ToJSON, ToSchema)
+
+
 data ListOrganizationReq =
   ListOrganizationReq
    { _limit  :: Int
