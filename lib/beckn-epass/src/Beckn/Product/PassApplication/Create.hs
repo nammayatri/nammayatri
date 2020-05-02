@@ -43,9 +43,14 @@ bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicat
 bulkSponsorFlow token req@API.CreatePassApplicationReq{..} = do
   when (isNothing _OrganizationId)
     (L.throwException $ err400 {errBody = "OrganizationId cannot be empty"})
+  let organizationId = fromJust _OrganizationId
+
   when (isNothing _count || _count == Just 0)
     (L.throwException $ err400 {errBody = "Count cannot be 0"})
-  getPassAppInfo token req _CustomerId
+
+  QO.findOrganizationById organizationId
+    >>= fromMaybeM400 "Organization does not exists"
+  getPassAppInfo token req Nothing
 
 selfFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
 selfFlow token req@API.CreatePassApplicationReq{..} = do

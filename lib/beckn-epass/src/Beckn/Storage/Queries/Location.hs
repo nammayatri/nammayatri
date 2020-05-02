@@ -7,7 +7,10 @@ import           EulerHS.Prelude              hiding (id)
 
 import qualified Beckn.Storage.Queries        as DB
 import           Beckn.Types.Common
+import qualified Beckn.Types.Common           as Common
 import qualified Beckn.Types.Storage.DB       as DB
+import qualified Beckn.Types.Storage.DB       as DB
+import qualified Beckn.Types.Storage.Location as Storage
 import qualified Beckn.Types.Storage.Location as Storage
 import qualified Data.Text                    as T
 import qualified Database.Beam                as B
@@ -23,6 +26,17 @@ findLocation id = do
   where
     predicate Storage.Location {..} = (_id ==. B.val_ id)
 
+
+findByLocation :: Common.LocationType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int ->  L.Flow (Maybe Storage.Location)
+findByLocation locType (Just dist) (Just city) (Just state) (Just country) (Just ward) (Just pin) = do
+  DB.findOne dbTable (predicate locType dist city state country ward pin) >>=
+   either DB.throwDBError pure
+  where
+    predicate locType dist city state country ward pin Storage.Location {..} = -- B.val_ True
+        (  (_type ==. B.val_  (show $ locType))
+        &&. (_district ==. B.val_ dist))
+
+findByLocation locType _ _ _ _ _ _ = pure Nothing
 findLocationWithErr :: Text -> L.Flow Storage.Location
 findLocationWithErr id = do
   DB.findOneWithErr dbTable predicate

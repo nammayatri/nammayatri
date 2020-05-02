@@ -2,7 +2,7 @@
 
 module Beckn.Storage.Queries.Blacklist where
 
-import           Database.Beam                 ((&&.), (<-.), (==.), in_)
+import           Database.Beam                 (in_, (&&.), (<-.), (==.))
 import           EulerHS.Prelude               hiding (id)
 
 import qualified Beckn.Storage.Queries         as DB
@@ -91,8 +91,18 @@ findAllByEntityId entityType entityIds =
 
 findByOrgId :: OrganizationId ->  L.Flow (Maybe Storage.Blacklist)
 findByOrgId (OrganizationId eId) =
-  DB.findOne dbTable (predicate eId) >>=
+  DB.findOne dbTable (pred eId) >>=
     either DB.throwDBError pure
   where
-    predicate eId Storage.Blacklist {..} = (__EntityId ==. B.val_ eId)
+    pred eId Storage.Blacklist {..} = (__EntityId ==. B.val_ eId)
                                                 &&. (_entityType ==. B.val_ ORG)
+
+
+findByLocationId :: Text ->  L.Flow (Maybe Storage.Blacklist)
+findByLocationId eid =
+  DB.findOne dbTable (pred eid) >>=
+    either DB.throwDBError pure
+  where
+    pred eId Storage.Blacklist {..} = (__EntityId ==. B.val_ eId)
+                                            &&. (_entityType ==. B.val_ LOCATION)
+

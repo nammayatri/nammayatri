@@ -81,6 +81,7 @@ dependencies:
 - warp
 - time
 - template-haskell
+- random-strings
 
 executables:
   beckn-gateway-exe:

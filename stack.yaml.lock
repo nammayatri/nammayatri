@@ -97,6 +97,13 @@ packages:
       sha256: 8f0a4cf5c7c340c347c6b9117c809c9dbf7c15a4c94d80d1f07bd2e3f47308c9
   original:
     hackage: servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
+- completed:
+    hackage: random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
+    pantry-tree:
+      size: 663
+      sha256: 5a382966fdd8d5220b5791f3bff6db00d2ea29235e2716dadd52461b8a8beb97
+  original:
+    hackage: random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
 snapshots:
 - completed:
     size: 524804
