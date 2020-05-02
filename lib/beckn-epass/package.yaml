@@ -65,7 +65,6 @@ dependencies:
 - http-types
 - lens
 - pureMD5
-- purescript-bridge
 - servant
 - servant-client
 - servant-multipart

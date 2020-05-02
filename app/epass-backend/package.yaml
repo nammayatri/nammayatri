@@ -51,7 +51,20 @@ default-extensions:
 
 dependencies:
 - aeson
+- aeson-pretty
 - base >= 4.7 && < 5
+- bytestring
+- containers
+- lens
+- purescript-bridge
+- servant-purescript
+- servant-server
+- servant-subscriber
+- servant-swagger
+- servant
+- swagger2
+- text
+- time
 
 executables:
   epass-backend-exe:
