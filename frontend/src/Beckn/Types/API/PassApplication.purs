@@ -114,14 +114,14 @@ newtype UpdatePassApplicationReq =
     UpdatePassApplicationReq {
       _status :: Status
     , _approvedCount :: Maybe Int
-    , _remarks :: String
+    , _remarks :: Maybe String
     }
 
 derive instance genericUpdatePassApplicationReq :: Generic UpdatePassApplicationReq
 derive instance newtypeUpdatePassApplicationReq :: Newtype UpdatePassApplicationReq _
 
 --------------------------------------------------------------------------------
-_UpdatePassApplicationReq :: Iso' UpdatePassApplicationReq { _status :: Status, _approvedCount :: Maybe Int, _remarks :: String}
+_UpdatePassApplicationReq :: Iso' UpdatePassApplicationReq { _status :: Status, _approvedCount :: Maybe Int, _remarks :: Maybe String}
 _UpdatePassApplicationReq = _Newtype
 
 status :: Lens' UpdatePassApplicationReq Status
@@ -130,7 +130,7 @@ status = _Newtype <<< prop (SProxy :: SProxy "_status")
 approvedCount :: Lens' UpdatePassApplicationReq (Maybe Int)
 approvedCount = _Newtype <<< prop (SProxy :: SProxy "_approvedCount")
 
-remarks :: Lens' UpdatePassApplicationReq String
+remarks :: Lens' UpdatePassApplicationReq (Maybe String)
 remarks = _Newtype <<< prop (SProxy :: SProxy "_remarks")
 
 --------------------------------------------------------------------------------

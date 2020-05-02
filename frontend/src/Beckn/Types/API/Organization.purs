@@ -93,27 +93,33 @@ _type = _Newtype <<< prop (SProxy :: SProxy "__type")
 --------------------------------------------------------------------------------
 newtype ListOrganizationRes =
     ListOrganizationRes {
-      organizations :: Array (OrganizationT Identity)
+      _organizations :: Array OrgInfo
     }
 
 derive instance genericListOrganizationRes :: Generic ListOrganizationRes
 derive instance newtypeListOrganizationRes :: Newtype ListOrganizationRes _
 
 --------------------------------------------------------------------------------
-_ListOrganizationRes :: Iso' ListOrganizationRes { organizations :: Array (OrganizationT Identity)}
+_ListOrganizationRes :: Iso' ListOrganizationRes { _organizations :: Array OrgInfo}
 _ListOrganizationRes = _Newtype
+
+organizations :: Lens' ListOrganizationRes (Array OrgInfo)
+organizations = _Newtype <<< prop (SProxy :: SProxy "_organizations")
 
 --------------------------------------------------------------------------------
 newtype UpdateOrganizationReq =
     UpdateOrganizationReq {
-      status :: Status
+      _status :: Status
     }
 
 derive instance genericUpdateOrganizationReq :: Generic UpdateOrganizationReq
 derive instance newtypeUpdateOrganizationReq :: Newtype UpdateOrganizationReq _
 
 --------------------------------------------------------------------------------
-_UpdateOrganizationReq :: Iso' UpdateOrganizationReq { status :: Status}
+_UpdateOrganizationReq :: Iso' UpdateOrganizationReq { _status :: Status}
 _UpdateOrganizationReq = _Newtype
+
+status :: Lens' UpdateOrganizationReq Status
+status = _Newtype <<< prop (SProxy :: SProxy "_status")
 
 --------------------------------------------------------------------------------

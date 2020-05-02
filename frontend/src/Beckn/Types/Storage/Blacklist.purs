@@ -18,10 +18,10 @@ import Data.Generic (class Generic)
 newtype BlacklistT Identity =
     Blacklist {
       _id :: BlacklistId
-    , _BlacklistedBy :: UserId
-    , _TenantOrganizationId :: Maybe TenantOrganizationId
+    , __BlacklistedBy :: UserId
+    , __TenantOrganizationId :: Maybe TenantOrganizationId
     , _remarks :: String
-    , _EntityId :: String
+    , __EntityId :: String
     , _entityType :: EntityType
     , _startTime :: LocalTime
     , _endTime :: LocalTime
@@ -34,23 +34,23 @@ derive instance genericBlacklistT :: Generic (BlacklistT Identity)
 derive instance newtypeBlacklistT :: Newtype (BlacklistT Identity) _
 
 --------------------------------------------------------------------------------
-_Blacklist :: forall Identity. Iso' (BlacklistT Identity) { _id :: BlacklistId, _BlacklistedBy :: UserId, _TenantOrganizationId :: Maybe TenantOrganizationId, _remarks :: String, _EntityId :: String, _entityType :: EntityType, _startTime :: LocalTime, _endTime :: LocalTime, _info :: Maybe String, _createdAt :: LocalTime, _updatedAt :: LocalTime}
+_Blacklist :: forall Identity. Iso' (BlacklistT Identity) { _id :: BlacklistId, __BlacklistedBy :: UserId, __TenantOrganizationId :: Maybe TenantOrganizationId, _remarks :: String, __EntityId :: String, _entityType :: EntityType, _startTime :: LocalTime, _endTime :: LocalTime, _info :: Maybe String, _createdAt :: LocalTime, _updatedAt :: LocalTime}
 _Blacklist = _Newtype
 
 id :: forall Identity. Lens' (BlacklistT Identity) BlacklistId
 id = _Newtype <<< prop (SProxy :: SProxy "_id")
 
-BlacklistedBy :: forall Identity. Lens' (BlacklistT Identity) UserId
-BlacklistedBy = _Newtype <<< prop (SProxy :: SProxy "_BlacklistedBy")
+_BlacklistedBy :: forall Identity. Lens' (BlacklistT Identity) UserId
+_BlacklistedBy = _Newtype <<< prop (SProxy :: SProxy "__BlacklistedBy")
 
-TenantOrganizationId :: forall Identity. Lens' (BlacklistT Identity) (Maybe TenantOrganizationId)
-TenantOrganizationId = _Newtype <<< prop (SProxy :: SProxy "_TenantOrganizationId")
+_TenantOrganizationId :: forall Identity. Lens' (BlacklistT Identity) (Maybe TenantOrganizationId)
+_TenantOrganizationId = _Newtype <<< prop (SProxy :: SProxy "__TenantOrganizationId")
 
 remarks :: forall Identity. Lens' (BlacklistT Identity) String
 remarks = _Newtype <<< prop (SProxy :: SProxy "_remarks")
 
-EntityId :: forall Identity. Lens' (BlacklistT Identity) String
-EntityId = _Newtype <<< prop (SProxy :: SProxy "_EntityId")
+_EntityId :: forall Identity. Lens' (BlacklistT Identity) String
+_EntityId = _Newtype <<< prop (SProxy :: SProxy "__EntityId")
 
 entityType :: forall Identity. Lens' (BlacklistT Identity) EntityType
 entityType = _Newtype <<< prop (SProxy :: SProxy "_entityType")
