@@ -5,22 +5,24 @@ import Prelude
 
 import Beckn.Types.API.Blacklist (CreateReq, CreateRes, ListRes, UpdateReq, UpdateRes)
 import Beckn.Types.API.Comment (CreateReq, CreateRes, ListRes)
+import Beckn.Types.API.Common (UserInfo)
 import Beckn.Types.API.Customer (GetCustomerRes)
 import Beckn.Types.API.Document (DocumentRes, ListDocumentRes)
-import Beckn.Types.API.Organization (CreateOrganizationReq, ListOrganizationRes, OrganizationRes, UpdateOrganizationReq)
+import Beckn.Types.API.Location.CRUD (ListLocationRes)
+import Beckn.Types.API.Organization (CreateOrganizationReq, GetOrganizationRes, ListOrganizationRes, OrganizationRes, UpdateOrganizationReq)
 import Beckn.Types.API.Pass (ListPassRes, PassRes, UpdatePassReq)
-import Beckn.Types.API.PassApplication (CreatePassApplicationReq, ListPassApplicationRes, PassApplicationRes, UpdatePassApplicationReq)
+import Beckn.Types.API.PassApplication (CreatePassApplicationReq, GetPassApplication, ListPassApplicationRes, PassApplicationRes, UpdatePassApplicationReq)
 import Beckn.Types.API.Quota (CreateReq, CreateRes, ListRes, UpdateReq, UpdateRes)
 import Beckn.Types.API.Registration (InitiateLoginReq, InitiateLoginRes, LoginReq, LoginRes, ReInitiateLoginReq)
 import Beckn.Types.API.Tag (CreateReq, CreateRes, ListRes, TagEntityReq, TagEntityRes)
-import Beckn.Types.API.User (CreateReq, CreateRes, ListRes, UpdateReq, UpdateRes)
+import Beckn.Types.API.User (CreateReq, ListRes, UpdateReq, UpdateRes)
 import Beckn.Types.App (BlacklistId, OrganizationId, PassApplicationId, QuotaId, UserId)
-import Beckn.Types.Common (Ack, DocumentByType, DocumentEntity, EntityType, LocationType, PassIDType, PassType)
+import Beckn.Types.Common (Ack, DocumentByType, DocumentEntity, EntityType, LocateBy, LocationType, PassIDType, PassType)
 import Beckn.Types.Storage.Blacklist (BlacklistT)
 import Beckn.Types.Storage.Organization (Status)
 import Beckn.Types.Storage.PassApplication (Status)
 import Beckn.Types.Storage.Quota (QuotaT)
-import Beckn.Types.Storage.User (UserT)
+import Beckn.Types.Storage.User (Role)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Error.Class (class MonadError)
 import Control.Monad.Reader.Class (ask, class MonadAsk)
@@ -220,7 +222,7 @@ getV1Pass_applicationList registrationToken limit offset from_pincode from_city
 getV1Pass_applicationByPassApplicationId :: forall eff m.
                                             MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
                                             => Maybe String -> PassApplicationId
-                                            -> m PassApplicationRes
+                                            -> m GetPassApplication
 getV1Pass_applicationByPassApplicationId registrationToken
                                          passApplicationId = do
   spOpts_' <- ask
@@ -347,7 +349,7 @@ getV1OrganizationList registrationToken limit offset locationType pincode city
 getV1OrganizationByOrganizationId :: forall eff m.
                                      MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
                                      => Maybe String -> String
-                                     -> m OrganizationRes
+                                     -> m GetOrganizationRes
 getV1OrganizationByOrganizationId registrationToken organizationId = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
@@ -510,7 +512,7 @@ getV1PassList registrationToken identifierType identifier limit offset type = do
 
 postV1User :: forall eff m.
               MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
-              => Maybe String -> CreateReq -> m CreateRes
+              => Maybe String -> CreateReq -> m UserInfo
 postV1User registrationToken reqBody = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
@@ -534,15 +536,15 @@ postV1User registrationToken reqBody = do
   let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d
   getResult affReq decodeJson affResp
 
-putV1UserByUserId :: forall eff m.
-                     MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
-                     => Maybe String -> UpdateReq -> UserId -> m UpdateRes
-putV1UserByUserId registrationToken reqBody userId = do
+postV1UserByUserId :: forall eff m.
+                      MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
+                      => Maybe String -> UpdateReq -> UserId -> m UpdateRes
+postV1UserByUserId registrationToken reqBody userId = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
   let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
   let baseURL = spParams_.baseURL
-  let httpMethod = "PUT"
+  let httpMethod = "POST"
   let queryString = ""
   let reqUrl = baseURL <> "v1" <> "/" <> "user"
         <> "/" <> encodeURLPiece spOpts_' userId <> queryString
@@ -564,8 +566,9 @@ putV1UserByUserId registrationToken reqBody userId = do
 getV1UserList :: forall eff m.
                  MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
                  => Maybe String -> Maybe (Maybe Int) -> Maybe (Maybe Int)
+                 -> Maybe (Maybe LocateBy) -> Maybe (Maybe Role) -> Array Role
                  -> m ListRes
-getV1UserList registrationToken limit offset = do
+getV1UserList registrationToken limit offset filterBy filter roles = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
   let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
@@ -573,7 +576,10 @@ getV1UserList registrationToken limit offset = do
   let httpMethod = "GET"
   let queryArgs = catMaybes [
     encodeQueryItem spOpts_' "limit" <$> limit,
-    encodeQueryItem spOpts_' "offset" <$> offset
+    encodeQueryItem spOpts_' "offset" <$> offset,
+    encodeQueryItem spOpts_' "filterBy" <$> filterBy,
+    encodeQueryItem spOpts_' "filter" <$> filter,
+    encodeListQuery spOpts_' "roles" <$> Just roles
   ]
   let queryString = if null queryArgs then "" else "?" <> (joinWith "&" queryArgs)
   let reqUrl = baseURL <> "v1" <> "/" <> "user" <> "/" <> "list" <> queryString
@@ -592,7 +598,7 @@ getV1UserList registrationToken limit offset = do
 
 getV1UserBy:id :: forall eff m.
                   MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
-                  => Maybe String -> UserId -> m (UserT Identity)
+                  => Maybe String -> UserId -> m UserInfo
 getV1UserBy:id registrationToken _id = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
@@ -640,6 +646,30 @@ deleteV1UserBy:id registrationToken _id = do
   let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d
   getResult affReq decodeJson affResp
 
+getV1UserRoles :: forall eff m.
+                  MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
+                  => Maybe String -> m (Array Role)
+getV1UserRoles registrationToken = do
+  spOpts_' <- ask
+  let spOpts_ = case spOpts_' of SPSettings_ o -> o
+  let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
+  let baseURL = spParams_.baseURL
+  let httpMethod = "GET"
+  let queryString = ""
+  let reqUrl = baseURL <> "v1" <> "/" <> "user" <> "/" <> "roles" <> queryString
+  let reqHeaders =
+        [{ field : "registrationToken"
+         , value : encodeHeader spOpts_' registrationToken
+         }]
+  let affReq = defaultRequest
+                 { method = httpMethod
+                 , url = reqUrl
+                 , headers = defaultRequest.headers <> reqHeaders
+                 }
+  affResp <- affjax affReq
+  let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d
+  getResult affReq decodeJson affResp
+
 postV1Quota :: forall eff m.
                MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
                => Maybe String -> CreateReq -> m CreateRes
@@ -666,15 +696,15 @@ postV1Quota registrationToken reqBody = do
   let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d
   getResult affReq decodeJson affResp
 
-putV1QuotaByQuotaId :: forall eff m.
-                       MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
-                       => Maybe String -> UpdateReq -> QuotaId -> m UpdateRes
-putV1QuotaByQuotaId registrationToken reqBody quotaId = do
+postV1QuotaByQuotaId :: forall eff m.
+                        MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
+                        => Maybe String -> UpdateReq -> QuotaId -> m UpdateRes
+postV1QuotaByQuotaId registrationToken reqBody quotaId = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
   let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
   let baseURL = spParams_.baseURL
-  let httpMethod = "PUT"
+  let httpMethod = "POST"
   let queryString = ""
   let reqUrl = baseURL <> "v1" <> "/" <> "quota"
         <> "/" <> encodeURLPiece spOpts_' quotaId <> queryString
@@ -775,16 +805,16 @@ postV1Blacklist registrationToken reqBody = do
   let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d
   getResult affReq decodeJson affResp
 
-putV1BlacklistByBlacklist_id :: forall eff m.
-                                MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
-                                => Maybe String -> UpdateReq -> BlacklistId
-                                -> m UpdateRes
-putV1BlacklistByBlacklist_id registrationToken reqBody blacklist_id = do
+postV1BlacklistByBlacklist_id :: forall eff m.
+                                 MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
+                                 => Maybe String -> UpdateReq -> BlacklistId
+                                 -> m UpdateRes
+postV1BlacklistByBlacklist_id registrationToken reqBody blacklist_id = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
   let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
   let baseURL = spParams_.baseURL
-  let httpMethod = "PUT"
+  let httpMethod = "POST"
   let queryString = ""
   let reqUrl = baseURL <> "v1" <> "/" <> "blacklist"
         <> "/" <> encodeURLPiece spOpts_' blacklist_id <> queryString
@@ -1068,6 +1098,40 @@ getV1CommentByPrimaryEntityTypeByPrimaryEntityIdList registrationToken
   let reqUrl = baseURL <> "v1" <> "/" <> "comment"
         <> "/" <> encodeURLPiece spOpts_' primaryEntityType
         <> "/" <> encodeURLPiece spOpts_' primaryEntityId
+        <> "/" <> "list" <> queryString
+  let reqHeaders =
+        [{ field : "registrationToken"
+         , value : encodeHeader spOpts_' registrationToken
+         }]
+  let affReq = defaultRequest
+                 { method = httpMethod
+                 , url = reqUrl
+                 , headers = defaultRequest.headers <> reqHeaders
+                 }
+  affResp <- affjax affReq
+  let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d
+  getResult affReq decodeJson affResp
+
+getV1LocationList :: forall eff m.
+                     MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m
+                     => Maybe String -> Maybe (Maybe Int) -> Maybe (Maybe Int)
+                     -> Maybe LocateBy -> Maybe LocateBy -> Maybe String
+                     -> m ListLocationRes
+getV1LocationList registrationToken limit offset distinctBy filterBy filter = do
+  spOpts_' <- ask
+  let spOpts_ = case spOpts_' of SPSettings_ o -> o
+  let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
+  let baseURL = spParams_.baseURL
+  let httpMethod = "GET"
+  let queryArgs = catMaybes [
+    encodeQueryItem spOpts_' "limit" <$> limit,
+    encodeQueryItem spOpts_' "offset" <$> offset,
+    encodeQueryItem spOpts_' "distinctBy" <$> distinctBy,
+    encodeQueryItem spOpts_' "filterBy" <$> filterBy,
+    encodeQueryItem spOpts_' "filter" <$> filter
+  ]
+  let queryString = if null queryArgs then "" else "?" <> (joinWith "&" queryArgs)
+  let reqUrl = baseURL <> "v1" <> "/" <> "location"
         <> "/" <> "list" <> queryString
   let reqHeaders =
         [{ field : "registrationToken"

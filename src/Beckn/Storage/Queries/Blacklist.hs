@@ -2,7 +2,7 @@
 
 module Beckn.Storage.Queries.Blacklist where
 
-import           Database.Beam                 ((&&.), (<-.), (==.))
+import           Database.Beam                 (in_, (&&.), (<-.), (==.))
 import           EulerHS.Prelude               hiding (id)
 
 import qualified Beckn.Storage.Queries         as DB
@@ -54,9 +54,9 @@ update id API.UpdateReq {..} = do
     setClause remarksM tenantOrganizationIdM infoM entityType entityId startTimeM endTimeM currTime Storage.Blacklist {..} =
       mconcat ([_updatedAt <-. B.val_ currTime ]
               <> maybe [] (\x -> [ _remarks <-. B.val_ x ]) remarksM
-              <> maybe [] (return . (_TenantOrganizationId <-.) . B.val_ . Just) tenantOrganizationIdM
+              <> maybe [] (return . (__TenantOrganizationId <-.) . B.val_ . Just) tenantOrganizationIdM
               <> maybe [] (return . (_info <-.) .  B.val_ . Just) infoM
-              <> maybe [] (\x -> [ _EntityId <-. B.val_ x]) entityId
+              <> maybe [] (\x -> [ __EntityId <-. B.val_ x]) entityId
               <> maybe [] (\x -> [ _entityType <-. B.val_ x]) entityType
               <> maybe [] (return . (_startTime <-.) . B.val_) startTimeM
               <> maybe [] (return . (_endTime <-.) . B.val_) endTimeM
@@ -77,13 +77,32 @@ findAllWithLimitOffset mlimit moffset entityType entityId =
     offset = (toInteger $ fromMaybe 0 moffset)
     orderByDesc Storage.Blacklist {..} = B.desc_ _createdAt
     pred entityType entityId Storage.Blacklist {..} = (_entityType ==. (B.val_ entityType)
-                                                  &&. _EntityId ==. (B.val_ entityId))
+                                                  &&. __EntityId ==. (B.val_ entityId))
+
+
+findAllByEntityId :: EntityType -> [Text] ->  L.Flow [Storage.Blacklist]
+findAllByEntityId entityType entityIds =
+  DB.findAllOrErr dbTable (pred entityType entityIds)
+  where
+    pred entityType entityIds Storage.Blacklist {..} =
+      (_entityType ==. (B.val_ entityType)
+      &&. B.in_ __EntityId (B.val_ <$> entityIds))
 
 
 findByOrgId :: OrganizationId ->  L.Flow (Maybe Storage.Blacklist)
 findByOrgId (OrganizationId eId) =
-  DB.findOne dbTable (predicate eId) >>=
+  DB.findOne dbTable (pred eId) >>=
     either DB.throwDBError pure
   where
-    predicate eId Storage.Blacklist {..} = (_EntityId ==. B.val_ eId)
+    pred eId Storage.Blacklist {..} = (__EntityId ==. B.val_ eId)
                                                 &&. (_entityType ==. B.val_ ORG)
+
+
+findByLocationId :: Text ->  L.Flow (Maybe Storage.Blacklist)
+findByLocationId eid =
+  DB.findOne dbTable (pred eid) >>=
+    either DB.throwDBError pure
+  where
+    pred eId Storage.Blacklist {..} = (__EntityId ==. B.val_ eId)
+                                            &&. (_entityType ==. B.val_ LOCATION)
+

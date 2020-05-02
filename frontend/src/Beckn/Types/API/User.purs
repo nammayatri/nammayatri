@@ -75,29 +75,15 @@ users :: Lens' ListRes (Array (UserT Identity))
 users = _Newtype <<< prop (SProxy :: SProxy "_users")
 
 --------------------------------------------------------------------------------
-newtype CreateRes =
-    CreateRes {
-      _user :: UserT Identity
-    }
-
-derive instance genericCreateRes :: Generic CreateRes
-derive instance newtypeCreateRes :: Newtype CreateRes _
-
---------------------------------------------------------------------------------
-_CreateRes :: Iso' CreateRes { _user :: UserT Identity}
-_CreateRes = _Newtype
-
-user :: Lens' CreateRes (UserT Identity)
-user = _Newtype <<< prop (SProxy :: SProxy "_user")
-
---------------------------------------------------------------------------------
 newtype CreateReq =
     CreateReq {
       _name :: String
     , _username :: String
     , _email :: String
     , _mobileNumber :: String
+    , _info :: Maybe String
     , _role :: Role
+    , _LocationId :: String
     , _OrganizationId :: OrganizationId
     , _TenantOrganizationId :: Maybe TenantOrganizationId
     }
@@ -106,7 +92,7 @@ derive instance genericCreateReq :: Generic CreateReq
 derive instance newtypeCreateReq :: Newtype CreateReq _
 
 --------------------------------------------------------------------------------
-_CreateReq :: Iso' CreateReq { _name :: String, _username :: String, _email :: String, _mobileNumber :: String, _role :: Role, _OrganizationId :: OrganizationId, _TenantOrganizationId :: Maybe TenantOrganizationId}
+_CreateReq :: Iso' CreateReq { _name :: String, _username :: String, _email :: String, _mobileNumber :: String, _info :: Maybe String, _role :: Role, _LocationId :: String, _OrganizationId :: OrganizationId, _TenantOrganizationId :: Maybe TenantOrganizationId}
 _CreateReq = _Newtype
 
 name :: Lens' CreateReq String
@@ -121,8 +107,14 @@ email = _Newtype <<< prop (SProxy :: SProxy "_email")
 mobileNumber :: Lens' CreateReq String
 mobileNumber = _Newtype <<< prop (SProxy :: SProxy "_mobileNumber")
 
+info :: Lens' CreateReq (Maybe String)
+info = _Newtype <<< prop (SProxy :: SProxy "_info")
+
 role :: Lens' CreateReq Role
 role = _Newtype <<< prop (SProxy :: SProxy "_role")
+
+LocationId :: Lens' CreateReq String
+LocationId = _Newtype <<< prop (SProxy :: SProxy "_LocationId")
 
 OrganizationId :: Lens' CreateReq OrganizationId
 OrganizationId = _Newtype <<< prop (SProxy :: SProxy "_OrganizationId")

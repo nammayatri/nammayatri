@@ -47,7 +47,7 @@ list ::
 list regToken tagIds entityTypeM entityIdM = withFlowHandler $ do
   verifyToken regToken
   res <- if not $ null tagIds
-    then Tag.findAllByIds tagIds
+    then Tag.findAllById tagIds
     else if isJust entityTypeM && isJust entityIdM
       then Tag.findAllByEntity (fromJust entityTypeM) (fromJust entityIdM)
       else return []

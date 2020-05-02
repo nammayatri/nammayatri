@@ -1,6 +1,7 @@
 module Beckn.Types.API.User where
 
 import           Beckn.Types.App
+import           Beckn.Types.API.Common
 import           Beckn.Types.Storage.User
 import           Data.Default
 import           Data.Swagger
@@ -13,7 +14,9 @@ data CreateReq =
   , _username             :: Text
   , _email                :: Text
   , _mobileNumber         :: Text
+  , _info                 :: Maybe Text
   , _role                 :: Role
+  , _LocationId           :: Text
   , _OrganizationId       :: OrganizationId
   , _TenantOrganizationId :: Maybe TenantOrganizationId
   }
@@ -24,14 +27,7 @@ instance FromJSON CreateReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 
-data CreateRes =
-  CreateRes
-  { _user :: User
-  }
-  deriving (Show, Generic, FromJSON, Default, ToSchema)
-
-instance ToJSON CreateRes where
-  toJSON = genericToJSON stripLensPrefixOptions
+type CreateRes = UserInfo
 
 data UpdateReq =
   UpdateReq
@@ -64,4 +60,4 @@ data ListRes =
 instance ToJSON ListRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
-type GetRes = User
+type GetRes = UserInfo

@@ -198,7 +198,7 @@ checkCustomerExists _EntityId =
 
 checkUserExists :: Text -> L.Flow SU.User
 checkUserExists _EntityId =
-  User.findById (UserId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
+  User.findById (UserId _EntityId)
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =

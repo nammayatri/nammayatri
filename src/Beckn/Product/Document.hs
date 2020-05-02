@@ -116,9 +116,7 @@ getOrgId ei eit = do
           (OrganizationId "individual")
           (SC._OrganizationId cust)
     USER -> do
-      user <-
-        QU.findById (UserId ei) >>=
-          fromMaybeM400 "INVALID_USER_ID"
+      user <- QU.findById (UserId ei)
       return $ SU._OrganizationId user
     PASSAPPLICATION -> do
       pass <-

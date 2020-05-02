@@ -7,6 +7,7 @@ import qualified Beckn.Storage.Queries.Customer        as QC
 import qualified Beckn.Storage.Queries.Document        as Document
 import qualified Beckn.Storage.Queries.EntityDocument  as EntityDocument
 import qualified Beckn.Storage.Queries.EntityTag       as EntityTag
+import qualified Beckn.Storage.Queries.Location        as Location
 import qualified Beckn.Storage.Queries.Organization    as QO
 import qualified Beckn.Storage.Queries.Tag             as Tag
 import qualified Beckn.Types.API.Organization          as API
@@ -16,6 +17,7 @@ import qualified Beckn.Types.Common                    as Location (Location (..
 import qualified Beckn.Types.Storage.Document          as Document
 import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
 import qualified Beckn.Types.Storage.EntityTag         as EntityTag
+import qualified Beckn.Types.Storage.Location          as SL
 import           Beckn.Types.Storage.Organization
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Tag               as Tag
@@ -100,8 +102,9 @@ getOrgInfo Organization {..} = do
   tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
   comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
   isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
+  let locType = fromMaybe Location.PINCODE _locationType
   let toLocation = Location.Location
-                  { _type     = fromMaybe Location.PINCODE _locationType
+                  { _type     = locType
                   , _lat      = _lat
                   , _long     = _long
                   , _ward     = _ward
@@ -114,12 +117,14 @@ getOrgInfo Organization {..} = do
                   , _bound    = _bound
                   }
 
+  locationM <- Location.findByLocation locType _district (Just _city) (Just _state) (Just _country) (_ward) (Just _pincode)
+  isBlacklistedLocation <- maybe (pure False) (\loc-> (isJust <$> Blacklist.findByLocationId (SL._id loc))) $ locationM
   pure API.OrgInfo
     { _Tags = tags
     , _Documents  = docs
     , _Comments = comments
     , _isBlacklistedOrganization = isBlacklistedOrg
-    , _isBlacklistedLocation = False
+    , _isBlacklistedLocation = isBlacklistedLocation
     , _location = toLocation
     ,..
     }

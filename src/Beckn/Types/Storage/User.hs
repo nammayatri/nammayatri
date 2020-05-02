@@ -8,14 +8,18 @@ module Beckn.Types.Storage.User where
 import           Beckn.Types.App
 import qualified Beckn.Utils.Defaults      as Defaults
 import           Data.Aeson
+import qualified Data.ByteString.Lazy      as BSL
 import           Data.Default
 import           Data.Swagger
 import qualified Data.Text                 as T
+import qualified Data.Text.Encoding        as DT
 import           Data.Time
 import qualified Database.Beam             as B
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
+import           Servant
+import           Web.HttpApiData
 
 data Status = ACTIVE | INACTIVE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -29,17 +33,31 @@ instance FromBackendRow MySQL Status where
 instance ToSchema Status
 instance ToParamSchema Status
 
-data Role = ADMIN | MANAGER | VIEWER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+data Role
+  = ADMIN
+  | VALIDATOR
+  | MANAGER
+  | VIEWER
+  | WARDLEVEL
+  | DISTRICTLEVEL
+  | CITYLEVEL
+  | STATELEVEL
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck MySQL Role
 instance FromBackendRow MySQL Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema Role
 instance ToParamSchema Role
+
+instance FromHttpApiData Role where
+  parseUrlPiece = parseBoundedTextData
+  parseQueryParam = parseBoundedTextData
+  parseHeader = parseBoundedTextData . DT.decodeUtf8
 
 
 data UserT f =
@@ -51,6 +69,7 @@ data UserT f =
     , _username             :: B.C f Text
     , _mobileNumber         :: B.C f Text
     , _email                :: B.C f Text
+    , _LocationId           :: B.C f Text
     , _role                 :: B.C f Role
     , _verified             :: B.C f Bool
     , _status               :: B.C f Status
