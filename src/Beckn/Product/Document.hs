@@ -43,14 +43,18 @@ upload regToken enType enId multipartData = withFlowHandler $ do
     DocumentRes $
       _getDocumentId . SD._id <$> documents
 
-getDocuments ::
-  Maybe Text -> DocumentByType -> Text -> FlowHandler DocumentRes
-getDocuments regToken dt en = withFlowHandler $ do
+listDocuments ::
+  Maybe Text -> DocumentByType -> Text -> FlowHandler [ListDocumentRes]
+listDocuments regToken dt en = withFlowHandler $ do
   verifyToken regToken
   eds <- QED.findAllIds en dt
-  -- if needed more inforamtion
-  -- docs <- traverse (QD.findById . DocumentId . _DocumentId) eds
-  return $ DocumentRes $ SED._DocumentId <$> eds
+  docs <- catMaybes <$> traverse (QD.findById . DocumentId . _DocumentId) eds
+  return $
+    (\Document{..} ->
+        ListDocumentRes
+          (_getDocumentId _id)
+          _fileName
+    ) <$> docs
 
 createEntity :: Text -> DocumentEntity -> Document -> L.Flow EntityDocument
 createEntity custId enType Document {..} = do
@@ -78,20 +82,21 @@ uploadDocument file dir orgId = do
   let contentB = fdPayload file
       content = BSL.toStrict contentB
       fileName = fdFileName file
+      format = fdFileCType file
   uuid <- generateGUID
   L.runIO $
     BS.writeFile
-      (T.unpack $ dir <> (_getDocumentId uuid) <> "/" <> fileName)
+      (T.unpack $ dir <> (_getDocumentId uuid))
       content
   now <- getCurrentTimeUTC
   let doc =
         Document
           uuid
-          (dir <> (_getDocumentId uuid) <> "/")
+          dir
           (BS.length content)
           (show $ md5 contentB)
           fileName
-          (fdFileCType file)
+          format
           Nothing
           now
           now

@@ -10,5 +10,6 @@ data DocumentRes =
 
 data ListDocumentRes =
   ListDocumentRes
-    { documents :: [Document]
+    { docId :: Text
+    , fileName :: Text
     } deriving (Generic, ToJSON)

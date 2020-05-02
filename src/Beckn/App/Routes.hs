@@ -295,12 +295,12 @@ type DocumentAPIs
         :> Post '[ JSON] DocumentRes
       :<|> Capture "entityType" DocumentByType
         :> Capture "entityId" Text
-        :> Get '[ JSON] DocumentRes
+        :> Get '[ JSON] [ListDocumentRes]
       )
 
 documentFlow registrationToken =
        Document.upload registrationToken
-  :<|> Document.getDocuments registrationToken
+  :<|> Document.listDocuments registrationToken
 
 --------
 ---- Tag Api
