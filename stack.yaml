@@ -80,3 +80,11 @@ extra-deps:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+#
+#
+# Mac OS facing this issue
+# Missing (or bad) C libraries: SSL, Crypto
+extra-include-dirs:
+- /usr/local/opt/openssl/include
+extra-lib-dirs:
+- /usr/local/opt/openssl/lib
