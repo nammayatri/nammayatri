@@ -20,6 +20,8 @@ import qualified EulerHS.Language                      as L
 import           EulerHS.Prelude
 import qualified EulerHS.Types                         as T
 import           Servant
+import qualified Test.RandomStrings                    as RS
+import qualified Data.Text                             as DT
 
 updatePassApplication ::
   Maybe Text ->
@@ -72,10 +74,11 @@ verifyIfStatusUpdatable currStatus newStatus =
 createPass :: PassApplication -> L.Flow ()
 createPass PassApplication{..} = do
   id <- generateGUID
+  shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   currTime <- getCurrTime
   let pass = Pass.Pass
               { _id = id
-              , _ShortId = ""
+              , _ShortId = DT.pack shortId
               , _status = Pass.ACTIVE
               , _PassApplicationId = _id
               , _createdAt = currTime

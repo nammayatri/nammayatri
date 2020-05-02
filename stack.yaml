@@ -57,6 +57,7 @@ extra-deps:
   - unix-2.7.2.2@sha256:e69269a17b9fa26cb77f3f55e86c39d0a4940ccfa0c4bc20826919d2572076ad,3496
   - servant-purescript-0.10.0.0@sha256:0533143282b941d2416a08ee1fd3ff4b39383587f5e5fee71ccb4dd2a8a9369e,2289
   - servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
+  - random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
 # Override default flag values for local packages and extra-deps
 # flags: {}
 
