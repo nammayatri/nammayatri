@@ -1,6 +1,6 @@
 module Beckn.Storage.Queries.Pass where
 
-import           Database.Beam            ((&&.), (<-.), (==.))
+import           Database.Beam            ((&&.), (<-.), (==.), (||.))
 import           EulerHS.Prelude          hiding (id)
 
 import qualified Beckn.Storage.Queries    as DB
@@ -29,7 +29,7 @@ findPassById :: Text -> L.Flow (Maybe Storage.Pass)
 findPassById id = do
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
-    predicate Storage.Pass {..} = (_ShortId ==. B.val_ id)
+    predicate Storage.Pass {..} = ((_ShortId ==. B.val_ id) ||. (_id ==. B.val_ (PassId id)))
 
 revokeByPassApplicationId :: PassApplicationId -> L.Flow ()
 revokeByPassApplicationId passApplicationId = do

@@ -82,6 +82,7 @@ dependencies:
 - warp
 - time
 - template-haskell
+- random-strings
 
 library:
   source-dirs: src
