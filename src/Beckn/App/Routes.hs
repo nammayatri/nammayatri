@@ -215,7 +215,7 @@ type QuotaAPIS
         :> Post '[JSON] Quota.CreateRes
       :<|> Capture "quotaId" QuotaId
         :> ReqBody '[JSON] Quota.UpdateReq
-        :> Put '[JSON] Quota.UpdateRes
+        :> Post '[JSON] Quota.UpdateRes
       :<|> "list"
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
@@ -239,7 +239,7 @@ type UserAPIS
         :> Post '[JSON] User.CreateRes
       :<|> Capture "userId" UserId
         :> ReqBody '[JSON] User.UpdateReq
-        :> Put '[JSON] User.UpdateRes
+        :> Post '[JSON] User.UpdateRes
       :<|> "list"
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
@@ -264,7 +264,7 @@ type BlacklistAPIS
         :> Post '[JSON] Blacklist.CreateRes
       :<|> Capture "blacklist_id" BlacklistId
         :> ReqBody '[JSON] Blacklist.UpdateReq
-        :> Put '[JSON] Blacklist.UpdateRes
+        :> Post '[JSON] Blacklist.UpdateRes
       :<|> "list"
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int

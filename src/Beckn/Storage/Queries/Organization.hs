@@ -8,10 +8,11 @@ import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.DB           as DB
 import qualified Beckn.Types.Storage.Organization as Storage
+import           Beckn.Utils.Common
+import           Data.Time
 import qualified Database.Beam                    as B
 import qualified EulerHS.Language                 as L
 import qualified EulerHS.Types                    as T
-
 
 dbTable :: B.DatabaseEntity be DB.BecknDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.becknDb
@@ -55,3 +56,18 @@ complementVal l
   | (null l) = B.val_ True
   | otherwise = B.val_ False
 
+update ::
+  OrganizationId
+  -> Storage.Status
+  -> L.Flow (T.DBResult ())
+update id status = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update dbTable
+    (setClause status currTime)
+    (predicate id)
+  where
+    predicate id Storage.Organization {..} = _id ==. B.val_ id
+    setClause status currTime Storage.Organization {..} =
+      mconcat
+      [_updatedAt <-. B.val_ currTime
+      , _status <-. B.val_ status ]

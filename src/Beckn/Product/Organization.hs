@@ -78,4 +78,11 @@ listOrganization regToken limitM offsetM locationTypes pincodes cities districts
 
 updateOrganization ::
      Maybe Text -> Text -> UpdateOrganizationReq -> FlowHandler OrganizationRes
-updateOrganization regToken orgId req = undefined
+updateOrganization regToken orgId UpdateOrganizationReq{..} = withFlowHandler $ do
+  verifyToken regToken
+  QO.update (OrganizationId orgId) _status
+  QO.findOrganizationById (OrganizationId orgId)
+  >>= \case
+    Just v -> return $ OrganizationRes v
+    Nothing -> L.throwException $ err400 {errBody = "Organization not found"}
+

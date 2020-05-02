@@ -42,5 +42,8 @@ data ListOrganizationRes =
 
 data UpdateOrganizationReq =
   UpdateOrganizationReq
-    { status :: Status
-    } deriving (Generic, FromJSON, ToSchema)
+    { _status :: Status
+    } deriving (Generic, ToSchema)
+
+instance FromJSON UpdateOrganizationReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
