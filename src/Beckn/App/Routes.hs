@@ -259,7 +259,7 @@ type UserAPIS
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
         :> QueryParam "filterBy" LocateBy
-        :> QueryParam "filter" User.Role
+        :> QueryParams "location" Text
         :> QueryParams "roles" User.Role
         :> Get '[JSON] User.ListRes
       :<|> Capture ":id" UserId

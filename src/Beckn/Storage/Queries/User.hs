@@ -53,12 +53,13 @@ findAllWithLimitOffsetByRole mlimit moffset roles =
     limit = (toInteger $ fromMaybe 10 mlimit)
     offset = (toInteger $ fromMaybe 0 moffset)
 
+    predicate [] Storage.User {..} = B.val_ True
     predicate r Storage.User {..} =
       _role `B.in_` (B.val_ <$> r)
 
     orderByDesc Storage.User {..} = B.desc_ _createdAt
 
-findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> Maybe Storage.Role -> [OrganizationId] -> L.Flow [Storage.User]
+findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [OrganizationId] -> L.Flow [Storage.User]
 findAllWithLimitOffsetBy mlimit moffset r f =
   DB.findAllWithLimitOffsetWhere dbTable (predicate f r) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -66,9 +67,10 @@ findAllWithLimitOffsetBy mlimit moffset r f =
     limit = (toInteger $ fromMaybe 10 mlimit)
     offset = (toInteger $ fromMaybe 0 moffset)
 
-    predicate i Nothing Storage.User {..} =
+    predicate i [] Storage.User {..} =
       _OrganizationId `B.in_` (B.val_ <$> i)
-    predicate i (Just r) Storage.User {..} = _OrganizationId `B.in_` (B.val_ <$> i) &&. _role ==. B.val_ r
+    predicate i r Storage.User {..} =
+      _OrganizationId `B.in_` (B.val_ <$> i) &&. _role `B.in_` (B.val_ <$> r)
 
     orderByDesc Storage.User {..} = B.desc_ _createdAt
 

@@ -16,6 +16,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import           Beckn.Types.Storage.User              as Storage
 import qualified Beckn.Types.Storage.User              as SU
 import           Beckn.Utils.Common
+import           Beckn.Utils.Extra
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
 import           Data.Aeson
@@ -56,7 +57,7 @@ list ::
   -> Maybe Int
   -> Maybe Int
   -> Maybe LocateBy
-  -> Maybe Role
+  -> [Text]
   -> [Role]
   -> FlowHandler ListRes
 list regToken offsetM limitM locateM locate roleM =
@@ -72,48 +73,50 @@ list regToken offsetM limitM locateM locate roleM =
       L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
     let org = fromJust orgM
 
-    if null roleM
-      then getLocateBased offsetM limitM locateM locate user org
-      else DB.findAllWithLimitOffsetByRole limitM offsetM roleM >>=
-           return . ListRes
+    getUsers limitM offsetM locateM roleM locate user org
 
-getLocateBased ::
+getUsers ::
      Maybe Int
   -> Maybe Int
   -> Maybe LocateBy
-  -> Maybe Role
+  -> [Role]
+  -> [Text]
   -> SU.User
   -> SO.Organization
   -> L.Flow ListRes
-getLocateBased offsetM limitM locateM locate user org =
+getUsers offsetM limitM locateM role locate user org =
   case SU._role user of
     ADMIN ->
       case locateM of
-        Just LCITY -> cityLevelUsers limitM offsetM locate [(SO._city org)]
+        Just LCITY -> cityLevelUsers limitM offsetM role ((SO._city org): locate)
         Just LDISTRICT ->
-          districtLevelUsers limitM offsetM locate [(fromJust $ SO._district org)]
-        Just LWARD -> wardLevelUsers limitM offsetM locate [(fromJust $ SO._ward org)]
+          districtLevelUsers limitM offsetM role (addIfPresent locate $ SO._district org)
+        Just LWARD ->
+          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
         _ -> DB.findAllWithLimitOffset limitM offsetM >>= return . ListRes
     CITYLEVEL ->
       case locateM of
-        Just LCITY -> cityLevelUsers limitM offsetM locate [(SO._city org)]
+        Just LCITY -> cityLevelUsers limitM offsetM role ((SO._city org): locate)
         Just LDISTRICT ->
-          districtLevelUsers limitM offsetM locate [(fromJust $ SO._district org)]
-        Just LWARD -> wardLevelUsers limitM offsetM locate [(fromJust $ SO._ward org)]
+          districtLevelUsers limitM offsetM role (addIfPresent locate $ SO._district org)
+        Just LWARD ->
+          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     DISTRICTLEVEL -> do
       case locateM of
         Just LDISTRICT ->
-          districtLevelUsers limitM offsetM locate [(fromJust $ SO._district org)]
-        Just LWARD -> wardLevelUsers limitM offsetM locate [(fromJust $ SO._ward org)]
+          districtLevelUsers limitM offsetM role (addIfPresent locate $ SO._district org)
+        Just LWARD ->
+          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     WARDLEVEL -> do
       case locateM of
-        Just LWARD -> wardLevelUsers limitM offsetM locate [(fromJust $ SO._ward org)]
+        Just LWARD ->
+          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
 
-cityLevelUsers :: Maybe Int -> Maybe Int -> Maybe Role -> [Text] -> L.Flow ListRes
+cityLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
 cityLevelUsers limitM offsetM r cities =
   QO.listOrganizations
     Nothing
@@ -129,7 +132,7 @@ cityLevelUsers limitM offsetM r cities =
   DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id >>=
   return . ListRes
 
-districtLevelUsers :: Maybe Int -> Maybe Int -> Maybe Role -> [Text] -> L.Flow ListRes
+districtLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
 districtLevelUsers limitM offsetM r districts =
   QO.listOrganizations
     Nothing
@@ -145,7 +148,7 @@ districtLevelUsers limitM offsetM r districts =
   DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id >>=
   return . ListRes
 
-wardLevelUsers :: Maybe Int -> Maybe Int -> Maybe Role -> [Text] -> L.Flow ListRes
+wardLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
 wardLevelUsers limitM offsetM r wards =
   QO.listOrganizations
     Nothing
