@@ -65,6 +65,7 @@ dependencies:
 - http-types
 - lens
 - pureMD5
+- random-strings
 - servant
 - servant-client
 - servant-multipart

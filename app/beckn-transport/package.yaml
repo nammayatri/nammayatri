@@ -1,4 +1,4 @@
-name:                beckn-gateway
+name:                beckn-trasnport
 version:             0.1.0.0
 github:              "juspay/beckn-epass"
 license:             BSD3
@@ -84,7 +84,7 @@ dependencies:
 - random-strings
 
 executables:
-  beckn-gateway-exe:
+  beckn-transport-exe:
     main:                Main.hs
     source-dirs:         src
     ghc-options:
@@ -95,7 +95,7 @@ executables:
     - beckn-epass
 
 tests:
-  beckn-gateway-test:
+  beckn-transport-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
