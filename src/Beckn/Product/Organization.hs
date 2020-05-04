@@ -14,6 +14,7 @@ import qualified Beckn.Types.API.Organization          as API
 import           Beckn.Types.App
 import qualified Beckn.Types.Common                    as Location (Location (..),
                                                                     LocationType (..))
+import qualified Beckn.Types.Storage.Customer          as SC
 import qualified Beckn.Types.Storage.Document          as Document
 import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
 import qualified Beckn.Types.Storage.EntityTag         as EntityTag
@@ -21,6 +22,7 @@ import qualified Beckn.Types.Storage.Location          as SL
 import           Beckn.Types.Storage.Organization
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Tag               as Tag
+import           Beckn.Utils.Common
 import           Beckn.Utils.Extra
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
@@ -65,7 +67,14 @@ createOrganization regToken req =
 getOrganization :: Maybe Text -> Text -> FlowHandler API.GetOrganizationRes
 getOrganization regToken orgId =
   withFlowHandler $ do
-    regToken <- verifyToken regToken
+    reg <- verifyToken regToken
+
+    when (SR._entityType reg == SR.CUSTOMER) $ do
+      customer <- QC.findCustomerById (CustomerId $ SR._EntityId reg) >>=
+                    fromMaybeM400 "INVALID_DATA"
+      unless (Just (OrganizationId orgId) == SC._OrganizationId customer) $
+        L.throwException $ err400 { errBody = "INVALID_DATA" }
+
     QO.findOrganizationById (OrganizationId orgId) >>=
       maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
@@ -87,7 +96,9 @@ listOrganization ::
   -> Maybe Bool
   -> FlowHandler API.ListOrganizationRes
 listOrganization regToken limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM = withFlowHandler $ do
-  verifyToken regToken
+  reg <- verifyToken regToken
+  when (SR._entityType reg == SR.CUSTOMER) $
+    L.throwException $ err400 { errBody = "UNAUTHORIZED"}
   organizations  <- QO.listOrganizations limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM
   orgInfo  <- (traverse getOrgInfo organizations)
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
@@ -132,10 +143,11 @@ getOrgInfo Organization {..} = do
 updateOrganization ::
      Maybe Text -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
 updateOrganization regToken orgId API.UpdateOrganizationReq{..} = withFlowHandler $ do
-  verifyToken regToken
+  reg <- verifyToken regToken
+  when (SR._entityType reg == SR.CUSTOMER) $
+    L.throwException $ err400 { errBody = "UNAUTHORIZED"}
   QO.update (OrganizationId orgId) _status
   QO.findOrganizationById (OrganizationId orgId)
   >>= \case
     Just v -> return $ API.OrganizationRes v
     Nothing -> L.throwException $ err400 {errBody = "Organization not found"}
-
