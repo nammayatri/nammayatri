@@ -52,7 +52,7 @@ getPassInfo Pass {..} = do
   entityTags <- maybe (pure []) (\id-> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
   let tagIds = EntityTag._TagId <$> entityTags
   tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
-  comments <- maybe (pure []) (\id-> Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
+  comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ (_getPassApplicationId $ PassApplication._id passApplication)
   let toLocation = Location
                   { _type     = fromMaybe PINCODE _toLocationType
                   , _lat      = _toLat
