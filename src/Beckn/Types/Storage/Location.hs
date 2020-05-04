@@ -26,7 +26,7 @@ data LocationT f =
     , _type      :: B.C f BTC.LocationType
     , _lat       :: B.C f (Maybe Double)
     , _long      :: B.C f (Maybe Double)
-    , _bound     :: B.C f Value
+    , _bound     :: B.C f (Maybe Value)
     , _district  :: B.C f (Maybe Text)
     , _city      :: B.C f (Maybe Text)
     , _state     :: B.C f (Maybe Text)
@@ -34,7 +34,7 @@ data LocationT f =
     , _ward      :: B.C f (Maybe Text)
     , _pincode   :: B.C f Int
     , _address   :: B.C f (Maybe Text)
-    , _info      :: B.C f Text
+    , _info      :: B.C f (Maybe Text)
     , _createdAt :: B.C f LocalTime
     , _updatedAt :: B.C f LocalTime
     }
