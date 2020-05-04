@@ -14,6 +14,7 @@ import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization      as SO
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import           Beckn.Types.Storage.User              as Storage
+import           Beckn.Types.Storage.Location          as SL
 import qualified Beckn.Types.Storage.User              as SU
 import           Beckn.Utils.Common
 import           Beckn.Utils.Extra
@@ -21,6 +22,7 @@ import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
 import           Data.Aeson
 import           Data.Default
+import qualified Data.List                             as List
 import           Data.Time
 import qualified Database.Beam.Schema.Tables           as B
 import qualified EulerHS.Language                      as L
@@ -63,16 +65,13 @@ list ::
 list regToken offsetM limitM locateM locate roleM =
   withFlowHandler $ do
     reg <- verifyToken regToken
-
     when (SR._entityType reg == SR.CUSTOMER) $ do
       L.throwException $ err400 {errBody = "UNAUTHORIZED_CUSTOMER"}
-
     user <- DB.findById (UserId $ SR._EntityId reg)
     orgM <- QO.findOrganizationById (SU._OrganizationId user)
     when (isNothing orgM) $
       L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
     let org = fromJust orgM
-
     getUsers limitM offsetM locateM roleM locate user org
 
 getUsers ::
@@ -84,35 +83,63 @@ getUsers ::
   -> SU.User
   -> SO.Organization
   -> L.Flow ListRes
-getUsers offsetM limitM locateM role locate user org =
+getUsers offsetM limitM locateM role locate user org = do
   case SU._role user of
     ADMIN ->
       case locateM of
-        Just LCITY -> cityLevelUsers limitM offsetM role ((SO._city org): locate)
-        Just LDISTRICT ->
-          districtLevelUsers limitM offsetM role (addIfPresent locate $ SO._district org)
-        Just LWARD ->
-          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
-        _ -> DB.findAllWithLimitOffset limitM offsetM >>= return . ListRes
-    CITYLEVEL ->
+        Just LCITY -> cityLevelUsers limitM offsetM role locate
+        Just LDISTRICT -> districtLevelUsers limitM offsetM role locate
+        Just LWARD -> wardLevelUsers limitM offsetM role locate
+        _ ->
+          DB.findAllWithLimitOffsetByRole limitM offsetM role >>=
+          return . ListRes
+    CITYLEVEL -> do
+      allLocations <-
+        Loc.findByStOrDistrict offsetM limitM LCITY (SO._city org)
       case locateM of
-        Just LCITY -> cityLevelUsers limitM offsetM role ((SO._city org): locate)
-        Just LDISTRICT ->
-          districtLevelUsers limitM offsetM role (addIfPresent locate $ SO._district org)
-        Just LWARD ->
-          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
+        Just LCITY ->
+          if List.null locate || elem (SO._city org) locate
+            then cityLevelUsers limitM offsetM role [(SO._city org)]
+            else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
+        Just LDISTRICT -> do
+          let dists = map SL._district allLocations
+          let locateD =
+                if List.null locate
+                  then dists
+                  else filter (flip elem dists) locate
+          districtLevelUsers limitM offsetM role locateD
+        Just LWARD -> do
+          let wards = map SL._ward allLocations
+          let locateW =
+                if List.null locate
+                  then wards
+                  else filter (flip elem wards) locate
+          wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     DISTRICTLEVEL -> do
+      let district = fromJust $ SO._district org
+      allLocations <-
+        Loc.findByStOrDistrict offsetM limitM LDISTRICT district
       case locateM of
         Just LDISTRICT ->
-          districtLevelUsers limitM offsetM role (addIfPresent locate $ SO._district org)
-        Just LWARD ->
-          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
+          if List.null locate || elem district locate
+            then districtLevelUsers limitM offsetM role [district]
+            else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
+        Just LWARD -> do
+          let wards = map SL._ward allLocations
+          let locateW =
+                if List.null locate
+                  then wards
+                  else filter (flip elem wards) locate
+          wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     WARDLEVEL -> do
+      let ward = fromJust $ SO._ward org
       case locateM of
         Just LWARD ->
-          wardLevelUsers limitM offsetM role (addIfPresent locate $ SO._ward org)
+          if List.null locate || List.elem ward locate
+            then wardLevelUsers limitM offsetM role [ward]
+            else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
 
@@ -132,7 +159,8 @@ cityLevelUsers limitM offsetM r cities =
   DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id >>=
   return . ListRes
 
-districtLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
+districtLevelUsers ::
+     Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
 districtLevelUsers limitM offsetM r districts =
   QO.listOrganizations
     Nothing
@@ -165,17 +193,18 @@ wardLevelUsers limitM offsetM r wards =
   return . ListRes
 
 get :: Maybe Text -> UserId -> FlowHandler GetRes
-get regToken userId = withFlowHandler $ do
-  verifyToken regToken
-  user@User {..} <- DB.findById userId
-  locInfo <- getLocationInfo _LocationId
-  return $ mkUInfo user locInfo
+get regToken userId =
+  withFlowHandler $ do
+    verifyToken regToken
+    user@User {..} <- DB.findById userId
+    locInfo <- getLocationInfo _LocationId
+    return $ mkUInfo user locInfo
 
 update :: Maybe Text -> UserId -> UpdateReq -> FlowHandler UpdateRes
 update regToken userId UpdateReq {..} =
   withFlowHandler $
   do verifyToken regToken
-     DB.update userId _status _name _email _role
+     DB.update userId _status _name _role
      UpdateRes <$> DB.findById userId
 
 delete :: Maybe RegistrationTokenText -> UserId -> FlowHandler Ack
@@ -193,8 +222,4 @@ listRoles regToken =
 
 -- Transformers
 mkUInfo :: User -> C.LocationInfo -> UserInfo
-mkUInfo user locInfo =
-  UserInfo
-    { _user = user
-    , _locationInfo = locInfo
-    }
+mkUInfo user locInfo = UserInfo {_user = user, _locationInfo = locInfo}

@@ -78,21 +78,19 @@ update ::
   UserId
   -> Storage.Status
   -> Maybe Text
-  -> Maybe Text
   -> Maybe Storage.Role -> L.Flow ()
-update id status nameM emailM roleM = do
+update id status nameM roleM = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update dbTable
-    (setClause status nameM emailM roleM currTime)
+    (setClause status nameM roleM currTime)
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause status nameM emailM roleM currTime Storage.User {..} =
+    setClause status nameM roleM currTime Storage.User {..} =
       mconcat
         ([ _status <-. B.val_ status
         , _updatedAt <-. B.val_ currTime
         ] <> maybe [] (\name -> [ _name <-. B.val_ name ]) nameM
-          <> maybe [] (\email -> [ _email <-. B.val_ email ]) emailM
           <> maybe [] (\role -> [ _role <-. B.val_ role ]) roleM
         )
 
