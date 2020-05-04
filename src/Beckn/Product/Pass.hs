@@ -51,7 +51,7 @@ getPassInfo Pass {..} = do
   docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
   entityTags <- maybe (pure []) (\id-> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
   let tagIds = EntityTag._TagId <$> entityTags
-  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds)) -- TODO : Can we add a single query to fetch this data.
   comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ (_getPassApplicationId $ PassApplication._id passApplication)
   let toLocation = Location
                   { _type     = fromMaybe PINCODE _toLocationType
