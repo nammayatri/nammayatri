@@ -196,25 +196,31 @@ customerFlow registrationToken =
 
 ---------------------------
 ------ Pass Flow ---------
+-- | Please be cautious while changing the order of the routes
+-- | The /pass/list?.. was getting overriden by /pass/:passId
+
 type PassAPIs
-  = "pass" :> Header "registrationToken" RegistrationTokenText
-  :> (    Capture "passId" Text :> Get '[ JSON] PassRes
-     :<|> Capture "passId" Text
-       :> ReqBody '[ JSON] UpdatePassReq
-       :> Post '[ JSON] PassRes
-     :<|> "list"
+  = "pass"
+  :> Header "registrationToken" RegistrationTokenText
+  :> (   "list"
        :> MandatoryQueryParam "identifierType" PassIDType
        :> MandatoryQueryParam "identifier" Text
        :> QueryParam "limit" Int
        :> QueryParam "offset" Int
        :> MandatoryQueryParam "type" PassType
        :> Get '[ JSON] ListPassRes
+     :<|> Capture "passId" Text
+       :> Get '[ JSON] PassRes
+     :<|> Capture "passId" Text
+       :> ReqBody '[ JSON] UpdatePassReq
+       :> Post '[ JSON] PassRes
      )
 
 passFlow registrationToken =
-       Pass.getPassById registrationToken
+       Pass.listPass registrationToken
+  :<|> Pass.getPassById registrationToken
   :<|> Pass.updatePass registrationToken
-  :<|> Pass.listPass registrationToken
+
 
 ------ Quota Flow ----------
 type QuotaAPIS
@@ -253,7 +259,7 @@ type UserAPIS
         :> QueryParam "limit" Int
         :> QueryParam "offset" Int
         :> QueryParam "filterBy" LocateBy
-        :> QueryParam "filter" User.Role
+        :> QueryParams "location" Text
         :> QueryParams "roles" User.Role
         :> Get '[JSON] User.ListRes
       :<|> Capture ":id" UserId
