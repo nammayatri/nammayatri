@@ -5,6 +5,13 @@ import qualified Beckn.Storage.Queries.Customer        as Customer
 import qualified Beckn.Storage.Queries.CustomerDetail  as QCD
 import qualified Beckn.Storage.Queries.Pass            as QP
 import qualified Beckn.Storage.Queries.User            as User
+import qualified Beckn.Storage.Queries.Organization    as Organization
+import qualified Beckn.Storage.Queries.Document        as Document
+import qualified Beckn.Storage.Queries.EntityDocument  as EntityDocument
+import qualified Beckn.Storage.Queries.PassApplication as PassApplication
+import qualified Beckn.Storage.Queries.EntityTag       as EntityTag
+import qualified Beckn.Storage.Queries.Tag             as Tag
+import qualified Beckn.Storage.Queries.Comment         as Comment
 import           Beckn.Types.API.Pass
 import           Beckn.Types.App
 import           Beckn.Types.Common
@@ -13,6 +20,10 @@ import qualified Beckn.Types.Storage.Customer          as Customer
 import qualified Beckn.Types.Storage.CustomerDetail    as SCD
 import           Beckn.Types.Storage.Pass
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.PassApplication   as PassApplication
+import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
+import qualified Beckn.Types.Storage.Document          as Document
+import qualified Beckn.Types.Storage.EntityTag         as EntityTag
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
@@ -28,7 +39,56 @@ getPassById regToken passId =
     QP.findPassById passId >>=
       maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
-        (return . PassRes)
+        (\pass -> PassRes <$> getPassInfo pass)
+
+getPassInfo :: Pass -> L.Flow PassInfo
+getPassInfo Pass {..} = do
+  morg <- maybe (pure Nothing) (Organization.findOrganizationById) $ _OrganizationId
+  mcustomer <- maybe (pure Nothing) (Customer.findCustomerById) $ _CustomerId
+  passApplication <- PassApplication.findById _PassApplicationId >>= (maybe (L.throwException $ err400 {errBody = "Pass Application not found"}) pure)
+  entityDocs <- EntityDocument.findAllByPassApplicationId (PassApplication._id passApplication)
+  let docIds = EntityDocument._DocumentId <$> entityDocs
+  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  entityTags <- maybe (pure []) (\id-> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
+  let tagIds = EntityTag._TagId <$> entityTags
+  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds)) -- TODO : Can we add a single query to fetch this data.
+  comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ (_getPassApplicationId $ PassApplication._id passApplication)
+  let toLocation = Location
+                  { _type     = fromMaybe PINCODE _toLocationType
+                  , _lat      = _toLat
+                  , _long     = _toLong
+                  , _ward     = _toWard
+                  , _district = _toDistrict
+                  , _city     = _toCity
+                  , _state    = _toState
+                  , _country  = _toCountry
+                  , _pincode  = _toPincode
+                  , _address  = _toAddress
+                  , _bound   = _toBound
+                  }
+  let fromLocation = Location
+          { _type     = fromMaybe PINCODE _fromLocationType
+          , _lat      = _fromLat
+          , _long     = _fromLong
+          , _ward     = _fromWard
+          , _district = _fromDistrict
+          , _city     = _fromCity
+          , _state    = _fromState
+          , _country  = _fromCountry
+          , _pincode  = _fromPincode
+          , _address  = _fromAddress
+          , _bound   = _fromBound
+          }
+  pure $ PassInfo
+    { _fromLocation = fromLocation
+    , _toLocation = toLocation
+    , _Organization = morg
+    , _Customer = mcustomer
+    , _Comments = comments
+    , _Tags = tags
+    , _Documents = docs
+    ,..
+  }
 
 updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq{..} = withFlowHandler $ do
@@ -43,7 +103,7 @@ updatePass regToken passId UpdatePassReq{..} = withFlowHandler $ do
           when (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
             (L.throwException $ err400 {errBody = "Access denied"})
 
-          return pass { _status = fromJust _action }
+          return $ (pass { _status = fromJust _action } :: Pass)
 
         RegistrationToken.CUSTOMER -> do
           customer <- fromMaybeM500 "Could not find Customer" =<< Customer.findCustomerById (CustomerId _EntityId)
@@ -97,11 +157,10 @@ updatePass regToken passId UpdatePassReq{..} = withFlowHandler $ do
                         , _fromAddress = (Location._address location)
                         , _fromBound = (Location._bound location)
                       }
-
     QP.updateMultiple passId pass'
     QP.findPassById passId
-      >>= fromMaybeM500 "Could not find Pass"
-      >>= return . PassRes
+      >>= maybe (L.throwException $ err500 {errBody = "Could not find Pass"})
+          (\pass -> PassRes <$> getPassInfo pass)
 
 listPass ::
      Maybe Text
@@ -115,7 +174,8 @@ listPass regToken passIdType passV limitM offsetM passType =
   withFlowHandler $ do
     reg <- verifyToken regToken
     listBy <- getListBy
-    ListPassRes <$> maybe (return []) getPasses listBy
+    passes <-  maybe (return []) getPasses listBy
+    ListPassRes <$> traverse getPassInfo passes
   where
     getListBy =
       case passIdType of
@@ -132,3 +192,4 @@ listPass regToken passIdType passV limitM offsetM passType =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
         (Just l, Just o) -> QP.listAllPassesWithOffset l o listBy []
         _                -> QP.listAllPasses listBy []
+
