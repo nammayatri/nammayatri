@@ -102,14 +102,14 @@ getUsers offsetM limitM locateM role locate user org = do
             then cityLevelUsers limitM offsetM role [(SO._city org)]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LDISTRICT -> do
-          let dists = map SL._district allLocations
+          let dists = catMaybes $ map SL._district allLocations
           let locateD =
                 if List.null locate
                   then dists
                   else filter (flip elem dists) locate
           districtLevelUsers limitM offsetM role locateD
         Just LWARD -> do
-          let wards = map SL._ward allLocations
+          let wards = catMaybes $ map SL._ward allLocations
           let locateW =
                 if List.null locate
                   then wards
@@ -126,7 +126,7 @@ getUsers offsetM limitM locateM role locate user org = do
             then districtLevelUsers limitM offsetM role [district]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LWARD -> do
-          let wards = map SL._ward allLocations
+          let wards = catMaybes $ map SL._ward allLocations
           let locateW =
                 if List.null locate
                   then wards

@@ -27,13 +27,14 @@ findLocation id = do
     predicate Storage.Location {..} = (_id ==. B.val_ id)
 
 
+-- :TODO complete this function
 findByLocation :: Common.LocationType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int ->  L.Flow (Maybe Storage.Location)
-findByLocation locType (Just dist) (Just city) (Just state) (Just country) (Just ward) (Just pin) = do
+findByLocation locType dist city state country ward pin = do
   DB.findOne dbTable (predicate locType dist city state country ward pin) >>=
    either DB.throwDBError pure
   where
     predicate locType dist city state country ward pin Storage.Location {..} = -- B.val_ True
-        (  (_type ==. B.val_  (show $ locType))
+        (  (_type ==. B.val_  locType)
         &&. (_district ==. B.val_ dist))
 
 findByLocation locType _ _ _ _ _ _ = pure Nothing
@@ -61,13 +62,13 @@ findByStOrDistrict moffset mlimit filterByT filterBy = do
      >>= either DB.throwDBError pure
   where
     predicate LDISTRICT filterBy Storage.Location {..} =
-      _district ==. B.val_ filterBy
+      _district ==. B.val_ (Just filterBy)
     predicate LSTATE filterBy Storage.Location {..} =
-      _state ==. B.val_ filterBy
+      _state ==. B.val_ (Just filterBy)
     predicate LCITY filterBy Storage.Location {..} =
-      _city ==. B.val_ filterBy
+      _city ==. B.val_ (Just filterBy)
     predicate LWARD filterBy Storage.Location {..} =
-      _ward ==. B.val_ filterBy
+      _ward ==. B.val_ (Just filterBy)
     predicate LPINCODE filterBy Storage.Location {..} =
       _pincode ==. B.val_ (read $ T.unpack filterBy)
 

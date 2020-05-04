@@ -5,11 +5,12 @@
 
 module Beckn.Types.Storage.Location where
 
+import qualified Beckn.Types.Common as BTC
 import           Data.Aeson
 import           Data.Time
 import           EulerHS.Prelude
 
-import qualified Database.Beam   as B
+import qualified Database.Beam      as B
 
 data Point = Point
   { _lat  :: Double
@@ -22,17 +23,17 @@ data Bound = Bound [Point] deriving (Generic)
 data LocationT f =
   Location
     { _id        :: B.C f Text
-    , _type      :: B.C f Text
-    , _lat       :: B.C f Double
-    , _long      :: B.C f Double
+    , _type      :: B.C f BTC.LocationType
+    , _lat       :: B.C f (Maybe Double)
+    , _long      :: B.C f (Maybe Double)
     , _bound     :: B.C f Value
-    , _district  :: B.C f Text
-    , _city      :: B.C f Text
-    , _state     :: B.C f Text
-    , _country   :: B.C f Text
-    , _ward      :: B.C f Text
+    , _district  :: B.C f (Maybe Text)
+    , _city      :: B.C f (Maybe Text)
+    , _state     :: B.C f (Maybe Text)
+    , _country   :: B.C f (Maybe Text)
+    , _ward      :: B.C f (Maybe Text)
     , _pincode   :: B.C f Int
-    , _address   :: B.C f Text
+    , _address   :: B.C f (Maybe Text)
     , _info      :: B.C f Text
     , _createdAt :: B.C f LocalTime
     , _updatedAt :: B.C f LocalTime
