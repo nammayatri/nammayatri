@@ -172,7 +172,7 @@ update :: Maybe Text -> UserId -> UpdateReq -> FlowHandler UpdateRes
 update regToken userId UpdateReq {..} =
   withFlowHandler $
   do verifyToken regToken
-     DB.update userId _status _name _email _role
+     DB.update userId _status _name _role
      UpdateRes <$> DB.findById userId
 
 delete :: Maybe RegistrationTokenText -> UserId -> FlowHandler Ack
