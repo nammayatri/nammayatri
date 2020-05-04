@@ -1,7 +1,7 @@
 module Main where
 
-import           Beckn.App
-import           Beckn.App.Routes
+import           App
+import           App.Routes
 import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty   (encodePretty)
