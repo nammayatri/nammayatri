@@ -7,6 +7,7 @@ import qualified Beckn.Storage.Queries    as DB
 import           Beckn.Types.App
 import qualified Beckn.Types.Storage.DB   as DB
 import qualified Beckn.Types.Storage.Pass as Storage
+import           Beckn.Utils.Common
 import qualified Database.Beam            as B
 import qualified EulerHS.Language         as L
 import qualified EulerHS.Types            as T
@@ -75,3 +76,39 @@ listAllPasses id status = do
     predicate (ByOrganizationId i) s Storage.Pass {..} = (_OrganizationId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
     predicate (ById i) [] Storage.Pass {..} = (_id ==. B.val_ i)
     predicate (ById i) s Storage.Pass {..} = (_id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+
+updateMultiple :: Text -> Storage.Pass -> L.Flow ()
+updateMultiple id pass@Storage.Pass{..} = do
+  currTime <- getCurrTime
+  DB.update dbTable (setClause currTime pass) (predicate id) >>=
+    either DB.throwDBError pure
+  where
+    predicate id Storage.Pass {..} = (_ShortId ==. B.val_ id ||. _id ==. B.val_ (PassId id))
+    setClause now pass Storage.Pass {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ now
+        , _status <-. B.val_ (Storage._status pass)
+        , _CustomerId <-. B.val_ (Storage._CustomerId pass)
+        , _fromLocationType <-. B.val_ (Storage._fromLocationType pass)
+        , _fromLat <-. B.val_ (Storage._fromLat pass)
+        , _fromLong <-. B.val_ (Storage._fromLong pass)
+        , _fromWard <-. B.val_ (Storage._fromWard pass)
+        , _fromDistrict <-. B.val_ (Storage._fromDistrict pass)
+        , _fromCity <-. B.val_ (Storage._fromCity pass)
+        , _fromState <-. B.val_ (Storage._fromState pass)
+        , _fromCountry <-. B.val_ (Storage._fromCountry pass)
+        , _fromPincode <-. B.val_ (Storage._fromPincode pass)
+        , _fromAddress <-. B.val_ (Storage._fromAddress pass)
+        , _fromBound <-. B.val_ (Storage._fromBound pass)
+        , _toLocationType <-. B.val_ (Storage._toLocationType pass)
+        , _toLat <-. B.val_ (Storage._toLat pass)
+        , _toLong <-. B.val_ (Storage._toLong pass)
+        , _toWard <-. B.val_ (Storage._toWard pass)
+        , _toDistrict <-. B.val_ (Storage._toDistrict pass)
+        , _toCity <-. B.val_ (Storage._toCity pass)
+        , _toState <-. B.val_ (Storage._toState pass)
+        , _toCountry <-. B.val_ (Storage._toCountry pass)
+        , _toPincode <-. B.val_ (Storage._toPincode pass)
+        , _toAddress <-. B.val_ (Storage._toAddress pass)
+        , _toBound <-. B.val_ (Storage._toBound pass)
+        ]
