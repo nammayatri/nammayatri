@@ -64,6 +64,7 @@ fieldEMod =
     B.tableModification
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
+      , _type = "location_type"
       }
 
 
