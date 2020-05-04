@@ -12,7 +12,7 @@ import           Servant.Multipart
 
 run :: V.Key (HashMap Text Text) -> Env -> Application
 run key env =
-  serveWithContext transporterAPIs transporterContext (transporterServer env key)
+  serve transporterAPIs (transporterServer env key)
 
 transporterServer :: Env -> V.Key (HashMap Text Text) -> Server TransporterAPIs
 transporterServer env key = hoistServer transporterAPIs (f env) (transporterServer' key)

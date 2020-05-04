@@ -22,15 +22,15 @@ import           Servant
 import           Servant.Server
 import qualified System.Environment           as SE
 
-runBecknBackendApp :: IO ()
-runBecknBackendApp = do
+runTransporterBackendApp :: IO ()
+runTransporterBackendApp = do
   port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runBecknBackendApp' port $
-    setOnExceptionResponse becknExceptionResponse $
+  runTransporterBackendApp' port $
+    setOnExceptionResponse transporterExceptionResponse $
     setPort port defaultSettings
 
-runBecknBackendApp' :: Int -> Settings -> IO ()
-runBecknBackendApp' port settings = do
+runTransporterBackendApp' :: Int -> Settings -> IO ()
+runTransporterBackendApp' port settings = do
   reqHeadersKey <- V.newKey
   let loggerCfg =
         T.defaultLoggerConfig
@@ -48,8 +48,8 @@ runBecknBackendApp' port settings = do
           ("Runtime created. Starting server at port " <> show port)
         runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
-becknExceptionResponse :: SomeException -> Response
-becknExceptionResponse exception = do
+transporterExceptionResponse :: SomeException -> Response
+transporterExceptionResponse exception = do
   let anyException = fromException exception
   case anyException of
     Just ex ->

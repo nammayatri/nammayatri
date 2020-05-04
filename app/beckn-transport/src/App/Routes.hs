@@ -45,20 +45,6 @@ import qualified Beckn.Types.Storage.Pass             as SP
 import qualified Beckn.Types.Storage.PassApplication  as PA
 import qualified Beckn.Types.Storage.User             as SU
 
-transporterContext :: Context '[ MultipartOptions Mem]
-transporterContext = transporterMultipartOptions (Proxy :: Proxy Mem) :. EmptyContext
-
--- 5 MB size each and max of 3 files
-transporterMultipartOptions ::
-  MultipartBackend tag => Proxy tag -> MultipartOptions tag
-transporterMultipartOptions pTag =
-  MultipartOptions
-    { generalOptions =
-        setMaxRequestNumFiles 3 $
-        setMaxRequestFileSize (5 * 1024) defaultParseRequestBodyOptions
-    , backendOptions = defaultBackendOptions pTag
-    }
-
 type TransporterAPIs
     = "v1" :> (    Get '[ JSON] Text
               )

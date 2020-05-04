@@ -20,7 +20,7 @@ main :: IO ()
 main =
   -- writeSwaggerJSON
   --PSGen.main
-  runBecknBackendApp
+  runTransporterBackendApp
 
 --todoSwagger :: Swagger
 --todoSwagger = toSwagger epassAPIs
