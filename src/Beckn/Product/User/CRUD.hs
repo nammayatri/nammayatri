@@ -51,6 +51,9 @@ create regToken CreateReq {..} =
           , _info = Nothing
           , _createdAt = now
           , _updatedAt = now
+          , _username = Nothing
+          , _email = Nothing
+          , _TenantOrganizationId = Nothing -- TODO : Fix this
           , ..
           }
 
