@@ -1,4 +1,4 @@
 # Small Readme
 
 
-## `stack run beckn-gateway-exe` to run your executable
+## `stack run beckn-transport-exe` to run your executable
