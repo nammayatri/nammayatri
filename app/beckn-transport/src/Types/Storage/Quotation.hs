@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Organization where
+module Types.Storage.Quotation where
 
 import           Types.App
 import           Data.Aeson
@@ -17,7 +17,7 @@ import           EulerHS.Prelude
 import           Servant.API
 import           Servant.Swagger
 
-data Status = PENDING_VERIFICATION | APPROVED | REJECTED
+data Status = NEW | PENDING | EXPIRED | CONFIRMED | SYSTEM_CANCELLED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
@@ -33,42 +33,39 @@ instance FromHttpApiData Status where
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 
-data OrganizationT f =
-  Organization
-    { _id           :: B.C f OrganizationId
-    , _name         :: B.C f Text
-    , _gstin        :: B.C f (Maybe Text)
-    , _fcmId        :: B.C f (Maybe Text)
-    , _status       :: B.C f Status
-    , _verified     :: B.C f Bool
-    , _locationId   :: B.C f (Maybe Text)
-    , _info         :: B.C f (Maybe Text)
+data QuotationT f =
+  Quotation
+    { _id                 :: B.C f QuotationId
+    , _bookingReferenceId :: B.C f Text
+    , _amount             :: B.C f Text
+    , _organizationId      :: B.C f Text
+    , _status              :: B.C f Text
     , _createdAt    :: B.C f LocalTime
     , _updatedAt    :: B.C f LocalTime
     }
 
   deriving (Generic, B.Beamable)
 
-type Organization = OrganizationT Identity
+type Quotation = QuotationT Identity
 
-type OrganizationPrimaryKey = B.PrimaryKey OrganizationT Identity
+type QuotationPrimaryKey = B.PrimaryKey QuotationT Identity
 
-instance B.Table OrganizationT where
-  data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f OrganizationId)
+instance B.Table QuotationT where
+  data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f QuotationId)
                                deriving (Generic, B.Beamable)
-  primaryKey = OrganizationPrimaryKey . _id
+  primaryKey = QuotationPrimaryKey . _id
 
-deriving instance Show Organization
+deriving instance Show Quotation
 
-deriving instance Eq Organization
+deriving instance Eq Quotation
 
-instance ToJSON Organization where
+instance ToJSON Quotation where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-instance FromJSON Organization where
+instance FromJSON Quotation where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToSchema Organization
+instance ToSchema Quotation
 
 insertExpression org = insertExpressions [org]
 
@@ -76,11 +73,12 @@ insertExpressions orgs = B.insertValues orgs
 
 
 fieldEMod ::
-     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OrganizationT)
+     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuotationT)
 fieldEMod =
   B.modifyTableFields
     B.tableModification
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
-      , _locationId = "location_id"
+      , _bookingReferenceId = "booking_reference_id"
+      , _organizationId = "organization_id"
       }

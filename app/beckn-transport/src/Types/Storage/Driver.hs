@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Organization where
+module Types.Storage.Driver where
 
 import           Types.App
 import           Data.Aeson
@@ -17,58 +17,58 @@ import           EulerHS.Prelude
 import           Servant.API
 import           Servant.Swagger
 
-data Status = PENDING_VERIFICATION | APPROVED | REJECTED
+data Gender = MALE | FEMALE | OTHER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow MySQL Gender where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance ToParamSchema Status
-instance FromHttpApiData Status where
+instance ToParamSchema Gender
+instance FromHttpApiData Gender where
   parseUrlPiece  = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 
-data OrganizationT f =
-  Organization
-    { _id           :: B.C f OrganizationId
-    , _name         :: B.C f Text
-    , _gstin        :: B.C f (Maybe Text)
-    , _fcmId        :: B.C f (Maybe Text)
-    , _status       :: B.C f Status
-    , _verified     :: B.C f Bool
-    , _locationId   :: B.C f (Maybe Text)
-    , _info         :: B.C f (Maybe Text)
-    , _createdAt    :: B.C f LocalTime
-    , _updatedAt    :: B.C f LocalTime
+data DriverT f =
+  Driver
+    { _id                 :: B.C f DriverId
+    , _name               :: B.C f Text
+    , _mobileNumber       :: B.C f Text
+    , _gender             :: B.C f Gender
+    , _experience         :: B.C f Text
+    , _rating             :: B.C f Text
+    , _noOfTrips          :: B.C f Int
+    , _description        :: B.C f Text
+    , _createdAt          :: B.C f LocalTime
+    , _updatedAt          :: B.C f LocalTime
     }
 
   deriving (Generic, B.Beamable)
 
-type Organization = OrganizationT Identity
+type Driver = DriverT Identity
 
-type OrganizationPrimaryKey = B.PrimaryKey OrganizationT Identity
+type DriverPrimaryKey = B.PrimaryKey DriverT Identity
 
-instance B.Table OrganizationT where
-  data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f OrganizationId)
+instance B.Table DriverT where
+  data PrimaryKey DriverT f = DriverPrimaryKey (B.C f DriverId)
                                deriving (Generic, B.Beamable)
-  primaryKey = OrganizationPrimaryKey . _id
+  primaryKey = DriverPrimaryKey . _id
 
-deriving instance Show Organization
+deriving instance Show Driver
 
-deriving instance Eq Organization
+deriving instance Eq Driver
 
-instance ToJSON Organization where
+instance ToJSON Driver where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-instance FromJSON Organization where
+instance FromJSON Driver where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToSchema Organization
+instance ToSchema Driver
 
 insertExpression org = insertExpressions [org]
 
@@ -76,11 +76,12 @@ insertExpressions orgs = B.insertValues orgs
 
 
 fieldEMod ::
-     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OrganizationT)
+     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverT)
 fieldEMod =
   B.modifyTableFields
     B.tableModification
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
-      , _locationId = "location_id"
+      , _mobileNumber = "mobile_number"
+      , _noOfTrips = "no_of_trips"
       }
