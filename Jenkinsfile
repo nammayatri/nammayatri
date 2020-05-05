@@ -17,8 +17,8 @@ pipeline {
           expression { return hasChanged("Makefile") }
           changeset "stack.yaml"
           expression { return hasChanged("stack.yaml") }
-          changeset "package.yaml"
-          expression { return hasChanged("package.yaml") }
+          changeset "**/package.yaml"
+          expression { return hasChanged("**/package.yaml") }
           expression {
             // build dep on the first run
             return (env.BUILD_NUMBER == "1")
@@ -43,14 +43,14 @@ pipeline {
           expression { return hasChanged("Dockerfile") }
           changeset "Makefile"
           expression { return hasChanged("Makefile") }
-          changeset "src/**/*"
-          expression { return hasChanged("src/**/*") }
+          changeset "lib/**/*"
+          expression { return hasChanged("lib/**/*") }
           changeset "app/**/*"
           expression { return hasChanged("app/**/*") }
           changeset "stack.yaml"
           expression { return hasChanged("stack.yaml") }
-          changeset "package.yaml"
-          expression { return hasChanged("package.yaml") }
+          changeset "**/package.yaml"
+          expression { return hasChanged("**/package.yaml") }
           changeset "deployment-configs/*deploy.yaml"
           expression { return hasChanged("deployment-configs/*deploy.yaml") }
         }
