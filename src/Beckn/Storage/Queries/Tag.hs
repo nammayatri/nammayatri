@@ -48,3 +48,33 @@ findAllByEntity entityType entityId = do
   where
     predicate tagIds Storage.Tag {..} =
       _id `B.in_` (B.val_ <$> tagIds)
+
+findAllTagTypes :: L.Flow [Text]
+findAllTagTypes = do
+  DB.aggregate dbTable aggregator predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate tag = B.val_ True
+
+    aggregator Storage.Tag{..} =
+      B.group_ _tagType
+
+findAllTagWhereType :: Text -> L.Flow [Text]
+findAllTagWhereType tagType = do
+  DB.aggregate dbTable aggregator (predicate tagType)
+    >>= either DB.throwDBError pure
+  where
+    predicate tagType Storage.Tag{..} =
+      _tagType ==. B.val_ tagType
+
+    aggregator Storage.Tag{..} =
+      B.group_ _tag
+
+findAllByTag :: Text -> Text -> L.Flow [Storage.Tag]
+findAllByTag tagType tag = do
+  DB.findAll dbTable (predicate tagType tag)
+    >>= either DB.throwDBError pure
+  where
+    predicate tagType tag Storage.Tag{..} =
+      _tagType ==. B.val_ tagType &&.
+      _tag ==. B.val_ tag

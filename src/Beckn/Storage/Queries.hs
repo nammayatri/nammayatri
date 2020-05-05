@@ -221,3 +221,5 @@ findAllWithLimitOffset dbTable limit offset orderBy =
   -- -> L.Flow (T.DBResult [table Identity])
 findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.filter_ predicate $ B.orderBy_ orderBy $ B.all_ dbTable
+
+aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggregate_ aggregator $ B.filter_ predicate $ B.all_ dbTable
