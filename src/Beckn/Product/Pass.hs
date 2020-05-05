@@ -1,29 +1,29 @@
 module Beckn.Product.Pass where
 
 import qualified Beckn.Data.Accessor                   as Accessor
+import qualified Beckn.Storage.Queries.Comment         as Comment
 import qualified Beckn.Storage.Queries.Customer        as Customer
 import qualified Beckn.Storage.Queries.CustomerDetail  as QCD
-import qualified Beckn.Storage.Queries.Pass            as QP
-import qualified Beckn.Storage.Queries.User            as User
-import qualified Beckn.Storage.Queries.Organization    as Organization
 import qualified Beckn.Storage.Queries.Document        as Document
 import qualified Beckn.Storage.Queries.EntityDocument  as EntityDocument
-import qualified Beckn.Storage.Queries.PassApplication as PassApplication
 import qualified Beckn.Storage.Queries.EntityTag       as EntityTag
+import qualified Beckn.Storage.Queries.Organization    as Organization
+import qualified Beckn.Storage.Queries.Pass            as QP
+import qualified Beckn.Storage.Queries.PassApplication as PassApplication
 import qualified Beckn.Storage.Queries.Tag             as Tag
-import qualified Beckn.Storage.Queries.Comment         as Comment
+import qualified Beckn.Storage.Queries.User            as User
 import           Beckn.Types.API.Pass
 import           Beckn.Types.App
 import           Beckn.Types.Common
 import qualified Beckn.Types.Common                    as Location (Location (..))
 import qualified Beckn.Types.Storage.Customer          as Customer
 import qualified Beckn.Types.Storage.CustomerDetail    as SCD
-import           Beckn.Types.Storage.Pass
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import qualified Beckn.Types.Storage.PassApplication   as PassApplication
-import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
 import qualified Beckn.Types.Storage.Document          as Document
+import qualified Beckn.Types.Storage.EntityDocument    as EntityDocument
 import qualified Beckn.Types.Storage.EntityTag         as EntityTag
+import           Beckn.Types.Storage.Pass
+import qualified Beckn.Types.Storage.PassApplication   as PassApplication
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Beckn.Utils.Common
 import           Beckn.Utils.Routes
 import           Beckn.Utils.Storage
@@ -51,7 +51,7 @@ getPassInfo Pass {..} = do
   docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
   entityTags <- maybe (pure []) (\id-> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
   let tagIds = EntityTag._TagId <$> entityTags
-  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds)) -- TODO : Can we add a single query to fetch this data.
+  tags <- Tag.findAllById (TagId <$> tagIds)
   comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ (_getPassApplicationId $ PassApplication._id passApplication)
   let toLocation = Location
                   { _type     = fromMaybe PINCODE _toLocationType
