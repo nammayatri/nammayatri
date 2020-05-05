@@ -1,0 +1,1 @@
+module Storage.Queries.Organisation where
