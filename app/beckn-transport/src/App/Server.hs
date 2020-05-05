@@ -1,7 +1,7 @@
 module App.Server where
 
 import           App.Routes
-import           Beckn.Types.App
+import           Types.App
 import qualified Data.Vault.Lazy      as V
 import qualified EulerHS.Interpreters as I
 import           EulerHS.Prelude

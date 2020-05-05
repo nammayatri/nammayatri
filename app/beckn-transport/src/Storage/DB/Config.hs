@@ -1,7 +1,7 @@
 
 module Storage.DB.Config where
 
-import           Beckn.Types.Config  (Config (..))
+import           Types.Config  (Config (..))
 
 import           Data.Text           as T
 import qualified Database.Beam.MySQL as BM
@@ -16,9 +16,9 @@ instance Config T.MySQLConfig where
   theConfig = T.MySQLConfig
     { connectHost     = "127.0.0.1"
     , connectPort     = 3306
-    , connectUser     = "atlas"
-    , connectPassword = "atlas"
-    , connectDatabase = "atlas_epass"
+    , connectUser     = "transporter"
+    , connectPassword = "transporter"
+    , connectDatabase = ""
     , connectOptions  = [T.CharsetName "utf8"]
     , connectPath     = ""
     , connectSSL      = Nothing

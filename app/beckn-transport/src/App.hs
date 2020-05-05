@@ -2,8 +2,8 @@ module App where
 
 import qualified App.Server                   as App
 import           Beckn.Constants.APIErrorCode
-import           Beckn.Storage.DB.Config
-import qualified Beckn.Types.App              as App
+import           Storage.DB.Config
+import qualified Types.App                    as App
 import           Beckn.Utils.Storage
 import qualified Data.Aeson                   as Aeson
 import qualified Data.ByteString.Char8        as BS
