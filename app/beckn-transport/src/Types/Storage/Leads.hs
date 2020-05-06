@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.BookingReference where
+module Types.Storage.Leads where
 
 import           Types.App
 import           Data.Aeson
@@ -17,9 +17,9 @@ import           EulerHS.Prelude
 import           Servant.API
 import           Servant.Swagger
 
-data BookingReferenceT f =
-  BookingReference
-    { _id               :: B.C f BookingReferenceId
+data LeadsT f =
+  Leads
+    { _id               :: B.C f LeadsId
     , _customerId       :: B.C f Text
     , _fromLocationId   :: B.C f (Maybe Text)
     , _toLocationId     :: B.C f (Maybe Text)
@@ -36,26 +36,26 @@ data BookingReferenceT f =
 
   deriving (Generic, B.Beamable)
 
-type BookingReference = BookingReferenceT Identity
+type Leads = LeadsT Identity
 
-type BookingReferencePrimaryKey = B.PrimaryKey BookingReferenceT Identity
+type LeadsPrimaryKey = B.PrimaryKey LeadsT Identity
 
-instance B.Table BookingReferenceT where
-  data PrimaryKey BookingReferenceT f = BookingReferencePrimaryKey (B.C f BookingReferenceId)
+instance B.Table LeadsT where
+  data PrimaryKey LeadsT f = LeadsPrimaryKey (B.C f LeadsId)
                                deriving (Generic, B.Beamable)
-  primaryKey = BookingReferencePrimaryKey . _id
+  primaryKey = LeadsPrimaryKey . _id
 
-deriving instance Show BookingReference
+deriving instance Show Leads
 
-deriving instance Eq BookingReference
+deriving instance Eq Leads
 
-instance ToJSON BookingReference where
+instance ToJSON Leads where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-instance FromJSON BookingReference where
+instance FromJSON Leads where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToSchema BookingReference
+instance ToSchema Leads
 
 insertExpression org = insertExpressions [org]
 
@@ -63,7 +63,7 @@ insertExpressions orgs = B.insertValues orgs
 
 
 fieldEMod ::
-     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BookingReferenceT)
+     B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LeadsT)
 fieldEMod =
   B.setEntityName "booking_reference" <>
     B.modifyTableFields

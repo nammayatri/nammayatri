@@ -39,7 +39,7 @@ data TripReferenceT f =
     , _customerId           :: B.C f Text
     , _quotationId          :: B.C f Text
     , _driverId             :: B.C f (Maybe Text)
-    , _bookingReferenceId   :: B.C f Text
+    , _leadsId              :: B.C f Text
     , _vehicleId            :: B.C f (Maybe Text)
     , _shortId              :: B.C f Text
     , _status               :: B.C f Status
@@ -86,7 +86,7 @@ fieldEMod =
         , _customerId     = "customer_id"
         , _quotationId    = "quotation_id"
         , _driverId       = "driver_id"
-        , _bookingReferenceId = "_booking_reference_id"
+        , _leadsId = "_booking_reference_id"
         , _vehicleId      = "vehicle_id"
         , _shortId        = "short_id"
         }

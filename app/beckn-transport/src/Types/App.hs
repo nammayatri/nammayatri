@@ -43,13 +43,13 @@ newtype OrganizationId =
 
 deriveIdentifierInstances ''OrganizationId
 
-newtype BookingReferenceId =
-  BookingReferenceId
-    { _getBookingReferenceId :: Text
+newtype LeadsId =
+  LeadsId
+    { _getLeadsId :: Text
     }
   deriving  (Generic, Show)
 
-deriveIdentifierInstances ''BookingReferenceId
+deriveIdentifierInstances ''LeadsId
 
 newtype QuotationId =
   QuotationId

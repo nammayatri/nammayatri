@@ -35,9 +35,9 @@ instance FromHttpApiData Status where
 
 data QuotationT f =
   Quotation
-    { _id                 :: B.C f QuotationId
-    , _bookingReferenceId :: B.C f Text
-    , _amount             :: B.C f Text
+    { _id                  :: B.C f QuotationId
+    , _leadsId             :: B.C f Text
+    , _amount              :: B.C f Text
     , _organizationId      :: B.C f Text
     , _status              :: B.C f Status
     , _createdAt    :: B.C f LocalTime
@@ -79,6 +79,6 @@ fieldEMod =
     B.tableModification
       { _createdAt = "created_at"
       , _updatedAt = "updated_at"
-      , _bookingReferenceId = "booking_reference_id"
+      , _leadsId = "booking_reference_id"
       , _organizationId = "organization_id"
       }

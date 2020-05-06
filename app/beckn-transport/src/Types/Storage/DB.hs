@@ -5,7 +5,7 @@ module Types.Storage.DB where
 import           EulerHS.Prelude                       hiding (id)
 
 import qualified Types.Storage.Organization            as Organization
-import qualified Types.Storage.BookingReference        as BookingReference
+import qualified Types.Storage.Leads                   as Leads
 import qualified Types.Storage.Customer                as Customer
 import qualified Types.Storage.Driver                  as Driver
 import qualified Types.Storage.Location                as Location
@@ -20,7 +20,7 @@ data TransporterDb f =
   TransporterDb
     { 
       _organization :: f (B.TableEntity Organization.OrganizationT)
-    , _bookingReference :: f (B.TableEntity BookingReference.BookingReferenceT)
+    , _leads :: f (B.TableEntity Leads.LeadsT)
     , _customer :: f (B.TableEntity Customer.CustomerT)
     , _driver :: f (B.TableEntity Driver.DriverT)
     , _location :: f (B.TableEntity Location.LocationT)
@@ -36,7 +36,7 @@ transporterDb =
   B.defaultDbSettings `B.withDbModification`
   B.dbModification
     { _organization = Organization.fieldEMod
-    , _bookingReference = BookingReference.fieldEMod
+    , _leads = Leads.fieldEMod
     , _customer = Customer.fieldEMod 
     , _driver = Driver.fieldEMod 
     , _location = Location.fieldEMod 
