@@ -28,9 +28,9 @@ getCustomerInfo regToken customerId = withFlowHandler $ do
 
 mask :: Text -> Text
 mask txt = let
-  prefixLen = 4 - length txt
+  prefixLen = length txt - 4
   last4 = T.reverse $ T.take 4 $ T.reverse txt
-  in T.replicate prefixLen "x" <> last4
+  in (T.replicate prefixLen "X") <> last4
 
 sanitizeDetails :: CustomerDetail -> AdditionalInfo
 sanitizeDetails CustomerDetail{..} =
