@@ -42,7 +42,7 @@ data TripReferenceT f =
     , _bookingReferenceId   :: B.C f Text
     , _vehicleId            :: B.C f (Maybe Text)
     , _shortId              :: B.C f Text
-    , _status               :: B.C f Int
+    , _status               :: B.C f Status
     , _createdAt    :: B.C f LocalTime
     , _updatedAt    :: B.C f LocalTime
     }

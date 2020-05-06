@@ -39,7 +39,7 @@ data QuotationT f =
     , _bookingReferenceId :: B.C f Text
     , _amount             :: B.C f Text
     , _organizationId      :: B.C f Text
-    , _status              :: B.C f Text
+    , _status              :: B.C f Status
     , _createdAt    :: B.C f LocalTime
     , _updatedAt    :: B.C f LocalTime
     }
