@@ -5,15 +5,17 @@ module Beckn.Types.Storage.CustomerDetail where
 
 import           Beckn.Types.App
 import           Data.Aeson
+import           Data.Swagger
 import qualified Data.Text                 as T
 import           Data.Time.LocalTime
 import qualified Database.Beam             as B
 import           Database.Beam.Backend.SQL
 import           Database.Beam.MySQL
 import           EulerHS.Prelude
+import           Servant.Swagger
 
 data IdentifierType = MOBILENUMBER | AADHAAR
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType where
   sqlValueSyntax = autoSqlValueSyntax
