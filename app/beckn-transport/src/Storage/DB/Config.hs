@@ -16,9 +16,9 @@ instance Config T.MySQLConfig where
   theConfig = T.MySQLConfig
     { connectHost     = "127.0.0.1"
     , connectPort     = 3306
-    , connectUser     = "transporter"
-    , connectPassword = "transporter"
-    , connectDatabase = ""
+    , connectUser     = "atlas"
+    , connectPassword = "atlas"
+    , connectDatabase = "atlas_transporter"
     , connectOptions  = [T.CharsetName "utf8"]
     , connectPath     = ""
     , connectSSL      = Nothing
@@ -62,8 +62,8 @@ getMysqlDBConfig defMysqlConfig = do
   case mConfig of
     Nothing -> do
       L.runIO $ putStrLn @String "Could not load mysql config from env. Using defaults."
-      pure $ T.mkMySQLPoolConfig (T.pack "becknDb") defMysqlConfig poolConfig
-    Just config -> pure $ T.mkMySQLPoolConfig (T.pack "becknDb") config poolConfig
+      pure $ T.mkMySQLPoolConfig (T.pack "transporterDb") defMysqlConfig poolConfig
+    Just config -> pure $ T.mkMySQLPoolConfig (T.pack "transporterDb") config poolConfig
 
 -- helper
 dbHandle :: (T.DBConfig beM -> L.Flow (Either T.DBError a)) -> T.DBConfig beM -> L.Flow a
