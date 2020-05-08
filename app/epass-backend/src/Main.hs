@@ -1,7 +1,7 @@
 module Main where
 
-import           Beckn.App
-import           Beckn.App.Routes
+import           Epass.App
+import           Epass.App.Routes
 import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty   (encodePretty)
@@ -21,7 +21,7 @@ main :: IO ()
 main =
   -- writeSwaggerJSON
   --PSGen.main
-  runBecknBackendApp
+  runEpassBackendApp
 
 --todoSwagger :: Swagger
 --todoSwagger = toSwagger epassAPIs

@@ -6,9 +6,9 @@ import           EulerHS.Prelude                  hiding (id)
 import qualified Beckn.Storage.Queries            as DB
 import           Types.App
 import           Beckn.Types.Common
+import           Beckn.Utils.Common
 import qualified Types.Storage.DB                 as DB
 import qualified Types.Storage.TripReference          as Storage
-import           Beckn.Utils.Common
 import           Data.Time
 import qualified Database.Beam                    as B
 import qualified EulerHS.Language                 as L

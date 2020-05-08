@@ -24,18 +24,18 @@ import           Servant.API
 import           Servant.PureScript
 import           Servant.Subscriber.Subscribable
 
-import           Beckn.App.Routes
-import           Beckn.Types.API.Registration
-import qualified Beckn.Types.API.Blacklist as Blacklist
-import qualified Beckn.Types.API.Comment as Comment
-import qualified Beckn.Types.API.Customer as Customer
-import qualified Beckn.Types.API.Document as Document
-import qualified Beckn.Types.API.Organization as Organization
-import qualified Beckn.Types.API.Pass as Pass
-import qualified Beckn.Types.API.PassApplication as PA
-import qualified Beckn.Types.API.Quota as Quota
-import qualified Beckn.Types.API.Tag as Tag
-import qualified Beckn.Types.API.User as User
+import           Epass.App.Routes
+import           Epass.Types.API.Registration
+import qualified Epass.Types.API.Blacklist as Blacklist
+import qualified Epass.Types.API.Comment as Comment
+import qualified Epass.Types.API.Customer as Customer
+import qualified Epass.Types.API.Document as Document
+import qualified Epass.Types.API.Organization as Organization
+import qualified Epass.Types.API.Pass as Pass
+import qualified Epass.Types.API.PassApplication as PA
+import qualified Epass.Types.API.Quota as Quota
+import qualified Epass.Types.API.Tag as Tag
+import qualified Epass.Types.API.User as User
 --import           EulerHS.Prelude
 
 -- | We have been lazy and defined our types in the WebAPI module,
@@ -43,9 +43,9 @@ import qualified Beckn.Types.API.User as User
 --   types to Counter.ServerTypes.
 fixTypesModule :: BridgePart
 fixTypesModule = do
-  typeModule ^== "Beckn.App.Routes"
+  typeModule ^== "Epass.App.Routes"
   t <- view haskType
-  TypeInfo (_typePackage t) "Beckn.ServerTypes" (_typeName t) <$> psTypeParameters
+  TypeInfo (_typePackage t) "Epass.ServerTypes" (_typeName t) <$> psTypeParameters
 
 myBridge :: BridgePart
 myBridge = defaultBridge <|> fixTypesModule

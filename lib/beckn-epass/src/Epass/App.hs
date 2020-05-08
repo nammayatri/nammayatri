@@ -1,9 +1,10 @@
-module App where
+module Epass.App where
 
-import qualified App.Server                   as App
-import           Beckn.Constants.APIErrorCode
-import           Storage.DB.Config
-import qualified Types.App                    as App
+import qualified Epass.App.Server             as App
+import           Epass.Constants.APIErrorCode
+import           Epass.Storage.DB.Config
+import qualified Epass.Types.App              as App
+import           Epass.Utils.Storage
 import qualified Data.Aeson                   as Aeson
 import qualified Data.ByteString.Char8        as BS
 import qualified Data.Vault.Lazy              as V
@@ -21,20 +22,20 @@ import           Servant
 import           Servant.Server
 import qualified System.Environment           as SE
 
-runTransporterBackendApp :: IO ()
-runTransporterBackendApp = do
-  port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runTransporterBackendApp' port $
-    setOnExceptionResponse transporterExceptionResponse $
+runEpassBackendApp :: IO ()
+runEpassBackendApp = do
+  port <- fromMaybe 8012 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
+  runEpassBackendApp' port $
+    setOnExceptionResponse becknExceptionResponse $
     setPort port defaultSettings
 
-runTransporterBackendApp' :: Int -> Settings -> IO ()
-runTransporterBackendApp' port settings = do
+runEpassBackendApp' :: Int -> Settings -> IO ()
+runEpassBackendApp' port settings = do
   reqHeadersKey <- V.newKey
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True
-          , T._logFilePath = "/tmp/beckn-transport.log"
+          , T._logFilePath = "/tmp/beckn-epass.log"
           , T._isAsync = True
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
@@ -47,8 +48,8 @@ runTransporterBackendApp' port settings = do
           ("Runtime created. Starting server at port " <> show port)
         runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
-transporterExceptionResponse :: SomeException -> Response
-transporterExceptionResponse exception = do
+becknExceptionResponse :: SomeException -> Response
+becknExceptionResponse exception = do
   let anyException = fromException exception
   case anyException of
     Just ex ->

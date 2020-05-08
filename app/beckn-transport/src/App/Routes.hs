@@ -1,6 +1,5 @@
 module App.Routes where
 
-import qualified Beckn.Data.Accessor                  as Accessor
 import           Types.App
 import           Beckn.Types.Common
 import           Data.Aeson
