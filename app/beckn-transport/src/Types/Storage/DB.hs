@@ -13,6 +13,7 @@ import qualified Types.Storage.Quotation               as Quotation
 import qualified Types.Storage.Tracker                 as Tracker
 import qualified Types.Storage.TripReference           as TripReference
 import qualified Types.Storage.Vehicle                 as Vehicle
+import qualified Types.Storage.Person                  as Person
 
 import qualified Database.Beam                         as B
 
@@ -28,6 +29,7 @@ data TransporterDb f =
     , _tracker :: f (B.TableEntity Tracker.TrackerT)
     , _tripReference :: f (B.TableEntity TripReference.TripReferenceT)
     , _vehicle :: f (B.TableEntity Vehicle.VehicleT)
+    , _person :: f (B.TableEntity Person.PersonT)
     }
   deriving (Generic, B.Database be)
 
@@ -43,5 +45,6 @@ transporterDb =
     , _quotation = Quotation.fieldEMod 
     , _tracker = Tracker.fieldEMod 
     , _tripReference = TripReference.fieldEMod 
-    , _vehicle = Vehicle.fieldEMod 
+    , _vehicle = Vehicle.fieldEMod
+    , _person = Person.fieldEMod
     }

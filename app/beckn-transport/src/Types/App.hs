@@ -99,6 +99,14 @@ newtype LocationId =
 
 deriveIdentifierInstances ''LocationId
 
+newtype PersonId =
+  PersonId
+    { _getPersonId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''PersonId
+
 type Limit = Int
 
 type Offset = Int
