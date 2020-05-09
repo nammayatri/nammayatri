@@ -1,8 +1,8 @@
 module Beckn.Types.API.Confirm where
 
-import           Beckn.Types.External.Core.Context
-import           Beckn.Types.External.Core.Ack
-import           Beckn.Types.External.Mobility.Service
+import           Beckn.Types.Core.Context
+import           Beckn.Types.Core.Ack
+import           Beckn.Types.Mobility.Service
 import           Data.Swagger
 import           EulerHS.Prelude
 import           Servant.Swagger
