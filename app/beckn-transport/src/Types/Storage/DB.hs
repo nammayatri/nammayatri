@@ -19,7 +19,7 @@ import qualified Types.Storage.Vehicle as Vehicle
 import qualified Beckn.Types.Storage.Organization      as Organization
 import qualified Beckn.Types.Storage.Case              as Case
 import qualified Beckn.Types.Storage.Person            as Person
-import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.Leads                   as Leads
 import qualified Types.Storage.Customer                as Customer
 import qualified Types.Storage.Driver                  as Driver

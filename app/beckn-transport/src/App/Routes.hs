@@ -5,7 +5,7 @@ module App.Routes where
 -- import           Beckn.Types.Common
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
-import Epass.Types.Common
+import Beckn.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration

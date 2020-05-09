@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Epass.Types.Storage.RegistrationToken where
+module Beckn.Types.Storage.RegistrationToken where
 
 import Data.Aeson
 import Data.Swagger

@@ -5,7 +5,7 @@ import Epass.Types.API.Comment
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Comment as Comment
-import Epass.Types.Storage.RegistrationToken
+import Beckn.Types.Storage.RegistrationToken
 import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage

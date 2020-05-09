@@ -20,7 +20,7 @@ import Epass.Types.Storage.Blacklist as BL
 import qualified Epass.Types.Storage.EntityTag as ET
 import Epass.Types.Storage.Location as L
 import Epass.Types.Storage.PassApplication
-import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Epass.Types.Storage.Tag as T
 import Epass.Utils.Common
 import Epass.Utils.Routes

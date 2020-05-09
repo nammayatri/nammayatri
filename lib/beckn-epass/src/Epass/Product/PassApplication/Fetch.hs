@@ -25,7 +25,7 @@ import qualified Epass.Types.Storage.Document as Document
 import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import Epass.Types.Storage.PassApplication
-import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Epass.Types.Storage.Tag as Document
 import Epass.Utils.Common
 import Epass.Utils.Routes
