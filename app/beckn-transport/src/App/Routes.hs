@@ -9,7 +9,7 @@ import Epass.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration
-import qualified Product.Case as Case
+import qualified Product.Case.CRUD as Case
 import Servant
 import Servant.Multipart
 import Types.API.Registration

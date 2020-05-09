@@ -1,4 +1,4 @@
-module Product.Case where
+module Product.Case.CRUD where
 
 import Beckn.Types.App
 import Beckn.Types.Common as BC
@@ -21,3 +21,13 @@ import Utils.Routes
 list :: CaseReq -> FlowHandler CaseListRes
 list CaseReq {..} = withFlowHandler $ do
   DB.findAllByType _limit _offset _type _status
+
+-- Provider Internal API: Update Case
+
+--   1) Create Product with quote and state=TRANSPORTER_ACCEPTED
+--   2) Create CaseProduct Entries
+-- 	3) Get all products with state=TRANSPORTER_ACCEPTED
+--   4) Send /on_search to BG
+
+update :: Text -> FlowHandler Text
+update = undefined
