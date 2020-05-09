@@ -27,3 +27,6 @@ fromMaybeM400, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> L.Fl
 fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
+
+mkAckResponse :: L.Flow AckResponse
+mkAckResponse = undefined

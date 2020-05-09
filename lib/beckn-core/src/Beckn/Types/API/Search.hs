@@ -1,6 +1,7 @@
 module Beckn.Types.API.Search where
 
 import           Beckn.Types.Core.Context
+import           Beckn.Types.Common
 import           Beckn.Types.Core.Ack
 import           Beckn.Types.Mobility.Service
 import           Beckn.Types.Mobility.Intent
@@ -19,13 +20,7 @@ instance FromJSON SearchReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 
-data SearchRes =
-  SearchRes
-    { context :: Context
-    , message :: Ack
-    }
-  deriving (Generic, ToJSON)
-
+type SearchRes = AckResponse
 
 data OnSearchReq =
   OnSearchReq

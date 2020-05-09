@@ -1,5 +1,7 @@
 module Beckn.Types.Common where
 
+import           Beckn.Types.Core.Context
+import           Beckn.Types.Core.Ack
 import           Data.Swagger
 import qualified EulerHS.Language as L
 import           EulerHS.Prelude
@@ -17,3 +19,10 @@ data ErrorResponse =
     , responseMessage :: Text
     }
   deriving (Show, Generic, ToJSON, ToSchema)
+
+data AckResponse =
+  AckResponse
+    { context     :: Context
+    , message     :: Ack
+    }
+  deriving (Show, Generic, ToJSON)
