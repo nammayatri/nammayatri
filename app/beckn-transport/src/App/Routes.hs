@@ -9,9 +9,11 @@ import Epass.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration
+import qualified Product.Case as Case
 import Servant
 import Servant.Multipart
 import Types.API.Registration
+import Types.API.Case
 import Types.App
 
 type TransporterAPIs =
@@ -41,7 +43,17 @@ registrationFlow =
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
--------------------------------
+-------- Case Flow----------
+type CaseAPIs =
+     "case"
+       :> "list"
+       :> (    ReqBody '[ JSON] CaseReq
+           :>  Post '[ JSON] ListRes
+           )
+
+caseFlow =
+    Case.list
+
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
