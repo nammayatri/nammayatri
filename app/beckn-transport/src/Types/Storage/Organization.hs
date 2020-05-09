@@ -20,6 +20,9 @@ import           Servant.Swagger
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data OrganizationType = GATEWAY | PROVIDER | TRANSPORTER
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
@@ -32,6 +35,17 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL OrganizationType where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance ToParamSchema OrganizationType
+instance FromHttpApiData OrganizationType where
+  parseUrlPiece  = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data OrganizationT f =
   Organization
@@ -40,6 +54,7 @@ data OrganizationT f =
     , _gstin        :: B.C f (Maybe Text)
     , _fcmId        :: B.C f (Maybe Text)
     , _status       :: B.C f Status
+    , _type         :: B.C f OrganizationType
     , _verified     :: B.C f Bool
     , _locationId   :: B.C f (Maybe Text)
     , _info         :: B.C f (Maybe Text)

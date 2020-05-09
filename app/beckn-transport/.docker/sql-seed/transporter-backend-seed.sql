@@ -13,6 +13,7 @@ CREATE TABLE `organization` (
   `name` varchar(255) NULL,
   `gstin` varchar(255) NULL,
   `status` varchar(255) NULL,
+  `organization_type` varchar(255) NULL,
   `verified` boolean NOT NULL,
   `location_type` varchar(255) NULL,
   `lat` double NULL,
