@@ -1,7 +1,7 @@
 module Types.API.Registration where
 
 import           Epass.Types.Common
-import           Types.Storage.Person
+import           Beckn.Types.Storage.Person
 import           Epass.Types.Storage.RegistrationToken
 import           Data.Swagger
 import           EulerHS.Prelude

@@ -35,14 +35,6 @@ newtype CustomerId =
 
 deriveIdentifierInstances ''CustomerId
 
-newtype OrganizationId =
-  OrganizationId
-    { _getOrganizationId :: Text
-    }
-  deriving  (Generic, Show)
-
-deriveIdentifierInstances ''OrganizationId
-
 newtype LeadsId =
   LeadsId
     { _getLeadsId :: Text
@@ -98,14 +90,6 @@ newtype LocationId =
   deriving  (Generic, Show)
 
 deriveIdentifierInstances ''LocationId
-
-newtype PersonId =
-  PersonId
-    { _getPersonId :: Text
-    }
-  deriving  (Generic, Show)
-
-deriveIdentifierInstances ''PersonId
 
 type Limit = Int
 

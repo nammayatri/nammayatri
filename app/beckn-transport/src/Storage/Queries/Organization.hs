@@ -4,10 +4,10 @@ import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
 import           EulerHS.Prelude                  hiding (id)
 
 import qualified Epass.Storage.Queries            as DB
-import           Types.App
+import           Beckn.Types.App
 import           Epass.Types.Common
 import qualified Types.Storage.DB                 as DB
-import qualified Types.Storage.Organization       as Storage
+import qualified Beckn.Types.Storage.Organization as Storage
 import           Epass.Utils.Common
 import           Data.Time
 import qualified Database.Beam                    as B

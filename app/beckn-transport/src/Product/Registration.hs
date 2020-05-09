@@ -6,9 +6,10 @@ import qualified Epass.External.MyValuesFirst.Types      as Sms
 import qualified Storage.Queries.Person                  as QP
 import qualified Epass.Storage.Queries.RegistrationToken as QR
 import           Types.API.Registration
-import           Types.App
-import           Epass.Types.Common
-import qualified Types.Storage.Person                    as SP
+import           Types.App                               
+import           Beckn.Types.App
+import           Beckn.Types.Common                       as BC
+import qualified Beckn.Types.Storage.Person                    as SP
 import qualified Epass.Types.Storage.RegistrationToken   as SR
 import           Epass.Utils.Common
 import           Epass.Utils.Extra
@@ -54,7 +55,7 @@ initiateFlow req = do
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
 makePerson req = do
   role <- fromMaybeM400 "CUSTOMER_ROLE required" (req ^. Lens.role)
-  id <- generateGUID
+  id <- BC.generateGUID
   now <- getCurrentTimeUTC
   return $
     SP.Person { 

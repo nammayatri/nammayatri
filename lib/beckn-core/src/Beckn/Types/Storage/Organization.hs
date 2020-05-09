@@ -1,9 +1,9 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Organization where
+module Beckn.Types.Storage.Organization where
 
-import           Types.App
+import           Beckn.Types.App
 import           Data.Aeson
 import qualified Data.ByteString.Lazy      as BSL
 import           Data.Swagger
