@@ -4,6 +4,7 @@ module Types.Storage.DB where
 
 import           EulerHS.Prelude                       hiding (id)
 
+import qualified Beckn.Types.Storage.Case              as Case
 import qualified Types.Storage.Organization            as Organization
 import qualified Types.Storage.Leads                   as Leads
 import qualified Types.Storage.Customer                as Customer
@@ -18,7 +19,7 @@ import qualified Database.Beam                         as B
 
 data TransporterDb f =
   TransporterDb
-    { 
+    {
       _organization :: f (B.TableEntity Organization.OrganizationT)
     , _leads :: f (B.TableEntity Leads.LeadsT)
     , _customer :: f (B.TableEntity Customer.CustomerT)
@@ -28,6 +29,7 @@ data TransporterDb f =
     , _tracker :: f (B.TableEntity Tracker.TrackerT)
     , _tripReference :: f (B.TableEntity TripReference.TripReferenceT)
     , _vehicle :: f (B.TableEntity Vehicle.VehicleT)
+    , _case :: f (B.TableEntity Case.CaseT)
     }
   deriving (Generic, B.Database be)
 
@@ -37,11 +39,12 @@ transporterDb =
   B.dbModification
     { _organization = Organization.fieldEMod
     , _leads = Leads.fieldEMod
-    , _customer = Customer.fieldEMod 
-    , _driver = Driver.fieldEMod 
-    , _location = Location.fieldEMod 
-    , _quotation = Quotation.fieldEMod 
-    , _tracker = Tracker.fieldEMod 
-    , _tripReference = TripReference.fieldEMod 
-    , _vehicle = Vehicle.fieldEMod 
+    , _customer = Customer.fieldEMod
+    , _driver = Driver.fieldEMod
+    , _location = Location.fieldEMod
+    , _quotation = Quotation.fieldEMod
+    , _tracker = Tracker.fieldEMod
+    , _tripReference = TripReference.fieldEMod
+    , _vehicle = Vehicle.fieldEMod
+    , _case = Case.fieldEMod
     }
