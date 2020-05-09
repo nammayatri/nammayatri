@@ -1,7 +1,7 @@
 module App.Routes where
 
 import           Types.App
-import           Beckn.Types.Common
+import           Epass.Types.Common
 import qualified Product.Registration                 as Registration
 import           Types.API.Registration
 

@@ -1,7 +1,7 @@
 module App where
 
 import qualified App.Server                   as App
-import           Beckn.Constants.APIErrorCode
+import           Epass.Constants.APIErrorCode
 import           Storage.DB.Config
 import qualified Types.App                    as App
 import qualified Data.Aeson                   as Aeson

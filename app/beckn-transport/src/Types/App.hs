@@ -5,7 +5,7 @@
 
 module Types.App where
 
-import           Beckn.Utils.TH
+import           Epass.Utils.TH
 import           Data.Swagger
 import           Database.Beam.Backend.SQL     (FromBackendRow,
                                                 HasSqlValueSyntax)
