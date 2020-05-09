@@ -3,12 +3,12 @@ module Storage.Queries.Driver where
 import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
 import           EulerHS.Prelude                  hiding (id)
 
-import qualified Beckn.Storage.Queries            as DB
+import qualified Epass.Storage.Queries            as DB
 import           Types.App
-import           Beckn.Types.Common
+import           Epass.Types.Common
 import qualified Types.Storage.DB                 as DB
 import qualified Types.Storage.Driver             as Storage
-import           Beckn.Utils.Common
+import           Epass.Utils.Common
 import           Data.Time
 import qualified Database.Beam                    as B
 import qualified EulerHS.Language                 as L

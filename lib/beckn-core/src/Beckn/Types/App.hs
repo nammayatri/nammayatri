@@ -32,6 +32,14 @@ newtype CaseProductId =
 
 deriveIdentifierInstances ''CaseProductId
 
+newtype PersonId =
+  PersonId
+    { _getPersonId :: Text
+    }
+  deriving  (Generic, Show)
+
+deriveIdentifierInstances ''PersonId
+
 newtype OrganizationId =
   OrganizationId
     { _getOrganizationId :: Text

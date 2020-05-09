@@ -5,7 +5,7 @@
 
 module Types.App where
 
-import           Beckn.Utils.TH
+import           Epass.Utils.TH
 import           Data.Swagger
 import           Database.Beam.Backend.SQL     (FromBackendRow,
                                                 HasSqlValueSyntax)
@@ -34,14 +34,6 @@ newtype CustomerId =
   deriving  (Generic, Show)
 
 deriveIdentifierInstances ''CustomerId
-
-newtype OrganizationId =
-  OrganizationId
-    { _getOrganizationId :: Text
-    }
-  deriving  (Generic, Show)
-
-deriveIdentifierInstances ''OrganizationId
 
 newtype LeadsId =
   LeadsId

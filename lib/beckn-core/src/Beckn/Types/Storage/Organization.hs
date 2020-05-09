@@ -1,9 +1,9 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Organization where
+module Beckn.Types.Storage.Organization where
 
-import           Types.App
+import           Beckn.Types.App
 import           Data.Aeson
 import qualified Data.ByteString.Lazy      as BSL
 import           Data.Swagger
@@ -35,31 +35,41 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
+--------------------------------------------------------------------------------------
+
+data IndustryType = RIDE | PASS | SKU
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be IndustryType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL OrganizationType where
+instance FromBackendRow MySQL IndustryType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance ToParamSchema OrganizationType
-instance FromHttpApiData OrganizationType where
+instance ToParamSchema IndustryType
+instance FromHttpApiData IndustryType where
   parseUrlPiece  = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data OrganizationT f =
   Organization
-    { _id           :: B.C f OrganizationId
-    , _name         :: B.C f Text
-    , _gstin        :: B.C f (Maybe Text)
-    , _fcmId        :: B.C f (Maybe Text)
-    , _status       :: B.C f Status
-    , _type         :: B.C f OrganizationType
-    , _verified     :: B.C f Bool
-    , _locationId   :: B.C f (Maybe Text)
-    , _info         :: B.C f (Maybe Text)
-    , _createdAt    :: B.C f LocalTime
-    , _updatedAt    :: B.C f LocalTime
+    { _id            :: B.C f OrganizationId
+    , _name          :: B.C f Text
+    , _description   :: B.C f (Maybe Text)
+    , _mobileNumber  :: B.C f (Maybe Text)
+    , _fcmId         :: B.C f (Maybe Text)
+    , _gstin         :: B.C f (Maybe Text)
+    , _type          :: B.C f IndustryType
+    -- , _industry      :: B.C f Industry
+    , _locationId    :: B.C f (Maybe Text)
+    , _fromTime      :: B.C f (Maybe LocalTime)
+    , _toTime        :: B.C f (Maybe LocalTime)
+    , _headcount     :: B.C f (Maybe Int)
+    , _status        :: B.C f Status
+    , _verified      :: B.C f Bool
+    , _createdAt     :: B.C f LocalTime
+    , _updatedAt     :: B.C f LocalTime
     }
 
   deriving (Generic, B.Beamable)

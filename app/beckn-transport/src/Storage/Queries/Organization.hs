@@ -3,12 +3,12 @@ module Storage.Queries.Organization where
 import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
 import           EulerHS.Prelude                  hiding (id)
 
-import qualified Beckn.Storage.Queries            as DB
-import           Types.App
-import           Beckn.Types.Common
+import qualified Epass.Storage.Queries            as DB
+import           Beckn.Types.App
+import           Epass.Types.Common
 import qualified Types.Storage.DB                 as DB
-import qualified Types.Storage.Organization       as Storage
-import           Beckn.Utils.Common
+import qualified Beckn.Types.Storage.Organization as Storage
+import           Epass.Utils.Common
 import           Data.Time
 import qualified Database.Beam                    as B
 import qualified EulerHS.Language                 as L
@@ -30,30 +30,30 @@ findOrganizationById id = do
   where
     predicate Storage.Organization {..} = (_id ==. B.val_ id)
 
-listOrganizations ::
-  Maybe Int
-  -> Maybe Int
-  -> [Storage.OrganizationType]
-  -> [Storage.Status]
-  -> L.Flow [Storage.Organization]
-listOrganizations mlimit moffset oType status =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
-    >>= either DB.throwDBError pure
-  where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
-    orderByDesc Storage.Organization {..} = B.desc_ _createdAt
+-- listOrganizations ::
+--   Maybe Int
+--   -> Maybe Int
+--   -> [Storage.OrganizationType]
+--   -> [Storage.Status]
+--   -> L.Flow [Storage.Organization]
+-- listOrganizations mlimit moffset oType status =
+--   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
+--     >>= either DB.throwDBError pure
+--   where
+--     limit = (toInteger $ fromMaybe 100 mlimit)
+--     offset = (toInteger $ fromMaybe 0 moffset)
+--     orderByDesc Storage.Organization {..} = B.desc_ _createdAt
 
-    predicate oType status Storage.Organization {..} =
-        foldl (&&.)
-          (B.val_ True)
-          [ _status `B.in_` (B.val_ <$> status) ||. complementVal status
-          , _type `B.in_` (B.val_ <$> oType) ||. complementVal  oType
-          ]
+--     predicate oType status Storage.Organization {..} =
+--         foldl (&&.)
+--           (B.val_ True)
+--           [ _status `B.in_` (B.val_ <$> status) ||. complementVal status
+--           , _type `B.in_` (B.val_ <$> oType) ||. complementVal  oType
+--           ]
 
-complementVal l
-  | (null l) = B.val_ True
-  | otherwise = B.val_ False
+-- complementVal l
+--   | (null l) = B.val_ True
+--   | otherwise = B.val_ False
 
 update ::
   OrganizationId

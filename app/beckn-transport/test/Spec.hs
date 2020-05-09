@@ -1,7 +1,7 @@
-import           Beckn.App
-import           Beckn.App.Routes
-import qualified Beckn.App.Server         as App
-import           Beckn.Types.App
+import           Core.App
+import           Core.App.Routes
+import qualified Core.App.Server         as App
+import           Core.Types.App
 import           Data.Text.Encoding       as DT
 import qualified Data.Vault.Lazy          as V
 import           EulerHS.Interpreters
