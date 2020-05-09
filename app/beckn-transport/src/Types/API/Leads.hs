@@ -2,10 +2,10 @@ module Types.API.Leads where
 
 import           EulerHS.Prelude
 import           Data.Time
-import           Types.API.External.Core.Context
-import           Types.API.External.Mobility.Vehicle as MV
-import           Types.API.External.Core.Location as CL
-import           Types.API.External.Core.Tag
+import           Beckn.Types.External.Core.Context
+import           Beckn.Types.External.Mobility.Vehicle as MV
+import           Beckn.Types.External.Core.Location as CL
+import           Beckn.Types.External.Core.Tag
 
 data LeadsReq =
   LeadsReq
