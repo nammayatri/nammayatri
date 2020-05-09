@@ -30,6 +30,12 @@ fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
+getCurrentTimeUTC :: L.Flow LocalTime
+getCurrentTimeUTC = L.runIO' "getCurrentTimeUTC" getCurrentTimeUTC'
+
+getCurrentTimeUTC' :: IO LocalTime
+getCurrentTimeUTC' = (zonedTimeToLocalTime . utcToZonedTime utc) <$> getCurrentTime
+
 mkAckResponse :: Text -> Text -> L.Flow AckResponse
 mkAckResponse txnId action = do
   (currTime :: LocalTime) <- getCurrTime

@@ -99,6 +99,8 @@ data CaseT f = Case
 -- fields => mobility  => pass
 -- udf1 => vehicle variant  =>
 -- udf2 => luggage_count =>
+-- udf3 => start Location
+-- udf4 => end Location 
 
 type Case = CaseT Identity
 
