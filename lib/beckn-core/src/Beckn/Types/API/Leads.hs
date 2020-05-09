@@ -1,4 +1,4 @@
-module Types.API.Leads where
+module Beckn.Types.API.Leads where
 
 import           EulerHS.Prelude
 import           Data.Time
