@@ -1,49 +1,44 @@
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Types.App where
 
-import           EulerHS.Prelude
-import           Beckn.Utils.TH
+import Beckn.Utils.TH
+import EulerHS.Prelude
 
-newtype CaseId =
-  CaseId
-    { _getCaseId :: Text
-    }
-  deriving  (Generic, Show)
+newtype CaseId = CaseId
+  { _getCaseId :: Text
+  }
+  deriving (Generic, Show)
 
 deriveIdentifierInstances ''CaseId
 
-newtype ProductsId =
-  ProductsId
-    { _getProductsId :: Text
-    }
-  deriving  (Generic, Show)
+newtype ProductsId = ProductsId
+  { _getProductsId :: Text
+  }
+  deriving (Generic, Show)
 
 deriveIdentifierInstances ''ProductsId
 
-newtype CaseProductId =
-  CaseProductId
-    { _getCaseProductId :: Text
-    }
-  deriving  (Generic, Show)
+newtype CaseProductId = CaseProductId
+  { _getCaseProductId :: Text
+  }
+  deriving (Generic, Show)
 
 deriveIdentifierInstances ''CaseProductId
 
-newtype PersonId =
-  PersonId
-    { _getPersonId :: Text
-    }
-  deriving  (Generic, Show)
+newtype PersonId = PersonId
+  { _getPersonId :: Text
+  }
+  deriving (Generic, Show)
 
 deriveIdentifierInstances ''PersonId
 
-newtype OrganizationId =
-  OrganizationId
-    { _getOrganizationId :: Text
-    }
-  deriving  (Generic, Show)
+newtype OrganizationId = OrganizationId
+  { _getOrganizationId :: Text
+  }
+  deriving (Generic, Show)
 
 deriveIdentifierInstances ''OrganizationId

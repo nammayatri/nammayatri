@@ -1,31 +1,30 @@
 module Storage.Queries.Customer where
 
-import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
-import           EulerHS.Prelude                  hiding (id)
-
-import qualified Epass.Storage.Queries            as DB
-import           Types.App
-import           Epass.Types.Common
-import qualified Types.Storage.DB                 as DB
-import qualified Types.Storage.Customer           as Storage
-import           Epass.Utils.Common
-import           Data.Time
-import qualified Database.Beam                    as B
-import qualified EulerHS.Language                 as L
-import qualified EulerHS.Types                    as T
+import Data.Time
+import Database.Beam ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam as B
+import qualified Epass.Storage.Queries as DB
+import Epass.Types.Common
+import Epass.Utils.Common
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
+import Types.App
+import qualified Types.Storage.Customer as Storage
+import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT)
 dbTable = DB._customer DB.transporterDb
 
 create :: Storage.Customer -> L.Flow ()
 create Storage.Customer {..} =
-  DB.createOne dbTable (Storage.insertExpression Storage.Customer {..}) >>=
-  either DB.throwDBError pure
+  DB.createOne dbTable (Storage.insertExpression Storage.Customer {..})
+    >>= either DB.throwDBError pure
 
 findCustomerById ::
-     CustomerId -> L.Flow (Maybe Storage.Customer)
+  CustomerId -> L.Flow (Maybe Storage.Customer)
 findCustomerById id = do
-  DB.findOne dbTable predicate >>=
-    either DB.throwDBError pure
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
   where
     predicate Storage.Customer {..} = (_id ==. B.val_ id)

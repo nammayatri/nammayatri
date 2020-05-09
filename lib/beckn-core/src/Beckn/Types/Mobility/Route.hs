@@ -1,17 +1,16 @@
 module Beckn.Types.Mobility.Route where
-  
-import           Data.Text
-import           Data.Time
-import           EulerHS.Prelude
-import           Beckn.Types.Mobility.Stop
-import           Beckn.Types.Core.Scalar
 
-data Route =
-  Route
-    { _edge :: RouteEdge
-    , _stops :: [Stop]
-    }
-      deriving (Generic, Show)
+import Beckn.Types.Core.Scalar
+import Beckn.Types.Mobility.Stop
+import Data.Text
+import Data.Time
+import EulerHS.Prelude
+
+data Route = Route
+  { _edge :: RouteEdge,
+    _stops :: [Stop]
+  }
+  deriving (Generic, Show)
 
 instance FromJSON Route where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -19,14 +18,13 @@ instance FromJSON Route where
 instance ToJSON Route where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data RouteEdge =
-  RouteEdge
-    { _endpoints :: Endpoint
-    , _path :: String
-    , _duration :: Scalar
-    , _distance :: Scalar
-    }
-      deriving (Generic, Show)
+data RouteEdge = RouteEdge
+  { _endpoints :: Endpoint,
+    _path :: String,
+    _duration :: Scalar,
+    _distance :: Scalar
+  }
+  deriving (Generic, Show)
 
 instance FromJSON RouteEdge where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -34,12 +32,11 @@ instance FromJSON RouteEdge where
 instance ToJSON RouteEdge where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Endpoint =
-  Endpoint
-    { _start :: Stop
-    , _stop :: Stop
-    }
-      deriving (Generic, Show)
+data Endpoint = Endpoint
+  { _start :: Stop,
+    _stop :: Stop
+  }
+  deriving (Generic, Show)
 
 instance FromJSON Endpoint where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

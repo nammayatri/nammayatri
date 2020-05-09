@@ -1,11 +1,11 @@
 module Epass.External.Geo.API where
 
-import           Epass.External.Geo.Types
-import           Epass.Types.App
-import           EulerHS.Prelude
-import qualified EulerHS.Types            as ET
-import           Servant
-import           Servant.Client
+import Epass.External.Geo.Types
+import Epass.Types.App
+import EulerHS.Prelude
+import qualified EulerHS.Types as ET
+import Servant
+import Servant.Client
 
 type GeoAPI =
   "maps"

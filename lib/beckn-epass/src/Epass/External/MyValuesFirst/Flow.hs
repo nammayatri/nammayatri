@@ -1,13 +1,11 @@
 module Epass.External.MyValuesFirst.Flow where
 
-import           EulerHS.Language
-import qualified EulerHS.Language                           as L
-import           EulerHS.Prelude
-
-import           Servant.Client
-
-import qualified Epass.External.MyValuesFirst.API             as API
-import           Epass.External.MyValuesFirst.Types
+import qualified Epass.External.MyValuesFirst.API as API
+import Epass.External.MyValuesFirst.Types
+import EulerHS.Language
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant.Client
 
 submitSms :: BaseUrl -> SubmitSms -> Flow (Either Text ())
 submitSms url params = do
@@ -19,8 +17,8 @@ submitSms url params = do
 defaultBaseUrl :: BaseUrl
 defaultBaseUrl =
   BaseUrl
-    { baseUrlScheme = Https
-    , baseUrlHost = "www.myvaluefirst.com"
-    , baseUrlPort = 443
-    , baseUrlPath = ""
+    { baseUrlScheme = Https,
+      baseUrlHost = "www.myvaluefirst.com",
+      baseUrlPort = 443,
+      baseUrlPath = ""
     }

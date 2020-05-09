@@ -1,14 +1,14 @@
 module App.Server where
 
-import           App.Routes
-import           Types.App
-import qualified Data.Vault.Lazy      as V
+import App.Routes
+import qualified Data.Vault.Lazy as V
 import qualified EulerHS.Interpreters as I
-import           EulerHS.Prelude
-import qualified EulerHS.Types        as T
-import           Network.Wai.Parse
-import           Servant
-import           Servant.Multipart
+import EulerHS.Prelude
+import qualified EulerHS.Types as T
+import Network.Wai.Parse
+import Servant
+import Servant.Multipart
+import Types.App
 
 run :: V.Key (HashMap Text Text) -> Env -> Application
 run key env =

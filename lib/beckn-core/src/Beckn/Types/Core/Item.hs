@@ -1,26 +1,25 @@
 module Beckn.Types.Core.Item where
-  
-import           Data.Text
-import           EulerHS.Prelude
-import           Beckn.Types.Core.Policy
-import           Beckn.Types.Core.Image
-import           Beckn.Types.Core.Price
 
-data Item =
-  Item
-    { _id :: Text
-    , _name :: Text
-    , _description :: Text
-    , _image :: Image
-    , _price :: Price
-    , _primary :: Bool
-    , _selected :: Bool
-    , _quantity :: Integer
-    , _policy :: Policy
-    , _category_id :: Text
-    , _tags :: [Text]
-    }
-      deriving (Generic, Show)
+import Beckn.Types.Core.Image
+import Beckn.Types.Core.Policy
+import Beckn.Types.Core.Price
+import Data.Text
+import EulerHS.Prelude
+
+data Item = Item
+  { _id :: Text,
+    _name :: Text,
+    _description :: Text,
+    _image :: Image,
+    _price :: Price,
+    _primary :: Bool,
+    _selected :: Bool,
+    _quantity :: Integer,
+    _policy :: Policy,
+    _category_id :: Text,
+    _tags :: [Text]
+  }
+  deriving (Generic, Show)
 
 instance FromJSON Item where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

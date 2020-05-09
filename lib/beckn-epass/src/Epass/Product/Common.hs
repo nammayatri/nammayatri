@@ -2,33 +2,32 @@
 
 module Epass.Product.Common where
 
-import qualified Epass.Data.Accessor                   as Accessor
-import qualified Epass.Storage.Queries.Blacklist       as DB
-import qualified Epass.Storage.Queries.EntityTag       as ETag
-import qualified Epass.Storage.Queries.Location        as DB
+import Data.Aeson
+import qualified Data.List as List
+import Data.Map.Strict
+import qualified Epass.Data.Accessor as Accessor
+import qualified Epass.Storage.Queries.Blacklist as DB
+import qualified Epass.Storage.Queries.EntityTag as ETag
+import qualified Epass.Storage.Queries.Location as DB
 import qualified Epass.Storage.Queries.PassApplication as DB
-import qualified Epass.Storage.Queries.Tag             as Tag
-import           Epass.Types.API.Location.CRUD
-import           Epass.Types.API.PassApplication
-import           Epass.Types.API.Common                as C
-import           Epass.Types.App
-import           Epass.Types.Common
-import           Epass.Types.Storage.Blacklist         as BL
-import qualified Epass.Types.Storage.EntityTag         as ET
-import           Epass.Types.Storage.Location          as L
-import           Epass.Types.Storage.PassApplication
+import qualified Epass.Storage.Queries.Tag as Tag
+import Epass.Types.API.Common as C
+import Epass.Types.API.Location.CRUD
+import Epass.Types.API.PassApplication
+import Epass.Types.App
+import Epass.Types.Common
+import Epass.Types.Storage.Blacklist as BL
+import qualified Epass.Types.Storage.EntityTag as ET
+import Epass.Types.Storage.Location as L
+import Epass.Types.Storage.PassApplication
 import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
-import           Epass.Types.Storage.Tag               as T
-import           Epass.Utils.Common
-import           Epass.Utils.Routes
-import           Epass.Utils.Storage
-import           Data.Aeson
-import qualified Data.List                             as List
-import           Data.Map.Strict
-import qualified EulerHS.Language                      as L
-import           EulerHS.Prelude
-import           Servant
-
+import Epass.Types.Storage.Tag as T
+import Epass.Utils.Common
+import Epass.Utils.Routes
+import Epass.Utils.Storage
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant
 
 getLocationInfo :: Text -> L.Flow C.LocationInfo
 getLocationInfo lid = do
@@ -43,21 +42,22 @@ getLocationInfo lid = do
   tags <- Tag.findAllById (tagId <$> locationTags)
 
   return $ mkLocationInfo blacklist locationTags tags location
-
   where
     locationId L.Location {..} = _id
     tagId ET.EntityTag {..} = TagId _TagId
 
 mkLocationInfo ::
-     [Blacklist] -> [ET.EntityTag] -> [Tag] -> L.Location -> C.LocationInfo
+  [Blacklist] -> [ET.EntityTag] -> [Tag] -> L.Location -> C.LocationInfo
 mkLocationInfo bLists eTags tags loc =
   let bMap = fromList ((\bl@Blacklist {..} -> (__EntityId, bl)) <$> bLists)
       tagMap =
         fromList
-          ((\t@Tag {..} ->
-              let TagId x = _id
-               in (x, t)) <$>
-           tags)
+          ( ( \t@Tag {..} ->
+                let TagId x = _id
+                 in (x, t)
+            )
+              <$> tags
+          )
       eTagMap =
         fromListWith (++) ((\et@ET.EntityTag {..} -> (_EntityId, [et])) <$> eTags)
       mkTag eTag@ET.EntityTag {..} =
@@ -65,8 +65,8 @@ mkLocationInfo bLists eTags tags loc =
       mkTagInfo eTags = mkTag <$> eTags
       mkLInfo loc@L.Location {..} =
         C.LocationInfo
-          { _location = loc
-          , _blacklistInfo = lookup _id bMap
-          , _tagInfo = fromMaybe [] (mkTagInfo <$> (lookup _id eTagMap))
+          { _location = loc,
+            _blacklistInfo = lookup _id bMap,
+            _tagInfo = fromMaybe [] (mkTagInfo <$> (lookup _id eTagMap))
           }
    in mkLInfo loc

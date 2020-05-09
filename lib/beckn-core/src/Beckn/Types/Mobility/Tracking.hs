@@ -1,16 +1,15 @@
 module Beckn.Types.Mobility.Tracking where
-  
-import           Data.Text
-import           Data.Time
-import           EulerHS.Prelude
-import           Beckn.Types.Core.Location
 
-data Tracking =
-  Tracking
-    { _method :: Location -- "PULL", "PUSH"
-    , _pull :: PullTrackingData
-    }
-      deriving (Generic, Show)
+import Beckn.Types.Core.Location
+import Data.Text
+import Data.Time
+import EulerHS.Prelude
+
+data Tracking = Tracking
+  { _method :: Location, -- "PULL", "PUSH"
+    _pull :: PullTrackingData
+  }
+  deriving (Generic, Show)
 
 instance FromJSON Tracking where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -18,12 +17,11 @@ instance FromJSON Tracking where
 instance ToJSON Tracking where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data PullTrackingData =
-  PullTrackingData
-    { _data_url :: Text
-    , _embed_url :: Text
-    }
-      deriving (Generic, Show)
+data PullTrackingData = PullTrackingData
+  { _data_url :: Text,
+    _embed_url :: Text
+  }
+  deriving (Generic, Show)
 
 instance FromJSON PullTrackingData where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

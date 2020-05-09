@@ -1,35 +1,37 @@
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.DB.Config where
 
-import           Types.Config  (Config (..))
-
-import           Data.Text           as T
+import Data.Text as T
 import qualified Database.Beam.MySQL as BM
-import qualified EulerHS.Language    as L
-import           EulerHS.Prelude
-import qualified EulerHS.Types       as T
-import qualified Prelude             as P (show)
-import           Servant.Server
-import           System.Environment
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import qualified EulerHS.Types as T
+import Servant.Server
+import System.Environment
+import Types.Config (Config (..))
+import qualified Prelude as P (show)
 
 instance Config T.MySQLConfig where
-  theConfig = T.MySQLConfig
-    { connectHost     = "127.0.0.1"
-    , connectPort     = 3306
-    , connectUser     = "atlas"
-    , connectPassword = "atlas"
-    , connectDatabase = "atlas_transporter"
-    , connectOptions  = [T.CharsetName "utf8"]
-    , connectPath     = ""
-    , connectSSL      = Nothing
-    }
+  theConfig =
+    T.MySQLConfig
+      { connectHost = "127.0.0.1",
+        connectPort = 3306,
+        connectUser = "atlas",
+        connectPassword = "atlas",
+        connectDatabase = "atlas_transporter",
+        connectOptions = [T.CharsetName "utf8"],
+        connectPath = "",
+        connectSSL = Nothing
+      }
 
 poolConfig :: T.PoolConfig
-poolConfig = T.PoolConfig
-  { stripes = 1
-  , keepAlive = 10
-  , resourcesPerStripe = 50
-  }
+poolConfig =
+  T.PoolConfig
+    { stripes = 1,
+      keepAlive = 10,
+      resourcesPerStripe = 50
+    }
 
 loadMysqlConfig :: IO (Maybe T.MySQLConfig)
 loadMysqlConfig = do
@@ -45,16 +47,17 @@ loadMysqlConfig = do
     pass <- mpass
     db <- mdb
     p <- readMaybe port
-    Just $ T.MySQLConfig
-      { connectHost     = host
-      , connectPort     = p
-      , connectUser     = user
-      , connectPassword = pass
-      , connectDatabase = db
-      , connectOptions  = [T.CharsetName "utf8"]
-      , connectPath     = ""
-      , connectSSL      = Nothing
-      }
+    Just $
+      T.MySQLConfig
+        { connectHost = host,
+          connectPort = p,
+          connectUser = user,
+          connectPassword = pass,
+          connectDatabase = db,
+          connectOptions = [T.CharsetName "utf8"],
+          connectPath = "",
+          connectSSL = Nothing
+        }
 
 getMysqlDBConfig :: T.MySQLConfig -> L.Flow (T.DBConfig BM.MySQLM)
 getMysqlDBConfig defMysqlConfig = do
@@ -71,8 +74,8 @@ dbHandle f cfg = f cfg >>= either (error . show) pure
 
 connMySQLorFail, getConn, getOrInitConn :: T.DBConfig beM -> L.Flow (T.SqlConn beM)
 connMySQLorFail = dbHandle L.initSqlDBConnection
-getConn         = dbHandle L.getSqlDBConnection
-getOrInitConn   = dbHandle L.getOrInitSqlConn
+getConn = dbHandle L.getSqlDBConnection
+getOrInitConn = dbHandle L.getOrInitSqlConn
 
 prepareDBConnections :: Config T.MySQLConfig => L.Flow (T.SqlConn BM.MySQLM)
 prepareDBConnections = getMysqlDBConfig theConfig >>= connMySQLorFail

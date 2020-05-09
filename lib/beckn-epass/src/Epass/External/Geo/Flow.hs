@@ -1,12 +1,12 @@
 module Epass.External.Geo.Flow where
 
-import qualified Epass.External.Geo.API   as API
-import           Epass.External.Geo.Types
-import qualified Data.Text                as T
-import qualified EulerHS.Language         as L
-import           EulerHS.Prelude
-import           Servant.Client
-import           System.Environment
+import qualified Data.Text as T
+import qualified Epass.External.Geo.API as API
+import Epass.External.Geo.Types
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant.Client
+import System.Environment
 
 defaultBaseUrl :: BaseUrl
 defaultBaseUrl = BaseUrl Https "maps.googleapis.com" 443 ""

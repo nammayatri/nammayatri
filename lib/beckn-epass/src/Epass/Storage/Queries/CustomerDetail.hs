@@ -1,30 +1,30 @@
 module Epass.Storage.Queries.CustomerDetail where
 
-import qualified Epass.Storage.Queries              as DB
-import           Epass.Types.App
-import           Epass.Types.Storage.CustomerDetail as Storage
-import qualified Epass.Types.Storage.DB             as DB
-import           Epass.Utils.Common                 (generateGUID)
-import           Epass.Utils.Extra                  (getCurrentTimeUTC)
-import           Data.Aeson                         (Value (Null))
-import           Database.Beam                      ((&&.), (<-.), (==.))
-import qualified Database.Beam                      as B
-import qualified EulerHS.Language                   as L
-import           EulerHS.Prelude                    hiding (id)
-import qualified EulerHS.Types                      as T
+import Data.Aeson (Value (Null))
+import Database.Beam ((&&.), (<-.), (==.))
+import qualified Database.Beam as B
+import qualified Epass.Storage.Queries as DB
+import Epass.Types.App
+import Epass.Types.Storage.CustomerDetail as Storage
+import qualified Epass.Types.Storage.DB as DB
+import Epass.Utils.Common (generateGUID)
+import Epass.Utils.Extra (getCurrentTimeUTC)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
 import Servant
 
 dbTable ::
-     B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.CustomerDetailT)
+  B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.CustomerDetailT)
 dbTable = DB._CustomerDetail DB.becknDb
 
 create :: Storage.CustomerDetail -> L.Flow ()
 create Storage.CustomerDetail {..} =
-  DB.createOne dbTable (Storage.insertExpression Storage.CustomerDetail {..}) >>=
-  either DB.throwDBError pure
+  DB.createOne dbTable (Storage.insertExpression Storage.CustomerDetail {..})
+    >>= either DB.throwDBError pure
 
 findById ::
-     CustomerDetailId -> L.Flow (T.DBResult (Maybe Storage.CustomerDetail))
+  CustomerDetailId -> L.Flow (T.DBResult (Maybe Storage.CustomerDetail))
 findById id = do
   DB.findOne dbTable predicate
   where
@@ -33,15 +33,15 @@ findById id = do
 findByIdentifier ::
   Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.CustomerDetail)
 findByIdentifier idType mb =
-  DB.findOne dbTable predicate >>=
-    either DB.throwDBError pure
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
   where
     predicate Storage.CustomerDetail {..} =
-      _identifierType ==. B.val_ idType &&.
-      _uniqueIdentifier ==. B.val_ mb
+      _identifierType ==. B.val_ idType
+        &&. _uniqueIdentifier ==. B.val_ mb
 
 findAllByCustomerId ::
-     CustomerId -> L.Flow [Storage.CustomerDetail]
+  CustomerId -> L.Flow [Storage.CustomerDetail]
 findAllByCustomerId id = do
   DB.findAll dbTable predicate
     >>= either DB.throwDBError pure
@@ -53,10 +53,10 @@ findExact customerId idType identifier =
   DB.findOne dbTable (predicate customerId idType identifier)
     >>= either DB.throwDBError pure
   where
-    predicate customerId idType identifier Storage.CustomerDetail{..} =
-      _CustomerId ==. B.val_ customerId &&.
-      _identifierType ==. B.val_ idType &&.
-      _uniqueIdentifier ==. B.val_ identifier
+    predicate customerId idType identifier Storage.CustomerDetail {..} =
+      _CustomerId ==. B.val_ customerId
+        &&. _identifierType ==. B.val_ idType
+        &&. _uniqueIdentifier ==. B.val_ identifier
 
 createIfNotExistsCustomerD :: Storage.CustomerDetail -> L.Flow ()
 createIfNotExistsCustomerD cust = do
@@ -64,8 +64,8 @@ createIfNotExistsCustomerD cust = do
   resp <- DB.findOne dbTable (\CustomerDetail {..} -> B.val_ cid ==. _uniqueIdentifier)
   case resp of
     Right (Just x) -> return ()
-    Right Nothing  -> create cust
-    Left err       -> L.throwException err500
+    Right Nothing -> create cust
+    Left err -> L.throwException err500
 
 createIfNotExists :: CustomerId -> Storage.IdentifierType -> Text -> L.Flow ()
 createIfNotExists customerId idType identifier = do
@@ -73,22 +73,23 @@ createIfNotExists customerId idType identifier = do
   case res of
     Just _ -> return ()
     Nothing -> do
-        details <- findAllByCustomerId customerId
-        let isPrimary = if length details == 0 then True else False
-        create =<< (getDetails isPrimary)
+      details <- findAllByCustomerId customerId
+      let isPrimary = if length details == 0 then True else False
+      create =<< (getDetails isPrimary)
   where
     getDetails isPrimary = do
       id <- generateGUID
       now <- getCurrentTimeUTC
-      return $ Storage.CustomerDetail
-            { _id = id
-            , _CustomerId = customerId
-            , _uniqueIdentifier = identifier
-            , _identifierType = idType
-            , _value = Null
-            , _verified = False
-            , _primaryIdentifier = isPrimary
-            , _info = ""
-            , _createdAt = now
-            , _updatedAt = now
-            }
+      return $
+        Storage.CustomerDetail
+          { _id = id,
+            _CustomerId = customerId,
+            _uniqueIdentifier = identifier,
+            _identifierType = idType,
+            _value = Null,
+            _verified = False,
+            _primaryIdentifier = isPrimary,
+            _info = "",
+            _createdAt = now,
+            _updatedAt = now
+          }

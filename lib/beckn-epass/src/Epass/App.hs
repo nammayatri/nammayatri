@@ -1,42 +1,49 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Epass.App where
 
-import qualified Epass.App.Server             as App
-import           Epass.Constants.APIErrorCode
-import           Epass.Storage.DB.Config
-import qualified Epass.Types.App              as App
-import           Epass.Utils.Storage
-import qualified Data.Aeson                   as Aeson
-import qualified Data.ByteString.Char8        as BS
-import qualified Data.Vault.Lazy              as V
-import qualified EulerHS.Interpreters         as R
-import qualified EulerHS.Language             as L
-import           EulerHS.Prelude
-import qualified EulerHS.Runtime              as R
-import qualified EulerHS.Types                as T
-import qualified Network.HTTP.Types           as H
-import           Network.Wai
-import           Network.Wai.Handler.Warp     (Settings, defaultSettings, run,
-                                               runSettings,
-                                               setOnExceptionResponse, setPort)
-import           Servant
-import           Servant.Server
-import qualified System.Environment           as SE
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Vault.Lazy as V
+import qualified Epass.App.Server as App
+import Epass.Constants.APIErrorCode
+import Epass.Storage.DB.Config
+import qualified Epass.Types.App as App
+import Epass.Utils.Storage
+import qualified EulerHS.Interpreters as R
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import qualified EulerHS.Runtime as R
+import qualified EulerHS.Types as T
+import qualified Network.HTTP.Types as H
+import Network.Wai
+import Network.Wai.Handler.Warp
+  ( Settings,
+    defaultSettings,
+    run,
+    runSettings,
+    setOnExceptionResponse,
+    setPort,
+  )
+import Servant
+import Servant.Server
+import qualified System.Environment as SE
 
 runEpassBackendApp :: IO ()
 runEpassBackendApp = do
   port <- fromMaybe 8012 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runEpassBackendApp' port $
-    setOnExceptionResponse becknExceptionResponse $
-    setPort port defaultSettings
+  runEpassBackendApp' port
+    $ setOnExceptionResponse becknExceptionResponse
+    $ setPort port defaultSettings
 
 runEpassBackendApp' :: Int -> Settings -> IO ()
 runEpassBackendApp' port settings = do
   reqHeadersKey <- V.newKey
   let loggerCfg =
         T.defaultLoggerConfig
-          { T._logToFile = True
-          , T._logFilePath = "/tmp/beckn-epass.log"
-          , T._isAsync = True
+          { T._logToFile = True,
+            T._logFilePath = "/tmp/beckn-epass.log",
+            T._isAsync = True
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."

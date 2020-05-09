@@ -2,32 +2,32 @@
 
 module Epass.Product.User.CRUD where
 
-import qualified Epass.Data.Accessor                   as Accessor
-import           Epass.Product.Common
-import qualified Epass.Storage.Queries.Location        as Loc
-import qualified Epass.Storage.Queries.Organization    as QO
-import qualified Epass.Storage.Queries.User            as DB
-import           Epass.Types.API.Common                as C
-import           Epass.Types.API.User
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Storage.Organization      as SO
+import Data.Aeson
+import Data.Default
+import qualified Data.List as List
+import Data.Time
+import qualified Database.Beam.Schema.Tables as B
+import qualified Epass.Data.Accessor as Accessor
+import Epass.Product.Common
+import qualified Epass.Storage.Queries.Location as Loc
+import qualified Epass.Storage.Queries.Organization as QO
+import qualified Epass.Storage.Queries.User as DB
+import Epass.Types.API.Common as C
+import Epass.Types.API.User
+import Epass.Types.App
+import Epass.Types.Common
+import Epass.Types.Storage.Location as SL
+import qualified Epass.Types.Storage.Organization as SO
 import qualified Epass.Types.Storage.RegistrationToken as SR
-import           Epass.Types.Storage.User              as Storage
-import           Epass.Types.Storage.Location          as SL
-import qualified Epass.Types.Storage.User              as SU
-import           Epass.Utils.Common
-import           Epass.Utils.Extra
-import           Epass.Utils.Routes
-import           Epass.Utils.Storage
-import           Data.Aeson
-import           Data.Default
-import qualified Data.List                             as List
-import           Data.Time
-import qualified Database.Beam.Schema.Tables           as B
-import qualified EulerHS.Language                      as L
-import           EulerHS.Prelude
-import           Servant
+import Epass.Types.Storage.User as Storage
+import qualified Epass.Types.Storage.User as SU
+import Epass.Utils.Common
+import Epass.Utils.Extra
+import Epass.Utils.Routes
+import Epass.Utils.Storage
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant
 
 create :: Maybe Text -> CreateReq -> FlowHandler CreateRes
 create regToken CreateReq {..} =
@@ -45,26 +45,26 @@ create regToken CreateReq {..} =
       now <- getCurrTime
       return
         Storage.User
-          { _id = id
-          , _verified = False
-          , _status = INACTIVE
-          , _info = Nothing
-          , _createdAt = now
-          , _updatedAt = now
-          , _username = Nothing
-          , _email = Nothing
-          , _TenantOrganizationId = Nothing -- TODO : Fix this
-          , ..
+          { _id = id,
+            _verified = False,
+            _status = INACTIVE,
+            _info = Nothing,
+            _createdAt = now,
+            _updatedAt = now,
+            _username = Nothing,
+            _email = Nothing,
+            _TenantOrganizationId = Nothing, -- TODO : Fix this
+            ..
           }
 
 list ::
-     Maybe Text
-  -> Maybe Int
-  -> Maybe Int
-  -> Maybe LocateBy
-  -> [Text]
-  -> [Role]
-  -> FlowHandler ListRes
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe LocateBy ->
+  [Text] ->
+  [Role] ->
+  FlowHandler ListRes
 list regToken offsetM limitM locateM locate roleM =
   withFlowHandler $ do
     reg <- verifyToken regToken
@@ -72,20 +72,21 @@ list regToken offsetM limitM locateM locate roleM =
       L.throwException $ err400 {errBody = "UNAUTHORIZED_CUSTOMER"}
     user <- DB.findById (UserId $ SR._EntityId reg)
     orgM <- QO.findOrganizationById (SU._OrganizationId user)
-    when (isNothing orgM) $
-      L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
+    when (isNothing orgM)
+      $ L.throwException
+      $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
     let org = fromJust orgM
     getUsers limitM offsetM locateM roleM locate user org
 
 getUsers ::
-     Maybe Int
-  -> Maybe Int
-  -> Maybe LocateBy
-  -> [Role]
-  -> [Text]
-  -> SU.User
-  -> SO.Organization
-  -> L.Flow ListRes
+  Maybe Int ->
+  Maybe Int ->
+  Maybe LocateBy ->
+  [Role] ->
+  [Text] ->
+  SU.User ->
+  SO.Organization ->
+  L.Flow ListRes
 getUsers offsetM limitM locateM role locate user org = do
   case SU._role user of
     ADMIN ->
@@ -94,8 +95,8 @@ getUsers offsetM limitM locateM role locate user org = do
         Just LDISTRICT -> districtLevelUsers limitM offsetM role locate
         Just LWARD -> wardLevelUsers limitM offsetM role locate
         _ ->
-          DB.findAllWithLimitOffsetByRole limitM offsetM role >>=
-          return . ListRes
+          DB.findAllWithLimitOffsetByRole limitM offsetM role
+            >>= return . ListRes
     CITYLEVEL -> do
       allLocations <-
         Loc.findByStOrDistrict offsetM limitM LCITY (SO._city org)
@@ -158,12 +159,12 @@ cityLevelUsers limitM offsetM r cities =
     mempty
     empty
     empty
-    Nothing >>=
-  DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id >>=
-  return . ListRes
+    Nothing
+    >>= DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id
+    >>= return . ListRes
 
 districtLevelUsers ::
-     Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
+  Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
 districtLevelUsers limitM offsetM r districts =
   QO.listOrganizations
     Nothing
@@ -175,9 +176,9 @@ districtLevelUsers limitM offsetM r districts =
     mempty
     empty
     empty
-    Nothing >>=
-  DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id >>=
-  return . ListRes
+    Nothing
+    >>= DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id
+    >>= return . ListRes
 
 wardLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
 wardLevelUsers limitM offsetM r wards =
@@ -191,9 +192,9 @@ wardLevelUsers limitM offsetM r wards =
     wards
     empty
     empty
-    Nothing >>=
-  DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id >>=
-  return . ListRes
+    Nothing
+    >>= DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id
+    >>= return . ListRes
 
 get :: Maybe Text -> UserId -> FlowHandler GetRes
 get regToken userId =
@@ -206,9 +207,10 @@ get regToken userId =
 update :: Maybe Text -> UserId -> UpdateReq -> FlowHandler UpdateRes
 update regToken userId UpdateReq {..} =
   withFlowHandler $
-  do verifyToken regToken
-     DB.update userId _status _name _role
-     UpdateRes <$> DB.findById userId
+    do
+      verifyToken regToken
+      DB.update userId _status _name _role
+      UpdateRes <$> DB.findById userId
 
 delete :: Maybe RegistrationTokenText -> UserId -> FlowHandler Ack
 delete regToken userId =

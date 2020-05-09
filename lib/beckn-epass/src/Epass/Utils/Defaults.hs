@@ -1,12 +1,11 @@
 module Epass.Utils.Defaults where
 
-import           Epass.Types.Common
-import           Data.Time
-import           Data.Time.Calendar  (Day (..))
-import           Data.Time.Clock
-import           Data.Time.LocalTime
-import           EulerHS.Prelude
-
+import Data.Time
+import Data.Time.Calendar (Day (..))
+import Data.Time.Clock
+import Data.Time.LocalTime
+import Epass.Types.Common
+import EulerHS.Prelude
 
 localTime :: LocalTime
 localTime = LocalTime (ModifiedJulianDay 58930) (TimeOfDay 1 1 1)

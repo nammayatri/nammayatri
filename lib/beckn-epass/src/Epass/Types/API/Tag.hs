@@ -1,16 +1,15 @@
 module Epass.Types.API.Tag where
 
-import           Epass.Types.Storage.EntityTag
-import           Epass.Types.Storage.Tag
-import           Data.Default
-import           Data.Swagger                  hiding (Tag)
-import           EulerHS.Prelude
+import Data.Default
+import Data.Swagger hiding (Tag)
+import Epass.Types.Storage.EntityTag
+import Epass.Types.Storage.Tag
+import EulerHS.Prelude
 
-data CreateReq =
-  CreateReq
-  { _tagType :: Text
-  , _tag     :: Text
-  , _info    :: Maybe Text
+data CreateReq = CreateReq
+  { _tagType :: Text,
+    _tag :: Text,
+    _info :: Maybe Text
   }
   deriving (Show, Generic, ToSchema)
 
@@ -20,8 +19,7 @@ instance FromJSON CreateReq where
 instance ToJSON CreateReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data CreateRes =
-  CreateRes
+data CreateRes = CreateRes
   { _tag :: Tag
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -32,8 +30,7 @@ instance ToJSON CreateRes where
 instance FromJSON CreateRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data ListRes =
-  ListRes
+data ListRes = ListRes
   { _tags :: [Tag]
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -44,8 +41,7 @@ instance ToJSON ListRes where
 instance FromJSON ListRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data ListVal =
-  ListVal
+data ListVal = ListVal
   { _val :: [Text]
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -56,11 +52,10 @@ instance ToJSON ListVal where
 instance FromJSON ListVal where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data TagEntityReq =
-  TagEntityReq
-  { _EntityId   :: Text
-  , _entityType :: Text
-  , _TagId      :: Text
+data TagEntityReq = TagEntityReq
+  { _EntityId :: Text,
+    _entityType :: Text,
+    _TagId :: Text
   }
   deriving (Show, Generic, ToSchema)
 
@@ -70,8 +65,7 @@ instance ToJSON TagEntityReq where
 instance FromJSON TagEntityReq where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data TagEntityRes =
-  TagEntityRes
+data TagEntityRes = TagEntityRes
   { _entityTag :: EntityTag
   }
   deriving (Show, Generic, Default, ToSchema)
