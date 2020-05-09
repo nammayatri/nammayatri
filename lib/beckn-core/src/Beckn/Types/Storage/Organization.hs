@@ -20,9 +20,6 @@ import           Servant.Swagger
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data OrganizationType = GATEWAY | PROVIDER | TRANSPORTER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
@@ -37,17 +34,17 @@ instance FromHttpApiData Status where
 
 --------------------------------------------------------------------------------------
 
-data IndustryType = RIDE | PASS | SKU
+data OrganizationType = TRANSPORTER | PASS | SKU
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be IndustryType where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL IndustryType where
+instance FromBackendRow MySQL OrganizationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance ToParamSchema IndustryType
-instance FromHttpApiData IndustryType where
+instance ToParamSchema OrganizationType
+instance FromHttpApiData OrganizationType where
   parseUrlPiece  = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
@@ -60,7 +57,7 @@ data OrganizationT f =
     , _mobileNumber  :: B.C f (Maybe Text)
     , _fcmId         :: B.C f (Maybe Text)
     , _gstin         :: B.C f (Maybe Text)
-    , _type          :: B.C f IndustryType
+    , _type          :: B.C f OrganizationType
     -- , _industry      :: B.C f Industry
     , _locationId    :: B.C f (Maybe Text)
     , _fromTime      :: B.C f (Maybe LocalTime)
