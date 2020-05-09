@@ -1,28 +1,28 @@
 module Product.Registration where
 
-import qualified Data.Accessor                     as Lens
-import qualified Epass.External.MyValuesFirst.Flow       as Sms
-import qualified Epass.External.MyValuesFirst.Types      as Sms
-import qualified Storage.Queries.Person                  as QP
+import Beckn.Types.App
+import Beckn.Types.Common as BC
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Crypto.Number.Generate as Cryptonite
+import qualified Data.Accessor as Lens
+import Data.Aeson
+import qualified Data.Text as T
+import Data.Time.LocalTime
+import qualified Epass.External.MyValuesFirst.Flow as Sms
+import qualified Epass.External.MyValuesFirst.Types as Sms
 import qualified Epass.Storage.Queries.RegistrationToken as QR
-import           Types.API.Registration
-import           Types.App                               
-import           Beckn.Types.App
-import           Beckn.Types.Common                       as BC
-import qualified Beckn.Types.Storage.Person                    as SP
-import qualified Epass.Types.Storage.RegistrationToken   as SR
-import           Epass.Utils.Common
-import           Epass.Utils.Extra
-import           Utils.Routes
-import           Epass.Utils.Storage
-import qualified Crypto.Number.Generate                  as Cryptonite
-import           Data.Aeson
-import qualified Data.Text                               as T
-import           Data.Time.LocalTime
-import qualified EulerHS.Language                        as L
-import           EulerHS.Prelude
-import           Servant
-import           System.Environment
+import qualified Epass.Types.Storage.RegistrationToken as SR
+import Epass.Utils.Common
+import Epass.Utils.Extra
+import Epass.Utils.Storage
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant
+import qualified Storage.Queries.Person as QP
+import System.Environment
+import Types.API.Registration
+import Types.App
+import Utils.Routes
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -38,12 +38,12 @@ initiateFlow req = do
   entityId <-
     case entityType of
       SR.CUSTOMER -> do
-        QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber >>=
-          maybe (createPerson req) (return . _getPersonId . SP._id)
+        QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
+          >>= maybe (createPerson req) (return . _getPersonId . SP._id)
       SR.USER -> do
         person <-
-          fromMaybeM400 "User not found" =<<
-          QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
+          fromMaybeM400 "User not found"
+            =<< QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
         return $ _getPersonId $ SP._id person
   regToken <- makeSession req entityId entityType
   QR.create regToken
@@ -58,33 +58,33 @@ makePerson req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
   return $
-    SP.Person { 
-      _id                 = id
-      , _firstName         = Nothing
-      , _middleName        = Nothing 
-      , _lastName          = Nothing
-      , _fullName          = Nothing
-      , _role               = role
-      , _gender             = SP.UNKNOWN
-      , _identifierType     = SP.MOBILENUMBER
-      , _email              = Nothing
-      , _mobileNumber       = Nothing
-      , _mobileCountryCode= Nothing
-      , _identifier         = Nothing
-      , _rating             = Nothing
-      , _verified           = False
-      , _status             = SP.INACTIVE
-      , _udf1               = Nothing
-      , _udf2               = Nothing
-      , _organizationId     = Nothing
-      , _locationId         = Nothing
-      , _description        = Nothing
-      , _createdAt          = now
-      , _updatedAt          = now
-    }
+    SP.Person
+      { _id = id,
+        _firstName = Nothing,
+        _middleName = Nothing,
+        _lastName = Nothing,
+        _fullName = Nothing,
+        _role = role,
+        _gender = SP.UNKNOWN,
+        _identifierType = SP.MOBILENUMBER,
+        _email = Nothing,
+        _mobileNumber = Nothing,
+        _mobileCountryCode = Nothing,
+        _identifier = Nothing,
+        _rating = Nothing,
+        _verified = False,
+        _status = SP.INACTIVE,
+        _udf1 = Nothing,
+        _udf2 = Nothing,
+        _organizationId = Nothing,
+        _locationId = Nothing,
+        _description = Nothing,
+        _createdAt = now,
+        _updatedAt = now
+      }
 
 makeSession ::
-     InitiateLoginReq -> Text -> SR.RTEntityType -> L.Flow SR.RegistrationToken
+  InitiateLoginReq -> Text -> SR.RTEntityType -> L.Flow SR.RegistrationToken
 makeSession req entityId entityType = do
   otp <- generateOTPCode
   id <- L.generateGUID
@@ -98,20 +98,20 @@ makeSession req entityId entityType = do
     L.runIO $ fromMaybe 365 . (>>= readMaybe) <$> lookupEnv "TOKEN_EXPIRY"
   return $
     SR.RegistrationToken
-      { _id = id
-      , _token = token
-      , _attempts = attempts
-      , _authMedium = (req ^. Lens.medium)
-      , _authType = (req ^. Lens._type)
-      , _authValueHash = otp
-      , _verified = False
-      , _authExpiry = authExpiry
-      , _tokenExpiry = tokenExpiry
-      , _EntityId = entityId
-      , _entityType = entityType
-      , _createdAt = now
-      , _updatedAt = now
-      , _info = Nothing
+      { _id = id,
+        _token = token,
+        _attempts = attempts,
+        _authMedium = (req ^. Lens.medium),
+        _authType = (req ^. Lens._type),
+        _authValueHash = otp,
+        _verified = False,
+        _authExpiry = authExpiry,
+        _tokenExpiry = tokenExpiry,
+        _EntityId = entityId,
+        _entityType = entityType,
+        _createdAt = now,
+        _updatedAt = now,
+        _info = Nothing
       }
 
 generateOTPCode :: L.Flow Text
@@ -130,11 +130,11 @@ sendOTP phoneNumber otpCode = do
     Sms.submitSms
       Sms.defaultBaseUrl
       Sms.SubmitSms
-        { Sms._username = T.pack username
-        , Sms._password = T.pack password
-        , Sms._from = "JUSPAY"
-        , Sms._to = phoneNumber
-        , Sms._text = "Your OTP is " <> otpCode
+        { Sms._username = T.pack username,
+          Sms._password = T.pack password,
+          Sms._from = "JUSPAY",
+          Sms._to = phoneNumber,
+          Sms._text = "Your OTP is " <> otpCode
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
 
@@ -145,16 +145,16 @@ login tokenId req =
     when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
     checkForExpiry _authExpiry _updatedAt
     let isValid =
-          _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type &&
-          _authValueHash ==
-          req ^.
-          Lens.hash
+          _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type
+            && _authValueHash
+              == req
+              ^. Lens.hash
     if isValid
       then do
         case _entityType of
           SR.CUSTOMER -> do
             person <- checkPersonExists _EntityId
-            QP.updatePerson (SP._id person) True (req ^. Lens.identifier) SP.MOBILENUMBER (Just $ req ^. Lens.identifier) 
+            QP.updatePerson (SP._id person) True (req ^. Lens.identifier) SP.MOBILENUMBER (Just $ req ^. Lens.identifier)
             return $ LoginRes _token (Just person) Nothing
           SR.USER -> do
             person <- checkPersonExists _EntityId
@@ -163,9 +163,9 @@ login tokenId req =
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =
-      whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
-      L.throwException $
-      err400 {errBody = "AUTH_EXPIRED"}
+      whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt)
+        $ L.throwException
+        $ err400 {errBody = "AUTH_EXPIRED"}
 
 checkRegistrationTokenExists :: Text -> L.Flow SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
@@ -187,7 +187,7 @@ reInitiateLogin tokenId req =
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
     case _entityType of
       SR.CUSTOMER -> void $ checkPersonExists _EntityId
-      SR.USER     -> void $ checkPersonExists _EntityId
+      SR.USER -> void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
         sendOTP (req ^. Lens.identifier) _authValueHash

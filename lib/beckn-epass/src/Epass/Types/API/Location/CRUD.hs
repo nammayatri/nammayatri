@@ -1,19 +1,18 @@
 module Epass.Types.API.Location.CRUD where
 
-import           Epass.Types.App
+import Data.Default
+import Data.Time.LocalTime
 import qualified Epass.Types.API.Common as C
+import Epass.Types.App
 import qualified Epass.Types.Common as C
-import           Epass.Types.Storage.Blacklist
-import           Epass.Types.Storage.EntityTag
-import           Epass.Types.Storage.Location
-import           Epass.Types.Storage.Tag
-import           Epass.Utils.Common
-import           Data.Default
-import           Data.Time.LocalTime
-import           EulerHS.Prelude
+import Epass.Types.Storage.Blacklist
+import Epass.Types.Storage.EntityTag
+import Epass.Types.Storage.Location
+import Epass.Types.Storage.Tag
+import Epass.Utils.Common
+import EulerHS.Prelude
 
-data ListLocationRes =
-  ListLocationRes
+data ListLocationRes = ListLocationRes
   { _locationInfo :: [C.LocationInfo]
   }
   deriving (Show, Generic)

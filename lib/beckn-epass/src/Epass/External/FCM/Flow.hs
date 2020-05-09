@@ -1,15 +1,15 @@
 module Epass.External.FCM.Flow where
 
-import qualified Epass.External.FCM.API   as API
-import           Epass.External.FCM.Types
-import qualified Data.Text                as T
-import qualified EulerHS.Language         as L
-import           EulerHS.Prelude
-import           Servant.Client
-import           System.Environment
+import qualified Data.Text as T
+import qualified Epass.External.FCM.API as API
+import Epass.External.FCM.Types
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant.Client
+import System.Environment
 
 sendNotification ::
-     BaseUrl -> Text -> SubmitNotification -> L.Flow (Either Text ())
+  BaseUrl -> Text -> SubmitNotification -> L.Flow (Either Text ())
 sendNotification url param req = do
   auth <- L.runIO $ T.pack <$> (getEnv "FCM_TOKEN")
   res <- L.callAPI url $ API.sendNotification (Just $ FAuth auth) param req
@@ -22,8 +22,8 @@ sendNotification url param req = do
 defaultBaseUrl :: BaseUrl
 defaultBaseUrl =
   BaseUrl
-    { baseUrlScheme = Https
-    , baseUrlHost = "fcm.googleapis.com"
-    , baseUrlPort = 443
-    , baseUrlPath = ""
+    { baseUrlScheme = Https,
+      baseUrlHost = "fcm.googleapis.com",
+      baseUrlPort = 443,
+      baseUrlPath = ""
     }

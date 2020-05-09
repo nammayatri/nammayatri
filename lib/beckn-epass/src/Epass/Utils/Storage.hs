@@ -1,16 +1,16 @@
 module Epass.Utils.Storage where
 
+import qualified Data.Time as DT
+import Data.Time.Clock
+import Data.Time.LocalTime
 import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Epass.Types.Storage.RegistrationToken   as SR
-import           Epass.Utils.Common
-import           Epass.Utils.Extra
-import qualified Data.Time                               as DT
-import           Data.Time.Clock
-import           Data.Time.LocalTime
-import qualified EulerHS.Language                        as L
-import           EulerHS.Prelude
-import qualified EulerHS.Types                           as T
-import           Servant
+import qualified Epass.Types.Storage.RegistrationToken as SR
+import Epass.Utils.Common
+import Epass.Utils.Extra
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import qualified EulerHS.Types as T
+import Servant
 
 data AppException
   = SqlDBConnectionFailedException Text
@@ -18,7 +18,7 @@ data AppException
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON, Exception)
 
 throwOnFailedWithLog ::
-     Show e => Either e a -> (Text -> AppException) -> Text -> L.Flow ()
+  Show e => Either e a -> (Text -> AppException) -> Text -> L.Flow ()
 throwOnFailedWithLog (Left err) mkException msg = do
   L.logError ("" :: Text) $ msg <> " " <> show err <> ""
   L.throwException $ mkException $ msg <> " " <> show err <> ""
@@ -32,8 +32,8 @@ throwFailedWithLog mkException msg = do
 verifyToken :: Maybe Text -> L.Flow SR.RegistrationToken
 verifyToken (Just token) =
   QR.findRegistrationTokenByToken token
-  >>= fromMaybeM400 "INVALID_TOKEN"
-  >>= validateToken
+    >>= fromMaybeM400 "INVALID_TOKEN"
+    >>= validateToken
 verifyToken _ = L.throwException $ err400 {errBody = "NO_TOKEN_FOUND"}
 
 validateToken :: SR.RegistrationToken -> L.Flow SR.RegistrationToken

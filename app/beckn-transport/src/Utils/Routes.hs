@@ -1,9 +1,9 @@
 module Utils.Routes where
 
-import           Types.App
 import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language     as L
-import           EulerHS.Prelude
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Types.App
 
 withFlowHandler :: L.Flow a -> FlowHandler a
 withFlowHandler flow = do

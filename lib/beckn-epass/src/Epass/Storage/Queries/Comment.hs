@@ -2,27 +2,25 @@
 
 module Epass.Storage.Queries.Comment where
 
-import           Database.Beam               ((&&.), (<-.), (==.))
-import           EulerHS.Prelude             hiding (id)
-
-import qualified Epass.Storage.Queries       as DB
-import           Epass.Types.App
-import           Epass.Types.Common
+import Database.Beam ((&&.), (<-.), (==.))
+import qualified Database.Beam as B
+import qualified Epass.Storage.Queries as DB
+import Epass.Types.App
+import Epass.Types.Common
 import qualified Epass.Types.Storage.Comment as Storage
-import qualified Epass.Types.Storage.DB      as DB
-
-import           Epass.Utils.Common
-import qualified Database.Beam               as B
-import qualified EulerHS.Language            as L
-import qualified EulerHS.Types               as T
+import qualified Epass.Types.Storage.DB as DB
+import Epass.Utils.Common
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.CommentT)
 dbTable = DB._comment DB.becknDb
 
 create :: Storage.Comment -> L.Flow ()
 create Storage.Comment {..} =
-  DB.createOne dbTable (Storage.insertExpression Storage.Comment {..}) >>=
-  either DB.throwDBError pure
+  DB.createOne dbTable (Storage.insertExpression Storage.Comment {..})
+    >>= either DB.throwDBError pure
 
 findById :: CommentId -> L.Flow (Maybe Storage.Comment)
 findById id = do
@@ -36,6 +34,6 @@ findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId =
   DB.findAll dbTable (predicate commentedOnEntityType commentedOnEntityId)
     >>= either DB.throwDBError pure
   where
-    predicate commentedOnEntityType commentedOnEntityId Storage.Comment{..} =
-      _commentedOnEntityType ==. B.val_ commentedOnEntityType &&.
-      _CommentedOnEntityId ==. B.val_ commentedOnEntityId
+    predicate commentedOnEntityType commentedOnEntityId Storage.Comment {..} =
+      _commentedOnEntityType ==. B.val_ commentedOnEntityType
+        &&. _CommentedOnEntityId ==. B.val_ commentedOnEntityId

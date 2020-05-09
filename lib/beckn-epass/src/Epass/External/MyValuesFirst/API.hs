@@ -1,15 +1,14 @@
 module Epass.External.MyValuesFirst.API where
 
-import           EulerHS.Prelude
-
-import           Servant
-import           Servant.API.ContentTypes
-import           Servant.Client
+import Epass.External.MyValuesFirst.Types
+import Epass.Types.App
+  ( MandatoryQueryParam,
+  )
+import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import           Epass.Types.App
-    ( MandatoryQueryParam
-    )
-import           Epass.External.MyValuesFirst.Types
+import Servant
+import Servant.API.ContentTypes
+import Servant.Client
 
 type ServiceAPI =
   "smpp"
@@ -24,5 +23,5 @@ type ServiceAPI =
 serviceAPI :: Proxy ServiceAPI
 serviceAPI = Proxy
 
-submitSms SubmitSms{..} =
+submitSms SubmitSms {..} =
   void $ ET.client serviceAPI _username _password _from _to _text

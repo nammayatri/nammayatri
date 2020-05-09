@@ -1,23 +1,22 @@
 module Epass.Product.Comment where
 
-import           Epass.Storage.Queries.Comment         as Comment
-import           Epass.Types.API.Comment
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Storage.Comment           as Comment
-import           Epass.Types.Storage.RegistrationToken
-import           Epass.Utils.Common
-import           Epass.Utils.Routes
-import           Epass.Utils.Storage
-import           EulerHS.Prelude
-
-import qualified EulerHS.Language                      as L
+import Epass.Storage.Queries.Comment as Comment
+import Epass.Types.API.Comment
+import Epass.Types.App
+import Epass.Types.Common
+import qualified Epass.Types.Storage.Comment as Comment
+import Epass.Types.Storage.RegistrationToken
+import Epass.Utils.Common
+import Epass.Utils.Routes
+import Epass.Utils.Storage
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
 
 create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
-create regToken CreateReq{..} = withFlowHandler $ do
-  RegistrationToken{..} <- verifyToken regToken
+create regToken CreateReq {..} = withFlowHandler $ do
+  RegistrationToken {..} <- verifyToken regToken
   id <- generateGUID
-  comment <- getComment id  _entityType _EntityId
+  comment <- getComment id _entityType _EntityId
   Comment.create comment
   Comment.findById id
     >>= fromMaybeM500 "Unable to create Comment"
@@ -25,18 +24,19 @@ create regToken CreateReq{..} = withFlowHandler $ do
   where
     getComment id entityType entityId = do
       now <- getCurrTime
-      return $ Comment.Comment
-          { _id = id
-          , _CommentedBy = entityId
-          , _commentedByEntityType = entityType
-          , _createdAt = now
-          , _updatedAt = now
-          , _value = _comment
-          , ..
+      return $
+        Comment.Comment
+          { _id = id,
+            _CommentedBy = entityId,
+            _commentedByEntityType = entityType,
+            _createdAt = now,
+            _updatedAt = now,
+            _value = _comment,
+            ..
           }
 
 list :: Maybe RegistrationTokenText -> Text -> Text -> FlowHandler ListRes
 list regToken commentedOnEntityType commentedOnEntityId = withFlowHandler $ do
-  RegistrationToken{..} <- verifyToken regToken
+  RegistrationToken {..} <- verifyToken regToken
   Comment.findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId
     >>= return . ListRes

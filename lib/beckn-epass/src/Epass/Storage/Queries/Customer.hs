@@ -1,23 +1,23 @@
 module Epass.Storage.Queries.Customer where
 
-import qualified Epass.Storage.Queries        as DB
-import           Epass.Types.App
+import Database.Beam ((&&.), (<-.), (==.))
+import qualified Database.Beam as B
+import qualified Epass.Storage.Queries as DB
+import Epass.Types.App
 import qualified Epass.Types.Storage.Customer as C
-import qualified Epass.Types.Storage.DB       as DB
-import           Epass.Utils.Extra
-import           Database.Beam                ((&&.), (<-.), (==.))
-import qualified Database.Beam                as B
-import qualified EulerHS.Language             as L
-import           EulerHS.Prelude              hiding (id)
-import           Servant
+import qualified Epass.Types.Storage.DB as DB
+import Epass.Utils.Extra
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import Servant
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity C.CustomerT)
 dbTable = DB._customer DB.becknDb
 
 create :: C.Customer -> L.Flow ()
 create C.Customer {..} =
-  DB.createOne dbTable (C.insertExpression C.Customer {..}) >>=
-  either DB.throwDBError pure
+  DB.createOne dbTable (C.insertExpression C.Customer {..})
+    >>= either DB.throwDBError pure
 
 createIfNotExists :: C.Customer -> L.Flow ()
 createIfNotExists cust@C.Customer {..} = do
@@ -25,8 +25,8 @@ createIfNotExists cust@C.Customer {..} = do
   resp <- DB.findOne dbTable (\C.Customer {..} -> B.val_ cid ==. _id)
   case resp of
     Right (Just x) -> return ()
-    Right Nothing  -> create cust
-    Left err       -> L.throwException err500
+    Right Nothing -> create cust
+    Left err -> L.throwException err500
 
 existsByCustomerId :: CustomerId -> L.Flow Bool
 existsByCustomerId customerId =
@@ -40,8 +40,8 @@ existsByCustomerId customerId =
 findCustomerById :: CustomerId -> L.Flow (Maybe C.Customer)
 findCustomerById customerId =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
- where
-   predicate C.Customer {..} = _id ==. B.val_ customerId
+  where
+    predicate C.Customer {..} = _id ==. B.val_ customerId
 
 updateCustomerOrgId :: OrganizationId -> CustomerId -> L.Flow ()
 updateCustomerOrgId orgId customerId = do
@@ -50,7 +50,7 @@ updateCustomerOrgId orgId customerId = do
     >>= either DB.throwDBError pure
   where
     setClause a n C.Customer {..} =
-      mconcat [ _OrganizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n ]
+      mconcat [_OrganizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i C.Customer {..} = _id ==. B.val_ i
 
 updateStatus :: Bool -> CustomerId -> L.Flow ()
@@ -60,7 +60,7 @@ updateStatus s customerId = do
     >>= either DB.throwDBError pure
   where
     setClause a n C.Customer {..} =
-      mconcat [ _verified <-. B.val_ a, _updatedAt <-. B.val_ n ]
+      mconcat [_verified <-. B.val_ a, _updatedAt <-. B.val_ n]
     predicate i C.Customer {..} = _id ==. B.val_ i
 
 updateDetails :: CustomerId -> Maybe Text -> Maybe OrganizationId -> L.Flow ()
@@ -71,18 +71,17 @@ updateDetails customerId nameM orgIdM = do
   where
     setClause nameM orgIdM now C.Customer {..} =
       mconcat
-        ([ _updatedAt <-. B.val_ now ]
-          <> maybe [] (\name -> [ _name <-. B.val_ (Just name) ]) nameM
-          <> maybe [] (\orgId -> [ _OrganizationId <-. B.val_ (Just orgId) ]) orgIdM
+        ( [_updatedAt <-. B.val_ now]
+            <> maybe [] (\name -> [_name <-. B.val_ (Just name)]) nameM
+            <> maybe [] (\orgId -> [_OrganizationId <-. B.val_ (Just orgId)]) orgIdM
         )
-
     predicate id C.Customer {..} = _id ==. B.val_ id
 
 --updateDocument :: CustomerId -> [DocumentId] -> L.Flow ()
 --updateDocument cust docs =
-  --DB.update dbTable (setClause docs) (predicate cust)
-    -- >>= either DB.throwDBError pure
-  --where
-    --setClause docs C.Customer {..} =
-      --mconcat [ _documentIds <-. B.val_ docs ]
-    --predicate i C.Customer {..} = _id ==. B.val_ i
+--DB.update dbTable (setClause docs) (predicate cust)
+-- >>= either DB.throwDBError pure
+--where
+--setClause docs C.Customer {..} =
+--mconcat [ _documentIds <-. B.val_ docs ]
+--predicate i C.Customer {..} = _id ==. B.val_ i

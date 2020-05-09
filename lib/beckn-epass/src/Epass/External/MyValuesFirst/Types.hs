@@ -1,14 +1,17 @@
 module Epass.External.MyValuesFirst.Types where
 
-import           EulerHS.Prelude
+import EulerHS.Prelude
 
-data SubmitSms =
-  SubmitSms
-    { _username :: Text  -- ^ Login of myfirstvalue.com account.
-    , _password :: Text  -- ^ Password of that account.
-    , _from     :: Text  -- ^ Author name assigned to SMS.
-    , _to       :: Text  -- ^ Phone number.
-    , _text     :: Text  -- ^ SMS contents.
-    }
+data SubmitSms = SubmitSms
+  { -- | Login of myfirstvalue.com account.
+    _username :: Text,
+    -- | Password of that account.
+    _password :: Text,
+    -- | Author name assigned to SMS.
+    _from :: Text,
+    -- | Phone number.
+    _to :: Text,
+    -- | SMS contents.
+    _text :: Text
+  }
   deriving (Show)
-

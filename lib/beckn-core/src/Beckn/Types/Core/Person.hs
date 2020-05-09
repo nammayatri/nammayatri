@@ -1,21 +1,20 @@
 module Beckn.Types.Core.Person where
-  
-import           Data.Text
-import           EulerHS.Prelude
-import           Beckn.Types.Core.Contact
 
-data Person =
-  Person
-    { _title :: Text -- "Mr", "Mrs", "Miss", "Dr"
-    , _first_name :: Text
-    , _middle_name :: Text
-    , _last_name :: Text
-    , _full_name :: Text
-    , _image :: Image
-    , _dob :: Text
-    , _gender :: Text -- male, female
-    , _contact :: Contact
-    }
+import Beckn.Types.Core.Contact
+import Data.Text
+import EulerHS.Prelude
+
+data Person = Person
+  { _title :: Text, -- "Mr", "Mrs", "Miss", "Dr"
+    _first_name :: Text,
+    _middle_name :: Text,
+    _last_name :: Text,
+    _full_name :: Text,
+    _image :: Image,
+    _dob :: Text,
+    _gender :: Text, -- male, female
+    _contact :: Contact
+  }
   deriving (Generic, Show)
 
 instance FromJSON Person where
@@ -24,11 +23,10 @@ instance FromJSON Person where
 instance ToJSON Person where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data Image =
-  Image
-    { _format :: Text -- "url", "encoded"
-    , _data :: Text
-    }
+data Image = Image
+  { _format :: Text, -- "url", "encoded"
+    _data :: Text
+  }
   deriving (Generic, Show)
 
 instance FromJSON Image where

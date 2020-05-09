@@ -1,17 +1,16 @@
 module Beckn.Types.Mobility.Stop where
-  
-import           Data.Text
-import           Data.Time
-import           EulerHS.Prelude
-import           Beckn.Types.Core.Location
 
-data Stop =
-  Stop
-    { _location :: Location
-    , _arrival_time :: LocalTime
-    , _departure_time :: LocalTime
-    }
-      deriving (Generic, Show)
+import Beckn.Types.Core.Location
+import Data.Text
+import Data.Time
+import EulerHS.Prelude
+
+data Stop = Stop
+  { _location :: Location,
+    _arrival_time :: LocalTime,
+    _departure_time :: LocalTime
+  }
+  deriving (Generic, Show)
 
 instance FromJSON Stop where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
