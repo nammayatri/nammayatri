@@ -1,6 +1,12 @@
 module Storage.Queries.Organization where
 
-import Beckn.Types.App
+import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
+import           EulerHS.Prelude                  hiding (id)
+
+import qualified Storage.Queries            as DB
+import           Beckn.Types.App
+import           Epass.Types.Common
+import qualified Types.Storage.DB                 as DB
 import qualified Beckn.Types.Storage.Organization as Storage
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
