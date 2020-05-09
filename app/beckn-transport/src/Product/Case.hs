@@ -18,7 +18,6 @@ import Types.App
 import Utils.Routes
 
 
-list :: CaseReq -> FlowHandler ListRes
+list :: CaseReq -> FlowHandler CaseListRes
 list CaseReq {..} = withFlowHandler $ do
-  DB.findAllByCaseType _limit _offset _type _status
-    >>= return . ListRes
+  CaseListRes <$> DB.findAllByCaseType _limit _offset _type _status

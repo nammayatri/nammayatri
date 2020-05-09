@@ -46,10 +46,9 @@ registrationFlow =
 -------- Case Flow----------
 type CaseAPIs =
      "case"
-       :> "list"
        :> (    ReqBody '[ JSON] CaseReq
-           :>  Post '[ JSON] ListRes
-           )
+           :>  Post '[ JSON] CaseListRes
+          )
 
 caseFlow =
     Case.list
