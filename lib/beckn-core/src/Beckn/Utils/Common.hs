@@ -1,6 +1,8 @@
 module Beckn.Utils.Common where
 
 import Beckn.Types.Common
+import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Context
 import qualified Data.ByteString.Lazy as BSL
 import Data.Time
 import Data.Time.Calendar (Day (..))
@@ -28,5 +30,24 @@ fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
-mkAckResponse :: L.Flow AckResponse
-mkAckResponse = undefined
+mkAckResponse :: Text -> Text -> L.Flow AckResponse
+mkAckResponse txnId action = do
+  (currTime :: LocalTime) <- getCurrTime
+  return
+    AckResponse
+      { _context =
+          Context
+            { _domain = "MOBILITY"
+            , _action = action
+            , _version = Nothing
+            , _transaction_id = txnId
+            , _message_id = Nothing
+            , _timestamp = currTime
+            , _dummy = ""
+            }
+      , _message =
+          Ack
+            { _action = action
+            , _message = ""
+            }
+      }

@@ -20,7 +20,10 @@ data ErrorResponse = ErrorResponse
   deriving (Show, Generic, ToJSON, ToSchema)
 
 data AckResponse = AckResponse
-  { context :: Context,
-    message :: Ack
+  { _context :: Context,
+    _message :: Ack
   }
   deriving (Show, Generic, ToJSON)
+
+instance FromJSON AckResponse where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions

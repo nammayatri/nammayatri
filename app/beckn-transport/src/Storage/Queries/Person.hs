@@ -32,7 +32,21 @@ findPersonById id = do
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
-findAllByOrgIds roles orgIds = undefined
+findAllByOrgIds roles orgIds = do
+    DB.findAllOrErr dbTable (predicate roles orgIds)
+  where
+    predicate roles orgIds Storage.Person {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles
+        , _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+        ]
+
+complementVal l
+  | (null l) = B.val_ True
+  | otherwise = B.val_ False
+
 
 findByIdentifier ::
   Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
