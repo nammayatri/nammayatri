@@ -154,7 +154,7 @@ login tokenId req =
             return $ LoginRes _token (Just cust) Nothing
           SR.USER -> do
             user <- checkUserExists _EntityId
-            User.update (SU._id user) SU.ACTIVE Nothing Nothing Nothing
+            User.update (SU._id user) SU.ACTIVE Nothing Nothing
             return $ LoginRes _token Nothing (Just user)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where

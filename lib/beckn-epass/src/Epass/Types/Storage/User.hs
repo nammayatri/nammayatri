@@ -66,9 +66,9 @@ data UserT f =
     , _OrganizationId       :: B.C f OrganizationId
     , _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId)
     , _name                 :: B.C f Text
-    , _username             :: B.C f Text
+    , _username             :: B.C f (Maybe Text)
     , _mobileNumber         :: B.C f Text
-    , _email                :: B.C f Text
+    , _email                :: B.C f (Maybe Text)
     , _LocationId           :: B.C f Text
     , _role                 :: B.C f Role
     , _verified             :: B.C f Bool
@@ -94,9 +94,9 @@ instance Default User where
     , _OrganizationId = OrganizationId Defaults.orgId
     , _TenantOrganizationId = Nothing
     , _name           = Defaults.user
-    , _username       = Defaults.user
-    , _mobileNumber       = ""
-    , _email          = Defaults.email
+    , _username       = Just $ Defaults.user
+    , _mobileNumber   = ""
+    , _email          = Just $ Defaults.email
     , _LocationId     = Defaults.locId
     , _role           = VIEWER
     , _verified       = False

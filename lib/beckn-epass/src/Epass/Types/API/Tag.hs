@@ -44,6 +44,18 @@ instance ToJSON ListRes where
 instance FromJSON ListRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
+data ListVal =
+  ListVal
+  { _val :: [Text]
+  }
+  deriving (Show, Generic, Default, ToSchema)
+
+instance ToJSON ListVal where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON ListVal where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
 data TagEntityReq =
   TagEntityReq
   { _EntityId   :: Text

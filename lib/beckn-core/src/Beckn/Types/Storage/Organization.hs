@@ -20,6 +20,9 @@ import           Servant.Swagger
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data OrganizationType = GATEWAY | PROVIDER | TRANSPORTER
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
