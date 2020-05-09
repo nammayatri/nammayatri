@@ -20,11 +20,6 @@ import           Utils.Routes
 -- 2) Notify all transporter using GCM
 -- 3) Respond with Ack
 
--- createCase
--- getAllOrganization
--- sendGCMToOrgAdmin
--- sendResponse
-
 search :: Text -> SearchReq -> FlowHandler SearchRes
 search apiKey req = withFlowHandler $ do
   let c = mkCase req
