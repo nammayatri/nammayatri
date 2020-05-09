@@ -19,13 +19,4 @@ instance FromJSON CaseReq where
 instance ToJSON CaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data CaseListRes = CaseListRes
-  { _comments :: [Case]
-  }
-  deriving (Show, Generic, Default, ToSchema)
-
-instance ToJSON CaseListRes where
-  toJSON = genericToJSON stripLensPrefixOptions
-
-instance FromJSON CaseListRes where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+type CaseListRes = [Case]
