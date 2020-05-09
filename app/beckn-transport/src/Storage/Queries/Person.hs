@@ -30,6 +30,10 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
+findAllByOrgIds ::
+  [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+findAllByOrgIds roles orgIds = undefined
+
 findByIdentifier ::
   Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
 findByIdentifier idType mb =
