@@ -2,6 +2,7 @@ module Storage.Queries.Case where
 
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
+import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
 import Data.Time
@@ -30,3 +31,10 @@ findAllByType limit offset caseType caseStatus =
     predicate caseType caseStatus Storage.Case {..} =
       ( _type ==. (B.val_ caseType)
          &&. _status ==. (B.val_ caseStatus))
+
+findAllByIds :: [CaseId] ->  L.Flow [Storage.Case]
+findAllByIds ids =
+  DB.findAllOrErr dbTable (pred ids)
+  where
+    pred ids Storage.Case {..} =
+     B.in_ _id (B.val_ <$> ids)
