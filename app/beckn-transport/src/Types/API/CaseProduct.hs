@@ -2,6 +2,7 @@ module Types.API.CaseProduct where
 
 import           Data.Default
 import           Data.Swagger
+import           Data.Time
 import           Beckn.Types.Storage.CaseProduct
 import qualified Beckn.Types.Storage.Products   as Product
 import qualified Beckn.Types.Storage.Case       as Case
@@ -11,7 +12,11 @@ data CaseProdReq = CaseProdReq
   { _type   :: Product.ProductsStatus,
     _organisationId  :: Text,
     _limit :: Integer,
-    _offset :: Integer
+    _offset :: Integer,
+    _fromTime :: LocalTime,
+    _toTime  :: LocalTime
+
+
   }
   deriving (Show, Generic, ToSchema)
 
