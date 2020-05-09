@@ -32,7 +32,7 @@ findOrganizationById id = do
 listOrganizations ::
   Maybe Int ->
   Maybe Int ->
-  [Storage.IndustryType] ->
+  [Storage.OrganizationType] ->
   [Storage.Status] ->
   L.Flow [Storage.Organization]
 listOrganizations mlimit moffset oType status =
