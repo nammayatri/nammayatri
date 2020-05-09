@@ -11,8 +11,6 @@ import           EulerHS.Prelude
 data CreateReq =
   CreateReq
   { _name                 :: Text
-  , _username             :: Text
-  , _email                :: Text
   , _mobileNumber         :: Text
   , _info                 :: Maybe Text
   , _role                 :: Role
@@ -32,7 +30,6 @@ type CreateRes = UserInfo
 data UpdateReq =
   UpdateReq
   { _name   :: Maybe Text
-  , _email  :: Maybe Text
   , _role   :: Maybe Role
   , _status :: Status
   }

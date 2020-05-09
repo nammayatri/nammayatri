@@ -51,6 +51,9 @@ create regToken CreateReq {..} =
           , _info = Nothing
           , _createdAt = now
           , _updatedAt = now
+          , _username = Nothing
+          , _email = Nothing
+          , _TenantOrganizationId = Nothing -- TODO : Fix this
           , ..
           }
 
@@ -102,14 +105,14 @@ getUsers offsetM limitM locateM role locate user org = do
             then cityLevelUsers limitM offsetM role [(SO._city org)]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LDISTRICT -> do
-          let dists = map SL._district allLocations
+          let dists = catMaybes $ map SL._district allLocations
           let locateD =
                 if List.null locate
                   then dists
                   else filter (flip elem dists) locate
           districtLevelUsers limitM offsetM role locateD
         Just LWARD -> do
-          let wards = map SL._ward allLocations
+          let wards = catMaybes $ map SL._ward allLocations
           let locateW =
                 if List.null locate
                   then wards
@@ -126,7 +129,7 @@ getUsers offsetM limitM locateM role locate user org = do
             then districtLevelUsers limitM offsetM role [district]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LWARD -> do
-          let wards = map SL._ward allLocations
+          let wards = catMaybes $ map SL._ward allLocations
           let locateW =
                 if List.null locate
                   then wards
@@ -202,10 +205,10 @@ get regToken userId =
 
 update :: Maybe Text -> UserId -> UpdateReq -> FlowHandler UpdateRes
 update regToken userId UpdateReq {..} =
-  withFlowHandler $ do
-    verifyToken regToken
-    DB.update userId _status _name _email _role
-    UpdateRes <$> DB.findById userId
+  withFlowHandler $
+  do verifyToken regToken
+     DB.update userId _status _name _role
+     UpdateRes <$> DB.findById userId
 
 delete :: Maybe RegistrationTokenText -> UserId -> FlowHandler Ack
 delete regToken userId =

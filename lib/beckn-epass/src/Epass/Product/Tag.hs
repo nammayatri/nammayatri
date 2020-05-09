@@ -83,3 +83,30 @@ tagEntity regToken TagEntityReq{..} = withFlowHandler $ do
         , _info = Nothing
         , ..
         }
+
+listTypes ::
+  Maybe RegistrationTokenText
+  -> FlowHandler ListVal
+listTypes regToken = withFlowHandler $ do
+  verifyToken regToken
+  Tag.findAllTagTypes
+    >>= return . ListVal
+
+listTags ::
+  Maybe RegistrationTokenText
+  -> Text
+  -> FlowHandler ListVal
+listTags regToken tagType = withFlowHandler $ do
+  verifyToken regToken
+  Tag.findAllTagWhereType tagType
+    >>= return . ListVal
+
+listByTag ::
+  Maybe RegistrationTokenText
+  -> Text
+  -> Text
+  -> FlowHandler ListRes
+listByTag regToken tagType tag = withFlowHandler $ do
+  verifyToken regToken
+  Tag.findAllByTag tagType tag
+    >>= return . ListRes

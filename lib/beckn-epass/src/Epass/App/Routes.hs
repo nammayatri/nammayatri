@@ -327,8 +327,8 @@ documentFlow registrationToken =
 ---- Tag Api
 type TagAPIs
    = "tag"
-   :> Header "registrationToken" RegistrationTokenText
-   :> (    ReqBody '[JSON] Tag.CreateReq
+    :> Header "registrationToken" RegistrationTokenText
+    :> (    ReqBody '[JSON] Tag.CreateReq
         :> Post '[JSON] Tag.CreateRes
       :<|> "list"
         :> QueryParams "tagId" TagId
@@ -338,12 +338,22 @@ type TagAPIs
       :<|> "entity"
         :> ReqBody '[JSON] Tag.TagEntityReq
         :> Post '[JSON] Tag.TagEntityRes
+      :<|> "types"
+        :> Get '[JSON] Tag.ListVal
+      :<|> Capture "tagType" Text
+        :> Get '[JSON] Tag.ListVal
+      :<|> Capture "tagType" Text
+        :> Capture "tag" Text
+        :> Get '[JSON] Tag.ListRes
       )
 
 tagFlow registrationToken =
        Tag.create registrationToken
   :<|> Tag.list registrationToken
   :<|> Tag.tagEntity registrationToken
+  :<|> Tag.listTypes registrationToken
+  :<|> Tag.listTags registrationToken
+  :<|> Tag.listByTag registrationToken
 
 --------
 ---- Comment Api

@@ -55,6 +55,7 @@ dependencies:
 - base >= 4.7 && < 5
 - beam-core
 - beam-mysql
+- beckn-core
 - bytestring
 - containers
 - cryptonite
