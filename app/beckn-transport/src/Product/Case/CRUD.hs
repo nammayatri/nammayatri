@@ -1,33 +1,47 @@
 module Product.Case.CRUD where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import           Beckn.Types.App
+import           Beckn.Types.Common as BC
+import           Beckn.Types.Storage.Case as Case
+import           Beckn.Types.Storage.CaseProduct as CaseP
+import           Beckn.Types.Storage.Products as Product
 import qualified Data.Accessor as Lens
-import Data.Aeson
+import           Data.Aeson
 import qualified Data.Text as T
-import Data.Time.LocalTime
+import           Data.Time.LocalTime
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
-import qualified Storage.Queries.Case as DB
-import qualified Beckn.Types.Storage.Case as Storage
+import           EulerHS.Prelude
+import           Servant
+import           Storage.Queries.Case as Case
+import           System.Environment
 import           Types.API.Case
-import System.Environment
-import Types.API.Registration
-import Types.App
-import Utils.Routes
+import           Types.API.Registration
+import           Types.App
+import           Utils.Routes
 
 
 list :: CaseReq -> FlowHandler CaseListRes
 list CaseReq {..} = withFlowHandler $ do
-  DB.findAllByType _limit _offset _type _status
+  Case.findAllByType _limit _offset _type _status
 
--- Provider Internal API: Update Case
+-- Update Case
+-- Transporter Accepts a Ride with Quote
+update :: Text -> UpdateCaseReq -> FlowHandler Case
+update caseId UpdateCaseReq {..} = withFlowHandler $ do
+  c <- Case.findById $ CaseId caseId
+  case _transporterChoice of
+    "ACCEPTED" -> do
+      p   <- createProduct c _quote
+      cp  <- createCaseProduct c p
+      notifyGateway c
+      return c
+    "DECLINED" -> return c
 
---   1) Create Product with quote and state=TRANSPORTER_ACCEPTED
---   2) Create CaseProduct Entries
--- 	3) Get all products with state=TRANSPORTER_ACCEPTED
---   4) Send /on_search to BG
+createProduct :: Case -> Maybe Double -> L.Flow Products
+createProduct = undefined
 
-update :: Text -> FlowHandler Text
-update = undefined
+createCaseProduct :: Case -> Products -> L.Flow CaseProduct
+createCaseProduct = undefined
+
+notifyGateway :: Case -> L.Flow ()
+notifyGateway _ = undefined

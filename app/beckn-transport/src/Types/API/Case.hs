@@ -20,3 +20,15 @@ instance ToJSON CaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 type CaseListRes = [Case]
+
+data UpdateCaseReq = UpdateCaseReq
+  { _quote             :: Maybe Double
+  , _transporterChoice :: Text
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON UpdateCaseReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON UpdateCaseReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
