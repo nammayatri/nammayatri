@@ -5,6 +5,7 @@ import           Beckn.Types.Common as BC
 import           Beckn.Types.Storage.Case as Case
 import           Beckn.Types.Storage.CaseProduct as CaseP
 import           Beckn.Types.Storage.Products as Product
+import           Beckn.Utils.Common
 import           Storage.Queries.Products as PQ
 import           Storage.Queries.CaseProduct as CPQ
 import qualified Data.Accessor as Lens
@@ -19,6 +20,7 @@ import           System.Environment
 import           Types.API.Case
 import           Types.API.Registration
 import           Types.App
+import qualified Utils.Defaults as Defaults
 import           Utils.Routes
 
 
@@ -33,20 +35,21 @@ update caseId UpdateCaseReq {..} = withFlowHandler $ do
   c <- Case.findById $ CaseId caseId
   case _transporterChoice of
     "ACCEPTED" -> do
-      p   <- createProduct c _quote
+      p   <- createProduct c _quote Defaults.localTime
       cp  <- createCaseProduct c p
       notifyGateway c
       return c
     "DECLINED" -> return c
 
-createProduct :: Case -> Maybe Double -> L.Flow Products
-createProduct cs price = do
+createProduct :: Case -> Maybe Double -> LocalTime -> L.Flow Products
+createProduct cs price ctime = do
   prodId <- L.generateGUID
-  let product = getProduct prodId price cs
+  (currTime :: LocalTime) <- getCurrTime
+  let product = getProduct prodId price cs ctime currTime
   PQ.create product
   return $ product
   where
-    getProduct prodId price cs = Products
+    getProduct prodId price cs ctime currTime = Products
       { _id = ProductsId prodId
       , _name =  Case._name cs
       , _description = Case._description cs
@@ -65,9 +68,9 @@ createProduct cs price = do
       , _udf4 = Case._udf4 cs
       , _udf5 = Case._udf5 cs
       , _info = Case._info cs
-      , _organizationId =  "Defaults orgId"
-      , _createdAt = Case._createdAt cs
-      , _updatedAt = Case._updatedAt cs
+      , _organizationId =  Defaults.orgId
+      , _createdAt = ctime
+      , _updatedAt = currTime
       , _fromLocation =  Nothing
       , _toLocation =  Nothing
       }
@@ -75,11 +78,12 @@ createProduct cs price = do
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
     cpId <- L.generateGUID
-    let caseProd = getCaseProd cpId cs prod
+    (currTime :: LocalTime) <- getCurrTime
+    let caseProd = getCaseProd cpId cs prod currTime
     CPQ.create caseProd
     return $ caseProd
     where
-      getCaseProd cpId cs prod = CaseProduct
+      getCaseProd cpId cs prod currTime = CaseProduct
         { _id = CaseProductId cpId
         , _caseId = Case._id cs
         , _productId = Product._id prod
@@ -88,7 +92,7 @@ createCaseProduct cs prod = do
         , _status = read (show (Product._status prod)) :: CaseProductStatus
         , _info = Nothing
         , _createdAt = Case._createdAt cs
-        , _updatedAt = Case._updatedAt cs
+        , _updatedAt = currTime
         }
 
 notifyGateway :: Case -> L.Flow ()
