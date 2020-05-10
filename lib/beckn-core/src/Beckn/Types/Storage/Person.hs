@@ -95,16 +95,16 @@ instance FromHttpApiData Gender where
 data PersonT f =
   Person
     { _id                 :: B.C f PersonId
-    , _firstName         :: B.C f (Maybe Text)
-    , _middleName        :: B.C f (Maybe Text)
-    , _lastName          :: B.C f (Maybe Text)
-    , _fullName          :: B.C f (Maybe Text)
+    , _firstName          :: B.C f (Maybe Text)
+    , _middleName         :: B.C f (Maybe Text)
+    , _lastName           :: B.C f (Maybe Text)
+    , _fullName           :: B.C f (Maybe Text)
     , _role               :: B.C f Role
     , _gender             :: B.C f Gender
     , _identifierType     :: B.C f IdentifierType
     , _email              :: B.C f (Maybe Text)
     , _mobileNumber       :: B.C f (Maybe Text)
-    , _mobileCountryCode:: B.C f (Maybe Text)
+    , _mobileCountryCode  :: B.C f (Maybe Text)
     , _identifier         :: B.C f (Maybe Text)
     , _rating             :: B.C f (Maybe Text)
     , _verified           :: B.C f Bool
@@ -113,6 +113,7 @@ data PersonT f =
     , _status             :: B.C f Status
     , _organizationId     :: B.C f (Maybe Text)
     , _locationId         :: B.C f (Maybe Text) 
+    , _deviceToken        :: B.C f (Maybe Text)
     , _description        :: B.C f (Maybe Text)
     , _createdAt          :: B.C f LocalTime
     , _updatedAt          :: B.C f LocalTime
@@ -161,4 +162,5 @@ fieldEMod =
       , _locationId        = "location_id"
       , _mobileCountryCode = "mobile_country_code"
       , _identifierType = "identifier_type"
+      , _deviceToken    = "device_token"
       }

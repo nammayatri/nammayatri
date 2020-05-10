@@ -56,10 +56,8 @@ data OrganizationT f = Organization
     _name :: B.C f Text,
     _description :: B.C f (Maybe Text),
     _mobileNumber :: B.C f (Maybe Text),
-    _fcmId :: B.C f (Maybe Text),
     _gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
-    -- , _industry      :: B.C f Industry
     _locationId :: B.C f (Maybe Text),
     _fromTime :: B.C f (Maybe LocalTime),
     _toTime :: B.C f (Maybe LocalTime),

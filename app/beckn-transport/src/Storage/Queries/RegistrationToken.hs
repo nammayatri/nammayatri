@@ -13,6 +13,7 @@ import qualified Database.Beam                         as B
 import qualified EulerHS.Language                      as L
 import qualified EulerHS.Types                         as T
 import           Servant
+import Beckn.Utils.Common
 
 dbTable ::
      B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT)
@@ -29,9 +30,9 @@ findRegistrationToken id = do
   where
     predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)
 
-findRegistrationTokenByToken :: Text -> L.Flow (Maybe Storage.RegistrationToken)
+findRegistrationTokenByToken :: Text -> L.Flow Storage.RegistrationToken
 findRegistrationTokenByToken id = do
-  DB.findOne dbTable predicate >>= either DB.throwDBError pure
+  DB.findOne dbTable predicate >>= either DB.throwDBError pure >>= fromMaybeM400 "INVALID_TOKEN"
   where
     predicate Storage.RegistrationToken {..} = (_token ==. B.val_ id)
 
