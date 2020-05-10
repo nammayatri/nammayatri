@@ -17,6 +17,11 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductsT)
 dbTable = DB._products DB.transporterDb
 
+create :: Storage.Products -> L.Flow ()
+create Storage.Products {..} =
+  DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
+    >>= either DB.throwDBError pure
+
 findAllByTypeOrgId :: Text -> Storage.ProductsStatus -> L.Flow [Storage.Products]
 findAllByTypeOrgId orgId status =
   DB.findAll dbTable (predicate orgId status)
@@ -26,3 +31,5 @@ findAllByTypeOrgId orgId status =
     predicate orgId status Storage.Products {..} =
       ( _status ==. (B.val_ status)
           &&. _organizationId ==. (B.val_ orgId))
+
+

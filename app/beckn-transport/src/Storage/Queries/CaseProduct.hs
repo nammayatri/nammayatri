@@ -17,6 +17,11 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseProductT)
 dbTable = DB._caseProduct DB.transporterDb
 
+create :: Storage.CaseProduct -> L.Flow ()
+create Storage.CaseProduct {..} =
+  DB.createOne dbTable (Storage.insertExpression Storage.CaseProduct {..})
+    >>= either DB.throwDBError pure
+
 findAllByIds :: Integer -> Integer -> [ProductsId] ->  L.Flow [Storage.CaseProduct]
 findAllByIds limit offset ids =
   DB.findAllWithLimitOffsetWhere dbTable (pred ids) limit offset orderByDesc
