@@ -4,6 +4,7 @@ import           Beckn.Types.App
 import           Beckn.Types.API.Search
 import           Beckn.Types.Storage.Organization    as Org
 import           Beckn.Types.Storage.Person          as Person
+import           Beckn.Types.Storage.Location          as Location
 import           Beckn.Types.Storage.Case
 import           Beckn.Utils.Common
 import           Data.Aeson
@@ -31,7 +32,8 @@ search apiKey req = withFlowHandler $ do
   uuid <- L.generateGUID
   -- get customer info and do findOrCreate Person?? or store customerInfo in requestor?
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime currTime --addLocalTime (60*30 :: NominalDiffTime) currTime 
+  validity <- getValidTime currTime
+  let fromLocation = mkFromLocation req uuid currTime
   let c = mkCase req uuid currTime validity
   Case.create c
   transporters <- listOrganizations Nothing Nothing [Org.TRANSPORTER] [Org.APPROVED]
@@ -54,6 +56,24 @@ notifyTransporters c admins =
 
 getValidTime :: LocalTime -> L.Flow LocalTime
 getValidTime now = pure $ addLocalTime (60*30 :: NominalDiffTime) now 
+
+mkFromLocation :: SearchReq -> Text -> LocalTime -> Location
+mkFromLocation req uuid now = Location
+  { _id = LocationId {_getLocationId = uuid <> "1"}
+  , _locationType = POINT
+  , _lat = Nothing
+  , _long = Nothing
+  , _ward = Nothing
+  , _district = Nothing
+  , _city = Nothing
+  , _state = Nothing
+  , _country = Nothing
+  , _pincode = Nothing
+  , _address = Nothing
+  , _bound = Nothing
+  , _createdAt = now
+  , _updatedAt = now
+  }
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> Case
 mkCase req uuid now validity = Case
