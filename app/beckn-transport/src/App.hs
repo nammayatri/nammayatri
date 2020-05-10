@@ -6,7 +6,7 @@ import qualified App.Server as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
-import Epass.Constants.APIErrorCode
+import Beckn.Constants.APIErrorCode
 import qualified EulerHS.Interpreters as R
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

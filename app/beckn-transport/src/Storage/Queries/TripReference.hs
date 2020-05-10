@@ -3,9 +3,9 @@ module Storage.Queries.TripReference where
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
-import Epass.Types.Common
-import Epass.Utils.Common
+import qualified Storage.Queries as DB
+import Beckn.Types.Common
+import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T

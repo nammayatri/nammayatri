@@ -23,7 +23,7 @@ import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import qualified Epass.Types.Storage.Location as SL
 import Epass.Types.Storage.Organization
-import qualified Epass.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Epass.Types.Storage.Tag as Tag
 import Epass.Utils.Common
 import Epass.Utils.Extra

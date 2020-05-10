@@ -5,11 +5,11 @@ import           EulerHS.Prelude                  hiding (id)
 
 import qualified Storage.Queries            as DB
 import           Beckn.Types.App
-import           Epass.Types.Common
+import           Beckn.Types.Common
 import qualified Types.Storage.DB                 as DB
 import qualified Beckn.Types.Storage.Person       as Storage
-import           Epass.Utils.Common
-import           Epass.Utils.Extra
+import           Beckn.Utils.Common
+import           Beckn.Utils.Extra
 import           Data.Time
 import qualified Database.Beam                    as B
 import qualified EulerHS.Language                 as L

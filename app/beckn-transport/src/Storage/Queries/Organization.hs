@@ -5,14 +5,13 @@ import           EulerHS.Prelude                  hiding (id)
 
 import qualified Storage.Queries            as DB
 import           Beckn.Types.App
-import           Epass.Types.Common
+import           Beckn.Types.Common
 import qualified Types.Storage.DB                 as DB
 import qualified Beckn.Types.Storage.Organization as Storage
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Epass.Types.Common
-import Epass.Utils.Common
+import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T

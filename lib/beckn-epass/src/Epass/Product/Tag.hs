@@ -6,7 +6,7 @@ import Epass.Types.API.Tag
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.EntityTag as EntityTag
-import Epass.Types.Storage.RegistrationToken
+import Beckn.Types.Storage.RegistrationToken
 import qualified Epass.Types.Storage.Tag as Tag
 import Epass.Utils.Common
 import Epass.Utils.Routes

@@ -7,8 +7,8 @@ import           EulerHS.Prelude                       hiding (id)
 
 import qualified Storage.Queries                 as DB
 import qualified Types.Storage.DB                as DB
-import qualified Epass.Types.Storage.RegistrationToken as Storage
-import           Epass.Utils.Extra
+import qualified Beckn.Types.Storage.RegistrationToken as Storage
+import           Beckn.Utils.Extra
 import qualified Database.Beam                         as B
 import qualified EulerHS.Language                      as L
 import qualified EulerHS.Types                         as T
