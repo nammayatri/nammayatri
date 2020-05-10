@@ -18,7 +18,6 @@ CREATE TABLE `organization` (
   `location_id` varchar(255) NULL,
   `description` TEXT NULL,
   `mobileNumber` TEXT NULL,
-  `fcm_id` TEXT NULL,
   `from_time` TEXT NULL,
   `to_time` TEXT NULL,
   `api_key` TEXT NULL,

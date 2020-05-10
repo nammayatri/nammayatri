@@ -14,8 +14,8 @@ import Beckn.TypeClass.Transform
 
 updatePerson :: Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken >>= fromMaybeM400 "INVALID_TOKEN"
-  person                    <- QP.findPersonById (PersonId _EntityId) >>= fromMaybeM400 "User not found"
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
+  person                    <- QP.findPersonById (PersonId _EntityId)
   let updatedPerson           = transform req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson

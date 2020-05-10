@@ -171,7 +171,7 @@ createPerson req = do
 
 checkPersonExists :: Text -> L.Flow SP.Person
 checkPersonExists _EntityId =
-  QP.findPersonById (PersonId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
+  QP.findPersonById (PersonId _EntityId)
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =

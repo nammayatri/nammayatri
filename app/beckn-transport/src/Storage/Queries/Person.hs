@@ -24,10 +24,11 @@ create Storage.Person {..} =
     >>= either DB.throwDBError pure
 
 findPersonById ::
-  PersonId -> L.Flow (Maybe Storage.Person)
+  PersonId -> L.Flow Storage.Person
 findPersonById id = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_DATA"
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
@@ -85,8 +86,6 @@ updatePersonRec personId person = do
           , _role <-. B.val_ (Storage._role person)
           , _gender <-. B.val_ (Storage._gender person)
           , _email <-. B.val_ (Storage._email person)
-          , _mobileNumber <-. B.val_ (Storage._mobileNumber person)
-          , _mobileCountryCode <-. B.val_ (Storage._mobileCountryCode person)
           , _identifier <-. B.val_ (Storage._identifier person)
           , _rating <-. B.val_ (Storage._rating person)
           , _deviceToken <-. B.val_ (Storage._deviceToken person)

@@ -15,8 +15,6 @@ data UpdatePersonReq = UpdatePersonReq
   , _role               :: Maybe SP.Role
   , _gender             :: Maybe SP.Gender
   , _email              :: Maybe Text
-  , _mobileNumber       :: Maybe Text
-  , _mobileCountryCode  :: Maybe Text
   , _identifier         :: Maybe Text
   , _rating             :: Maybe Text
   , _deviceToken        :: Maybe Text
@@ -32,6 +30,7 @@ instance FromJSON UpdatePersonReq where
 
 instance Transform UpdatePersonReq SP.Person where
   transform req person = person {
+    -- only these below will be updated in the person table. if you want to add something extra please add in queries also
     SP._firstName = ifJust (req ^^. _firstName) (person ^^. SP._firstName)
     , SP._middleName = ifJust (req ^^. _middleName) (person ^^. SP._middleName)
     , SP._lastName           = ifJust (req ^^.  _lastName) (person ^^. SP._lastName)
@@ -39,8 +38,6 @@ instance Transform UpdatePersonReq SP.Person where
     , SP._role               = ifJustExtract (req ^^.  _role) (person ^^. SP._role)
     , SP._gender             = ifJustExtract (req ^^.  _gender) (person ^^. SP._gender)
     , SP._email              = ifJust (req ^^.  _email) (person ^^. SP._email)
-    , SP._mobileNumber       = ifJust (req ^^.  _mobileNumber) (person ^^. SP._mobileNumber)
-    , SP._mobileCountryCode  = ifJust (req ^^.  _mobileCountryCode) (person ^^. SP._mobileCountryCode)
     , SP._identifier         = ifJust (req ^^.  _identifier) (person ^^. SP._identifier)
     , SP._rating             = ifJust (req ^^.  _rating) (person ^^. SP._rating)
     , SP._deviceToken        = ifJust (req ^^.  _deviceToken) (person ^^. SP._deviceToken)
