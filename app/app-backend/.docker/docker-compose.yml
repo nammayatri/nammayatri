@@ -1,0 +1,15 @@
+version: "3"
+services:
+  db:
+    image: "mysql:8.0.18"
+    container_name: "atlas-app"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/app-backend-seed.sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=atlas_app
+      - MYSQL_USER=atlas
+      - MYSQL_PASSWORD=atlas
+    command: mysqld --default-authentication-plugin=mysql_native_password --skip-mysqlx

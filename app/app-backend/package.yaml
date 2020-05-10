@@ -1,9 +1,9 @@
-name:                beckn-transport
+name:                app-backend
 version:             0.1.0.0
 github:              "juspay/beckn"
 license:             BSD3
-author:              "Aravind Gopal Mallapureddy"
-maintainer:          "aravind.mallapureddy@juspay.in"
+author:              "Juspay"
+maintainer:          "juspay.in"
 copyright:           "2020 Author name here"
 
 extra-source-files:
@@ -82,10 +82,9 @@ dependencies:
 - time
 - template-haskell
 - random-strings
-- generic-lens
 
 executables:
-  beckn-transport-exe:
+  app-backend-exe:
     main:                Main.hs
     source-dirs:         src
     ghc-options:
@@ -94,9 +93,10 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - beckn-core
+    - beckn-epass
 
 tests:
-  beckn-transport-test:
+  app-backend-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:

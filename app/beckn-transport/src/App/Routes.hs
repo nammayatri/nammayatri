@@ -10,10 +10,14 @@ import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration
 import qualified Product.Person as Person
+import Types.API.Person
+import qualified Product.CaseProduct as CaseProduct
+import qualified Product.Case.CRUD as Case
 import Servant
 import Servant.Multipart
 import Types.API.Registration
-import Types.API.Person
+import Types.API.Case
+import Types.API.CaseProduct
 import Types.App
 
 type TransporterAPIs =
@@ -57,6 +61,26 @@ updatePersonFlow :: FlowServer UpdatePersonAPIs
 updatePersonFlow = Person.updatePerson
 
 -------------------------------
+-- -------- Case Flow----------
+-- type CaseAPIs =
+--      "case"
+--        :> (    ReqBody '[ JSON] CaseReq
+--            :>  Post '[ JSON] CaseListRes
+--           )
+
+-- caseFlow =
+--     Case.list
+
+-- -------- CaseProduct Flow----------
+-- type CaseProductAPIs =
+--      "caseProduct"
+--        :> (    ReqBody '[ JSON] CaseProdReq
+--            :>  Post '[ JSON] CaseProductList
+--           )
+
+-- caseProductFlow =
+--     CaseProduct.list
+
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
