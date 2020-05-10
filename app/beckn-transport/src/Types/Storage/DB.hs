@@ -3,6 +3,8 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Database.Beam as B
@@ -27,7 +29,9 @@ data TransporterDb f = TransporterDb
     _tripReference :: f (B.TableEntity TripReference.TripReferenceT),
     _vehicle :: f (B.TableEntity Vehicle.VehicleT),
     _person :: f (B.TableEntity Person.PersonT),
-    _case :: f (B.TableEntity Case.CaseT)
+    _case :: f (B.TableEntity Case.CaseT),
+    _products :: f (B.TableEntity Product.ProductsT),
+    _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT)
   }
   deriving (Generic, B.Database be)
 
@@ -45,5 +49,7 @@ transporterDb =
         _tripReference = TripReference.fieldEMod,
         _vehicle = Vehicle.fieldEMod,
         _person = Person.fieldEMod,
-        _case = Case.fieldEMod
+        _case = Case.fieldEMod,
+        _products = Product.fieldEMod,
+        _caseProduct = CaseProduct.fieldEMod
       }
