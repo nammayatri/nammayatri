@@ -17,11 +17,12 @@ CREATE TABLE `organization` (
   `verified` boolean NOT NULL,
   `location_id` varchar(255) NULL,
   `description` TEXT NULL,
-  `mobileNumber` TEXT NULL,
+  `mobile_number` TEXT NULL,
   `from_time` TEXT NULL,
   `to_time` TEXT NULL,
   `api_key` TEXT NULL,
   `callback_url` TEXT NULL,
+  `head_count` integer NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`)

@@ -10,12 +10,14 @@ import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration
 import qualified Product.Person as Person
-import Types.API.Person
 import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Case.CRUD as Case
+import qualified Product.Transporter as Transporter
 import Servant
 import Servant.Multipart
 import Types.API.Registration
+import Types.API.Transporter
+import Types.API.Person
 import Types.API.Case
 import Types.API.CaseProduct
 import Types.App
@@ -25,6 +27,7 @@ type TransporterAPIs =
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
            :<|> UpdatePersonAPIs
+           :<|> OrganizationAPIs --Transporter
        )
 
 ---- Registration Flow ------
@@ -60,6 +63,18 @@ type UpdatePersonAPIs =
 updatePersonFlow :: FlowServer UpdatePersonAPIs
 updatePersonFlow = Person.updatePerson
 
+-- Following is organization creation
+type OrganizationAPIs =
+  "transporter"
+    :> ( Capture "regToken" Text
+        :> "create"
+        :> ReqBody '[JSON] TransporterReq
+        :> Post '[JSON] TransporterRes
+       )
+
+organizationFlow :: FlowServer OrganizationAPIs
+organizationFlow = Transporter.createTransporter
+
 -------------------------------
 -- -------- Case Flow----------
 -- type CaseAPIs =
@@ -90,6 +105,7 @@ transporterServer' key =
   pure "App is UP"
     :<|> registrationFlow
     :<|> updatePersonFlow
+    :<|> organizationFlow
 
 -- type SearchAPIs =
 --       "search"

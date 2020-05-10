@@ -70,6 +70,19 @@ findByRoleAndIdentifier role idType identifier =
       _role ==. B.val_ role
         &&. _mobileNumber ==. B.val_ (Just identifier)
 
+updateOrganizationId :: PersonId -> Text -> L.Flow () 
+updateOrganizationId personId orgId = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause orgId now) (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause orgId n Storage.Person {..} =
+      mconcat
+        [
+           _organizationId <-. B.val_ (Just orgId)
+          , _updatedAt <-. B.val_ n
+        ]
+    predicate id Storage.Person {..} = _id ==. B.val_ id
 updatePersonRec :: PersonId -> Storage.Person -> L.Flow ()
 updatePersonRec personId person = do
   now <- getCurrentTimeUTC
@@ -116,25 +129,21 @@ updatePerson personId verified identifier identifierType mobileNumber = do
 update ::
   PersonId ->
   Storage.Status ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Storage.Role ->
+  Bool ->
   L.Flow ()
-update id status nameM emailM roleM = do
+update id status verified = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update
     dbTable
-    (setClause status nameM emailM roleM currTime)
+    (setClause status verified currTime)
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause status nameM emailM roleM currTime Storage.Person {..} =
+    setClause status verified currTime Storage.Person {..} =
       mconcat
         ( [ _status <-. B.val_ status,
-            _updatedAt <-. B.val_ currTime
+            _updatedAt <-. B.val_ currTime,
+            _verified <-. B.val_ verified
           ]
-            <> (\name -> [_fullName <-. B.val_ name]) nameM
-            <> (\email -> [_email <-. B.val_ email]) emailM
-            <> maybe [] (\role -> [_role <-. B.val_ role]) roleM
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
