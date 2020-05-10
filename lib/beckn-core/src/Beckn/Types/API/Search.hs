@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 module Beckn.Types.API.Search where
 
 import Beckn.Types.Common
@@ -5,29 +6,24 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
+import Data.Generics.Labels
 import Data.Swagger
 import EulerHS.Prelude
 import Servant.Swagger
 
 data SearchReq = SearchReq
-  { _context :: Context,
-    _message :: Intent
+  { context :: Context,
+    message :: Intent
   }
-  deriving (Generic)
-
-instance FromJSON SearchReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  deriving (Generic, FromJSON)
 
 type SearchRes = AckResponse
 
 data OnSearchReq = OnSearchReq
-  { _context :: Context,
-    _message :: Service
+  { context :: Context,
+    message :: Service
   }
-  deriving (Generic)
-
-instance FromJSON OnSearchReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  deriving (Generic, FromJSON)
 
 data OnSearchRes = OnSearchRes
   { context :: Context,
