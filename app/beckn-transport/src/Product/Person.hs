@@ -16,6 +16,6 @@ updatePerson :: Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson regToken req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken >>= fromMaybeM400 "INVALID_TOKEN"
   person                    <- QP.findPersonById (PersonId _EntityId) >>= fromMaybeM400 "User not found"
-  let updatePerson           = transform req person
+  let updatedPerson           = transform req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
