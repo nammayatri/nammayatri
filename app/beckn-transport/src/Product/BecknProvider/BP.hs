@@ -1,10 +1,16 @@
+{-# LANGUAGE OverloadedLabels      #-}
+
 module Product.BecknProvider.BP where
 
 import           Beckn.Types.App
 import           Beckn.Types.API.Search
-import           Beckn.Types.Storage.Organization    as Org
-import           Beckn.Types.Storage.Person          as Person
-import           Beckn.Types.Storage.Location          as Location
+import           Beckn.Types.API.Confirm
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import           Beckn.Types.Storage.Organization     as Org
+import           Beckn.Types.Storage.Person           as Person
+import           Beckn.Types.Storage.Products         as Product
+import           Beckn.Types.Storage.Location         as Location
 import           Beckn.Types.Storage.Case
 import           Beckn.Utils.Common
 import           Data.Aeson
@@ -16,6 +22,7 @@ import           EulerHS.Prelude
 import           Servant
 import           Storage.Queries.Case                as Case
 import           Storage.Queries.Person              as Person
+import           Storage.Queries.Products            as Product
 import           Storage.Queries.Organization        as Org
 import           Types.App
 import           Types.Notification
@@ -104,3 +111,11 @@ mkCase req uuid now validity = Case
   , _createdAt = now
   , _updatedAt = now 
   }
+
+confirm :: Text -> ConfirmReq -> FlowHandler AckResponse
+confirm apiKey req = withFlowHandler $ do
+  let prodId = (req ^. #message ^. #_selected_items) !! 0
+  Product.updateStatus (ProductsId prodId) Product.INPROGRESS
+  uuid <- L.generateGUID
+  mkAckResponse uuid "confirm"
+  -- TODO : Add notifying transporter admin with GCM

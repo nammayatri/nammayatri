@@ -1,18 +1,19 @@
 module Storage.Queries.Person where
 
-import Beckn.Types.App
-import qualified Beckn.Types.Storage.Person as Storage
-import Data.Time
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
-import Epass.Types.Common
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
-import qualified Types.Storage.DB as DB
+import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
+import           EulerHS.Prelude                  hiding (id)
+
+import qualified Storage.Queries            as DB
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import qualified Types.Storage.DB                 as DB
+import qualified Beckn.Types.Storage.Person       as Storage
+import           Beckn.Utils.Common
+import           Beckn.Utils.Extra
+import           Data.Time
+import qualified Database.Beam                    as B
+import qualified EulerHS.Language                 as L
+import qualified EulerHS.Types                    as T
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.transporterDb
@@ -23,10 +24,11 @@ create Storage.Person {..} =
     >>= either DB.throwDBError pure
 
 findPersonById ::
-  PersonId -> L.Flow (Maybe Storage.Person)
+  PersonId -> L.Flow Storage.Person
 findPersonById id = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_DATA"
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
@@ -67,6 +69,33 @@ findByRoleAndIdentifier role idType identifier =
     predicate Storage.Person {..} =
       _role ==. B.val_ role
         &&. _mobileNumber ==. B.val_ (Just identifier)
+
+updatePersonRec :: PersonId -> Storage.Person -> L.Flow ()
+updatePersonRec personId person = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause person now) (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause person n Storage.Person {..} =
+      mconcat
+        [
+          _firstName <-. B.val_ (Storage._firstName person)
+          , _middleName <-. B.val_ (Storage._middleName person)
+          , _lastName <-. B.val_ (Storage._lastName person)
+          , _fullName <-. B.val_ (Storage._fullName person)
+          , _role <-. B.val_ (Storage._role person)
+          , _gender <-. B.val_ (Storage._gender person)
+          , _email <-. B.val_ (Storage._email person)
+          , _identifier <-. B.val_ (Storage._identifier person)
+          , _rating <-. B.val_ (Storage._rating person)
+          , _deviceToken <-. B.val_ (Storage._deviceToken person)
+          , _udf1 <-. B.val_ (Storage._udf1 person)
+          , _udf2 <-. B.val_ (Storage._udf2 person)
+          , _organizationId <-. B.val_ (Storage._organizationId person)
+          , _description <-. B.val_ (Storage._description person)
+          , _updatedAt <-. B.val_ n
+        ]
+    predicate id Storage.Person {..} = _id ==. B.val_ id
 
 updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> L.Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do

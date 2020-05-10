@@ -7,6 +7,9 @@ module Beckn.Types.App where
 
 import Beckn.Utils.TH
 import EulerHS.Prelude
+import Servant
+
+type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 
 newtype CaseId = CaseId
   { _getCaseId :: Text

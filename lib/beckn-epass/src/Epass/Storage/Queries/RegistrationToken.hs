@@ -6,7 +6,7 @@ import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import qualified Epass.Storage.Queries as DB
 import qualified Epass.Types.Storage.DB as DB
-import qualified Epass.Types.Storage.RegistrationToken as Storage
+import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)

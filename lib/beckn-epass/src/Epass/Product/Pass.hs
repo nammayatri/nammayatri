@@ -32,7 +32,7 @@ import qualified Epass.Types.Storage.EntityTag as EntityTag
 import Epass.Types.Storage.Pass
 import Epass.Types.Storage.Pass
 import qualified Epass.Types.Storage.PassApplication as PassApplication
-import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Epass.Utils.Common
 import Epass.Utils.Common
 import Epass.Utils.Routes
