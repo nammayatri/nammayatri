@@ -3,6 +3,8 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Database.Beam as B
@@ -15,21 +17,7 @@ import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TripReference as TripReference
 import qualified Types.Storage.Vehicle as Vehicle
-
-import qualified Beckn.Types.Storage.Organization      as Organization
-import qualified Beckn.Types.Storage.Case              as Case
-import qualified Beckn.Types.Storage.Person            as Person
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import qualified Types.Storage.Leads                   as Leads
-import qualified Types.Storage.Customer                as Customer
-import qualified Types.Storage.Driver                  as Driver
-import qualified Types.Storage.Location                as Location
-import qualified Types.Storage.Quotation               as Quotation
-import qualified Types.Storage.Tracker                 as Tracker
-import qualified Types.Storage.TripReference           as TripReference
-import qualified Types.Storage.Vehicle                 as Vehicle
-
-import qualified Database.Beam                         as B
 
 data TransporterDb f =
   TransporterDb
@@ -45,6 +33,8 @@ data TransporterDb f =
     , _vehicle :: f (B.TableEntity Vehicle.VehicleT)
     , _person :: f (B.TableEntity Person.PersonT)
     , _case :: f (B.TableEntity Case.CaseT)
+    , _products :: f (B.TableEntity Product.ProductsT)
+    , _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT)
     , _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
     }
   deriving (Generic, B.Database be)
@@ -64,5 +54,7 @@ transporterDb =
     , _vehicle = Vehicle.fieldEMod
     , _person = Person.fieldEMod
     , _case = Case.fieldEMod
+    , _products = Product.fieldEMod
+    , _caseProduct = CaseProduct.fieldEMod
     , _registrationToken = RegistrationToken.fieldEMod
     }

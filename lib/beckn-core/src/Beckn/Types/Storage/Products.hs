@@ -28,6 +28,8 @@ data ProductsStatus = VALID | INPROGRESS | INSTOCK | OUTOFSTOCK
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck MySQL ProductsStatus
+
 instance FromBackendRow MySQL ProductsStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 

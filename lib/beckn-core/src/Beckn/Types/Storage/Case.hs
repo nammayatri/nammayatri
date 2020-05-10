@@ -19,6 +19,8 @@ data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck MySQL CaseType
+
 instance FromBackendRow MySQL CaseType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
@@ -28,8 +30,11 @@ data CaseStatus = NEW | INPROGRESS | CLOSED
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck MySQL CaseStatus
+
 instance FromBackendRow MySQL CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
 
 data CaseIndustry = MOBILITY | GOVT | GROCERY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
