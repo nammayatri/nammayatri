@@ -57,8 +57,8 @@ mkCase req = undefined
 
 confirm :: Text -> ConfirmReq -> FlowHandler AckResponse
 confirm apiKey req = withFlowHandler $ do
-  let prodId = req ^. #message ^. #_selected_items
-  Product.updateStatus (ProductsId $ "") Product.INPROGRESS
+  let prodId = (req ^. #message ^. #_selected_items) !! 0
+  Product.updateStatus (ProductsId prodId) Product.INPROGRESS
   uuid <- L.generateGUID
   mkAckResponse uuid "confirm"
   -- TODO : Add notifying transporter admin with GCM
