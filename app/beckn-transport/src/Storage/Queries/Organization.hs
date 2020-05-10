@@ -1,17 +1,20 @@
 module Storage.Queries.Organization where
 
-import Beckn.Types.App
+import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
+import           EulerHS.Prelude                  hiding (id)
+
+import qualified Storage.Queries            as DB
+import           Beckn.Types.App
+import           Beckn.Types.Common
+import qualified Types.Storage.DB                 as DB
 import qualified Beckn.Types.Storage.Organization as Storage
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
-import Epass.Types.Common
-import Epass.Utils.Common
+import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.transporterDb

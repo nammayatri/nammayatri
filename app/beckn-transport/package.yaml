@@ -93,7 +93,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - beckn-core
-    - beckn-epass
 
 tests:
   beckn-transport-test:

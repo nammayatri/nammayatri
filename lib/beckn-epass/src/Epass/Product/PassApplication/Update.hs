@@ -15,7 +15,7 @@ import qualified Epass.Types.Common as Location
 import qualified Epass.Types.Storage.Pass as Pass
 import Epass.Types.Storage.PassApplication
 import qualified Epass.Types.Storage.PassApplication as PassApplication
-import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage

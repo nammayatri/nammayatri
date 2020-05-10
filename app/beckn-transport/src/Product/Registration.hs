@@ -1,28 +1,27 @@
 module Product.Registration where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Crypto.Number.Generate as Cryptonite
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified Epass.External.MyValuesFirst.Flow as Sms
-import qualified Epass.External.MyValuesFirst.Types as Sms
-import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Epass.Types.Storage.RegistrationToken as SR
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import Epass.Utils.Storage
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
-import qualified Storage.Queries.Person as QP
-import System.Environment
-import Types.API.Registration
-import Types.App
-import Utils.Routes
+import qualified Data.Accessor                     as Lens
+import qualified Beckn.External.MyValuesFirst.Flow       as Sms
+import qualified Beckn.External.MyValuesFirst.Types      as Sms
+import qualified Storage.Queries.Person                  as QP
+import qualified Storage.Queries.RegistrationToken as QR
+import           Types.API.Registration
+import           Types.App                               
+import           Beckn.Types.App
+import           Beckn.Types.Common                       as BC
+import qualified Beckn.Types.Storage.Person                    as SP
+import qualified Beckn.Types.Storage.RegistrationToken   as SR
+import           Beckn.Utils.Common
+import           Beckn.Utils.Extra
+import           Utils.Routes
+import qualified Crypto.Number.Generate                  as Cryptonite
+import           Data.Aeson
+import qualified Data.Text                               as T
+import           Data.Time.LocalTime
+import qualified EulerHS.Language                        as L
+import           EulerHS.Prelude
+import           Servant
+import           System.Environment
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =

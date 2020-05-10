@@ -33,6 +33,7 @@ packages:
 - lib/beckn-core
 - app/epass-backend
 - app/beckn-transport
+- app/app-backend
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:

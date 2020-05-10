@@ -18,7 +18,7 @@ import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Location as SL
 import qualified Epass.Types.Storage.Organization as SO
-import qualified Epass.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Epass.Types.Storage.User as Storage
 import qualified Epass.Types.Storage.User as SU
 import Epass.Utils.Common

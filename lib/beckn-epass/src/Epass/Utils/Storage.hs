@@ -4,7 +4,7 @@ import qualified Data.Time as DT
 import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Epass.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L

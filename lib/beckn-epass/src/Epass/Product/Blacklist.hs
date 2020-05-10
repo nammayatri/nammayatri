@@ -13,7 +13,7 @@ import Epass.Types.API.Blacklist
 import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Blacklist as Storage
-import qualified Epass.Types.Storage.RegistrationToken as RegToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage
