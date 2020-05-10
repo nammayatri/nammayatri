@@ -30,6 +30,7 @@ list CaseReq {..} = withFlowHandler $ do
 
 -- Update Case
 -- Transporter Accepts a Ride with Quote
+-- TODO fromLocation toLocation getCreatedTimeFromInput
 update :: Text -> UpdateCaseReq -> FlowHandler Case
 update caseId UpdateCaseReq {..} = withFlowHandler $ do
   c <- Case.findById $ CaseId caseId
