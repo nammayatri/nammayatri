@@ -81,6 +81,7 @@ dependencies:
 - warp
 - time
 - template-haskell
+- generic-lens
 
 library:
   source-dirs:

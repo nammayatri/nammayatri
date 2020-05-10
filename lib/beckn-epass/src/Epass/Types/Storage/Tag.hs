@@ -10,7 +10,7 @@ import Data.Swagger hiding (Tag)
 import Data.Time
 import qualified Database.Beam as B
 import Epass.Types.App
-import Epass.Types.Storage.RegistrationToken (RTEntityType (..))
+import Beckn.Types.Storage.RegistrationToken (RTEntityType (..))
 import qualified Epass.Utils.Defaults as Defaults
 import EulerHS.Prelude
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Mobility.Service where
 
 import Beckn.Types.Core.Catalog
@@ -10,9 +12,11 @@ import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.FareProduct
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Trip
+import Data.Generics.Labels
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
+
 
 data Service = Service
   { _id :: Text,

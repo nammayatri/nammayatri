@@ -32,4 +32,26 @@ findAllByTypeOrgId orgId status =
       ( _status ==. (B.val_ status)
           &&. _organizationId ==. (B.val_ orgId))
 
+findById :: ProductsId -> L.Flow Storage.Products
+findById pid =
+  DB.findOneWithErr dbTable (predicate pid)
+  where
+    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
 
+updateStatus ::
+  ProductsId ->
+  Storage.ProductsStatus ->
+  L.Flow (T.DBResult ())
+updateStatus id status = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate id)
+  where
+    predicate id Storage.Products {..} = _id ==. B.val_ id
+    setClause status currTime Storage.Products {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]

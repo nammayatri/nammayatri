@@ -14,7 +14,6 @@ import           Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import           EulerHS.Prelude
 import           Servant
-import qualified Epass.Utils.Defaults as Defaults
 import           Storage.Queries.Case as Case
 import           System.Environment
 import           Types.API.Case
@@ -66,7 +65,7 @@ createProduct cs price = do
       , _udf4 = Case._udf4 cs
       , _udf5 = Case._udf5 cs
       , _info = Case._info cs
-      , _organizationId =  Defaults.orgId
+      , _organizationId =  "Defaults orgId"
       , _createdAt = Case._createdAt cs
       , _updatedAt = Case._updatedAt cs
       , _fromLocation =  Nothing

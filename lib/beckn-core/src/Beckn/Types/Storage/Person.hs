@@ -91,30 +91,33 @@ instance FromHttpApiData Gender where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data PersonT f = Person
-  { _id :: B.C f PersonId,
-    _firstName :: B.C f (Maybe Text),
-    _middleName :: B.C f (Maybe Text),
-    _lastName :: B.C f (Maybe Text),
-    _fullName :: B.C f (Maybe Text),
-    _role :: B.C f Role,
-    _gender :: B.C f Gender,
-    _identifierType :: B.C f IdentifierType,
-    _email :: B.C f (Maybe Text),
-    _mobileNumber :: B.C f (Maybe Text),
-    _mobileCountryCode :: B.C f (Maybe Text),
-    _identifier :: B.C f (Maybe Text),
-    _rating :: B.C f (Maybe Text),
-    _verified :: B.C f Bool,
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Int),
-    _status :: B.C f Status,
-    _organizationId :: B.C f (Maybe Text),
-    _locationId :: B.C f (Maybe Text),
-    _description :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+
+data PersonT f =
+  Person
+    { _id                 :: B.C f PersonId
+    , _firstName         :: B.C f (Maybe Text)
+    , _middleName        :: B.C f (Maybe Text)
+    , _lastName          :: B.C f (Maybe Text)
+    , _fullName          :: B.C f (Maybe Text)
+    , _role               :: B.C f Role
+    , _gender             :: B.C f Gender
+    , _identifierType     :: B.C f IdentifierType
+    , _email              :: B.C f (Maybe Text)
+    , _mobileNumber       :: B.C f (Maybe Text)
+    , _mobileCountryCode:: B.C f (Maybe Text)
+    , _identifier         :: B.C f (Maybe Text)
+    , _rating             :: B.C f (Maybe Text)
+    , _verified           :: B.C f Bool
+    , _udf1               :: B.C f (Maybe Text)
+    , _udf2               :: B.C f (Maybe Text)
+    , _status             :: B.C f Status
+    , _organizationId     :: B.C f (Maybe Text)
+    , _locationId         :: B.C f (Maybe Text) 
+    , _description        :: B.C f (Maybe Text)
+    , _createdAt          :: B.C f LocalTime
+    , _updatedAt          :: B.C f LocalTime
+    }
+
   deriving (Generic, B.Beamable)
 
 type Person = PersonT Identity
@@ -147,14 +150,15 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _createdAt = "created_at",
-        _updatedAt = "updated_at",
-        _firstName = "first_name",
-        _middleName = "middle_name",
-        _lastName = "last_name",
-        _fullName = "full_name",
-        _mobileNumber = "mobile_number",
-        _organizationId = "organization_id",
-        _locationId = "location_id",
-        _mobileCountryCode = "mobile_country_code"
+      { _createdAt = "created_at"
+      , _updatedAt = "updated_at"
+      , _firstName    = "first_name"
+      , _middleName   = "middle_name"
+      , _lastName     = "last_name"
+      , _fullName     = "full_name"
+      , _mobileNumber = "mobile_number"
+      , _organizationId    = "organization_id"
+      , _locationId        = "location_id"
+      , _mobileCountryCode = "mobile_country_code"
+      , _identifierType = "identifier_type"
       }

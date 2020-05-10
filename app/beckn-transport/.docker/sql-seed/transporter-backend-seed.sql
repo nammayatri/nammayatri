@@ -15,54 +15,62 @@ CREATE TABLE `organization` (
   `status` varchar(255) NULL,
   `type` varchar(255) NULL,
   `verified` boolean NOT NULL,
-  `location_type` varchar(255) NULL,
-  `lat` double NULL,
-  `long` double NULL,
-  `ward` varchar(255) NULL,
-  `district` varchar(255) NULL,
-  `city` varchar(255) NULL,
-  `state` varchar(255) NULL,
-  `country` varchar(255) NULL,
-  `pincode` integer NULL,
-  `address` varchar(1024) NULL,
-  `bound` TEXT NULL,
+  `location_id` varchar(255) NULL,
+  `description` TEXT NULL,
+  `mobileNumber` TEXT NULL,
+  `fcm_id` TEXT NULL,
+  `from_time` TEXT NULL,
+  `to_time` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`)
+);
+
+DROP TABLE IF EXISTS `person`;
+
+CREATE TABLE `person` (
+  `id` char(36) NOT NULL,
+  `first_name` varchar(255) NULL,
+  `middle_name` varchar(255) NULL,
+  `last_name` varchar(255) NULL,
+  `full_name` varchar(255) NULL,
+  `role` varchar(255) NOT NULL,
+  `gender` varchar(255) NOT NULL,
+  `identifier_type` varchar(255) NULL,
+  `email` varchar(255) NULL,
+  `mobile_number` varchar(255) NULL,
+  `mobile_country_code` varchar(255) NULL,
+  `identifier` varchar(255) NULL,
+  `rating` varchar(255) NULL,
+  `verified` boolean NOT NULL,
+  `udf1` varchar(255) NULL,
+  `udf2` varchar(255) NULL,
+  `status` varchar(255) NOT NULL,
+  `organization_id` varchar(255) NULL,
+  `location_id` varchar(255) NULL,
+  `description` varchar(255) NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`)
+);
+
+DROP TABLE IF EXISTS `registration_token`;
+CREATE TABLE `registration_token` (
+  `id` char(36) NOT NULL,
+  `auth_medium` varchar(255) NOT NULL,
+  `auth_type` varchar(255) NOT NULL,
+  `auth_value_hash` varchar(1024) NOT NULL,
+  `token` varchar(1024) NOT NULL,
+  `verified` boolean NOT NULL,
+  `auth_expiry` integer NOT NULL,
+  `token_expiry` integer NOT NULL,
+  `attempts` integer NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` char(36) NOT NULL,
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`ward`),
-  INDEX (`district`),
-  INDEX (`city`),
-  INDEX (`pincode`)
+  INDEX (`entity_id`),
+  INDEX (`entity_type`)
 );
-
-DROP TABLE IF EXISTS `customer`;
-
-CREATE TABLE `customer` (
-  `id` char(36) NOT NULL,
-  `reference_id` varchar(36) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `mobile_number` varchar(1024) NOT NULL,
-  `info` Text NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`),
-  INDEX (`mobile_number`),
-  INDEX (`reference_id`)
-)
-
-DROP TABLE IF EXISTS `driver`;
-
-CREATE TABLE `driver`(
-  `id` char(36) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `mobile_number` varchar(1024) NULL,
-  `gender` varchar(32) NOT NULL,
-  `experience` varchar(255) NULL,
-  `rating` varchar(255) NULL,
-  `no_of_trips` integer NULL,
-  `description` Text NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`),
-)
