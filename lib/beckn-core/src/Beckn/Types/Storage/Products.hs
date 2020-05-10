@@ -13,6 +13,13 @@ import Database.Beam.MySQL
 import EulerHS.Prelude --(FromJSON, ToJSON, toJSON, parseJSON, Eq, Maybe)
 import Servant.Swagger
 
+
+data ProdInfo = ProdInfo
+  { driverInfo :: Text
+  , vehicleInfo :: Text
+  } deriving (Show, Generic, ToJSON, FromJSON)
+
+
 data ProductsType = RIDE | PASS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 

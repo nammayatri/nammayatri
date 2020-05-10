@@ -1,9 +1,13 @@
 module Storage.Queries.Products where
 
 import qualified Beckn.Storage.Queries as DB
+import qualified Storage.Queries.Vehicle as VQ
+import qualified Storage.Queries.Driver as VD
 import Beckn.Types.Common
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Products as Storage
+import qualified Types.Storage.Driver as D
+import qualified Types.Storage.Vehicle as V
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -50,3 +54,23 @@ updateStatus id status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+updateInfo :: ProductsId -> DriverId -> VehicleId -> L.Flow (T.DBResult ())
+updateInfo prodId driverId vechId = do
+  drivInfo <- VD.findDriverById driverId
+  vechInfo <- VQ.findVehicleById vechId
+  let info = Just $ show $ toJSON (prepareInfo drivInfo vechInfo)
+  DB.update
+    dbTable
+    (setClause info)
+    (predicate prodId)
+  where
+    prepareInfo drivInfo vechInfo = Storage.ProdInfo
+      { driverInfo = show (toJSON <$> drivInfo)
+      , vehicleInfo = show (toJSON <$>  vechInfo)
+      }
+    predicate id Storage.Products {..} = _id ==. B.val_ id
+    setClause info Storage.Products {..} =
+      mconcat
+        [ _info <-. B.val_ info]
+
