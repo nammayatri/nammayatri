@@ -82,6 +82,7 @@ dependencies:
 - time
 - template-haskell
 - random-strings
+- generic-lens
 
 executables:
   beckn-transport-exe:

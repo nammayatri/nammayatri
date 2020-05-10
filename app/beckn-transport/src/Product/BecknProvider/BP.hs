@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels      #-}
+
 module Product.BecknProvider.BP where
 
 import           Beckn.Types.API.Search
@@ -55,7 +57,7 @@ mkCase req = undefined
 
 confirm :: Text -> ConfirmReq -> FlowHandler AckResponse
 confirm apiKey req = withFlowHandler $ do
-  -- let prodId = (req ^. _message ^. _selected_items)
+  let prodId = req ^. #message ^. #_selected_items
   Product.updateStatus (ProductsId $ "") Product.INPROGRESS
   uuid <- L.generateGUID
   mkAckResponse uuid "confirm"
