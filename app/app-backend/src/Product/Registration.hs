@@ -11,7 +11,7 @@ import Data.Time.LocalTime
 import qualified Epass.External.MyValuesFirst.Flow as Sms
 import qualified Epass.External.MyValuesFirst.Types as Sms
 import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Epass.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import Epass.Utils.Storage

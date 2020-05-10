@@ -11,7 +11,7 @@ import Epass.Types.API.Quota
 import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Quota as Storage
-import qualified Epass.Types.Storage.RegistrationToken as RegToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import qualified Epass.Types.Storage.User as User
 import Epass.Utils.Common
 import Epass.Utils.Routes

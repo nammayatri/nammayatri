@@ -17,7 +17,7 @@ import Epass.Types.Storage.Document as SD
 import Epass.Types.Storage.EntityDocument as SED
 import Epass.Types.Storage.EntityDocument
 import Epass.Types.Storage.PassApplication as SPA
-import qualified Epass.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Epass.Types.Storage.User as SU
 import Epass.Utils.Common
 import Epass.Utils.Extra
