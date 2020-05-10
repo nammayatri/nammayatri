@@ -32,19 +32,11 @@ initiateLogin req =
 
 initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
-  let entityType = req ^. Lens.entityType
   let mobileNumber = req ^. Lens.identifier
-  entityId <-
-    case entityType of
-      SR.CUSTOMER -> do
+  entityId <- do
         QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
           >>= maybe (createPerson req) (return . _getPersonId . SP._id)
-      SR.USER -> do
-        person <-
-          fromMaybeM400 "User not found"
-            =<< QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
-        return $ _getPersonId $ SP._id person
-  regToken <- makeSession req entityId entityType
+  regToken <- makeSession req entityId SR.USER
   QR.create regToken
   sendOTP mobileNumber (SR._authValueHash regToken)
   let attempts = SR._attempts regToken
@@ -75,6 +67,7 @@ makePerson req = do
         _status = SP.INACTIVE,
         _udf1 = Nothing,
         _udf2 = Nothing,
+        _deviceToken = Nothing,
         _organizationId = Nothing,
         _locationId = Nothing,
         _description = Nothing,
@@ -185,7 +178,7 @@ reInitiateLogin tokenId req =
   withFlowHandler $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
     case _entityType of
-      SR.CUSTOMER -> void $ checkPersonExists _EntityId
+      SR.CUSTOMER -> L.throwException $ err400 {errBody = "INVALID_ENTITY_TYPE"}
       SR.USER -> void $ checkPersonExists _EntityId
     if _attempts > 0
       then do

@@ -69,6 +69,35 @@ findByRoleAndIdentifier role idType identifier =
       _role ==. B.val_ role
         &&. _mobileNumber ==. B.val_ (Just identifier)
 
+updatePersonRec :: PersonId -> Storage.Person -> L.Flow ()
+updatePersonRec personId person = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause person now) (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause person n Storage.Person {..} =
+      mconcat
+        [
+          _firstName <-. B.val_ (Storage._firstName person)
+          , _middleName <-. B.val_ (Storage._middleName person)
+          , _lastName <-. B.val_ (Storage._lastName person)
+          , _fullName <-. B.val_ (Storage._fullName person)
+          , _role <-. B.val_ (Storage._role person)
+          , _gender <-. B.val_ (Storage._gender person)
+          , _email <-. B.val_ (Storage._email person)
+          , _mobileNumber <-. B.val_ (Storage._mobileNumber person)
+          , _mobileCountryCode <-. B.val_ (Storage._mobileCountryCode person)
+          , _identifier <-. B.val_ (Storage._identifier person)
+          , _rating <-. B.val_ (Storage._rating person)
+          , _deviceToken <-. B.val_ (Storage._deviceToken person)
+          , _udf1 <-. B.val_ (Storage._udf1 person)
+          , _udf2 <-. B.val_ (Storage._udf2 person)
+          , _organizationId <-. B.val_ (Storage._organizationId person)
+          , _description <-. B.val_ (Storage._description person)
+          , _updatedAt <-. B.val_ n
+        ]
+    predicate id Storage.Person {..} = _id ==. B.val_ id
+
 updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> L.Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   now <- getCurrentTimeUTC

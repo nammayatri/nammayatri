@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module TypeClass.Transform where
+module Beckn.TypeClass.Transform where
 
 class Transform f g where
-  transform :: f -> g
+  transform :: f -> g -> g

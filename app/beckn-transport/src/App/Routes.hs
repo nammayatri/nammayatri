@@ -9,15 +9,18 @@ import Beckn.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration
+import qualified Product.Person as Person
 import Servant
 import Servant.Multipart
 import Types.API.Registration
+import Types.API.Person
 import Types.App
 
 type TransporterAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
+           :<|> UpdatePersonAPIs
        )
 
 ---- Registration Flow ------
@@ -41,6 +44,18 @@ registrationFlow =
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
+-- Following is Update person flow
+type UpdatePersonAPIs =
+  "person"
+    :> ( Capture "regToken" Text
+          :> "update"
+          :> ReqBody '[JSON] UpdatePersonReq
+          :> Post '[JSON] UpdatePersonRes
+       )
+
+updatePersonFlow :: FlowServer UpdatePersonAPIs
+updatePersonFlow = Person.updatePerson
+
 -------------------------------
 
 transporterAPIs :: Proxy TransporterAPIs
@@ -50,6 +65,7 @@ transporterServer' :: V.Key (HashMap Text Text) -> FlowServer TransporterAPIs
 transporterServer' key =
   pure "App is UP"
     :<|> registrationFlow
+    :<|> updatePersonFlow
 
 -- type SearchAPIs =
 --       "search"
