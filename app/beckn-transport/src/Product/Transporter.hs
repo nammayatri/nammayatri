@@ -29,3 +29,4 @@ createTransporter regToken req = withFlowHandler $ do
   where
     validation person = 
       whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+      whenM (return $ SP._organizationId person /= Nothing) $ L.throwException $ err400 {errBody = "user already registered an organization"} 
