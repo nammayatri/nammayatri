@@ -10,10 +10,10 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Person
 
-updatePerson :: Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
-updatePerson regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
-  person <- QP.findPersonById (PersonId _EntityId)
+updatePerson :: Text -> Maybe Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
+updatePerson personId token req = withFlowHandler $ do
+  QR.verifyAuth token
+  person <- QP.findPersonById (PersonId personId)
   updatedPerson <- transformFlow2 req person
-  QP.updatePersonRec (PersonId _EntityId) updatedPerson
+  QP.updatePersonRec (PersonId personId) updatedPerson
   return $ UpdatePersonRes updatedPerson
