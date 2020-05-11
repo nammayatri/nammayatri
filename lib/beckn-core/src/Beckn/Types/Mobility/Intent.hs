@@ -22,7 +22,7 @@ data Intent = Intent
     vehicle :: Vehicle,
     providers :: [Provider],
     payload :: Payload,
-    transfer_attrs :: TransferAttrs,
+    transfer_attrs :: Maybe TransferAttrs,
     fare_range :: ScalarRange,
     tags :: [Tag]
   }
@@ -42,8 +42,8 @@ data Payload = Payload
 
 data Luggage = Luggage
   { count :: Int,
-    weight_range :: ScalarRange,
-    dimensions :: Dimension
+    weight_range :: Maybe ScalarRange,
+    dimensions :: Maybe Dimension
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
