@@ -31,8 +31,8 @@ data UpdatePersonReq = UpdatePersonReq
   , _organizationId     :: Maybe Text
   , _description        :: Maybe Text
   , _locationType       :: Maybe SL.LocationType
-  , _lat                :: Maybe Double
-  , _long               :: Maybe Double
+  , _lat                :: Maybe Text
+  , _long               :: Maybe Text
   , _ward               :: Maybe Text
   , _district           :: Maybe Text
   , _city               :: Maybe Text

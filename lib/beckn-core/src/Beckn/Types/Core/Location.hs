@@ -27,8 +27,8 @@ instance ToJSON Location where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data GPS = GPS
-  { lat :: Double,
-    lon :: Double
+  { lat :: Text,
+    lon :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

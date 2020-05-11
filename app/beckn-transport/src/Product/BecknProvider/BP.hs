@@ -39,19 +39,23 @@ import           Utils.FCM
 -- 2) Notify all transporter using GCM
 -- 3) Respond with Ack
 
-search :: Text -> SearchReq -> FlowHandler SearchRes
-search apiKey req = withFlowHandler $ do
+search :: SearchReq -> FlowHandler AckResponse
+search req = withFlowHandler $ do
+  --TODO: Need to add authenticator
   uuid <- L.generateGUID
-  -- get customer info and do findOrCreate Person?? or store customerInfo in requestor?
   currTime <- getCurrentTimeUTC
   validity <- getValidTime currTime
-  let fromLocation = mkFromLocation req uuid "1" currTime $ req ^. #message ^. #origin
-  let toLocation = mkFromLocation req uuid "2" currTime $ req ^. #message ^. #destination
+  uuid1 <- L.generateGUID
+  let fromLocation = mkFromLocation req uuid1 currTime $ req ^. #message ^. #origin
+  uuid2 <- L.generateGUID
+  let toLocation = mkFromLocation req uuid2 currTime $ req ^. #message ^. #destination
   Loc.create fromLocation
   Loc.create toLocation
   let c = mkCase req uuid currTime validity fromLocation toLocation
   Case.create c
   transporters <- listOrganizations Nothing Nothing [Org.TRANSPORTER] [Org.APPROVED]
+  L.logInfo "search API Flow" "Reached"
+
   -- TODO : Fix show
   admins       <- findAllByOrgIds
                   [Person.ADMIN]
@@ -72,12 +76,12 @@ notifyTransporters c admins =
 getValidTime :: LocalTime -> L.Flow LocalTime
 getValidTime now = pure $ addLocalTime (60*30 :: NominalDiffTime) now 
 
-mkFromLocation :: SearchReq -> Text -> Text -> LocalTime -> BL.Location -> SL.Location
-mkFromLocation req uuid ref now loc = do
+mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
+mkFromLocation req uuid now loc = do
   case loc ^. #_type of
     "gps" -> case loc ^. #_gps of 
                 Just (val :: GPS) -> SL.Location
-                                        { _id = LocationId {_getLocationId = uuid <> ref}
+                                        { _id = LocationId {_getLocationId = uuid}
                                         , _locationType = POINT
                                         , _lat = Just $ val ^. #lat
                                         , _long = Just $ val ^. #lon
@@ -130,20 +134,21 @@ mkCase req uuid now validity fromLocation toLocation = do
     , _requestor = Nothing
     , _requestorType = Just CONSUMER
     , _parentCaseId = Nothing
-    , _fromLocationId = fromLocation ^. #_id
-    , _toLocationId = toLocation ^. #_id
+    , _fromLocationId = fromLocation ^. #_id ^. #_getLocationId
+    , _toLocationId = toLocation ^. #_id ^. #_getLocationId
     , _udf1 = Just $ intent ^. #vehicle ^. #variant
     , _udf2 = Just $ show $ intent ^. #payload ^. #travellers ^. #count
     , _udf3 = Nothing
     , _udf4 = Nothing
     , _udf5 = Nothing
-    , _info = Just $ show $ req ^. #message
+    , _info = Nothing --Just $ show $ req ^. #message
     , _createdAt = now
     , _updatedAt = now 
     }
 
-confirm :: Text -> ConfirmReq -> FlowHandler AckResponse
-confirm apiKey req = withFlowHandler $ do
+confirm :: ConfirmReq -> FlowHandler AckResponse
+confirm req = withFlowHandler $ do
+  L.logInfo "confirm API Flow" "Reached"
   let prodId = (req ^. #message ^. #_selected_items) !! 0
   Product.updateStatus (ProductsId prodId) Product.INPROGRESS
   uuid <- L.generateGUID

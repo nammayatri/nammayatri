@@ -89,8 +89,8 @@ data CaseT f = Case
     _requestor :: B.C f (Maybe Text),
     _requestorType :: B.C f (Maybe RequestorType),
     _parentCaseId :: B.C f (Maybe CaseId),
-    _fromLocationId :: B.C f LocationId,
-    _toLocationId :: B.C f LocationId,
+    _fromLocationId :: B.C f Text,
+    _toLocationId :: B.C f Text,
     _udf1 :: B.C f (Maybe Text),
     _udf2 :: B.C f (Maybe Text),
     _udf3 :: B.C f (Maybe Text),
@@ -103,6 +103,7 @@ data CaseT f = Case
   deriving (Generic, B.Beamable)
 
 --TODO: assignedTo, requestor - -- need to point to primarykey of Person
+-- fromLcoationId and toLocationId to LocationId
 -- fields => mobility  => pass
 -- udf1 => vehicle variant  =>
 -- udf2 => luggage_count =>
@@ -141,9 +142,12 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { _shortId = "short_id",
+          _exchangeType = "exchange_type",
           _startTime = "start_time",
           _endTime = "end_time",
           _validTill = "valid_till",
+          _providerType = "provider_type",
+          _requestorType = "requestor_type",
           _parentCaseId = "parent_case_id",
           _fromLocationId = "from_location_id",
           _toLocationId = "to_location_id",

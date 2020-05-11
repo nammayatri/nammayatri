@@ -36,8 +36,8 @@ instance FromHttpApiData LocationType where
 data LocationT f = Location
   { _id :: B.C f LocationId,
     _locationType :: B.C f LocationType,
-    _lat :: B.C f (Maybe Double),
-    _long :: B.C f (Maybe Double),
+    _lat :: B.C f (Maybe Text),
+    _long :: B.C f (Maybe Text),
     _ward :: B.C f (Maybe Text),
     _district :: B.C f (Maybe Text),
     _city :: B.C f (Maybe Text),
