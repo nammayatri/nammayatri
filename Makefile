@@ -4,11 +4,11 @@
 NS ?= asia.gcr.io/jp-k8s-internal
 VERSION ?= latest
 
-IMAGE_NAME ?= beckn-epass-uat
+IMAGE_NAME ?= beckn-uat
 
 SOURCE_COMMIT := $(shell git rev-parse HEAD)
 
-DEP_IMAGE ?= beckn-epass
+DEP_IMAGE ?= beckn
 
 DEP_LABEL ?= master
 
