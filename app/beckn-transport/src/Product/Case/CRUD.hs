@@ -8,6 +8,7 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Products as Product
 import Beckn.Utils.Common
@@ -20,9 +21,10 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import Servant
 import Storage.Queries.Case as Case
+
 import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Products as PQ
-import Storage.Queries.Products as PQ
+import Storage.Queries.Location as LQ
 import System.Environment
 import Types.API.Case
 import Types.API.Registration
@@ -30,7 +32,20 @@ import qualified Utils.Defaults as Defaults
 
 list :: CaseReq -> FlowHandler CaseListRes
 list CaseReq {..} = withFlowHandler $ do
-  Case.findAllByType _limit _offset _type _status
+  caseList <- Case.findAllByType _limit _offset _type _status
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList)
+  return $ catMaybes $ joinByIds locList <$> caseList
+  where
+    joinByIds locList cs =
+      buildResponse <$> find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList
+      where
+        buildResponse k = CaseRes
+          { _case = cs
+          , _location = k
+          }
+
+
+
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
