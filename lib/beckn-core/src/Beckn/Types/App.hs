@@ -1,14 +1,14 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module Beckn.Types.App where
 
-import Beckn.Utils.TH
-import EulerHS.Prelude
+import           Beckn.Utils.TH
+import           EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Servant
+import           Servant
 
 -- App Types
 data Env = Env

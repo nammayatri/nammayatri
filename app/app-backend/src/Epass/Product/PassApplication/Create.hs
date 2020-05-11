@@ -1,29 +1,31 @@
 module Epass.Product.PassApplication.Create where
 
-import Data.Aeson
-import qualified Epass.Data.Accessor as Accessor
-import qualified Epass.Storage.Queries.Customer as Customer
-import qualified Epass.Storage.Queries.CustomerDetail as CustomerDetail
-import qualified Epass.Storage.Queries.Organization as QO
-import qualified Epass.Storage.Queries.PassApplication as DB
-import qualified Epass.Types.API.PassApplication as API
-import Epass.Types.App
-import Epass.Types.Common
-import qualified Epass.Types.Common as Location
-  ( Location (..),
-    LocationType,
-  )
-import qualified Epass.Types.Storage.Customer as Customer
-import qualified Epass.Types.Storage.CustomerDetail as CD
-import Epass.Types.Storage.PassApplication
+import qualified Beckn.Types.Common                    as BTC
+import qualified Beckn.Types.Storage.Case              as Case
+import qualified Beckn.Types.Storage.Location          as Loc
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import Epass.Utils.Routes
-import Epass.Utils.Storage
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
+import           Data.Aeson
+import qualified Epass.Data.Accessor                   as Accessor
+import qualified Epass.Storage.Queries.Customer        as Customer
+import qualified Epass.Storage.Queries.CustomerDetail  as CustomerDetail
+import qualified Epass.Storage.Queries.Organization    as QO
+import qualified Epass.Storage.Queries.PassApplication as DB
+import qualified Epass.Types.API.PassApplication       as API
+import           Epass.Types.App
+import           Epass.Types.Common
+import qualified Epass.Types.Common                    as Location (Location (..),
+                                                                    LocationType)
+import qualified Epass.Types.Storage.Customer          as Customer
+import qualified Epass.Types.Storage.CustomerDetail    as CD
+import           Epass.Types.Storage.PassApplication
+import           Epass.Utils.Common
+import           Epass.Utils.Extra
+import           Epass.Utils.Routes
+import           Epass.Utils.Storage
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import           Servant
+import qualified Storage.Queries.Location              as QL
 
 createPassApplication ::
   Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes
@@ -32,10 +34,9 @@ createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowH
 
   passAppInfo <-
     case _type of
-      SELF -> selfFlow token req
-      SPONSOR -> sponsorFlow token req
+      SELF        -> selfFlow token req
+      SPONSOR     -> sponsorFlow token req
       BULKSPONSOR -> bulkSponsorFlow token req
-
   DB.create passAppInfo
   DB.findById (_id passAppInfo)
     >>= fromMaybeM500 "Could not create PassApplication"
@@ -139,8 +140,8 @@ getPassAppInfo token API.CreatePassApplicationReq {..} mCustId = do
       }
 
 getPassType :: PassApplicationType -> PassType
-getPassType SELF = INDIVIDUAL
-getPassType SPONSOR = INDIVIDUAL
+getPassType SELF        = INDIVIDUAL
+getPassType SPONSOR     = INDIVIDUAL
 getPassType BULKSPONSOR = ORGANIZATION
 
 getCount :: PassApplicationType -> Maybe Int -> L.Flow Int
@@ -149,8 +150,89 @@ getCount SPONSOR _ = return 1
 getCount BULKSPONSOR (Just c) = return c
 getCount BULKSPONSOR Nothing = L.throwException $ err400 {errBody = "Count cannot be null"}
 
-mapIdType MOBILE = CD.MOBILENUMBER
+mapIdType MOBILE  = CD.MOBILENUMBER
 mapIdType AADHAAR = CD.AADHAAR
+
+
+getLocation ::  API.CreatePassApplicationReq -> L.Flow (Loc.Location, Loc.Location)
+getLocation  API.CreatePassApplicationReq {..} = do
+  id <- BTC.generateGUID
+  currTime <- getCurrTime
+
+  let fromLocation = Loc.Location
+        { _id = id
+        , _locationType = Loc.PINCODE -- (Location._type <$> _fromLocation)
+        , _lat = join (Location._lat <$> _fromLocation)
+        , _long = join (Location._long <$> _fromLocation)
+        , _ward = join (Location._ward <$> _fromLocation)
+        , _district = join (Location._district <$> _fromLocation)
+        , _city = join (Location._city <$> _fromLocation)
+        , _state = join (Location._state <$> _fromLocation)
+        , _country = join (Location._country <$> _fromLocation)
+        , _pincode = Nothing -- join (Location._pincode <$> _fromLocation), type mismatch
+        , _address = join (Location._address <$> _fromLocation)
+        , _bound  = Nothing -- join (Location._bound <$> _fromLocation)
+        , _createdAt = currTime
+        , _updatedAt = currTime
+        }
+  let toLocation = Loc.Location
+        { _id = id
+        , _locationType = Loc.PINCODE -- (Location._type  _toLocation)
+        , _lat = Location._lat  _toLocation
+        , _long = Location._long  _toLocation
+        , _ward = Location._ward  _toLocation
+        , _district = Location._district  _toLocation
+        , _city = Location._city  _toLocation
+        , _state = Location._state  _toLocation
+        , _country = Location._country  _toLocation
+        , _pincode = Nothing -- join (Location._pincode  _toLocation), type mismatch
+        , _address = Location._address  _toLocation
+        , _bound  = Nothing -- join (Location._bound  _toLocation)
+        , _createdAt = currTime
+        , _updatedAt = currTime
+        }
+  return (fromLocation, toLocation)
+
+getCaseInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe CustomerId -> L.Flow Case.Case
+getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
+  id <- BTC.generateGUID
+  (fromLoc,toLoc) <- getLocation req
+  QL.create fromLoc
+  QL.create toLoc
+  currTime <- getCurrTime
+  count <- getCount _type _count
+  let toLocationId = show $ Loc._id toLoc
+      fromLocationId = show $ Loc._id fromLoc
+      shortId = ""
+  return $
+    Case.Case
+      { _id = id
+      , _name = Nothing
+      , _description = Nothing
+      , _shortId = shortId
+      , _industry = Case.GOVT
+      , _type = Case.PASSAPPLICATION
+      , _exchangeType = Case.ORDER
+      , _status = Case.NEW
+      , _startTime = _fromDate
+      , _endTime = Just _toDate
+      , _validTill = _fromDate
+      , _provider = Nothing
+      , _providerType = Just Case.GOVTADMIN
+      , _requestor = show <$> mCustId
+      , _requestorType = Just Case.CONSUMER
+      , _parentCaseId = Nothing
+      , _fromLocationId = fromLocationId
+      , _toLocationId = toLocationId
+      , _udf1 = Just $ show $ getPassType _type
+      , _udf2 = Nothing
+      , _udf3 = Nothing
+      , _udf4 = Nothing
+      , _udf5 = Nothing
+      , _info = Nothing
+      , _createdAt = currTime
+      , _updatedAt = currTime
+      }
 
 createCustomer :: Text -> L.Flow Customer.Customer
 createCustomer name = do
