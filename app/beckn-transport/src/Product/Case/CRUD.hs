@@ -1,7 +1,12 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Case.CRUD where
 
+import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common as BC
+import Beckn.Types.Core.Context
+import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Products as Product
@@ -12,9 +17,12 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import External.Gateway.Flow as Gateway
 import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CPQ
+import Storage.Queries.CaseProduct as CPQ
+import Storage.Queries.Products as PQ
 import Storage.Queries.Products as PQ
 import System.Environment
 import Types.API.Case
@@ -96,4 +104,46 @@ createCaseProduct cs prod = do
         }
 
 notifyGateway :: Case -> L.Flow ()
-notifyGateway _ = undefined
+notifyGateway c = do
+  cps <- CPQ.findAllByCaseId (c ^. #_id)
+  prods <- PQ.findAllById []
+  onSearchPayload <- mkOnSearchPayload c prods
+  Gateway.onSearch defaultBaseUrl onSearchPayload
+  return ()
+
+mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
+mkOnSearchPayload c prods = do
+  currTime <- getCurrTime
+  let context =
+        Context
+          { domain = "MOBILITY",
+            action = "SEARCH",
+            version = Just $ "0.1",
+            transaction_id = _getCaseId $ c ^. #_id, -- TODO : What should be the txnId
+            message_id = Nothing,
+            timestamp = currTime,
+            dummy = ""
+          }
+  service <- mkServiceOffer c prods
+  return
+    OnSearchReq
+      { context,
+        message = service
+      }
+
+mkServiceOffer :: Case -> [Products] -> L.Flow Service
+mkServiceOffer c prods =
+  let x =
+        Service
+          { _id = _getCaseId $ c ^. #_id,
+            _catalog = Nothing,
+            _matched_items = (_getProductsId . Product._id) <$> prods,
+            _selected_items = [],
+            _fare_product = Nothing,
+            _offers = [],
+            _provider = Nothing,
+            _trip = Nothing,
+            _policies = [],
+            _billing_address = Nothing
+          }
+   in return x

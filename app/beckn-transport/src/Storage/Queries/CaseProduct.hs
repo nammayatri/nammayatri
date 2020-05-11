@@ -1,5 +1,5 @@
 module Storage.Queries.CaseProduct where
-    
+
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.App
@@ -30,3 +30,9 @@ findAllByIds limit offset ids =
     orderByDesc Storage.CaseProduct {..} = B.desc_ _createdAt
     pred ids Storage.CaseProduct {..} =
      B.in_ _productId (B.val_ <$> ids)
+
+findAllByCaseId :: CaseId -> L.Flow [Storage.CaseProduct]
+findAllByCaseId id =
+  DB.findAllOrErr dbTable (pred id)
+  where
+    pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ id)

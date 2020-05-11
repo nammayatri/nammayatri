@@ -32,6 +32,13 @@ findAllByTypeOrgId orgId status =
       ( _status ==. (B.val_ status)
           &&. _organizationId ==. (B.val_ orgId))
 
+findAllById :: [ProductsId] -> L.Flow [Storage.Products]
+findAllById ids =
+  DB.findAllOrErr dbTable (predicate ids)
+  where
+    predicate ids Storage.Products {..} =
+      B.in_ _id (B.val_ <$> ids)
+
 findById :: ProductsId -> L.Flow Storage.Products
 findById pid =
   DB.findOneWithErr dbTable (predicate pid)

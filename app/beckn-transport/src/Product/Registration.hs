@@ -141,15 +141,9 @@ login tokenId req =
               ^. Lens.hash
     if isValid
       then do
-        case _entityType of
-          SR.CUSTOMER -> do
-            person <- checkPersonExists _EntityId
-            QP.updatePerson (SP._id person) True (req ^. Lens.identifier) SP.MOBILENUMBER (Just $ req ^. Lens.identifier)
-            return $ LoginRes _token (Just person) Nothing
-          SR.USER -> do
-            person <- checkPersonExists _EntityId
-            QP.update (SP._id person) SP.ACTIVE Nothing Nothing Nothing
-            return $ LoginRes _token Nothing (Just person)
+        person <- checkPersonExists _EntityId
+        QP.update (SP._id person) SP.ACTIVE True
+        return $ LoginRes _token Nothing (Just person)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =
@@ -175,9 +169,7 @@ reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
   withFlowHandler $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-    case _entityType of
-      SR.CUSTOMER -> L.throwException $ err400 {errBody = "INVALID_ENTITY_TYPE"}
-      SR.USER -> void $ checkPersonExists _EntityId
+    void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
         sendOTP (req ^. Lens.identifier) _authValueHash
