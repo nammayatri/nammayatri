@@ -11,6 +11,10 @@ import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RegistrationToken as QR
 import Beckn.Utils.Common
 import qualified Data.Accessor as Lens
 import Data.Aeson
@@ -30,8 +34,9 @@ import Types.API.Case
 import Types.API.Registration
 import qualified Utils.Defaults as Defaults
 
-list :: CaseReq -> FlowHandler CaseListRes
-list CaseReq {..} = withFlowHandler $ do
+list :: Text -> CaseReq -> FlowHandler CaseListRes
+list regToken CaseReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
   caseList <- Case.findAllByType _limit _offset _type _status
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
@@ -48,31 +53,34 @@ list CaseReq {..} = withFlowHandler $ do
             , _toLocation = to
             }
 
-
-
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
-update :: Text -> UpdateCaseReq -> FlowHandler Case
-update caseId UpdateCaseReq {..} = withFlowHandler $ do
+update :: Text -> Text -> UpdateCaseReq -> FlowHandler Case
+update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
+  person <- QP.findPersonById (PersonId _EntityId)
   c <- Case.findById $ CaseId caseId
-  case _transporterChoice of
-    "ACCEPTED" -> do
-      p <- createProduct c _quote Defaults.localTime
-      cp <- createCaseProduct c p
-      notifyGateway c
-      return c
-    "DECLINED" -> return c
+  case (SP._organizationId person) of
+    Just orgId -> case _transporterChoice of
+                  "ACCEPTED" -> do
+                    p <- createProduct c _quote Defaults.localTime orgId
+                    cp <- createCaseProduct c p
+                    notifyGateway c
+                    return c
+                  "DECLINED" -> return c
+    Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Double -> LocalTime -> L.Flow Products
-createProduct cs price ctime = do
+
+createProduct :: Case -> Maybe Double -> LocalTime -> Text -> L.Flow Products
+createProduct cs price ctime orgId = do
   prodId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrTime
-  let product = getProduct prodId price cs ctime currTime
+  let product = getProduct prodId price cs ctime currTime orgId
   PQ.create product
   return $ product
   where
-    getProduct prodId price cs ctime currTime =
+    getProduct prodId price cs ctime currTime orgId =
       Products
         { _id = ProductsId prodId,
           _name = Case._name cs,
@@ -92,7 +100,7 @@ createProduct cs price ctime = do
           _udf4 = Case._udf4 cs,
           _udf5 = Case._udf5 cs,
           _info = Case._info cs,
-          _organizationId = Defaults.orgId,
+          _organizationId = orgId,
           _createdAt = ctime,
           _updatedAt = currTime,
           _fromLocation = Nothing,

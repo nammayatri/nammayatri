@@ -97,11 +97,13 @@ organizationFlow =
 -------- Case Flow----------
 type CaseAPIs =
      "case"
-       :> (    ReqBody '[ JSON] CaseReq
-           :>  Post '[ JSON] CaseListRes
-          :<|> Capture "caseId" Text
-             :> ReqBody '[JSON] UpdateCaseReq
-             :> Post '[JSON] Case
+       :> ( Capture "regToken" Text
+              :> ReqBody '[ JSON] CaseReq
+              :>  Post '[ JSON] CaseListRes
+          :<|> Capture "regToken" Text
+                 :> Capture "caseId" Text
+                 :> ReqBody '[JSON] UpdateCaseReq
+                 :> Post '[JSON] Case
           )
 
 caseFlow =
