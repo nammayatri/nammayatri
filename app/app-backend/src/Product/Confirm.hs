@@ -1,13 +1,13 @@
 module Product.Confirm where
 
-import           Beckn.Types.API.Confirm
-import           Beckn.Types.Core.Ack
-import qualified EulerHS.Language        as L
-import           EulerHS.Prelude
-import qualified EulerHS.Types           as ET
-import qualified External.Gateway.Types  as Gateway
-import           Types.App
-import           Utils.Routes
+import Beckn.Types.API.Confirm
+import Beckn.Types.App
+import Beckn.Types.Core.Ack
+import Beckn.Utils.Common (withFlowHandler)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import qualified EulerHS.Types as ET
+import qualified External.Gateway.Types as Gateway
 
 confirm :: Text -> Text -> FlowHandler Ack
 confirm caseId productId = withFlowHandler $ do
