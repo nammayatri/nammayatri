@@ -11,17 +11,18 @@ import EulerHS.Prelude
 import Servant.Swagger
 import Beckn.Types.Common
 import Beckn.Utils.Extra
+import Data.Generics.Labels
 import Beckn.TypeClass.Transform
 
 data TransporterReq = TransporterReq
-  { _name :: Text
-  , _description :: Maybe Text
-  , _mobileNumber :: Maybe Text
-  , _gstin :: Maybe Text
-  , _orgType :: SO.OrganizationType
-  , _fromTime :: Maybe LocalTime
-  , _toTime :: Maybe LocalTime
-  , _headCount :: Maybe Int
+  { name :: Text
+  , description :: Maybe Text
+  , mobileNumber :: Maybe Text
+  , gstin :: Maybe Text
+  , orgType :: SO.OrganizationType
+  , fromTime :: Maybe LocalTime
+  , toTime :: Maybe LocalTime
+  , headCount :: Maybe Int
   }
   deriving (Generic, ToSchema)
 
@@ -34,15 +35,15 @@ instance Transform TransporterReq SO.Organization where
     now <- getCurrentTimeUTC
     return $ SO.Organization {
     SO._id = id
-    , SO._name = req ^^. _name
-    , SO._description = req ^^. _description
-    , SO._mobileNumber = req ^^. _mobileNumber
-    , SO._gstin = req ^^. _gstin
+    , SO._name = req ^. #name
+    , SO._description = req ^. #description
+    , SO._mobileNumber = req ^. #mobileNumber
+    , SO._gstin = req ^. #gstin
     , SO._locationId = Nothing
-    , SO._type = req ^^. _orgType
-    , SO._fromTime = req ^^. _fromTime
-    , SO._toTime = req ^^. _toTime
-    , SO._headCount = req ^^. _headCount
+    , SO._type = req ^. #orgType
+    , SO._fromTime = req ^. #fromTime
+    , SO._toTime = req ^. #toTime
+    , SO._headCount = req ^. #headCount
     , SO._apiKey = Nothing
     , SO._callbackUrl = Nothing
     , SO._status = SO.PENDING_VERIFICATION
@@ -50,8 +51,6 @@ instance Transform TransporterReq SO.Organization where
     , SO._createdAt = now
     , SO._updatedAt = now
     }
-
-(^^.) f g = g f
 
 data TransporterRes = TransporterRes
   { user :: SP.Person
