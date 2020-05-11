@@ -42,32 +42,32 @@ spec:
         - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
-              name: beckn-configs
+              name: beckn-transport-configs
               key: MYSQL_HOST
         - name: MYSQL_PORT
           valueFrom:
             configMapKeyRef:
-              name: beckn-configs
+              name: beckn-transport-configs
               key: MYSQL_PORT
         - name: MYSQL_DB
           valueFrom:
             configMapKeyRef:
-              name: beckn-configs
+              name: beckn-transport-configs
               key: MYSQL_DB
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
-              name: beckn-configs
+              name: beckn-transport-configs
               key: REDIS_HOST
         - name: REDIS_PORT
           valueFrom:
             configMapKeyRef:
-              name: beckn-configs
+              name: beckn-transport-configs
               key: REDIS_PORT
         - name: REDIS_DB
           valueFrom:
             configMapKeyRef:
-              name: beckn-configs
+              name: beckn-transport-configs
               key: REDIS_DB
         - name: MYSQL_USER
           valueFrom:
@@ -92,13 +92,13 @@ spec:
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
         name: beckn-transport
         ports:
-        - containerPort: 8012
-          name: http
+        - containerPort: 8014
+          name: transport-http
         livenessProbe:
           failureThreshold: 3
           httpGet:
             path: /v1/
-            port: 8012
+            port: 8014
           initialDelaySeconds: 30
           periodSeconds: 20
           successThreshold: 1
@@ -107,7 +107,7 @@ spec:
           failureThreshold: 2
           httpGet:
             path: /v1/
-            port: 8012
+            port: 8014
           initialDelaySeconds: 30
           periodSeconds: 12
           successThreshold: 1
@@ -153,7 +153,7 @@ spec:
         - --statusPort
         - "15020"
         - --applicationPorts
-        - "8012"
+        - "8014"
         env:
         - name: POD_NAME
           valueFrom:
@@ -178,7 +178,7 @@ spec:
         - name: ISTIO_META_INTERCEPTION_MODE
           value: REDIRECT
         - name: ISTIO_META_INCLUDE_INBOUND_PORTS
-          value: "8012"
+          value: "8014"
         - name: ISTIO_METAJSON_ANNOTATIONS
           value: |
             {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
@@ -240,7 +240,7 @@ spec:
         - -x
         - ""
         - -b
-        - "8012"
+        - "8014"
         - -d
         - "15020"
         image: docker.io/istio/proxy_init:1.2.2
@@ -279,8 +279,8 @@ metadata:
     app: beckn-transport
 spec:
   ports:
-  - port: 8012
-    targetPort: 8012
-    name: http
+  - port: 8014
+    targetPort: 8014
+    name: transport-http
   selector:
     app: beckn-transport
