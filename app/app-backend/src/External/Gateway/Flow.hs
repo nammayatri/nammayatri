@@ -17,11 +17,35 @@ search url req = do
     L.logError "Search" ("error occurred while search: " <> (show err))
   return $ first show res
 
-baseUrl :: BaseUrl
-baseUrl =
-  BaseUrl
-    { baseUrlScheme = Https,
-      baseUrlHost = "https://api.juspay.in/gateway",
-      baseUrlPort = 443,
-      baseUrlPath = ""
-    }
+getBaseUrl :: L.Flow BaseUrl
+getBaseUrl = do
+  envUrl <- L.runIO loadGatewayUrl
+  case envUrl of
+    Nothing -> do
+      L.logInfo "Gateway Url" "Using defaults"
+      return $
+        BaseUrl
+          { baseUrlScheme = Http,
+            baseUrlHost = "localhost",
+            baseUrlPort = 8014,
+            baseUrlPath = ""
+          }
+    Just url -> return url
+
+loadGatewayUrl :: IO (Maybe BaseUrl)
+loadGatewayUrl = do
+  mhost <- lookupEnv "GATEWAY_HOST"
+  mport <- lookupEnv "GATEWAY_PORT"
+  mpath <- lookupEnv "GATEWAY_PATH"
+  pure $ do
+    host <- mhost
+    port <- mport
+    path <- mpath
+    p <- readMaybe port
+    Just $
+      BaseUrl
+        { baseUrlScheme = Https,
+          baseUrlHost = host,
+          baseUrlPort = p,
+          baseUrlPath = path
+        }

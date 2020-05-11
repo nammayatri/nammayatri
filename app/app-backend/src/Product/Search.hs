@@ -28,7 +28,8 @@ search regToken req = withFlowHandler $ do
   case_ <- mkCase req fromLocation toLocation
   Case.create case_
 
-  eres <- Gateway.search (Gateway.baseUrl) req
+  gatewayUrl <- Gateway.getBaseUrl
+  eres <- Gateway.search gatewayUrl req
   let ack =
         case eres of
           Left err -> Ack "search" ("Err: " <> show err)
