@@ -23,7 +23,8 @@ instance ToJSON CaseReq where
 
 data CaseRes = CaseRes
   { _case   :: Case,
-    _location  :: Location
+    _fromLocation  :: Location,
+    _toLocation  :: Location
   }
   deriving (Show, Generic, ToSchema)
 

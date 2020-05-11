@@ -33,16 +33,20 @@ import qualified Utils.Defaults as Defaults
 list :: CaseReq -> FlowHandler CaseListRes
 list CaseReq {..} = withFlowHandler $ do
   caseList <- Case.findAllByType _limit _offset _type _status
-  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList)
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
   where
     joinByIds locList cs =
-      buildResponse <$> find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList
-      where
-        buildResponse k = CaseRes
-          { _case = cs
-          , _location = k
-          }
+      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
+        Just k -> buildResponse k
+        Nothing -> Nothing
+        where
+          buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+          prepare cs from to = CaseRes
+            { _case = cs
+            , _fromLocation = from
+            , _toLocation = to
+            }
 
 
 
