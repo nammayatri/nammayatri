@@ -1,24 +1,27 @@
-{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
+
 module App.Routes where
 
+import qualified Beckn.Types.API.Confirm as Confirm
+import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
+import Beckn.Types.Core.Ack
+import Data.Aeson
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
+import qualified Data.Vault.Lazy as V
+import EulerHS.Prelude
 import EulerHS.Prelude
 import Network.Wai.Parse
+import Network.Wai.Parse
 import qualified Product.Registration as Registration
+import qualified Product.Search as Search
+import Servant
 import Servant
 import Types.API.Registration
 import Types.App
-import           Beckn.Types.Core.Ack
-import qualified Beckn.Types.API.Confirm as Confirm
-import           Data.Aeson
-import qualified Data.Vault.Lazy          as V
-import           EulerHS.Prelude
-import           Network.Wai.Parse
-import           Servant
-import           Types.App
+import Types.App
 
 type AppAPIs =
   "v1"
@@ -55,13 +58,31 @@ registrationFlow =
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
+-------- Search Flow --------
+type SearchAPIs =
+  "search" :> "services"
+    :> Header "token" RegToken
+    :> ReqBody '[JSON] Search.SearchReq
+    :> Post '[JSON] Search.SearchRes
+    -- on_search
+    :<|> "on_search"
+    :> "services"
+    :> Header "token" RegToken
+    :> ReqBody '[JSON] Search.OnSearchReq
+    :> Post '[JSON] Search.OnSearchRes
+
+searchFlow :: FlowServer SearchAPIs
+searchFlow =
+  Search.search
+    :<|> Search.search_cb
+
+-------- Confirm Flow --------
 type ConfirmAPIs =
-  (   "confirm"
-   :> MandatoryQueryParam "caseId" Text
-   :> MandatoryQueryParam "productId" Text
-   :> Get '[JSON] Ack
-  :<|>
-      "on_confirm"
-   :> ReqBody '[JSON] Confirm.OnConfirmReq
-   :> Post '[JSON] Confirm.OnConfirmRes
+  ( "confirm"
+      :> MandatoryQueryParam "caseId" Text
+      :> MandatoryQueryParam "productId" Text
+      :> Get '[JSON] Ack
+      :<|> "on_confirm"
+      :> ReqBody '[JSON] Confirm.OnConfirmReq
+      :> Post '[JSON] Confirm.OnConfirmRes
   )
