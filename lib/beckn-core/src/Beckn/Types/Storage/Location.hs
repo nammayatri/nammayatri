@@ -17,7 +17,7 @@ import Servant.API
 import Servant.Swagger
 import Beckn.Types.App
 
-data LocationType = POINT | POLYGON | PINCODE
+data LocationType = POINT | POLYGON | PINCODE | ADDRESS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
