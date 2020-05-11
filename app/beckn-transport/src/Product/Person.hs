@@ -9,11 +9,17 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Person
+import Servant
+import qualified EulerHS.Language as L
 
 updatePerson :: Text -> Maybe Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson personId token req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
+  verifyPerson personId _EntityId
   person <- QP.findPersonById (PersonId _EntityId)
   updatedPerson <- transformFlow2 req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
+
+  where
+    verifyPerson personId entityId = whenM (return $ personId /= entityId) $ L.throwException $ err400 {errBody = "PERSON_ID_MISMATCH"}
