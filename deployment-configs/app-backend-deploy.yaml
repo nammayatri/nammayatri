@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-epass-api
+  name: beckn-app-backend
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: beckn-epass-api
+      app: beckn-app-backend
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: beckn-epass-api
+        app: beckn-app-backend
         version: latest
     spec:
       containers:
@@ -29,7 +29,7 @@ spec:
         - /bin/bash
         - -c
         args:
-        - "echo \"starting app server\" && /opt/app/epass-backend-exe"
+        - "echo \"starting app server\" && /opt/app/app-backend-exe"
         env:
         - name: POD_NAME
           valueFrom:
@@ -42,32 +42,32 @@ spec:
         - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
-              name: beckn-epass-configs
+              name: beckn-configs
               key: MYSQL_HOST
         - name: MYSQL_PORT
           valueFrom:
             configMapKeyRef:
-              name: beckn-epass-configs
+              name: beckn-configs
               key: MYSQL_PORT
         - name: MYSQL_DB
           valueFrom:
             configMapKeyRef:
-              name: beckn-epass-configs
+              name: beckn-configs
               key: MYSQL_DB
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
-              name: beckn-epass-configs
+              name: beckn-configs
               key: REDIS_HOST
         - name: REDIS_PORT
           valueFrom:
             configMapKeyRef:
-              name: beckn-epass-configs
+              name: beckn-configs
               key: REDIS_PORT
         - name: REDIS_DB
           valueFrom:
             configMapKeyRef:
-              name: beckn-epass-configs
+              name: beckn-configs
               key: REDIS_DB
         - name: MYSQL_USER
           valueFrom:
@@ -89,8 +89,8 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: MY_VALUE_FIRST_PASSWORD
-        image: asia.gcr.io/jp-k8s-internal/beckn-epass-uat:$BUILD_VERSION
-        name: beckn-epass-api
+        image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
+        name: beckn-app-backend
         ports:
         - containerPort: 8012
           name: http
@@ -131,7 +131,7 @@ spec:
         - --binaryPath
         - /usr/local/bin/envoy
         - --serviceCluster
-        - beckn-epass-api.$(POD_NAMESPACE)
+        - beckn-app-backend.$(POD_NAMESPACE)
         - --drainDuration
         - 45s
         - --parentShutdownDuration
@@ -184,7 +184,7 @@ spec:
             {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
         - name: ISTIO_METAJSON_LABELS
           value: |
-            {"app":"beckn-epass-api","version":"latest"}
+            {"app":"beckn-app-backend","version":"latest"}
         image: docker.io/istio/proxyv2:1.2.2
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -274,13 +274,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-epass-api
+  name: beckn-app-backend
   labels:
-    app: beckn-epass-api
+    app: beckn-app-backend
 spec:
   ports:
   - port: 8012
     targetPort: 8012
     name: http
   selector:
-    app: beckn-epass-api
+    app: beckn-app-backend

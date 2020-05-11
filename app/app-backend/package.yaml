@@ -93,8 +93,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - beckn-core
-    - beckn-epass
-
+    
 tests:
   app-backend-test:
     main:                Spec.hs

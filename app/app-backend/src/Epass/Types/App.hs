@@ -1,33 +1,28 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
-module Epass.Types.App where
-
-import Data.Swagger
-import Database.Beam.Backend.SQL
-  ( FromBackendRow,
-    HasSqlValueSyntax,
+module Epass.Types.App
+  ( module Epass.Types.App
+  , module Beckn.Types.App
   )
-import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
-import Database.Beam.MySQL.FromField
-import Epass.Utils.TH
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
-import Servant
-import Servant.Swagger
+  where
 
--- App Types
-data Env = Env
-  { runTime :: R.FlowRuntime
-  }
+import           Beckn.Types.App
+import           Data.Swagger
+import           Database.Beam.Backend.SQL     (FromBackendRow,
+                                                HasSqlValueSyntax)
+import           Database.Beam.MySQL           (MySQL, MysqlValueSyntax)
+import           Database.Beam.MySQL.FromField
+import           Epass.Utils.TH
+import qualified EulerHS.Interpreters          as I
+import qualified EulerHS.Language              as L
+import           EulerHS.Prelude
+import qualified EulerHS.Runtime               as R
+import           Servant
+import           Servant.Swagger
 
-type FlowHandler = ReaderT Env (ExceptT ServerError IO)
-
-type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
 
 newtype CustomerId = CustomerId
   { _getCustomerId :: Text
@@ -36,12 +31,12 @@ newtype CustomerId = CustomerId
 
 deriveIdentifierInstances ''CustomerId
 
-newtype OrganizationId = OrganizationId
-  { _getOrganizationId :: Text
-  }
-  deriving (Generic, Show)
+-- newtype OrganizationId = OrganizationId
+--   { _getOrganizationId :: Text
+--   }
+--   deriving (Generic, Show)
 
-deriveIdentifierInstances ''OrganizationId
+-- deriveIdentifierInstances ''OrganizationId
 
 newtype TenantOrganizationId = TenantOrganizationId
   { _getTenantOrganizationId :: Text
@@ -85,12 +80,12 @@ newtype AssignedTo = AssignedTo
 
 deriveIdentifierInstances ''AssignedTo
 
-newtype LocationId = LocationId
-  { _getLocationId :: Text
-  }
-  deriving (Generic, Show)
+-- newtype LocationId = LocationId
+--   { _getLocationId :: Text
+--   }
+--   deriving (Generic, Show)
 
-deriveIdentifierInstances ''LocationId
+-- deriveIdentifierInstances ''LocationId
 
 newtype QuotaId = QuotaId
   { _getQuotaId :: Text
@@ -154,7 +149,6 @@ type Limit = Int
 
 type Offset = Int
 
-type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 
 newtype TagId = TagId
   { _getTagId :: Text

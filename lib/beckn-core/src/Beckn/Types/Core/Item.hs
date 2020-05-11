@@ -10,12 +10,12 @@ data Item = Item
   { _id :: Text,
     _name :: Text,
     _description :: Text,
-    _image :: Image,
+    _image :: Maybe Image,
     _price :: Price,
     _primary :: Bool,
     _selected :: Bool,
     _quantity :: Integer,
-    _policy :: Policy,
+    _policy :: Maybe Policy,
     _category_id :: Text,
     _tags :: [Text]
   }

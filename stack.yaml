@@ -29,9 +29,7 @@ resolver: lts-14.16
 #   - auto-update
 #   - wai
 packages:
-- lib/beckn-epass
 - lib/beckn-core
-- app/epass-backend
 - app/beckn-transport
 - app/app-backend
 # Dependency packages to be pulled from upstream that are not in the resolver.

@@ -58,7 +58,7 @@ search req = withFlowHandler $ do
   admins <-
     findAllByOrgIds
       [Person.ADMIN]
-      ((\o -> show $ Org._id o) <$> transporters)
+      ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
   -- notifyTransporters c admins TODO : Uncomment this once we start saving deviceToken
   mkAckResponse uuid "search"
 
