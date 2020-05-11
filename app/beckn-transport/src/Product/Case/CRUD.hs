@@ -40,7 +40,7 @@ import qualified Utils.Defaults as Defaults
 
 list :: Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken $ Just regToken
   caseList <- Case.findAllByType _limit _offset _type _status
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
@@ -62,7 +62,7 @@ list regToken CaseReq {..} = withFlowHandler $ do
 -- TODO fromLocation toLocation getCreatedTimeFromInput
 update :: Text -> Text -> UpdateCaseReq -> FlowHandler Case
 update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken $ Just regToken
   person <- QP.findPersonById (PersonId _EntityId)
   c <- Case.findById $ CaseId caseId
   case (SP._organizationId person) of
