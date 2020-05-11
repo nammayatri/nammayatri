@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.API.Search where
 
 import Beckn.Types.Common
@@ -25,8 +26,4 @@ data OnSearchReq = OnSearchReq
   }
   deriving (Generic, FromJSON, ToJSON)
 
-data OnSearchRes = OnSearchRes
-  { context :: Context,
-    message :: Ack
-  }
-  deriving (Generic, FromJSON, ToJSON)
+type OnSearchRes = AckResponse

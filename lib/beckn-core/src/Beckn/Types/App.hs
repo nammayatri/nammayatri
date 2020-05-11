@@ -7,10 +7,19 @@ module Beckn.Types.App where
 
 import Beckn.Utils.TH
 import EulerHS.Prelude
+import qualified EulerHS.Runtime as R
 import Servant
 
-type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
+-- App Types
+data Env = Env
+  { runTime :: R.FlowRuntime
+  }
 
+type FlowHandler = ReaderT Env (ExceptT ServerError IO)
+
+type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
+
+type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 
 newtype CaseId = CaseId
   { _getCaseId :: Text

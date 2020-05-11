@@ -1,5 +1,6 @@
 module Beckn.Utils.Common where
 
+import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
@@ -8,6 +9,7 @@ import Data.Time
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock
 import Data.Time.LocalTime
+import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -38,17 +40,22 @@ mkAckResponse txnId action = do
     AckResponse
       { _context =
           Context
-            { domain = "MOBILITY"
-            , action = action
-            , version = Nothing
-            , transaction_id = txnId
-            , message_id = Nothing
-            , timestamp = currTime
-            , dummy = ""
-            }
-      , _message =
+            { domain = "MOBILITY",
+              action = action,
+              version = Nothing,
+              transaction_id = txnId,
+              message_id = Nothing,
+              timestamp = currTime,
+              dummy = ""
+            },
+        _message =
           Ack
-            { _action = action
-            , _message = ""
+            { _action = action,
+              _message = ""
             }
       }
+
+withFlowHandler :: L.Flow a -> FlowHandler a
+withFlowHandler flow = do
+  (Env flowRt) <- ask
+  lift $ ExceptT $ try $ I.runFlow flowRt $ flow

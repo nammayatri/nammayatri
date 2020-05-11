@@ -13,21 +13,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
 import Database.Beam.MySQL.FromField
 import Epass.Utils.TH
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
-import Servant
-import Servant.Swagger
-
--- App Types
-data Env = Env
-  { runTime :: R.FlowRuntime
-  }
-
-type FlowHandler = ReaderT Env (ExceptT ServerError IO)
-
-type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
 
 newtype CustomerId = CustomerId
   { _getCustomerId :: Text
@@ -89,4 +75,4 @@ type Limit = Int
 
 type Offset = Int
 
-type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
+type RegToken = Text
