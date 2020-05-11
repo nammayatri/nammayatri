@@ -3,22 +3,23 @@ module App.Routes where
 -- import           Beckn.Types.API.Search
 -- import           Beckn.Types.API.Confirm
 -- import           Beckn.Types.Common
+
+import Beckn.Types.App
+import Beckn.Types.Common
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
-import Beckn.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
-import qualified Product.Registration as Registration
-import qualified Product.Person as Person
-import Types.API.Person
-import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Case.CRUD as Case
+import qualified Product.CaseProduct as CaseProduct
+import qualified Product.Person as Person
+import qualified Product.Registration as Registration
 import Servant
 import Servant.Multipart
-import Types.API.Registration
 import Types.API.Case
 import Types.API.CaseProduct
-import Types.App
+import Types.API.Person
+import Types.API.Registration
 
 type TransporterAPIs =
   "v1"
@@ -52,9 +53,9 @@ registrationFlow =
 type UpdatePersonAPIs =
   "person"
     :> ( Capture "regToken" Text
-          :> "update"
-          :> ReqBody '[JSON] UpdatePersonReq
-          :> Post '[JSON] UpdatePersonRes
+           :> "update"
+           :> ReqBody '[JSON] UpdatePersonReq
+           :> Post '[JSON] UpdatePersonRes
        )
 
 updatePersonFlow :: FlowServer UpdatePersonAPIs
@@ -80,7 +81,6 @@ updatePersonFlow = Person.updatePerson
 
 -- caseProductFlow =
 --     CaseProduct.list
-
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy

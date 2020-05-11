@@ -3,6 +3,8 @@ module Product.Registration where
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Common (withFlowHandler)
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
 import Data.Aeson
@@ -11,7 +13,6 @@ import Data.Time.LocalTime
 import qualified Epass.External.MyValuesFirst.Flow as Sms
 import qualified Epass.External.MyValuesFirst.Types as Sms
 import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import Epass.Utils.Storage
@@ -22,7 +23,6 @@ import qualified Storage.Queries.Person as QP
 import System.Environment
 import Types.API.Registration
 import Types.App
-import Utils.Routes
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =

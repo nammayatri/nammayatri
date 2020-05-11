@@ -1,5 +1,6 @@
 module App.Routes where
 
+import Beckn.Types.App
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude

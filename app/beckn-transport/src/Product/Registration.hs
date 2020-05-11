@@ -1,27 +1,25 @@
 module Product.Registration where
 
-import qualified Data.Accessor                     as Lens
-import qualified Beckn.External.MyValuesFirst.Flow       as Sms
-import qualified Beckn.External.MyValuesFirst.Types      as Sms
-import qualified Storage.Queries.Person                  as QP
+import qualified Beckn.External.MyValuesFirst.Flow as Sms
+import qualified Beckn.External.MyValuesFirst.Types as Sms
+import Beckn.Types.App
+import Beckn.Types.Common as BC
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
+import qualified Crypto.Number.Generate as Cryptonite
+import qualified Data.Accessor as Lens
+import Data.Aeson
+import qualified Data.Text as T
+import Data.Time.LocalTime
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import           Types.API.Registration
-import           Types.App                               
-import           Beckn.Types.App
-import           Beckn.Types.Common                       as BC
-import qualified Beckn.Types.Storage.Person                    as SP
-import qualified Beckn.Types.Storage.RegistrationToken   as SR
-import           Beckn.Utils.Common
-import           Beckn.Utils.Extra
-import           Utils.Routes
-import qualified Crypto.Number.Generate                  as Cryptonite
-import           Data.Aeson
-import qualified Data.Text                               as T
-import           Data.Time.LocalTime
-import qualified EulerHS.Language                        as L
-import           EulerHS.Prelude
-import           Servant
-import           System.Environment
+import System.Environment
+import Types.API.Registration
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -34,8 +32,8 @@ initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
   let mobileNumber = req ^. Lens.identifier
   entityId <- do
-        QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
-          >>= maybe (createPerson req) (return . _getPersonId . SP._id)
+    QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
+      >>= maybe (createPerson req) (return . _getPersonId . SP._id)
   regToken <- makeSession req entityId SR.USER
   QR.create regToken
   sendOTP mobileNumber (SR._authValueHash regToken)
