@@ -70,8 +70,8 @@ findByRoleAndIdentifier role idType identifier =
       _role ==. B.val_ role
         &&. _mobileNumber ==. B.val_ (Just identifier)
 
-updateOrganizationId :: PersonId -> Text -> L.Flow ()
-updateOrganizationId personId orgId = do
+updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
+updateOrganizationIdAndMakeAdmin personId orgId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either DB.throwDBError pure
@@ -80,6 +80,7 @@ updateOrganizationId personId orgId = do
       mconcat
         [
            _organizationId <-. B.val_ (Just orgId)
+          , _role <-. B.val_ Storage.ADMIN
           , _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id

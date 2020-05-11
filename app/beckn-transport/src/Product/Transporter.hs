@@ -15,23 +15,24 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Transporter
 import Types.App
 
-createTransporter :: Text -> TransporterReq -> FlowHandler TransporterRes
+createTransporter :: Maybe Text -> TransporterReq -> FlowHandler TransporterRes
 createTransporter regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   validation person
   organization <- transformFlow req
-  QP.updateOrganizationId (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
   QO.create organization
-  return $ TransporterRes (Just person) organization
+  QP.updateOrganizationIdAndMakeAdmin (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
+  updatedPerson <- QP.findPersonById (PersonId _EntityId)
+  return $ TransporterRes updatedPerson organization
   where
     validation person = do
       whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
       whenM (return $ SP._organizationId person /= Nothing) $ L.throwException $ err400 {errBody = "user already registered an organization"}
 
-createGateway :: Maybe Text -> TransporterReq -> FlowHandler TransporterRes
+createGateway :: Maybe Text -> TransporterReq -> FlowHandler GatewayRes
 createGateway auth req = withFlowHandler $ do
   QO.verifyAuth auth
   organization              <- transformFlow req
   QO.create organization
-  return $ TransporterRes Nothing organization
+  return $ GatewayRes organization
