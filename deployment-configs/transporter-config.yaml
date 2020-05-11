@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: beckn-configs
+  name: beckn-transport-configs
   namespace: atlas
 data:
   MYSQL_HOST: "beckn-beta.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
   MYSQL_PORT: "3306"
-  MYSQL_DB: "atlas_epass"
+  MYSQL_DB: "atlas_transporter"
   REDIS_HOST: "ec-redis-beta-001.bfw4iw.0001.apse1.cache.amazonaws.com"
   REDIS_PORT: "6379"
   REDIS_DB: "20"

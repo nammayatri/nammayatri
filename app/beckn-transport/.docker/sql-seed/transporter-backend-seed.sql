@@ -177,3 +177,5 @@ CREATE TABLE `location` (
   , INDEX (`city`)
   , INDEX (`state`)
 );
+
+-- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "TRANSPORTER", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
