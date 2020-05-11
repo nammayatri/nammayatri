@@ -1,25 +1,22 @@
 module Types.API.Case where
 
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Products
 import Data.Default
 import Data.Swagger
 import EulerHS.Prelude
 
-data CaseReq = CaseReq
-  { _type :: CaseType,
-    _limit :: Integer,
-    _offset :: Integer,
-    _status :: CaseStatus
+data StatusRes = StatusRes
+  { _case :: Case,
+    _product :: [Products]
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON CaseReq where
+instance FromJSON StatusRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON CaseReq where
+instance ToJSON StatusRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
-
-type CaseListRes = [Case]
 
 data UpdateCaseReq = UpdateCaseReq
   { _quote :: Maybe Double,

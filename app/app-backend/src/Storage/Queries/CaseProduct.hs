@@ -22,11 +22,10 @@ create Storage.CaseProduct {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.CaseProduct {..})
     >>= either DB.throwDBError pure
 
-findAllByIds :: Integer -> Integer -> [ProductsId] -> L.Flow [Storage.CaseProduct]
-findAllByIds limit offset ids =
-  DB.findAllWithLimitOffsetWhere dbTable (pred ids) limit offset orderByDesc
+findAllByCaseId :: CaseId -> L.Flow [Storage.CaseProduct]
+findAllByCaseId caseId =
+  DB.findAll dbTable (predicate caseId)
     >>= either DB.throwDBError pure
   where
-    orderByDesc Storage.CaseProduct {..} = B.desc_ _createdAt
-    pred ids Storage.CaseProduct {..} =
-      B.in_ _productId (B.val_ <$> ids)
+    predicate caseId Storage.CaseProduct {..} =
+      _caseId ==. B.val_ caseId
