@@ -12,8 +12,8 @@ import Types.API.Person
 
 updatePerson :: Text -> Maybe Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson personId token req = withFlowHandler $ do
-  QR.verifyAuth token
-  person <- QP.findPersonById (PersonId personId)
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  person <- QP.findPersonById (PersonId _EntityId)
   updatedPerson <- transformFlow2 req person
-  QP.updatePersonRec (PersonId personId) updatedPerson
+  QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
