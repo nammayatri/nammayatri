@@ -1,41 +1,43 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
 module App.Routes where
 
 import qualified Beckn.Types.API.Confirm as Confirm
-import qualified Beckn.Types.API.Search as Search
-import Beckn.Types.App
-import Beckn.Types.Core.Ack
-import Data.Aeson
-import Data.Aeson
-import qualified Data.Vault.Lazy as V
-import qualified Data.Vault.Lazy as V
-import EulerHS.Prelude
-import EulerHS.Prelude
-import Network.Wai.Parse
-import Network.Wai.Parse
-import qualified Product.Registration as Registration
-import qualified Product.Search as Search
-import Servant
-import Servant
-import Types.API.Registration
-import Types.App
-import Types.App
+import qualified Beckn.Types.API.Search  as Search
+import           Beckn.Types.App
+import           Beckn.Types.Core.Ack
+import           Data.Aeson
+import           Data.Aeson
+import qualified Data.Vault.Lazy         as V
+import qualified Data.Vault.Lazy         as V
+import qualified Epass.App.Routes        as Epass
+import           EulerHS.Prelude
+import           EulerHS.Prelude
+import           Network.Wai.Parse
+import           Network.Wai.Parse
+import qualified Product.Registration    as Registration
+import qualified Product.Search          as Search
+import           Servant
+import           Servant
+import           Types.API.Registration
+import           Types.App
 
 type AppAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
        )
+  :<|>  Epass.EPassAPIs
 
 appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
 
 appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
-appServer' key =
-  pure "App is UP"
-    :<|> registrationFlow
+appServer' key = do
+  (pure "App is UP"
+    :<|> registrationFlow)
+    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =
