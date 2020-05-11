@@ -18,9 +18,11 @@ import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Products as QProducts
 import Types.App
 import Utils.Routes
+import Epass.Utils.Storage
 
-confirm :: Text -> Text -> FlowHandler AckResponse
-confirm caseId productId = withFlowHandler $ do
+confirm :: Maybe RegToken -> Text -> Text -> FlowHandler AckResponse
+confirm regToken caseId productId = withFlowHandler $ do
+  verifyToken regToken
   lt <- getCurrentTimeUTC
   currentCase <- QCase.findById $ CaseId caseId
   product <- QProducts.findById $ ProductsId productId
@@ -35,8 +37,9 @@ confirm caseId productId = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack
 
-onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
-onConfirm req = withFlowHandler $ do
+onConfirm :: Maybe RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm regToken req = withFlowHandler $ do
+  verifyToken regToken
   eres <- traverse (flip QProducts.updateStatus SProducts.CONFIRMED . ProductsId) (req ^. #message ^. #_selected_items)
   let ack =
         case sequence eres of

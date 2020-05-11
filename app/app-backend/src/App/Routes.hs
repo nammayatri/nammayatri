@@ -83,10 +83,12 @@ searchFlow =
 -------- Confirm Flow --------
 type ConfirmAPIs =
   ( "confirm"
+      :> Header "token" RegToken
       :> MandatoryQueryParam "caseId" Text
       :> MandatoryQueryParam "productId" Text
       :> Get '[JSON] AckResponse
       :<|> "on_confirm"
+      :> Header "token" RegToken
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
