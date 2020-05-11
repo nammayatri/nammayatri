@@ -77,15 +77,15 @@ updatePersonFlow = Person.updatePerson
 -- Following is organization creation
 type OrganizationAPIs =
   "transporter"
-    :> ( "create"
-           :> "gateway"
-           --  :> Header "apiKey" Text
-           :> ReqBody '[JSON] TransporterReq
-           :> Post '[JSON] TransporterRes
-           :<|> Capture "regToken" Text
-             :> "create"
-             :> ReqBody '[JSON] TransporterReq
-             :> Post '[JSON] TransporterRes
+      :> ( "create"
+         :> "gateway"
+         :> Header "authorization" Text
+         :> ReqBody '[JSON] TransporterReq
+         :> Post '[JSON] TransporterRes
+        :<|> Capture "regToken" Text
+          :> "create"
+          :> ReqBody '[JSON] TransporterReq
+          :> Post '[JSON] TransporterRes
        )
 
 organizationFlow :: FlowServer OrganizationAPIs
