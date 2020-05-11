@@ -13,14 +13,19 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Case as CQ
 import qualified Storage.Queries.CaseProduct as DB
 import qualified Storage.Queries.Products as PQ
 import System.Environment
 import Types.API.CaseProduct
 
-list :: CaseProdReq -> FlowHandler CaseProductList
-list CaseProdReq {..} = withFlowHandler $ do
+list :: Text -> CaseProdReq -> FlowHandler CaseProductList
+list regToken CaseProdReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
   prodList <- PQ.findAllByTypeOrgId _organisationId _type
   caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
   caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)

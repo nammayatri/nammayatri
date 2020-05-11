@@ -113,7 +113,8 @@ caseFlow =
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
   "caseProduct"
-    :> ( ReqBody '[JSON] CaseProdReq
+    :> ( Capture "regToken" Text
+           :> ReqBody '[JSON] CaseProdReq
            :> Post '[JSON] CaseProductList
        )
 
