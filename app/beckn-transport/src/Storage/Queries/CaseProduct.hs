@@ -31,8 +31,8 @@ findAllByIds limit offset ids =
     pred ids Storage.CaseProduct {..} =
      B.in_ _productId (B.val_ <$> ids)
 
-findAllByCaseId :: Text -> L.Flow [Storage.CaseProduct]
+findAllByCaseId :: CaseId -> L.Flow [Storage.CaseProduct]
 findAllByCaseId id =
   DB.findAllOrErr dbTable (pred id)
   where
-    pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ $ CaseId id)
+    pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ id)

@@ -103,7 +103,7 @@ createCaseProduct cs prod = do
 
 notifyGateway :: Case -> L.Flow ()
 notifyGateway c = do
-  cps             <- CPQ.findAllByCaseId ""
+  cps             <- CPQ.findAllByCaseId (c ^. #_id)
   prods           <- PQ.findAllById []
   onSearchPayload <- mkOnSearchPayload c prods
   Gateway.onSearch defaultBaseUrl onSearchPayload
