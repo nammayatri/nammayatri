@@ -23,9 +23,9 @@ import qualified Storage.Queries.Products as PQ
 import System.Environment
 import Types.API.CaseProduct
 
-list :: Text -> CaseProdReq -> FlowHandler CaseProductList
+list :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
 list regToken CaseProdReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken $ Just regToken
+  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
   prodList <- PQ.findAllByTypeOrgId _organisationId _type
   caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
   caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
