@@ -16,7 +16,7 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Customer as SC
 import qualified Epass.Types.Storage.CustomerDetail as SCD
-import qualified Epass.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Epass.Types.Storage.User as SU
 import Epass.Utils.Common
 import Epass.Utils.Extra

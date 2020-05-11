@@ -16,7 +16,7 @@ import qualified Epass.Types.Storage.Organization as Organization
 import qualified Epass.Types.Storage.Pass as Pass
 import qualified Epass.Types.Storage.PassApplication as PassApplication
 import qualified Epass.Types.Storage.Quota as Quota
-import qualified Epass.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Epass.Types.Storage.Tag as Tag
 import qualified Epass.Types.Storage.User as User
 import EulerHS.Prelude hiding (id)

@@ -1,28 +1,27 @@
 module Product.Registration where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Crypto.Number.Generate as Cryptonite
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified Epass.External.MyValuesFirst.Flow as Sms
-import qualified Epass.External.MyValuesFirst.Types as Sms
-import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Epass.Types.Storage.RegistrationToken as SR
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import Epass.Utils.Storage
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
-import qualified Storage.Queries.Person as QP
-import System.Environment
-import Types.API.Registration
-import Types.App
-import Utils.Routes
+import qualified Data.Accessor                     as Lens
+import qualified Beckn.External.MyValuesFirst.Flow       as Sms
+import qualified Beckn.External.MyValuesFirst.Types      as Sms
+import qualified Storage.Queries.Person                  as QP
+import qualified Storage.Queries.RegistrationToken as QR
+import           Types.API.Registration
+import           Types.App                               
+import           Beckn.Types.App
+import           Beckn.Types.Common                       as BC
+import qualified Beckn.Types.Storage.Person                    as SP
+import qualified Beckn.Types.Storage.RegistrationToken   as SR
+import           Beckn.Utils.Common
+import           Beckn.Utils.Extra
+import           Utils.Routes
+import qualified Crypto.Number.Generate                  as Cryptonite
+import           Data.Aeson
+import qualified Data.Text                               as T
+import           Data.Time.LocalTime
+import qualified EulerHS.Language                        as L
+import           EulerHS.Prelude
+import           Servant
+import           System.Environment
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -33,19 +32,11 @@ initiateLogin req =
 
 initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
-  let entityType = req ^. Lens.entityType
   let mobileNumber = req ^. Lens.identifier
-  entityId <-
-    case entityType of
-      SR.CUSTOMER -> do
+  entityId <- do
         QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
           >>= maybe (createPerson req) (return . _getPersonId . SP._id)
-      SR.USER -> do
-        person <-
-          fromMaybeM400 "User not found"
-            =<< QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
-        return $ _getPersonId $ SP._id person
-  regToken <- makeSession req entityId entityType
+  regToken <- makeSession req entityId SR.USER
   QR.create regToken
   sendOTP mobileNumber (SR._authValueHash regToken)
   let attempts = SR._attempts regToken
@@ -76,6 +67,7 @@ makePerson req = do
         _status = SP.INACTIVE,
         _udf1 = Nothing,
         _udf2 = Nothing,
+        _deviceToken = Nothing,
         _organizationId = Nothing,
         _locationId = Nothing,
         _description = Nothing,
@@ -179,14 +171,14 @@ createPerson req = do
 
 checkPersonExists :: Text -> L.Flow SP.Person
 checkPersonExists _EntityId =
-  QP.findPersonById (PersonId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
+  QP.findPersonById (PersonId _EntityId)
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
   withFlowHandler $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
     case _entityType of
-      SR.CUSTOMER -> void $ checkPersonExists _EntityId
+      SR.CUSTOMER -> L.throwException $ err400 {errBody = "INVALID_ENTITY_TYPE"}
       SR.USER -> void $ checkPersonExists _EntityId
     if _attempts > 0
       then do

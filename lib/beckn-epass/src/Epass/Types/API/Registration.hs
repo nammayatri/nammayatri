@@ -3,7 +3,7 @@ module Epass.Types.API.Registration where
 import Data.Swagger
 import Epass.Types.Common
 import Epass.Types.Storage.Customer
-import Epass.Types.Storage.RegistrationToken
+import Beckn.Types.Storage.RegistrationToken
 import Epass.Types.Storage.User
 import EulerHS.Prelude
 import Servant.Swagger
