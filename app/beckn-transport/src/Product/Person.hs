@@ -1,21 +1,25 @@
 module Product.Person where
 
-import EulerHS.Prelude
-import qualified Storage.Queries.Person                  as QP
-import qualified Storage.Queries.RegistrationToken       as QR
-import qualified Beckn.Types.Storage.RegistrationToken   as SR
-import qualified Beckn.Types.Storage.Person              as SP
-import Types.App
-import Beckn.Types.App
-import Types.API.Person
-import Beckn.Utils.Common
-import Utils.Routes
 import Beckn.TypeClass.Transform
+import Beckn.Types.App
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Common
+import EulerHS.Prelude
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RegistrationToken as QR
+import Types.API.Person
+import Servant
+import qualified EulerHS.Language as L
 
-updatePerson :: Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
-updatePerson regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
-  person                    <- QP.findPersonById (PersonId _EntityId)
-  let updatedPerson           = transform req person
+updatePerson :: Text -> Maybe Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
+updatePerson personId token req = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  verifyPerson personId _EntityId
+  person <- QP.findPersonById (PersonId _EntityId)
+  updatedPerson <- transformFlow2 req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
+
+  where
+    verifyPerson personId entityId = whenM (return $ personId /= entityId) $ L.throwException $ err400 {errBody = "PERSON_ID_MISMATCH"}

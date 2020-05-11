@@ -5,6 +5,7 @@
 
 module Types.App where
 
+import Beckn.Utils.TH
 import Data.Swagger
 import Database.Beam.Backend.SQL
   ( FromBackendRow,
@@ -12,22 +13,12 @@ import Database.Beam.Backend.SQL
   )
 import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
 import Database.Beam.MySQL.FromField
-import Beckn.Utils.TH
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Servant
 import Servant.Swagger
-
--- App Types
-data Env = Env
-  { runTime :: R.FlowRuntime
-  }
-
-type FlowHandler = ReaderT Env (ExceptT ServerError IO)
-
-type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
 
 newtype CustomerId = CustomerId
   { _getCustomerId :: Text
@@ -77,7 +68,6 @@ newtype TrackerId = TrackerId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''TrackerId
-
 
 type Limit = Int
 

@@ -1,6 +1,6 @@
 module Storage.Queries.Products where
 
-import qualified Beckn.Storage.Queries as DB
+import qualified Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Products as Storage
@@ -31,6 +31,13 @@ findAllByTypeOrgId orgId status =
     predicate orgId status Storage.Products {..} =
       ( _status ==. (B.val_ status)
           &&. _organizationId ==. (B.val_ orgId))
+
+findAllById :: [ProductsId] -> L.Flow [Storage.Products]
+findAllById ids =
+  DB.findAllOrErr dbTable (predicate ids)
+  where
+    predicate ids Storage.Products {..} =
+      B.in_ _id (B.val_ <$> ids)
 
 findById :: ProductsId -> L.Flow Storage.Products
 findById pid =

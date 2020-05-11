@@ -61,9 +61,11 @@ data OrganizationT f = Organization
     _locationId :: B.C f (Maybe Text),
     _fromTime :: B.C f (Maybe LocalTime),
     _toTime :: B.C f (Maybe LocalTime),
-    _headcount :: B.C f (Maybe Int),
+    _headCount :: B.C f (Maybe Int),
     _status :: B.C f Status,
     _verified :: B.C f Bool,
+    _apiKey :: B.C f (Maybe Text),
+    _callbackUrl :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime
   }
@@ -101,5 +103,11 @@ fieldEMod =
     B.tableModification
       { _createdAt = "created_at",
         _updatedAt = "updated_at",
-        _locationId = "location_id"
+        _locationId = "location_id",
+        _mobileNumber = "mobile_number",
+        _headCount = "head_count",
+        _apiKey = "api_key",
+        _fromTime = "from_time",
+        _toTime = "to_time",
+        _callbackUrl = "callback_url"
       }

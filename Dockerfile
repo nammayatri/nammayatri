@@ -1,4 +1,4 @@
-ARG DEP_IMAGE=beckn-epass
+ARG DEP_IMAGE=beckn
 ARG DEP_LABEL=master
 
 FROM asia.gcr.io/jp-k8s-internal/${DEP_IMAGE}:${DEP_LABEL} as build
@@ -36,4 +36,4 @@ RUN apt-get update && apt-get install -y \
   libmysqlclient-dev
 
 COPY --from=build /opt/build/bin .
-CMD ["/opt/app/beckn-epass-exe"]
+CMD ["/opt/app/app-backend-exe"]

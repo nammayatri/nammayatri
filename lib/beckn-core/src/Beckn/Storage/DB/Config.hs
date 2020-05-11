@@ -19,7 +19,7 @@ instance Config T.MySQLConfig where
         connectPort = 3306,
         connectUser = "atlas",
         connectPassword = "atlas",
-        connectDatabase = "atlas_epass",
+        connectDatabase = "atlas_transporter",
         connectOptions = [T.CharsetName "utf8"],
         connectPath = "",
         connectSSL = Nothing

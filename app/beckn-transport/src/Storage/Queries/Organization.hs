@@ -15,7 +15,9 @@ import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-
+import Data.ByteString.Base64 as DBB
+import qualified Data.Text.Encoding as DT
+import qualified Data.Text as DT
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.transporterDb
 
@@ -23,6 +25,20 @@ create :: Storage.Organization -> L.Flow ()
 create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
+
+verifyAuth :: Maybe Text -> L.Flow Storage.Organization
+verifyAuth auth = do
+  L.logInfo "verifying auth" $ show auth
+  let apiKey = DT.reverse <$> DT.drop 1
+               <$> DT.reverse <$> DT.decodeUtf8
+               <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+  -- did atob of auth by removing basic in front and after atob, `:` in the end
+  L.logInfo "verifying apikey" $ show apiKey
+  DB.findOne dbTable (predicate apiKey)
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "UNAUTHENTICATED_USER"
+  where
+    predicate apiKey Storage.Organization {..} = (_apiKey ==. B.val_ apiKey)
 
 findOrganizationById ::
   OrganizationId -> L.Flow (Maybe Storage.Organization)

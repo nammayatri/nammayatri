@@ -5,6 +5,7 @@ module Beckn.Types.Storage.CaseProduct where
 
 import Beckn.Types.App
 import Data.Swagger
+import Data.Generics.Labels
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Database.Beam as B
@@ -66,6 +67,8 @@ fieldEMod =
   B.setEntityName "case_product"
     <> B.modifyTableFields
       B.tableModification
-        { _createdAt = "created_at",
+        { _caseId = "case_id",
+          _productId = "product_id",
+          _createdAt = "created_at",
           _updatedAt = "updated_at"
         }

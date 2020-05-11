@@ -17,11 +17,12 @@ CREATE TABLE `organization` (
   `verified` boolean NOT NULL,
   `location_id` varchar(255) NULL,
   `description` TEXT NULL,
-  `mobileNumber` TEXT NULL,
+  `mobile_number` TEXT NULL,
   `from_time` TEXT NULL,
   `to_time` TEXT NULL,
   `api_key` TEXT NULL,
   `callback_url` TEXT NULL,
+  `head_count` integer NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`)
@@ -82,7 +83,7 @@ CREATE TABLE `case` (
   `id` char(36) NOT NULL,
   `name` varchar(255) NULL,
   `description` varchar(1024) NULL,
-  `shortId` varchar(1024) NOT NULL,
+  `short_id` varchar(36) NOT NULL,
   `industry` varchar(1024) NOT NULL,
   `type` varchar(255) NOT NULL,
   `exchange_type` varchar(255) NOT NULL,
@@ -92,11 +93,11 @@ CREATE TABLE `case` (
   `valid_till` datetime NOT NULL,
   `provider` varchar(255) NULL,
   `provider_type` varchar(255) NULL,
-  `requestor` varchar(255) NOT NULL,
+  `requestor` varchar(255)  NULL,
   `requestor_type` varchar(255) NULL,
   `parent_case_id` varchar(255) NULL,
-  `from_location_id` varchar(255) NULL,
-  `to_location_id` varchar(255) NULL,
+  `from_location_id` varchar(36) NULL,
+  `to_location_id` varchar(36) NULL,
   `udf1` varchar(255) NULL,
   `udf2` varchar(255) NULL,
   `udf3` varchar(255) NULL,
@@ -106,17 +107,18 @@ CREATE TABLE `case` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
+  INDEX (`short_id`),
   INDEX (`provider`),
   INDEX (`requestor`)
 );
 
 DROP TABLE IF EXISTS `case_product`;
-CREATE TABLE `case` (
+CREATE TABLE `case_product` (
   `id` char(36) NOT NULL,
   `case_id` varchar(255) NOT NULL,
-  `product_id` varchar(1024) NOT NULL,
+  `product_id` varchar(255) NOT NULL,
   `quantity` integer NOT NULL,
-  `price` DECIMAL(10,2) NOT NULL,
+  `price` DECIMAL(8,2) NOT NULL,
   `status` varchar(255) NOT NULL,
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
@@ -152,25 +154,28 @@ CREATE TABLE `product` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`organization_id`),
+  INDEX (`organization_id`)
 );
 
 DROP TABLE IF EXISTS `location`;
 CREATE TABLE `location` (
-  `id` char(36) NOT NULL,
-  `location_type` varchar(255) NOT NULL,
-  `lat` DECIMAL(3,6) NULL,
-  `long` DECIMAL(3,6)  NULL,
-  `ward` varchar(255)  NULL,
-  `district` varchar(255)  NULL,
-  `city` varchar(255)  NULL,
-  `state` varchar(255) NULL,
-  `country` varchar(255)  NULL,
-  `pincode` varchar(255)  NULL,
-  `address` varchar(255) NULL,
-  `bound` varchar(255)  NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`),
-  INDEX (`organization_id`),
+  `id` char(36) NOT NULL
+  , `location_type` varchar(255) NULL
+  , `lat` double NULL
+  , `long` double NULL
+  , `ward` varchar(255) NULL
+  , `district` varchar(255) NULL
+  , `city` varchar(255) NULL
+  , `state` varchar(255) NULL
+  , `country` varchar(255) NULL
+  , `pincode` varchar(255) NULL
+  , `address` varchar(255) NULL
+  , `bound` varchar(255) NULL
+  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , PRIMARY KEY (`id`)
+  , INDEX (`city`)
+  , INDEX (`state`)
 );
+
+-- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "TRANSPORTER", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
