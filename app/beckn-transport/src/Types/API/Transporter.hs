@@ -73,7 +73,7 @@ instance Transform TransporterReq SO.Organization where
 --     }
 
 data TransporterRes = TransporterRes
-  { user :: SP.Person
+  { user :: Maybe SP.Person
   , organization :: SO.Organization
   }
   deriving (Generic, ToJSON, ToSchema)

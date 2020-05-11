@@ -24,6 +24,14 @@ create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
+verifyAuth :: Maybe Text -> L.Flow Storage.Organization
+verifyAuth apiKey = do
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "UNAUTHENTICATED_USER"
+  where
+    predicate Storage.Organization {..} = (_apiKey ==. B.val_ apiKey)
+
 findOrganizationById ::
   OrganizationId -> L.Flow (Maybe Storage.Organization)
 findOrganizationById id = do

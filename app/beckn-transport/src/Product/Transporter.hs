@@ -24,9 +24,16 @@ createTransporter regToken req = withFlowHandler $ do
   organization              <- transformFlow req
   QP.updateOrganizationId (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
   QO.create organization
-  return $ TransporterRes person organization
+  return $ TransporterRes (Just person) organization
 
   where
-    validation person = 
+    validation person = do
       whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
-      whenM (return $ SP._organizationId person /= Nothing) $ L.throwException $ err400 {errBody = "user already registered an organization"} 
+      whenM (return $ SP._organizationId person /= Nothing) $ L.throwException $ err400 {errBody = "user already registered an organization"}
+
+createGateway :: TransporterReq -> FlowHandler TransporterRes
+createGateway req = withFlowHandler $ do
+  -- QO.verifyAuth apiKey
+  organization              <- transformFlow req
+  QO.create organization
+  return $ TransporterRes Nothing organization
