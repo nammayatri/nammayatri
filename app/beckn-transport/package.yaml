@@ -94,6 +94,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - beckn-core
+    - base64-bytestring
 
 tests:
   beckn-transport-test:
