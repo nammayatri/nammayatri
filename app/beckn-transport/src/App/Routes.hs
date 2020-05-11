@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.Storage.Case
 import Beckn.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
@@ -73,10 +74,14 @@ type CaseAPIs =
      "case"
        :> (    ReqBody '[ JSON] CaseReq
            :>  Post '[ JSON] CaseListRes
+          :<|> Capture "caseId" Text
+             :> ReqBody '[JSON] UpdateCaseReq
+             :> Post '[JSON] Case
           )
 
 caseFlow =
     Case.list
+    :<|> Case.update
 
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
