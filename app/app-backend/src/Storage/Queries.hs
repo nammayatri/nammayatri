@@ -1,7 +1,5 @@
-module Beckn.Storage.Queries where
+module Storage.Queries where
 
-import qualified Beckn.Storage.DB.Config as DB
-import Beckn.Types.Config (Config (..))
 import qualified Database.Beam as B
 import qualified Database.Beam.MySQL as BM
 import qualified Database.Beam.Query.Internal as BI
@@ -9,6 +7,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import Servant (err500, errBody)
+import qualified Storage.DB.Config as DB
+import Types.Config (Config (..))
 
 type MySqlTable table db =
   ( B.Beamable table,

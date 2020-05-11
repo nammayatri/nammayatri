@@ -1,7 +1,9 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 module Beckn.Types.Core.Location where
 
 import Beckn.Types.Core.Scalar
 import Data.Text
+import Data.Generics.Labels
 import EulerHS.Prelude
 
 data Location = Location
@@ -25,67 +27,37 @@ instance ToJSON Location where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data GPS = GPS
-  { _lat :: Text,
-    _lon :: Text
+  { lat :: Double,
+    lon :: Double
   }
-  deriving (Generic, Show)
-
-instance FromJSON GPS where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON GPS where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Address = Address
-  { _door :: Text,
-    _building :: Text,
-    _street :: Text,
-    _area :: Text,
-    _city :: Text,
-    _country :: Text,
-    _area_code :: Text
+  { door :: Text,
+    building :: Text,
+    street :: Text,
+    area :: Text,
+    city :: Text,
+    country :: Text,
+    area_code :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Address where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Address where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data City = City
-  { _name :: Text,
-    _code :: Text
+  { name :: Text,
+    code :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON City where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON City where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Country = Country
-  { _name :: Text,
-    _code :: Text
+  { name :: Text,
+    code :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Country where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Country where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Circle = Circle
-  { _lat :: Text,
-    _long :: Text,
-    _radius :: Scalar
+  { lat :: Text,
+    long :: Text,
+    radius :: Scalar
   }
-  deriving (Generic, Show)
-
-instance FromJSON Circle where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Circle where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)

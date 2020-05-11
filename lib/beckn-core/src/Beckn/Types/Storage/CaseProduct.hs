@@ -63,8 +63,9 @@ insertExpressions products = B.insertValues products
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseProductT)
 fieldEMod =
-  B.modifyTableFields
-    B.tableModification
-      { _createdAt = "created_at",
-        _updatedAt = "updated_at"
-      }
+  B.setEntityName "case_product"
+    <> B.modifyTableFields
+      B.tableModification
+        { _createdAt = "created_at",
+          _updatedAt = "updated_at"
+        }

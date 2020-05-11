@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 module Beckn.Types.Mobility.Intent where
 
 import Beckn.Types.Core.Location
@@ -9,86 +10,51 @@ import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Data.Text
 import Data.Time
+import Data.Generics.Labels
 import EulerHS.Prelude
 
 data Intent = Intent
-  { _domain :: Text,
-    _origin :: Location,
-    _destination :: Location,
-    _time :: LocalTime,
-    _stops :: [Stop],
-    _vehicle :: Vehicle,
-    _providers :: [Provider],
-    _payload :: Payload,
-    _transfer_attrs :: TransferAttrs,
-    _fare_range :: ScalarRange,
-    _tags :: [Tag]
+  { domain :: Text,
+    origin :: Location,
+    destination :: Location,
+    time :: LocalTime,
+    stops :: [Stop],
+    vehicle :: Vehicle,
+    providers :: [Provider],
+    payload :: Payload,
+    transfer_attrs :: TransferAttrs,
+    fare_range :: ScalarRange,
+    tags :: [Tag]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Intent where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Intent where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data TransferAttrs = TransferAttrs
-  { _max_count :: Int,
-    _max_distance :: Scalar
+  { max_count :: Int,
+    max_distance :: Scalar
   }
-  deriving (Generic, Show)
-
-instance FromJSON TransferAttrs where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON TransferAttrs where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Payload = Payload
-  { _travellers :: TravellerReqInfo,
-    _luggage :: Luggage
+  { travellers :: TravellerReqInfo,
+    luggage :: Luggage
   }
-  deriving (Generic, Show)
-
-instance FromJSON Payload where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Payload where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Luggage = Luggage
-  { _count :: Int,
-    _weight_range :: ScalarRange,
-    _dimensions :: Dimension
+  { count :: Int,
+    weight_range :: ScalarRange,
+    dimensions :: Dimension
   }
-  deriving (Generic, Show)
-
-instance FromJSON Luggage where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Luggage where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Dimension = Dimension
-  { _length :: Scalar,
-    _breadth :: Scalar,
-    _height :: Scalar
+  { length :: Scalar,
+    breadth :: Scalar,
+    height :: Scalar
   }
-  deriving (Generic, Show)
-
-instance FromJSON Dimension where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Dimension where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data TravellerReqInfo = TravellerReqInfo
-  { _count :: Int
+  { count :: Int
   }
-  deriving (Generic, Show)
-
-instance FromJSON TravellerReqInfo where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON TravellerReqInfo where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
