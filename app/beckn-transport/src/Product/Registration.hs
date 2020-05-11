@@ -43,7 +43,7 @@ initiateFlow req = do
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
 makePerson req = do
-  role <- fromMaybeM400 "CUSTOMER_ROLE required" (req ^. Lens.role)
+  let role = fromMaybe SP.USER (req ^. Lens.role)
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
   return $
@@ -143,7 +143,8 @@ login tokenId req =
       then do
         person <- checkPersonExists _EntityId
         QP.update (SP._id person) SP.ACTIVE True
-        return $ LoginRes _token Nothing (Just person)
+        updatedPerson <- QP.findPersonById (SP._id person)
+        return $ LoginRes _token (Just updatedPerson)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =

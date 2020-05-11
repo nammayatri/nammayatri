@@ -5,11 +5,20 @@ module Product.Case.CRUD where
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common as BC
+import Beckn.Types.Core.Catalog
+import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Item
+import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RegistrationToken as QR
 import Beckn.Utils.Common
 import qualified Data.Accessor as Lens
 import Data.Aeson
@@ -20,40 +29,62 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import Servant
 import Storage.Queries.Case as Case
+
 import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Products as PQ
-import Storage.Queries.Products as PQ
+import Storage.Queries.Location as LQ
 import System.Environment
 import Types.API.Case
 import Types.API.Registration
 import qualified Utils.Defaults as Defaults
 
-list :: CaseReq -> FlowHandler CaseListRes
-list CaseReq {..} = withFlowHandler $ do
-  Case.findAllByType _limit _offset _type _status
+list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
+list regToken CaseReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  caseList <- Case.findAllByType _limit _offset _type _status
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
+  return $ catMaybes $ joinByIds locList <$> caseList
+  where
+    joinByIds locList cs =
+      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
+        Just k -> buildResponse k
+        Nothing -> Nothing
+        where
+          buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+          prepare cs from to = CaseRes
+            { _case = cs
+            , _fromLocation = from
+            , _toLocation = to
+            }
+
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
-update :: Text -> UpdateCaseReq -> FlowHandler Case
-update caseId UpdateCaseReq {..} = withFlowHandler $ do
+update :: Maybe Text -> Text -> UpdateCaseReq -> FlowHandler Case
+update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  person <- QP.findPersonById (PersonId _EntityId)
   c <- Case.findById $ CaseId caseId
-  case _transporterChoice of
-    "ACCEPTED" -> do
-      p <- createProduct c _quote Defaults.localTime
-      cp <- createCaseProduct c p
-      notifyGateway c
-      return c
-    "DECLINED" -> return c
+  case (SP._organizationId person) of
+    Just orgId -> case _transporterChoice of
+                  "ACCEPTED" -> do
+                    p <- createProduct c _quote Defaults.localTime orgId
+                    cp <- createCaseProduct c p
+                    notifyGateway c
+                    return c
+                  "DECLINED" -> return c
+    Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Double -> LocalTime -> L.Flow Products
-createProduct cs price ctime = do
+
+createProduct :: Case -> Maybe Double -> LocalTime -> Text -> L.Flow Products
+createProduct cs price ctime orgId = do
   prodId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrTime
-  let product = getProduct prodId price cs ctime currTime
+  let product = getProduct prodId price cs ctime currTime orgId
   PQ.create product
   return $ product
   where
-    getProduct prodId price cs ctime currTime =
+    getProduct prodId price cs ctime currTime orgId =
       Products
         { _id = ProductsId prodId,
           _name = Case._name cs,
@@ -73,7 +104,7 @@ createProduct cs price ctime = do
           _udf4 = Case._udf4 cs,
           _udf5 = Case._udf5 cs,
           _info = Case._info cs,
-          _organizationId = Defaults.orgId,
+          _organizationId = orgId,
           _createdAt = ctime,
           _updatedAt = currTime,
           _fromLocation = Nothing,
@@ -141,15 +172,50 @@ mkServiceOffer :: Case -> [Products] -> L.Flow Service
 mkServiceOffer c prods =
   let x =
         Service
-          { _id = _getCaseId $ c ^. #_id,
-            _catalog = Nothing,
-            _matched_items = (_getProductsId . Product._id) <$> prods,
-            _selected_items = [],
-            _fare_product = Nothing,
-            _offers = [],
-            _provider = Nothing,
-            _trip = Nothing,
-            _policies = [],
-            _billing_address = Nothing
+          { _id = _getCaseId $ c ^. #_id
+          , _catalog = Just $ mkCatalog prods
+          , _matched_items = (_getProductsId . Product._id) <$> prods
+          , _selected_items = []
+          , _fare_product = Nothing
+          , _offers = []
+          , _provider = Nothing
+          , _trip = Nothing
+          , _policies = []
+          , _billing_address = Nothing
           }
    in return x
+
+mkCatalog :: [Products] -> Catalog
+mkCatalog prods =
+  Catalog
+    { _category_tree = Category { _id = "", _subcategories = [] }
+    , _items = mkItem <$> prods
+    }
+
+mkItem :: Products -> Item
+mkItem prod = Item
+  { _id = _getProductsId $ prod ^. #_id
+  , _description = fromMaybe "" $ prod ^. #_description
+  , _name = fromMaybe "" $ prod ^. #_name
+  , _image = Nothing
+  , _price = mkPrice prod
+  , _primary = False
+  , _selected = False
+  , _quantity = 1
+  , _policy = Nothing
+  , _category_id = ""
+  , _tags = []
+  }
+
+mkPrice :: Products -> Price
+mkPrice prod =
+  Price
+    { _currency = "INR" -- TODO : Fetch this from product
+    , _estimated_value = prod ^. #_price
+    , _computed_value = prod ^. #_price
+    , _listed_value = prod ^. #_price
+    , _offered_value = prod ^. #_price
+    , _unit = "1" -- TODO : Fetch this from product
+    , _discount = 0.0
+    , _tax = Nothing
+  }

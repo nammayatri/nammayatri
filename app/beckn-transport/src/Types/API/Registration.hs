@@ -48,7 +48,6 @@ instance FromJSON LoginReq where
 
 data LoginRes = LoginRes
   { registrationToken :: Text,
-    customer :: Maybe Person,
     user :: Maybe Person
   }
   deriving (Generic, ToJSON, ToSchema)

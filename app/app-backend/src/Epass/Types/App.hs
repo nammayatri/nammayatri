@@ -1,28 +1,29 @@
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Epass.Types.App
-  ( module Epass.Types.App
-  , module Beckn.Types.App
+  ( module Epass.Types.App,
+    module Beckn.Types.App,
   )
-  where
+where
 
-import           Beckn.Types.App
-import           Data.Swagger
-import           Database.Beam.Backend.SQL     (FromBackendRow,
-                                                HasSqlValueSyntax)
-import           Database.Beam.MySQL           (MySQL, MysqlValueSyntax)
-import           Database.Beam.MySQL.FromField
-import           Epass.Utils.TH
-import qualified EulerHS.Interpreters          as I
-import qualified EulerHS.Language              as L
-import           EulerHS.Prelude
-import qualified EulerHS.Runtime               as R
-import           Servant
-import           Servant.Swagger
-
+import Beckn.Types.App
+import Data.Swagger
+import Database.Beam.Backend.SQL
+  ( FromBackendRow,
+    HasSqlValueSyntax,
+  )
+import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
+import Database.Beam.MySQL.FromField
+import Epass.Utils.TH
+import qualified EulerHS.Interpreters as I
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import qualified EulerHS.Runtime as R
+import Servant
+import Servant.Swagger
 
 newtype CustomerId = CustomerId
   { _getCustomerId :: Text
@@ -144,11 +145,6 @@ newtype AllocatedQuotaId = AllocatedQuotaId
 deriveIdentifierInstances ''AllocatedQuotaId
 
 type RegistrationTokenText = Text
-
-type Limit = Int
-
-type Offset = Int
-
 
 newtype TagId = TagId
   { _getTagId :: Text

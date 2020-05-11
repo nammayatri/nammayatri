@@ -68,9 +68,3 @@ newtype LocationId = LocationId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''LocationId
-
-type Limit = Int
-
-type Offset = Int
-
-type RegToken = Text

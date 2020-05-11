@@ -1,42 +1,46 @@
-{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
 module App.Routes where
 
 import qualified Beckn.Types.API.Confirm as Confirm
-import qualified Beckn.Types.API.Search  as Search
-import           Beckn.Types.App
-import           Beckn.Types.Core.Ack
-import           Data.Aeson
-import           Data.Aeson
-import qualified Data.Vault.Lazy         as V
-import qualified Data.Vault.Lazy         as V
-import qualified Epass.App.Routes        as Epass
-import           EulerHS.Prelude
-import           EulerHS.Prelude
-import           Network.Wai.Parse
-import           Network.Wai.Parse
-import qualified Product.Registration    as Registration
-import qualified Product.Search          as Search
-import           Servant
-import           Servant
-import           Types.API.Registration
-import           Types.App
+import qualified Beckn.Types.API.Search as Search
+import Beckn.Types.App
+import Beckn.Types.Common (AckResponse (..), generateGUID)
+import Beckn.Types.Core.Ack
+import Data.Aeson
+import Data.Aeson
+import qualified Data.Vault.Lazy as V
+import qualified Data.Vault.Lazy as V
+import qualified Epass.App.Routes as Epass
+import EulerHS.Prelude
+import EulerHS.Prelude
+import Network.Wai.Parse
+import Network.Wai.Parse
+import qualified Product.Case as Case
+import qualified Product.Confirm as Confirm
+import qualified Product.Registration as Registration
+import qualified Product.Search as Search
+import Servant
+import qualified Types.API.Case as Case
+import Types.API.Registration
+import Types.App
 
 type AppAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
        )
-  :<|>  Epass.EPassAPIs
+    :<|> Epass.EPassAPIs
 
 appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
 
 appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
 appServer' key = do
-  (pure "App is UP"
-    :<|> registrationFlow)
+  ( pure "App is UP"
+      :<|> registrationFlow
+    )
     :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
@@ -81,10 +85,28 @@ searchFlow =
 -------- Confirm Flow --------
 type ConfirmAPIs =
   ( "confirm"
+      :> Header "token" RegToken
       :> MandatoryQueryParam "caseId" Text
       :> MandatoryQueryParam "productId" Text
-      :> Get '[JSON] Ack
+      :> Get '[JSON] AckResponse
       :<|> "on_confirm"
+      :> Header "token" RegToken
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
+
+confirmFlow :: FlowServer ConfirmAPIs
+confirmFlow =
+  Confirm.confirm
+    :<|> Confirm.onConfirm
+
+------- Case Flow -------
+type CaseAPIs =
+  "case"
+    :> Header "token" RegToken
+    :> Capture "caseId" CaseId
+    :> Get '[JSON] Case.StatusRes
+
+caseFlow :: FlowServer CaseAPIs
+caseFlow =
+  Case.status
