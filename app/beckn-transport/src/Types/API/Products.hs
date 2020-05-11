@@ -7,13 +7,14 @@ import           Beckn.Types.Common
 import           Beckn.Types.App
 import qualified Beckn.Types.Storage.Products   as Product
 import           EulerHS.Prelude
+import           Types.Storage.Driver
+import           Types.Storage.Vehicle
 
 data ProdReq = ProdReq
   { _status   :: Product.ProductsStatus,
     _id     :: Text,
-    _driverId  :: Text,
-    _vehicleId :: Text,
-    _orgId :: Text
+    _driverInfo  :: Driver,
+    _vehicleInfo :: Vehicle
   }
   deriving (Show, Generic, ToSchema)
 

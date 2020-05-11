@@ -10,27 +10,27 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import Types.API.Products
-import qualified Types.Storage.Driver
-import qualified Types.Storage.Vehicle
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.Driver as D
+import qualified Types.Storage.Vehicle as V
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Storage.Queries.Driver as VD
 import qualified Storage.Queries.Products as DB
 import qualified Beckn.Types.Storage.Products as Storage
+import qualified Storage.Queries.RegistrationToken as QR
 import           Types.API.CaseProduct
 import System.Environment
 import Types.App
-import Utils.Routes
+import Beckn.Utils.Common (withFlowHandler)
 
-
-updateProductInfo :: ProdReq -> FlowHandler ProdInfoRes
-updateProductInfo ProdReq {..} = withFlowHandler $ do
-  drivInfo <- VD.findDriverById (DriverId _driverId)
-  vechInfo <- VQ.findVehicleById (VehicleId _vehicleId)
-  let info = Just $ show $ toJSON (prepareInfo drivInfo vechInfo)
+updateInfo :: Maybe Text -> ProdReq -> FlowHandler ProdInfoRes
+updateInfo regToken ProdReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  let info = Just $ show $ toJSON (prepareInfo _driverInfo _vehicleInfo)
   DB.updateInfo (ProductsId _id) info
   return $ fromMaybe "Failure" info
   where
-  prepareInfo drivInfo vechInfo = Storage.ProdInfo
-        { driverInfo = show (toJSON <$> drivInfo)
-        , vehicleInfo = show (toJSON <$>  vechInfo)
-        }
+    prepareInfo drivInfo vechInfo = Storage.ProdInfo
+          { driverInfo = show (toJSON  drivInfo)
+          , vehicleInfo = show (toJSON  vechInfo)
+          }
