@@ -3,8 +3,10 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.Products as Products
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Location as Location
@@ -17,7 +19,9 @@ data AppDb f = AppDb
     _tracker :: f (B.TableEntity Tracker.TrackerT),
     _tripReference :: f (B.TableEntity TripReference.TripReferenceT),
     _person :: f (B.TableEntity Person.PersonT),
-    _case :: f (B.TableEntity Case.CaseT)
+    _case :: f (B.TableEntity Case.CaseT),
+    _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
+    _products :: f (B.TableEntity Products.ProductsT)
   }
   deriving (Generic, B.Database be)
 
@@ -30,5 +34,7 @@ appDb =
         _tracker = Tracker.fieldEMod,
         _tripReference = TripReference.fieldEMod,
         _person = Person.fieldEMod,
-        _case = Case.fieldEMod
+        _case = Case.fieldEMod,
+        _caseProduct = CaseProduct.fieldEMod,
+        _products = Products.fieldEMod
       }

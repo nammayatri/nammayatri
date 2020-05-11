@@ -1,6 +1,5 @@
 module Storage.Queries.Case where
 
-import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
@@ -11,6 +10,7 @@ import qualified Database.Beam as B
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 import Types.App
 import qualified Types.Storage.DB as DB
 
