@@ -17,10 +17,12 @@ import EulerHS.Prelude
 import EulerHS.Prelude
 import Network.Wai.Parse
 import Network.Wai.Parse
+import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import Servant
+import qualified Types.API.Case as Case
 import Types.API.Registration
 import Types.App
 
@@ -97,3 +99,14 @@ confirmFlow :: FlowServer ConfirmAPIs
 confirmFlow =
   Confirm.confirm
     :<|> Confirm.onConfirm
+
+------- Case Flow -------
+type CaseAPIs =
+  "case"
+    :> Header "token" RegToken
+    :> Capture "caseId" CaseId
+    :> Get '[JSON] Case.StatusRes
+
+caseFlow :: FlowServer CaseAPIs
+caseFlow =
+  Case.status
