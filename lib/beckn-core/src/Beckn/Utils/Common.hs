@@ -11,6 +11,7 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import Data.Aeson
 
 getCurrTime :: L.Flow LocalTime
 getCurrTime = L.runIO $ do

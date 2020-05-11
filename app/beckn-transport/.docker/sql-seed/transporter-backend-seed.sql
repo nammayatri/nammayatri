@@ -17,11 +17,12 @@ CREATE TABLE `organization` (
   `verified` boolean NOT NULL,
   `location_id` varchar(255) NULL,
   `description` TEXT NULL,
-  `mobileNumber` TEXT NULL,
+  `mobile_number` TEXT NULL,
   `from_time` TEXT NULL,
   `to_time` TEXT NULL,
   `api_key` TEXT NULL,
   `callback_url` TEXT NULL,
+  `head_count` integer NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`)
@@ -158,19 +159,22 @@ CREATE TABLE `product` (
 
 DROP TABLE IF EXISTS `location`;
 CREATE TABLE `location` (
-  `id` char(36) NOT NULL,
-  `location_type` varchar(255) NOT NULL,
-  `lat`varchar(12) NULL,
-  `long`varchar(12)  NULL,
-  `ward` varchar(255)  NULL,
-  `district` varchar(255)  NULL,
-  `city` varchar(255)  NULL,
-  `state` varchar(255) NULL,
-  `country` varchar(255)  NULL,
-  `pincode` varchar(255)  NULL,
-  `address` varchar(255) NULL,
-  `bound` varchar(255)  NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`)
+  `id` char(36) NOT NULL
+  , `location_type` varchar(255) NULL
+  , `lat` double NULL
+  , `long` double NULL
+  , `ward` varchar(255) NULL
+  , `district` varchar(255) NULL
+  , `city` varchar(255) NULL
+  , `state` varchar(255) NULL
+  , `country` varchar(255) NULL
+  , `pincode` varchar(255) NULL
+  , `address` varchar(255) NULL
+  , `bound` varchar(255) NULL
+  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , PRIMARY KEY (`id`)
+  , INDEX (`city`)
+  , INDEX (`state`)
+  , INDEX (`organization_id`)
 );

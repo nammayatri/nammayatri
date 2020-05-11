@@ -16,6 +16,6 @@ updatePerson :: Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson regToken req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.findRegistrationTokenByToken regToken
   person                    <- QP.findPersonById (PersonId _EntityId)
-  let updatedPerson           = transform req person
+  updatedPerson             <- transformFlow2 req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson

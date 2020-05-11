@@ -78,7 +78,6 @@ newtype TrackerId = TrackerId
 
 deriveIdentifierInstances ''TrackerId
 
-
 type Limit = Int
 
 type Offset = Int
