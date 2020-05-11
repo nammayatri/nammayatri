@@ -103,14 +103,15 @@ insertExpressions products = B.insertValues products
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ProductsT)
 fieldEMod =
-  B.modifyTableFields
-    B.tableModification
-      { _startTime = "start_time",
-        _endTime = "end_time",
-        _validTill = "valid_till",
-        _fromLocation = "from_location",
-        _toLocation = "to_location",
-        _organizationId = "organization_id",
-        _createdAt = "created_at",
-        _updatedAt = "updated_at"
-      }
+  B.setEntityName "product"
+    <> B.modifyTableFields
+      B.tableModification
+        { _startTime = "start_time",
+          _endTime = "end_time",
+          _validTill = "valid_till",
+          _fromLocation = "from_location_id",
+          _toLocation = "to_location_id",
+          _organizationId = "organization_id",
+          _createdAt = "created_at",
+          _updatedAt = "updated_at"
+        }

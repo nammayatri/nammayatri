@@ -37,13 +37,13 @@ mkAckResponse txnId action = do
     AckResponse
       { _context =
           Context
-            { _domain = "MOBILITY"
-            , _action = action
-            , _version = Nothing
-            , _transaction_id = txnId
-            , _message_id = Nothing
-            , _timestamp = currTime
-            , _dummy = ""
+            { domain = "MOBILITY"
+            , action = action
+            , version = Nothing
+            , transaction_id = txnId
+            , message_id = Nothing
+            , timestamp = currTime
+            , dummy = ""
             }
       , _message =
           Ack
