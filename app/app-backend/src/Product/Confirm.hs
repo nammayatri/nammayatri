@@ -3,9 +3,8 @@ module Product.Confirm where
 import Beckn.Types.API.Confirm
 import Beckn.Types.App
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Catalog
-import Beckn.Types.Core.Category
-import Beckn.Types.Core.Service
+import Beckn.Types.Mobility.Service
+import Beckn.Utils.Common (withFlowHandler)
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -23,9 +22,7 @@ confirm caseId productId = withFlowHandler $ do
   product <- QProducts.findById $ ProductsId productId
   transactionId <- L.generateGUID
   context <- buildContext "confirm" transactionId
-  let provider = defaultProvider lt
-      catalog = Catalog (Category "" []) []
-      service = Service caseId catalog provider
+  let service = Service productId Nothing [] [] Nothing [] Nothing Nothing [] Nothing
   return $ Ack "Confirm" "Confirm invoked to transporter"
 
 on_confirm :: OnConfirmReq -> FlowHandler OnConfirmRes

@@ -1,6 +1,6 @@
 module Storage.Queries.Case where
 
-import qualified Beckn.Storage.Queries as DB
+import qualified Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage

@@ -176,5 +176,4 @@ CREATE TABLE `location` (
   , PRIMARY KEY (`id`)
   , INDEX (`city`)
   , INDEX (`state`)
-  , INDEX (`organization_id`)
 );

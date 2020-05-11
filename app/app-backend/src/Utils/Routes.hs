@@ -1,5 +1,6 @@
 module Utils.Routes where
 
+import Beckn.Types.App
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
@@ -9,11 +10,6 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Types.App
-
-withFlowHandler :: L.Flow a -> FlowHandler a
-withFlowHandler flow = do
-  (Env flowRt) <- ask
-  lift $ ExceptT $ try $ I.runFlow flowRt $ flow
 
 buildContext :: Text -> Text -> L.Flow Context
 buildContext action tId = do

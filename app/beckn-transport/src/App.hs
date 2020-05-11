@@ -3,10 +3,11 @@
 module App where
 
 import qualified App.Server as App
+import Beckn.Constants.APIErrorCode
+import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
-import Beckn.Constants.APIErrorCode
 import qualified EulerHS.Interpreters as R
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -26,7 +27,6 @@ import Servant
 import Servant.Server
 import Storage.DB.Config
 import qualified System.Environment as SE
-import qualified Types.App as App
 
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do

@@ -14,22 +14,22 @@ data ConfirmReq = ConfirmReq
   { context :: Context,
     message :: Service
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data ConfirmRes = ConfirmRes
   { context :: Context,
     message :: Ack
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON)
 
 data OnConfirmReq = OnConfirmReq
   { context :: Context,
     message :: Service
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data OnConfirmRes = OnConfirmRes
   { context :: Context,
     message :: Ack
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON)
