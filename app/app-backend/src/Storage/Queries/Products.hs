@@ -39,6 +39,14 @@ findById pid =
   where
     predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
 
+findAllByIds :: [ProductsId] -> L.Flow [Storage.Products]
+findAllByIds pids =
+  DB.findAll dbTable (predicate pids)
+    >>= either DB.throwDBError pure
+  where
+    predicate pids Storage.Products {..} =
+      _id `B.in_` (B.val_ <$> pids)
+
 updateStatus ::
   ProductsId ->
   Storage.ProductsStatus ->
