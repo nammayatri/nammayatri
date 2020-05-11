@@ -52,14 +52,12 @@ search req = withFlowHandler $ do
   let c = mkCase req uuid currTime validity fromLocation toLocation
   Case.create c
   transporters <- listOrganizations Nothing Nothing [Org.TRANSPORTER] [Org.APPROVED]
-  L.logInfo "search API Flow" "Reached"
-
   -- TODO : Fix show
   admins <-
     findAllByOrgIds
       [Person.ADMIN]
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
-  -- notifyTransporters c admins TODO : Uncomment this once we start saving deviceToken
+  -- notifyTransporters c admins --TODO : Uncomment this once we start saving deviceToken
   mkAckResponse uuid "search"
 
 notifyTransporters :: Case -> [Person] -> L.Flow ()
@@ -80,41 +78,31 @@ mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
 mkFromLocation req uuid now loc = do
   case loc ^. #_type of
     "gps" -> case loc ^. #_gps of
-      Just (val :: GPS) ->
-        SL.Location
-          { _id = LocationId {_getLocationId = uuid},
-            _locationType = POINT,
-            _lat = Just $ read $ T.unpack $ val ^. #lat,
-            _long = Just $ read $ T.unpack $ val ^. #lon,
-            _ward = Nothing,
-            _district = Nothing,
-            _city = Nothing,
-            _state = Nothing,
-            _country = Nothing,
-            _pincode = Nothing,
-            _address = Nothing,
-            _bound = Nothing,
-            _createdAt = now,
-            _updatedAt = now
-          }
+      Just (val :: GPS) -> mkLocationRecord uuid now SL.POINT (Just $ read $ T.unpack $ val ^. #lat) (Just $ read $ T.unpack $ val ^. #lon) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
       _ -> undefined -- need to throw error
-    _ ->
-      SL.Location
-        { _id = LocationId {_getLocationId = uuid <> "1"},
-          _locationType = POINT,
-          _lat = Nothing,
-          _long = Nothing,
-          _ward = Nothing,
-          _district = Nothing,
-          _city = Nothing,
-          _state = Nothing,
-          _country = Nothing,
-          _pincode = Nothing,
-          _address = Nothing,
-          _bound = Nothing,
-          _createdAt = now,
-          _updatedAt = now
-        }
+    "address" -> case loc ^. #_address of
+      Just (val :: Address) -> mkLocationRecord uuid now SL.ADDRESS Nothing Nothing (Just $ val ^. #area) Nothing (Just $ val ^. #area) Nothing (Just $ val ^. #country) (Just $ val ^. #area_code) (Just $ (val ^. #door) <> (val ^. #building) <> (val ^. #street)) Nothing
+      _ -> undefined -- need to throw error
+    _ -> mkLocationRecord uuid now SL.POINT Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+
+mkLocationRecord :: Text -> LocalTime -> SL.LocationType -> Maybe Double -> Maybe Double -> Maybe Text -> Maybe Text
+  -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> SL.Location
+mkLocationRecord idr time typ lat lon ward dis city state country pincode address bound = SL.Location
+  { _id = LocationId {_getLocationId = idr},
+    _locationType = typ,
+    _lat = lat,
+    _long = lon,
+    _ward = ward,
+    _district = dis,
+    _city = city,
+    _state = state,
+    _country = country,
+    _pincode = pincode,
+    _address = address,
+    _bound = bound,
+    _createdAt = time,
+    _updatedAt = time
+  }
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do

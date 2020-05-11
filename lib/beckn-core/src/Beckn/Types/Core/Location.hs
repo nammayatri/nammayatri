@@ -42,7 +42,7 @@ data Address = Address
     area_code :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
-
+-- Can we add district and state in Address? 
 data City = City
   { name :: Text,
     code :: Text
