@@ -5,7 +5,11 @@ module Product.Case.CRUD where
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common as BC
+import Beckn.Types.Core.Catalog
+import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Item
+import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.CaseProduct as CaseP
@@ -21,7 +25,6 @@ import External.Gateway.Flow as Gateway
 import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CPQ
-import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Products as PQ
 import Storage.Queries.Products as PQ
 import System.Environment
@@ -32,7 +35,6 @@ import qualified Utils.Defaults as Defaults
 list :: CaseReq -> FlowHandler CaseListRes
 list CaseReq {..} = withFlowHandler $ do
   Case.findAllByType _limit _offset _type _status
-
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
@@ -60,9 +62,9 @@ createProduct cs price ctime = do
         { _id = ProductsId prodId,
           _name = Case._name cs,
           _description = Case._description cs,
-          _industry = read (show (Case._industry cs)) :: ProductsIndustry,
-          _type = read (show (Case._type cs)) :: ProductsType,
-          _status = read (show (Case._status cs)) :: ProductsStatus,
+          _industry = mapCaseIndustry $ Case._industry cs,
+          _type = RIDE,
+          _status = Product.INPROGRESS,
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
@@ -82,6 +84,12 @@ createProduct cs price ctime = do
           _toLocation = Nothing
         }
 
+mapCaseIndustry :: Case.Industry -> ProductsIndustry
+mapCaseIndustry industry = case industry of
+    Case.MOBILITY -> Product.MOBILITY
+    Case.GOVT -> Product.GOVT
+    Case.GROCERY -> Product.GROCERY
+
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
   cpId <- L.generateGUID
@@ -97,7 +105,7 @@ createCaseProduct cs prod = do
           _productId = Product._id prod,
           _quantity = 1,
           _price = Product._price prod,
-          _status = read (show (Product._status prod)) :: CaseProductStatus,
+          _status = CaseP.INPROGRESS,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime
@@ -105,7 +113,9 @@ createCaseProduct cs prod = do
 
 notifyGateway :: Case -> L.Flow ()
 notifyGateway c = do
+  L.logInfo "notifyGateway" $ show c
   cps <- CPQ.findAllByCaseId (c ^. #_id)
+  L.logInfo "notifyGateway" $ show cps
   prods <- PQ.findAllById []
   onSearchPayload <- mkOnSearchPayload c prods
   Gateway.onSearch defaultBaseUrl onSearchPayload
@@ -135,15 +145,50 @@ mkServiceOffer :: Case -> [Products] -> L.Flow Service
 mkServiceOffer c prods =
   let x =
         Service
-          { _id = _getCaseId $ c ^. #_id,
-            _catalog = Nothing,
-            _matched_items = (_getProductsId . Product._id) <$> prods,
-            _selected_items = [],
-            _fare_product = Nothing,
-            _offers = [],
-            _provider = Nothing,
-            _trip = Nothing,
-            _policies = [],
-            _billing_address = Nothing
+          { _id = _getCaseId $ c ^. #_id
+          , _catalog = Just $ mkCatalog prods
+          , _matched_items = (_getProductsId . Product._id) <$> prods
+          , _selected_items = []
+          , _fare_product = Nothing
+          , _offers = []
+          , _provider = Nothing
+          , _trip = Nothing
+          , _policies = []
+          , _billing_address = Nothing
           }
    in return x
+
+mkCatalog :: [Products] -> Catalog
+mkCatalog prods =
+  Catalog
+    { _category_tree = Category { _id = "", _subcategories = [] }
+    , _items = mkItem <$> prods
+    }
+
+mkItem :: Products -> Item
+mkItem prod = Item
+  { _id = _getProductsId $ prod ^. #_id
+  , _description = fromMaybe "" $ prod ^. #_description
+  , _name = fromMaybe "" $ prod ^. #_name
+  , _image = Nothing
+  , _price = mkPrice prod
+  , _primary = False
+  , _selected = False
+  , _quantity = 1
+  , _policy = Nothing
+  , _category_id = ""
+  , _tags = []
+  }
+
+mkPrice :: Products -> Price
+mkPrice prod =
+  Price
+    { _currency = "INR" -- TODO : Fetch this from product
+    , _estimated_value = prod ^. #_price
+    , _computed_value = prod ^. #_price
+    , _listed_value = prod ^. #_price
+    , _offered_value = prod ^. #_price
+    , _unit = "1" -- TODO : Fetch this from product
+    , _discount = 0.0
+    , _tax = Nothing
+  }

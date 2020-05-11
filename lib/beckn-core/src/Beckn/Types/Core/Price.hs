@@ -11,7 +11,7 @@ data Price = Price
     _offered_value :: Double,
     _unit :: Text,
     _discount :: Double,
-    _tax :: Tax
+    _tax :: Maybe Tax
   }
   deriving (Generic, Show)
 

@@ -4,12 +4,12 @@ module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
+import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TripReference as TripReference
 

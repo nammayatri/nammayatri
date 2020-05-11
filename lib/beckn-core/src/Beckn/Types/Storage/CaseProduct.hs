@@ -67,6 +67,8 @@ fieldEMod =
   B.setEntityName "case_product"
     <> B.modifyTableFields
       B.tableModification
-        { _createdAt = "created_at",
+        { _caseId = "case_id",
+          _productId = "product_id",
+          _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
