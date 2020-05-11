@@ -9,6 +9,8 @@ import Beckn.Types.Common
 import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Registration as Registration
+import qualified Product.Person as Person
+import Types.API.Person
 import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Case.CRUD as Case
 import Servant
@@ -22,6 +24,7 @@ type TransporterAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
+           :<|> UpdatePersonAPIs
        )
 
 ---- Registration Flow ------
@@ -45,25 +48,38 @@ registrationFlow =
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
--------- Case Flow----------
-type CaseAPIs =
-     "case"
-       :> (    ReqBody '[ JSON] CaseReq
-           :>  Post '[ JSON] CaseListRes
-          )
+-- Following is Update person flow
+type UpdatePersonAPIs =
+  "person"
+    :> ( Capture "regToken" Text
+          :> "update"
+          :> ReqBody '[JSON] UpdatePersonReq
+          :> Post '[JSON] UpdatePersonRes
+       )
 
-caseFlow =
-    Case.list
+updatePersonFlow :: FlowServer UpdatePersonAPIs
+updatePersonFlow = Person.updatePerson
 
--------- CaseProduct Flow----------
-type CaseProductAPIs =
-     "caseProduct"
-       :> (    ReqBody '[ JSON] CaseProdReq
-           :>  Post '[ JSON] CaseProductList
-          )
+-------------------------------
+-- -------- Case Flow----------
+-- type CaseAPIs =
+--      "case"
+--        :> (    ReqBody '[ JSON] CaseReq
+--            :>  Post '[ JSON] CaseListRes
+--           )
 
-caseProductFlow =
-    CaseProduct.list
+-- caseFlow =
+--     Case.list
+
+-- -------- CaseProduct Flow----------
+-- type CaseProductAPIs =
+--      "caseProduct"
+--        :> (    ReqBody '[ JSON] CaseProdReq
+--            :>  Post '[ JSON] CaseProductList
+--           )
+
+-- caseProductFlow =
+--     CaseProduct.list
 
 
 transporterAPIs :: Proxy TransporterAPIs
@@ -73,6 +89,7 @@ transporterServer' :: V.Key (HashMap Text Text) -> FlowServer TransporterAPIs
 transporterServer' key =
   pure "App is UP"
     :<|> registrationFlow
+    :<|> updatePersonFlow
 
 -- type SearchAPIs =
 --       "search"

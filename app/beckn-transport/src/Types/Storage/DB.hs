@@ -7,12 +7,12 @@ import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.Location as Location
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Customer as Customer
 import qualified Types.Storage.Driver as Driver
 import qualified Types.Storage.Leads as Leads
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TripReference as TripReference

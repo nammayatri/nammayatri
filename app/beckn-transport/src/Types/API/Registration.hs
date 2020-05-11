@@ -11,8 +11,7 @@ data InitiateLoginReq = InitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
     _identifier :: Text,
-    _role :: Maybe Role,
-    _entityType :: RTEntityType
+    _role :: Maybe Role
   }
   deriving (Generic, ToSchema)
 
@@ -22,8 +21,7 @@ instance FromJSON InitiateLoginReq where
 data ReInitiateLoginReq = ReInitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
-    _identifier :: Text,
-    _entityType :: RTEntityType
+    _identifier :: Text
   }
   deriving (Generic, ToSchema)
 

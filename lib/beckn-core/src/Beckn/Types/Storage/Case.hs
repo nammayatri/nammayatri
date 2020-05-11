@@ -36,13 +36,13 @@ instance FromBackendRow MySQL CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 
-data CaseIndustry = MOBILITY | GOVT | GROCERY
+data Industry = MOBILITY | GOVT | GROCERY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseIndustry where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL CaseIndustry where
+instance FromBackendRow MySQL Industry where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ExchangeType = ORDER | FULFILLMENT
@@ -77,7 +77,7 @@ data CaseT f = Case
     _name :: B.C f (Maybe Text),
     _description :: B.C f (Maybe Text),
     _shortId :: B.C f Text,
-    _industry :: B.C f CaseIndustry,
+    _industry :: B.C f Industry,
     _type :: B.C f CaseType,
     _exchangeType :: B.C f ExchangeType,
     _status :: B.C f CaseStatus,
@@ -89,6 +89,8 @@ data CaseT f = Case
     _requestor :: B.C f (Maybe Text),
     _requestorType :: B.C f (Maybe RequestorType),
     _parentCaseId :: B.C f (Maybe CaseId),
+    _fromLocationId :: B.C f LocationId,
+    _toLocationId :: B.C f LocationId,
     _udf1 :: B.C f (Maybe Text),
     _udf2 :: B.C f (Maybe Text),
     _udf3 :: B.C f (Maybe Text),
@@ -104,6 +106,8 @@ data CaseT f = Case
 -- fields => mobility  => pass
 -- udf1 => vehicle variant  =>
 -- udf2 => luggage_count =>
+-- udf3 => start Location
+-- udf4 => end Location 
 
 type Case = CaseT Identity
 
@@ -133,13 +137,16 @@ insertExpressions cases = B.insertValues cases
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)
 fieldEMod =
-  B.modifyTableFields
-    B.tableModification
-      { _shortId = "short_id",
-        _startTime = "start_time",
-        _endTime = "end_time",
-        _validTill = "valid_till",
-        _parentCaseId = "parent_case_id",
-        _createdAt = "created_at",
-        _updatedAt = "updated_at"
-      }
+  B.setEntityName "case"
+    <> B.modifyTableFields
+      B.tableModification
+        { _shortId = "short_id",
+          _startTime = "start_time",
+          _endTime = "end_time",
+          _validTill = "valid_till",
+          _parentCaseId = "parent_case_id",
+          _fromLocationId = "from_location_id",
+          _toLocationId = "to_location_id",
+          _createdAt = "created_at",
+          _updatedAt = "updated_at"
+        }

@@ -210,15 +210,15 @@ findAllWithLimitOffset ::
 findAllWithLimitOffset dbTable limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
---findAllWithLimitOffsetWhere ::
---RunReadableMySqlTable table db
--- => B.DatabaseEntity BM.MySQL db (B.TableEntity table)
--- -> (table (B.QExpr BM.MySQL B.QBaseScope) -> B.QExpr BM.MySQL B.QBaseScope Bool)
--- -> Integer
--- -> Integer
--- -> (table (B.QExpr BM.MySQL Scope3) -> BI.QOrd BM.MySQL Scope3 ordering)
--- -> L.Flow (T.DBResult [table Identity])
+findAllWithLimitOffsetWhere ::
+  RunReadableMySqlTable table db =>
+  B.DatabaseEntity BM.MySQL db (B.TableEntity table) ->
+  (table (B.QExpr BM.MySQL B.QBaseScope) -> B.QExpr BM.MySQL B.QBaseScope Bool) ->
+  Integer ->
+  Integer ->
+  (table (B.QExpr BM.MySQL Scope3) -> BI.QOrd BM.MySQL Scope3 ordering) ->
+  L.Flow (T.DBResult [table Identity])
 findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
-  run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.filter_ predicate $ B.orderBy_ orderBy $ B.all_ dbTable
+  run $ L.findRows $ B.select $ B.filter_ predicate $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
 aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggregate_ aggregator $ B.filter_ predicate $ B.all_ dbTable
