@@ -23,4 +23,4 @@ instance FromJSON ProdReq where
 instance ToJSON ProdReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data ProdInfoRes = Text
+type ProdInfoRes = Text
