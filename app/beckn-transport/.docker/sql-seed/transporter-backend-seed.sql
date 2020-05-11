@@ -77,3 +77,24 @@ CREATE TABLE `registration_token` (
   INDEX (`entity_id`),
   INDEX (`entity_type`)
 );
+
+DROP TABLE IF EXISTS `location`;
+CREATE TABLE `location` (
+  `id` char(36) NOT NULL
+  , `location_type` varchar(255) NULL
+  , `lat` double NULL
+  , `long` double NULL
+  , `ward` varchar(255) NULL
+  , `district` varchar(255) NULL
+  , `city` varchar(255) NULL
+  , `state` varchar(255) NULL
+  , `country` varchar(255) NULL
+  , `pincode` varchar(255) NULL
+  , `address` varchar(255) NULL
+  , `bound` varchar(255) NULL
+  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , PRIMARY KEY (`id`)
+  , INDEX (`city`)
+  , INDEX (`state`)
+);

@@ -9,7 +9,6 @@ import Data.Time.Calendar (Day (..))
 import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
-import qualified Data.Text.Encoding as DT
 import EulerHS.Prelude
 import Servant
 import Data.Aeson
@@ -22,12 +21,6 @@ getCurrTime = L.runIO $ do
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
-
-textToLocalTime :: Text -> Either String LocalTime
-textToLocalTime = eitherDecodeStrict . DT.encodeUtf8
-
-textToMaybeLocalTime :: Text -> Maybe LocalTime
-textToMaybeLocalTime = rightToMaybe . textToLocalTime
 
 fromMaybeM :: ServerError -> Maybe a -> L.Flow a
 fromMaybeM err Nothing = L.throwException err

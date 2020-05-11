@@ -70,7 +70,7 @@ findByRoleAndIdentifier role idType identifier =
       _role ==. B.val_ role
         &&. _mobileNumber ==. B.val_ (Just identifier)
 
-updateOrganizationId :: PersonId -> Text -> L.Flow () 
+updateOrganizationId :: PersonId -> Text -> L.Flow ()
 updateOrganizationId personId orgId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause orgId now) (predicate personId)
@@ -106,6 +106,7 @@ updatePersonRec personId person = do
           , _udf2 <-. B.val_ (Storage._udf2 person)
           , _organizationId <-. B.val_ (Storage._organizationId person)
           , _description <-. B.val_ (Storage._description person)
+          , _locationId <-. B.val_ (Storage._locationId person)
           , _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id

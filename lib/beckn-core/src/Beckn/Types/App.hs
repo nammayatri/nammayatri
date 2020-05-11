@@ -45,3 +45,10 @@ newtype OrganizationId = OrganizationId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''OrganizationId
+
+newtype LocationId = LocationId
+  { _getLocationId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''LocationId
