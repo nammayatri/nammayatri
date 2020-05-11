@@ -32,6 +32,7 @@ verifyAuth auth = do
   let apiKey = DT.reverse <$> DT.drop 1
                <$> DT.reverse <$> DT.decodeUtf8
                <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+  -- did atob of auth by removing basic in front and after atob, `:` in the end
   L.logInfo "verifying apikey" $ show apiKey
   DB.findOne dbTable (predicate apiKey)
     >>= either DB.throwDBError pure
