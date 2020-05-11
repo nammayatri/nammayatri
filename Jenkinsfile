@@ -27,8 +27,8 @@ pipeline {
       }
 
       steps {
-        sh 'make build-dep -e IMAGE_NAME=beckn-epass -e DEP_LABEL=$DEP_LABEL'
-        sh 'make push-dep -e IMAGE_NAME=beckn-epass -e DEP_LABEL=$DEP_LABEL'
+        sh 'make build-dep -e DEP_LABEL=$DEP_LABEL'
+        sh 'make push-dep -e DEP_LABEL=$DEP_LABEL'
       }
     }
 
