@@ -20,15 +20,15 @@ import EulerHS.Prelude
 
 data Service = Service
   { _id :: Text,
-    _catalog :: Catalog,
-    _matched_items :: [Text], -- [Item.id]
-    _selected_items :: [Text], -- [Item.id]
-    _fare_product :: FareProduct,
+    _catalog :: Maybe Catalog,
+    _matched_items :: [Text],
+    _selected_items :: [Text],
+    _fare_product :: Maybe FareProduct,
     _offers :: [Offer],
-    _provider :: Provider,
-    _trip :: Trip,
+    _provider :: Maybe Provider,
+    _trip :: Maybe Trip,
     _policies :: [Policy],
-    _billing_address :: Location
+    _billing_address :: Maybe Location
   }
   deriving (Generic, Show)
 
