@@ -53,3 +53,12 @@ updateLocationRec locationId location = do
         , _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Location {..} = _id ==. B.val_ id
+
+
+findAllByLocIds :: [Text] -> [Text] ->  L.Flow [Storage.Location]
+findAllByLocIds fromIds toIds =
+  DB.findAllOrErr dbTable (pred (LocationId <$> fromIds) (LocationId <$> toIds))
+  where
+    pred fromIds toIds Storage.Location {..} =
+      (B.in_ _id (B.val_ <$> fromIds)
+        ||. B.in_ _id (B.val_ <$> toIds))
