@@ -19,6 +19,7 @@ import Beckn.Utils.Extra
 import Data.Accessor as Lens
 import Data.Aeson
 import Data.ByteString.Lazy.Char8
+import Data.Text as T
 import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
@@ -83,8 +84,8 @@ mkFromLocation req uuid now loc = do
         SL.Location
           { _id = LocationId {_getLocationId = uuid},
             _locationType = POINT,
-            _lat = Just $ val ^. #lat,
-            _long = Just $ val ^. #lon,
+            _lat = Just $ read $ T.unpack $ val ^. #lat,
+            _long = Just $ read $ T.unpack $ val ^. #lon,
             _ward = Nothing,
             _district = Nothing,
             _city = Nothing,
