@@ -82,7 +82,7 @@ CREATE TABLE `case` (
   `id` char(36) NOT NULL,
   `name` varchar(255) NULL,
   `description` varchar(1024) NULL,
-  `shortId` varchar(1024) NOT NULL,
+  `short_id` varchar(36) NOT NULL,
   `industry` varchar(1024) NOT NULL,
   `type` varchar(255) NOT NULL,
   `exchange_type` varchar(255) NOT NULL,
@@ -92,11 +92,11 @@ CREATE TABLE `case` (
   `valid_till` datetime NOT NULL,
   `provider` varchar(255) NULL,
   `provider_type` varchar(255) NULL,
-  `requestor` varchar(255) NOT NULL,
+  `requestor` varchar(255)  NULL,
   `requestor_type` varchar(255) NULL,
   `parent_case_id` varchar(255) NULL,
-  `from_location_id` varchar(255) NULL,
-  `to_location_id` varchar(255) NULL,
+  `from_location_id` varchar(36) NULL,
+  `to_location_id` varchar(36) NULL,
   `udf1` varchar(255) NULL,
   `udf2` varchar(255) NULL,
   `udf3` varchar(255) NULL,
@@ -106,17 +106,18 @@ CREATE TABLE `case` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
+  INDEX (`short_id`),
   INDEX (`provider`),
   INDEX (`requestor`)
 );
 
 DROP TABLE IF EXISTS `case_product`;
-CREATE TABLE `case` (
+CREATE TABLE `case_product` (
   `id` char(36) NOT NULL,
   `case_id` varchar(255) NOT NULL,
-  `product_id` varchar(1024) NOT NULL,
+  `product_id` varchar(255) NOT NULL,
   `quantity` integer NOT NULL,
-  `price` DECIMAL(10,2) NOT NULL,
+  `price` DECIMAL(8,2) NOT NULL,
   `status` varchar(255) NOT NULL,
   `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
@@ -152,15 +153,15 @@ CREATE TABLE `product` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`organization_id`),
+  INDEX (`organization_id`)
 );
 
 DROP TABLE IF EXISTS `location`;
 CREATE TABLE `location` (
   `id` char(36) NOT NULL,
   `location_type` varchar(255) NOT NULL,
-  `lat` DECIMAL(3,6) NULL,
-  `long` DECIMAL(3,6)  NULL,
+  `lat`varchar(12) NULL,
+  `long`varchar(12)  NULL,
   `ward` varchar(255)  NULL,
   `district` varchar(255)  NULL,
   `city` varchar(255)  NULL,
@@ -171,6 +172,5 @@ CREATE TABLE `location` (
   `bound` varchar(255)  NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`),
-  INDEX (`organization_id`),
+  PRIMARY KEY (`id`)
 );
