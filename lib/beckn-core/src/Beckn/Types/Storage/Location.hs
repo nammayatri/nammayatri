@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Location where
+module Beckn.Types.Storage.Location where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -15,7 +15,7 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
-import Types.App
+import Beckn.Types.App
 
 data LocationType = POINT | POLYGON | PINCODE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -79,7 +79,7 @@ insertExpressions orgs = B.insertValues orgs
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LocationT)
 fieldEMod =
-  B.setEntityName "trip_reference"
+  B.setEntityName "location"
     <> B.modifyTableFields
       B.tableModification
         { _createdAt = "created_at",

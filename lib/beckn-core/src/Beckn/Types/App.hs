@@ -11,6 +11,7 @@ import Servant
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 
+
 newtype CaseId = CaseId
   { _getCaseId :: Text
   }
@@ -45,3 +46,10 @@ newtype OrganizationId = OrganizationId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''OrganizationId
+
+newtype LocationId = LocationId
+  { _getLocationId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''LocationId

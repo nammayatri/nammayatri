@@ -9,9 +9,9 @@ import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Types.App
+import Beckn.Types.App
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Location as Storage
+import qualified Beckn.Types.Storage.Location as Storage
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT)
 dbTable = DB._location DB.transporterDb

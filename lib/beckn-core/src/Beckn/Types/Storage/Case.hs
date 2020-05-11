@@ -36,13 +36,13 @@ instance FromBackendRow MySQL CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 
-data CaseIndustry = MOBILITY | GOVT | GROCERY
+data Industry = MOBILITY | GOVT | GROCERY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseIndustry where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL CaseIndustry where
+instance FromBackendRow MySQL Industry where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ExchangeType = ORDER | FULFILLMENT
@@ -77,7 +77,7 @@ data CaseT f = Case
     _name :: B.C f (Maybe Text),
     _description :: B.C f (Maybe Text),
     _shortId :: B.C f Text,
-    _industry :: B.C f CaseIndustry,
+    _industry :: B.C f Industry,
     _type :: B.C f CaseType,
     _exchangeType :: B.C f ExchangeType,
     _status :: B.C f CaseStatus,
@@ -104,6 +104,8 @@ data CaseT f = Case
 -- fields => mobility  => pass
 -- udf1 => vehicle variant  =>
 -- udf2 => luggage_count =>
+-- udf3 => start Location
+-- udf4 => end Location 
 
 type Case = CaseT Identity
 
