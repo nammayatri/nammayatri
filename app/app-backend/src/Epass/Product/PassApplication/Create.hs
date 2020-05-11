@@ -25,24 +25,23 @@ import           Epass.Utils.Storage
 import qualified EulerHS.Language                      as L
 import           EulerHS.Prelude
 import           Servant
+import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.Location              as QL
 
 createPassApplication ::
-  Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes
+  Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
 createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowHandler $ do
   token <- verifyToken regToken
-
-  passAppInfo <-
+  caseInfo <-
     case _type of
       SELF        -> selfFlow token req
       SPONSOR     -> sponsorFlow token req
       BULKSPONSOR -> bulkSponsorFlow token req
-  DB.create passAppInfo
-  DB.findById (_id passAppInfo)
-    >>= fromMaybeM500 "Could not create PassApplication"
-    >>= return . API.PassApplicationRes
+  QC.create caseInfo
+  QC.findById (Case._id caseInfo)
+    >>= return . API.PassApplicationRes'
 
-bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
+bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
 bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _OrganizationId)
@@ -55,9 +54,9 @@ bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
 
   QO.findOrganizationById organizationId
     >>= fromMaybeM400 "Organization does not exists"
-  getPassAppInfo token req Nothing
+  getCaseInfo token req Nothing
 
-selfFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
+selfFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
 selfFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _CustomerId)
@@ -75,9 +74,9 @@ selfFlow token req@API.CreatePassApplicationReq {..} = do
 
   Customer.updateDetails customerId _travellerName _OrganizationId
   CustomerDetail.createIfNotExists customerId travellerIDType travellerID
-  getPassAppInfo token req _CustomerId
+  getCaseInfo token req _CustomerId
 
-sponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow PassApplication
+sponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
 sponsorFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _travellerName || isNothing _travellerIDType || isNothing _travellerID)
@@ -88,56 +87,12 @@ sponsorFlow token req@API.CreatePassApplicationReq {..} = do
       travellerIDType = mapIdType $ fromJust _travellerIDType
   CustomerDetail.findByIdentifier travellerIDType travellerID
     >>= \case
-      Just cd -> getPassAppInfo token req (Just $ CD._CustomerId cd)
+      Just cd -> getCaseInfo token req (Just $ CD._CustomerId cd)
       Nothing -> do
         customer <- createCustomer travellerName
         let customerId = Customer._id customer
         CustomerDetail.createIfNotExists customerId travellerIDType travellerID
-        getPassAppInfo token req (Just customerId)
-
-getPassAppInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe CustomerId -> L.Flow PassApplication
-getPassAppInfo token API.CreatePassApplicationReq {..} mCustId = do
-  id <- generateGUID
-  currTime <- getCurrTime
-  count <- getCount _type _count
-  return $
-    PassApplication
-      { _id = id,
-        _CustomerId = mCustId,
-        _passType = getPassType _type,
-        _fromLocationType = Location._type <$> _fromLocation,
-        _fromLat = join (Location._lat <$> _fromLocation),
-        _fromLong = join (Location._long <$> _fromLocation),
-        _fromWard = join (Location._ward <$> _fromLocation),
-        _fromDistrict = join (Location._district <$> _fromLocation),
-        _fromCity = join (Location._city <$> _fromLocation),
-        _fromState = join (Location._state <$> _fromLocation),
-        _fromCountry = join (Location._country <$> _fromLocation),
-        _fromPincode = join (Location._pincode <$> _fromLocation),
-        _fromAddress = join (Location._address <$> _fromLocation),
-        _fromBound = join (Location._bound <$> _fromLocation),
-        _toLocationType = Just $ Location._type _toLocation,
-        _toLat = Location._lat _toLocation,
-        _toLong = Location._long _toLocation,
-        _toWard = Location._ward _toLocation,
-        _toDistrict = Location._district _toLocation,
-        _toCity = Location._city _toLocation,
-        _toState = Location._state _toLocation,
-        _toCountry = Location._country _toLocation,
-        _toPincode = Location._pincode _toLocation,
-        _toAddress = Location._address _toLocation,
-        _toBound = Location._bound _toLocation,
-        _createdAt = currTime,
-        _updatedAt = currTime,
-        _status = PENDING,
-        _CreatedBy = CustomerId (RegistrationToken._EntityId token),
-        _AssignedTo = UserId "admin", -- TODO: fix this
-        _count = count,
-        _approvedCount = 0,
-        _remarks = "",
-        _info = "",
-        ..
-      }
+        getCaseInfo token req (Just customerId)
 
 getPassType :: PassApplicationType -> PassType
 getPassType SELF        = INDIVIDUAL
@@ -156,11 +111,11 @@ mapIdType AADHAAR = CD.AADHAAR
 
 getLocation ::  API.CreatePassApplicationReq -> L.Flow (Loc.Location, Loc.Location)
 getLocation  API.CreatePassApplicationReq {..} = do
-  id <- BTC.generateGUID
+  toId <- BTC.generateGUID
+  fromId <- BTC.generateGUID
   currTime <- getCurrTime
-
   let fromLocation = Loc.Location
-        { _id = id
+        { _id = toId
         , _locationType = Loc.PINCODE -- (Location._type <$> _fromLocation)
         , _lat = join (Location._lat <$> _fromLocation)
         , _long = join (Location._long <$> _fromLocation)
@@ -176,7 +131,7 @@ getLocation  API.CreatePassApplicationReq {..} = do
         , _updatedAt = currTime
         }
   let toLocation = Loc.Location
-        { _id = id
+        { _id = fromId
         , _locationType = Loc.PINCODE -- (Location._type  _toLocation)
         , _lat = Location._lat  _toLocation
         , _long = Location._long  _toLocation
@@ -201,8 +156,8 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   QL.create toLoc
   currTime <- getCurrTime
   count <- getCount _type _count
-  let toLocationId = show $ Loc._id toLoc
-      fromLocationId = show $ Loc._id fromLoc
+  let toLocationId = _getLocationId $ Loc._id toLoc
+      fromLocationId = _getLocationId $ Loc._id fromLoc
       shortId = ""
   return $
     Case.Case
@@ -219,7 +174,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
       , _validTill = _fromDate
       , _provider = Nothing
       , _providerType = Just Case.GOVTADMIN
-      , _requestor = show <$> mCustId
+      , _requestor = _getCustomerId <$> mCustId
       , _requestorType = Just Case.CONSUMER
       , _parentCaseId = Nothing
       , _fromLocationId = fromLocationId

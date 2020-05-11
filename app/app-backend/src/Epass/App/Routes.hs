@@ -121,7 +121,7 @@ type PassApplicationAPIs =
   "pass_application"
     :> Header "registrationToken" RegistrationTokenText
     :> ( ReqBody '[JSON] CreatePassApplicationReq
-           :> Post '[JSON] PassApplicationRes
+           :> Post '[JSON] PassApplicationRes'
            :<|> "list"
              :> QueryParam "limit" Int
              :> QueryParam "offset" Int

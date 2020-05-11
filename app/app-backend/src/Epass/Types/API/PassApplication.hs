@@ -1,37 +1,45 @@
 module Epass.Types.API.PassApplication where
 
-import Data.Default
-import Data.Swagger
-import Data.Time.LocalTime
-import Epass.Types.App
-import Epass.Types.Common
-import qualified Epass.Types.Storage.Comment as SCM
-import qualified Epass.Types.Storage.Customer as SC
-import qualified Epass.Types.Storage.Document as SD
-import qualified Epass.Types.Storage.Organization as SO
-import Epass.Types.Storage.PassApplication
-import qualified Epass.Types.Storage.Tag as ST
-import EulerHS.Prelude
+import qualified Beckn.Types.Storage.Case            as Case
+import           Data.Default
+import           Data.Swagger
+import           Data.Time.LocalTime
+import           Epass.Types.App
+import           Epass.Types.Common
+import qualified Epass.Types.Storage.Comment         as SCM
+import qualified Epass.Types.Storage.Customer        as SC
+import qualified Epass.Types.Storage.Document        as SD
+import qualified Epass.Types.Storage.Organization    as SO
+import           Epass.Types.Storage.PassApplication
+import qualified Epass.Types.Storage.Tag             as ST
+import           EulerHS.Prelude
+
 
 data CreatePassApplicationReq = CreatePassApplicationReq
-  { _CustomerId :: Maybe CustomerId,
-    _OrganizationId :: Maybe OrganizationId,
+  { _CustomerId           :: Maybe CustomerId,
+    _OrganizationId       :: Maybe OrganizationId,
     _TenantOrganizationId :: Maybe TenantOrganizationId,
-    _fromDate :: LocalTime,
-    _toDate :: LocalTime,
-    _fromLocation :: Maybe Location,
-    _toLocation :: Location,
-    _purpose :: Maybe Text,
-    _travellerName :: Maybe Text,
-    _travellerID :: Maybe Text,
-    _travellerIDType :: Maybe TravellerIDType,
-    _type :: PassApplicationType,
-    _count :: Maybe Int
+    _fromDate             :: LocalTime,
+    _toDate               :: LocalTime,
+    _fromLocation         :: Maybe Location,
+    _toLocation           :: Location,
+    _purpose              :: Maybe Text,
+    _travellerName        :: Maybe Text,
+    _travellerID          :: Maybe Text,
+    _travellerIDType      :: Maybe TravellerIDType,
+    _type                 :: PassApplicationType,
+    _count                :: Maybe Int
   }
   deriving (Generic, ToSchema)
 
 instance FromJSON CreatePassApplicationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+data PassApplicationRes' = PassApplicationRes'
+  { passApplication :: Case.Case
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
 
 data PassApplicationRes = PassApplicationRes
   { passApplication :: PassApplication
@@ -50,30 +58,30 @@ data ListPassApplicationRes = ListPassApplicationRes
   deriving (Generic, ToSchema)
 
 data PassAppInfo = PassAppInfo
-  { _id :: PassApplicationId,
-    _Customer :: (Maybe SC.Customer),
-    _Tags :: [ST.Tag],
-    _Documents :: [SD.Document],
-    _Comments :: [SCM.Comment],
-    _Organization :: (Maybe SO.Organization),
+  { _id                        :: PassApplicationId,
+    _Customer                  :: (Maybe SC.Customer),
+    _Tags                      :: [ST.Tag],
+    _Documents                 :: [SD.Document],
+    _Comments                  :: [SCM.Comment],
+    _Organization              :: (Maybe SO.Organization),
     _isBlacklistedOrganization :: Bool,
-    _isBlacklistedLocation :: Bool,
-    _TenantOrganizationId :: (Maybe TenantOrganizationId),
-    _status :: Status,
-    _fromDate :: LocalTime,
-    _toDate :: LocalTime,
-    _passType :: PassType,
-    _purpose :: (Maybe Text),
-    _fromLocation :: Maybe Location,
-    _toLocation :: Location,
-    _CreatedBy :: CustomerId,
-    _AssignedTo :: UserId,
-    _count :: Int,
-    _approvedCount :: Int,
-    _remarks :: Text,
-    _info :: Text,
-    _createdAt :: LocalTime,
-    _updatedAt :: LocalTime
+    _isBlacklistedLocation     :: Bool,
+    _TenantOrganizationId      :: (Maybe TenantOrganizationId),
+    _status                    :: Status,
+    _fromDate                  :: LocalTime,
+    _toDate                    :: LocalTime,
+    _passType                  :: PassType,
+    _purpose                   :: (Maybe Text),
+    _fromLocation              :: Maybe Location,
+    _toLocation                :: Location,
+    _CreatedBy                 :: CustomerId,
+    _AssignedTo                :: UserId,
+    _count                     :: Int,
+    _approvedCount             :: Int,
+    _remarks                   :: Text,
+    _info                      :: Text,
+    _createdAt                 :: LocalTime,
+    _updatedAt                 :: LocalTime
   }
   deriving (Generic, ToSchema)
 
@@ -84,9 +92,9 @@ instance ToJSON PassAppInfo where
   toJSON = genericToJSON stripLensPrefixOptions
 
 data UpdatePassApplicationReq = UpdatePassApplicationReq
-  { _status :: Status,
+  { _status        :: Status,
     _approvedCount :: Maybe Int,
-    _remarks :: Maybe Text
+    _remarks       :: Maybe Text
   }
   deriving (Generic, ToSchema)
 
