@@ -1,11 +1,15 @@
+{-# LANGUAGE OverloadedLabels      #-}
+
 module Product.Case.CRUD where
 
 import           Beckn.Types.App
+import           Beckn.Types.API.Search
 import           Beckn.Types.Common as BC
 import           Beckn.Types.Storage.Case as Case
 import           Beckn.Types.Storage.CaseProduct as CaseP
 import           Beckn.Types.Storage.Products as Product
 import           Beckn.Utils.Common
+import           External.Gateway.Flow as Gateway
 import           Storage.Queries.Products as PQ
 import           Storage.Queries.CaseProduct as CPQ
 import qualified Data.Accessor as Lens
@@ -96,5 +100,14 @@ createCaseProduct cs prod = do
         , _updatedAt = currTime
         }
 
+
 notifyGateway :: Case -> L.Flow ()
-notifyGateway _ = undefined
+notifyGateway c = do
+  cps             <- CPQ.findAllByCaseId ""
+  prods           <- PQ.findAllById []
+  onSearchPayload <- mkOnSearchPayload c prods
+  Gateway.onSearch defaultBaseUrl onSearchPayload
+  return ()
+
+mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
+mkOnSearchPayload = undefined

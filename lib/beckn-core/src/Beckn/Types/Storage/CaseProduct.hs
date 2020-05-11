@@ -5,6 +5,7 @@ module Beckn.Types.Storage.CaseProduct where
 
 import Beckn.Types.App
 import Data.Swagger
+import Data.Generics.Labels
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Database.Beam as B
