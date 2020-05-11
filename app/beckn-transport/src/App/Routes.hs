@@ -84,7 +84,7 @@ type OrganizationAPIs =
           :<|> "gateway"
             :> Header "authorization" Text
             :> ReqBody '[JSON] TransporterReq
-            :> Post '[JSON] TransporterRes
+            :> Post '[JSON] GatewayRes
        )
 
 organizationFlow :: FlowServer OrganizationAPIs

@@ -24,15 +24,15 @@ createTransporter regToken req = withFlowHandler $ do
   QO.create organization
   QP.updateOrganizationIdAndMakeAdmin (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
   updatedPerson <- QP.findPersonById (PersonId _EntityId)
-  return $ TransporterRes (Just updatedPerson) organization
+  return $ TransporterRes updatedPerson organization
   where
     validation person = do
       whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
       whenM (return $ SP._organizationId person /= Nothing) $ L.throwException $ err400 {errBody = "user already registered an organization"}
 
-createGateway :: Maybe Text -> TransporterReq -> FlowHandler TransporterRes
+createGateway :: Maybe Text -> TransporterReq -> FlowHandler GatewayRes
 createGateway auth req = withFlowHandler $ do
   QO.verifyAuth auth
   organization              <- transformFlow req
   QO.create organization
-  return $ TransporterRes Nothing organization
+  return $ GatewayRes organization

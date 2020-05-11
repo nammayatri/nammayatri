@@ -91,7 +91,12 @@ transformToLocation req = do
   }
 
 data TransporterRes = TransporterRes
-  { user :: Maybe SP.Person
+  { user :: SP.Person
   , organization :: SO.Organization
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data GatewayRes = GatewayRes
+  { organization :: SO.Organization
   }
   deriving (Generic, ToJSON, ToSchema)
