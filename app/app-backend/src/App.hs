@@ -3,6 +3,7 @@
 module App where
 
 import qualified App.Server as App
+import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -26,7 +27,6 @@ import Servant
 import Servant.Server
 import Storage.DB.Config
 import qualified System.Environment as SE
-import qualified Types.App as App
 
 runAppBackend :: IO ()
 runAppBackend = do

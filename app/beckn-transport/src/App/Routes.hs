@@ -3,32 +3,38 @@ module App.Routes where
 -- import           Beckn.Types.API.Search
 -- import           Beckn.Types.API.Confirm
 -- import           Beckn.Types.Common
-import Data.Aeson
-import qualified Data.Vault.Lazy as V
+
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
-import Beckn.Types.Storage.Case
+import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Storage.Case
+import Data.Aeson
+import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
-import qualified Product.Registration as Registration
-import qualified Product.Person as Person
-import Types.API.Person
-import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Case.CRUD as Case
+import qualified Product.CaseProduct as CaseProduct
+import qualified Product.Person as Person
+import qualified Product.Registration as Registration
+import qualified Product.Transporter as Transporter
 import Servant
 import Servant.Multipart
-import Types.API.Registration
 import Types.API.Case
 import Types.API.CaseProduct
-import Types.App
+import Types.API.Person
+import Types.API.Person
+import Types.API.Registration
+import Types.API.Registration
+import Types.API.Transporter
 
 type TransporterAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
            :<|> UpdatePersonAPIs
+           :<|> OrganizationAPIs --Transporter
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> CaseAPIs
@@ -60,13 +66,32 @@ registrationFlow =
 type UpdatePersonAPIs =
   "person"
     :> ( Capture "regToken" Text
-          :> "update"
-          :> ReqBody '[JSON] UpdatePersonReq
-          :> Post '[JSON] UpdatePersonRes
+           :> "update"
+           :> ReqBody '[JSON] UpdatePersonReq
+           :> Post '[JSON] UpdatePersonRes
        )
 
 updatePersonFlow :: FlowServer UpdatePersonAPIs
 updatePersonFlow = Person.updatePerson
+
+-- Following is organization creation
+type OrganizationAPIs =
+  "transporter"
+    :> ( "create"
+           :> "gateway"
+           --  :> Header "apiKey" Text
+           :> ReqBody '[JSON] TransporterReq
+           :> Post '[JSON] TransporterRes
+           :<|> Capture "regToken" Text
+             :> "create"
+             :> ReqBody '[JSON] TransporterReq
+             :> Post '[JSON] TransporterRes
+       )
+
+organizationFlow :: FlowServer OrganizationAPIs
+organizationFlow =
+  Transporter.createGateway
+    :<|> Transporter.createTransporter
 
 -----------------------------
 -------- Case Flow----------
@@ -85,14 +110,13 @@ caseFlow =
 
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
-     "caseProduct"
-       :> (    ReqBody '[ JSON] CaseProdReq
-           :>  Post '[ JSON] CaseProductList
-          )
+  "caseProduct"
+    :> ( ReqBody '[JSON] CaseProdReq
+           :> Post '[JSON] CaseProductList
+       )
 
 caseProductFlow =
-    CaseProduct.list
-
+  CaseProduct.list
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
@@ -102,28 +126,28 @@ transporterServer' key =
   pure "App is UP"
     :<|> registrationFlow
     :<|> updatePersonFlow
+    :<|> organizationFlow
     :<|> searchApiFlow
     :<|> confirmApiFlow
     :<|> caseFlow
     :<|> caseProductFlow
 
 type SearchAPIs =
-      "search"
-        :> "services"
-        :> (    ReqBody '[ JSON] SearchReq
-            :>  Post '[ JSON] AckResponse
-            )
+  "search"
+    :> "services"
+    :> ( ReqBody '[JSON] SearchReq
+           :> Post '[JSON] AckResponse
+       )
 
 searchApiFlow :: FlowServer SearchAPIs
 searchApiFlow = BP.search
 
-
 type ConfirmAPIs =
-      "confirm"
-        :> "services"
-        :> (    ReqBody '[ JSON] ConfirmReq
-            :>  Post '[ JSON] AckResponse
-            )
+  "confirm"
+    :> "services"
+    :> ( ReqBody '[JSON] ConfirmReq
+           :> Post '[JSON] AckResponse
+       )
 
 confirmApiFlow :: FlowServer ConfirmAPIs
 confirmApiFlow = BP.confirm
