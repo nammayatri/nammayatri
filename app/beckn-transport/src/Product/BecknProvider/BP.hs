@@ -49,7 +49,7 @@ search apiKey req = withFlowHandler $ do
   let toLocation = mkFromLocation req uuid "2" currTime $ req ^. #message ^. #destination
   Loc.create fromLocation
   Loc.create toLocation
-  let c = mkCase req uuid currTime validity
+  let c = mkCase req uuid currTime validity fromLocation toLocation
   Case.create c
   transporters <- listOrganizations Nothing Nothing [Org.TRANSPORTER] [Org.APPROVED]
   -- TODO : Fix show
@@ -73,7 +73,8 @@ getValidTime :: LocalTime -> L.Flow LocalTime
 getValidTime now = pure $ addLocalTime (60*30 :: NominalDiffTime) now 
 
 mkFromLocation :: SearchReq -> Text -> Text -> LocalTime -> BL.Location -> SL.Location
-mkFromLocation req uuid ref now loc = case loc ^. #_type of
+mkFromLocation req uuid ref now loc = do
+  case loc ^. #_type of
     "gps" -> case loc ^. #_gps of 
                 Just (val :: GPS) -> SL.Location
                                         { _id = LocationId {_getLocationId = uuid <> ref}
@@ -109,14 +110,14 @@ mkFromLocation req uuid ref now loc = case loc ^. #_type of
           , _updatedAt = now
           }
 
-mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SC.Case
-mkCase req uuid now validity = do
+mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
+mkCase req uuid now validity fromLocation toLocation = do
   let intent = (req ^. #message)
   SC.Case
     { _id = CaseId { _getCaseId = uuid}
     , _name = Nothing
     , _description = Just "Case to create a Ride"
-    , _shortId = uuid -- need to generate shortId
+    , _shortId = req ^. #context ^. #transaction_id
     , _industry = SC.MOBILITY
     , _type = RIDEBOOK
     , _exchangeType = FULFILLMENT
@@ -126,16 +127,17 @@ mkCase req uuid now validity = do
     , _validTill = validity
     , _provider = Nothing
     , _providerType = Nothing
-    , _requestor = Nothing 
-  -- Need to extract from Req and add it here
+    , _requestor = Nothing
     , _requestorType = Just CONSUMER
     , _parentCaseId = Nothing
+    , _fromLocationId = fromLocation ^. #_id
+    , _toLocationId = toLocation ^. #_id
     , _udf1 = Just $ intent ^. #vehicle ^. #variant
     , _udf2 = Just $ show $ intent ^. #payload ^. #travellers ^. #count
-    , _udf3 = Just $ uuid <> "1"
-    , _udf4 = Just $ uuid <> "2"
+    , _udf3 = Nothing
+    , _udf4 = Nothing
     , _udf5 = Nothing
-    , _info = Just $ show $ req ^. #context
+    , _info = Just $ show $ req ^. #message
     , _createdAt = now
     , _updatedAt = now 
     }
