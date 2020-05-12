@@ -95,17 +95,17 @@ spec:
         #------ Gateway configs ------#
         - name: GATEWAY_HOST
           valueFrom:
-            secretKeyRef:
+            configMapKeyRef:
               name: beckn-app-backend-configs
               key: GATEWAY_HOST
         - name: GATEWAY_PORT
           valueFrom:
-            secretKeyRef:
+            configMapKeyRef:
               name: beckn-app-backend-configs
               key: GATEWAY_PORT
         - name: GATEWAY_PATH
           valueFrom:
-            secretKeyRef:
+            configMapKeyRef:
               name: beckn-app-backend-configs
               key: GATEWAY_PATH
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
