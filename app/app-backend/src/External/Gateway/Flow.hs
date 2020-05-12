@@ -1,7 +1,7 @@
 module External.Gateway.Flow where
 
-import Beckn.Types.API.Search
 import qualified Beckn.Types.API.Confirm as Confirm
+import Beckn.Types.API.Search
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
@@ -54,7 +54,7 @@ loadGatewayUrl = do
     p <- readMaybe port
     Just $
       BaseUrl
-        { baseUrlScheme = Https,
+        { baseUrlScheme = Http, -- TODO: make Https when required
           baseUrlHost = host,
           baseUrlPort = p,
           baseUrlPath = path

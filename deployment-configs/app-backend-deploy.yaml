@@ -39,6 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        #------ DB configs ------#
         - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
@@ -54,6 +55,17 @@ spec:
             configMapKeyRef:
               name: beckn-app-backend-configs
               key: MYSQL_DB
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_PASSWORD
+        #------ Redis configs ------#
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
@@ -69,16 +81,7 @@ spec:
             configMapKeyRef:
               name: beckn-app-backend-configs
               key: REDIS_DB
-        - name: MYSQL_USER
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MYSQL_USER
-        - name: MYSQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MYSQL_PASSWORD
+        #------ SMS provider configs ------#
         - name: SMS_GATEWAY_USERNAME
           valueFrom:
             secretKeyRef:
@@ -89,6 +92,22 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: MY_VALUE_FIRST_PASSWORD
+        #------ Gateway configs ------#
+        - name: GATEWAY_HOST
+          valueFrom:
+            secretKeyRef:
+              name: beckn-app-backend-configs
+              key: GATEWAY_HOST
+        - name: GATEWAY_PORT
+          valueFrom:
+            secretKeyRef:
+              name: beckn-app-backend-configs
+              key: GATEWAY_PORT
+        - name: GATEWAY_PATH
+          valueFrom:
+            secretKeyRef:
+              name: beckn-app-backend-configs
+              key: GATEWAY_PATH
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
         name: beckn-app-backend
         ports:
