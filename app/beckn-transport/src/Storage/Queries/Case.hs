@@ -31,7 +31,7 @@ findAllByType limit offset caseType caseStatus now =
     predicate caseType caseStatus now Storage.Case {..} =
       ( _type ==. (B.val_ caseType)
          &&. _status ==. (B.val_ caseStatus)
-          &&. _validTill >. (B.val_ now))
+          &&. _validTill B.>. (B.val_ now))
 
 findAllByIds :: [CaseId] ->  L.Flow [Storage.Case]
 findAllByIds ids =
