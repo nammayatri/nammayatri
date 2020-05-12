@@ -8,7 +8,9 @@ import qualified Epass.Types.Storage.Comment as SCM
 import qualified Epass.Types.Storage.Customer as SC
 import qualified Epass.Types.Storage.Document as SD
 import qualified Epass.Types.Storage.Organization as SO
+import qualified Beckn.Types.Storage.Person as SP
 import Epass.Types.Storage.Pass
+import Beckn.Types.Storage.CaseProduct
 import qualified Epass.Types.Storage.Tag as ST
 import EulerHS.Prelude
 
@@ -46,24 +48,24 @@ data ListPassRes = ListPassRes
   deriving (Generic, ToJSON, ToSchema)
 
 data PassInfo = PassInfo
-  { _id :: PassId,
+  { _id :: Text,
     _ShortId :: Text,
     _TenantOrganizationId :: (Maybe TenantOrganizationId),
-    _status :: Status,
+    _status :: CaseProductStatus,
     _fromDate :: LocalTime,
     _toDate :: LocalTime,
     _passType :: PassType,
-    _PassApplicationId :: PassApplicationId,
-    _CreatedBy :: CustomerId,
-    _info :: Text,
-    _createdAt :: LocalTime,
-    _updatedAt :: LocalTime,
-    _fromLocation :: Location,
-    _toLocation :: Location,
+    _PassApplicationId :: Text,
+    _CreatedBy :: Text,
+    --_info :: Text,
+    --_createdAt :: LocalTime,
+    --_updatedAt :: LocalTime,
+    _fromLocation :: Text, -- Location,
+    _toLocation :: Text, -- Location,
     _Organization :: (Maybe SO.Organization),
-    _Customer :: (Maybe SC.Customer),
-    _Comments :: [SCM.Comment],
-    _Tags :: [ST.Tag],
+    _Customer :: (Maybe SP.Person),
+    --_Comments :: [SCM.Comment],
+    --_Tags :: [ST.Tag],
     _Documents :: [SD.Document]
   }
   deriving (Generic, ToSchema)

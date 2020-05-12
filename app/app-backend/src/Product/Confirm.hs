@@ -8,6 +8,7 @@ import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Products as SProducts
+import qualified Beckn.Types.Storage.CaseProduct as SCP
 import Beckn.Utils.Common (withFlowHandler)
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L
@@ -16,6 +17,7 @@ import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Products as QProducts
+import qualified Storage.Queries.CaseProduct as QCP
 import Types.App
 import Utils.Routes
 import Epass.Utils.Storage
@@ -24,8 +26,7 @@ confirm :: Maybe RegToken -> Text -> Text -> FlowHandler AckResponse
 confirm regToken caseId productId = withFlowHandler $ do
   verifyToken regToken
   lt <- getCurrentTimeUTC
-  currentCase <- QCase.findById $ CaseId caseId
-  product <- QProducts.findById $ ProductsId productId
+  caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
   context <- buildContext "confirm" transactionId
   let service = Service caseId Nothing [] [productId] Nothing [] Nothing Nothing [] Nothing
@@ -40,7 +41,10 @@ confirm regToken caseId productId = withFlowHandler $ do
 onConfirm :: Maybe RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
 onConfirm regToken req = withFlowHandler $ do
   verifyToken regToken
-  eres <- traverse (flip QProducts.updateStatus SProducts.CONFIRMED . ProductsId) (req ^. #message ^. #_selected_items)
+  let update pid =
+        QProducts.updateStatus pid SProducts.CONFIRMED
+        >>= either (pure . Left) (\_ -> QCP.updateStatus pid SCP.CONFIRMED)
+  eres <- traverse (update . ProductsId) (req ^. #message ^. #_selected_items)
   let ack =
         case sequence eres of
           Left err -> Ack "on_confirm" ("Err: " <> show err)
