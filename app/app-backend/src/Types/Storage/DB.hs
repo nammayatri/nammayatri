@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as Products
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Tracker as Tracker
@@ -21,7 +22,8 @@ data AppDb f = AppDb
     _person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
     _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
-    _products :: f (B.TableEntity Products.ProductsT)
+    _products :: f (B.TableEntity Products.ProductsT),
+    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
   }
   deriving (Generic, B.Database be)
 
@@ -36,5 +38,6 @@ appDb =
         _person = Person.fieldEMod,
         _case = Case.fieldEMod,
         _caseProduct = CaseProduct.fieldEMod,
-        _products = Products.fieldEMod
+        _products = Products.fieldEMod,
+        _registrationToken = RegistrationToken.fieldEMod
       }

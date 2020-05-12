@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Registration where
 
 import Beckn.Types.App
@@ -12,14 +14,14 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Epass.External.MyValuesFirst.Flow as Sms
 import qualified Epass.External.MyValuesFirst.Types as Sms
-import qualified Epass.Storage.Queries.RegistrationToken as QR
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
-import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import System.Environment
 import Types.API.Registration
 import Types.App
@@ -27,26 +29,19 @@ import Types.App
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
   withFlowHandler $ do
+    L.logInfo "LOGIN" "here"
     case (req ^. Lens.medium, req ^. Lens._type) of
       (SR.SMS, SR.OTP) -> initiateFlow req
       _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
 
 initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
-  let entityType = req ^. Lens.entityType
   let mobileNumber = req ^. Lens.identifier
   entityId <-
-    case entityType of
-      SR.CUSTOMER -> do
-        QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
-          >>= maybe (createPerson req) (return . _getPersonId . SP._id)
-      SR.USER -> do
-        person <-
-          fromMaybeM400 "User not found"
-            =<< QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
-        return $ _getPersonId $ SP._id person
-  regToken <- makeSession req entityId entityType
-  QR.create regToken
+    Person.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
+      >>= maybe (createPerson req) (return . _getPersonId . SP._id)
+  regToken <- makeSession req entityId
+  RegistrationToken.create regToken
   sendOTP mobileNumber (SR._authValueHash regToken)
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -68,12 +63,13 @@ makePerson req = do
         _gender = SP.UNKNOWN,
         _identifierType = SP.MOBILENUMBER,
         _email = Nothing,
-        _mobileNumber = Nothing,
+        _mobileNumber = Just $ req ^. #_identifier,
         _mobileCountryCode = Nothing,
-        _identifier = Nothing,
+        _identifier = Just $ req ^. #_identifier,
         _rating = Nothing,
         _verified = False,
         _status = SP.INACTIVE,
+        _deviceToken = Nothing,
         _udf1 = Nothing,
         _udf2 = Nothing,
         _organizationId = Nothing,
@@ -84,8 +80,8 @@ makePerson req = do
       }
 
 makeSession ::
-  InitiateLoginReq -> Text -> SR.RTEntityType -> L.Flow SR.RegistrationToken
-makeSession req entityId entityType = do
+  InitiateLoginReq -> Text -> L.Flow SR.RegistrationToken
+makeSession req entityId = do
   otp <- generateOTPCode
   id <- L.generateGUID
   token <- L.generateGUID
@@ -108,7 +104,7 @@ makeSession req entityId entityType = do
         _authExpiry = authExpiry,
         _tokenExpiry = tokenExpiry,
         _EntityId = entityId,
-        _entityType = entityType,
+        _entityType = SR.USER,
         _createdAt = now,
         _updatedAt = now,
         _info = Nothing
@@ -141,7 +137,7 @@ sendOTP phoneNumber otpCode = do
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandler $ do
-    SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
+    SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
     when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
     checkForExpiry _authExpiry _updatedAt
     let isValid =
@@ -151,15 +147,12 @@ login tokenId req =
               ^. Lens.hash
     if isValid
       then do
-        case _entityType of
-          SR.CUSTOMER -> do
-            person <- checkPersonExists _EntityId
-            QP.updatePerson (SP._id person) True (req ^. Lens.identifier) SP.MOBILENUMBER (Just $ req ^. Lens.identifier)
-            return $ LoginRes _token (Just person) Nothing
-          SR.USER -> do
-            person <- checkPersonExists _EntityId
-            QP.update (SP._id person) SP.ACTIVE Nothing Nothing Nothing
-            return $ LoginRes _token Nothing (Just person)
+        person <- checkPersonExists _EntityId
+        let personId = person ^. #_id
+        Person.update personId SP.ACTIVE Nothing Nothing Nothing
+        Person.findById personId
+          >>= fromMaybeM500 "Could not find user"
+          >>= return . LoginRes _token
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =
@@ -167,30 +160,28 @@ login tokenId req =
         $ L.throwException
         $ err400 {errBody = "AUTH_EXPIRED"}
 
-checkRegistrationTokenExists :: Text -> L.Flow SR.RegistrationToken
-checkRegistrationTokenExists tokenId =
-  QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
+getRegistrationTokenE :: Text -> L.Flow SR.RegistrationToken
+getRegistrationTokenE tokenId =
+  RegistrationToken.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
 
 createPerson :: InitiateLoginReq -> L.Flow Text
 createPerson req = do
   person <- makePerson req
-  QP.create person
+  Person.create person
   return $ _getPersonId $ SP._id person
 
 checkPersonExists :: Text -> L.Flow SP.Person
 checkPersonExists _EntityId =
-  QP.findPersonById (PersonId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
+  Person.findById (PersonId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
   withFlowHandler $ do
-    SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-    case _entityType of
-      SR.CUSTOMER -> void $ checkPersonExists _EntityId
-      SR.USER -> void $ checkPersonExists _EntityId
+    SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
+    void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
         sendOTP (req ^. Lens.identifier) _authValueHash
-        QR.updateAttempts (_attempts - 1) _id
+        RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}

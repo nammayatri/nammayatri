@@ -5,13 +5,13 @@ import qualified Beckn.Types.Storage.Person as Storage
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
 import Epass.Types.Common
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
@@ -22,9 +22,9 @@ create Storage.Person {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Person {..})
     >>= either DB.throwDBError pure
 
-findPersonById ::
+findById ::
   PersonId -> L.Flow (Maybe Storage.Person)
-findPersonById id = do
+findById id = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
