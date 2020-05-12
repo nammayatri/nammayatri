@@ -1,21 +1,21 @@
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.Products where
 
-import Beckn.Types.App
-import Data.Swagger
-import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
-import EulerHS.Prelude --(FromJSON, ToJSON, toJSON, parseJSON, Eq, Maybe)
-import Servant.Swagger
-
+import           Beckn.Types.App
+import qualified Beckn.Types.Storage.Case  as Case
+import           Data.Swagger
+import qualified Data.Text                 as T
+import           Data.Time.LocalTime
+import qualified Database.Beam             as B
+import           Database.Beam.Backend.SQL
+import           Database.Beam.MySQL
+import           EulerHS.Prelude
+import           Servant.Swagger
 
 data ProdInfo = ProdInfo
-  { driverInfo :: Text
+  { driverInfo  :: Text
   , vehicleInfo :: Text
   } deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -40,39 +40,40 @@ instance B.HasSqlEqualityCheck MySQL ProductsStatus
 instance FromBackendRow MySQL ProductsStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductsIndustry = MOBILITY | GOVT | GROCERY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+type ProductsIndustry = Case.Industry
+-- data ProductsIndustry = MOBILITY | GOVT | GROCERY
+--   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsIndustry where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsIndustry where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL ProductsIndustry where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+-- instance FromBackendRow MySQL ProductsIndustry where
+--   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductsT f = Products
-  { _id :: B.C f ProductsId,
-    _name :: B.C f (Maybe Text),
-    _description :: B.C f (Maybe Text),
-    _industry :: B.C f ProductsIndustry,
-    _type :: B.C f ProductsType,
-    _status :: B.C f ProductsStatus,
-    _startTime :: B.C f LocalTime,
-    _endTime :: B.C f (Maybe LocalTime),
-    _validTill :: B.C f LocalTime,
-    _price :: B.C f Double,
-    _rating :: B.C f (Maybe Text),
-    _review :: B.C f (Maybe Text),
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _udf3 :: B.C f (Maybe Text),
-    _udf4 :: B.C f (Maybe Text),
-    _udf5 :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text),
-    _fromLocation :: B.C f (Maybe Text),
-    _toLocation :: B.C f (Maybe Text),
+  { _id             :: B.C f ProductsId,
+    _name           :: B.C f (Maybe Text),
+    _description    :: B.C f (Maybe Text),
+    _industry       :: B.C f ProductsIndustry,
+    _type           :: B.C f ProductsType,
+    _status         :: B.C f ProductsStatus,
+    _startTime      :: B.C f LocalTime,
+    _endTime        :: B.C f (Maybe LocalTime),
+    _validTill      :: B.C f LocalTime,
+    _price          :: B.C f Double,
+    _rating         :: B.C f (Maybe Text),
+    _review         :: B.C f (Maybe Text),
+    _udf1           :: B.C f (Maybe Text),
+    _udf2           :: B.C f (Maybe Text),
+    _udf3           :: B.C f (Maybe Text),
+    _udf4           :: B.C f (Maybe Text),
+    _udf5           :: B.C f (Maybe Text),
+    _info           :: B.C f (Maybe Text),
+    _fromLocation   :: B.C f (Maybe Text),
+    _toLocation     :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt      :: B.C f LocalTime,
+    _updatedAt      :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

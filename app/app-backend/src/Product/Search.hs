@@ -2,27 +2,28 @@
 
 module Product.Search where
 
-import Beckn.Types.API.Search
-import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..), generateGUID)
-import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Item as Core
-import qualified Beckn.Types.Core.Location as Core
-import qualified Beckn.Types.Storage.Case as Case
+import           Beckn.Types.API.Search
+import           Beckn.Types.App
+import           Beckn.Types.Common              (AckResponse (..),
+                                                  generateGUID)
+import           Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Item           as Core
+import qualified Beckn.Types.Core.Location       as Core
+import qualified Beckn.Types.Storage.Case        as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (getCurrTime, withFlowHandler)
-import qualified Data.Text as T
-import Data.Time.LocalTime (addLocalTime)
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
-import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.Products as Products
-import Types.App
+import qualified Beckn.Types.Storage.Location    as Location
+import qualified Beckn.Types.Storage.Products    as Products
+import           Beckn.Utils.Common              (getCurrTime, withFlowHandler)
+import qualified Data.Text                       as T
+import           Data.Time.LocalTime             (addLocalTime)
+import qualified EulerHS.Language                as L
+import           EulerHS.Prelude
+import qualified External.Gateway.Flow           as Gateway
+import qualified Storage.Queries.Case            as Case
+import qualified Storage.Queries.CaseProduct     as CaseProduct
+import qualified Storage.Queries.Location        as Location
+import qualified Storage.Queries.Products        as Products
+import           Types.App
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
@@ -38,7 +39,7 @@ search regToken req = withFlowHandler $ do
   let ack =
         case eres of
           Left err -> Ack "search" ("Err: " <> show err)
-          Right _ -> Ack "search" (show $ case_ ^. #_id)
+          Right _  -> Ack "search" (show $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
@@ -133,7 +134,7 @@ mkProduct item = do
       { _id = ProductsId $ item ^. #_id,
         _name = Just $ item ^. #_name,
         _description = Just $ item ^. #_description,
-        _industry = Products.MOBILITY, -- TODO: fix this
+        _industry = Case.MOBILITY, -- TODO: fix this
         _type = Products.RIDE,
         _status = Products.INSTOCK,
         _startTime = now, -- TODO: fix this

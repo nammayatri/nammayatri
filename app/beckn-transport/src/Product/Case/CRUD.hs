@@ -2,41 +2,41 @@
 
 module Product.Case.CRUD where
 
-import Beckn.Types.API.Search
-import Beckn.Types.App
-import Beckn.Types.Common as BC
-import Beckn.Types.Core.Catalog
-import Beckn.Types.Core.Category
-import Beckn.Types.Core.Context
-import Beckn.Types.Core.Item
-import Beckn.Types.Core.Price
-import Beckn.Types.Mobility.Service
-import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Location as Location
-import Beckn.Types.Storage.CaseProduct as CaseP
-import Beckn.Types.Storage.Products as Product
+import           Beckn.Types.API.Search
+import           Beckn.Types.App
+import           Beckn.Types.Common                    as BC
+import           Beckn.Types.Core.Catalog
+import           Beckn.Types.Core.Category
+import           Beckn.Types.Core.Context
+import           Beckn.Types.Core.Item
+import           Beckn.Types.Core.Price
+import           Beckn.Types.Mobility.Service
+import           Beckn.Types.Storage.Case              as Case
+import           Beckn.Types.Storage.CaseProduct       as CaseP
+import           Beckn.Types.Storage.Location          as Location
+import qualified Beckn.Types.Storage.Person            as SP
+import           Beckn.Types.Storage.Products          as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RegistrationToken as QR
-import Beckn.Utils.Common
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import External.Gateway.Flow as Gateway
-import Servant
-import Storage.Queries.Case as Case
+import           Beckn.Utils.Common
+import qualified Data.Accessor                         as Lens
+import           Data.Aeson
+import qualified Data.Text                             as T
+import           Data.Time.LocalTime
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import           External.Gateway.Flow                 as Gateway
+import           Servant
+import           Storage.Queries.Case                  as Case
+import qualified Storage.Queries.Person                as QP
+import qualified Storage.Queries.RegistrationToken     as QR
 
-import Storage.Queries.CaseProduct as CPQ
-import Storage.Queries.Products as PQ
-import Storage.Queries.Location as LQ
-import System.Environment
-import Types.API.Case
-import Types.API.Registration
-import qualified Utils.Defaults as Defaults
+import           Storage.Queries.CaseProduct           as CPQ
+import           Storage.Queries.Location              as LQ
+import           Storage.Queries.Products              as PQ
+import           System.Environment
+import           Types.API.Case
+import           Types.API.Registration
+import qualified Utils.Defaults                        as Defaults
 
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
@@ -47,7 +47,7 @@ list regToken CaseReq {..} = withFlowHandler $ do
   where
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
-        Just k -> buildResponse k
+        Just k  -> buildResponse k
         Nothing -> Nothing
         where
           buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
@@ -89,7 +89,7 @@ createProduct cs price ctime orgId = do
         { _id = ProductsId prodId,
           _name = Case._name cs,
           _description = Case._description cs,
-          _industry = mapCaseIndustry $ Case._industry cs,
+          _industry = Case._industry cs,
           _type = RIDE,
           _status = Product.INPROGRESS,
           _startTime = Case._startTime cs,
@@ -110,12 +110,6 @@ createProduct cs price ctime orgId = do
           _fromLocation = Nothing,
           _toLocation = Nothing
         }
-
-mapCaseIndustry :: Case.Industry -> ProductsIndustry
-mapCaseIndustry industry = case industry of
-    Case.MOBILITY -> Product.MOBILITY
-    Case.GOVT -> Product.GOVT
-    Case.GROCERY -> Product.GROCERY
 
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
