@@ -6,17 +6,15 @@ import           Data.Time
 import           Beckn.Types.Storage.CaseProduct
 import qualified Beckn.Types.Storage.Products   as Product
 import qualified Beckn.Types.Storage.Case       as Case
+import qualified Beckn.Types.Storage.Location as Loc
 import           EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
   { _type   :: Product.ProductsStatus,
-    _organisationId  :: Text,
     _limit :: Integer,
     _offset :: Integer,
     _fromTime :: LocalTime,
     _toTime  :: LocalTime
-
-
   }
   deriving (Show, Generic, ToSchema)
 
@@ -30,7 +28,9 @@ instance ToJSON CaseProdReq where
 data CaseProductRes = CaseProductRes
   { _case   :: Case.Case,
     _product  :: Product.Products,
-    _caseProduct :: CaseProduct
+    _caseProduct :: CaseProduct,
+    _fromLocation :: Maybe Loc.Location,
+    _toLocation :: Maybe Loc.Location
   }
   deriving (Show, Generic, ToSchema)
 

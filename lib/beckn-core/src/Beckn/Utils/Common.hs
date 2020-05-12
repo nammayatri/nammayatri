@@ -14,6 +14,9 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import Data.Aeson
+import Data.ByteString.Base64 as DBB
+import qualified Data.Text.Encoding as DT
+import qualified Data.Text as DT
 
 getCurrTime :: L.Flow LocalTime
 getCurrTime = L.runIO $ do
@@ -59,3 +62,8 @@ withFlowHandler :: L.Flow a -> FlowHandler a
 withFlowHandler flow = do
   (Env flowRt) <- ask
   lift $ ExceptT $ try $ I.runFlow flowRt $ flow
+
+base64Decode :: Maybe Text -> Maybe Text
+base64Decode auth = DT.reverse <$> DT.drop 1
+                      <$> DT.reverse <$> DT.decodeUtf8
+                      <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)

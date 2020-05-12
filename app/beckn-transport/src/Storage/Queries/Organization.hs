@@ -15,9 +15,7 @@ import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Data.ByteString.Base64 as DBB
-import qualified Data.Text.Encoding as DT
-import qualified Data.Text as DT
+
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.transporterDb
 
@@ -29,9 +27,7 @@ create Storage.Organization {..} =
 verifyAuth :: Maybe Text -> L.Flow Storage.Organization
 verifyAuth auth = do
   L.logInfo "verifying auth" $ show auth
-  let apiKey = DT.reverse <$> DT.drop 1
-               <$> DT.reverse <$> DT.decodeUtf8
-               <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+  let apiKey = base64Decode auth
   -- did atob of auth by removing basic in front and after atob, `:` in the end
   L.logInfo "verifying apikey" $ show apiKey
   DB.findOne dbTable (predicate apiKey)
