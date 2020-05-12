@@ -22,13 +22,13 @@ create Storage.Case {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
     >>= either DB.throwDBError pure
 
-findAllByType :: Integer -> Integer -> Storage.CaseType -> Storage.CaseStatus -> LocaTime -> L.Flow [Storage.Case]
+findAllByType :: Integer -> Integer -> Storage.CaseType -> Storage.CaseStatus -> LocalTime -> L.Flow [Storage.Case]
 findAllByType limit offset caseType caseStatus now =
   DB.findAllWithLimitOffsetWhere dbTable (predicate caseType caseStatus now) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate caseType caseStatus Storage.Case {..} =
+    predicate caseType caseStatus now Storage.Case {..} =
       ( _type ==. (B.val_ caseType)
          &&. _status ==. (B.val_ caseStatus)
           &&. _validTill >. (B.val_ now))

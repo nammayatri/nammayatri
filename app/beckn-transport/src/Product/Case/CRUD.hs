@@ -43,9 +43,8 @@ list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   now <- getCurrTime
   caseList <- Case.findAllByType _limit _offset _type _status now
---  let activeCaseList = filter (\x -> (Case._validTill x) > now) caseList
-  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> activeCaseList) (Case._toLocationId <$> activeCaseList)
-  return $ catMaybes $ joinByIds locList <$> activeCaseList
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
+  return $ catMaybes $ joinByIds locList <$> caseList
   where
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
