@@ -108,3 +108,13 @@ update id status nameM emailM roleM = do
             <> maybe [] (\role -> [_role <-. B.val_ role]) roleM
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
+
+updatePersonOrgId :: Text -> PersonId -> L.Flow ()
+updatePersonOrgId orgId personId = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause orgId now) (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause a n Storage.Person {..} =
+      mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
+    predicate i Storage.Person {..} = _id ==. B.val_ i
