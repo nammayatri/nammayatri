@@ -16,8 +16,8 @@ import Types.API.Transporter
 import Types.App
 
 createTransporter :: Maybe Text -> TransporterReq -> FlowHandler TransporterRes
-createTransporter regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+createTransporter auth req = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth auth
   person <- QP.findPersonById (PersonId _EntityId)
   validation person
   organization <- transformFlow req
