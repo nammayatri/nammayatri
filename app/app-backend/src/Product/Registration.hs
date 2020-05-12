@@ -29,7 +29,6 @@ import Types.App
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
   withFlowHandler $ do
-    L.logInfo "LOGIN" "here"
     case (req ^. Lens.medium, req ^. Lens._type) of
       (SR.SMS, SR.OTP) -> initiateFlow req
       _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
