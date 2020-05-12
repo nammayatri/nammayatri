@@ -1,18 +1,18 @@
 module Storage.Queries.Case where
 
-import Beckn.Types.App
-import Beckn.Types.Common
+import           Beckn.Types.App
+import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
-import Beckn.Utils.Common
-import Data.Time
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
-import qualified Storage.Queries as DB
-import Types.App
-import qualified Types.Storage.DB as DB
+import           Beckn.Utils.Common
+import           Data.Time
+import           Database.Beam            ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam            as B
+import qualified EulerHS.Language         as L
+import           EulerHS.Prelude          hiding (id)
+import qualified EulerHS.Types            as T
+import qualified Storage.Queries          as DB
+import           Types.App
+import qualified Types.Storage.DB         as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT)
 dbTable = DB._case DB.appDb
@@ -38,3 +38,21 @@ findById caseId =
   DB.findOneWithErr dbTable (predicate caseId)
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+
+
+updateStatus :: CaseId -> Storage.CaseStatus  -> L.Flow ()
+updateStatus id status = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    setClause status currTime Storage.Case {..} =
+      mconcat
+         [ _status <-. B.val_ status,
+            _updatedAt <-. B.val_ currTime
+         ]
+
+    predicate id Storage.Case {..} = _id ==. B.val_ id

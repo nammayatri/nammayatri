@@ -141,9 +141,9 @@ type PassApplicationAPIs =
              :> Get '[JSON] ListPassApplicationRes
            :<|> Capture "passApplicationId" PassApplicationId
              :> Get '[JSON] GetPassApplication
-           :<|> Capture "passApplicationId" PassApplicationId
+           :<|> Capture "caseId" CaseId
              :> ReqBody '[JSON] UpdatePassApplicationReq
-             :> Post '[JSON] PassApplicationRes
+             :> Post '[JSON] PassApplicationRes'
        )
 
 passApplicationFlow registrationToken =
