@@ -38,7 +38,7 @@ search regToken req = withFlowHandler $ do
   let ack =
         case eres of
           Left err -> Ack "search" ("Err: " <> show err)
-          Right _ -> Ack "search" "Ok"
+          Right _ -> Ack "search" (show $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
