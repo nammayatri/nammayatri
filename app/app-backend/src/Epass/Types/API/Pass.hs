@@ -20,10 +20,10 @@ data PassRes = PassRes
   deriving (Generic, ToSchema)
 
 data UpdatePassReq = UpdatePassReq
-  { _action :: Maybe Status,
+  { _action :: Maybe CaseProductStatus,
     _CustomerId :: Maybe CustomerId,
-    _fromLocation :: Maybe Location,
-    _toLocation :: Maybe Location
+    _fromLocation :: Maybe Text,
+    _toLocation :: Maybe Text
   }
   deriving (Generic, ToSchema)
 

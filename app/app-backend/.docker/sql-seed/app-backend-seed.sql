@@ -86,6 +86,106 @@ CREATE TABLE `registration_token` (
   INDEX (`entity_type`)
 );
 
+DROP TABLE IF EXISTS `case`;
+CREATE TABLE `case` (
+  `id` char(36) NOT NULL,
+  `name` varchar(255) NULL,
+  `description` varchar(1024) NULL,
+  `short_id` varchar(36) NOT NULL,
+  `industry` varchar(1024) NOT NULL,
+  `type` varchar(255) NOT NULL,
+  `exchange_type` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NULL,
+  `valid_till` datetime NOT NULL,
+  `provider` varchar(255) NULL,
+  `provider_type` varchar(255) NULL,
+  `requestor` varchar(255)  NULL,
+  `requestor_type` varchar(255) NULL,
+  `parent_case_id` varchar(255) NULL,
+  `from_location_id` varchar(36) NULL,
+  `to_location_id` varchar(36) NULL,
+  `udf1` varchar(255) NULL,
+  `udf2` varchar(255) NULL,
+  `udf3` varchar(255) NULL,
+  `udf4` varchar(255) NULL,
+  `udf5` varchar(255) NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`short_id`),
+  INDEX (`provider`),
+  INDEX (`requestor`)
+);
+
+DROP TABLE IF EXISTS `case_product`;
+CREATE TABLE `case_product` (
+  `id` char(36) NOT NULL,
+  `case_id` varchar(255) NOT NULL,
+  `product_id` varchar(255) NOT NULL,
+  `quantity` integer NOT NULL,
+  `price` DECIMAL(8,2) NOT NULL,
+  `status` varchar(255) NOT NULL,
+  `info` TEXT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`case_id`),
+  INDEX (`product_id`)
+);
+
+DROP TABLE IF EXISTS `product`;
+CREATE TABLE `product` (
+  `id` char(36) NOT NULL,
+  `name` varchar(255) NULL,
+  `description` varchar(1024) NULL,
+  `industry` varchar(1024) NOT NULL,
+  `type` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NULL,
+  `valid_till` datetime NOT NULL,
+  `price` DECIMAL(10,2) NOT NULL,
+  `rating` varchar(255) NULL,
+  `review` varchar(255)  NULL,
+  `udf1` varchar(255) NULL,
+  `udf2` varchar(255) NULL,
+  `udf3` varchar(255) NULL,
+  `udf4` varchar(255) NULL,
+  `udf5` varchar(255) NULL,
+  `info` TEXT NULL,
+  `from_location_id` varchar(255) NULL,
+  `to_location_id` varchar(255) NULL,
+  `organization_id` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX (`organization_id`)
+);
+
+DROP TABLE IF EXISTS `location`;
+CREATE TABLE `location` (
+  `id` char(36) NOT NULL
+  , `location_type` varchar(255) NULL
+  , `lat` double NULL
+  , `long` double NULL
+  , `ward` varchar(255) NULL
+  , `district` varchar(255) NULL
+  , `city` varchar(255) NULL
+  , `state` varchar(255) NULL
+  , `country` varchar(255) NULL
+  , `pincode` varchar(255) NULL
+  , `address` varchar(255) NULL
+  , `bound` varchar(255) NULL
+  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , PRIMARY KEY (`id`)
+  , INDEX (`city`)
+  , INDEX (`state`)
+);
+
 INSERT INTO `person` (`id`, `first_name`, `middle_name`, `last_name`, `full_name`, `role`, `gender`, `identifier_type`, `email`, `mobile_number`, `mobile_country_code`, `identifier`, `rating`, `verified`, `udf1`, `udf2`, `status`, `organization_id`, `location_id`, `device_token`, `description`, `created_at`, `updated_at`)
   VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'USER', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, FALSE, NULL, NULL, 'INACTIVE', NULL, NULL, NULL, NULL, '2020-05-12 10:23:00.578424', '2020-05-12 10:23:00.578424');
 

@@ -24,9 +24,11 @@ import qualified Storage.Queries.CaseProduct     as CaseProduct
 import qualified Storage.Queries.Location        as Location
 import qualified Storage.Queries.Products        as Products
 import           Types.App
+import           Utils.Common                    (verifyToken)
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
+  verifyToken regToken
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
@@ -38,12 +40,13 @@ search regToken req = withFlowHandler $ do
   eres <- Gateway.search gatewayUrl req
   let ack =
         case eres of
-          Left err -> Ack "search" ("Err: " <> show err)
-          Right _  -> Ack "search" (show $ case_ ^. #_id)
+          Left err -> Ack "Error" (show err)
+          Right _  -> Ack "Successful" (show $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
 search_cb regToken req = withFlowHandler $ do
+  -- TODO: Verify api key here
   let service = req ^. #message
       mcatalog = service ^. #_catalog
       caseId = CaseId $ service ^. #_id
