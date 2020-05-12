@@ -1,10 +1,11 @@
 module Epass.Product.Organization where
 
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Aeson
 import qualified Epass.Data.Accessor as Lens
 import qualified Epass.Storage.Queries.Blacklist as Blacklist
 import qualified Epass.Storage.Queries.Comment as Comment
-import qualified Epass.Storage.Queries.Customer as QC
 import qualified Epass.Storage.Queries.Document as Document
 import qualified Epass.Storage.Queries.EntityDocument as EntityDocument
 import qualified Epass.Storage.Queries.EntityTag as EntityTag
@@ -17,13 +18,11 @@ import qualified Epass.Types.Common as Location
   ( Location (..),
     LocationType (..),
   )
-import qualified Epass.Types.Storage.Customer as SC
 import qualified Epass.Types.Storage.Document as Document
 import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import qualified Epass.Types.Storage.Location as SL
 import Epass.Types.Storage.Organization
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Epass.Types.Storage.Tag as Tag
 import Epass.Utils.Common
 import Epass.Utils.Extra
@@ -32,13 +31,14 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Storage.Queries.Person as QP
 
 createOrganization ::
   Maybe Text -> API.CreateOrganizationReq -> FlowHandler API.OrganizationRes
 createOrganization regToken req =
   withFlowHandler $ do
     reg <- verifyToken regToken
-    customer <- QC.findCustomerById (CustomerId $ SR._EntityId reg)
+    customer <- QP.findById (PersonId $ SR._EntityId reg)
     uuid <- L.generateGUID
     now <- getCurrentTimeUTC
     let org =
@@ -63,22 +63,20 @@ createOrganization regToken req =
             now
             now
     QO.create org
-    QC.updateCustomerOrgId (OrganizationId uuid) (CustomerId $ SR._EntityId reg)
+    QP.updatePersonOrgId uuid (PersonId $ SR._EntityId reg)
     return $ API.OrganizationRes org
 
 getOrganization :: Maybe Text -> Text -> FlowHandler API.GetOrganizationRes
 getOrganization regToken orgId =
   withFlowHandler $ do
     reg <- verifyToken regToken
-
     when (SR._entityType reg == SR.CUSTOMER) $ do
       customer <-
-        QC.findCustomerById (CustomerId $ SR._EntityId reg)
+        QP.findById (PersonId $ SR._EntityId reg)
           >>= fromMaybeM400 "INVALID_DATA"
-      unless (Just (OrganizationId orgId) == SC._OrganizationId customer)
+      unless (Just orgId == SP._organizationId customer)
         $ L.throwException
         $ err400 {errBody = "INVALID_DATA"}
-
     QO.findOrganizationById (OrganizationId orgId)
       >>= maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
@@ -134,7 +132,6 @@ getOrgInfo Organization {..} = do
             _address = Just _address,
             _bound = _bound
           }
-
   locationM <- Location.findByLocation locType _district (Just _city) (Just _state) (Just _country) (_ward) (Just _pincode)
   isBlacklistedLocation <- maybe (pure False) (\loc -> (isJust <$> Blacklist.findByLocationId (SL._id loc))) $ locationM
   pure
