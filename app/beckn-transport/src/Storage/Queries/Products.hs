@@ -62,3 +62,17 @@ updateStatus id status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+updateInfo :: ProductsId -> Maybe Text -> L.Flow ()
+updateInfo prodId info = do
+  DB.update
+    dbTable
+    (setClause info)
+    (predicate prodId)
+      >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Products {..} = _id ==. B.val_ id
+    setClause info Storage.Products {..} =
+      mconcat
+        [ _info <-. B.val_ info]
+
