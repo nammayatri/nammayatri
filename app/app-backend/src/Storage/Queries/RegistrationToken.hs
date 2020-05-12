@@ -23,33 +23,25 @@ create Storage.RegistrationToken {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
     >>= either DB.throwDBError pure
 
-findRegistrationToken :: Text -> L.Flow (Maybe Storage.RegistrationToken)
-findRegistrationToken id = do
+findById :: Text -> L.Flow (Maybe Storage.RegistrationToken)
+findById id = do
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)
 
-verifyAuth :: Maybe Text -> L.Flow Storage.RegistrationToken
-verifyAuth auth = do
-  L.logInfo "verifying auth" $ show auth
-  let token = base64Decode auth
-  -- did atob of auth by removing basic in front and after atob, `:` in the end
-  L.logInfo "verifying token" $ show token
-  findRegistrationTokenByToken token
-
-findRegistrationTokenByToken :: Maybe Text -> L.Flow Storage.RegistrationToken
-findRegistrationTokenByToken idM = do
-  id <- fromMaybeM400 "INVALID_TOKEN" idM
-  DB.findOne dbTable (predicate id) >>= either DB.throwDBError pure >>= fromMaybeM400 "INVALID_TOKEN"
+findByToken :: Text -> L.Flow (Maybe Storage.RegistrationToken)
+findByToken token =
+  DB.findOne dbTable (predicate token)
+    >>= either DB.throwDBError pure
   where
-    predicate id Storage.RegistrationToken {..} = (_token ==. B.val_ id)
+    predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
 
 updateAttempts :: Int -> Text -> L.Flow Storage.RegistrationToken
 updateAttempts attemps id = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
-  findRegistrationToken id >>= maybe (L.throwException err500) pure
+  findById id >>= maybe (L.throwException err500) pure
   where
     predicate i Storage.RegistrationToken {..} = (_id ==. B.val_ i)
     setClause a n Storage.RegistrationToken {..} =

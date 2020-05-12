@@ -23,9 +23,11 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Products as Products
 import Types.App
+import Utils.Common (verifyToken)
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
+  verifyToken regToken
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
@@ -43,6 +45,7 @@ search regToken req = withFlowHandler $ do
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
 search_cb regToken req = withFlowHandler $ do
+  -- TODO: Verify api key here
   let service = req ^. #message
       mcatalog = service ^. #_catalog
       caseId = CaseId $ service ^. #_id
