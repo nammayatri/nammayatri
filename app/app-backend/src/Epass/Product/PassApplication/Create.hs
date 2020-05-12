@@ -5,6 +5,7 @@ import qualified Beckn.Types.Storage.Case              as Case
 import qualified Beckn.Types.Storage.Location          as Loc
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Data.Aeson
+import qualified Data.Text                             as T
 import qualified Epass.Data.Accessor                   as Accessor
 import qualified Epass.Storage.Queries.Customer        as Customer
 import qualified Epass.Storage.Queries.CustomerDetail  as CustomerDetail
@@ -27,6 +28,8 @@ import           EulerHS.Prelude
 import           Servant
 import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.Location              as QL
+import qualified Test.RandomStrings                    as RS
+
 
 createPassApplication ::
   Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
@@ -156,15 +159,15 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   QL.create toLoc
   currTime <- getCurrTime
   count <- getCount _type _count
+  shortId <-  L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let toLocationId = _getLocationId $ Loc._id toLoc
       fromLocationId = _getLocationId $ Loc._id fromLoc
-      shortId = ""
   return $
     Case.Case
       { _id = id
       , _name = Nothing
       , _description = Nothing
-      , _shortId = shortId
+      , _shortId = T.pack shortId
       , _industry = Case.GOVT
       , _type = Case.PASSAPPLICATION
       , _exchangeType = Case.ORDER
