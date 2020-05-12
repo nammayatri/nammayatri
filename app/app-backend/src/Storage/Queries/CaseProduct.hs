@@ -14,6 +14,12 @@ import qualified Storage.Queries as DB
 import Types.App
 import qualified Types.Storage.DB as DB
 
+data ListById
+  = ByApplicationId CaseId
+  | ById ProductsId
+  | ByCustomerId PersonId
+  -- | ByOrganizationId OrganizationId
+
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseProductT)
 dbTable = DB._caseProduct DB.appDb
 
@@ -61,3 +67,28 @@ updateStatus id status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+listAllCaseProductWithOffset :: Integer -> Integer -> ListById -> [Storage.CaseProductStatus] -> L.Flow [Storage.CaseProduct]
+listAllCaseProductWithOffset limit offset id stats = do
+  DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
+    >>= either DB.throwDBError pure
+  where
+    predicate (ByApplicationId i) [] Storage.CaseProduct {..} = (_caseId ==. B.val_ i)
+    predicate (ByApplicationId i) s Storage.CaseProduct {..} = (_caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByCustomerId i) [] Storage.CaseProduct {..} = (_personId ==. B.val_ (Just i))
+    predicate (ByCustomerId i) s Storage.CaseProduct {..} = (_personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
+    predicate (ById i) [] Storage.CaseProduct {..} = (_productId ==. B.val_ i)
+    predicate (ById i) s Storage.CaseProduct {..} = (_productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    orderBy Storage.CaseProduct {..} = B.desc_ _updatedAt
+
+listAllCaseProduct :: ListById -> [Storage.CaseProductStatus] -> L.Flow [Storage.CaseProduct]
+listAllCaseProduct id status = do
+  DB.findAll dbTable (predicate id status)
+    >>= either DB.throwDBError pure
+  where
+    predicate (ByApplicationId i) [] Storage.CaseProduct {..} = (_caseId ==. B.val_ i)
+    predicate (ByApplicationId i) s Storage.CaseProduct {..} = (_caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByCustomerId i) [] Storage.CaseProduct {..} = (_personId ==. B.val_ (Just i))
+    predicate (ByCustomerId i) s Storage.CaseProduct {..} = (_personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
+    predicate (ById i) [] Storage.CaseProduct {..} = (_productId ==. B.val_ i)
+    predicate (ById i) s Storage.CaseProduct {..} = (_productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))

@@ -6,6 +6,7 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Data.Aeson
+import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
 import qualified Epass.Storage.Queries.Comment as Comment
 import qualified Epass.Storage.Queries.Customer as Customer
@@ -74,7 +75,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
             (isJust _action || isJust _fromLocation)
             (L.throwException $ err400 {errBody = "Access denied"})
           return $
-            pass {SP._toLocation = _toLocation }
+            pass {SP._toLocation = _toLocation}
         Person.USER -> do
           when
             (isNothing _CustomerId && isNothing _fromLocation)
@@ -82,8 +83,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
           when
             (isJust _action || isJust _toLocation)
             (L.throwException $ err400 {errBody = "Access denied"})
-          return $ pass { SP._fromLocation = _fromLocation }
-
+          return $ pass {SP._fromLocation = _fromLocation}
   caseProduct <- QCP.findByProductId (ProductsId passId)
   case' <- QC.findById (SCP._caseId caseProduct)
   QProd.updateMultiple passId pass'
@@ -101,25 +101,32 @@ listPass regToken passIdType passV limitM offsetM passType =
   withFlowHandler $ do
     reg <- verifyToken regToken
     listBy <- getListBy
-    passes <- maybe (return []) getPasses listBy
-    undefined
+    caseProducts <- maybe (return []) getCaseProducts listBy
+    ListPassRes <$> traverse buildListRes caseProducts
   where
-    --ListPassRes <$> traverse getPassInfo passes
-
     getListBy =
       case passIdType of
         ORGANIZATIONID ->
-          return $ Just $ QP.ByOrganizationId (OrganizationId passV)
+          undefined
+        --return $ Just $ QP.ByOrganizationId (OrganizationId passV)
         PASSAPPLICATIONID ->
-          return $ Just $ QP.ByApplicationId (PassApplicationId passV)
-        CUSTOMERID -> return $ Just $ QP.ByCustomerId (CustomerId passV)
+          return $ Just $ QCP.ByApplicationId (CaseId passV)
+        CUSTOMERID -> return $ Just $ QCP.ByCustomerId (PersonId passV)
         MOBILENUMBER -> do
-          detail <- QCD.findByIdentifier SCD.MOBILENUMBER passV
-          return $ (QP.ByCustomerId . SCD._CustomerId) <$> detail
-    getPasses listBy =
+          person <-
+            Person.findByIdentifier Person.MOBILENUMBER passV
+              >>= fromMaybeM400 "PERSON_NOT_FOUND"
+          return $ Just $ QCP.ByCustomerId (Person._id person)
+    getCaseProducts listBy =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
-        (Just l, Just o) -> QP.listAllPassesWithOffset l o listBy []
-        _ -> QP.listAllPasses listBy []
+        (Just l, Just o) -> QCP.listAllCaseProductWithOffset l o listBy []
+        _ -> QCP.listAllCaseProduct listBy []
+
+buildListRes :: SCP.CaseProduct -> L.Flow PassInfo
+buildListRes caseProduct = do
+  case' <- QC.findById (SCP._caseId caseProduct)
+  product <- QProd.findById (SCP._productId caseProduct)
+  getPassInfo case' product caseProduct
 
 getPassInfo :: SC.Case -> SP.Products -> SCP.CaseProduct -> L.Flow PassInfo
 getPassInfo case' prod caseProduct = do
@@ -135,14 +142,13 @@ getPassInfo case' prod caseProduct = do
         _Customer = join person,
         _Documents = docs,
         _id = _getProductsId $ SP._id prod,
-        _ShortId = "", -- TODO: short_id in product
+        _ShortId = SCP._shortId caseProduct,
         _TenantOrganizationId = Nothing,
         _status = SCP._status caseProduct,
         _fromDate = SP._startTime prod,
         _toDate = SP._validTill prod,
-        _passType = INDIVIDUAL, -- TODO:remove this hardcoded
+        _passType = read $ T.unpack $ fromJust $ SC._udf1 case', -- BEWARE: udf1 is being used in case to store the pass type
         _PassApplicationId = _getCaseId $ SC._id case',
         _CreatedBy = fromJust $ SC._requestor case',
         _Organization = org
       }
-

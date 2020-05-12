@@ -28,6 +28,7 @@ data CaseProductT f
       { _id :: B.C f CaseProductId,
         _caseId :: B.C f CaseId,
         _productId :: B.C f ProductsId,
+        _shortId :: B.C f Text, -- product short id
         _personId :: B.C f (Maybe PersonId),
         _quantity :: B.C f Int,
         _price :: B.C f Double,
@@ -71,6 +72,7 @@ fieldEMod =
       B.tableModification
         { _caseId = "case_id",
           _productId = "product_id",
+          _shortId = "short_id",
           _personId = "person_id",
           _createdAt = "created_at",
           _updatedAt = "updated_at"
