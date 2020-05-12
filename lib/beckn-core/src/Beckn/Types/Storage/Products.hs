@@ -29,7 +29,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
 instance FromBackendRow MySQL ProductsType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK
+data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK | INVALID
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where

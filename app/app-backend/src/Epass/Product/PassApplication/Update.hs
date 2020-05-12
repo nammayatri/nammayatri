@@ -42,9 +42,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   -- verifyIfStatusUpdatable (PassApplication._status pA) _status
   case _status of
     REVOKED -> do
-  --     Pass.revokeByPassApplicationId passApplicationId
-  --     -- _approvedCount remains unchanged as part of history
-      -- TODO: mark passes(product) as revoked
+      QCP.updateAllProductsByCaseId caseId Products.INVALID
       QC.updateStatus caseId Case.CLOSED
     APPROVED -> do
       when
@@ -109,8 +107,6 @@ createPass c@(Case.Case {..}) = do
   QProd.create product
   QCP.create caseProduct
   return product
-
-
 
 
 allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()
