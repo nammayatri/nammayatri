@@ -19,3 +19,7 @@ isExpired nominal time = do
   now <- getCurrentTimeUTC
   let addedLocalTime = addLocalTime nominal time
   return $ now > addedLocalTime
+
+headMaybe :: [a] -> Maybe a
+headMaybe [] = Nothing
+headMaybe (x: _) = Just x
