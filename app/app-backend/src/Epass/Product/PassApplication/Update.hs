@@ -1,6 +1,9 @@
 module Epass.Product.PassApplication.Update where
 
 import qualified Beckn.Types.Storage.Case              as Case
+import qualified Beckn.Types.Storage.CaseProduct       as CaseProduct
+import qualified Beckn.Types.Storage.Products          as Products
+
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Data.Aeson
 import qualified Data.Text                             as DT
@@ -26,7 +29,6 @@ import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.CaseProduct           as QCP
 import qualified Storage.Queries.Products              as QProd
 import qualified Test.RandomStrings                    as RS
-    -- case' <- QC.findById (SCP._caseId caseProduct)
 
 updatePassApplication ::
   Maybe Text ->
@@ -45,15 +47,12 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       -- TODO: mark passes(product) as revoked
       QC.updateStatus caseId Case.CLOSED
     APPROVED -> do
-      -- TODO: create Passes
-  --     when
-  --       (isNothing _approvedCount)
-  --       (L.throwException $ err400 {errBody = "Approved count cannot be empty"})
-  --     let count = PassApplication._count pA
-  --         approvedCount = validApprovedCount count $ fromJust _approvedCount
-  --     -- Create passes
-  --     replicateM approvedCount (createPass pA)
-  --     DB.update passApplicationId _status (Just approvedCount) _remarks
+      when
+        (isNothing _approvedCount)
+        (L.throwException $ err400 {errBody = "Approved count cannot be empty"})
+      let approvedCount = fromJust _approvedCount
+      -- Create passes
+      replicateM approvedCount (createPass pA)
       QC.updateStatus caseId Case.CONFIRMED
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
@@ -74,22 +73,45 @@ verifyIfStatusUpdatable currStatus newStatus =
     (APPROVED, REVOKED) -> return ()
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
 
-createPass :: PassApplication -> L.Flow ()
-createPass PassApplication {..} = do
+createPass :: Case.Case -> L.Flow Products.Products
+createPass c@(Case.Case {..}) = do
   id <- generateGUID
-  shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
+  cpId <- generateGUID
   currTime <- getCurrTime
-  let pass =
-        Pass.Pass
-          { _id = id,
-            _ShortId = DT.pack shortId,
-            _status = Pass.ACTIVE,
-            _PassApplicationId = _id,
-            _createdAt = currTime,
-            _updatedAt = currTime,
-            ..
+  let orgId = "" --TODO: this should be optional
+      product =
+       Products.Products
+        { _id = ProductsId id
+        , _createdAt = currTime
+        , _updatedAt = currTime
+        , _type = Products.PASS
+        , _status = Products.CONFIRMED
+        , _fromLocation = Just _fromLocationId
+        , _toLocation = Just _toLocationId
+        , _organizationId = orgId
+        , _price = 0 -- TODO: this should be optional?
+        , _rating = Nothing
+        , _review = Nothing
+        , ..
+        }
+      caseProduct =
+         CaseProduct.CaseProduct
+          { _id = CaseProductId cpId
+            ,_caseId = _id
+            ,_productId = ProductsId id
+            ,_quantity = 0
+            ,_price = 0.0
+            ,_status = CaseProduct.CONFIRMED
+            ,_info = Nothing
+            ,_createdAt = currTime
+            ,_updatedAt = currTime
           }
-  Pass.create pass
+  QProd.create product
+  QCP.create caseProduct
+  return product
+
+
+
 
 allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()
 allowOnlyUser RegistrationToken.RegistrationToken {..} =
