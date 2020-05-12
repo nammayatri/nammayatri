@@ -49,101 +49,45 @@ getPassById regToken passId =
     product <- QProd.findById (ProductsId passId)
     PassRes <$> getPassInfo case' product caseProduct
 
-getPassInfo :: SC.Case -> SP.Products -> SCP.CaseProduct -> L.Flow PassInfo
-getPassInfo case' prod caseProduct = do
-  org <- Organization.findOrganizationById (OrganizationId $ SP._organizationId prod)
-  entityDocs <- EntityDocument.findAllByPassApplicationId (PassApplicationId $ _getCaseId $ SC._id case')
-  let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
-  pure $
-    PassInfo
-      { _fromLocation = fromJust $ SP._fromLocation prod,
-        _toLocation = fromJust $ SP._toLocation prod,
-        _Customer = Nothing, -- TODO: find person
-        _Documents = docs,
-        _id = _getProductsId $ SP._id prod,
-        _ShortId = "", -- TODO: short_id in product
-        _TenantOrganizationId = Nothing,
-        _status = SCP._status caseProduct,
-        _fromDate = SP._startTime prod,
-        _toDate = SP._validTill prod,
-        _passType = INDIVIDUAL, -- TODO:remove this hardcoded
-        _PassApplicationId = _getCaseId $ SC._id case',
-        _CreatedBy = fromJust $ SC._requestor case',
-        _Organization = org
-      }
-
 updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   RegistrationToken.RegistrationToken {..} <- verifyToken regToken
   pass <- QProd.findById (ProductsId passId)
-  pass' <-
-    case _entityType of
-      RegistrationToken.USER -> do
-        when
-          (isNothing _action)
-          (L.throwException $ err400 {errBody = "Status update cannot be empty"})
-        when
-          (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
-          (L.throwException $ err400 {errBody = "Access denied"})
-        return $ pass --{_status = fromJust _action}
-      RegistrationToken.CUSTOMER -> do
-        customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
-        case Person._role customer of
-          Person.ADMIN -> do
-            when
-              (isNothing _CustomerId && isNothing _toLocation)
-              (L.throwException $ err400 {errBody = "Can update customerId or toLocation"})
-            when
-              (isJust _action || isJust _fromLocation)
-              (L.throwException $ err400 {errBody = "Access denied"})
-            return $
-              case _toLocation of
-                Nothing -> pass
-                Just location ->
-                  pass
-          --pass
-          --{ _toLocationType = Just (Location._type location),
-          --_toLat = (Location._lat location),
-          --_toLong = (Location._long location),
-          --_toWard = (Location._ward location),
-          --_toDistrict = (Location._district location),
-          --_toCity = (Location._city location),
-          --_toState = (Location._state location),
-          --_toCountry = (Location._country location),
-          --_toPincode = (Location._pincode location),
-          --_toAddress = (Location._address location),
-          --_toBound = (Location._bound location)
-          --}
-          Person.USER -> do
-            when
-              (isNothing _CustomerId && isNothing _fromLocation)
-              (L.throwException $ err400 {errBody = "Can update customerId or fromLocation"})
-            when
-              (isJust _action || isJust _toLocation)
-              (L.throwException $ err400 {errBody = "Access denied"})
-            return $
-              case _fromLocation of
-                Nothing -> pass
-                Just location ->
-                  pass
-  --{ _fromLocationType = Just (Location._type location),
-  --_fromLat = (Location._lat location),
-  --_fromLong = (Location._long location),
-  --_fromWard = (Location._ward location),
-  --_fromDistrict = (Location._district location),
-  --_fromCity = (Location._city location),
-  --_fromState = (Location._state location),
-  --_fromCountry = (Location._country location),
-  --_fromPincode = (Location._pincode location),
-  --_fromAddress = (Location._address location),
-  --_fromBound = (Location._bound location)
-  --}
-  --QP.updateMultiple passId pass'
-  QProd.findById (ProductsId passId)
-    >>= undefined
+  pass' <- case _entityType of
+    RegistrationToken.USER -> do
+      when
+        (isNothing _action)
+        (L.throwException $ err400 {errBody = "Status update cannot be empty"})
+      when
+        (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
+        (L.throwException $ err400 {errBody = "Access denied"})
+      QCP.updateStatus (ProductsId passId) (fromJust _action)
+      return $ pass
+    RegistrationToken.CUSTOMER -> do
+      customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
+      case Person._role customer of
+        Person.ADMIN -> do
+          when
+            (isNothing _CustomerId && isNothing _toLocation)
+            (L.throwException $ err400 {errBody = "Can update customerId or toLocation"})
+          when
+            (isJust _action || isJust _fromLocation)
+            (L.throwException $ err400 {errBody = "Access denied"})
+          return $
+            pass {SP._toLocation = _toLocation }
+        Person.USER -> do
+          when
+            (isNothing _CustomerId && isNothing _fromLocation)
+            (L.throwException $ err400 {errBody = "Can update customerId or fromLocation"})
+          when
+            (isJust _action || isJust _toLocation)
+            (L.throwException $ err400 {errBody = "Access denied"})
+          return $ pass { SP._fromLocation = _fromLocation }
 
---(\pass -> PassRes <$> getPassInfo pass)
+  caseProduct <- QCP.findByProductId (ProductsId passId)
+  case' <- QC.findById (SCP._caseId caseProduct)
+  QProd.updateMultiple passId pass'
+  PassRes <$> getPassInfo case' pass caseProduct
 
 listPass ::
   Maybe Text ->
@@ -176,3 +120,29 @@ listPass regToken passIdType passV limitM offsetM passType =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
         (Just l, Just o) -> QP.listAllPassesWithOffset l o listBy []
         _ -> QP.listAllPasses listBy []
+
+getPassInfo :: SC.Case -> SP.Products -> SCP.CaseProduct -> L.Flow PassInfo
+getPassInfo case' prod caseProduct = do
+  person <- sequence $ Person.findById <$> (SCP._personId caseProduct)
+  org <- Organization.findOrganizationById (OrganizationId $ SP._organizationId prod)
+  entityDocs <- EntityDocument.findAllByPassApplicationId (PassApplicationId $ _getCaseId $ SC._id case')
+  let docIds = EntityDocument._DocumentId <$> entityDocs
+  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  pure $
+    PassInfo
+      { _fromLocation = fromJust $ SP._fromLocation prod,
+        _toLocation = fromJust $ SP._toLocation prod,
+        _Customer = join person,
+        _Documents = docs,
+        _id = _getProductsId $ SP._id prod,
+        _ShortId = "", -- TODO: short_id in product
+        _TenantOrganizationId = Nothing,
+        _status = SCP._status caseProduct,
+        _fromDate = SP._startTime prod,
+        _toDate = SP._validTill prod,
+        _passType = INDIVIDUAL, -- TODO:remove this hardcoded
+        _PassApplicationId = _getCaseId $ SC._id case',
+        _CreatedBy = fromJust $ SC._requestor case',
+        _Organization = org
+      }
+

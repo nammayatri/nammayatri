@@ -64,3 +64,19 @@ updateStatus id status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+updateMultiple :: Text -> Storage.Products -> L.Flow ()
+updateMultiple id pass@Storage.Products {..} = do
+  currTime <- getCurrTime
+  DB.update dbTable (setClause currTime pass) (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Products {..} = _id ==. B.val_ (ProductsId id)
+    setClause now pass Storage.Products {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ now,
+          _status <-. B.val_ (Storage._status pass),
+          --_personId <-. B.val_ (Storage._personId pass),
+          _fromLocation <-. B.val_ (Storage._fromLocation pass),
+          _toLocation <-. B.val_ (Storage._toLocation pass)
+        ]
