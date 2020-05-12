@@ -39,8 +39,8 @@ search regToken req = withFlowHandler $ do
   eres <- Gateway.search gatewayUrl req
   let ack =
         case eres of
-          Left err -> Ack "search" ("Err: " <> show err)
-          Right _ -> Ack "search" (show $ case_ ^. #_id)
+          Left err -> Ack "Error" (show err)
+          Right _ -> Ack "Successful" (show $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes

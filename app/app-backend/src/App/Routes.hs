@@ -30,6 +30,9 @@ type AppAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
+           :<|> SearchAPIs
+           :<|> ConfirmAPIs
+           :<|> CaseAPIs
        )
     :<|> Epass.EPassAPIs
 
@@ -40,6 +43,9 @@ appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
 appServer' key = do
   ( pure "App is UP"
       :<|> registrationFlow
+      :<|> searchFlow
+      :<|> confirmFlow
+      :<|> caseFlow
     )
     :<|> Epass.epassServer' key
 
