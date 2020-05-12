@@ -2,6 +2,7 @@ module Epass.Product.Pass where
 
 import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.CaseProduct as SCP
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Data.Aeson
@@ -36,6 +37,7 @@ import EulerHS.Prelude hiding (pass)
 import Servant
 import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.CaseProduct as QCP
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as QProd
 
 getPassById :: Maybe Text -> Text -> FlowHandler PassRes
@@ -57,15 +59,15 @@ getPassInfo case' prod caseProduct = do
     PassInfo
       { _fromLocation = fromJust $ SP._fromLocation prod,
         _toLocation = fromJust $ SP._toLocation prod,
-        _Customer = Nothing,
+        _Customer = Nothing, -- TODO: find person
         _Documents = docs,
         _id = _getProductsId $ SP._id prod,
-        _ShortId = "",
+        _ShortId = "", -- TODO: short_id in product
         _TenantOrganizationId = Nothing,
         _status = SCP._status caseProduct,
         _fromDate = SP._startTime prod,
         _toDate = SP._validTill prod,
-        _passType = INDIVIDUAL, -- remove this hardcoded
+        _passType = INDIVIDUAL, -- TODO:remove this hardcoded
         _PassApplicationId = _getCaseId $ SC._id case',
         _CreatedBy = fromJust $ SC._requestor case',
         _Organization = org
@@ -74,7 +76,7 @@ getPassInfo case' prod caseProduct = do
 updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   RegistrationToken.RegistrationToken {..} <- verifyToken regToken
-  pass <- fromMaybeM400 "Could not find Pass" =<< QP.findPassById passId
+  pass <- QProd.findById (ProductsId passId)
   pass' <-
     case _entityType of
       RegistrationToken.USER -> do
@@ -84,11 +86,11 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
         when
           (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
           (L.throwException $ err400 {errBody = "Access denied"})
-        return $ (pass {_status = fromJust _action} :: Pass)
+        return $ pass --{_status = fromJust _action}
       RegistrationToken.CUSTOMER -> do
-        customer <- fromMaybeM500 "Could not find Customer" =<< Customer.findCustomerById (CustomerId _EntityId)
-        case Customer._role customer of
-          Customer.BUSINESSADMIN -> do
+        customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
+        case Person._role customer of
+          Person.ADMIN -> do
             when
               (isNothing _CustomerId && isNothing _toLocation)
               (L.throwException $ err400 {errBody = "Can update customerId or toLocation"})
@@ -100,19 +102,20 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
                 Nothing -> pass
                 Just location ->
                   pass
-                    { _toLocationType = Just (Location._type location),
-                      _toLat = (Location._lat location),
-                      _toLong = (Location._long location),
-                      _toWard = (Location._ward location),
-                      _toDistrict = (Location._district location),
-                      _toCity = (Location._city location),
-                      _toState = (Location._state location),
-                      _toCountry = (Location._country location),
-                      _toPincode = (Location._pincode location),
-                      _toAddress = (Location._address location),
-                      _toBound = (Location._bound location)
-                    }
-          Customer.INDIVIDUAL -> do
+          --pass
+          --{ _toLocationType = Just (Location._type location),
+          --_toLat = (Location._lat location),
+          --_toLong = (Location._long location),
+          --_toWard = (Location._ward location),
+          --_toDistrict = (Location._district location),
+          --_toCity = (Location._city location),
+          --_toState = (Location._state location),
+          --_toCountry = (Location._country location),
+          --_toPincode = (Location._pincode location),
+          --_toAddress = (Location._address location),
+          --_toBound = (Location._bound location)
+          --}
+          Person.USER -> do
             when
               (isNothing _CustomerId && isNothing _fromLocation)
               (L.throwException $ err400 {errBody = "Can update customerId or fromLocation"})
@@ -124,23 +127,21 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
                 Nothing -> pass
                 Just location ->
                   pass
-                    { _fromLocationType = Just (Location._type location),
-                      _fromLat = (Location._lat location),
-                      _fromLong = (Location._long location),
-                      _fromWard = (Location._ward location),
-                      _fromDistrict = (Location._district location),
-                      _fromCity = (Location._city location),
-                      _fromState = (Location._state location),
-                      _fromCountry = (Location._country location),
-                      _fromPincode = (Location._pincode location),
-                      _fromAddress = (Location._address location),
-                      _fromBound = (Location._bound location)
-                    }
-  QP.updateMultiple passId pass'
-  QP.findPassById passId
-    >>= maybe
-      (L.throwException $ err500 {errBody = "Could not find Pass"})
-      undefined
+  --{ _fromLocationType = Just (Location._type location),
+  --_fromLat = (Location._lat location),
+  --_fromLong = (Location._long location),
+  --_fromWard = (Location._ward location),
+  --_fromDistrict = (Location._district location),
+  --_fromCity = (Location._city location),
+  --_fromState = (Location._state location),
+  --_fromCountry = (Location._country location),
+  --_fromPincode = (Location._pincode location),
+  --_fromAddress = (Location._address location),
+  --_fromBound = (Location._bound location)
+  --}
+  --QP.updateMultiple passId pass'
+  QProd.findById (ProductsId passId)
+    >>= undefined
 
 --(\pass -> PassRes <$> getPassInfo pass)
 

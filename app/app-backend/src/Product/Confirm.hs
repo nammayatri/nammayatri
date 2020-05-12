@@ -20,10 +20,11 @@ import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Products as QProducts
 import Types.App
 import Utils.Common (verifyToken)
+import qualified Types.API.Confirm as API
 import Utils.Routes
 
-confirm :: Maybe RegToken -> Text -> Text -> FlowHandler AckResponse
-confirm regToken caseId productId = withFlowHandler $ do
+confirm :: Maybe RegToken -> API.ConfirmReq -> FlowHandler AckResponse
+confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   verifyToken regToken
   lt <- getCurrentTimeUTC
   caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)

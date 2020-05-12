@@ -4,6 +4,7 @@
 module App.Routes where
 
 import qualified Beckn.Types.API.Confirm as Confirm
+import qualified Types.API.Confirm as ConfirmAPI
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
@@ -92,9 +93,8 @@ searchFlow =
 type ConfirmAPIs =
   ( "confirm"
       :> Header "token" RegToken
-      :> MandatoryQueryParam "caseId" Text
-      :> MandatoryQueryParam "productId" Text
-      :> Get '[JSON] AckResponse
+      :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
+      :> Post '[JSON] AckResponse
       :<|> "on_confirm"
       :> Header "token" RegToken
       :> ReqBody '[JSON] Confirm.OnConfirmReq
