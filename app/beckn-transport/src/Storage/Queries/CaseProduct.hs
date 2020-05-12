@@ -36,3 +36,22 @@ findAllByCaseId id =
   DB.findAllOrErr dbTable (pred id)
   where
     pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ id)
+
+updateStatus ::
+  CaseId -> ProductsId ->
+  Storage.CaseProductStatus ->
+  L.Flow (T.DBResult ())
+updateStatus caseId productId status = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate caseId productId)
+  where
+    predicate cId pId Storage.CaseProduct {..} =
+        (_caseId ==. B.val_ cId) &&. (_productId ==. B.val_ pId)
+    setClause status currTime Storage.CaseProduct {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]

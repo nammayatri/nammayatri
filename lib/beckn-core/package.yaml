@@ -82,6 +82,7 @@ dependencies:
 - time
 - template-haskell
 - generic-lens
+- base64-bytestring
 
 library:
   source-dirs:

@@ -17,6 +17,7 @@ import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
 import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Person as Person
+import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import Servant
@@ -24,7 +25,7 @@ import Servant.Multipart
 import Types.API.Case
 import Types.API.CaseProduct
 import Types.API.Person
-import Types.API.Person
+import Types.API.Products
 import Types.API.Registration
 import Types.API.Registration
 import Types.API.Transporter
@@ -119,6 +120,17 @@ type CaseProductAPIs =
 
 caseProductFlow =
   CaseProduct.list
+
+-------- Product Flow----------
+type ProductAPIs =
+  "update"
+    :> (  Header "authorization" Text
+           :> ReqBody '[JSON] ProdReq
+           :> Post '[JSON] ProdInfoRes
+       )
+
+productFlow =
+  Product.updateInfo
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy

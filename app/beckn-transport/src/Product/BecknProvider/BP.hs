@@ -10,6 +10,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Location as BL
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Storage.Case as SC
+import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
@@ -26,6 +27,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import Storage.Queries.Case as Case
+import Storage.Queries.CaseProduct as CaseProduct
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -42,7 +44,7 @@ search req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime currTime
+  validity <- getValidTime $ req ^. #message ^. #time
   uuid1 <- L.generateGUID
   let fromLocation = mkFromLocation req uuid1 currTime $ req ^. #message ^. #origin
   uuid2 <- L.generateGUID
@@ -116,7 +118,7 @@ mkCase req uuid now validity fromLocation toLocation = do
       _type = RIDEBOOK,
       _exchangeType = FULFILLMENT,
       _status = NEW,
-      _startTime = now,
+      _startTime = intent ^. #time,
       _endTime = Nothing,
       _validTill = validity,
       _provider = Nothing,
@@ -140,7 +142,10 @@ confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
   let prodId = (req ^. #message ^. #_selected_items) !! 0
-  Product.updateStatus (ProductsId prodId) Product.INPROGRESS
+  let caseId = req ^. #message ^. #_id
+  Case.updateStatus (CaseId caseId) SC.CONFIRMED
+  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
+  Product.updateStatus (ProductsId prodId) Product.CONFIRMED
   uuid <- L.generateGUID
   mkAckResponse uuid "confirm"
 

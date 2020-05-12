@@ -14,10 +14,6 @@ import qualified EulerHS.Language                      as L
 import qualified EulerHS.Types                         as T
 import           Servant
 import Beckn.Utils.Common
-import Data.ByteString.Base64 as DBB
-import qualified Data.Text.Encoding as DT
-import qualified Data.Text as DT
-
 
 dbTable ::
      B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT)
@@ -37,9 +33,7 @@ findRegistrationToken id = do
 verifyAuth :: Maybe Text -> L.Flow Storage.RegistrationToken
 verifyAuth auth = do
   L.logInfo "verifying auth" $ show auth
-  let token = DT.reverse <$> DT.drop 1
-             <$> DT.reverse <$> DT.decodeUtf8
-             <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+  let token = base64Decode auth
   -- did atob of auth by removing basic in front and after atob, `:` in the end
   L.logInfo "verifying token" $ show token
   findRegistrationTokenByToken token
