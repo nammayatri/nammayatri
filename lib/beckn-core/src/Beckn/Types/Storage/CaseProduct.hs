@@ -14,7 +14,7 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.Swagger
 
-data CaseProductStatus = VALID | INPROGRESS | INSTOCK | OUTOFSTOCK
+data CaseProductStatus = VALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
