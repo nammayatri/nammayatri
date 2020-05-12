@@ -10,13 +10,10 @@ import           EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
   { _type   :: Product.ProductsStatus,
-    _organisationId  :: Text,
     _limit :: Integer,
     _offset :: Integer,
     _fromTime :: LocalTime,
     _toTime  :: LocalTime
-
-
   }
   deriving (Show, Generic, ToSchema)
 

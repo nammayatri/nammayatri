@@ -26,10 +26,15 @@ import Types.API.CaseProduct
 list :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
 list regToken CaseProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  prodList <- PQ.findAllByTypeOrgId _organisationId _type
-  caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
-  caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
-  return $ catMaybes $ joinIds prodList caseList <$> caseProdList
+  person <- QP.findPersonById (PersonId _EntityId)
+  case SP._organizationId person of
+    Just orgId -> do
+      prodList <- PQ.findAllByTypeOrgId orgId _type
+      caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
+      caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
+      return $ catMaybes $ joinIds prodList caseList <$> caseProdList
+    Nothing ->
+      L.throwException $ err400 {errBody = "organisation id is missing"}
   where
     joinIds :: [Product.Products] -> [Case.Case] -> Storage.CaseProduct -> Maybe CaseProductRes
     joinIds prodList caseList caseProd =
