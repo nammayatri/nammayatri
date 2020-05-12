@@ -41,7 +41,7 @@ runAppBackend' port settings = do
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,
-            T._logFilePath = "/tmp/beckn-transport.log",
+            T._logFilePath = "/tmp/epass-backend.log",
             T._isAsync = True
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
