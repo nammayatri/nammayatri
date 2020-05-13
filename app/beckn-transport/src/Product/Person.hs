@@ -23,3 +23,16 @@ updatePerson personId token req = withFlowHandler $ do
 
   where
     verifyPerson personId entityId = whenM (return $ personId /= entityId) $ L.throwException $ err400 {errBody = "PERSON_ID_MISMATCH"}
+
+createPerson :: Maybe Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
+createPerson token req = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  verifyAdmin _EntityId
+  person <- transformFlow req
+  QP.create person
+  return $ UpdatePersonRes person
+
+  where
+    verifyAdmin entityId = do
+      user <- QP.findPersonById (PersonId entityId)
+      whenM (return $ SP._role user /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}

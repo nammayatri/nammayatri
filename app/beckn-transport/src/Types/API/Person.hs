@@ -53,20 +53,20 @@ instance Transform UpdatePersonReq SP.Person where
     location        <- updateOrCreateLocation req $ SP._locationId person
     return $ person {
       -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-      SP._firstName = ifJust (req ^^. _firstName) (person ^^. SP._firstName)
-      , SP._middleName = ifJust (req ^^. _middleName) (person ^^. SP._middleName)
-      , SP._lastName           = ifJust (req ^^.  _lastName) (person ^^. SP._lastName)
-      , SP._fullName           = ifJust (req ^^.  _fullName) (person ^^. SP._fullName)
-      , SP._role               = ifJustExtract (req ^^.  _role) (person ^^. SP._role)
-      , SP._gender             = ifJustExtract (req ^^.  _gender) (person ^^. SP._gender)
-      , SP._email              = ifJust (req ^^.  _email) (person ^^. SP._email)
-      , SP._identifier         = ifJust (req ^^.  _identifier) (person ^^. SP._identifier)
-      , SP._rating             = ifJust (req ^^.  _rating) (person ^^. SP._rating)
-      , SP._deviceToken        = ifJust (req ^^.  _deviceToken) (person ^^. SP._deviceToken)
-      , SP._udf1               = ifJust (req ^^.  _udf1) (person ^^. SP._udf1)
-      , SP._udf2               = ifJust (req ^^.  _udf2) (person ^^. SP._udf2)
-      , SP._organizationId     = ifJust (req ^^.  _organizationId) (person ^^. SP._organizationId)
-      , SP._description        = ifJust (req ^^.  _description) (person ^^. SP._description)
+      SP._firstName = ifJust (req ^. #_firstName) (person ^. #_firstName)
+      , SP._middleName = ifJust (req ^. #_middleName) (person ^. #_middleName)
+      , SP._lastName           = ifJust (req ^.  #_lastName) (person ^. #_lastName)
+      , SP._fullName           = ifJust (req ^.  #_fullName) (person ^. #_fullName)
+      , SP._role               = ifJustExtract (req ^.  #_role) (person ^. #_role)
+      , SP._gender             = ifJustExtract (req ^.  #_gender) (person ^. #_gender)
+      , SP._email              = ifJust (req ^.  #_email) (person ^. #_email)
+      , SP._identifier         = ifJust (req ^.  #_identifier) (person ^. #_identifier)
+      , SP._rating             = ifJust (req ^.  #_rating) (person ^. #_rating)
+      , SP._deviceToken        = ifJust (req ^.  #_deviceToken) (person ^. #_deviceToken)
+      , SP._udf1               = ifJust (req ^.  #_udf1) (person ^. #_udf1)
+      , SP._udf2               = ifJust (req ^.  #_udf2) (person ^. #_udf2)
+      , SP._organizationId     = ifJust (req ^.  #_organizationId) (person ^. #_organizationId)
+      , SP._description        = ifJust (req ^.  #_description) (person ^. #_description)
       , SP._locationId         = Just (_getLocationId $ SL._id location)
     }
 
@@ -125,3 +125,100 @@ ifJustExtract a b = fromMaybe b a
 data UpdatePersonRes = UpdatePersonRes
   {  user :: SP.Person }
   deriving (Generic, ToJSON, ToSchema)
+
+
+-- Create Person request and response
+data CreatePersonReq = CreatePersonReq
+  { _firstName          :: Maybe Text
+  , _middleName         :: Maybe Text
+  , _lastName           :: Maybe Text
+  , _fullName           :: Maybe Text
+  , _role               :: Maybe SP.Role
+  , _gender             :: Maybe SP.Gender
+  , _email              :: Maybe Text
+  , _identifier         :: Maybe Text
+  , _identifierType     :: Maybe SP.IdentifierType
+  , _rating             :: Maybe Text
+  , _deviceToken        :: Maybe Text
+  , _mobileNumber       :: Maybe Text
+  , _mobileCountryCode  :: Maybe Text
+  , _udf1               :: Maybe Text
+  , _udf2               :: Maybe Text
+  , _organizationId     :: Maybe Text
+  , _description        :: Maybe Text
+  , _locationType       :: Maybe SL.LocationType
+  , _lat                :: Maybe Double
+  , _long               :: Maybe Double
+  , _ward               :: Maybe Text
+  , _district           :: Maybe Text
+  , _city               :: Maybe Text
+  , _state              :: Maybe Text
+  , _country            :: Maybe Text
+  , _pincode            :: Maybe Text
+  , _address            :: Maybe Text
+  , _bound              :: Maybe Text
+
+  }
+  deriving (Generic, ToSchema)
+
+instance FromJSON CreatePersonReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance Transform2 CreatePersonReq SP.Person where
+  transformFlow req = do
+    id              <- BC.generateGUID
+    now             <- getCurrentTimeUTC
+    location        <- createLocationT req
+    return $ SP.Person {
+      -- only these below will be updated in the person table. if you want to add something extra please add in queries also
+      SP._id                   = id
+      , SP._firstName          = req ^. #_firstName
+      , SP._middleName         = req ^. #_middleName
+      , SP._lastName           = req ^. #_lastName
+      , SP._fullName           = req ^. #_fullName
+      , SP._role               = ifJustExtract (req ^. #_role) SP.USER
+      , SP._gender             = ifJustExtract (req ^. #_gender) SP.UNKNOWN
+      , SP._email              = req ^. #_email
+      , SP._identifier         = req ^. #_identifier
+      , SP._identifierType     = fromMaybe SP.MOBILENUMBER $ req ^. #_identifierType
+      , SP._mobileNumber       = req ^. #_mobileNumber
+      , SP._mobileCountryCode  = req ^. #_mobileCountryCode
+      , SP._verified           = False
+      , SP._rating             = req ^. #_rating
+      , SP._status             = SP.INACTIVE
+      , SP._deviceToken        = req ^. #_deviceToken
+      , SP._udf1               = req ^. #_udf1
+      , SP._udf2               = req ^. #_udf2
+      , SP._organizationId     = req ^. #_organizationId
+      , SP._description        = req ^. #_description
+      , SP._locationId         = Just (_getLocationId $ SL._id location)
+      , SP._createdAt          = now
+      , SP._updatedAt          = now
+    }
+
+createLocationT :: CreatePersonReq -> L.Flow SL.Location
+createLocationT req = do
+  location <- createLocationRec req
+  QL.create location
+  return location
+
+createLocationRec :: CreatePersonReq -> L.Flow SL.Location
+createLocationRec req = do
+  id <- BC.generateGUID
+  now <- getCurrentTimeUTC
+  return $ SL.Location {
+    SL._id = id
+    , SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType
+    , SL._lat = req ^. #_lat
+    , SL._long = req ^. #_long
+    , SL._ward = req ^. #_ward
+    , SL._district = req ^. #_district
+    , SL._city = req ^. #_city
+    , SL._state = req ^. #_state
+    , SL._country = req ^. #_country
+    , SL._pincode = req ^. #_pincode
+    , SL._address = req ^. #_address
+    , SL._bound = req ^. #_bound
+    , SL._createdAt = now
+    , SL._updatedAt = now
+  }
