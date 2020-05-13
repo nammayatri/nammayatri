@@ -22,6 +22,7 @@ data CreateVehicleReq = CreateVehicleReq
     , _size :: Maybe Text
     , _variant :: Maybe Variant
     , _color :: Maybe Text
+    , _organizationId :: Text
     , _energyType :: Maybe EnergyType
     , _registrationNo :: Text
     , _registrationCategory :: Maybe RegistrationCategory
@@ -43,6 +44,7 @@ instance Transform2 CreateVehicleReq SV.Vehicle where
       , SV._make = req ^. #_make
       , SV._model = req ^. #_model
       , SV._size = req ^. #_size
+      , SV._organizationId = req ^. #_organizationId
       , SV._variant = req ^. #_variant
       , SV._color = req ^. #_color
       , SV._energyType = req ^. #_energyType
@@ -54,4 +56,19 @@ instance Transform2 CreateVehicleReq SV.Vehicle where
 
 data CreateVehicleRes = CreateVehicleRes
   {  user :: SV.Vehicle}
+  deriving (Generic, ToJSON, ToSchema)
+
+data ListVehicleReq = ListVehicleReq
+  {
+    _organizationId :: Text
+    , _limit :: Integer
+    , _offset :: Integer
+  }
+  deriving (Generic, ToSchema)
+
+instance FromJSON ListVehicleReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+data ListVehicleRes = ListVehicleRes
+  {  vehicles :: [SV.Vehicle] }
   deriving (Generic, ToJSON, ToSchema)

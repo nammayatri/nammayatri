@@ -28,3 +28,18 @@ findVehicleById id = do
     >>= either DB.throwDBError pure
   where
     predicate Storage.Vehicle {..} = (_id ==. B.val_ id)
+
+findAllByOrgIds ::[Text] -> L.Flow [Storage.Vehicle]
+findAllByOrgIds orgIds = do
+    DB.findAllOrErr dbTable (predicate orgIds)
+  where
+    predicate orgIds Storage.Vehicle {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _organizationId `B.in_` ((\x -> B.val_ x) <$> orgIds) ||. complementVal orgIds
+        ]
+
+complementVal l
+  | (null l) = B.val_ True
+  | otherwise = B.val_ False

@@ -87,6 +87,7 @@ instance FromHttpApiData RegistrationCategory where
 data VehicleT f = Vehicle
   { _id :: B.C f VehicleId,
     _capacity :: B.C f (Maybe Int),
+    _organizationId :: B.C f Text,
     _category :: B.C f (Maybe Category),
     _make :: B.C f (Maybe Text),
     _model :: B.C f (Maybe Text),
@@ -136,5 +137,6 @@ fieldEMod =
           _updatedAt = "updated_at",
           _energyType = "energy_type",
           _registrationNo = "registration_no",
-          _registrationCategory = "registration_category"
+          _registrationCategory = "registration_category",
+          _organizationId = "organization_id"
         }
