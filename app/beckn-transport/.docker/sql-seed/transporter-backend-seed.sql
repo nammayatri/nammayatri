@@ -181,4 +181,20 @@ CREATE TABLE `location` (
   , INDEX (`state`)
 );
 
+DROP TABLE IF EXISTS `vehicle`;
+CREATE TABLE `vehicle` (
+  , `id` char(36) NOT NULL
+  , `capacity` integer NULL
+  , `category` varchar(255) NULL
+  , `make` varchar(255) NULL
+  , `model` varchar(255) NULL
+  , `size` varchar(255) NULL
+  , `variant` varchar(255) NULL
+  , `color` varchar(255) NULL
+  , `energyType` varchar(255) NULL
+  , `registrationNo` varchar(255) NOT NULL
+  , `registrationCategory` varchar(255) NULL
+  , `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+)
 -- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "TRANSPORTER", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);

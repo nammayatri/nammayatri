@@ -9,9 +9,9 @@ import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Types.App
+import Beckn.Types.App
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Vehicle as Storage
+import qualified Beckn.Types.Storage.Vehicle as Storage
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT)
 dbTable = DB._vehicle DB.transporterDb

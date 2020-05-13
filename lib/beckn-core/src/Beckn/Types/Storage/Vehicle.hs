@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Vehicle where
+module Beckn.Types.Storage.Vehicle where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -15,7 +15,7 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
-import Types.App
+import Beckn.Types.App
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -129,7 +129,7 @@ insertExpressions orgs = B.insertValues orgs
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)
 fieldEMod =
-  B.setEntityName "booking_reference"
+  B.setEntityName "vehicle"
     <> B.modifyTableFields
       B.tableModification
         { _createdAt = "created_at",
