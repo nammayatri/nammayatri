@@ -12,7 +12,7 @@ import Servant
 import Types.API.Products
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.Driver as D
-import qualified Types.Storage.Vehicle as V
+import qualified Beckn.Types.Storage.Vehicle as V
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Storage.Queries.Driver as VD
 import qualified Storage.Queries.Products as DB

@@ -170,7 +170,6 @@ mkCaseProduct caseId product = do
       { _id = id,
         _caseId = caseId,
         _productId = productId,
-        _shortId = "", -- TODO: fix this
         _personId = Nothing, -- TODO: fix this
         _quantity = 1,
         _price = price,

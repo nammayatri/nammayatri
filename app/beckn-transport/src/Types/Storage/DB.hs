@@ -16,7 +16,7 @@ import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TripReference as TripReference
-import qualified Types.Storage.Vehicle as Vehicle
+import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 
 data TransporterDb f =

@@ -1,20 +1,20 @@
 module Epass.Product.Customer where
 
+import Beckn.Types.Storage.Person
+import qualified Beckn.Types.Storage.Person as Person
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
-import qualified Epass.Storage.Queries.Customer as QC
-import qualified Epass.Storage.Queries.CustomerDetail as CustomerDetail
 import Epass.Types.API.Customer
 import Epass.Types.App
 import Epass.Types.Common
-import Epass.Types.Storage.CustomerDetail as CustomerDetail
 import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (mask)
 import Servant
+import qualified Storage.Queries.Person as QP
 
 getCustomerInfo ::
   Maybe Text -> Text -> FlowHandler GetCustomerRes
@@ -22,25 +22,23 @@ getCustomerInfo regToken customerId = withFlowHandler $ do
   reg <- verifyToken regToken
   customer <-
     fromMaybeM400 "INVALID_DATA"
-      =<< QC.findCustomerById (CustomerId customerId)
-  custDetails <- CustomerDetail.findAllByCustomerId (CustomerId customerId)
-  return $ GetCustomerRes customer (sanitizeDetails <$> custDetails)
+      =<< QP.findById (PersonId customerId)
+  return $ GetCustomerRes $ sanitizeDetails customer
 
-mask :: Text -> Text
-mask txt =
-  let prefixLen = length txt - 4
-      last4 = T.reverse $ T.take 4 $ T.reverse txt
-   in (T.replicate prefixLen "X") <> last4
+mask :: Maybe Text -> Maybe Text
+mask txtM =
+  let prefixLen txt = length txt - 4
+      last4 txt = T.reverse $ T.take 4 $ T.reverse txt
+   in (\t -> (T.replicate (prefixLen t) "X") <> last4 t) <$> txtM
 
-sanitizeDetails :: CustomerDetail -> AdditionalInfo
-sanitizeDetails CustomerDetail {..} =
-  AdditionalInfo
-    { _uniqueIdentifier = if shouldSanitize then mask _uniqueIdentifier else _uniqueIdentifier,
-      _value = Json _value,
-      ..
+sanitizeDetails :: Person -> Person
+sanitizeDetails person =
+  person
+    { _identifier = if shouldSanitize then mask uniqueIdentifier else uniqueIdentifier
     }
   where
+    uniqueIdentifier = _identifier person
     shouldSanitize =
-      case _identifierType of
-        CustomerDetail.MOBILENUMBER -> False
-        CustomerDetail.AADHAAR -> True
+      case _identifierType person of
+        Person.MOBILENUMBER -> False
+        Person.AADHAAR -> True

@@ -117,7 +117,6 @@ CREATE TABLE `case_product` (
   `id` char(36) NOT NULL,
   `case_id` varchar(255) NOT NULL,
   `product_id` varchar(255) NOT NULL,
-  `short_id` varchar(36) NOT NULL,
   `person_id` varchar(255) NULL,
   `quantity` integer NOT NULL,
   `price` DECIMAL(8,2) NOT NULL,
@@ -127,14 +126,14 @@ CREATE TABLE `case_product` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
   INDEX (`case_id`),
-  INDEX (`product_id`),
-  INDEX (`short_id`)
+  INDEX (`product_id`)
 );
 
 DROP TABLE IF EXISTS `product`;
 CREATE TABLE `product` (
   `id` char(36) NOT NULL,
   `name` varchar(255) NULL,
+  `short_id` varchar(36) NOT NULL,
   `description` varchar(1024) NULL,
   `industry` varchar(1024) NOT NULL,
   `type` varchar(255) NOT NULL,
@@ -157,7 +156,8 @@ CREATE TABLE `product` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`organization_id`)
+  INDEX (`organization_id`),
+  INDEX (`short_id`)
 );
 
 DROP TABLE IF EXISTS `location`;
@@ -181,4 +181,21 @@ CREATE TABLE `location` (
   , INDEX (`state`)
 );
 
--- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "TRANSPORTER", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+DROP TABLE IF EXISTS `vehicle`;
+CREATE TABLE `vehicle` (
+  `id` char(36) NOT NULL
+  , `capacity` integer NULL
+  , `category` varchar(255) NULL
+  , `make` varchar(255) NULL
+  , `model` varchar(255) NULL
+  , `size` varchar(255) NULL
+  , `variant` varchar(255) NULL
+  , `color` varchar(255) NULL
+  , `energy_type` varchar(255) NULL
+  , `registration_no` varchar(255) NOT NULL
+  , `registration_category` varchar(255) NULL
+  , `organization_id` char(36) Null
+  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+);
+-- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "GATEWAY", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);

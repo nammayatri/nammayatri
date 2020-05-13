@@ -63,6 +63,13 @@ newtype LocationId = LocationId
 
 deriveIdentifierInstances ''LocationId
 
+newtype VehicleId = VehicleId
+  { _getVechicleId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''VehicleId
+
 type Limit = Int
 
 type Offset = Int
