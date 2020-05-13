@@ -117,7 +117,6 @@ CREATE TABLE `case_product` (
   `id` char(36) NOT NULL,
   `case_id` varchar(255) NOT NULL,
   `product_id` varchar(255) NOT NULL,
-  `short_id` varchar(36) NOT NULL,
   `person_id` varchar(255) NULL,
   `quantity` integer NOT NULL,
   `price` DECIMAL(8,2) NOT NULL,
@@ -127,14 +126,14 @@ CREATE TABLE `case_product` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
   INDEX (`case_id`),
-  INDEX (`product_id`),
-  INDEX (`short_id`)
+  INDEX (`product_id`)
 );
 
 DROP TABLE IF EXISTS `product`;
 CREATE TABLE `product` (
   `id` char(36) NOT NULL,
   `name` varchar(255) NULL,
+  `short_id` varchar(36) NOT NULL,
   `description` varchar(1024) NULL,
   `industry` varchar(1024) NOT NULL,
   `type` varchar(255) NOT NULL,
@@ -157,7 +156,8 @@ CREATE TABLE `product` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`organization_id`)
+  INDEX (`organization_id`),
+  INDEX (`short_id`)
 );
 
 DROP TABLE IF EXISTS `location`;
