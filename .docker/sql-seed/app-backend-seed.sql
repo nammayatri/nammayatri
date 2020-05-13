@@ -125,6 +125,7 @@ CREATE TABLE `case_product` (
   `id` char(36) NOT NULL,
   `case_id` varchar(255) NOT NULL,
   `product_id` varchar(255) NOT NULL,
+  `person_id` varchar(255) NULL,
   `quantity` integer NOT NULL,
   `price` DECIMAL(8,2) NOT NULL,
   `status` varchar(255) NOT NULL,
@@ -139,6 +140,7 @@ CREATE TABLE `case_product` (
 DROP TABLE IF EXISTS `product`;
 CREATE TABLE `product` (
   `id` char(36) NOT NULL,
+  `short_id` char(36) NULL,
   `name` varchar(255) NULL,
   `description` varchar(1024) NULL,
   `industry` varchar(1024) NOT NULL,
