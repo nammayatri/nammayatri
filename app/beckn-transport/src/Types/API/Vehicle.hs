@@ -55,14 +55,14 @@ instance Transform2 CreateVehicleReq SV.Vehicle where
     }
 
 data CreateVehicleRes = CreateVehicleRes
-  {  user :: SV.Vehicle}
+  {  vehicle :: SV.Vehicle}
   deriving (Generic, ToJSON, ToSchema)
 
 data ListVehicleReq = ListVehicleReq
   {
     _organizationId :: Text
-    , _limit :: Integer
-    , _offset :: Integer
+    , _limit :: Maybe Integer
+    , _offset :: Maybe Integer
   }
   deriving (Generic, ToSchema)
 

@@ -195,7 +195,7 @@ CREATE TABLE `vehicle` (
   , `registration_no` varchar(255) NOT NULL
   , `registration_category` varchar(255) NULL
   , `organization_id` char(36) Null
-  , `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
-  , `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
 );
--- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "TRANSPORTER", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+-- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "GATEWAY", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);

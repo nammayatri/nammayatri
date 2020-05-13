@@ -29,6 +29,21 @@ findVehicleById id = do
   where
     predicate Storage.Vehicle {..} = (_id ==. B.val_ id)
 
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> L.Flow [Storage.Vehicle]
+findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
+    DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds) limit offset orderByDesc
+      >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
+    limit = (toInteger $ fromMaybe 100 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+    predicate orgIds Storage.Vehicle {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _organizationId `B.in_` ((\x -> B.val_ x) <$> orgIds) ||. complementVal orgIds
+        ]
+
 findAllByOrgIds ::[Text] -> L.Flow [Storage.Vehicle]
 findAllByOrgIds orgIds = do
     DB.findAllOrErr dbTable (predicate orgIds)

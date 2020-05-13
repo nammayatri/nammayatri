@@ -228,8 +228,8 @@ data ListPersonReq = ListPersonReq
   {
     _organizationId :: Text
     , _roles :: [SP.Role]
-    , _limit :: Integer
-    , _offset :: Integer
+    , _limit :: Maybe Integer
+    , _offset :: Maybe Integer
   }
   deriving (Generic, ToSchema)
 

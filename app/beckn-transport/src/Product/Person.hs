@@ -12,6 +12,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Person
 import Data.Generics.Labels
 import Servant
+import Data.Maybe
 import qualified EulerHS.Language as L
 
 updatePerson :: Text -> Maybe Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -30,6 +31,7 @@ createPerson :: Maybe Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson token req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   verifyAdmin (req ^. #_organizationId) _EntityId
+  whenM (return $ ((req ^. #_role) == Just SP.DRIVER) && (isNothing $ req ^. #_mobileNumber )) $ L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
   person <- transformFlow req
   QP.create person
   return $ UpdatePersonRes person
@@ -38,7 +40,7 @@ listPerson :: Maybe Text -> ListPersonReq -> FlowHandler ListPersonRes
 listPerson token req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   verifyAdmin (Just $ req ^. #_organizationId) _EntityId
-  ListPersonRes <$> QP.findAllByOrgIds (req ^. #_roles) [req ^. #_organizationId]
+  ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [req ^. #_organizationId]
 
 verifyAdmin orgIdM entityId = do
   user <- QP.findPersonById (PersonId entityId)

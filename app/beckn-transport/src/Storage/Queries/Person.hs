@@ -32,6 +32,22 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
+  DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Person {..} = B.desc_ _createdAt
+    limit = (toInteger $ fromMaybe 100 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+    predicate roles orgIds Storage.Person {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles
+        , _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+        ]
+
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
