@@ -16,7 +16,10 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import Data.Aeson (encode)
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Data.Time.LocalTime (addLocalTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -43,7 +46,7 @@ search regToken req = withFlowHandler $ do
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
-          Right _ -> Ack "Successful" (show $ case_ ^. #_id)
+          Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
@@ -121,7 +124,7 @@ mkLocation loc = do
         _state = Nothing,
         _country = (^. #name) <$> loc ^. #_country,
         _pincode = Nothing,
-        _address = show <$> loc ^. #_address,
+        _address = (T.decodeUtf8 . BSL.toStrict . encode) <$> loc ^. #_address,
         _bound = Nothing,
         _createdAt = now,
         _updatedAt = now

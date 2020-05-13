@@ -1,21 +1,21 @@
 module Epass.Types.API.User where
 
+import Beckn.Types.Storage.Person
 import Data.Default
 import Data.Swagger
 import Data.Time.LocalTime
 import Epass.Types.API.Common
 import Epass.Types.App
-import Epass.Types.Storage.User
 import EulerHS.Prelude
 
 data CreateReq = CreateReq
   { _name :: Text,
     _mobileNumber :: Text,
+    _mobileCountryCode :: Maybe Text,
     _info :: Maybe Text,
     _role :: Role,
-    _LocationId :: Text,
-    _OrganizationId :: OrganizationId,
-    _TenantOrganizationId :: Maybe TenantOrganizationId
+    _locationId :: Text,
+    _organizationId :: OrganizationId
   }
   deriving (Show, Generic, ToJSON, ToSchema)
 
@@ -26,6 +26,7 @@ type CreateRes = UserInfo
 
 data UpdateReq = UpdateReq
   { _name :: Maybe Text,
+    _email :: Maybe Text,
     _role :: Maybe Role,
     _status :: Status
   }
@@ -35,17 +36,17 @@ instance FromJSON UpdateReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 data UpdateRes = UpdateRes
-  { _user :: User
+  { _user :: Person
   }
-  deriving (Show, Generic, FromJSON, Default, ToSchema)
+  deriving (Show, Generic, FromJSON, ToSchema)
 
 instance ToJSON UpdateRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
 data ListRes = ListRes
-  { _users :: [User]
+  { _users :: [Person]
   }
-  deriving (Show, Generic, FromJSON, Default, ToSchema)
+  deriving (Show, Generic, FromJSON, ToSchema)
 
 instance ToJSON ListRes where
   toJSON = genericToJSON stripLensPrefixOptions

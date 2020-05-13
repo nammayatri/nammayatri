@@ -56,3 +56,32 @@ updateStatus id status = do
          ]
 
     predicate id Storage.Case {..} = _id ==. B.val_ id
+
+
+findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> L.Flow [Storage.Case]
+findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset =
+    DB.findAllWithLimitOffsetWhere
+      dbTable
+      (predicate  fromLocationIds toLocationIds types statuses udf1s)
+      limit
+      offset
+      orderByDesc
+      >>= either DB.throwDBError pure
+    where
+      limit = (toInteger $ fromMaybe 100 mlimit)
+      offset = (toInteger $ fromMaybe 0 moffset)
+      orderByDesc Storage.Case {..} = B.desc_ _createdAt
+      predicate fromLocationIds toLocationIds types statuses udf1s Storage.Case {..} =
+          foldl
+            (&&.)
+            (B.val_ True)
+            [ _fromLocationId `B.in_` ((B.val_) <$> fromLocationIds) ||. complementVal fromLocationIds,
+             _toLocationId `B.in_` ((B.val_) <$> toLocationIds) ||. complementVal toLocationIds,
+              _status `B.in_` ((B.val_ ) <$> statuses) ||. complementVal statuses,
+              _type `B.in_` ((B.val_ ) <$> types) ||. complementVal types,
+              _udf1 `B.in_` ((B.val_ . Just ) <$> udf1s) ||. complementVal udf1s
+            ]
+
+complementVal l
+  | (null l) = B.val_ True
+  | otherwise = B.val_ False

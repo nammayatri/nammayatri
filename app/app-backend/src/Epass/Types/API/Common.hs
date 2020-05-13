@@ -6,6 +6,7 @@
 
 module Epass.Types.API.Common where
 
+import Beckn.Types.Storage.Person
 import Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -20,13 +21,12 @@ import Epass.Types.Storage.Blacklist
 import Epass.Types.Storage.EntityTag
 import Epass.Types.Storage.Location
 import Epass.Types.Storage.Tag
-import Epass.Types.Storage.User
 import EulerHS.Prelude
 import Servant
 import Servant.Swagger
 
 data UserInfo = UserInfo
-  { _user :: User,
+  { _user :: Person,
     _locationInfo :: LocationInfo
   }
   deriving (Generic, Show)
