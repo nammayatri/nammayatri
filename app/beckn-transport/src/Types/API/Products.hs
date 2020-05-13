@@ -26,3 +26,5 @@ instance ToJSON ProdReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 type ProdInfoRes = Text
+
+type RideList = [Product.Products]

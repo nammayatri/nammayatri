@@ -41,7 +41,7 @@ updateInfo regToken ProdReq {..} = withFlowHandler $ do
           , assignedTo = _getDriverId $ D._id drivInfo
           }
 
-listRides :: Maybe Text -> FlowHandler [Storage.Products]
+listRides :: Maybe Text -> FlowHandler RideList
 listRides regToken = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
