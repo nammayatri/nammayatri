@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Epass.Product.User.CRUD where
+module Epass.Product.User.Get where
 
-import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Common (withFlowHandler)
 import Data.Aeson
 import qualified Data.List as List
 import Data.Time
@@ -18,57 +18,11 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Location as Location
 import qualified Epass.Types.Storage.Organization as Org
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import Epass.Utils.Routes
-import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Person as Person
-
-create :: Maybe Text -> CreateReq -> FlowHandler CreateRes
-create regToken CreateReq {..} = withFlowHandler $ do
-  verifyToken regToken
-  loc <- Location.findLocationWithErr _locationId
-  user <- userInfo id
-  Person.create user
-  eres <- Person.findById (user ^. #_id)
-  case eres of
-    Nothing -> L.throwException $ err500 {errBody = "Couldnt find user"}
-    Just user -> do
-      locInfo <- getLocationInfo _locationId
-      return $ mkUInfo user locInfo
-  where
-    userInfo id = do
-      id <- L.generateGUID -- TODO: use GUID typeclass instance
-      now <- getCurrTime
-      return $
-        Person.Person
-          { _id = PersonId id,
-            _firstName = Nothing,
-            _middleName = Nothing,
-            _lastName = Nothing,
-            _fullName = Just $ _name,
-            _role = _role,
-            _gender = Person.UNKNOWN,
-            _identifierType = Person.MOBILENUMBER,
-            _email = Nothing,
-            _mobileNumber = Just $ _mobileNumber,
-            _mobileCountryCode = _mobileCountryCode,
-            _identifier = Just $ _mobileNumber,
-            _rating = Nothing,
-            _verified = False,
-            _udf1 = Nothing,
-            _udf2 = Nothing,
-            _status = Person.INACTIVE,
-            _organizationId = Just $ _getOrganizationId _organizationId,
-            _locationId = Just $ _locationId,
-            _deviceToken = Nothing,
-            _description = Nothing,
-            _createdAt = now,
-            _updatedAt = now
-          }
+import Utils.Common
 
 list ::
   Maybe Text ->
@@ -222,25 +176,7 @@ get regToken userId = withFlowHandler $ do
   locInfo <- getLocationInfo (fromJust $ user ^. #_locationId) -- TODO: fix this
   return $ mkUInfo user locInfo
 
-update :: Maybe Text -> PersonId -> UpdateReq -> FlowHandler UpdateRes
-update regToken userId UpdateReq {..} = withFlowHandler $ do
-  verifyToken regToken
-  Person.update userId _status _name _email _role
-  Person.findById userId
-    >>= fromMaybeM500 "Couldnot find user"
-    >>= return . UpdateRes
-
-delete :: Maybe RegistrationTokenText -> PersonId -> FlowHandler Ack
-delete regToken userId = withFlowHandler $ do
-  verifyToken regToken
-  Person.deleteById userId
-  sendAck
-
 listRoles :: Maybe RegistrationTokenText -> FlowHandler [Person.Role]
 listRoles regToken = withFlowHandler $ do
   verifyToken regToken
   pure $ enumFrom minBound
-
--- Transformers
-mkUInfo :: Person.Person -> LocationInfo -> UserInfo
-mkUInfo user locInfo = UserInfo {_user = user, _locationInfo = locInfo}

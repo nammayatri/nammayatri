@@ -19,7 +19,9 @@ import qualified Epass.Product.PassApplication.Update as PassApplication
 import qualified Epass.Product.Quota as Quota
 import qualified Epass.Product.Registration as Registration
 import qualified Epass.Product.Tag as Tag
-import qualified Epass.Product.User.CRUD as User
+import qualified Epass.Product.User.Create as User
+import qualified Epass.Product.User.Get as User
+import qualified Epass.Product.User.Update as User
 import qualified Epass.Types.API.Blacklist as Blacklist
 import qualified Epass.Types.API.Comment as Comment
 import Epass.Types.API.Customer
