@@ -1,13 +1,13 @@
 module External.Gateway.Flow where
 
-import           Beckn.Types.API.Search
+import Beckn.Types.API.Search
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
-import           EulerHS.Prelude
+import EulerHS.Prelude
 import qualified External.Gateway.API as API
-import           External.Gateway.Types
-import           Servant.Client
-import           System.Environment
+import External.Gateway.Types
+import Servant.Client
+import System.Environment
 
 onSearch ::
   BaseUrl -> OnSearchReq -> L.Flow (Either Text ())
@@ -19,11 +19,11 @@ onSearch url req = do
     L.logError "error occurred while sending onSearch Callback: " (show err)
   return $ first show res
 
-defaultBaseUrl :: BaseUrl
-defaultBaseUrl =
+defaultBaseUrl :: String -> BaseUrl
+defaultBaseUrl baseUrl = do
   BaseUrl
     { baseUrlScheme = Https,
-      baseUrlHost = "https://api.juspay.in/gateway",
+      baseUrlHost = baseUrl,
       baseUrlPort = 443,
       baseUrlPath = ""
     }
