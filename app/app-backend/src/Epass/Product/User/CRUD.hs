@@ -80,11 +80,11 @@ list ::
   FlowHandler ListRes
 list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
   reg <- verifyToken regToken
-  -- when (SR._entityType reg == SR.CUSTOMER) $ do
-  --   L.throwException $ err400 {errBody = "UNAUTHORIZED_CUSTOMER"}
   user <-
     fromMaybeM500 "Could not find user"
       =<< Person.findById (PersonId $ SR._EntityId reg)
+  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER) $ do
+    L.throwException $ err400 {errBody = "UNAUTHORIZED_USER"}
   orgM <-
     join
       <$> mapM
