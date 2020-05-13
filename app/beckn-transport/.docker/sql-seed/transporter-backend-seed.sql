@@ -191,9 +191,9 @@ CREATE TABLE `vehicle` (
   , `size` varchar(255) NULL
   , `variant` varchar(255) NULL
   , `color` varchar(255) NULL
-  , `energyType` varchar(255) NULL
-  , `registrationNo` varchar(255) NOT NULL
-  , `registrationCategory` varchar(255) NULL
+  , `energy_type` varchar(255) NULL
+  , `registration_no` varchar(255) NOT NULL
+  , `registration_category` varchar(255) NULL
   , `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
   , `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
 )

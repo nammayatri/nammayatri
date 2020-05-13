@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels      #-}
 module Product.Person where
 
 import Beckn.TypeClass.Transform
@@ -9,6 +10,7 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Person
+import Data.Generics.Labels
 import Servant
 import qualified EulerHS.Language as L
 
@@ -27,12 +29,18 @@ updatePerson personId token req = withFlowHandler $ do
 createPerson :: Maybe Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson token req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
-  verifyAdmin _EntityId
+  verifyAdmin (req ^. #_organizationId) _EntityId
   person <- transformFlow req
   QP.create person
   return $ UpdatePersonRes person
 
-  where
-    verifyAdmin entityId = do
-      user <- QP.findPersonById (PersonId entityId)
-      whenM (return $ SP._role user /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
+listPerson :: Maybe Text -> ListPersonReq -> FlowHandler ListPersonRes
+listPerson token req = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  verifyAdmin (Just $ req ^. #_organizationId) _EntityId
+  ListPersonRes <$> QP.findAllByOrgIds (req ^. #_roles) [req ^. #_organizationId]
+
+verifyAdmin orgIdM entityId = do
+  user <- QP.findPersonById (PersonId entityId)
+  whenM (return $ SP._role user /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
+  whenM (return $ orgIdM /= user ^. #_organizationId)  $ L.throwException $ err400 {errBody = "USER_NOT_BELONG_TO_ORGANIZATION"}

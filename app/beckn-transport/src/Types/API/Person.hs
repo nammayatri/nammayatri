@@ -222,3 +222,20 @@ createLocationRec req = do
     , SL._createdAt = now
     , SL._updatedAt = now
   }
+
+
+data ListPersonReq = ListPersonReq
+  {
+    _organizationId :: Text
+    , _roles :: [SP.Role]
+    , _limit :: Integer
+    , _offset :: Integer
+  }
+  deriving (Generic, ToSchema)
+
+instance FromJSON ListPersonReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+data ListPersonRes = ListPersonRes
+  {  users :: [SP.Person] }
+  deriving (Generic, ToJSON, ToSchema)
