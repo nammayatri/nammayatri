@@ -23,7 +23,10 @@ data AckResponse = AckResponse
   { _context :: Context,
     _message :: Ack
   }
-  deriving (Show, Generic, ToJSON)
+  deriving (Show, Generic)
 
 instance FromJSON AckResponse where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON AckResponse where
+  toJSON = genericToJSON stripLensPrefixOptions

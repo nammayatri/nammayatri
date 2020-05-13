@@ -16,7 +16,7 @@ data SearchReq = SearchReq
   { context :: Context,
     message :: Intent
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 type SearchRes = AckResponse
 
@@ -24,6 +24,6 @@ data OnSearchReq = OnSearchReq
   { context :: Context,
     message :: Service
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 type OnSearchRes = AckResponse

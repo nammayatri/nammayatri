@@ -141,9 +141,10 @@ notifyGateway c = do
   L.logInfo "notifyGateway" $ show c
   cps <- CPQ.findAllByCaseId (c ^. #_id)
   L.logInfo "notifyGateway" $ show cps
-  prods <- PQ.findAllById []
+  prods <- PQ.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
   onSearchPayload <- mkOnSearchPayload c prods
   url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
+  L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch (defaultBaseUrl url) onSearchPayload
   return ()
 
@@ -155,7 +156,7 @@ mkOnSearchPayload c prods = do
           { domain = "MOBILITY",
             action = "SEARCH",
             version = Just $ "0.1",
-            transaction_id = _getCaseId $ c ^. #_id, -- TODO : What should be the txnId
+            transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             message_id = Nothing,
             timestamp = currTime,
             dummy = ""

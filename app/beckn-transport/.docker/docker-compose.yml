@@ -1,10 +1,10 @@
 version: "3"
 services:
-  db:
+  db01:
     image: "mysql:8.0.18"
     container_name: "atlas-transporter"
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/transporter-backend-seed.sql
     environment:

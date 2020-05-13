@@ -22,8 +22,8 @@ onSearch url req = do
 defaultBaseUrl :: String -> BaseUrl
 defaultBaseUrl baseUrl = do
   BaseUrl
-    { baseUrlScheme = Https,
+    { baseUrlScheme = Http,
       baseUrlHost = baseUrl,
-      baseUrlPort = 443,
-      baseUrlPath = ""
+      baseUrlPort = 8013,
+      baseUrlPath = "/v1"
     }
