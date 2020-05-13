@@ -39,6 +39,12 @@ findById caseId =
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
 
+findAllByPerson :: Text -> L.Flow [Storage.Case]
+findAllByPerson perId =
+  DB.findAll dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
 updateStatus :: CaseId -> Storage.CaseStatus  -> L.Flow ()
 updateStatus id status = do
