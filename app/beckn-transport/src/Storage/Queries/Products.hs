@@ -76,3 +76,11 @@ updateInfo prodId info = do
       mconcat
         [ _info <-. B.val_ info]
 
+
+findAllByOrgId :: Text -> L.Flow [Storage.Products]
+findAllByOrgId orgId =
+  DB.findAll dbTable (predicate orgId)
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Products {..} = B.desc_ _createdAt
+    predicate orgId Storage.Products {..} = ( _organizationId ==. (B.val_ orgId))

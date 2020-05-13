@@ -17,6 +17,7 @@ import           Servant.Swagger
 data ProdInfo = ProdInfo
   { driverInfo  :: Text
   , vehicleInfo :: Text
+  , assignedTo  :: Text
   } deriving (Show, Generic, ToJSON, FromJSON)
 
 

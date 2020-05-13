@@ -1,5 +1,6 @@
 module Types.API.CaseProduct where
 
+import           Beckn.Types.App
 import           Data.Default
 import           Data.Swagger
 import           Data.Time
@@ -42,3 +43,16 @@ instance ToJSON CaseProductRes where
 
 
 type CaseProductList = [CaseProductRes]
+
+
+
+data TripReq = TripReq
+  { _productId  :: ProductsId
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON TripReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON TripReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions

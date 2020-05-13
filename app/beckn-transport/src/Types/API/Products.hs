@@ -14,7 +14,8 @@ data ProdReq = ProdReq
   { _status   :: Product.ProductsStatus,
     _id     :: Text,
     _driverInfo  :: Driver,
-    _vehicleInfo :: Vehicle
+    _vehicleInfo :: Vehicle,
+    _assignedTo :: Text
   }
   deriving (Show, Generic, ToSchema)
 
