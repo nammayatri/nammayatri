@@ -20,6 +20,7 @@ import qualified Product.Person as Person
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
+import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.Multipart
 import Types.API.Case
@@ -29,17 +30,19 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Registration
 import Types.API.Transporter
+import Types.API.Vehicle
 
 type TransporterAPIs =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPIs
-           :<|> UpdatePersonAPIs
+           :<|> PersonAPIs
            :<|> OrganizationAPIs --Transporter
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> CaseAPIs
            :<|> CaseProductAPIs
+           :<|> VehicleAPIs
        )
 
 ---- Registration Flow ------
@@ -63,18 +66,45 @@ registrationFlow =
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
--- Following is Update person flow
-type UpdatePersonAPIs =
+-- Following is person flow
+type PersonAPIs =
   "person"
-    :> ( Capture "personId" Text
-           :> "update"
+      :> ( Header "authorization" Text
+           :> ReqBody '[JSON] CreatePersonReq
+           :> Post '[JSON] UpdatePersonRes
+          :<|> "list"
            :> Header "authorization" Text
+           :> ReqBody '[JSON] ListPersonReq
+           :> Post '[JSON] ListPersonRes
+          :<|> Capture "personId" Text
+           :> Header "authorization" Text
+           :> "update"
            :> ReqBody '[JSON] UpdatePersonReq
            :> Post '[JSON] UpdatePersonRes
        )
 
-updatePersonFlow :: FlowServer UpdatePersonAPIs
-updatePersonFlow = Person.updatePerson
+personFlow :: FlowServer PersonAPIs
+personFlow =
+  Person.createPerson
+  :<|> Person.listPerson
+  :<|> Person.updatePerson
+
+-- Following is vehicle flow
+type VehicleAPIs =
+  "vehicle"
+      :> ( Header "authorization" Text
+           :> ReqBody '[JSON] CreateVehicleReq
+           :> Post '[JSON] CreateVehicleRes
+          :<|> "list"
+           :> Header "authorization" Text
+           :> ReqBody '[JSON] ListVehicleReq
+           :> Post '[JSON] ListVehicleRes
+       )
+
+vehicleFlow :: FlowServer VehicleAPIs
+vehicleFlow =
+  Vehicle.createVehicle
+  :<|> Vehicle.listVehicles
 
 -- Following is organization creation
 type OrganizationAPIs =
@@ -139,12 +169,13 @@ transporterServer' :: V.Key (HashMap Text Text) -> FlowServer TransporterAPIs
 transporterServer' key =
   pure "App is UP"
     :<|> registrationFlow
-    :<|> updatePersonFlow
+    :<|> personFlow
     :<|> organizationFlow
     :<|> searchApiFlow
     :<|> confirmApiFlow
     :<|> caseFlow
     :<|> caseProductFlow
+    :<|> vehicleFlow
 
 type SearchAPIs =
   "search"
