@@ -1,26 +1,23 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Epass.Product.User.CRUD where
 
+import Beckn.Types.App (PersonId (..))
+import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Aeson
-import Data.Default
 import qualified Data.List as List
 import Data.Time
-import qualified Database.Beam.Schema.Tables as B
-import qualified Epass.Data.Accessor as Accessor
 import Epass.Product.Common
-import qualified Epass.Storage.Queries.Location as Loc
-import qualified Epass.Storage.Queries.Organization as QO
-import qualified Epass.Storage.Queries.User as DB
-import Epass.Types.API.Common as C
+import qualified Epass.Storage.Queries.Location as Location
+import qualified Epass.Storage.Queries.Organization as Org
+import Epass.Types.API.Common
 import Epass.Types.API.User
 import Epass.Types.App
 import Epass.Types.Common
-import Epass.Types.Storage.Location as SL
-import qualified Epass.Types.Storage.Organization as SO
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Epass.Types.Storage.User as Storage
-import qualified Epass.Types.Storage.User as SU
+import qualified Epass.Types.Storage.Location as Location
+import qualified Epass.Types.Storage.Organization as Org
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import Epass.Utils.Routes
@@ -28,33 +25,49 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Storage.Queries.Person as Person
 
 create :: Maybe Text -> CreateReq -> FlowHandler CreateRes
-create regToken CreateReq {..} =
-  withFlowHandler $ do
-    verifyToken regToken
-    id <- generateGUID
-    loc <- Loc.findLocationWithErr _LocationId
-    user <- userInfo id
-    DB.create user
-    eres <- DB.findById id
-    locInfo <- getLocationInfo _LocationId
-    return $ mkUInfo user locInfo
+create regToken CreateReq {..} = withFlowHandler $ do
+  verifyToken regToken
+  loc <- Location.findLocationWithErr _locationId
+  user <- userInfo id
+  Person.create user
+  eres <- Person.findById (user ^. #_id)
+  case eres of
+    Nothing -> L.throwException $ err500 {errBody = "Couldnt find user"}
+    Just user -> do
+      locInfo <- getLocationInfo _locationId
+      return $ mkUInfo user locInfo
   where
     userInfo id = do
+      id <- L.generateGUID -- TODO: use GUID typeclass instance
       now <- getCurrTime
-      return
-        Storage.User
-          { _id = id,
-            _verified = False,
-            _status = INACTIVE,
-            _info = Nothing,
-            _createdAt = now,
-            _updatedAt = now,
-            _username = Nothing,
+      return $
+        Person.Person
+          { _id = PersonId id,
+            _firstName = Nothing,
+            _middleName = Nothing,
+            _lastName = Nothing,
+            _fullName = Just $ _name,
+            _role = _role,
+            _gender = Person.UNKNOWN,
+            _identifierType = Person.MOBILENUMBER,
             _email = Nothing,
-            _TenantOrganizationId = Nothing, -- TODO : Fix this
-            ..
+            _mobileNumber = Just $ _mobileNumber,
+            _mobileCountryCode = _mobileCountryCode,
+            _identifier = Just $ _mobileNumber,
+            _rating = Nothing,
+            _verified = False,
+            _udf1 = Nothing,
+            _udf2 = Nothing,
+            _status = Person.INACTIVE,
+            _organizationId = Just $ _getOrganizationId _organizationId,
+            _locationId = Just $ _locationId,
+            _deviceToken = Nothing,
+            _description = Nothing,
+            _createdAt = now,
+            _updatedAt = now
           }
 
 list ::
@@ -63,82 +76,86 @@ list ::
   Maybe Int ->
   Maybe LocateBy ->
   [Text] ->
-  [Role] ->
+  [Person.Role] ->
   FlowHandler ListRes
-list regToken offsetM limitM locateM locate roleM =
-  withFlowHandler $ do
-    reg <- verifyToken regToken
-    when (SR._entityType reg == SR.CUSTOMER) $ do
-      L.throwException $ err400 {errBody = "UNAUTHORIZED_CUSTOMER"}
-    user <- DB.findById (UserId $ SR._EntityId reg)
-    orgM <- QO.findOrganizationById (SU._OrganizationId user)
-    when (isNothing orgM)
-      $ L.throwException
-      $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
-    let org = fromJust orgM
-    getUsers limitM offsetM locateM roleM locate user org
+list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
+  reg <- verifyToken regToken
+  -- when (SR._entityType reg == SR.CUSTOMER) $ do
+  --   L.throwException $ err400 {errBody = "UNAUTHORIZED_CUSTOMER"}
+  user <-
+    fromMaybeM500 "Could not find user"
+      =<< Person.findById (PersonId $ SR._EntityId reg)
+  orgM <-
+    join
+      <$> mapM
+        (Org.findOrganizationById . OrganizationId)
+        (user ^. #_organizationId)
+  when (isNothing orgM)
+    $ L.throwException
+    $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
+  getUsers limitM offsetM locateM roleM locate user (fromJust orgM)
 
 getUsers ::
   Maybe Int ->
   Maybe Int ->
   Maybe LocateBy ->
-  [Role] ->
+  [Person.Role] ->
   [Text] ->
-  SU.User ->
-  SO.Organization ->
+  Person.Person ->
+  Org.Organization ->
   L.Flow ListRes
 getUsers offsetM limitM locateM role locate user org = do
-  case SU._role user of
-    ADMIN ->
+  case user ^. #_role of
+    Person.ADMIN ->
       case locateM of
         Just LCITY -> cityLevelUsers limitM offsetM role locate
         Just LDISTRICT -> districtLevelUsers limitM offsetM role locate
         Just LWARD -> wardLevelUsers limitM offsetM role locate
         _ ->
-          DB.findAllWithLimitOffsetByRole limitM offsetM role
+          Person.findAllWithLimitOffsetByRole limitM offsetM role
             >>= return . ListRes
-    CITYLEVEL -> do
+    Person.CITYLEVEL -> do
       allLocations <-
-        Loc.findByStOrDistrict offsetM limitM LCITY (SO._city org)
+        Location.findByStOrDistrict offsetM limitM LCITY (org ^. #_city)
       case locateM of
         Just LCITY ->
-          if List.null locate || elem (SO._city org) locate
-            then cityLevelUsers limitM offsetM role [(SO._city org)]
+          if List.null locate || elem (org ^. #_city) locate
+            then cityLevelUsers limitM offsetM role [(org ^. #_city)]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LDISTRICT -> do
-          let dists = catMaybes $ map SL._district allLocations
+          let dists = catMaybes $ map Location._district allLocations
           let locateD =
                 if List.null locate
                   then dists
                   else filter (flip elem dists) locate
           districtLevelUsers limitM offsetM role locateD
         Just LWARD -> do
-          let wards = catMaybes $ map SL._ward allLocations
+          let wards = catMaybes $ map Location._ward allLocations
           let locateW =
                 if List.null locate
                   then wards
                   else filter (flip elem wards) locate
           wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
-    DISTRICTLEVEL -> do
-      let district = fromJust $ SO._district org
+    Person.DISTRICTLEVEL -> do
+      let district = fromJust $ org ^. #_district
       allLocations <-
-        Loc.findByStOrDistrict offsetM limitM LDISTRICT district
+        Location.findByStOrDistrict offsetM limitM LDISTRICT district
       case locateM of
         Just LDISTRICT ->
           if List.null locate || elem district locate
             then districtLevelUsers limitM offsetM role [district]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LWARD -> do
-          let wards = catMaybes $ map SL._ward allLocations
+          let wards = catMaybes $ map Location._ward allLocations
           let locateW =
                 if List.null locate
                   then wards
                   else filter (flip elem wards) locate
           wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
-    WARDLEVEL -> do
-      let ward = fromJust $ SO._ward org
+    Person.WARDLEVEL -> do
+      let ward = fromJust $ org ^. #_ward
       case locateM of
         Just LWARD ->
           if List.null locate || List.elem ward locate
@@ -147,9 +164,9 @@ getUsers offsetM limitM locateM role locate user org = do
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
 
-cityLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
+cityLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 cityLevelUsers limitM offsetM r cities =
-  QO.listOrganizations
+  Org.listOrganizations
     Nothing
     Nothing
     mempty
@@ -160,13 +177,13 @@ cityLevelUsers limitM offsetM r cities =
     empty
     empty
     Nothing
-    >>= DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id
+    >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
     >>= return . ListRes
 
 districtLevelUsers ::
-  Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
+  Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 districtLevelUsers limitM offsetM r districts =
-  QO.listOrganizations
+  Org.listOrganizations
     Nothing
     Nothing
     mempty
@@ -177,12 +194,12 @@ districtLevelUsers limitM offsetM r districts =
     empty
     empty
     Nothing
-    >>= DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id
+    >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
     >>= return . ListRes
 
-wardLevelUsers :: Maybe Int -> Maybe Int -> [Role] -> [Text] -> L.Flow ListRes
+wardLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 wardLevelUsers limitM offsetM r wards =
-  QO.listOrganizations
+  Org.listOrganizations
     Nothing
     Nothing
     mempty
@@ -193,38 +210,37 @@ wardLevelUsers limitM offsetM r wards =
     empty
     empty
     Nothing
-    >>= DB.findAllWithLimitOffsetBy limitM offsetM r . map SO._id
+    >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
     >>= return . ListRes
 
-get :: Maybe Text -> UserId -> FlowHandler GetRes
-get regToken userId =
-  withFlowHandler $ do
-    verifyToken regToken
-    user@User {..} <- DB.findById userId
-    locInfo <- getLocationInfo _LocationId
-    return $ mkUInfo user locInfo
+get :: Maybe Text -> PersonId -> FlowHandler GetRes
+get regToken userId = withFlowHandler $ do
+  verifyToken regToken
+  user <-
+    fromMaybeM400 "User not found"
+      =<< Person.findById userId
+  locInfo <- getLocationInfo (fromJust $ user ^. #_locationId) -- TODO: fix this
+  return $ mkUInfo user locInfo
 
-update :: Maybe Text -> UserId -> UpdateReq -> FlowHandler UpdateRes
-update regToken userId UpdateReq {..} =
-  withFlowHandler $
-    do
-      verifyToken regToken
-      DB.update userId _status _name _role
-      UpdateRes <$> DB.findById userId
+update :: Maybe Text -> PersonId -> UpdateReq -> FlowHandler UpdateRes
+update regToken userId UpdateReq {..} = withFlowHandler $ do
+  verifyToken regToken
+  Person.update userId _status _name _email _role
+  Person.findById userId
+    >>= fromMaybeM500 "Couldnot find user"
+    >>= return . UpdateRes
 
-delete :: Maybe RegistrationTokenText -> UserId -> FlowHandler Ack
-delete regToken userId =
-  withFlowHandler $ do
-    verifyToken regToken
-    DB.deleteById userId
-    sendAck
+delete :: Maybe RegistrationTokenText -> PersonId -> FlowHandler Ack
+delete regToken userId = withFlowHandler $ do
+  verifyToken regToken
+  Person.deleteById userId
+  sendAck
 
-listRoles :: Maybe RegistrationTokenText -> FlowHandler [Role]
-listRoles regToken =
-  withFlowHandler $ do
-    verifyToken regToken
-    pure $ enumFrom minBound
+listRoles :: Maybe RegistrationTokenText -> FlowHandler [Person.Role]
+listRoles regToken = withFlowHandler $ do
+  verifyToken regToken
+  pure $ enumFrom minBound
 
 -- Transformers
-mkUInfo :: User -> C.LocationInfo -> UserInfo
+mkUInfo :: Person.Person -> LocationInfo -> UserInfo
 mkUInfo user locInfo = UserInfo {_user = user, _locationInfo = locInfo}
