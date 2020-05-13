@@ -31,10 +31,19 @@ createPerson :: Maybe Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson token req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   verifyAdmin (req ^. #_organizationId) _EntityId
-  whenM (return $ ((req ^. #_role) == Just SP.DRIVER) && (isNothing $ req ^. #_mobileNumber )) $ L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
+  validateDriver req
   person <- transformFlow req
   QP.create person
   return $ UpdatePersonRes person
+    where
+      validateDriver req =
+        if (req ^. #_role == Just SP.DRIVER)
+          then do
+            whenM (return (isNothing $ req ^. #_mobileNumber )) $ L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
+            let mobileNumber = fromMaybe "SHOULD_NEVER_COME_HERE" (req ^. #_mobileNumber)
+            whenM (return $ mobileNumber == "SHOULD_NEVER_COME_HERE") $ L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
+            whenM (isJust <$> (QP.findByMobileNumber mobileNumber)) $ L.throwException $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
+          else return ()
 
 listPerson :: Maybe Text -> ListPersonReq -> FlowHandler ListPersonRes
 listPerson token req = withFlowHandler $ do
