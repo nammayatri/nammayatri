@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels      #-}
 module Product.Registration where
 
 import qualified Beckn.External.MyValuesFirst.Flow as Sms
@@ -15,6 +16,7 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Data.Generics.Labels
 import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -57,9 +59,9 @@ makePerson req = do
         _gender = SP.UNKNOWN,
         _identifierType = SP.MOBILENUMBER,
         _email = Nothing,
-        _mobileNumber = Nothing,
+        _mobileNumber = Just $ req ^. #_identifier,
         _mobileCountryCode = Nothing,
-        _identifier = Nothing,
+        _identifier = Just $ req ^. #_identifier,
         _rating = Nothing,
         _verified = False,
         _status = SP.INACTIVE,

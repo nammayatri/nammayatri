@@ -143,7 +143,8 @@ notifyGateway c = do
   L.logInfo "notifyGateway" $ show cps
   prods <- PQ.findAllById []
   onSearchPayload <- mkOnSearchPayload c prods
-  Gateway.onSearch defaultBaseUrl onSearchPayload
+  url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
+  Gateway.onSearch (defaultBaseUrl url) onSearchPayload
   return ()
 
 mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
