@@ -34,7 +34,7 @@ initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
   let mobileNumber = req ^. Lens.identifier
   entityId <- do
-    QP.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
+    QP.findByMobileNumber mobileNumber
       >>= maybe (createPerson req) (return . _getPersonId . SP._id)
   regToken <- makeSession req entityId SR.USER
   QR.create regToken

@@ -44,7 +44,7 @@ data TransporterReq = TransporterReq
 instance FromJSON TransporterReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform TransporterReq SO.Organization where
+instance Transform2 TransporterReq SO.Organization where
   transformFlow req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
