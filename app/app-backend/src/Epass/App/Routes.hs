@@ -1,5 +1,6 @@
 module Epass.App.Routes where
 
+import qualified Beckn.Types.Storage.Case             as Case
 import           Data.Aeson
 import qualified Data.Vault.Lazy                      as V
 import qualified Epass.Data.Accessor                  as Accessor
@@ -135,9 +136,9 @@ type PassApplicationAPIs =
              :> QueryParams "to_district" Text
              :> QueryParams "to_ward" Text
              :> QueryParams "to_state" Text
-             :> QueryParams "status" PA.Status
+             :> QueryParams "status" Case.CaseStatus
              :> QueryParams "organization" OrganizationId
-             :> QueryParams "type" PassType
+             :> QueryParams "type" Text
              :> Get '[JSON] ListPassApplicationRes
            :<|> Capture "passApplicationId" PassApplicationId
              :> Get '[JSON] GetPassApplication

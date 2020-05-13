@@ -53,7 +53,7 @@ data GetPassApplication = GetPassApplication
 
 ------ List Pass Application ------
 data ListPassApplicationRes = ListPassApplicationRes
-  { _passApplications :: [PassAppInfo]
+  { _passApplications :: [Case.Case] --TODO: embed all pass appinfo entities (docs, tags, comments)
   }
   deriving (Generic, ToSchema)
 
