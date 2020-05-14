@@ -89,15 +89,44 @@ sponsorFlow token req@API.CreatePassApplicationReq {..} = do
 
   let travellerName = fromJust _travellerName
       travellerID = fromJust _travellerID
-      travellerIDType = mapIdType $ fromJust _travellerIDType
-  CustomerDetail.findByIdentifier travellerIDType travellerID
+      travellerIDType = mapIdType' $ fromJust _travellerIDType
+  QP.findByIdentifier travellerIDType travellerID
     >>= \case
-      Just cd -> getCaseInfo token req (Just $ PersonId $ _getCustomerId (CD._CustomerId cd))
+      Just cust ->  getCaseInfo token req (Just $ SP._id cust)
       Nothing -> do
-        customer <- createCustomer travellerName
-        let customerId = Customer._id customer
-        -- CustomerDetail.createIfNotExists customerId travellerIDType travellerID
-        getCaseInfo token req Nothing -- (Just customerId)
+        currTime <- getCurrTime
+        pId <- L.generateGUID
+        QP.create
+         SP.Person
+          { _id = PersonId pId,
+            _firstName = _travellerName,
+            _middleName = Nothing,
+            _lastName = Nothing,
+            _fullName = Nothing,
+            _role = SP.USER,
+            _gender = SP.UNKNOWN,
+            _identifierType = travellerIDType,
+            _email = Nothing,
+            _mobileNumber = getMobileNumberM travellerIDType _travellerID,
+            _mobileCountryCode = Nothing,
+            _identifier = _travellerID,
+            _rating = Nothing,
+            _verified = False,
+            _status = SP.INACTIVE,
+            _udf1 = Nothing,
+            _udf2 = Nothing,
+            _deviceToken = Nothing,
+            _organizationId = Nothing,
+            _locationId = Nothing,
+            _description = Nothing,
+            _createdAt = currTime,
+            _updatedAt = currTime
+          }
+        getCaseInfo token req (Just $ PersonId pId)
+  where
+    getMobileNumberM SP.MOBILENUMBER tId = tId
+    getMobileNumberM _ _                 = Nothing
+
 
 getPassType :: PassApplicationType -> PassType
 getPassType SELF        = INDIVIDUAL
