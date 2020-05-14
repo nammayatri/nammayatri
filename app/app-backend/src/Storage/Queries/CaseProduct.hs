@@ -54,6 +54,13 @@ findByCaseAndProductId caseId pId =
     predicate Storage.CaseProduct {..} =
       _productId ==. B.val_ pId &&. _caseId ==. B.val_ caseId
 
+findAllByPerson :: PersonId -> L.Flow [Storage.CaseProduct]
+findAllByPerson perId =
+  DB.findAll dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.CaseProduct {..} = _personId ==. B.val_ (Just perId)
+
 updateStatus ::
   ProductsId ->
   Storage.CaseProductStatus ->

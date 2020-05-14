@@ -118,3 +118,35 @@ updatePersonOrgId orgId personId = do
     setClause a n Storage.Person {..} =
       mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i Storage.Person {..} = _id ==. B.val_ i
+
+findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetByRole mlimit moffset roles =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    limit = (toInteger $ fromMaybe 10 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+    predicate [] Storage.Person {..} = B.val_ True
+    predicate r Storage.Person {..} =
+      _role `B.in_` (B.val_ <$> r)
+    orderByDesc Storage.Person {..} = B.desc_ _createdAt
+
+findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [OrganizationId] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetBy mlimit moffset roles orgIds =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    limit = (toInteger $ fromMaybe 10 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+    predicate orgIds [] Storage.Person {..} =
+      _organizationId `B.in_` ((B.val_ . Just . _getOrganizationId) <$> orgIds)
+    predicate orgIds roles Storage.Person {..} =
+      _organizationId `B.in_` ((B.val_ . Just . _getOrganizationId) <$> orgIds) &&. _role `B.in_` (B.val_ <$> roles)
+    orderByDesc Storage.Person {..} = B.desc_ _createdAt
+
+deleteById :: PersonId -> L.Flow ()
+deleteById id =
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Person {..} = _id ==. B.val_ id

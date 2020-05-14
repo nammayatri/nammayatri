@@ -101,6 +101,7 @@ createPass c@(Case.Case {..}) = do
             ,_price = 0.0
             ,_status = CaseProduct.CONFIRMED
             ,_info = Nothing
+            , _personId = Nothing -- TODO: this column should be removed?
             ,_createdAt = currTime
             ,_updatedAt = currTime
           }

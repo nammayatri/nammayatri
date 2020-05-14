@@ -38,7 +38,7 @@ getBaseUrl = do
           { baseUrlScheme = Http,
             baseUrlHost = "localhost",
             baseUrlPort = 8014,
-            baseUrlPath = ""
+            baseUrlPath = "/v1"
           }
     Just url -> return url
 

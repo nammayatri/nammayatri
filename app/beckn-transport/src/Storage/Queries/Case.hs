@@ -1,17 +1,17 @@
 module Storage.Queries.Case where
 
-import qualified Storage.Queries as DB
-import Beckn.Types.Common
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
-import           Beckn.Utils.Common
-import           Data.Time
-import           Database.Beam ((&&.), (<-.), (==.), (||.))
+import Beckn.Utils.Common
+import Data.Time
+import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
-import           EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import           Types.App
+import qualified Storage.Queries as DB
+import Types.App
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT)
@@ -30,21 +30,28 @@ findAllByType limit offset caseType caseStatus now =
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate caseType caseStatus now Storage.Case {..} =
       ( _type ==. (B.val_ caseType)
-         &&. _status ==. (B.val_ caseStatus)
-          &&. _validTill B.>. (B.val_ now))
+          &&. _status ==. (B.val_ caseStatus)
+          &&. _validTill B.>. (B.val_ now)
+      )
 
-findAllByIds :: [CaseId] ->  L.Flow [Storage.Case]
+findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds ids =
   DB.findAllOrErr dbTable (pred ids)
   where
     pred ids Storage.Case {..} =
-     B.in_ _id (B.val_ <$> ids)
+      B.in_ _id (B.val_ <$> ids)
 
 findById :: CaseId -> L.Flow Storage.Case
 findById caseId =
   DB.findOneWithErr dbTable (predicate caseId)
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+
+findBySid :: Text -> L.Flow Storage.Case
+findBySid sid =
+  DB.findOneWithErr dbTable (predicate sid)
+  where
+    predicate sid Storage.Case {..} = _shortId ==. (B.val_ sid)
 
 updateStatus ::
   CaseId ->

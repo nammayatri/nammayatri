@@ -18,9 +18,9 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Products as QProducts
+import qualified Types.API.Confirm as API
 import Types.App
 import Utils.Common (verifyToken)
-import qualified Types.API.Confirm as API
 import Utils.Routes
 
 confirm :: Maybe RegToken -> API.ConfirmReq -> FlowHandler AckResponse
@@ -29,7 +29,7 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrentTimeUTC
   caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
-  context <- buildContext "confirm" transactionId
+  context <- buildContext "confirm" caseId
   let service = Service caseId Nothing [] [productId] Nothing [] Nothing Nothing [] Nothing
   baseUrl <- Gateway.getBaseUrl
   eres <- Gateway.confirm baseUrl (ConfirmReq context service)

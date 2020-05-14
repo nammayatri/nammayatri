@@ -87,24 +87,38 @@ mkFromLocation req uuid now loc = do
       _ -> undefined -- need to throw error
     _ -> mkLocationRecord uuid now SL.POINT Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
-mkLocationRecord :: Text -> LocalTime -> SL.LocationType -> Maybe Double -> Maybe Double -> Maybe Text -> Maybe Text
-  -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> SL.Location
-mkLocationRecord idr time typ lat lon ward dis city state country pincode address bound = SL.Location
-  { _id = LocationId {_getLocationId = idr},
-    _locationType = typ,
-    _lat = lat,
-    _long = lon,
-    _ward = ward,
-    _district = dis,
-    _city = city,
-    _state = state,
-    _country = country,
-    _pincode = pincode,
-    _address = address,
-    _bound = bound,
-    _createdAt = time,
-    _updatedAt = time
-  }
+mkLocationRecord ::
+  Text ->
+  LocalTime ->
+  SL.LocationType ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  SL.Location
+mkLocationRecord idr time typ lat lon ward dis city state country pincode address bound =
+  SL.Location
+    { _id = LocationId {_getLocationId = idr},
+      _locationType = typ,
+      _lat = lat,
+      _long = lon,
+      _ward = ward,
+      _district = dis,
+      _city = city,
+      _state = state,
+      _country = country,
+      _pincode = pincode,
+      _address = address,
+      _bound = bound,
+      _createdAt = time,
+      _updatedAt = time
+    }
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do
@@ -142,7 +156,9 @@ confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
   let prodId = (req ^. #message ^. #_selected_items) !! 0
-  let caseId = req ^. #message ^. #_id
+  let caseShortId = req ^. #context ^. #transaction_id -- change to message.transactionId
+  case_ <- Case.findBySid caseShortId
+  let caseId = _getCaseId $ case_ ^. #_id
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED

@@ -32,6 +32,22 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
+  DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Person {..} = B.desc_ _createdAt
+    limit = (toInteger $ fromMaybe 100 mlimit)
+    offset = (toInteger $ fromMaybe 0 moffset)
+    predicate roles orgIds Storage.Person {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles
+        , _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+        ]
+
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
@@ -60,15 +76,14 @@ findByIdentifier idType mb =
       _identifierType ==. B.val_ idType
         &&. _mobileNumber ==. B.val_ (Just mb)
 
-findByRoleAndIdentifier ::
-  Storage.Role -> Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
-findByRoleAndIdentifier role idType identifier =
+findByMobileNumber::
+  Text -> L.Flow (Maybe Storage.Person)
+findByMobileNumber identifier =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-      _role ==. B.val_ role
-        &&. _mobileNumber ==. B.val_ (Just identifier)
+        _mobileNumber ==. B.val_ (Just identifier)
 
 updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do

@@ -2,29 +2,34 @@
 
 module Product.Search where
 
-import           Beckn.Types.API.Search
-import           Beckn.Types.App
-import           Beckn.Types.Common              (AckResponse (..),
-                                                  generateGUID)
-import           Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Item           as Core
-import qualified Beckn.Types.Core.Location       as Core
-import qualified Beckn.Types.Storage.Case        as Case
+import Beckn.Types.API.Search
+import Beckn.Types.App
+import Beckn.Types.Common
+  ( AckResponse (..),
+    generateGUID,
+  )
+import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Item as Core
+import qualified Beckn.Types.Core.Location as Core
+import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
-import qualified Beckn.Types.Storage.Location    as Location
-import qualified Beckn.Types.Storage.Products    as Products
-import           Beckn.Utils.Common              (getCurrTime, withFlowHandler)
-import qualified Data.Text                       as T
-import           Data.Time.LocalTime             (addLocalTime)
-import qualified EulerHS.Language                as L
-import           EulerHS.Prelude
-import qualified External.Gateway.Flow           as Gateway
-import qualified Storage.Queries.Case            as Case
-import qualified Storage.Queries.CaseProduct     as CaseProduct
-import qualified Storage.Queries.Location        as Location
-import qualified Storage.Queries.Products        as Products
-import           Types.App
-import           Utils.Common                    (verifyToken)
+import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.Products as Products
+import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import Data.Aeson (encode)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import Data.Time.LocalTime (addLocalTime)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import qualified External.Gateway.Flow as Gateway
+import qualified Storage.Queries.Case as Case
+import qualified Storage.Queries.CaseProduct as CaseProduct
+import qualified Storage.Queries.Location as Location
+import qualified Storage.Queries.Products as Products
+import Types.App
+import Utils.Common (verifyToken)
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
@@ -37,11 +42,11 @@ search regToken req = withFlowHandler $ do
   Case.create case_
 
   gatewayUrl <- Gateway.getBaseUrl
-  eres <- Gateway.search gatewayUrl req
+  eres <- Gateway.search gatewayUrl $ req & (#context . #transaction_id) .~ (_getCaseId $ case_ ^. #_id)
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
-          Right _  -> Ack "Successful" (show $ case_ ^. #_id)
+          Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
@@ -49,8 +54,7 @@ search_cb regToken req = withFlowHandler $ do
   -- TODO: Verify api key here
   let service = req ^. #message
       mcatalog = service ^. #_catalog
-      caseId = CaseId $ service ^. #_id
-
+      caseId = CaseId $ req ^. #context ^. #transaction_id --CaseId $ service ^. #_id
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
@@ -120,7 +124,7 @@ mkLocation loc = do
         _state = Nothing,
         _country = (^. #name) <$> loc ^. #_country,
         _pincode = Nothing,
-        _address = show <$> loc ^. #_address,
+        _address = (T.decodeUtf8 . BSL.toStrict . encode) <$> loc ^. #_address,
         _bound = Nothing,
         _createdAt = now,
         _updatedAt = now
@@ -135,6 +139,7 @@ mkProduct item = do
   return $
     Products.Products
       { _id = ProductsId $ item ^. #_id,
+        _shortId = "",
         _name = Just $ item ^. #_name,
         _description = Just $ item ^. #_description,
         _industry = Case.MOBILITY, -- TODO: fix this

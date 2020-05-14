@@ -1,6 +1,7 @@
 module Types.API.Case where
 
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Location
 import Beckn.Types.Storage.Products
 import Data.Default
 import Data.Swagger
@@ -8,7 +9,9 @@ import EulerHS.Prelude
 
 data StatusRes = StatusRes
   { _case :: Case,
-    _product :: [Products]
+    _product :: [Products],
+    _fromLocation :: Location,
+    _toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 
