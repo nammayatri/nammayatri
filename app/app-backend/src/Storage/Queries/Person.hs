@@ -2,19 +2,19 @@
 
 module Storage.Queries.Person where
 
-import Beckn.Types.App
+import           Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
-import Data.Time
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import Epass.Types.Common
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
-import qualified Storage.Queries as DB
-import qualified Types.Storage.DB as DB
+import           Data.Time
+import           Database.Beam              ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam              as B
+import           Epass.Types.Common
+import           Epass.Utils.Common
+import           Epass.Utils.Extra
+import qualified EulerHS.Language           as L
+import           EulerHS.Prelude            hiding (id)
+import qualified EulerHS.Types              as T
+import qualified Storage.Queries            as DB
+import qualified Types.Storage.DB           as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.appDb
@@ -93,27 +93,27 @@ updateMultiple personId person = do
 
 update ::
   PersonId ->
-  Storage.Status ->
+  Maybe Storage.Status ->
   Maybe Text ->
   Maybe Text ->
   Maybe Storage.Role ->
   L.Flow ()
-update id status nameM emailM roleM = do
+update id statusM nameM emailM roleM = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update
     dbTable
-    (setClause status nameM emailM roleM currTime)
+    (setClause statusM nameM emailM roleM currTime)
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause status nameM emailM roleM currTime Storage.Person {..} =
+    setClause statusM nameM emailM roleM currTime Storage.Person {..} =
       mconcat
-        ( [ _status <-. B.val_ status,
-            _updatedAt <-. B.val_ currTime
+        ( [ _updatedAt <-. B.val_ currTime
           ]
             <> (\name -> [_fullName <-. B.val_ name]) nameM
             <> (\email -> [_email <-. B.val_ email]) emailM
             <> maybe [] (\role -> [_role <-. B.val_ role]) roleM
+            <> maybe [] (\status -> [_status <-. B.val_ status]) statusM
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
 

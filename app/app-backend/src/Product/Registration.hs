@@ -2,29 +2,29 @@
 
 module Product.Registration where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
-import qualified Beckn.Types.Storage.Person as SP
+import           Beckn.Types.App
+import           Beckn.Types.Common                    as BC
+import qualified Beckn.Types.Storage.Person            as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
-import qualified Crypto.Number.Generate as Cryptonite
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified Epass.External.MyValuesFirst.Flow as Sms
-import qualified Epass.External.MyValuesFirst.Types as Sms
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import Epass.Utils.Storage
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import System.Environment
-import Types.API.Registration
-import Types.App
+import           Beckn.Utils.Common                    (withFlowHandler)
+import qualified Crypto.Number.Generate                as Cryptonite
+import qualified Data.Accessor                         as Lens
+import           Data.Aeson
+import qualified Data.Text                             as T
+import           Data.Time.LocalTime
+import qualified Epass.External.MyValuesFirst.Flow     as Sms
+import qualified Epass.External.MyValuesFirst.Types    as Sms
+import           Epass.Utils.Common
+import           Epass.Utils.Extra
+import           Epass.Utils.Storage
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import           Servant
+import qualified Storage.Queries.Person                as Person
+import qualified Storage.Queries.RegistrationToken     as RegistrationToken
+import           System.Environment
+import           Types.API.Registration
+import           Types.App
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -148,7 +148,7 @@ login tokenId req =
       then do
         person <- checkPersonExists _EntityId
         let personId = person ^. #_id
-        Person.update personId SP.ACTIVE Nothing Nothing Nothing
+        Person.update personId (Just SP.ACTIVE) Nothing Nothing Nothing
         Person.findById personId
           >>= fromMaybeM500 "Could not find user"
           >>= return . LoginRes _token
