@@ -103,6 +103,7 @@ listPass regToken passIdType passV limitM offsetM passType =
     listBy <- getListBy
     case passIdType of
       ORGANIZATIONID -> do
+        -- TODO: use limit and offset
         persons <- Person.findAllByOrgIds [] [passV]
         when (null persons) $ L.throwException err400 {errBody = "NO_PERSON_FOUND"}
         cases <- traverse (QC.findAllByPerson . _getPersonId . Person._id) persons

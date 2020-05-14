@@ -162,17 +162,8 @@ type OrganizationAPIs =
     :> ( ReqBody '[JSON] CreateOrganizationReq
            :> Post '[JSON] OrganizationRes
            :<|> "list"
-             :> QueryParam "limit" Int
-             :> QueryParam "offset" Int
-             :> QueryParams "locationType" LocationType
-             :> QueryParams "pincode" Int
-             :> QueryParams "city" Text
-             :> QueryParams "district" Text
-             :> QueryParams "ward" Text
-             :> QueryParams "state" Text
-             :> QueryParams "status" SO.Status
-             :> QueryParam "verified" Bool
-             :> Get '[JSON] ListOrganizationRes
+             :> ReqBody '[JSON] ListOrganizationReq
+             :> Post '[JSON] ListOrganizationRes
            :<|> Capture "organizationId" Text :> Get '[JSON] GetOrganizationRes
            :<|> Capture "organizationId" Text
              :> ReqBody '[JSON] UpdateOrganizationReq

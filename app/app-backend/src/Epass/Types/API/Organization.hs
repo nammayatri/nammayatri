@@ -1,5 +1,6 @@
 module Epass.Types.API.Organization where
 
+import Data.Aeson
 import Data.Default
 import Data.Swagger
 import Data.Time
@@ -36,14 +37,43 @@ data GetOrganizationRes = GetOrganizationRes
   deriving (Generic, ToJSON, ToSchema)
 
 data ListOrganizationReq = ListOrganizationReq
-  { _limit :: Int,
-    _offset :: Int,
-    __type :: Text
+  { limit :: Maybe Int,
+    offset :: Maybe Int,
+    locationType :: [LocationType],
+    pincode :: [Int],
+    city :: [Text],
+    district :: [Text],
+    ward :: [Text],
+    state :: [Text],
+    status :: [Status],
+    verified :: Maybe Bool
   }
   deriving (Generic, ToSchema)
 
 instance FromJSON ListOrganizationReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON (Object o) = do
+    lt <- fromMaybe [] <$> o .:? "locationType"
+    pins <- fromMaybe [] <$> o .:? "pincode"
+    cities <- fromMaybe [] <$> o .:? "city"
+    districts <- fromMaybe [] <$> o .:? "district"
+    wards <- fromMaybe [] <$> o .:? "ward"
+    states <- fromMaybe [] <$> o .:? "state"
+    status <- fromMaybe [] <$> o .:? "status"
+    verified <- o .:? "verified"
+    limit <- o .:? "limit"
+    offset <- o .:? "offset"
+    return $
+      ListOrganizationReq
+        limit
+        offset
+        lt
+        pins
+        cities
+        districts
+        wards
+        states
+        status
+        verified
 
 data ListOrganizationRes = ListOrganizationRes
   { _organizations :: [OrgInfo]
