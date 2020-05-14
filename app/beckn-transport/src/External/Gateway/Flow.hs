@@ -1,5 +1,6 @@
 module External.Gateway.Flow where
 
+import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Track
 import qualified Data.Text as T
@@ -10,9 +11,9 @@ import External.Gateway.Types
 import Servant.Client
 import System.Environment
 
-onSearch ::
-  BaseUrl -> OnSearchReq -> L.Flow (Either Text ())
-onSearch url req = do
+onSearch :: OnSearchReq -> L.Flow (Either Text ())
+onSearch req = do
+  url <- getBaseUrl
   res <- L.callAPI url $ API.onSearch req
   whenRight res $ \_ ->
     L.logInfo "OnSearch" $ "OnSearch callback successfully delivered"
@@ -20,9 +21,9 @@ onSearch url req = do
     L.logError "error occurred while sending onSearch Callback: " (show err)
   return $ first show res
 
-onTrackTrip ::
-  BaseUrl -> OnTrackTripReq -> L.Flow (Either Text ())
-onTrackTrip url req = do
+onTrackTrip :: OnTrackTripReq -> L.Flow (Either Text ())
+onTrackTrip req = do
+  url <- getBaseUrl
   res <- L.callAPI url $ API.onTrackTrip req
   whenRight res $ \_ ->
     L.logInfo "OnTrackTrip" $ "OnTrackTrip callback successfully delivered"
@@ -30,11 +31,27 @@ onTrackTrip url req = do
     L.logError "error occurred while sending OnTrackTrip Callback: " (show err)
   return $ first show res
 
-defaultBaseUrl :: String -> BaseUrl
-defaultBaseUrl baseUrl = do
+onConfirm :: OnConfirmReq -> L.Flow (Either Text ())
+onConfirm req = do
+  url <- getBaseUrl
+  res <- L.callAPI url $ API.onConfirm req
+  whenRight res $ \_ ->
+    L.logInfo "OnConfirm" $ "OnConfirm callback successfully delivered"
+  whenLeft res $ \err ->
+    L.logError "error occurred while sending onConfirm Callback: " (show err)
+  return $ first show res
+
+getBaseUrl :: L.Flow BaseUrl
+getBaseUrl = do
+  url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
+  port <- L.runIO $ getEnv "BECKN_GATEWAY_PORT"
+  return $ defaultBaseUrl url $ read $ port
+
+defaultBaseUrl :: String -> Int -> BaseUrl
+defaultBaseUrl baseUrl port = do
   BaseUrl
     { baseUrlScheme = Http,
       baseUrlHost = baseUrl,
-      baseUrlPort = 8013,
+      baseUrlPort = port,
       baseUrlPath = "/v1"
     }

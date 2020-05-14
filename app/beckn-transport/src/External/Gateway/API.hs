@@ -1,5 +1,6 @@
 module External.Gateway.API where
 
+import Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Track
 import EulerHS.Prelude
@@ -32,3 +33,15 @@ trackTripAPI = Proxy
 
 onTrackTrip req =
   void $ ET.client trackTripAPI req
+
+type ConfirmAPI =
+  "on_confirm"
+    :> "services"
+    :> ReqBody '[JSON] Confirm.OnConfirmReq
+    :> Post '[JSON] Confirm.OnConfirmRes
+
+confirmAPI :: Proxy ConfirmAPI
+confirmAPI = Proxy
+
+onConfirm req =
+  void $ ET.client confirmAPI req
