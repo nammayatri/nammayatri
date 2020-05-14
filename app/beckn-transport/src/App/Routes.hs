@@ -163,8 +163,8 @@ type ProductAPIs =
          )
 
 productFlow =
-  Product.update
-  :<|> Product.listRides
+  Product.listRides
+  :<|> Product.update
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
