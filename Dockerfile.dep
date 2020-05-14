@@ -16,4 +16,7 @@ RUN ssh-keyscan -H "bitbucket.org" >> ~/.ssh/known_hosts
 
 RUN stack build --system-ghc --dependencies-only
 
+# Remove src code to avoid caching it
+RUN ls | grep -v .stack | xargs rm -rf
+
 RUN rm -f /root/.ssh/id_rsa
