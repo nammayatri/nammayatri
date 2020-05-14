@@ -1,6 +1,7 @@
 module External.Gateway.Flow where
 
 import Beckn.Types.API.Search
+import Beckn.Types.API.Track
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -17,6 +18,16 @@ onSearch url req = do
     L.logInfo "OnSearch" $ "OnSearch callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending onSearch Callback: " (show err)
+  return $ first show res
+
+onTrackTrip ::
+  BaseUrl -> OnTrackTripReq -> L.Flow (Either Text ())
+onTrackTrip url req = do
+  res <- L.callAPI url $ API.onTrackTrip req
+  whenRight res $ \_ ->
+    L.logInfo "OnTrackTrip" $ "OnTrackTrip callback successfully delivered"
+  whenLeft res $ \err ->
+    L.logError "error occurred while sending OnTrackTrip Callback: " (show err)
   return $ first show res
 
 defaultBaseUrl :: String -> BaseUrl

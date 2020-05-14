@@ -4,11 +4,14 @@ module Product.BecknProvider.BP where
 
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location as BL
 import Beckn.Types.Mobility.Intent
+import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Storage.Case as SC
 import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Location as SL
@@ -25,6 +28,7 @@ import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import External.Gateway.Flow as Gateway
 import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CaseProduct
@@ -32,6 +36,7 @@ import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.Products as Product
+import System.Environment
 import Types.Notification
 import Utils.FCM
 
@@ -166,3 +171,59 @@ confirm req = withFlowHandler $ do
   mkAckResponse uuid "confirm"
 
 -- TODO : Add notifying transporter admin with GCM
+
+trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
+trackTrip req = withFlowHandler $ do
+  L.logInfo "track trip API Flow" $ show req
+  let tripId = req ^. #message ^. #id
+  case_ <- Case.findById (CaseId tripId)
+  --TODO : use forkFlow to notify gateway
+  notifyTripUrlToGateway case_
+  uuid <- L.generateGUID
+  mkAckResponse uuid "track"
+
+notifyTripUrlToGateway :: Case -> L.Flow ()
+notifyTripUrlToGateway c = do
+  onTrackTripPayload <- mkOnTrackTripPayload $ c ^. #_shortId
+  url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
+  L.logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
+  Gateway.onTrackTrip (defaultBaseUrl url) onTrackTripPayload
+  return ()
+
+mkOnTrackTripPayload :: Text -> L.Flow OnTrackTripReq
+mkOnTrackTripPayload c = do
+  currTime <- getCurrTime
+  let context =
+        Context
+          { domain = "MOBILITY",
+            action = "on_track",
+            version = Just $ "0.1",
+            transaction_id = c,
+            message_id = Nothing,
+            timestamp = currTime,
+            dummy = ""
+          }
+  let data_url = baseTrackingUrl <> "/" <> c
+  let embed_url = baseTrackingUrl <> "/" <> c <> "/embed"
+  return
+    OnTrackTripReq
+      { context,
+        message = mkTracking "PULL" data_url embed_url
+      }
+
+baseTrackingUrl :: Text
+baseTrackingUrl = "http://api.sandbox.beckn.juspay.in/transport/v1/track"
+
+mkTracking :: Text -> Text -> Text -> Tracking
+mkTracking method dataUrl embedUrl =
+  Tracking
+    { method = method,
+      pull = if method == "PULL" then Just $ mkPullTrackingData dataUrl embedUrl else Nothing
+    }
+
+mkPullTrackingData :: Text -> Text -> PullTrackingData
+mkPullTrackingData dataUrl embed =
+  PullTrackingData
+    { data_url = dataUrl,
+      embed_url = embed
+    }

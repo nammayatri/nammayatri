@@ -6,23 +6,24 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
+import Beckn.Types.Mobility.Tracking
 import Data.Generics.Labels
 import Data.Swagger
 import EulerHS.Prelude
 import Servant.Swagger
 
-data TrackReq = TrackReq
+data TrackTripReq = TrackTripReq
   { context :: Context,
     message :: IdObject
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-type TrackRes = AckResponse
+type TrackTripRes = AckResponse
 
-data OnTrackReq = OnTrackReq
+data OnTrackTripReq = OnTrackTripReq
   { context :: Context,
-    message :: Service
+    message :: Tracking
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-type OnTrackRes = AckResponse
+type OnTrackTripRes = AckResponse

@@ -6,6 +6,7 @@ module App.Routes where
 
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
@@ -40,6 +41,7 @@ type TransporterAPIs =
            :<|> OrganizationAPIs --Transporter
            :<|> SearchAPIs
            :<|> ConfirmAPIs
+           :<|> TrackApis
            :<|> CaseAPIs
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
@@ -69,81 +71,81 @@ registrationFlow =
 -- Following is person flow
 type PersonAPIs =
   "person"
-      :> ( Header "authorization" Text
+    :> ( Header "authorization" Text
            :> ReqBody '[JSON] CreatePersonReq
            :> Post '[JSON] UpdatePersonRes
-          :<|> "list"
-           :> Header "authorization" Text
-           :> ReqBody '[JSON] ListPersonReq
-           :> Post '[JSON] ListPersonRes
-          :<|> Capture "personId" Text
-           :> Header "authorization" Text
-           :> "update"
-           :> ReqBody '[JSON] UpdatePersonReq
-           :> Post '[JSON] UpdatePersonRes
+           :<|> "list"
+             :> Header "authorization" Text
+             :> ReqBody '[JSON] ListPersonReq
+             :> Post '[JSON] ListPersonRes
+           :<|> Capture "personId" Text
+             :> Header "authorization" Text
+             :> "update"
+             :> ReqBody '[JSON] UpdatePersonReq
+             :> Post '[JSON] UpdatePersonRes
        )
 
 personFlow :: FlowServer PersonAPIs
 personFlow =
   Person.createPerson
-  :<|> Person.listPerson
-  :<|> Person.updatePerson
+    :<|> Person.listPerson
+    :<|> Person.updatePerson
 
 -- Following is vehicle flow
 type VehicleAPIs =
   "vehicle"
-      :> ( Header "authorization" Text
+    :> ( Header "authorization" Text
            :> ReqBody '[JSON] CreateVehicleReq
            :> Post '[JSON] CreateVehicleRes
-          :<|> "list"
-           :> Header "authorization" Text
-           :> ReqBody '[JSON] ListVehicleReq
-           :> Post '[JSON] ListVehicleRes
+           :<|> "list"
+             :> Header "authorization" Text
+             :> ReqBody '[JSON] ListVehicleReq
+             :> Post '[JSON] ListVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPIs
 vehicleFlow =
   Vehicle.createVehicle
-  :<|> Vehicle.listVehicles
+    :<|> Vehicle.listVehicles
 
 -- Following is organization creation
 type OrganizationAPIs =
   "transporter"
-      :> ( Header "authorization" Text
-          :> ReqBody '[JSON] TransporterReq
-          :> Post '[JSON] TransporterRes
-          :<|> "gateway"
-            :> Header "authorization" Text
-            :> ReqBody '[JSON] TransporterReq
-            :> Post '[JSON] GatewayRes
+    :> ( Header "authorization" Text
+           :> ReqBody '[JSON] TransporterReq
+           :> Post '[JSON] TransporterRes
+           :<|> "gateway"
+             :> Header "authorization" Text
+             :> ReqBody '[JSON] TransporterReq
+             :> Post '[JSON] GatewayRes
        )
 
 organizationFlow :: FlowServer OrganizationAPIs
 organizationFlow =
   Transporter.createTransporter
-  :<|> Transporter.createGateway
+    :<|> Transporter.createGateway
 
 -----------------------------
 -------- Case Flow----------
 type CaseAPIs =
-     "case"
-       :> (  Header "authorization" Text
-              :> ReqBody '[ JSON] CaseReq
-              :>  Post '[ JSON] CaseListRes
-          :<|>  Header "authorization" Text
-                 :> Capture "caseId" Text
-                 :> ReqBody '[JSON] UpdateCaseReq
-                 :> Post '[JSON] Case
-          )
+  "case"
+    :> ( Header "authorization" Text
+           :> ReqBody '[JSON] CaseReq
+           :> Post '[JSON] CaseListRes
+           :<|> Header "authorization" Text
+             :> Capture "caseId" Text
+             :> ReqBody '[JSON] UpdateCaseReq
+             :> Post '[JSON] Case
+       )
 
 caseFlow =
-    Case.list
+  Case.list
     :<|> Case.update
 
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
   "caseProduct"
-    :> (  Header "authorization" Text
+    :> ( Header "authorization" Text
            :> ReqBody '[JSON] CaseProdReq
            :> Post '[JSON] CaseProductList
        )
@@ -154,7 +156,7 @@ caseProductFlow =
 -------- Product Flow----------
 type ProductAPIs =
   "update"
-    :> (  Header "authorization" Text
+    :> ( Header "authorization" Text
            :> ReqBody '[JSON] ProdReq
            :> Post '[JSON] ProdInfoRes
        )
@@ -173,6 +175,7 @@ transporterServer' key =
     :<|> organizationFlow
     :<|> searchApiFlow
     :<|> confirmApiFlow
+    :<|> trackApiFlow
     :<|> caseFlow
     :<|> caseProductFlow
     :<|> vehicleFlow
@@ -196,3 +199,13 @@ type ConfirmAPIs =
 
 confirmApiFlow :: FlowServer ConfirmAPIs
 confirmApiFlow = BP.confirm
+
+type TrackApis =
+  "track"
+    :> "trip"
+    :> ( ReqBody '[JSON] TrackTripReq
+           :> Post '[JSON] TrackTripRes
+       )
+
+trackApiFlow :: FlowServer TrackApis
+trackApiFlow = BP.trackTrip
