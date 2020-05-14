@@ -89,6 +89,11 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: MY_VALUE_FIRST_PASSWORD
+        - name: BECKN_GATEWAY_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: beckn-transport-configs
+              key: BECKN_GATEWAY_BASE_URL
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
         name: beckn-transport
         ports:

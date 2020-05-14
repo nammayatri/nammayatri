@@ -10,3 +10,4 @@ data:
   REDIS_HOST: "ec-redis-beta-001.bfw4iw.0001.apse1.cache.amazonaws.com"
   REDIS_PORT: "6379"
   REDIS_DB: "20"
+  BECKN_GATEWAY_BASE_URL: "api.sandbox.beckn.juspay.in/app2"
