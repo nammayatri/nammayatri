@@ -34,9 +34,9 @@ getBaseUrl :: L.Flow BaseUrl
 getBaseUrl = do
   url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
   port <- L.runIO $ getEnv "BECKN_GATEWAY_PORT"
-  return $ defaultBaseUrl url port
+  return $ defaultBaseUrl url $ read $ port
 
-defaultBaseUrl :: String -> Number -> BaseUrl
+defaultBaseUrl :: String -> Int -> BaseUrl
 defaultBaseUrl baseUrl port = do
   BaseUrl
     { baseUrlScheme = Http,

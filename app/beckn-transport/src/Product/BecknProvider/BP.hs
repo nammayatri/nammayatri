@@ -169,7 +169,6 @@ confirm req = withFlowHandler $ do
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
-  --TODO: Create child case with type TRACKER and create CaseProduct
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
@@ -216,7 +215,7 @@ mkTrackerCase case_ uuid now shortId = do
       _providerType = Nothing, --TODO: Ensure to update when getting Driver Info
       _requestor = Nothing,
       _requestorType = Just CONSUMER,
-      _parentCaseId = Nothing,
+      _parentCaseId = Just $ case_ ^. #_id,
       _fromLocationId = case_ ^. #_fromLocationId,
       _toLocationId = case_ ^. #_toLocationId,
       _udf1 = Nothing,
