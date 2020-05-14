@@ -43,7 +43,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   case _status of
     REVOKED -> do
       QCP.updateAllProductsByCaseId caseId Products.INVALID
-      QC.updateStatus caseId Case.CLOSED
+      QC.updateStatusAndUdfs caseId Case.CLOSED Nothing Nothing Nothing Nothing _remarks
     APPROVED -> do
       when
         (isNothing _approvedCount)
@@ -51,7 +51,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       let approvedCount = fromJust _approvedCount
       -- Create passes
       replicateM approvedCount (createPass pA)
-      QC.updateStatus caseId Case.CONFIRMED
+      QC.updateStatusAndUdfs caseId Case.CONFIRMED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
   QC.findById caseId
