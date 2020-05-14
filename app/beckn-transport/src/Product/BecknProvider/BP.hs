@@ -171,6 +171,7 @@ confirm req = withFlowHandler $ do
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
+  --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
@@ -301,7 +302,7 @@ mkOnTrackTripPayload c = do
       }
 
 baseTrackingUrl :: Text
-baseTrackingUrl = "http://api.sandbox.beckn.juspay.in/transport/v1/track"
+baseTrackingUrl = "http://api.sandbox.beckn.juspay.in/transport/v1/location"
 
 mkTracking :: Text -> Text -> Text -> Tracking
 mkTracking method dataUrl embedUrl =
