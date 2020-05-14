@@ -3,7 +3,6 @@ module Epass.Storage.Queries.CustomerDetail where
 import Data.Aeson (Value (Null))
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
 import Epass.Types.App
 import Epass.Types.Storage.CustomerDetail as Storage
 import qualified Epass.Types.Storage.DB as DB
@@ -13,6 +12,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import Servant
+import qualified Storage.Queries as DB
 
 dbTable ::
   B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.CustomerDetailT)

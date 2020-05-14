@@ -7,8 +7,6 @@ import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.), in_)
 import qualified Database.Beam as B
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
-import qualified Epass.Storage.Queries as DB
 import qualified Epass.Types.API.Blacklist as API
 import Epass.Types.App
 import Epass.Types.Common
@@ -22,6 +20,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
+import qualified Storage.Queries as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.BlacklistT)
 dbTable = DB._Blacklist DB.becknDb

@@ -4,7 +4,6 @@ import Data.Time
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.DB as DB
@@ -13,6 +12,7 @@ import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.DocumentT)
 dbTable = DB._document DB.becknDb
