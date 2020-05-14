@@ -236,6 +236,7 @@ notifyGateway c prodId = do
   L.logInfo "notifyGateway" $ show cps
   prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
   onConfirmPayload <- mkOnConfirmPayload c prods prodId
+  L.logInfo "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
   Gateway.onConfirm onConfirmPayload
   return ()
 
