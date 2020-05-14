@@ -30,3 +30,8 @@ instance FromJSON AckResponse where
 
 instance ToJSON AckResponse where
   toJSON = genericToJSON stripLensPrefixOptions
+
+data IdObject = IdObject
+  { id :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
