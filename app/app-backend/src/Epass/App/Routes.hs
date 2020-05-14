@@ -116,8 +116,8 @@ type PassApplicationAPIs =
              :> QueryParams "organization" OrganizationId
              :> QueryParams "type" Text
              :> Get '[JSON] ListPassApplicationRes
-           :<|> Capture "passApplicationId" PassApplicationId
-             :> Get '[JSON] GetPassApplication
+           :<|> Capture "caseId" CaseId
+             :> Get '[JSON] CaseInfo
            :<|> Capture "caseId" CaseId
              :> ReqBody '[JSON] UpdatePassApplicationReq
              :> Post '[JSON] PassApplicationRes'
