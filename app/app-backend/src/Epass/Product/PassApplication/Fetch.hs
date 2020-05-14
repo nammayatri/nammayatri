@@ -36,6 +36,7 @@ import           Servant
 import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.CaseProduct           as QCP
 import qualified Storage.Queries.Location              as QLoc
+import qualified Storage.Queries.Person                as QP
 import qualified Storage.Queries.Products              as QProd
 
 listPassApplication ::
@@ -136,8 +137,7 @@ getPassAppInfo PassApplication {..} = do
 getCaseAppInfo :: Case.Case -> L.Flow API.CaseInfo
 getCaseAppInfo Case.Case {..} = do
   morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) $ _udf2
-  mcustomer <- maybe (pure Nothing) (Customer.findCustomerById . CustomerId) $ _requestor
-  let maybeCustId = Customer._id <$> mcustomer
+  mcustomer <- maybe (pure Nothing) (QP.findById . PersonId) $ _requestor
   entityDocs <- EntityDocument.findAllByCaseId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
   docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
@@ -150,7 +150,7 @@ getCaseAppInfo Case.Case {..} = do
   toLocation <- QLoc.findLocationById $ LocationId _toLocationId
   pure
     API.CaseInfo
-      { _Customer = mcustomer
+      {  _Customer = mcustomer
         , _Tags = tags
         , _Comments = comments
         , _Documents = docs
