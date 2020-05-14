@@ -148,7 +148,7 @@ login tokenId req =
       then do
         person <- checkPersonExists _EntityId
         let personId = person ^. #_id
-        Person.update personId (Just SP.ACTIVE) Nothing Nothing Nothing
+        Person.update personId (Just SP.ACTIVE) Nothing Nothing Nothing Nothing Nothing
         Person.findById personId
           >>= fromMaybeM500 "Could not find user"
           >>= return . LoginRes _token

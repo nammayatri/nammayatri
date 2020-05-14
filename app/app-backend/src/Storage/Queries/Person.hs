@@ -97,16 +97,18 @@ update ::
   Maybe Text ->
   Maybe Text ->
   Maybe Storage.Role ->
+  Maybe Storage.IdentifierType ->
+  Maybe Text ->
   L.Flow ()
-update id statusM nameM emailM roleM = do
+update id statusM nameM emailM roleM identTypeM identM = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update
     dbTable
-    (setClause statusM nameM emailM roleM currTime)
+    (setClause statusM nameM emailM roleM identM identTypeM currTime)
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause statusM nameM emailM roleM currTime Storage.Person {..} =
+    setClause statusM nameM emailM roleM identM identTypeM currTime Storage.Person {..} =
       mconcat
         ( [ _updatedAt <-. B.val_ currTime
           ]
@@ -114,6 +116,8 @@ update id statusM nameM emailM roleM = do
             <> (\email -> [_email <-. B.val_ email]) emailM
             <> maybe [] (\role -> [_role <-. B.val_ role]) roleM
             <> maybe [] (\status -> [_status <-. B.val_ status]) statusM
+            <> maybe [] (\iden -> [_identifier <-. B.val_ (Just iden)]) identM
+            <> maybe [] (\idT -> [_identifierType <-. B.val_ idT]) identTypeM
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
 

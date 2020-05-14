@@ -33,11 +33,12 @@ import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.Location              as QL
 import qualified Storage.Queries.Person                as QP
 import qualified Test.RandomStrings                    as RS
+import qualified Utils.Common                          as UC
 
 createPassApplication ::
   Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
 createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowHandler $ do
-  token <- verifyToken regToken
+  token <- UC.verifyToken regToken
   caseInfo <-
     case _type of
       SELF        -> selfFlow token req
@@ -72,14 +73,12 @@ selfFlow token req@API.CreatePassApplicationReq {..} = do
     (L.throwException $ err400 {errBody = "travellerName, travellerIDType and travellerID cannot be empty"})
   let customerId = fromJust _CustomerId
       travellerID = fromJust _travellerID
-      travellerIDType = mapIdType $ fromJust _travellerIDType
+      travellerIDType = mapIdType' <$> _travellerIDType
 
   when
-    (customerId /= (CustomerId (RegistrationToken._EntityId token)))
+    (customerId /= (PersonId (RegistrationToken._EntityId token)))
     (L.throwException $ err400 {errBody = "CustomerId mismatch"})
-
-  Customer.updateDetails customerId _travellerName _OrganizationId
-  CustomerDetail.createIfNotExists customerId travellerIDType travellerID
+  QP.update customerId Nothing _travellerName Nothing Nothing travellerIDType _travellerID
   getCaseInfo token req _CustomerId
 
 sponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
@@ -93,12 +92,12 @@ sponsorFlow token req@API.CreatePassApplicationReq {..} = do
       travellerIDType = mapIdType $ fromJust _travellerIDType
   CustomerDetail.findByIdentifier travellerIDType travellerID
     >>= \case
-      Just cd -> getCaseInfo token req (Just $ CD._CustomerId cd)
+      Just cd -> getCaseInfo token req (Just $ PersonId $ _getCustomerId (CD._CustomerId cd))
       Nothing -> do
         customer <- createCustomer travellerName
         let customerId = Customer._id customer
-        CustomerDetail.createIfNotExists customerId travellerIDType travellerID
-        getCaseInfo token req (Just customerId)
+        -- CustomerDetail.createIfNotExists customerId travellerIDType travellerID
+        getCaseInfo token req Nothing -- (Just customerId)
 
 getPassType :: PassApplicationType -> PassType
 getPassType SELF        = INDIVIDUAL
@@ -114,6 +113,8 @@ getCount BULKSPONSOR Nothing = L.throwException $ err400 {errBody = "Count canno
 mapIdType MOBILE  = CD.MOBILENUMBER
 mapIdType AADHAAR = CD.AADHAAR
 
+mapIdType' MOBILE  = SP.MOBILENUMBER
+mapIdType' AADHAAR = SP.AADHAAR
 
 getLocation ::  API.CreatePassApplicationReq -> L.Flow (Loc.Location, Loc.Location)
 getLocation  API.CreatePassApplicationReq {..} = do
@@ -154,7 +155,7 @@ getLocation  API.CreatePassApplicationReq {..} = do
         }
   return (fromLocation, toLocation)
 
-getCaseInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe CustomerId -> L.Flow Case.Case
+getCaseInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe PersonId -> L.Flow Case.Case
 getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   id <- BTC.generateGUID
   (fromLoc,toLoc) <- getLocation req
@@ -182,7 +183,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
       , _validTill = _fromDate
       , _provider = Nothing
       , _providerType = Just Case.GOVTADMIN
-      , _requestor = _getCustomerId <$> mCustId
+      , _requestor = _getPersonId <$> mCustId
       , _requestorType = Just Case.CONSUMER
       , _parentCaseId = Nothing
       , _fromLocationId = fromLocationId

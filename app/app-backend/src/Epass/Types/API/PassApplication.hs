@@ -16,7 +16,7 @@ import qualified Epass.Types.Storage.Tag             as ST
 import           EulerHS.Prelude
 
 data CreatePassApplicationReq = CreatePassApplicationReq
-  { _CustomerId           :: Maybe CustomerId,
+  { _CustomerId           :: Maybe PersonId,
     _OrganizationId       :: Maybe OrganizationId,
     _TenantOrganizationId :: Maybe TenantOrganizationId,
     _fromDate             :: LocalTime,
