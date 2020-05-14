@@ -4,7 +4,6 @@ module Epass.Storage.Queries.EntityDocument where
 
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.DB as DB
@@ -13,6 +12,7 @@ import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.EntityDocumentT)
 dbTable = DB._entityDocument DB.becknDb
@@ -62,3 +62,12 @@ findAllByOrgId (OrganizationId eId) =
     predicate eId Storage.EntityDocument {..} =
       (_EntityId ==. B.val_ eId)
         &&. (_entityType ==. B.val_ ORGANIZATIONS)
+
+findAllByCaseId :: CaseId -> L.Flow [Storage.EntityDocument]
+findAllByCaseId (CaseId cId) =
+  DB.findAll dbTable (predicate cId)
+    >>= either DB.throwDBError pure
+  where
+    predicate eId Storage.EntityDocument {..} =
+      (_EntityId ==. B.val_ cId)
+        &&. (_entityType ==. B.val_ PASSAPPLICATION)

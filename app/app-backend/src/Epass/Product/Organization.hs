@@ -86,24 +86,14 @@ getOrganization regToken orgId =
         )
 
 listOrganization ::
-  Maybe Text ->
-  Maybe Int ->
-  Maybe Int ->
-  [Location.LocationType] ->
-  [Int] ->
-  [Text] ->
-  [Text] ->
-  [Text] ->
-  [Text] ->
-  [Status] ->
-  Maybe Bool ->
-  FlowHandler API.ListOrganizationRes
-listOrganization regToken limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM = withFlowHandler $ do
+  Maybe Text -> API.ListOrganizationReq -> FlowHandler API.ListOrganizationRes
+listOrganization regToken API.ListOrganizationReq {..} = withFlowHandler $ do
+  L.logInfo "list organization" "invoked"
   reg <- verifyToken regToken
   when (SR._entityType reg == SR.CUSTOMER)
     $ L.throwException
     $ err400 {errBody = "UNAUTHORIZED"}
-  organizations <- QO.listOrganizations limitM offsetM locationTypes pincodes cities districts wards states statuses verifiedM
+  organizations <- QO.listOrganizations limit offset locationType pincode city district ward state status verified
   orgInfo <- (traverse getOrgInfo organizations)
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
 

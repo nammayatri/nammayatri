@@ -8,7 +8,7 @@ import           Beckn.Types.App
 import qualified Beckn.Types.Storage.Products   as Product
 import           EulerHS.Prelude
 import           Types.Storage.Driver
-import           Types.Storage.Vehicle
+import           Beckn.Types.Storage.Vehicle
 
 data ProdReq = ProdReq
   { _status   :: Product.ProductsStatus,

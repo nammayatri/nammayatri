@@ -16,7 +16,6 @@ import qualified Epass.Types.Storage.Organization as Organization
 import qualified Epass.Types.Storage.Pass as Pass
 import qualified Epass.Types.Storage.PassApplication as PassApplication
 import qualified Epass.Types.Storage.Quota as Quota
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Epass.Types.Storage.Tag as Tag
 import qualified Epass.Types.Storage.User as User
 import EulerHS.Prelude hiding (id)
@@ -26,7 +25,6 @@ data EpassDb f = EpassDb
     _quota :: f (B.TableEntity Quota.QuotaT),
     _location :: f (B.TableEntity Location.LocationT),
     _Blacklist :: f (B.TableEntity Blacklist.BlacklistT),
-    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT),
     _customer :: f (B.TableEntity Customer.CustomerT),
     _CustomerDetail :: f (B.TableEntity CustomerDetail.CustomerDetailT),
@@ -49,7 +47,6 @@ becknDb =
         _quota = Quota.fieldEMod,
         _location = Location.fieldEMod,
         _Blacklist = Blacklist.fieldEMod,
-        _registrationToken = RegistrationToken.fieldEMod,
         _allocatedQuota = AllocatedQuota.fieldEMod,
         _customer = Customer.fieldEMod,
         _CustomerDetail = CustomerDetail.fieldEMod,

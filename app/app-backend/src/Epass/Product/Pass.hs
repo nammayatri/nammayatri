@@ -101,14 +101,20 @@ listPass regToken passIdType passV limitM offsetM passType =
   withFlowHandler $ do
     reg <- verifyToken regToken
     listBy <- getListBy
-    caseProducts <- maybe (return []) getCaseProducts listBy
-    ListPassRes <$> traverse buildListRes caseProducts
+    case passIdType of
+      ORGANIZATIONID -> do
+        -- TODO: use limit and offset
+        persons <- Person.findAllByOrgIds [] [passV]
+        when (null persons) $ L.throwException err400 {errBody = "NO_PERSON_FOUND"}
+        cases <- traverse (QC.findAllByPerson . _getPersonId . Person._id) persons
+        caseProducts <- traverse (QCP.findAllByCaseId . SC._id) (concat cases)
+        ListPassRes <$> traverse buildListRes (concat caseProducts)
+      _ -> do
+        caseProducts <- maybe (return []) getCaseProducts listBy
+        ListPassRes <$> traverse buildListRes caseProducts
   where
     getListBy =
       case passIdType of
-        ORGANIZATIONID ->
-          undefined
-        --return $ Just $ QP.ByOrganizationId (OrganizationId passV)
         PASSAPPLICATIONID ->
           return $ Just $ QCP.ByApplicationId (CaseId passV)
         CUSTOMERID -> return $ Just $ QCP.ByCustomerId (PersonId passV)
@@ -117,6 +123,7 @@ listPass regToken passIdType passV limitM offsetM passType =
             Person.findByIdentifier Person.MOBILENUMBER passV
               >>= fromMaybeM400 "PERSON_NOT_FOUND"
           return $ Just $ QCP.ByCustomerId (Person._id person)
+        ORGANIZATIONID -> L.throwException err500
     getCaseProducts listBy =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
         (Just l, Just o) -> QCP.listAllCaseProductWithOffset l o listBy []
@@ -142,7 +149,7 @@ getPassInfo case' prod caseProduct = do
         _Customer = join person,
         _Documents = docs,
         _id = _getProductsId $ SP._id prod,
-        _ShortId = SCP._shortId caseProduct,
+        _ShortId = SP._shortId prod,
         _TenantOrganizationId = Nothing,
         _status = SCP._status caseProduct,
         _fromDate = SP._startTime prod,

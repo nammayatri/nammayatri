@@ -2,6 +2,8 @@
 
 module Epass.Product.Common where
 
+import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Data.Aeson
 import qualified Data.List as List
 import Data.Map.Strict
@@ -20,7 +22,6 @@ import Epass.Types.Storage.Blacklist as BL
 import qualified Epass.Types.Storage.EntityTag as ET
 import Epass.Types.Storage.Location as L
 import Epass.Types.Storage.PassApplication
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Epass.Types.Storage.Tag as T
 import Epass.Utils.Common
 import Epass.Utils.Routes
@@ -70,3 +71,6 @@ mkLocationInfo bLists eTags tags loc =
             _tagInfo = fromMaybe [] (mkTagInfo <$> (lookup _id eTagMap))
           }
    in mkLInfo loc
+
+mkUInfo :: Person.Person -> C.LocationInfo -> C.UserInfo
+mkUInfo user locInfo = UserInfo {_user = user, _locationInfo = locInfo}

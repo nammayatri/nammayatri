@@ -39,6 +39,12 @@ findById caseId =
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
 
+findAllByPerson :: Text -> L.Flow [Storage.Case]
+findAllByPerson perId =
+  DB.findAll dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
 updateStatus :: CaseId -> Storage.CaseStatus  -> L.Flow ()
 updateStatus id status = do
@@ -56,3 +62,54 @@ updateStatus id status = do
          ]
 
     predicate id Storage.Case {..} = _id ==. B.val_ id
+
+
+updateStatusAndUdfs :: CaseId -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow ()
+updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause status udf1 udf2 udf3 udf4 udf5 currTime)
+    (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    setClause status udf1 udf2 udf3 udf4 udf5 currTime Storage.Case {..} =
+      mconcat
+         [ _status <-. B.val_ status
+         , _updatedAt <-. B.val_ currTime
+         , _udf1 <-. B.val_ udf1
+         , _udf2 <-. B.val_ udf2
+         , _udf3 <-. B.val_ udf3
+         , _udf4 <-. B.val_ udf4
+         , _udf5 <-. B.val_ udf5
+         ]
+
+    predicate id Storage.Case {..} = _id ==. B.val_ id
+
+findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> L.Flow [Storage.Case]
+findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset =
+    DB.findAllWithLimitOffsetWhere
+      dbTable
+      (predicate  fromLocationIds toLocationIds types statuses udf1s)
+      limit
+      offset
+      orderByDesc
+      >>= either DB.throwDBError pure
+    where
+      limit = (toInteger $ fromMaybe 100 mlimit)
+      offset = (toInteger $ fromMaybe 0 moffset)
+      orderByDesc Storage.Case {..} = B.desc_ _createdAt
+      predicate fromLocationIds toLocationIds types statuses udf1s Storage.Case {..} =
+          foldl
+            (&&.)
+            (B.val_ True)
+            [ _fromLocationId `B.in_` ((B.val_) <$> fromLocationIds) ||. complementVal fromLocationIds,
+             _toLocationId `B.in_` ((B.val_) <$> toLocationIds) ||. complementVal toLocationIds,
+              _status `B.in_` ((B.val_ ) <$> statuses) ||. complementVal statuses,
+              _type `B.in_` ((B.val_ ) <$> types) ||. complementVal types,
+              _udf1 `B.in_` ((B.val_ . Just ) <$> udf1s) ||. complementVal udf1s
+            ]
+
+complementVal l
+  | (null l) = B.val_ True
+  | otherwise = B.val_ False

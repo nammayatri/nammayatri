@@ -1,48 +1,48 @@
 module Epass.App.Routes where
 
-import           Data.Aeson
-import qualified Data.Vault.Lazy                      as V
-import qualified Epass.Data.Accessor                  as Accessor
-import qualified Epass.Product.Blacklist              as Blacklist
-import qualified Epass.Product.Comment                as Comment
-import qualified Epass.Product.Customer               as Customer
-import qualified Epass.Product.Document               as Document
-import qualified Epass.Product.HealthCheck            as HealthCheck
-import qualified Epass.Product.Location.CRUD          as Location
-import qualified Epass.Product.Organization           as Organization
-import qualified Epass.Product.Pass                   as Pass
+import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
+import Data.Aeson
+import qualified Data.Vault.Lazy as V
+import qualified Epass.Data.Accessor as Accessor
+import qualified Epass.Product.Blacklist as Blacklist
+import qualified Epass.Product.Comment as Comment
+import qualified Epass.Product.Customer as Customer
+import qualified Epass.Product.Document as Document
+import qualified Epass.Product.HealthCheck as HealthCheck
+import qualified Epass.Product.Location.CRUD as Location
+import qualified Epass.Product.Organization as Organization
+import qualified Epass.Product.Pass as Pass
 import qualified Epass.Product.PassApplication.Create as PassApplication
-import qualified Epass.Product.PassApplication.Fetch  as PassApplication
+import qualified Epass.Product.PassApplication.Fetch as PassApplication
 import qualified Epass.Product.PassApplication.Update as PassApplication
-import qualified Epass.Product.Quota                  as Quota
-import qualified Epass.Product.Registration           as Registration
-import qualified Epass.Product.Tag                    as Tag
-import qualified Epass.Product.User.CRUD              as User
-import qualified Epass.Types.API.Blacklist            as Blacklist
-import qualified Epass.Types.API.Comment              as Comment
-import           Epass.Types.API.Customer
-import           Epass.Types.API.Document
-import           Epass.Types.API.Location.CRUD
-import           Epass.Types.API.Organization
-import           Epass.Types.API.Pass
-import           Epass.Types.API.PassApplication
-import qualified Epass.Types.API.Quota                as Quota
-import           Epass.Types.API.Registration
-import qualified Epass.Types.API.Tag                  as Tag
-import qualified Epass.Types.API.User                 as User
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Storage.Organization     as SO
-import qualified Epass.Types.Storage.Pass             as SP
-import qualified Epass.Types.Storage.Pass             as SP
-import qualified Epass.Types.Storage.PassApplication  as PA
-import qualified Epass.Types.Storage.PassApplication  as PA
-import qualified Epass.Types.Storage.User             as User
-import qualified Epass.Types.Storage.User             as SU
-import           EulerHS.Prelude
-import           Network.Wai.Parse
-import           Servant
-import           Servant.Multipart
+import qualified Epass.Product.Quota as Quota
+import qualified Epass.Product.Tag as Tag
+import qualified Epass.Product.User.Create as User
+import qualified Epass.Product.User.Get as User
+import qualified Epass.Product.User.Update as User
+import qualified Epass.Types.API.Blacklist as Blacklist
+import qualified Epass.Types.API.Comment as Comment
+import Epass.Types.API.Customer
+import Epass.Types.API.Document
+import Epass.Types.API.Location.CRUD
+import Epass.Types.API.Organization
+import Epass.Types.API.Pass
+import Epass.Types.API.PassApplication
+import qualified Epass.Types.API.Quota as Quota
+import qualified Epass.Types.API.Tag as Tag
+import qualified Epass.Types.API.User as User
+import Epass.Types.App
+import Epass.Types.Common
+import qualified Epass.Types.Storage.Organization as SO
+import qualified Epass.Types.Storage.Pass as SP
+import qualified Epass.Types.Storage.Pass as SP
+import qualified Epass.Types.Storage.PassApplication as PA
+import qualified Epass.Types.Storage.PassApplication as PA
+import EulerHS.Prelude
+import Network.Wai.Parse
+import Servant
+import Servant.Multipart
 
 epassContext :: Context '[MultipartOptions Mem]
 epassContext = epassMultipartOptions (Proxy :: Proxy Mem) :. EmptyContext
@@ -61,7 +61,6 @@ epassMultipartOptions pTag =
 type EPassAPIs =
   "epass"
     :> ( Get '[JSON] Text
-           :<|> RegistrationAPIs
            :<|> PassApplicationAPIs
            :<|> OrganizationAPIs
            :<|> CustomerAPIs
@@ -81,7 +80,6 @@ epassAPIs = Proxy
 epassServer' :: V.Key (HashMap Text Text) -> FlowServer EPassAPIs
 epassServer' key =
   HealthCheck.healthCheckApp
-    :<|> registrationFlow
     :<|> passApplicationFlow
     :<|> organizationFlow
     :<|> customerFlow
@@ -93,27 +91,6 @@ epassServer' key =
     :<|> tagFlow
     :<|> commentFlow
     :<|> locationFlow
-
----- Registration Flow ------
-type RegistrationAPIs =
-  "token"
-    :> ( ReqBody '[JSON] InitiateLoginReq
-           :> Post '[JSON] InitiateLoginRes
-           :<|> Capture "tokenId" Text
-             :> "verify"
-             :> ReqBody '[JSON] LoginReq
-             :> Post '[JSON] LoginRes
-           :<|> Capture "tokenId" Text
-             :> "resend"
-             :> ReqBody '[JSON] ReInitiateLoginReq
-             :> Post '[JSON] InitiateLoginRes
-       )
-
-registrationFlow :: FlowServer RegistrationAPIs
-registrationFlow =
-  Registration.initiateLogin
-    :<|> Registration.login
-    :<|> Registration.reInitiateLogin
 
 ---------------------------------
 ---- Pass Application Flow ------
@@ -135,12 +112,12 @@ type PassApplicationAPIs =
              :> QueryParams "to_district" Text
              :> QueryParams "to_ward" Text
              :> QueryParams "to_state" Text
-             :> QueryParams "status" PA.Status
+             :> QueryParams "status" Case.CaseStatus
              :> QueryParams "organization" OrganizationId
-             :> QueryParams "type" PassType
+             :> QueryParams "type" Text
              :> Get '[JSON] ListPassApplicationRes
-           :<|> Capture "passApplicationId" PassApplicationId
-             :> Get '[JSON] GetPassApplication
+           :<|> Capture "caseId" CaseId
+             :> Get '[JSON] CaseInfo
            :<|> Capture "caseId" CaseId
              :> ReqBody '[JSON] UpdatePassApplicationReq
              :> Post '[JSON] PassApplicationRes'
@@ -160,17 +137,8 @@ type OrganizationAPIs =
     :> ( ReqBody '[JSON] CreateOrganizationReq
            :> Post '[JSON] OrganizationRes
            :<|> "list"
-             :> QueryParam "limit" Int
-             :> QueryParam "offset" Int
-             :> QueryParams "locationType" LocationType
-             :> QueryParams "pincode" Int
-             :> QueryParams "city" Text
-             :> QueryParams "district" Text
-             :> QueryParams "ward" Text
-             :> QueryParams "state" Text
-             :> QueryParams "status" SO.Status
-             :> QueryParam "verified" Bool
-             :> Get '[JSON] ListOrganizationRes
+             :> ReqBody '[JSON] ListOrganizationReq
+             :> Post '[JSON] ListOrganizationRes
            :<|> Capture "organizationId" Text :> Get '[JSON] GetOrganizationRes
            :<|> Capture "organizationId" Text
              :> ReqBody '[JSON] UpdateOrganizationReq
@@ -251,7 +219,7 @@ type UserAPIS =
   "user" :> Header "registrationToken" RegistrationTokenText
     :> ( ReqBody '[JSON] User.CreateReq
            :> Post '[JSON] User.CreateRes
-           :<|> Capture "userId" UserId
+           :<|> Capture "userId" PersonId
              :> ReqBody '[JSON] User.UpdateReq
              :> Post '[JSON] User.UpdateRes
            :<|> "list"
@@ -259,14 +227,14 @@ type UserAPIS =
              :> QueryParam "offset" Int
              :> QueryParam "filterBy" LocateBy
              :> QueryParams "location" Text
-             :> QueryParams "roles" User.Role
+             :> QueryParams "roles" Person.Role
              :> Get '[JSON] User.ListRes
-           :<|> Capture ":id" UserId
+           :<|> Capture ":id" PersonId
              :> Get '[JSON] User.GetRes
-           :<|> Capture ":id" UserId
+           :<|> Capture ":id" PersonId
              :> Delete '[JSON] Ack
            :<|> "roles"
-             :> Get '[JSON] [SU.Role]
+             :> Get '[JSON] [Person.Role]
        )
 
 userFlow registrationToken =

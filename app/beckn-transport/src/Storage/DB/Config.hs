@@ -16,7 +16,7 @@ instance Config T.MySQLConfig where
   theConfig =
     T.MySQLConfig
       { connectHost = "127.0.0.1",
-        connectPort = 3306,
+        connectPort = 3307,
         connectUser = "atlas",
         connectPassword = "atlas",
         connectDatabase = "atlas_transporter",

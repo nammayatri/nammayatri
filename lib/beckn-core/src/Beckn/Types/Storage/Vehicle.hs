@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Vehicle where
+module Beckn.Types.Storage.Vehicle where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -15,7 +15,7 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
-import Types.App
+import Beckn.Types.App
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -87,6 +87,7 @@ instance FromHttpApiData RegistrationCategory where
 data VehicleT f = Vehicle
   { _id :: B.C f VehicleId,
     _capacity :: B.C f (Maybe Int),
+    _organizationId :: B.C f Text,
     _category :: B.C f (Maybe Category),
     _make :: B.C f (Maybe Text),
     _model :: B.C f (Maybe Text),
@@ -129,12 +130,13 @@ insertExpressions orgs = B.insertValues orgs
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)
 fieldEMod =
-  B.setEntityName "booking_reference"
+  B.setEntityName "vehicle"
     <> B.modifyTableFields
       B.tableModification
         { _createdAt = "created_at",
           _updatedAt = "updated_at",
           _energyType = "energy_type",
           _registrationNo = "registration_no",
-          _registrationCategory = "registration_category"
+          _registrationCategory = "registration_category",
+          _organizationId = "organization_id"
         }

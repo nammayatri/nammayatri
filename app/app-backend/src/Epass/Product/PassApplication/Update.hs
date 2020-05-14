@@ -42,10 +42,8 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   -- verifyIfStatusUpdatable (PassApplication._status pA) _status
   case _status of
     REVOKED -> do
-  --     Pass.revokeByPassApplicationId passApplicationId
-  --     -- _approvedCount remains unchanged as part of history
-      -- TODO: mark passes(product) as revoked
-      QC.updateStatus caseId Case.CLOSED
+      QCP.updateAllProductsByCaseId caseId Products.INVALID
+      QC.updateStatusAndUdfs caseId Case.CLOSED Nothing Nothing Nothing Nothing _remarks
     APPROVED -> do
       when
         (isNothing _approvedCount)
@@ -53,7 +51,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       let approvedCount = fromJust _approvedCount
       -- Create passes
       replicateM approvedCount (createPass pA)
-      QC.updateStatus caseId Case.CONFIRMED
+      QC.updateStatusAndUdfs caseId Case.CONFIRMED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
   QC.findById caseId
@@ -103,14 +101,13 @@ createPass c@(Case.Case {..}) = do
             ,_price = 0.0
             ,_status = CaseProduct.CONFIRMED
             ,_info = Nothing
+            , _personId = Nothing -- TODO: this column should be removed?
             ,_createdAt = currTime
             ,_updatedAt = currTime
           }
   QProd.create product
   QCP.create caseProduct
   return product
-
-
 
 
 allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()

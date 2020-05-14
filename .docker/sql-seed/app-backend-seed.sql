@@ -3,7 +3,7 @@
 -- Host: localhost    Database: atlasdb
 -- ------------------------------------------------------
 -- Server version	8.0.18
-GRANT ALL PRIVILEGES ON atlas_transporter.* TO 'atlas'@'%';
+GRANT ALL PRIVILEGES ON atlas_app.* TO 'atlas'@'%';
 
 
 DROP TABLE IF EXISTS `organization`;
@@ -15,17 +15,25 @@ CREATE TABLE `organization` (
   `status` varchar(255) NULL,
   `type` varchar(255) NULL,
   `verified` boolean NOT NULL,
-  `location_id` varchar(255) NULL,
-  `description` TEXT NULL,
-  `mobile_number` TEXT NULL,
-  `from_time` TEXT NULL,
-  `to_time` TEXT NULL,
-  `api_key` TEXT NULL,
-  `callback_url` TEXT NULL,
-  `head_count` integer NULL,
+  `location_type` varchar(255) NULL,
+  `lat` double NULL,
+  `long` double NULL,
+  `ward` varchar(255) NULL,
+  `district` varchar(255) NULL,
+  `city` varchar(255) NULL,
+  `state` varchar(255) NULL,
+  `country` varchar(255) NULL,
+  `pincode` integer NULL,
+  `address` varchar(1024) NULL,
+  `bound` TEXT NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX (`ward`),
+  INDEX (`district`),
+  INDEX (`city`),
+  INDEX (`pincode`)
 );
 
 DROP TABLE IF EXISTS `person`;
@@ -117,7 +125,6 @@ CREATE TABLE `case_product` (
   `id` char(36) NOT NULL,
   `case_id` varchar(255) NOT NULL,
   `product_id` varchar(255) NOT NULL,
-  `short_id` varchar(36) NOT NULL,
   `person_id` varchar(255) NULL,
   `quantity` integer NOT NULL,
   `price` DECIMAL(8,2) NOT NULL,
@@ -127,13 +134,13 @@ CREATE TABLE `case_product` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
   INDEX (`case_id`),
-  INDEX (`product_id`),
-  INDEX (`short_id`)
+  INDEX (`product_id`)
 );
 
 DROP TABLE IF EXISTS `product`;
 CREATE TABLE `product` (
   `id` char(36) NOT NULL,
+  `short_id` char(36) NULL,
   `name` varchar(255) NULL,
   `description` varchar(1024) NULL,
   `industry` varchar(1024) NOT NULL,
@@ -181,4 +188,8 @@ CREATE TABLE `location` (
   , INDEX (`state`)
 );
 
--- INSERT INTO organization (id, name, gstin, status, type, verified, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) VALUES ('1',"juspay",null, "PENDING_VERIFICATION", "TRANSPORTER", false, null, null, null, null,null,"iamfromjuspay",null,null,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+INSERT INTO `person` (`id`, `first_name`, `middle_name`, `last_name`, `full_name`, `role`, `gender`, `identifier_type`, `email`, `mobile_number`, `mobile_country_code`, `identifier`, `rating`, `verified`, `udf1`, `udf2`, `status`, `organization_id`, `location_id`, `device_token`, `description`, `created_at`, `updated_at`)
+  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'USER', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, FALSE, NULL, NULL, 'INACTIVE', NULL, NULL, NULL, NULL, '2020-05-12 10:23:00.578424', '2020-05-12 10:23:00.578424');
+
+INSERT INTO `registration_token` (`id`, `token`, `attempts`, `auth_medium`, `auth_type`, `auth_value_hash`, `verified`, `auth_expiry`, `token_expiry`, `entity_id`, `entity_type`, `created_at`, `updated_at`, `info`)
+  VALUES ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'ea37f941-427a-4085-a7d0-96240f166672', 3, 'SMS', 'OTP', '3249', FALSE, 3, 365, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:00.582107', '2020-05-12 10:23:00.582107', NULL);

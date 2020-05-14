@@ -4,16 +4,20 @@
 module Beckn.Types.Storage.Case where
 
 import Beckn.Types.App
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.MySQL
 import EulerHS.Prelude
+import Servant.API
 import Servant.Swagger
 
-data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION
+data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION | TRACKER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
@@ -34,7 +38,6 @@ instance B.HasSqlEqualityCheck MySQL CaseStatus
 
 instance FromBackendRow MySQL CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
 
 data Industry = MOBILITY | GOVT | GROCERY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -72,6 +75,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
 instance FromBackendRow MySQL ProviderType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+instance FromHttpApiData CaseStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+
 data CaseT f = Case
   { _id :: B.C f CaseId,
     _name :: B.C f (Maybe Text),
@@ -108,7 +116,7 @@ data CaseT f = Case
 -- udf1 => vehicle variant  =>
 -- udf2 => luggage_count =>
 -- udf3 => start Location
--- udf4 => end Location 
+-- udf4 => end Location
 
 type Case = CaseT Identity
 

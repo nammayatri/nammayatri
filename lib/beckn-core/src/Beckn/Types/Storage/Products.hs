@@ -30,7 +30,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
 instance FromBackendRow MySQL ProductsType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK
+data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK | INVALID
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where
@@ -53,6 +53,7 @@ type ProductsIndustry = Case.Industry
 
 data ProductsT f = Products
   { _id             :: B.C f ProductsId,
+    _shortId        :: B.C f Text,
     _name           :: B.C f (Maybe Text),
     _description    :: B.C f (Maybe Text),
     _industry       :: B.C f ProductsIndustry,
@@ -117,6 +118,7 @@ fieldEMod =
       B.tableModification
         { _startTime = "start_time",
           _endTime = "end_time",
+          _shortId = "short_id",
           _validTill = "valid_till",
           _fromLocation = "from_location_id",
           _toLocation = "to_location_id",
