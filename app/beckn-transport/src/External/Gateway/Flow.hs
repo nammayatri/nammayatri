@@ -33,13 +33,14 @@ onConfirm req = do
 getBaseUrl :: L.Flow BaseUrl
 getBaseUrl = do
   url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
-  return $ defaultBaseUrl url
+  port <- L.runIO $ getEnv "BECKN_GATEWAY_PORT"
+  return $ defaultBaseUrl url port
 
-defaultBaseUrl :: String -> BaseUrl
-defaultBaseUrl baseUrl = do
+defaultBaseUrl :: String -> Number -> BaseUrl
+defaultBaseUrl baseUrl port = do
   BaseUrl
     { baseUrlScheme = Http,
       baseUrlHost = baseUrl,
-      baseUrlPort = 8013,
+      baseUrlPort = port,
       baseUrlPath = "/v1"
     }
