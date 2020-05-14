@@ -8,27 +8,17 @@ import Epass.Types.API.Common
 import Epass.Types.App
 import EulerHS.Prelude
 
-data CreateReq = CreateReq
-  { _name :: Text,
-    _mobileNumber :: Text,
-    _mobileCountryCode :: Maybe Text,
-    _info :: Maybe Text,
-    _role :: Role,
-    _locationId :: Text,
-    _organizationId :: OrganizationId
-  }
-  deriving (Show, Generic, ToJSON, ToSchema)
-
-instance FromJSON CreateReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-type CreateRes = UserInfo
-
 data UpdateReq = UpdateReq
-  { _name :: Maybe Text,
+  { _firstName :: Maybe Text,
+    _middleName :: Maybe Text,
+    _lastName :: Maybe Text,
+    _fullName :: Maybe Text,
+    _gender :: Maybe Gender,
     _email :: Maybe Text,
-    _role :: Maybe Role,
-    _status :: Status
+    _organizationId :: Maybe Text,
+    _locationId :: Maybe Text,
+    _description :: Maybe Text,
+    _status :: Maybe Status
   }
   deriving (Show, Generic, ToJSON, ToSchema)
 

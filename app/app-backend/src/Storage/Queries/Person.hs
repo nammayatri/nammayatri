@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.Person where
 
 import Beckn.Types.App
@@ -67,19 +69,25 @@ findByRoleAndIdentifier role idType identifier =
       _role ==. B.val_ role
         &&. _mobileNumber ==. B.val_ (Just identifier)
 
-updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> L.Flow ()
-updatePerson personId verified identifier identifierType mobileNumber = do
+updateMultiple :: PersonId -> Storage.Person -> L.Flow ()
+updateMultiple personId person = do
   now <- getCurrentTimeUTC
-  DB.update dbTable (setClause identifier identifierType mobileNumber verified now) (predicate personId)
+  DB.update dbTable (setClause now person) (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause i it mn v n Storage.Person {..} =
+    setClause now person Storage.Person {..} =
       mconcat
-        [ _identifier <-. B.val_ (Just i),
-          _identifierType <-. B.val_ it,
-          _mobileNumber <-. B.val_ mn,
-          _verified <-. B.val_ v,
-          _updatedAt <-. B.val_ n
+        [ _updatedAt <-. B.val_ now,
+          _firstName <-. B.val_ (person ^. #_firstName),
+          _middleName <-. B.val_ (person ^. #_middleName),
+          _lastName <-. B.val_ (person ^. #_lastName),
+          _fullName <-. B.val_ (person ^. #_fullName),
+          _gender <-. B.val_ (person ^. #_gender),
+          _email <-. B.val_ (person ^. #_email),
+          _organizationId <-. B.val_ (person ^. #_organizationId),
+          _locationId <-. B.val_ (person ^. #_locationId),
+          _description <-. B.val_ (person ^. #_description),
+          _status <-. B.val_ (person ^. #_status)
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 

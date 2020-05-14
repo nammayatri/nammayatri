@@ -27,7 +27,7 @@ import Servant.Swagger
 
 data UserInfo = UserInfo
   { _user :: Person,
-    _locationInfo :: LocationInfo
+    _locationInfo :: Maybe LocationInfo
   }
   deriving (Generic, Show)
 
