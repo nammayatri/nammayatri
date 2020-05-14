@@ -34,8 +34,8 @@ type AppAPIs =
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> CaseAPIs
+           :<|> Epass.EPassAPIs
        )
-    :<|> Epass.EPassAPIs
 
 appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
@@ -47,8 +47,8 @@ appServer' key = do
       :<|> searchFlow
       :<|> confirmFlow
       :<|> caseFlow
+      :<|> Epass.epassServer' key
     )
-    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =
