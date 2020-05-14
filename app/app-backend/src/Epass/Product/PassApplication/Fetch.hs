@@ -65,7 +65,8 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
 
     cases <- QC.findAllWithLimitOffsetWhere (_getLocationId <$> fromLocationIds) (_getLocationId <$> toLocationIds) [Case.PASSAPPLICATION] statuses (passType) limitM offsetM
     -- TODO: embed docs, comments, location and tags to the passapplication list response, once those are migrated
-    return $ API.ListPassApplicationRes cases
+    caseApps <- traverse getCaseAppInfo cases
+    return $ API.ListPassApplicationRes caseApps
 
 
 getLocationIds :: [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> L.Flow [LocationId]
@@ -131,16 +132,54 @@ getPassAppInfo PassApplication {..} = do
         ..
       }
 
-getPassApplicationById :: Maybe Text -> PassApplicationId -> FlowHandler API.GetPassApplication
-getPassApplicationById regToken applicationId = withFlowHandler $
+
+getCaseAppInfo :: Case.Case -> L.Flow API.CaseInfo
+getCaseAppInfo Case.Case {..} = do
+  morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) $ _udf2
+  mcustomer <- maybe (pure Nothing) (Customer.findCustomerById . CustomerId) $ _requestor
+  let maybeCustId = Customer._id <$> mcustomer
+  entityDocs <- EntityDocument.findAllByCaseId _id
+  let docIds = EntityDocument._DocumentId <$> entityDocs
+  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  entityTags <- maybe (pure []) (\id -> EntityTag.findAllByEntity "PASS_APPLICATION" $ id) $ _udf2
+  let tagIds = EntityTag._TagId <$> entityTags
+  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ _getCaseId _id
+  isBlacklistedOrg <- maybe (pure False) (\oid -> isJust <$> (Blacklist.findByOrgId (OrganizationId oid))) _udf2
+  fromLocation <- QLoc.findLocationById $ LocationId _fromLocationId
+  toLocation <- QLoc.findLocationById $ LocationId _toLocationId
+  pure
+    API.CaseInfo
+      { _Customer = mcustomer
+        ,_Tags = tags
+        ,_Comments = comments
+        ,_Documents = docs
+        ,_Organization = morg
+        ,_isBlacklistedOrganization = isBlacklistedOrg
+        ,_isBlacklistedLocation = False
+        ,_fromLocation = fromLocation
+        ,_toLocation = toLocation
+        , _passType = _udf1
+        ,_fromDate = _startTime
+        ,_toDate = _endTime
+        , _purpose = Nothing
+        ,_AssignedTo = Nothing
+        , _CreatedBy = _requestor
+        , _count = _udf3
+        , _approvedCount = _udf4
+        , _TenantOrganizationId = Nothing
+        ,_remarks = Nothing
+        ,..
+      }
+
+
+getPassApplicationById :: Maybe Text -> CaseId -> FlowHandler API.CaseInfo
+getPassApplicationById regToken caseId = withFlowHandler $
   do
     verifyToken regToken
-    DB.findById applicationId
-    >>= \case
-      (Just v) -> do
-        passInfo :: API.PassAppInfo <- getPassAppInfo v
-        return $ API.GetPassApplication passInfo
-      Nothing -> L.throwException $ err400 {errBody = "Pass Application not found"}
+    case' :: Case.Case <- QC.findById caseId
+    caseApp <- getCaseAppInfo case'
+    return $ caseApp
 
 scopeEntityAccess :: RegistrationToken.RegistrationToken -> Maybe CustomerId
 scopeEntityAccess RegistrationToken.RegistrationToken {..} =

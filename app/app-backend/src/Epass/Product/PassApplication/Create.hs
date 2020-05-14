@@ -3,10 +3,13 @@ module Epass.Product.PassApplication.Create where
 import qualified Beckn.Types.Common                    as BTC
 import qualified Beckn.Types.Storage.Case              as Case
 import qualified Beckn.Types.Storage.Location          as Loc
+import qualified Beckn.Types.Storage.Person            as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import           Data.Aeson
 import qualified Data.Text                             as T
 import qualified Epass.Data.Accessor                   as Accessor
+import qualified Epass.Product.Organization            as PO
 import qualified Epass.Storage.Queries.Customer        as Customer
 import qualified Epass.Storage.Queries.CustomerDetail  as CustomerDetail
 import qualified Epass.Storage.Queries.Organization    as QO
@@ -28,8 +31,8 @@ import           EulerHS.Prelude
 import           Servant
 import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.Location              as QL
+import qualified Storage.Queries.Person                as QP
 import qualified Test.RandomStrings                    as RS
-
 
 createPassApplication ::
   Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
@@ -157,6 +160,8 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   (fromLoc,toLoc) <- getLocation req
   QL.create fromLoc
   QL.create toLoc
+  customer <- QP.findById (PersonId $ SR._EntityId token)
+  let customerOrgId = join (SP._organizationId <$> customer)
   currTime <- getCurrTime
   count <- getCount _type _count
   shortId <-  L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -182,10 +187,10 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
       , _parentCaseId = Nothing
       , _fromLocationId = fromLocationId
       , _toLocationId = toLocationId
-      , _udf1 = Just $ show $ getPassType _type
-      , _udf2 = Nothing
-      , _udf3 = Nothing
-      , _udf4 = Nothing
+      , _udf1 = Just $ show $ getPassType _type -- passtype
+      , _udf2 = customerOrgId -- customer org id
+      , _udf3 = show <$> (Just _count) -- count
+      , _udf4 = Nothing -- approved count
       , _udf5 = Nothing
       , _info = Nothing
       , _createdAt = currTime
