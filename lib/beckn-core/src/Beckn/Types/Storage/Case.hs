@@ -1,23 +1,23 @@
-{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.Case where
 
-import           Beckn.Types.App
-import           Data.Aeson
-import qualified Data.ByteString.Lazy      as BSL
-import           Data.Swagger
-import qualified Data.Text                 as T
-import qualified Data.Text.Encoding        as DT
-import           Data.Time.LocalTime
-import qualified Database.Beam             as B
-import           Database.Beam.Backend.SQL
-import           Database.Beam.MySQL
-import           EulerHS.Prelude
-import           Servant.API
-import           Servant.Swagger
+import Beckn.Types.App
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
+import Data.Swagger
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import Data.Time.LocalTime
+import qualified Database.Beam as B
+import Database.Beam.Backend.SQL
+import Database.Beam.MySQL
+import EulerHS.Prelude
+import Servant.API
+import Servant.Swagger
 
-data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION
+data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION | TRACKER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
@@ -38,7 +38,6 @@ instance B.HasSqlEqualityCheck MySQL CaseStatus
 
 instance FromBackendRow MySQL CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
 
 data Industry = MOBILITY | GOVT | GROCERY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -76,40 +75,38 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
 instance FromBackendRow MySQL ProviderType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-
 instance FromHttpApiData CaseStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-
 data CaseT f = Case
-  { _id             :: B.C f CaseId,
-    _name           :: B.C f (Maybe Text),
-    _description    :: B.C f (Maybe Text),
-    _shortId        :: B.C f Text,
-    _industry       :: B.C f Industry,
-    _type           :: B.C f CaseType,
-    _exchangeType   :: B.C f ExchangeType,
-    _status         :: B.C f CaseStatus,
-    _startTime      :: B.C f LocalTime,
-    _endTime        :: B.C f (Maybe LocalTime),
-    _validTill      :: B.C f LocalTime,
-    _provider       :: B.C f (Maybe Text),
-    _providerType   :: B.C f (Maybe ProviderType),
-    _requestor      :: B.C f (Maybe Text),
-    _requestorType  :: B.C f (Maybe RequestorType),
-    _parentCaseId   :: B.C f (Maybe CaseId),
+  { _id :: B.C f CaseId,
+    _name :: B.C f (Maybe Text),
+    _description :: B.C f (Maybe Text),
+    _shortId :: B.C f Text,
+    _industry :: B.C f Industry,
+    _type :: B.C f CaseType,
+    _exchangeType :: B.C f ExchangeType,
+    _status :: B.C f CaseStatus,
+    _startTime :: B.C f LocalTime,
+    _endTime :: B.C f (Maybe LocalTime),
+    _validTill :: B.C f LocalTime,
+    _provider :: B.C f (Maybe Text),
+    _providerType :: B.C f (Maybe ProviderType),
+    _requestor :: B.C f (Maybe Text),
+    _requestorType :: B.C f (Maybe RequestorType),
+    _parentCaseId :: B.C f (Maybe CaseId),
     _fromLocationId :: B.C f Text,
-    _toLocationId   :: B.C f Text,
-    _udf1           :: B.C f (Maybe Text),
-    _udf2           :: B.C f (Maybe Text),
-    _udf3           :: B.C f (Maybe Text),
-    _udf4           :: B.C f (Maybe Text),
-    _udf5           :: B.C f (Maybe Text),
-    _info           :: B.C f (Maybe Text),
-    _createdAt      :: B.C f LocalTime,
-    _updatedAt      :: B.C f LocalTime
+    _toLocationId :: B.C f Text,
+    _udf1 :: B.C f (Maybe Text),
+    _udf2 :: B.C f (Maybe Text),
+    _udf3 :: B.C f (Maybe Text),
+    _udf4 :: B.C f (Maybe Text),
+    _udf5 :: B.C f (Maybe Text),
+    _info :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

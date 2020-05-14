@@ -38,6 +38,7 @@ import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.Products as Product
 import System.Environment
+import qualified Test.RandomStrings as RS
 import Types.Notification
 import Utils.FCM
 
@@ -168,11 +169,66 @@ confirm req = withFlowHandler $ do
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
+  --TODO: Create child case with type TRACKER and create CaseProduct
+  shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
+  currTime <- getCurrentTimeUTC
+  let trackerCase = mkTrackerCase case_ uuid currTime $ T.pack shortId
+  Case.create trackerCase
+  uuid1 <- L.generateGUID
+  let trackerCaseProduct = mkTrackerCaseProduct uuid1 (trackerCase ^. #_id) (ProductsId prodId) currTime
+  CaseProduct.create trackerCaseProduct
   notifyGateway case_ prodId
   mkAckResponse uuid "confirm"
 
 -- TODO : Add notifying transporter admin with GCM
+
+mkTrackerCaseProduct :: Text -> CaseId -> ProductsId -> LocalTime -> CaseProduct.CaseProduct
+mkTrackerCaseProduct cpId caseId prodId currTime =
+  CaseProduct.CaseProduct
+    { _id = CaseProductId cpId,
+      _caseId = caseId,
+      _productId = prodId,
+      _personId = Nothing,
+      _quantity = 1,
+      _price = 0,
+      _status = CaseProduct.INPROGRESS,
+      _info = Nothing,
+      _createdAt = currTime,
+      _updatedAt = currTime
+    }
+
+mkTrackerCase :: SC.Case -> Text -> LocalTime -> Text -> SC.Case
+mkTrackerCase case_ uuid now shortId = do
+  SC.Case
+    { _id = CaseId {_getCaseId = uuid},
+      _name = Nothing,
+      _description = Just "Case to track a Ride",
+      _shortId = shortId,
+      _industry = SC.MOBILITY,
+      _type = TRACKER,
+      _exchangeType = FULFILLMENT,
+      _status = NEW,
+      _startTime = case_ ^. #_startTime, --TODO: should we make it startTime - 30 mins?
+      _endTime = Nothing,
+      _validTill = case_ ^. #_validTill,
+      _provider = Nothing,
+      _providerType = Nothing, --TODO: Ensure to update when getting Driver Info
+      _requestor = Nothing,
+      _requestorType = Just CONSUMER,
+      _parentCaseId = Nothing,
+      _fromLocationId = case_ ^. #_fromLocationId,
+      _toLocationId = case_ ^. #_toLocationId,
+      _udf1 = Nothing,
+      _udf2 = Nothing,
+      _udf3 = Nothing,
+      _udf4 = Nothing,
+      _udf5 = Nothing,
+      _info = Nothing,
+      _createdAt = now,
+      _updatedAt = now
+    }
+
 notifyGateway :: Case -> Text -> L.Flow ()
 notifyGateway c prodId = do
   L.logInfo "notifyGateway" $ show c
