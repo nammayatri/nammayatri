@@ -1,16 +1,16 @@
 module Epass.Utils.Storage where
 
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Data.Time as DT
 import Data.Time.Clock
 import Data.Time.LocalTime
-import qualified Epass.Storage.Queries.RegistrationToken as QR
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Epass.Utils.Common
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Servant
+import qualified Storage.Queries.RegistrationToken as QR
 
 data AppException
   = SqlDBConnectionFailedException Text
@@ -31,7 +31,7 @@ throwFailedWithLog mkException msg = do
 
 verifyToken :: Maybe Text -> L.Flow SR.RegistrationToken
 verifyToken (Just token) =
-  QR.findRegistrationTokenByToken token
+  QR.findByToken token
     >>= fromMaybeM400 "INVALID_TOKEN"
     >>= validateToken
 verifyToken _ = L.throwException $ err400 {errBody = "NO_TOKEN_FOUND"}

@@ -17,7 +17,6 @@ import qualified Epass.Product.PassApplication.Create as PassApplication
 import qualified Epass.Product.PassApplication.Fetch as PassApplication
 import qualified Epass.Product.PassApplication.Update as PassApplication
 import qualified Epass.Product.Quota as Quota
-import qualified Epass.Product.Registration as Registration
 import qualified Epass.Product.Tag as Tag
 import qualified Epass.Product.User.Create as User
 import qualified Epass.Product.User.Get as User
@@ -31,7 +30,6 @@ import Epass.Types.API.Organization
 import Epass.Types.API.Pass
 import Epass.Types.API.PassApplication
 import qualified Epass.Types.API.Quota as Quota
-import Epass.Types.API.Registration
 import qualified Epass.Types.API.Tag as Tag
 import qualified Epass.Types.API.User as User
 import Epass.Types.App
@@ -63,7 +61,6 @@ epassMultipartOptions pTag =
 type EPassAPIs =
   "epass"
     :> ( Get '[JSON] Text
-           :<|> RegistrationAPIs
            :<|> PassApplicationAPIs
            :<|> OrganizationAPIs
            :<|> CustomerAPIs
@@ -83,7 +80,6 @@ epassAPIs = Proxy
 epassServer' :: V.Key (HashMap Text Text) -> FlowServer EPassAPIs
 epassServer' key =
   HealthCheck.healthCheckApp
-    :<|> registrationFlow
     :<|> passApplicationFlow
     :<|> organizationFlow
     :<|> customerFlow
@@ -95,27 +91,6 @@ epassServer' key =
     :<|> tagFlow
     :<|> commentFlow
     :<|> locationFlow
-
----- Registration Flow ------
-type RegistrationAPIs =
-  "token"
-    :> ( ReqBody '[JSON] InitiateLoginReq
-           :> Post '[JSON] InitiateLoginRes
-           :<|> Capture "tokenId" Text
-             :> "verify"
-             :> ReqBody '[JSON] LoginReq
-             :> Post '[JSON] LoginRes
-           :<|> Capture "tokenId" Text
-             :> "resend"
-             :> ReqBody '[JSON] ReInitiateLoginReq
-             :> Post '[JSON] InitiateLoginRes
-       )
-
-registrationFlow :: FlowServer RegistrationAPIs
-registrationFlow =
-  Registration.initiateLogin
-    :<|> Registration.login
-    :<|> Registration.reInitiateLogin
 
 ---------------------------------
 ---- Pass Application Flow ------
@@ -141,8 +116,8 @@ type PassApplicationAPIs =
              :> QueryParams "organization" OrganizationId
              :> QueryParams "type" Text
              :> Get '[JSON] ListPassApplicationRes
-           :<|> Capture "passApplicationId" PassApplicationId
-             :> Get '[JSON] GetPassApplication
+           :<|> Capture "caseId" CaseId
+             :> Get '[JSON] CaseInfo
            :<|> Capture "caseId" CaseId
              :> ReqBody '[JSON] UpdatePassApplicationReq
              :> Post '[JSON] PassApplicationRes'

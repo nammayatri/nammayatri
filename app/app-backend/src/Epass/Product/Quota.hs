@@ -1,17 +1,16 @@
 module Epass.Product.Quota where
 
+import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Data.Aeson
 import Data.Default
 import Data.Time
 import qualified Database.Beam.Schema.Tables as B
 import qualified Epass.Storage.Queries.Quota as DB
-import qualified Epass.Storage.Queries.RegistrationToken as RegToken
 import qualified Epass.Storage.Queries.User as User
 import Epass.Types.API.Quota
 import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Quota as Storage
-import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import qualified Epass.Types.Storage.User as User
 import Epass.Utils.Common
 import Epass.Utils.Routes
@@ -19,6 +18,7 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Storage.Queries.RegistrationToken as RegToken
 
 create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} = withFlowHandler $ do
