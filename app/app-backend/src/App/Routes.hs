@@ -111,9 +111,13 @@ confirmFlow =
 type CaseAPIs =
   "case"
     :> Header "token" RegToken
-    :> Capture "caseId" CaseId
-    :> Get '[JSON] Case.StatusRes
+    :> ( "list"
+           :> Get '[JSON] Case.ListRes
+           :<|> Capture "caseId" CaseId
+           :> Get '[JSON] Case.StatusRes
+       )
 
 caseFlow :: FlowServer CaseAPIs
-caseFlow =
-  Case.status
+caseFlow regToken =
+  Case.list regToken
+    :<|> Case.status regToken
