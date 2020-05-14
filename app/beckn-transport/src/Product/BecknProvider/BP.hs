@@ -7,8 +7,11 @@ import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location as BL
+import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Intent
+import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as SC
 import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Location as SL
@@ -25,6 +28,8 @@ import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import External.Gateway.Flow as Gateway
+import External.Gateway.Transform as GT
 import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CaseProduct
@@ -32,6 +37,7 @@ import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.Products as Product
+import System.Environment
 import Types.Notification
 import Utils.FCM
 
@@ -163,6 +169,36 @@ confirm req = withFlowHandler $ do
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
   uuid <- L.generateGUID
+  notifyGateway case_ prodId
   mkAckResponse uuid "confirm"
 
 -- TODO : Add notifying transporter admin with GCM
+notifyGateway :: Case -> Text -> L.Flow ()
+notifyGateway c prodId = do
+  L.logInfo "notifyGateway" $ show c
+  cps <- CaseProduct.findAllByCaseId (c ^. #_id)
+  L.logInfo "notifyGateway" $ show cps
+  prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
+  onConfirmPayload <- mkOnConfirmPayload c prods prodId
+  Gateway.onConfirm onConfirmPayload
+  return ()
+
+mkOnConfirmPayload :: Case -> [Products] -> Text -> L.Flow OnConfirmReq
+mkOnConfirmPayload c prods prodId = do
+  currTime <- getCurrTime
+  let context =
+        Context
+          { domain = "MOBILITY",
+            action = "SEARCH",
+            version = Just $ "0.1",
+            transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            message_id = Nothing,
+            timestamp = currTime,
+            dummy = ""
+          }
+  service <- GT.mkServiceOffer c prods [prodId]
+  return
+    OnConfirmReq
+      { context,
+        message = service
+      }
