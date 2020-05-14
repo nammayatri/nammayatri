@@ -17,7 +17,6 @@ import           Servant.Swagger
 data ProdInfo = ProdInfo
   { driverInfo  :: Text
   , vehicleInfo :: Text
-  , assignedTo  :: Text
   } deriving (Show, Generic, ToJSON, FromJSON)
 
 
@@ -74,6 +73,7 @@ data ProductsT f = Products
     _fromLocation   :: B.C f (Maybe Text),
     _toLocation     :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
+    _assignedTo     :: B.C f (Maybe Text),
     _createdAt      :: B.C f LocalTime,
     _updatedAt      :: B.C f LocalTime
   }

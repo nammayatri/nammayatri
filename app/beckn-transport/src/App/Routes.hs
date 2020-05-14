@@ -153,18 +153,17 @@ caseProductFlow =
 
 -------- Product Flow----------
 type ProductAPIs =
-
-      (   "update"
-             :> Header "authorization" Text
-             :> ReqBody '[JSON] ProdReq
-             :> Post '[JSON] ProdInfoRes
-       :<|> "rides"
-             :> Header "authorization" Text
-             :> Get '[JSON] RideList
-       )
+  "product"
+      :> (   Header "authorization" Text
+              :> Get '[JSON] RideList
+         :<|> "update"
+              :> Header "authorization" Text
+              :> ReqBody '[JSON] ProdReq
+              :> Post '[JSON] ProdInfoRes
+         )
 
 productFlow =
-  Product.updateInfo
+  Product.update
   :<|> Product.listRides
 
 transporterAPIs :: Proxy TransporterAPIs

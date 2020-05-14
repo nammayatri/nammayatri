@@ -63,24 +63,24 @@ updateStatus id status = do
           _status <-. B.val_ status
         ]
 
-updateInfo :: ProductsId -> Maybe Text -> L.Flow ()
-updateInfo prodId info = do
+updateInfo :: ProductsId -> Maybe Text -> Maybe Text -> L.Flow ()
+updateInfo prodId info driverId = do
   DB.update
     dbTable
-    (setClause info)
+    (setClause info driverId)
     (predicate prodId)
       >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
-    setClause info Storage.Products {..} =
+    setClause info driverId Storage.Products {..} =
       mconcat
-        [ _info <-. B.val_ info]
+        [ _info <-. B.val_ info
+        , _assignedTo <-. B.val_ (driverId)]
 
 
-findAllByOrgId :: Text -> L.Flow [Storage.Products]
-findAllByOrgId orgId =
-  DB.findAll dbTable (predicate orgId)
+findAllByAssignedTo :: Text -> L.Flow [Storage.Products]
+findAllByAssignedTo id =
+  DB.findAll dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    orderByDesc Storage.Products {..} = B.desc_ _createdAt
-    predicate orgId Storage.Products {..} = ( _organizationId ==. (B.val_ orgId))
+    predicate id Storage.Products {..} = ( _assignedTo ==. (B.val_ (Just id)))
