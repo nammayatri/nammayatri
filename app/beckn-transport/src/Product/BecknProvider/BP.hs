@@ -189,7 +189,7 @@ mkOnConfirmPayload c prods prodId = do
   let context =
         Context
           { domain = "MOBILITY",
-            action = "SEARCH",
+            action = "CONFIRM",
             version = Just $ "0.1",
             transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             message_id = Nothing,
