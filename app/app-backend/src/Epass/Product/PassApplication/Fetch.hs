@@ -151,24 +151,24 @@ getCaseAppInfo Case.Case {..} = do
   pure
     API.CaseInfo
       { _Customer = mcustomer
-        ,_Tags = tags
-        ,_Comments = comments
-        ,_Documents = docs
-        ,_Organization = morg
-        ,_isBlacklistedOrganization = isBlacklistedOrg
-        ,_isBlacklistedLocation = False
-        ,_fromLocation = fromLocation
-        ,_toLocation = toLocation
+        , _Tags = tags
+        , _Comments = comments
+        , _Documents = docs
+        , _Organization = morg
+        , _isBlacklistedOrganization = isBlacklistedOrg
+        , _isBlacklistedLocation = False
+        , _fromLocation = fromLocation
+        , _toLocation = toLocation
         , _passType = _udf1
-        ,_fromDate = _startTime
-        ,_toDate = _endTime
+        , _fromDate = _startTime
+        , _toDate = _endTime
         , _purpose = Nothing
-        ,_AssignedTo = Nothing
+        , _AssignedTo = Nothing
         , _CreatedBy = _requestor
         , _count = _udf3
         , _approvedCount = _udf4
         , _TenantOrganizationId = Nothing
-        ,_remarks = Nothing
+        , _remarks = _udf5
         ,..
       }
 
