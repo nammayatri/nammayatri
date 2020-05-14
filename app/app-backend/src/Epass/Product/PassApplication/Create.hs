@@ -17,8 +17,7 @@ import qualified Epass.Storage.Queries.PassApplication as DB
 import qualified Epass.Types.API.PassApplication       as API
 import           Epass.Types.App
 import           Epass.Types.Common
-import qualified Epass.Types.Common                    as Location (Location (..),
-                                                                    LocationType)
+import qualified Epass.Types.Common                    as Location (Location (..))
 import qualified Epass.Types.Storage.Customer          as Customer
 import qualified Epass.Types.Storage.CustomerDetail    as CD
 import           Epass.Types.Storage.PassApplication
@@ -152,7 +151,7 @@ getLocation  API.CreatePassApplicationReq {..} = do
   currTime <- getCurrTime
   let fromLocation = Loc.Location
         { _id = toId
-        , _locationType = Loc.PINCODE -- (Location._type <$> _fromLocation)
+        , _locationType = fromMaybe Loc.PINCODE (Location._type <$> _fromLocation)
         , _lat = join (Location._lat <$> _fromLocation)
         , _long = join (Location._long <$> _fromLocation)
         , _ward = join (Location._ward <$> _fromLocation)
@@ -160,7 +159,7 @@ getLocation  API.CreatePassApplicationReq {..} = do
         , _city = join (Location._city <$> _fromLocation)
         , _state = join (Location._state <$> _fromLocation)
         , _country = join (Location._country <$> _fromLocation)
-        , _pincode = Nothing -- join (Location._pincode <$> _fromLocation), type mismatch
+        , _pincode = show <$> (join (Location._pincode <$> _fromLocation))
         , _address = join (Location._address <$> _fromLocation)
         , _bound  = Nothing -- join (Location._bound <$> _fromLocation)
         , _createdAt = currTime
@@ -176,7 +175,7 @@ getLocation  API.CreatePassApplicationReq {..} = do
         , _city = Location._city  _toLocation
         , _state = Location._state  _toLocation
         , _country = Location._country  _toLocation
-        , _pincode = Nothing -- join (Location._pincode  _toLocation), type mismatch
+        , _pincode = show <$> (Location._pincode _toLocation)
         , _address = Location._address  _toLocation
         , _bound  = Nothing -- join (Location._bound  _toLocation)
         , _createdAt = currTime

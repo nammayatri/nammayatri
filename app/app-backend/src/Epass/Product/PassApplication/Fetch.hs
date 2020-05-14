@@ -2,6 +2,7 @@ module Epass.Product.PassApplication.Fetch where
 
 import qualified Beckn.Types.Storage.Case              as Case
 import qualified Beckn.Types.Storage.Location          as Location
+import qualified Beckn.Types.Storage.Location          as BTL
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Data.Aeson
 import           Data.List
@@ -19,8 +20,7 @@ import qualified Epass.Storage.Queries.Tag             as Tag
 import qualified Epass.Types.API.PassApplication       as API
 import           Epass.Types.App
 import           Epass.Types.Common
-import qualified Epass.Types.Common                    as Location (Location (..),
-                                                                    LocationType)
+import qualified Epass.Types.Common                    as Location (Location (..))
 import qualified Epass.Types.Storage.Customer          as Customer
 import qualified Epass.Types.Storage.Document          as Document
 import qualified Epass.Types.Storage.EntityDocument    as EntityDocument
@@ -89,7 +89,7 @@ getPassAppInfo PassApplication {..} = do
   isBlacklistedOrg <- maybe (pure False) (\oid -> isJust <$> (Blacklist.findByOrgId oid)) _OrganizationId
   let toLocation =
         Location
-          { _type = fromMaybe PINCODE _toLocationType,
+          { _type = fromMaybe BTL.PINCODE _toLocationType,
             _lat = _toLat,
             _long = _toLong,
             _ward = _toWard,

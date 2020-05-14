@@ -1,37 +1,35 @@
 module Epass.Product.Organization where
 
-import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.Location          as BTL
+import qualified Beckn.Types.Storage.Person            as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Data.Aeson
-import qualified Epass.Data.Accessor as Lens
-import qualified Epass.Storage.Queries.Blacklist as Blacklist
-import qualified Epass.Storage.Queries.Comment as Comment
-import qualified Epass.Storage.Queries.Document as Document
-import qualified Epass.Storage.Queries.EntityDocument as EntityDocument
-import qualified Epass.Storage.Queries.EntityTag as EntityTag
-import qualified Epass.Storage.Queries.Location as Location
-import qualified Epass.Storage.Queries.Organization as QO
-import qualified Epass.Storage.Queries.Tag as Tag
-import qualified Epass.Types.API.Organization as API
-import Epass.Types.App
-import qualified Epass.Types.Common as Location
-  ( Location (..),
-    LocationType (..),
-  )
-import qualified Epass.Types.Storage.Document as Document
-import qualified Epass.Types.Storage.EntityDocument as EntityDocument
-import qualified Epass.Types.Storage.EntityTag as EntityTag
-import qualified Epass.Types.Storage.Location as SL
-import Epass.Types.Storage.Organization
-import qualified Epass.Types.Storage.Tag as Tag
-import Epass.Utils.Common
-import Epass.Utils.Extra
-import Epass.Utils.Routes
-import Epass.Utils.Storage
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import Servant
-import qualified Storage.Queries.Person as QP
+import           Data.Aeson
+import qualified Epass.Data.Accessor                   as Lens
+import qualified Epass.Storage.Queries.Blacklist       as Blacklist
+import qualified Epass.Storage.Queries.Comment         as Comment
+import qualified Epass.Storage.Queries.Document        as Document
+import qualified Epass.Storage.Queries.EntityDocument  as EntityDocument
+import qualified Epass.Storage.Queries.EntityTag       as EntityTag
+import qualified Epass.Storage.Queries.Location        as Location
+import qualified Epass.Storage.Queries.Organization    as QO
+import qualified Epass.Storage.Queries.Tag             as Tag
+import qualified Epass.Types.API.Organization          as API
+import           Epass.Types.App
+import qualified Epass.Types.Common                    as Location (Location (..))
+import qualified Epass.Types.Storage.Document          as Document
+import qualified Epass.Types.Storage.EntityDocument    as EntityDocument
+import qualified Epass.Types.Storage.EntityTag         as EntityTag
+import qualified Epass.Types.Storage.Location          as SL
+import           Epass.Types.Storage.Organization
+import qualified Epass.Types.Storage.Tag               as Tag
+import           Epass.Utils.Common
+import           Epass.Utils.Extra
+import           Epass.Utils.Routes
+import           Epass.Utils.Storage
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import           Servant
+import qualified Storage.Queries.Person                as QP
 
 createOrganization ::
   Maybe Text -> API.CreateOrganizationReq -> FlowHandler API.OrganizationRes
@@ -107,7 +105,7 @@ getOrgInfo Organization {..} = do
   tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
   comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
   isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
-  let locType = fromMaybe Location.PINCODE _locationType
+  let locType = fromMaybe BTL.PINCODE _locationType
   let toLocation =
         Location.Location
           { _type = locType,
