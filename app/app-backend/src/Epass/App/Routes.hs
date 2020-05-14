@@ -1,50 +1,48 @@
 module Epass.App.Routes where
 
-import qualified Beckn.Types.Storage.Case             as Case
-import qualified Beckn.Types.Storage.Person           as Person
-import           Data.Aeson
-import qualified Data.Vault.Lazy                      as V
-import qualified Epass.Data.Accessor                  as Accessor
-import qualified Epass.Product.Blacklist              as Blacklist
-import qualified Epass.Product.Comment                as Comment
-import qualified Epass.Product.Customer               as Customer
-import qualified Epass.Product.Document               as Document
-import qualified Epass.Product.HealthCheck            as HealthCheck
-import qualified Epass.Product.Location.CRUD          as Location
-import qualified Epass.Product.Organization           as Organization
-import qualified Epass.Product.Pass                   as Pass
+import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
+import Data.Aeson
+import qualified Data.Vault.Lazy as V
+import qualified Epass.Data.Accessor as Accessor
+import qualified Epass.Product.Blacklist as Blacklist
+import qualified Epass.Product.Comment as Comment
+import qualified Epass.Product.Customer as Customer
+import qualified Epass.Product.Document as Document
+import qualified Epass.Product.HealthCheck as HealthCheck
+import qualified Epass.Product.Location.CRUD as Location
+import qualified Epass.Product.Organization as Organization
+import qualified Epass.Product.Pass as Pass
 import qualified Epass.Product.PassApplication.Create as PassApplication
-import qualified Epass.Product.PassApplication.Fetch  as PassApplication
+import qualified Epass.Product.PassApplication.Fetch as PassApplication
 import qualified Epass.Product.PassApplication.Update as PassApplication
-import qualified Epass.Product.Quota                  as Quota
-import qualified Epass.Product.Registration           as Registration
-import qualified Epass.Product.Tag                    as Tag
-import qualified Epass.Product.User.Create            as User
-import qualified Epass.Product.User.Get               as User
-import qualified Epass.Product.User.Update            as User
-import qualified Epass.Types.API.Blacklist            as Blacklist
-import qualified Epass.Types.API.Comment              as Comment
-import           Epass.Types.API.Customer
-import           Epass.Types.API.Document
-import           Epass.Types.API.Location.CRUD
-import           Epass.Types.API.Organization
-import           Epass.Types.API.Pass
-import           Epass.Types.API.PassApplication
-import qualified Epass.Types.API.Quota                as Quota
-import           Epass.Types.API.Registration
-import qualified Epass.Types.API.Tag                  as Tag
-import qualified Epass.Types.API.User                 as User
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Storage.Organization     as SO
-import qualified Epass.Types.Storage.Pass             as SP
-import qualified Epass.Types.Storage.Pass             as SP
-import qualified Epass.Types.Storage.PassApplication  as PA
-import qualified Epass.Types.Storage.PassApplication  as PA
-import           EulerHS.Prelude
-import           Network.Wai.Parse
-import           Servant
-import           Servant.Multipart
+import qualified Epass.Product.Quota as Quota
+import qualified Epass.Product.Tag as Tag
+import qualified Epass.Product.User.Create as User
+import qualified Epass.Product.User.Get as User
+import qualified Epass.Product.User.Update as User
+import qualified Epass.Types.API.Blacklist as Blacklist
+import qualified Epass.Types.API.Comment as Comment
+import Epass.Types.API.Customer
+import Epass.Types.API.Document
+import Epass.Types.API.Location.CRUD
+import Epass.Types.API.Organization
+import Epass.Types.API.Pass
+import Epass.Types.API.PassApplication
+import qualified Epass.Types.API.Quota as Quota
+import qualified Epass.Types.API.Tag as Tag
+import qualified Epass.Types.API.User as User
+import Epass.Types.App
+import Epass.Types.Common
+import qualified Epass.Types.Storage.Organization as SO
+import qualified Epass.Types.Storage.Pass as SP
+import qualified Epass.Types.Storage.Pass as SP
+import qualified Epass.Types.Storage.PassApplication as PA
+import qualified Epass.Types.Storage.PassApplication as PA
+import EulerHS.Prelude
+import Network.Wai.Parse
+import Servant
+import Servant.Multipart
 
 epassContext :: Context '[MultipartOptions Mem]
 epassContext = epassMultipartOptions (Proxy :: Proxy Mem) :. EmptyContext
@@ -63,7 +61,6 @@ epassMultipartOptions pTag =
 type EPassAPIs =
   "epass"
     :> ( Get '[JSON] Text
-           :<|> RegistrationAPIs
            :<|> PassApplicationAPIs
            :<|> OrganizationAPIs
            :<|> CustomerAPIs
@@ -83,7 +80,6 @@ epassAPIs = Proxy
 epassServer' :: V.Key (HashMap Text Text) -> FlowServer EPassAPIs
 epassServer' key =
   HealthCheck.healthCheckApp
-    :<|> registrationFlow
     :<|> passApplicationFlow
     :<|> organizationFlow
     :<|> customerFlow
@@ -95,27 +91,6 @@ epassServer' key =
     :<|> tagFlow
     :<|> commentFlow
     :<|> locationFlow
-
----- Registration Flow ------
-type RegistrationAPIs =
-  "token"
-    :> ( ReqBody '[JSON] InitiateLoginReq
-           :> Post '[JSON] InitiateLoginRes
-           :<|> Capture "tokenId" Text
-             :> "verify"
-             :> ReqBody '[JSON] LoginReq
-             :> Post '[JSON] LoginRes
-           :<|> Capture "tokenId" Text
-             :> "resend"
-             :> ReqBody '[JSON] ReInitiateLoginReq
-             :> Post '[JSON] InitiateLoginRes
-       )
-
-registrationFlow :: FlowServer RegistrationAPIs
-registrationFlow =
-  Registration.initiateLogin
-    :<|> Registration.login
-    :<|> Registration.reInitiateLogin
 
 ---------------------------------
 ---- Pass Application Flow ------
