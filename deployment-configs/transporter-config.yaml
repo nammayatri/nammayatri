@@ -11,3 +11,4 @@ data:
   REDIS_PORT: "6379"
   REDIS_DB: "20"
   BECKN_GATEWAY_BASE_URL: "api.sandbox.beckn.juspay.in/app2"
+  BECKN_GATEWAY_PORT: 8013

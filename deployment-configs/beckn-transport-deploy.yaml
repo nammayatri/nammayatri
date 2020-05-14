@@ -94,6 +94,11 @@ spec:
             secretKeyRef:
               name: beckn-transport-configs
               key: BECKN_GATEWAY_BASE_URL
+        - name: BECKN_GATEWAY_PORT
+          valueFrom:
+            secretKeyRef:
+              name: beckn-transport-configs
+              key: BECKN_GATEWAY_PORT
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
         name: beckn-transport
         ports:
