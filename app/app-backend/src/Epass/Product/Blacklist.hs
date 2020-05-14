@@ -2,24 +2,24 @@
 
 module Epass.Product.Blacklist where
 
+import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Data.Aeson
 import Data.Default
 import Data.Time
 import qualified Database.Beam.Schema.Tables as B
 import qualified Epass.Data.Accessor as Accessor
 import qualified Epass.Storage.Queries.Blacklist as DB
-import qualified Epass.Storage.Queries.RegistrationToken as RegToken
 import Epass.Types.API.Blacklist
 import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Blacklist as Storage
-import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Storage.Queries.RegistrationToken as RegToken
 
 create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
 create mRegToken CreateReq {..} = withFlowHandler $ do
@@ -27,7 +27,7 @@ create mRegToken CreateReq {..} = withFlowHandler $ do
   id <- generateGUID
   regToken <-
     fromMaybeM400 "INVALID_TOKEN" mRegToken
-      >>= RegToken.findRegistrationTokenByToken
+      >>= RegToken.findByToken
       >>= fromMaybeM400 "INVALID_TOKEN"
   case (RegToken._entityType regToken) of
     RegToken.USER -> do
