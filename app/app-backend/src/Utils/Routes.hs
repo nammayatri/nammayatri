@@ -30,28 +30,28 @@ defaultProvider lt =
     { _id = "",
       _name = "",
       _website = "",
-      _contact = contact,
+      _contact = contact_,
       _api = Api "" lt
     }
 
-contact =
+contact_ =
   Contact
-    { _email = "",
-      _mobile = mobile,
-      _landline = landLine,
-      _ivr = []
+    { email = Just "",
+      mobile = Just $ mobile_,
+      landline = Just $ landLine_,
+      ivr = []
     }
 
-mobile =
+mobile_ =
   Mobile
-    { _country_code = "",
-      _number = ""
+    { country_code = Just "",
+      number = Just ""
     }
 
-landLine =
+landLine_ =
   LandLine
-    { _country_code = "",
-      _std_code = "",
-      _number = "",
-      _extension = ""
+    { country_code = "",
+      std_code = "",
+      number = "",
+      extension = ""
     }
