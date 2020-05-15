@@ -14,10 +14,12 @@ import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
+import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Products as Product
+import Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Aeson
 import Data.Map
 import Data.Text as T
@@ -128,3 +130,26 @@ mkPerson person =
             ivr = []
           }
     }
+
+mkVehicleObj :: Maybe Vehicle.Vehicle -> L.Flow (Maybe BVehicle.Vehicle)
+mkVehicleObj v = case v of
+  Nothing -> return Nothing
+  Just val ->
+    return $
+      Just
+        BVehicle.Vehicle
+          { category = Nothing,
+            capaciity = Nothing,
+            make = Nothing,
+            model = Nothing,
+            size = Nothing,
+            variant = "",
+            color = Nothing,
+            energy_type = Nothing,
+            registration =
+              Just
+                Registration
+                  { category = "COMMERCIAL",
+                    number = val ^. #_registrationNo
+                  }
+          }
