@@ -36,24 +36,34 @@ import Beckn.Utils.Common (withFlowHandler)
 update :: Maybe Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  case _assignedTo of
-    Just _ -> do
-      let info = Just $ U.encodeTypeToText (prepareInfo _driverInfo _vehicleInfo)
-      DB.updateInfo _productId info _assignedTo
-  case _status of
-    Just k -> do
-      cpList <- CPQ.findAllByProdId _productId
-      case_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
-      DB.updateStatus _productId k
-      CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
-      CPQ.updateStatus (Case._id case_) _productId (read (show k) :: CaseP.CaseProductStatus)
+  infoRes <- case _assignedTo of
+            Just k -> updateInfo _productId _driverInfo _vehicleInfo _assignedTo
+            Nothing -> return $ "NO CHANGE"
+  tripRes <- case _status of
+            Just c -> updateTrip _productId c
+            Nothing -> return $ "NO CHANGE"
   updatedProd <- DB.findById _productId
   return $ updatedProd
+
+updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle -> Maybe Text -> L.Flow Text
+updateInfo productId driverInfo vehicleInfo assignedTo = do
+  let info = Just $ U.encodeTypeToText (prepareInfo driverInfo vehicleInfo)
+  DB.updateInfo productId info assignedTo
+  return "UPDATED"
   where
     prepareInfo drivInfo vehiInfo = Storage.ProdInfo
           { driverInfo = U.encodeTypeToText drivInfo
           , vehicleInfo = U.encodeTypeToText vehiInfo
           }
+
+updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow Text
+updateTrip productId k = do
+  cpList <- CPQ.findAllByProdId productId
+  case_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
+  DB.updateStatus productId k
+  CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
+  CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
+  return "UPDATED"
 
 listRides :: Maybe Text -> FlowHandler RideList
 listRides regToken = withFlowHandler $ do

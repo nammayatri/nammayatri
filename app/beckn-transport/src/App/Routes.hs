@@ -43,6 +43,7 @@ type TransporterAPIs =
            :<|> CaseAPIs
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
+           :<|> ProductAPIs
        )
 
 ---- Registration Flow ------
@@ -180,6 +181,8 @@ transporterServer' key =
     :<|> caseFlow
     :<|> caseProductFlow
     :<|> vehicleFlow
+    :<|> productFlow
+
 
 type SearchAPIs =
   "search"

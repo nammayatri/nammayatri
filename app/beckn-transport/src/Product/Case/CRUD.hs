@@ -112,7 +112,8 @@ createProduct cs price ctime orgId = do
           _createdAt = ctime,
           _updatedAt = currTime,
           _fromLocation = Nothing,
-          _toLocation = Nothing
+          _toLocation = Nothing,
+          _assignedTo = Nothing
         }
 
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct

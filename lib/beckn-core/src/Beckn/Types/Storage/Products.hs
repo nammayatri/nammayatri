@@ -124,5 +124,6 @@ fieldEMod =
           _toLocation = "to_location_id",
           _organizationId = "organization_id",
           _createdAt = "created_at",
-          _updatedAt = "updated_at"
+          _updatedAt = "updated_at",
+          _assignedTo = "assigned_to"
         }
