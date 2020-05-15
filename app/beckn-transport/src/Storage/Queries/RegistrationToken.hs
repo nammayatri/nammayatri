@@ -30,6 +30,20 @@ findRegistrationToken id = do
   where
     predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)
 
+updateVerified :: Text -> Bool -> L.Flow ()
+updateVerified id verified = do
+  now <- getCurrentTimeUTC
+  DB.update dbTable (setClause verified now) (predicate id) >>=
+    either DB.throwDBError pure
+  where
+    setClause verified currTime Storage.RegistrationToken {..} =
+      mconcat
+        ( [ _updatedAt <-. B.val_ currTime,
+            _verified <-. B.val_ verified
+          ]
+        )
+    predicate id Storage.RegistrationToken {..} = _id ==. B.val_ id
+
 verifyAuth :: Maybe Text -> L.Flow Storage.RegistrationToken
 verifyAuth auth = do
   L.logInfo "verifying auth" $ show auth

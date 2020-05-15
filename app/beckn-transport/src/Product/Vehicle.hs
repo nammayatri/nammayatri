@@ -27,7 +27,7 @@ listVehicles :: Maybe Text -> ListVehicleReq -> FlowHandler ListVehicleRes
 listVehicles token req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   verifyAdmin (req ^. #_organizationId) _EntityId
-  ListVehicleRes <$> (QV.findAllByOrgIds [req ^. #_organizationId])
+  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) [req ^. #_organizationId])
 
 verifyAdmin orgId entityId = do
   user <- QP.findPersonById (PersonId entityId)
