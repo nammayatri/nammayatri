@@ -144,7 +144,6 @@ data CreatePersonReq = CreatePersonReq
   , _mobileCountryCode  :: Maybe Text
   , _udf1               :: Maybe Text
   , _udf2               :: Maybe Text
-  , _organizationId     :: Maybe Text
   , _description        :: Maybe Text
   , _locationType       :: Maybe SL.LocationType
   , _lat                :: Maybe Double
@@ -189,7 +188,7 @@ instance Transform2 CreatePersonReq SP.Person where
       , SP._deviceToken        = req ^. #_deviceToken
       , SP._udf1               = req ^. #_udf1
       , SP._udf2               = req ^. #_udf2
-      , SP._organizationId     = req ^. #_organizationId
+      , SP._organizationId     = Nothing
       , SP._description        = req ^. #_description
       , SP._locationId         = Just (_getLocationId $ SL._id location)
       , SP._createdAt          = now
@@ -226,8 +225,7 @@ createLocationRec req = do
 
 data ListPersonReq = ListPersonReq
   {
-    _organizationId :: Text
-    , _roles :: [SP.Role]
+    _roles :: [SP.Role]
     , _limit :: Maybe Integer
     , _offset :: Maybe Integer
   }
