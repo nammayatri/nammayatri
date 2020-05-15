@@ -14,8 +14,8 @@ data Contact = Contact
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data Mobile = Mobile
-  { country_code :: Text,
-    number :: Text
+  { country_code :: Maybe Text,
+    number :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

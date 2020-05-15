@@ -5,18 +5,22 @@ module External.Gateway.Transform where
 import Beckn.Types.App
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
+import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Item
+import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
+import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Products as Product
 import Data.Aeson
 import Data.Map
-import Data.Text.Encoding as T
+import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -74,27 +78,6 @@ mkServiceOffer c prods trip =
           }
    in return x
 
-mkTrip :: Maybe Case -> L.Flow (Maybe Trip)
-mkTrip maybeCase = case maybeCase of
-  Nothing -> return Nothing
-  Just c -> do
-    let data_url = baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id)
-        embed_url = baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
-    --TODO: get case product and product then use it to fetch details and prepare
-    return $
-      Just
-        Trip
-          { id = _getCaseId $ c ^. #_id,
-            vehicle = Nothing, -- TODO: need to take it from product
-            driver = Nothing, -- TODO: need to take it from product.assginedTo
-            travellers = [],
-            tracking = mkTracking "PULL" data_url embed_url,
-            corridor_type = "ON-DEMAND",
-            state = "", -- TODO: need to take it from product
-            fare = Nothing, -- TODO: need to take it from product
-            route = Nothing
-          }
-
 baseTrackingUrl :: Text
 baseTrackingUrl = "http://api.sandbox.beckn.juspay.in/transport/v1/location"
 
@@ -110,4 +93,38 @@ mkPullTrackingData dataUrl embed =
   PullTrackingData
     { data_url = dataUrl,
       embed_url = embed
+    }
+
+mkDriverObj :: Person.Person -> L.Flow (Maybe Driver)
+mkDriverObj person =
+  return $
+    Just
+      Driver
+        { descriptor = mkPerson person,
+          experience = Nothing
+        }
+
+mkPerson :: Person.Person -> BPerson.Person
+mkPerson person =
+  BPerson.Person
+    { title = "",
+      first_name = "",
+      middle_name = "",
+      last_name = "",
+      full_name = "",
+      image = Nothing,
+      dob = Nothing,
+      gender = show $ person ^. #_gender,
+      contact =
+        Contact
+          { email = Nothing,
+            mobile =
+              Just
+                Mobile
+                  { country_code = Nothing,
+                    number = person ^. #_mobileNumber -- TODO: need to take last 10
+                  },
+            landline = Nothing,
+            ivr = []
+          }
     }

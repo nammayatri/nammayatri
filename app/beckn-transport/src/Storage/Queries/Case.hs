@@ -83,9 +83,9 @@ updateStatus id status = do
 
 findByIdType :: [CaseId] -> Storage.CaseType -> L.Flow Storage.Case
 findByIdType ids type_ =
-    DB.findOneWithErr dbTable (predicate ids type_)
-    where
-      predicate ids type_ Storage.Case {..} =
-         ( _type ==. (B.val_ type_)
-            &&. B.in_ _id (B.val_ <$> ids))
-
+  DB.findOneWithErr dbTable (predicate ids type_)
+  where
+    predicate ids type_ Storage.Case {..} =
+      ( _type ==. (B.val_ type_)
+          &&. B.in_ _id (B.val_ <$> ids)
+      )

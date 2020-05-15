@@ -17,7 +17,7 @@ import EulerHS.Prelude
 data Trip = Trip
   { id :: Text,
     vehicle :: Maybe Vehicle,
-    driver :: Maybe TripDriver,
+    driver :: TripDriver,
     travellers :: [Traveller],
     tracking :: Tracking,
     corridor_type :: Text, --"FIXED","ON-DEMAND"
@@ -28,7 +28,7 @@ data Trip = Trip
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data TripDriver = TripDriver
-  { persona :: Driver,
+  { persona :: Maybe Driver,
     rating :: Maybe Rating
   }
   deriving (Generic, Show, FromJSON, ToJSON)
