@@ -90,6 +90,7 @@ createPass c@(Case.Case {..}) = do
         , _price = 0 -- TODO: this should be optional?
         , _rating = Nothing
         , _review = Nothing
+        , _assignedTo = Nothing
         , ..
         }
       caseProduct =

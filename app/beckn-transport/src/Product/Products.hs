@@ -36,8 +36,11 @@ import Beckn.Utils.Common (withFlowHandler)
 update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  infoRes <- case _assignedTo of
-            Just k -> updateInfo (ProductsId productId) _driverInfo _vehicleInfo _assignedTo
+  infoRes <- case _driverInfo of
+            Just k -> updateInfo (ProductsId productId) _driverInfo _vehicleInfo
+            Nothing -> return $ "NO CHANGE"
+  idsRes <- case _assignedTo of
+            Just k -> updateIds (ProductsId productId) _assignedTo _vehicleId
             Nothing -> return $ "NO CHANGE"
   tripRes <- case _status of
             Just c -> updateTrip (ProductsId productId) c
@@ -45,16 +48,22 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
   updatedProd <- DB.findById (ProductsId productId)
   return $ updatedProd
 
-updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle -> Maybe Text -> L.Flow Text
-updateInfo productId driverInfo vehicleInfo assignedTo = do
+updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle  -> L.Flow Text
+updateInfo productId driverInfo vehicleInfo = do
   let info = Just $ U.encodeTypeToText (prepareInfo driverInfo vehicleInfo)
-  DB.updateInfo productId info assignedTo
-  return "UPDATED"
+  DB.updateInfo productId info
+  return "INFO UPDATED"
   where
     prepareInfo drivInfo vehiInfo = Storage.ProdInfo
           { driverInfo = U.encodeTypeToText drivInfo
           , vehicleInfo = U.encodeTypeToText vehiInfo
           }
+
+-- update udf3 for vehicleId
+updateIds :: ProductsId -> Maybe Text -> Maybe Text -> L.Flow Text
+updateIds productId assignedTo vehId = do
+  DB.updateIds productId assignedTo vehId
+  return "IDs UPDATED"
 
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow Text
 updateTrip productId k = do
