@@ -1,44 +1,28 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Core.Contact where
 
 import Data.Text
 import EulerHS.Prelude
 
 data Contact = Contact
-  { _email :: Text,
-    _mobile :: Mobile,
-    _landline :: LandLine,
-    _ivr :: [Text]
+  { email :: Maybe Text,
+    mobile :: Maybe Mobile,
+    landline :: Maybe LandLine,
+    ivr :: [Text]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Contact where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Contact where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Mobile = Mobile
-  { _country_code :: Text,
-    _number :: Text
+  { country_code :: Maybe Text,
+    number :: Maybe Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Mobile where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Mobile where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data LandLine = LandLine
-  { _country_code :: Text,
-    _std_code :: Text,
-    _number :: Text,
-    _extension :: Text
+  { country_code :: Text,
+    std_code :: Text,
+    number :: Text,
+    extension :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON LandLine where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON LandLine where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)

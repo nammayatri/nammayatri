@@ -1,8 +1,7 @@
 module Storage.Queries.Products where
 
-import qualified Storage.Queries as DB
-import Beckn.Types.Common
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Products as Storage
 import Beckn.Utils.Common
 import Data.Time
@@ -11,6 +10,7 @@ import qualified Database.Beam as B
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 import Types.App
 import qualified Types.Storage.DB as DB
 
@@ -30,7 +30,8 @@ findAllByTypeOrgId orgId status =
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
     predicate orgId status Storage.Products {..} =
       ( _status ==. (B.val_ status)
-          &&. _organizationId ==. (B.val_ orgId))
+          &&. _organizationId ==. (B.val_ orgId)
+      )
 
 findAllById :: [ProductsId] -> L.Flow [Storage.Products]
 findAllById ids =
@@ -69,7 +70,7 @@ updateInfo prodId info = do
     dbTable
     (setClause info)
     (predicate prodId)
-      >>= either DB.throwDBError pure
+    >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause info Storage.Products {..} =
@@ -95,4 +96,4 @@ findAllByAssignedTo id =
   DB.findAll dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Products {..} = ( _assignedTo ==. (B.val_ (Just id)))
+    predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))

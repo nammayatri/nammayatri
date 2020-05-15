@@ -144,6 +144,7 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists _EntityId
+        QR.updateVerified tokenId True
         QP.update (SP._id person) SP.ACTIVE True
         updatedPerson <- QP.findPersonById (SP._id person)
         return $ LoginRes _token (Just updatedPerson)
