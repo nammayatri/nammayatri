@@ -2,6 +2,7 @@ module External.Gateway.Flow where
 
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Status
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -28,6 +29,16 @@ onConfirm req = do
     L.logInfo "OnConfirm" $ "OnConfirm callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending onConfirm Callback: " (show err)
+  return $ first show res
+
+onStatus :: OnStatusReq -> L.Flow (Either Text ())
+onStatus req = do
+  url <- getBaseUrl
+  res <- L.callAPI url $ API.onStatus req
+  whenRight res $ \_ ->
+    L.logInfo "OnStatus" $ "OnStatus callback successfully delivered"
+  whenLeft res $ \err ->
+    L.logError "error occurred while sending onStatus Callback: " (show err)
   return $ first show res
 
 getBaseUrl :: L.Flow BaseUrl

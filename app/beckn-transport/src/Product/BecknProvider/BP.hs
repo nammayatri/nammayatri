@@ -4,6 +4,7 @@ module Product.BecknProvider.BP where
 
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Status
 import Beckn.Types.App
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -255,6 +256,49 @@ mkOnConfirmPayload c prods prodId = do
   service <- GT.mkServiceOffer c prods [prodId]
   return
     OnConfirmReq
+      { context,
+        message = service
+      }
+
+serviceStatus :: StatusReq -> FlowHandler StatusRes
+serviceStatus req = withFlowHandler $ do
+  L.logInfo "serviceStatus API Flow" $ show req
+  let caseId = req ^. #message ^. #id
+  -- c <- Case.findByIdAndType (CaseId caseId) "RIDEBOOK"
+  --TODO: Need to fetch child case and Trip.Tracking Record
+  --TODO: Need to fetch confirmed product and add Trip.Vehicle and Trip.Driver Record
+  c <- Case.findById (CaseId caseId)
+  cps <- CaseProduct.findAllByCaseId (c ^. #_id)
+  prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
+  --TODO : use forkFlow to notify gateway
+  notifyServiceStatusToGateway c prods
+  uuid <- L.generateGUID
+  mkAckResponse uuid "track"
+
+notifyServiceStatusToGateway :: Case -> [Products] -> L.Flow ()
+notifyServiceStatusToGateway c prods = do
+  onServiceStatusPayload <- mkOnServiceStatusPayload c prods
+  url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
+  L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
+  Gateway.onStatus onServiceStatusPayload
+  return ()
+
+mkOnServiceStatusPayload :: Case -> [Products] -> L.Flow OnStatusReq
+mkOnServiceStatusPayload c prods = do
+  currTime <- getCurrTime
+  let context =
+        Context
+          { domain = "MOBILITY",
+            action = "on_status",
+            version = Just $ "0.1",
+            transaction_id = c ^. #_shortId,
+            message_id = Nothing,
+            timestamp = currTime,
+            dummy = ""
+          }
+  service <- GT.mkServiceOffer c prods []
+  return
+    OnStatusReq
       { context,
         message = service
       }
