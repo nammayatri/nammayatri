@@ -1,31 +1,22 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Mobility.Driver where
 
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person
+import Data.Generics.Labels
 import Data.Text
 import EulerHS.Prelude
 
 data Driver = Driver
-  { _descriptor :: Person,
-    _experience :: Experience
+  { descriptor :: Person,
+    experience :: Maybe Experience
   }
-  deriving (Generic, Show)
-
-instance FromJSON Driver where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Driver where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Experience = Experience
-  { _label :: Text,
-    _value :: Text,
-    _unit :: Text
+  { label :: Text,
+    value :: Text,
+    unit :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Experience where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Experience where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)

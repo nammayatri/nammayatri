@@ -1,24 +1,24 @@
-{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.Products where
 
-import           Beckn.Types.App
-import qualified Beckn.Types.Storage.Case  as Case
-import           Data.Swagger
-import qualified Data.Text                 as T
-import           Data.Time.LocalTime
-import qualified Database.Beam             as B
-import           Database.Beam.Backend.SQL
-import           Database.Beam.MySQL
-import           EulerHS.Prelude
-import           Servant.Swagger
+import Beckn.Types.App
+import qualified Beckn.Types.Storage.Case as Case
+import Data.Swagger
+import qualified Data.Text as T
+import Data.Time.LocalTime
+import qualified Database.Beam as B
+import Database.Beam.Backend.SQL
+import Database.Beam.MySQL
+import EulerHS.Prelude
+import Servant.Swagger
 
 data ProdInfo = ProdInfo
-  { driverInfo  :: Text
-  , vehicleInfo :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
-
+  { driverInfo :: Text,
+    vehicleInfo :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data ProductsType = RIDE | PASS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -41,6 +41,7 @@ instance FromBackendRow MySQL ProductsStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 type ProductsIndustry = Case.Industry
+
 -- data ProductsIndustry = MOBILITY | GOVT | GROCERY
 --   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -51,31 +52,31 @@ type ProductsIndustry = Case.Industry
 --   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductsT f = Products
-  { _id             :: B.C f ProductsId,
-    _shortId        :: B.C f Text,
-    _name           :: B.C f (Maybe Text),
-    _description    :: B.C f (Maybe Text),
-    _industry       :: B.C f ProductsIndustry,
-    _type           :: B.C f ProductsType,
-    _status         :: B.C f ProductsStatus,
-    _startTime      :: B.C f LocalTime,
-    _endTime        :: B.C f (Maybe LocalTime),
-    _validTill      :: B.C f LocalTime,
-    _price          :: B.C f Double,
-    _rating         :: B.C f (Maybe Text),
-    _review         :: B.C f (Maybe Text),
-    _udf1           :: B.C f (Maybe Text),
-    _udf2           :: B.C f (Maybe Text),
-    _udf3           :: B.C f (Maybe Text),
-    _udf4           :: B.C f (Maybe Text),
-    _udf5           :: B.C f (Maybe Text),
-    _info           :: B.C f (Maybe Text),
-    _fromLocation   :: B.C f (Maybe Text),
-    _toLocation     :: B.C f (Maybe Text),
+  { _id :: B.C f ProductsId,
+    _shortId :: B.C f Text,
+    _name :: B.C f (Maybe Text),
+    _description :: B.C f (Maybe Text),
+    _industry :: B.C f ProductsIndustry,
+    _type :: B.C f ProductsType,
+    _status :: B.C f ProductsStatus,
+    _startTime :: B.C f LocalTime,
+    _endTime :: B.C f (Maybe LocalTime),
+    _validTill :: B.C f LocalTime,
+    _price :: B.C f Double,
+    _rating :: B.C f (Maybe Text),
+    _review :: B.C f (Maybe Text),
+    _udf1 :: B.C f (Maybe Text),
+    _udf2 :: B.C f (Maybe Text),
+    _udf3 :: B.C f (Maybe Text),
+    _udf4 :: B.C f (Maybe Text),
+    _udf5 :: B.C f (Maybe Text),
+    _info :: B.C f (Maybe Text),
+    _fromLocation :: B.C f (Maybe Text),
+    _toLocation :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
-    _assignedTo     :: B.C f (Maybe Text),
-    _createdAt      :: B.C f LocalTime,
-    _updatedAt      :: B.C f LocalTime
+    _assignedTo :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

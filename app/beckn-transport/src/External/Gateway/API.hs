@@ -2,6 +2,7 @@ module External.Gateway.API where
 
 import Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -45,3 +46,15 @@ confirmAPI = Proxy
 
 onConfirm req =
   void $ ET.client confirmAPI req
+
+type StatusAPI =
+  "on_status"
+    :> "services"
+    :> ReqBody '[JSON] Status.OnStatusReq
+    :> Post '[JSON] Status.OnStatusRes
+
+statusAPI :: Proxy StatusAPI
+statusAPI = Proxy
+
+onStatus req =
+  void $ ET.client statusAPI req

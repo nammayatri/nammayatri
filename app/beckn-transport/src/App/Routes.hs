@@ -6,6 +6,7 @@ module App.Routes where
 
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -17,23 +18,23 @@ import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
 import qualified Product.CaseProduct as CaseProduct
+import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
-import qualified Product.Location as Location
 import Servant
 import Servant.Multipart
 import Types.API.Case
 import Types.API.CaseProduct
+import Types.API.Location
 import Types.API.Person
 import Types.API.Products
 import Types.API.Registration
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Types.API.Location
 
 type TransporterAPIs =
   "v1"
@@ -43,6 +44,7 @@ type TransporterAPIs =
            :<|> OrganizationAPIs --Transporter
            :<|> SearchAPIs
            :<|> ConfirmAPIs
+           :<|> StatusAPIs
            :<|> TrackApis
            :<|> CaseAPIs
            :<|> CaseProductAPIs
@@ -175,17 +177,17 @@ productFlow =
 -- Location update and get for tracking is as follows
 type LocationAPIs =
   "location"
-    :>  ( Capture "caseId" Text
-          :> Get '[JSON] GetLocationRes
-          :<|> Capture "caseId" Text
-            :> Header "authorization" Text
-            :> ReqBody '[JSON] UpdateLocationReq
-            :> Post '[JSON] UpdateLocationRes
-        )
+    :> ( Capture "caseId" Text
+           :> Get '[JSON] GetLocationRes
+           :<|> Capture "caseId" Text
+             :> Header "authorization" Text
+             :> ReqBody '[JSON] UpdateLocationReq
+             :> Post '[JSON] UpdateLocationRes
+       )
 
 locationFlow =
   Location.getLocation
-  :<|> Location.updateLocation
+    :<|> Location.updateLocation
 
 -- location flow over
 
@@ -200,6 +202,7 @@ transporterServer' key =
     :<|> organizationFlow
     :<|> searchApiFlow
     :<|> confirmApiFlow
+    :<|> statusApiFlow
     :<|> trackApiFlow
     :<|> caseFlow
     :<|> caseProductFlow
@@ -226,6 +229,16 @@ type ConfirmAPIs =
 
 confirmApiFlow :: FlowServer ConfirmAPIs
 confirmApiFlow = BP.confirm
+
+type StatusAPIs =
+  "status"
+    :> "services"
+    :> ( ReqBody '[JSON] StatusReq
+           :> Post '[JSON] AckResponse
+       )
+
+statusApiFlow :: FlowServer StatusAPIs
+statusApiFlow = BP.serviceStatus
 
 type TrackApis =
   "track"
