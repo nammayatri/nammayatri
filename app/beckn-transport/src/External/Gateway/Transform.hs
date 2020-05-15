@@ -139,7 +139,7 @@ mkVehicleObj v = case v of
       Just
         BVehicle.Vehicle
           { category = Nothing,
-            capaciity = Nothing,
+            capacity = Nothing,
             make = Nothing,
             model = Nothing,
             size = Nothing,
