@@ -7,6 +7,7 @@ module App.Routes where
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
+import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
@@ -17,6 +18,7 @@ import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
 import qualified Product.CaseProduct as CaseProduct
+import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
@@ -26,6 +28,7 @@ import Servant
 import Servant.Multipart
 import Types.API.Case
 import Types.API.CaseProduct
+import Types.API.Location
 import Types.API.Person
 import Types.API.Products
 import Types.API.Registration
@@ -42,9 +45,11 @@ type TransporterAPIs =
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> StatusAPIs
+           :<|> TrackApis
            :<|> CaseAPIs
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
+           :<|> LocationAPIs
            :<|> ProductAPIs
        )
 
@@ -169,6 +174,23 @@ productFlow =
   Product.listRides
     :<|> Product.update
 
+-- Location update and get for tracking is as follows
+type LocationAPIs =
+  "location"
+    :> ( Capture "caseId" Text
+           :> Get '[JSON] GetLocationRes
+           :<|> Capture "caseId" Text
+             :> Header "authorization" Text
+             :> ReqBody '[JSON] UpdateLocationReq
+             :> Post '[JSON] UpdateLocationRes
+       )
+
+locationFlow =
+  Location.getLocation
+    :<|> Location.updateLocation
+
+-- location flow over
+
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
 
@@ -181,9 +203,11 @@ transporterServer' key =
     :<|> searchApiFlow
     :<|> confirmApiFlow
     :<|> statusApiFlow
+    :<|> trackApiFlow
     :<|> caseFlow
     :<|> caseProductFlow
     :<|> vehicleFlow
+    :<|> locationFlow
     :<|> productFlow
 
 type SearchAPIs =
@@ -215,3 +239,13 @@ type StatusAPIs =
 
 statusApiFlow :: FlowServer StatusAPIs
 statusApiFlow = BP.serviceStatus
+
+type TrackApis =
+  "track"
+    :> "trip"
+    :> ( ReqBody '[JSON] TrackTripReq
+           :> Post '[JSON] TrackTripRes
+       )
+
+trackApiFlow :: FlowServer TrackApis
+trackApiFlow = BP.trackTrip

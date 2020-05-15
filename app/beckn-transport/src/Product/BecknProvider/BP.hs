@@ -5,6 +5,7 @@ module Product.BecknProvider.BP where
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
+import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -13,6 +14,7 @@ import Beckn.Types.Core.Location as BL
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
+import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Storage.Case as SC
 import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Location as SL
@@ -170,6 +172,7 @@ confirm req = withFlowHandler $ do
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
+  --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
@@ -303,4 +306,43 @@ mkOnServiceStatusPayload c prods trackerCase = do
     OnStatusReq
       { context,
         message = service
+      }
+
+trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
+trackTrip req = withFlowHandler $ do
+  L.logInfo "track trip API Flow" $ show req
+  let tripId = req ^. #message ^. #id
+  case_ <- Case.findById (CaseId tripId)
+  --TODO : use forkFlow to notify gateway
+  notifyTripUrlToGateway case_
+  uuid <- L.generateGUID
+  mkAckResponse uuid "track"
+
+notifyTripUrlToGateway :: Case -> L.Flow ()
+notifyTripUrlToGateway c = do
+  onTrackTripPayload <- mkOnTrackTripPayload $ c ^. #_shortId
+  url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
+  L.logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
+  Gateway.onTrackTrip onTrackTripPayload
+  return ()
+
+mkOnTrackTripPayload :: Text -> L.Flow OnTrackTripReq
+mkOnTrackTripPayload c = do
+  currTime <- getCurrTime
+  let context =
+        Context
+          { domain = "MOBILITY",
+            action = "on_track",
+            version = Just $ "0.1",
+            transaction_id = c,
+            message_id = Nothing,
+            timestamp = currTime,
+            dummy = ""
+          }
+  let data_url = GT.baseTrackingUrl <> "/" <> c
+  let embed_url = GT.baseTrackingUrl <> "/" <> c <> "/embed"
+  return
+    OnTrackTripReq
+      { context,
+        message = GT.mkTracking "PULL" data_url embed_url
       }
