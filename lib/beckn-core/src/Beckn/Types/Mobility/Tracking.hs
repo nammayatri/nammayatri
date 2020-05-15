@@ -1,30 +1,21 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Mobility.Tracking where
 
 import Beckn.Types.Core.Location
+import Data.Generics.Labels
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
 
 data Tracking = Tracking
-  { _method :: Location, -- "PULL", "PUSH"
-    _pull :: PullTrackingData
+  { method :: Text, -- "PULL", "PUSH"
+    pull :: Maybe PullTrackingData
   }
-  deriving (Generic, Show)
-
-instance FromJSON Tracking where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Tracking where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data PullTrackingData = PullTrackingData
-  { _data_url :: Text,
-    _embed_url :: Text
+  { data_url :: Text,
+    embed_url :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON PullTrackingData where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON PullTrackingData where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Show, FromJSON, ToJSON)
