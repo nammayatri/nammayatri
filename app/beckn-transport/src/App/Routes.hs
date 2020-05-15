@@ -22,6 +22,7 @@ import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
+import qualified Product.Location as Location
 import Servant
 import Servant.Multipart
 import Types.API.Case
@@ -32,6 +33,7 @@ import Types.API.Registration
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
+import Types.API.Location
 
 type TransporterAPIs =
   "v1"
@@ -45,6 +47,7 @@ type TransporterAPIs =
            :<|> CaseAPIs
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
+           :<|> LocationAPIs
            :<|> ProductAPIs
        )
 
@@ -169,6 +172,23 @@ productFlow =
   Product.listRides
     :<|> Product.update
 
+-- Location update and get for tracking is as follows
+type LocationAPIs =
+  "location"
+    :>  ( Capture "caseId" Text
+          :> Get '[JSON] GetLocationRes
+          :<|> Capture "caseId" Text
+            :> Header "authorization" Text
+            :> ReqBody '[JSON] UpdateLocationReq
+            :> Post '[JSON] UpdateLocationRes
+        )
+
+locationFlow =
+  Location.getLocation
+  :<|> Location.updateLocation
+
+-- location flow over
+
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
 
@@ -184,6 +204,7 @@ transporterServer' key =
     :<|> caseFlow
     :<|> caseProductFlow
     :<|> vehicleFlow
+    :<|> locationFlow
     :<|> productFlow
 
 type SearchAPIs =
