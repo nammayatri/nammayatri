@@ -26,26 +26,25 @@ loadRedisConfig = do
   mhost <- lookupEnv "REDIS_HOST"
   mport <- lookupEnv "REDIS_PORT"
   mauth <- lookupEnv "REDIS_AUTH"
---   mdb   <- lookupEnv "REDIS_DB"
---   mmaxConnections <- lookupEnv "REDIS_MAX_CONNECTIONS"
---   mmaxIdleTime    <- lookupEnv "REDIS_MAX_IDLE_TIME"
---   mtimeout        <- lookupEnv "REDIS_CONNECTION_TIMEOUT"
+  mdb   <- lookupEnv "REDIS_DB"
+  mmaxConnections <- lookupEnv "REDIS_MAX_CONNECTIONS"
+  mmaxIdleTime    <- lookupEnv "REDIS_MAX_IDLE_TIME"
+  mtimeout        <- lookupEnv "REDIS_CONNECTION_TIMEOUT"
   pure $ do
     host  <- mhost
     port  <- mport
-    -- db    <- mdb
-    -- maxConnections <- mmaxConnections
-    -- maxIdleTime    <- mmaxIdleTime
-    -- timeout        <- mtimeout
+    db    <- mdb
+    maxConnections <- mmaxConnections
+    maxIdleTime    <- mmaxIdleTime
     p <- readMaybe port
     Just $ T.mkKVDBConfig "redis" $ T.RedisConfig
         { connectHost = host
         , connectPort = p
         , connectAuth = T.pack <$> mauth
-        , connectDatabase = 0
-        , connectMaxConnections = 50
-        , connectMaxIdleTime = 30
-        , connectTimeout = Nothing
+        , connectDatabase = read db
+        , connectMaxConnections = read maxConnections
+        , connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime
+        , connectTimeout = fromRational <$> toRational <$> read <$> mtimeout
         }
 
 prepareRedisConnections :: L.Flow ()
