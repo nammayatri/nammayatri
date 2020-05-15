@@ -142,11 +142,15 @@ type CaseAPIs =
              :> Capture "caseId" Text
              :> ReqBody '[JSON] UpdateCaseReq
              :> Post '[JSON] Case
+           :<|> Header "authorization" Text
+             :> ReqBody '[JSON] ProdTypeReq
+             :> Post '[JSON] CaseListRes
        )
 
 caseFlow =
   Case.list
     :<|> Case.update
+    :<|> Case.listByProdId
 
 -------- CaseProduct Flow----------
 type CaseProductAPIs =

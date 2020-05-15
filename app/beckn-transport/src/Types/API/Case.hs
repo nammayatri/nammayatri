@@ -1,6 +1,7 @@
 module Types.API.Case where
 
 import           Data.Default
+import           Beckn.Types.App
 import           Data.Swagger
 import           Beckn.Types.Storage.Case
 import           Beckn.Types.Storage.Location
@@ -18,6 +19,18 @@ instance FromJSON CaseReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 instance ToJSON CaseReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data ProdTypeReq = ProdTypeReq
+  { _type   :: CaseType,
+    _productId :: ProductsId
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON ProdTypeReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ProdTypeReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 
