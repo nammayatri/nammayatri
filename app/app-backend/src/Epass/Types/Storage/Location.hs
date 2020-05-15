@@ -1,17 +1,17 @@
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Epass.Types.Storage.Location where
 
-import Data.Aeson
-import Data.Time
-import qualified Database.Beam as B
-import qualified Epass.Types.Common as BTC
-import EulerHS.Prelude
+import qualified Beckn.Types.Storage.Location as BTC
+import           Data.Aeson
+import           Data.Time
+import qualified Database.Beam                as B
+import           EulerHS.Prelude
 
 data Point = Point
-  { _lat :: Double,
+  { _lat  :: Double,
     _long :: Double
   }
   deriving (Generic)
@@ -19,19 +19,19 @@ data Point = Point
 data Bound = Bound [Point] deriving (Generic)
 
 data LocationT f = Location
-  { _id :: B.C f Text,
-    _type :: B.C f BTC.LocationType,
-    _lat :: B.C f (Maybe Double),
-    _long :: B.C f (Maybe Double),
-    _bound :: B.C f (Maybe Value),
-    _district :: B.C f (Maybe Text),
-    _city :: B.C f (Maybe Text),
-    _state :: B.C f (Maybe Text),
-    _country :: B.C f (Maybe Text),
-    _ward :: B.C f (Maybe Text),
-    _pincode :: B.C f Int,
-    _address :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text),
+  { _id        :: B.C f Text,
+    _type      :: B.C f BTC.LocationType,
+    _lat       :: B.C f (Maybe Double),
+    _long      :: B.C f (Maybe Double),
+    _bound     :: B.C f (Maybe Value),
+    _district  :: B.C f (Maybe Text),
+    _city      :: B.C f (Maybe Text),
+    _state     :: B.C f (Maybe Text),
+    _country   :: B.C f (Maybe Text),
+    _ward      :: B.C f (Maybe Text),
+    _pincode   :: B.C f Int,
+    _address   :: B.C f (Maybe Text),
+    _info      :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime
   }

@@ -2,6 +2,7 @@ module Epass.Product.PassApplication.Fetch where
 
 import qualified Beckn.Types.Storage.Case              as Case
 import qualified Beckn.Types.Storage.Location          as Location
+import qualified Beckn.Types.Storage.Location          as BTL
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Data.Aeson
 import           Data.List
@@ -19,8 +20,7 @@ import qualified Epass.Storage.Queries.Tag             as Tag
 import qualified Epass.Types.API.PassApplication       as API
 import           Epass.Types.App
 import           Epass.Types.Common
-import qualified Epass.Types.Common                    as Location (Location (..),
-                                                                    LocationType)
+import qualified Epass.Types.Common                    as Location (Location (..))
 import qualified Epass.Types.Storage.Customer          as Customer
 import qualified Epass.Types.Storage.Document          as Document
 import qualified Epass.Types.Storage.EntityDocument    as EntityDocument
@@ -36,6 +36,7 @@ import           Servant
 import qualified Storage.Queries.Case                  as QC
 import qualified Storage.Queries.CaseProduct           as QCP
 import qualified Storage.Queries.Location              as QLoc
+import qualified Storage.Queries.Person                as QP
 import qualified Storage.Queries.Products              as QProd
 
 listPassApplication ::
@@ -89,7 +90,7 @@ getPassAppInfo PassApplication {..} = do
   isBlacklistedOrg <- maybe (pure False) (\oid -> isJust <$> (Blacklist.findByOrgId oid)) _OrganizationId
   let toLocation =
         Location
-          { _type = fromMaybe PINCODE _toLocationType,
+          { _type = fromMaybe BTL.PINCODE _toLocationType,
             _lat = _toLat,
             _long = _toLong,
             _ward = _toWard,
@@ -136,8 +137,7 @@ getPassAppInfo PassApplication {..} = do
 getCaseAppInfo :: Case.Case -> L.Flow API.CaseInfo
 getCaseAppInfo Case.Case {..} = do
   morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) $ _udf2
-  mcustomer <- maybe (pure Nothing) (Customer.findCustomerById . CustomerId) $ _requestor
-  let maybeCustId = Customer._id <$> mcustomer
+  mcustomer <- maybe (pure Nothing) (QP.findById . PersonId) $ _requestor
   entityDocs <- EntityDocument.findAllByCaseId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
   docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
@@ -150,7 +150,7 @@ getCaseAppInfo Case.Case {..} = do
   toLocation <- QLoc.findLocationById $ LocationId _toLocationId
   pure
     API.CaseInfo
-      { _Customer = mcustomer
+      {  _Customer = mcustomer
         , _Tags = tags
         , _Comments = comments
         , _Documents = docs

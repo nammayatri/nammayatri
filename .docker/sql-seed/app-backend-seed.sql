@@ -181,6 +181,7 @@ CREATE TABLE `location` (
   , `pincode` varchar(255) NULL
   , `address` varchar(255) NULL
   , `bound` varchar(255) NULL
+  , `info` TEXT NULL
   , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
   , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
   , PRIMARY KEY (`id`)
@@ -189,7 +190,7 @@ CREATE TABLE `location` (
 );
 
 INSERT INTO `person` (`id`, `first_name`, `middle_name`, `last_name`, `full_name`, `role`, `gender`, `identifier_type`, `email`, `mobile_number`, `mobile_country_code`, `identifier`, `rating`, `verified`, `udf1`, `udf2`, `status`, `organization_id`, `location_id`, `device_token`, `description`, `created_at`, `updated_at`)
-  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'USER', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, FALSE, NULL, NULL, 'INACTIVE', NULL, NULL, NULL, NULL, '2020-05-12 10:23:00.578424', '2020-05-12 10:23:00.578424');
+  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, FALSE, NULL, NULL, 'INACTIVE', NULL, NULL, NULL, NULL, '2020-05-12 10:23:00.578424', '2020-05-12 10:23:00.578424');
 
 INSERT INTO `registration_token` (`id`, `token`, `attempts`, `auth_medium`, `auth_type`, `auth_value_hash`, `verified`, `auth_expiry`, `token_expiry`, `entity_id`, `entity_type`, `created_at`, `updated_at`, `info`)
   VALUES ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'ea37f941-427a-4085-a7d0-96240f166672', 3, 'SMS', 'OTP', '3249', FALSE, 3, 365, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:00.582107', '2020-05-12 10:23:00.582107', NULL);

@@ -55,3 +55,9 @@ updateStatus caseId productId status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+findAllByProdId :: ProductsId -> L.Flow [Storage.CaseProduct]
+findAllByProdId id =
+  DB.findAllOrErr dbTable (pred id)
+  where
+    pred id Storage.CaseProduct {..} = _productId ==. (B.val_ id)

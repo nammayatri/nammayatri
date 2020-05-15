@@ -5,11 +5,13 @@ module Product.Case where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
 import Types.API.Case
 import Utils.Common (verifyToken)
@@ -30,3 +32,15 @@ status regToken caseId = withFlowHandler $ do
     fromMaybeM500 "Could not find to location"
       =<< Location.findLocationById (LocationId $ case_ ^. #_toLocationId)
   return $ StatusRes case_ products fromLocation toLocation
+
+list ::
+  Maybe RegToken ->
+  FlowHandler ListRes
+list regToken = withFlowHandler $ do
+  token <- verifyToken regToken
+  person <-
+    Person.findById (PersonId $ RegistrationToken._EntityId token)
+      >>= fromMaybeM500 "Could not find user"
+
+  Case.findAllByPerson (_getPersonId $ person ^. #_id)
+    >>= return . ListRes

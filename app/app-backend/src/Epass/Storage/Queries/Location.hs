@@ -2,19 +2,20 @@
 
 module Epass.Storage.Queries.Location where
 
-import qualified Data.Text as T
-import Database.Beam ((&&.), (<-.), (==.))
-import qualified Database.Beam as B
-import qualified Epass.Storage.Queries as DB
-import Epass.Types.Common
-import qualified Epass.Types.Common as Common
-import qualified Epass.Types.Storage.DB as DB
-import qualified Epass.Types.Storage.DB as DB
+import qualified Beckn.Types.Storage.Location as BTL
+import qualified Data.Text                    as T
+import           Database.Beam                ((&&.), (<-.), (==.))
+import qualified Database.Beam                as B
+import           Epass.Types.Common
+import qualified Epass.Types.Common           as Common
+import qualified Epass.Types.Storage.DB       as DB
+import qualified Epass.Types.Storage.DB       as DB
 import qualified Epass.Types.Storage.Location as Storage
 import qualified Epass.Types.Storage.Location as Storage
-import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
+import qualified EulerHS.Language             as L
+import           EulerHS.Prelude              hiding (id)
+import qualified EulerHS.Types                as T
+import qualified Storage.Queries              as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.LocationT)
 dbTable = DB._location DB.becknDb
@@ -26,7 +27,7 @@ findLocation id = do
     predicate Storage.Location {..} = (_id ==. B.val_ id)
 
 -- :TODO complete this function
-findByLocation :: Common.LocationType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int -> L.Flow (Maybe Storage.Location)
+findByLocation :: BTL.LocationType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int -> L.Flow (Maybe Storage.Location)
 findByLocation locType dist city state country ward pin = do
   DB.findOne dbTable (predicate locType dist city state country ward pin)
     >>= either DB.throwDBError pure

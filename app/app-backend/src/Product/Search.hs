@@ -15,7 +15,8 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -27,18 +28,23 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
 import Types.App
 import Utils.Common (verifyToken)
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
-  verifyToken regToken
+  token <- verifyToken regToken
+  person <-
+    Person.findById (PersonId $ RegistrationToken._EntityId token)
+      >>= fromMaybeM500 "Could not find user"
+
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
   Location.create toLocation
-  case_ <- mkCase req fromLocation toLocation
+  case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
 
   gatewayUrl <- Gateway.getBaseUrl
@@ -70,8 +76,8 @@ search_cb regToken req = withFlowHandler $ do
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
 
-mkCase :: SearchReq -> Location.Location -> Location.Location -> L.Flow Case.Case
-mkCase req from to = do
+mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
+mkCase req userId from to = do
   now <- getCurrTime
   id <- generateGUID
   let intent = req ^. #message
@@ -92,7 +98,7 @@ mkCase req from to = do
         _validTill = validTill,
         _provider = Nothing,
         _providerType = Nothing,
-        _requestor = Nothing,
+        _requestor = Just userId,
         _requestorType = Just Case.CONSUMER,
         _parentCaseId = Nothing,
         _fromLocationId = from ^. #_id ^. #_getLocationId,
