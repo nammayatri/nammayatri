@@ -157,8 +157,8 @@ type ProductAPIs =
   "product"
       :> (   Header "authorization" Text
               :> Get '[JSON] RideList
-         :<|> "update"
-              :> Header "authorization" Text
+         :<|>  Header "authorization" Text
+              :> Capture "productId" Text
               :> ReqBody '[JSON] ProdReq
               :> Post '[JSON] ProdInfoRes
          )

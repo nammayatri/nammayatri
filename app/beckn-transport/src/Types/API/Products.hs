@@ -12,7 +12,6 @@ import           Beckn.Types.Storage.Vehicle
 
 data ProdReq = ProdReq
   { _status   :: Maybe Product.ProductsStatus,
-    _productId     :: ProductsId,
     _driverInfo  :: Maybe Driver,
     _vehicleInfo :: Maybe Vehicle,
     _assignedTo :: Maybe Text

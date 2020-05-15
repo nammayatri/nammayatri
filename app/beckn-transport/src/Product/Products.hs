@@ -33,16 +33,16 @@ import Utils.Utils as U
 import Beckn.Utils.Common (withFlowHandler)
 
 
-update :: Maybe Text -> ProdReq -> FlowHandler ProdInfoRes
-update regToken ProdReq {..} = withFlowHandler $ do
+update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
+update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   infoRes <- case _assignedTo of
-            Just k -> updateInfo _productId _driverInfo _vehicleInfo _assignedTo
+            Just k -> updateInfo (ProductsId productId) _driverInfo _vehicleInfo _assignedTo
             Nothing -> return $ "NO CHANGE"
   tripRes <- case _status of
-            Just c -> updateTrip _productId c
+            Just c -> updateTrip (ProductsId productId) c
             Nothing -> return $ "NO CHANGE"
-  updatedProd <- DB.findById _productId
+  updatedProd <- DB.findById (ProductsId productId)
   return $ updatedProd
 
 updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle -> Maybe Text -> L.Flow Text
