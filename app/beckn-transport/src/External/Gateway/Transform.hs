@@ -9,6 +9,8 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Service
+import Beckn.Types.Mobility.Tracking
+import Beckn.Types.Mobility.Trip
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Products as Product
@@ -55,19 +57,57 @@ mkPrice prod =
       _tax = Nothing
     }
 
-mkServiceOffer :: Case -> [Products] -> [Text] -> L.Flow Service
-mkServiceOffer c prods prodId =
+mkServiceOffer :: Case -> [Products] -> Maybe Trip -> L.Flow Service
+mkServiceOffer c prods trip =
   let x =
         Service
           { _id = _getCaseId $ c ^. #_id,
             _catalog = Just $ mkCatalog prods,
             _matched_items = (_getProductsId . Product._id) <$> prods,
-            _selected_items = prodId,
+            _selected_items = catMaybes $ (\x -> if x ^. #_status == Product.CONFIRMED then Just (_getProductsId $ x ^. #_id) else Nothing) <$> prods,
             _fare_product = Nothing,
             _offers = [],
             _provider = Nothing,
-            _trip = Nothing,
+            _trip = trip,
             _policies = [],
             _billing_address = Nothing
           }
    in return x
+
+mkTrip :: Maybe Case -> L.Flow (Maybe Trip)
+mkTrip maybeCase = case maybeCase of
+  Nothing -> return Nothing
+  Just c -> do
+    let data_url = baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id)
+        embed_url = baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
+    --TODO: get case product and product then use it to fetch details and prepare
+    return $
+      Just
+        Trip
+          { id = _getCaseId $ c ^. #_id,
+            vehicle = Nothing, -- TODO: need to take it from product
+            driver = Nothing, -- TODO: need to take it from product.assginedTo
+            travellers = [],
+            tracking = mkTracking "PULL" data_url embed_url,
+            corridor_type = "ON-DEMAND",
+            state = "", -- TODO: need to take it from product
+            fare = Nothing, -- TODO: need to take it from product
+            route = Nothing
+          }
+
+baseTrackingUrl :: Text
+baseTrackingUrl = "http://api.sandbox.beckn.juspay.in/transport/v1/location"
+
+mkTracking :: Text -> Text -> Text -> Tracking
+mkTracking method dataUrl embedUrl =
+  Tracking
+    { method = method,
+      pull = if method == "PULL" then Just $ mkPullTrackingData dataUrl embedUrl else Nothing
+    }
+
+mkPullTrackingData :: Text -> Text -> PullTrackingData
+mkPullTrackingData dataUrl embed =
+  PullTrackingData
+    { data_url = dataUrl,
+      embed_url = embed
+    }

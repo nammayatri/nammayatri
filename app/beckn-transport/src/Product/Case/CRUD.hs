@@ -161,7 +161,7 @@ mkOnSearchPayload c prods = do
             timestamp = currTime,
             dummy = ""
           }
-  service <- GT.mkServiceOffer c prods []
+  service <- GT.mkServiceOffer c prods Nothing
   return
     OnSearchReq
       { context,

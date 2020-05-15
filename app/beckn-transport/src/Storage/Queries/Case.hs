@@ -47,6 +47,16 @@ findById caseId =
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
 
+findByParentCaseIdAndType :: CaseId -> Storage.CaseType -> L.Flow (Maybe Storage.Case)
+findByParentCaseIdAndType pCaseId cType =
+  DB.findOne dbTable (predicate pCaseId cType)
+    >>= either DB.throwDBError pure
+  where
+    predicate pCaseId cType Storage.Case {..} =
+      ( _parentCaseId ==. (B.val_ $ Just pCaseId)
+          &&. _type ==. B.val_ cType
+      )
+
 findBySid :: Text -> L.Flow Storage.Case
 findBySid sid =
   DB.findOneWithErr dbTable (predicate sid)
