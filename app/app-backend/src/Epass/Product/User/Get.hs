@@ -39,15 +39,8 @@ list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
       =<< Person.findById (PersonId $ SR._EntityId reg)
   when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER) $ do
     L.throwException $ err400 {errBody = "UNAUTHORIZED_USER"}
-  orgM <-
-    join
-      <$> mapM
-        (Org.findOrganizationById . OrganizationId)
-        (user ^. #_organizationId)
-  when (isNothing orgM)
-    $ L.throwException
-    $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
-  getUsers limitM offsetM locateM roleM locate user (fromJust orgM)
+
+  getUsers limitM offsetM locateM roleM locate user
 
 getUsers ::
   Maybe Int ->
@@ -56,9 +49,8 @@ getUsers ::
   [Person.Role] ->
   [Text] ->
   Person.Person ->
-  Org.Organization ->
   L.Flow ListRes
-getUsers offsetM limitM locateM role locate user org = do
+getUsers offsetM limitM locateM role locate user = do
   case user ^. #_role of
     Person.ADMIN ->
       case locateM of
@@ -69,6 +61,7 @@ getUsers offsetM limitM locateM role locate user org = do
           Person.findAllWithLimitOffsetByRole limitM offsetM role
             >>= return . ListRes
     Person.CITYLEVEL -> do
+      org <- getOrgOrFail (user ^. #_organizationId)
       allLocations <-
         Location.findByStOrDistrict offsetM limitM LCITY (org ^. #_city)
       case locateM of
@@ -92,6 +85,7 @@ getUsers offsetM limitM locateM role locate user org = do
           wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     Person.DISTRICTLEVEL -> do
+      org <- getOrgOrFail (user ^. #_organizationId)
       let district = fromJust $ org ^. #_district
       allLocations <-
         Location.findByStOrDistrict offsetM limitM LDISTRICT district
@@ -109,6 +103,7 @@ getUsers offsetM limitM locateM role locate user org = do
           wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     Person.WARDLEVEL -> do
+      org <- getOrgOrFail (user ^. #_organizationId)
       let ward = fromJust $ org ^. #_ward
       case locateM of
         Just LWARD ->
@@ -117,6 +112,15 @@ getUsers offsetM limitM locateM role locate user org = do
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
+
+getOrgOrFail :: Maybe Text -> L.Flow Org.Organization
+getOrgOrFail orgId = do
+  orgM <-
+    join
+      <$> mapM (Org.findOrganizationById . OrganizationId) orgId
+  case orgM of
+    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
+    Just org -> return org
 
 cityLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 cityLevelUsers limitM offsetM r cities =
@@ -173,7 +177,7 @@ get regToken userId = withFlowHandler $ do
   user <-
     fromMaybeM400 "User not found"
       =<< Person.findById userId
-  locInfo <- getLocationInfo (fromJust $ user ^. #_locationId) -- TODO: fix this
+  locInfo <- mapM getLocationInfo (user ^. #_locationId)
   return $ mkUInfo user locInfo
 
 listRoles :: Maybe RegistrationTokenText -> FlowHandler [Person.Role]

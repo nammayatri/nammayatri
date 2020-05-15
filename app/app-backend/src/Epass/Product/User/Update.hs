@@ -5,7 +5,6 @@ module Epass.Product.User.Update where
 
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Aeson
 import qualified Data.List as List
 import Data.Time
@@ -26,11 +25,34 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.RegistrationToken as RegToken
 
 update :: Maybe Text -> PersonId -> UpdateReq -> FlowHandler UpdateRes
-update regToken userId UpdateReq {..} = withFlowHandler $ do
+update regToken userId req@UpdateReq {..} = withFlowHandler $ do
   verifyToken regToken
-  Person.update userId _status _name _email _role
+  person <-
+    Person.findById userId
+      >>= fromMaybeM500 "Couldnot find user"
+
+  let role = person ^. #_role
+  when
+    (isJust _status && (role == Person.DRIVER || role == Person.USER))
+    (L.throwException $ err500 {errBody = "UNAUTHORIZED"})
+
+  let updatedPerson =
+        person
+          { Person._firstName = _middleName <|> (person ^. #_firstName),
+            Person._middleName = _middleName <|> (person ^. #_middleName),
+            Person._lastName = _lastName <|> (person ^. #_lastName),
+            Person._fullName = _fullName <|> (person ^. #_fullName),
+            Person._gender = fromMaybe (person ^. #_gender) _gender,
+            Person._email = _email <|> (person ^. #_email),
+            Person._organizationId = _organizationId <|> (person ^. #_organizationId),
+            Person._locationId = _locationId <|> (person ^. #_locationId),
+            Person._description = _description <|> (person ^. #_description),
+            Person._status = fromMaybe (person ^. #_status) _status
+          }
+  Person.updateMultiple userId updatedPerson
   Person.findById userId
     >>= fromMaybeM500 "Couldnot find user"
     >>= return . UpdateRes
@@ -39,4 +61,5 @@ delete :: Maybe RegistrationTokenText -> PersonId -> FlowHandler Ack
 delete regToken userId = withFlowHandler $ do
   verifyToken regToken
   Person.deleteById userId
+  RegToken.deleteByPersonId (_getPersonId userId)
   sendAck

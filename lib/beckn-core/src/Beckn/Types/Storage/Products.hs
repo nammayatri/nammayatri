@@ -73,6 +73,7 @@ data ProductsT f = Products
     _fromLocation   :: B.C f (Maybe Text),
     _toLocation     :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
+    _assignedTo     :: B.C f (Maybe Text),
     _createdAt      :: B.C f LocalTime,
     _updatedAt      :: B.C f LocalTime
   }
@@ -123,5 +124,6 @@ fieldEMod =
           _toLocation = "to_location_id",
           _organizationId = "organization_id",
           _createdAt = "created_at",
-          _updatedAt = "updated_at"
+          _updatedAt = "updated_at",
+          _assignedTo = "assigned_to"
         }

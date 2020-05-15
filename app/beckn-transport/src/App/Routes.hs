@@ -45,6 +45,7 @@ type TransporterAPIs =
            :<|> CaseAPIs
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
+           :<|> ProductAPIs
        )
 
 ---- Registration Flow ------
@@ -155,14 +156,18 @@ caseProductFlow =
 
 -------- Product Flow----------
 type ProductAPIs =
-  "update"
+  "product"
     :> ( Header "authorization" Text
-           :> ReqBody '[JSON] ProdReq
-           :> Post '[JSON] ProdInfoRes
+           :> Get '[JSON] RideList
+           :<|> Header "authorization" Text
+             :> Capture "productId" Text
+             :> ReqBody '[JSON] ProdReq
+             :> Post '[JSON] ProdInfoRes
        )
 
 productFlow =
-  Product.updateInfo
+  Product.listRides
+    :<|> Product.update
 
 transporterAPIs :: Proxy TransporterAPIs
 transporterAPIs = Proxy
@@ -179,6 +184,7 @@ transporterServer' key =
     :<|> caseFlow
     :<|> caseProductFlow
     :<|> vehicleFlow
+    :<|> productFlow
 
 type SearchAPIs =
   "search"

@@ -34,8 +34,8 @@ type AppAPIs =
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> CaseAPIs
+           :<|> Epass.EPassAPIs
        )
-    :<|> Epass.EPassAPIs
 
 appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
@@ -47,8 +47,8 @@ appServer' key = do
       :<|> searchFlow
       :<|> confirmFlow
       :<|> caseFlow
+      :<|> Epass.epassServer' key
     )
-    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =
@@ -111,9 +111,13 @@ confirmFlow =
 type CaseAPIs =
   "case"
     :> Header "token" RegToken
-    :> Capture "caseId" CaseId
-    :> Get '[JSON] Case.StatusRes
+    :> ( "list"
+           :> Get '[JSON] Case.ListRes
+           :<|> Capture "caseId" CaseId
+           :> Get '[JSON] Case.StatusRes
+       )
 
 caseFlow :: FlowServer CaseAPIs
-caseFlow =
-  Case.status
+caseFlow regToken =
+  Case.list regToken
+    :<|> Case.status regToken

@@ -11,10 +11,10 @@ import           Types.Storage.Driver
 import           Beckn.Types.Storage.Vehicle
 
 data ProdReq = ProdReq
-  { _status   :: Product.ProductsStatus,
-    _id     :: Text,
-    _driverInfo  :: Driver,
-    _vehicleInfo :: Vehicle
+  { _status   :: Maybe Product.ProductsStatus,
+    _driverInfo  :: Maybe Driver,
+    _vehicleInfo :: Maybe Vehicle,
+    _assignedTo :: Maybe Text
   }
   deriving (Show, Generic, ToSchema)
 
@@ -24,4 +24,6 @@ instance FromJSON ProdReq where
 instance ToJSON ProdReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-type ProdInfoRes = Text
+type ProdInfoRes = Product.Products
+
+type RideList = [Product.Products]

@@ -2,6 +2,7 @@ module Epass.Types.API.PassApplication where
 
 import qualified Beckn.Types.Storage.Case            as Case
 import qualified Beckn.Types.Storage.Location        as Loc
+import qualified Beckn.Types.Storage.Person          as SP
 import           Data.Default
 import           Data.Swagger
 import           Data.Time.LocalTime
@@ -16,7 +17,7 @@ import qualified Epass.Types.Storage.Tag             as ST
 import           EulerHS.Prelude
 
 data CreatePassApplicationReq = CreatePassApplicationReq
-  { _CustomerId           :: Maybe CustomerId,
+  { _CustomerId           :: Maybe PersonId,
     _OrganizationId       :: Maybe OrganizationId,
     _TenantOrganizationId :: Maybe TenantOrganizationId,
     _fromDate             :: LocalTime,
@@ -94,7 +95,7 @@ instance ToJSON PassAppInfo where
 
 data CaseInfo = CaseInfo
   { _id                        :: CaseId,
-    _Customer                  :: (Maybe SC.Customer),
+    _Customer                  :: (Maybe SP.Person),
     _Tags                      :: [ST.Tag],
     _Documents                 :: [SD.Document],
     _Comments                  :: [SCM.Comment],

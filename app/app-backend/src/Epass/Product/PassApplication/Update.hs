@@ -4,6 +4,7 @@ import qualified Beckn.Types.Storage.Case              as Case
 import qualified Beckn.Types.Storage.CaseProduct       as CaseProduct
 import qualified Beckn.Types.Storage.Products          as Products
 
+import qualified Beckn.Types.Storage.Location          as BTL
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import           Data.Aeson
 import qualified Data.Text                             as DT
@@ -13,8 +14,7 @@ import qualified Epass.Storage.Queries.PassApplication as DB
 import           Epass.Types.API.PassApplication
 import           Epass.Types.App
 import           Epass.Types.Common
-import qualified Epass.Types.Common                    as Location (Location (..),
-                                                                    LocationType)
+import qualified Epass.Types.Common                    as Location (Location (..))
 import qualified Epass.Types.Storage.Pass              as Pass
 import           Epass.Types.Storage.PassApplication
 import qualified Epass.Types.Storage.PassApplication   as PassApplication

@@ -72,5 +72,5 @@ mkLocationInfo bLists eTags tags loc =
           }
    in mkLInfo loc
 
-mkUInfo :: Person.Person -> C.LocationInfo -> C.UserInfo
-mkUInfo user locInfo = UserInfo {_user = user, _locationInfo = locInfo}
+mkUInfo :: Person.Person -> Maybe C.LocationInfo -> C.UserInfo
+mkUInfo user mlocInfo = UserInfo {_user = user, _locationInfo = mlocInfo}

@@ -1,17 +1,19 @@
 module Epass.Storage.Queries.Organization where
 
-import Data.Time
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import Epass.Types.App
-import Epass.Types.Common
-import qualified Epass.Types.Storage.DB as DB
+import qualified Beckn.Types.Storage.Location     as BTL
+import           Data.Time
+import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam                    as B
+import           Epass.Types.App
+import           Epass.Types.Common
+import qualified Epass.Types.Storage.DB           as DB
 import qualified Epass.Types.Storage.Organization as Storage
-import Epass.Utils.Common
-import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
-import qualified Storage.Queries as DB
+import           Epass.Utils.Common
+import qualified EulerHS.Language                 as L
+import           EulerHS.Prelude                  hiding (id)
+import qualified EulerHS.Types                    as T
+import qualified Storage.Queries                  as DB
+
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.becknDb
@@ -29,7 +31,7 @@ findOrganizationById id = do
   where
     predicate Storage.Organization {..} = (_id ==. B.val_ id)
 
-listOrganizations :: Maybe Int -> Maybe Int -> [LocationType] -> [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> [Storage.Status] -> Maybe Bool -> L.Flow [Storage.Organization]
+listOrganizations :: Maybe Int -> Maybe Int -> [BTL.LocationType] -> [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> [Storage.Status] -> Maybe Bool -> L.Flow [Storage.Organization]
 listOrganizations mlimit moffset locationTypes pincodes cities districts wards states statuses verifiedM =
   DB.findAllWithLimitOffsetWhere dbTable (predicate locationTypes pincodes cities districts wards states statuses verifiedM) limit offset orderByDesc
     >>= either DB.throwDBError pure

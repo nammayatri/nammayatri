@@ -1,5 +1,6 @@
 module Types.API.CaseProduct where
 
+import           Beckn.Types.App
 import           Data.Default
 import           Data.Swagger
 import           Data.Time

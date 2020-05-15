@@ -18,7 +18,6 @@ import qualified Epass.Product.PassApplication.Fetch as PassApplication
 import qualified Epass.Product.PassApplication.Update as PassApplication
 import qualified Epass.Product.Quota as Quota
 import qualified Epass.Product.Tag as Tag
-import qualified Epass.Product.User.Create as User
 import qualified Epass.Product.User.Get as User
 import qualified Epass.Product.User.Update as User
 import qualified Epass.Types.API.Blacklist as Blacklist
@@ -217,11 +216,9 @@ quotaFlow registrationToken =
 ------ User Flow ----------
 type UserAPIS =
   "user" :> Header "registrationToken" RegistrationTokenText
-    :> ( ReqBody '[JSON] User.CreateReq
-           :> Post '[JSON] User.CreateRes
-           :<|> Capture "userId" PersonId
-             :> ReqBody '[JSON] User.UpdateReq
-             :> Post '[JSON] User.UpdateRes
+    :> ( Capture "userId" PersonId
+           :> ReqBody '[JSON] User.UpdateReq
+           :> Post '[JSON] User.UpdateRes
            :<|> "list"
              :> QueryParam "limit" Int
              :> QueryParam "offset" Int
@@ -229,21 +226,20 @@ type UserAPIS =
              :> QueryParams "location" Text
              :> QueryParams "roles" Person.Role
              :> Get '[JSON] User.ListRes
+           :<|> "roles"
+             :> Get '[JSON] [Person.Role]
            :<|> Capture ":id" PersonId
              :> Get '[JSON] User.GetRes
            :<|> Capture ":id" PersonId
              :> Delete '[JSON] Ack
-           :<|> "roles"
-             :> Get '[JSON] [Person.Role]
        )
 
 userFlow registrationToken =
-  User.create registrationToken
-    :<|> User.update registrationToken
+  User.update registrationToken
     :<|> User.list registrationToken
+    :<|> User.listRoles registrationToken
     :<|> User.get registrationToken
     :<|> User.delete registrationToken
-    :<|> User.listRoles registrationToken
 
 ------ Location Blacklist ----------
 type BlacklistAPIS =

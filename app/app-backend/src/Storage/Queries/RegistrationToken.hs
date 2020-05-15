@@ -46,3 +46,10 @@ updateAttempts attemps id = do
     predicate i Storage.RegistrationToken {..} = (_id ==. B.val_ i)
     setClause a n Storage.RegistrationToken {..} =
       mconcat [_attempts <-. B.val_ a, _updatedAt <-. B.val_ n]
+
+deleteByPersonId :: Text -> L.Flow ()
+deleteByPersonId id =
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.RegistrationToken {..} = _EntityId ==. B.val_ id
