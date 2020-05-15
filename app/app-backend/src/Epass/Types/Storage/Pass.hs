@@ -1,26 +1,23 @@
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Epass.Types.Storage.Pass where
 
-import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
-import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
-import Epass.Types.App
-import Epass.Types.Common
-  ( Bound (..),
-    LocationType (..),
-    PassType (..),
-  )
-import EulerHS.Prelude
-import Servant.API
-import Servant.Swagger
+import qualified Beckn.Types.Storage.Location as BTL
+import           Data.Aeson
+import qualified Data.ByteString.Lazy         as BSL
+import           Data.Swagger
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as DT
+import           Data.Time.LocalTime
+import qualified Database.Beam                as B
+import           Database.Beam.Backend.SQL
+import           Database.Beam.MySQL
+import           Epass.Types.App
+import           Epass.Types.Common           (Bound (..), PassType (..))
+import           EulerHS.Prelude
+import           Servant.API
+import           Servant.Swagger
 
 data Status = ACTIVE | REVOKED | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -39,42 +36,42 @@ instance FromHttpApiData Status where
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data PassT f = Pass
-  { _id :: B.C f PassId,
-    _CustomerId :: B.C f (Maybe CustomerId),
-    _ShortId :: B.C f Text,
-    _OrganizationId :: B.C f (Maybe OrganizationId),
+  { _id                   :: B.C f PassId,
+    _CustomerId           :: B.C f (Maybe CustomerId),
+    _ShortId              :: B.C f Text,
+    _OrganizationId       :: B.C f (Maybe OrganizationId),
     _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
-    _status :: B.C f Status,
-    _fromDate :: B.C f LocalTime,
-    _toDate :: B.C f LocalTime,
-    _passType :: B.C f PassType,
-    _PassApplicationId :: B.C f PassApplicationId,
-    _CreatedBy :: B.C f CustomerId,
-    _info :: B.C f Text,
-    _fromLocationType :: B.C f (Maybe LocationType),
-    _fromLat :: B.C f (Maybe Double),
-    _fromLong :: B.C f (Maybe Double),
-    _fromWard :: B.C f (Maybe Text),
-    _fromDistrict :: B.C f (Maybe Text),
-    _fromCity :: B.C f (Maybe Text),
-    _fromState :: B.C f (Maybe Text),
-    _fromCountry :: B.C f (Maybe Text),
-    _fromPincode :: B.C f (Maybe Int),
-    _fromAddress :: B.C f (Maybe Text),
-    _fromBound :: B.C f (Maybe Bound),
-    _toLocationType :: B.C f (Maybe LocationType),
-    _toLat :: B.C f (Maybe Double),
-    _toLong :: B.C f (Maybe Double),
-    _toWard :: B.C f (Maybe Text),
-    _toDistrict :: B.C f (Maybe Text),
-    _toCity :: B.C f (Maybe Text),
-    _toState :: B.C f (Maybe Text),
-    _toCountry :: B.C f (Maybe Text),
-    _toPincode :: B.C f (Maybe Int),
-    _toAddress :: B.C f (Maybe Text),
-    _toBound :: B.C f (Maybe Bound),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _status               :: B.C f Status,
+    _fromDate             :: B.C f LocalTime,
+    _toDate               :: B.C f LocalTime,
+    _passType             :: B.C f PassType,
+    _PassApplicationId    :: B.C f PassApplicationId,
+    _CreatedBy            :: B.C f CustomerId,
+    _info                 :: B.C f Text,
+    _fromLocationType     :: B.C f (Maybe BTL.LocationType),
+    _fromLat              :: B.C f (Maybe Double),
+    _fromLong             :: B.C f (Maybe Double),
+    _fromWard             :: B.C f (Maybe Text),
+    _fromDistrict         :: B.C f (Maybe Text),
+    _fromCity             :: B.C f (Maybe Text),
+    _fromState            :: B.C f (Maybe Text),
+    _fromCountry          :: B.C f (Maybe Text),
+    _fromPincode          :: B.C f (Maybe Int),
+    _fromAddress          :: B.C f (Maybe Text),
+    _fromBound            :: B.C f (Maybe Bound),
+    _toLocationType       :: B.C f (Maybe BTL.LocationType),
+    _toLat                :: B.C f (Maybe Double),
+    _toLong               :: B.C f (Maybe Double),
+    _toWard               :: B.C f (Maybe Text),
+    _toDistrict           :: B.C f (Maybe Text),
+    _toCity               :: B.C f (Maybe Text),
+    _toState              :: B.C f (Maybe Text),
+    _toCountry            :: B.C f (Maybe Text),
+    _toPincode            :: B.C f (Maybe Int),
+    _toAddress            :: B.C f (Maybe Text),
+    _toBound              :: B.C f (Maybe Bound),
+    _createdAt            :: B.C f LocalTime,
+    _updatedAt            :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

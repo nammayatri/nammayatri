@@ -46,6 +46,7 @@ type TransporterAPIs =
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
            :<|> LocationAPIs
+           :<|> ProductAPIs
        )
 
 ---- Registration Flow ------
@@ -156,14 +157,18 @@ caseProductFlow =
 
 -------- Product Flow----------
 type ProductAPIs =
-  "update"
-    :> (  Header "authorization" Text
-           :> ReqBody '[JSON] ProdReq
-           :> Post '[JSON] ProdInfoRes
-       )
+  "product"
+      :> (   Header "authorization" Text
+              :> Get '[JSON] RideList
+         :<|>  Header "authorization" Text
+              :> Capture "productId" Text
+              :> ReqBody '[JSON] ProdReq
+              :> Post '[JSON] ProdInfoRes
+         )
 
 productFlow =
-  Product.updateInfo
+  Product.listRides
+  :<|> Product.update
 
 -- Location update and get for tracking is as follows
 type LocationAPIs =
@@ -197,6 +202,8 @@ transporterServer' key =
     :<|> caseProductFlow
     :<|> vehicleFlow
     :<|> locationFlow
+    :<|> productFlow
+
 
 type SearchAPIs =
   "search"

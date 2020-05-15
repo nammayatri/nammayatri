@@ -11,4 +11,4 @@ data:
   REDIS_PORT: "6379"
   REDIS_DB: "20"
   BECKN_GATEWAY_BASE_URL: "beckn-app-backend.atlas"
-  BECKN_GATEWAY_PORT: 8013
+  BECKN_GATEWAY_PORT: "8013"

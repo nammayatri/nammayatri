@@ -25,6 +25,7 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
+import External.Gateway.Transform as GT
 import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CPQ
@@ -111,7 +112,8 @@ createProduct cs price ctime orgId = do
           _createdAt = ctime,
           _updatedAt = currTime,
           _fromLocation = Nothing,
-          _toLocation = Nothing
+          _toLocation = Nothing,
+          _assignedTo = Nothing
         }
 
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
@@ -143,9 +145,8 @@ notifyGateway c = do
   L.logInfo "notifyGateway" $ show cps
   prods <- PQ.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
   onSearchPayload <- mkOnSearchPayload c prods
-  url <- L.runIO $ getEnv "BECKN_GATEWAY_BASE_URL"
   L.logInfo "notifyGateway Request" $ show onSearchPayload
-  Gateway.onSearch (defaultBaseUrl url) onSearchPayload
+  Gateway.onSearch onSearchPayload
   return ()
 
 mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
@@ -161,62 +162,9 @@ mkOnSearchPayload c prods = do
             timestamp = currTime,
             dummy = ""
           }
-  service <- mkServiceOffer c prods
+  service <- GT.mkServiceOffer c prods []
   return
     OnSearchReq
       { context,
         message = service
       }
-
-mkServiceOffer :: Case -> [Products] -> L.Flow Service
-mkServiceOffer c prods =
-  let x =
-        Service
-          { _id = _getCaseId $ c ^. #_id,
-            _catalog = Just $ mkCatalog prods,
-            _matched_items = (_getProductsId . Product._id) <$> prods,
-            _selected_items = [],
-            _fare_product = Nothing,
-            _offers = [],
-            _provider = Nothing,
-            _trip = Nothing,
-            _policies = [],
-            _billing_address = Nothing
-          }
-   in return x
-
-mkCatalog :: [Products] -> Catalog
-mkCatalog prods =
-  Catalog
-    { _category_tree = Category {_id = "", _subcategories = []},
-      _items = mkItem <$> prods
-    }
-
-mkItem :: Products -> Item
-mkItem prod =
-  Item
-    { _id = _getProductsId $ prod ^. #_id,
-      _description = fromMaybe "" $ prod ^. #_description,
-      _name = fromMaybe "" $ prod ^. #_name,
-      _image = Nothing,
-      _price = mkPrice prod,
-      _primary = False,
-      _selected = False,
-      _quantity = 1,
-      _policy = Nothing,
-      _category_id = "",
-      _tags = []
-    }
-
-mkPrice :: Products -> Price
-mkPrice prod =
-  Price
-    { _currency = "INR", -- TODO : Fetch this from product
-      _estimated_value = prod ^. #_price,
-      _computed_value = prod ^. #_price,
-      _listed_value = prod ^. #_price,
-      _offered_value = prod ^. #_price,
-      _unit = "1", -- TODO : Fetch this from product
-      _discount = 0.0,
-      _tax = Nothing
-    }

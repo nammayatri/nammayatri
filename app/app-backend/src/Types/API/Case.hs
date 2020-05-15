@@ -32,3 +32,14 @@ instance FromJSON UpdateCaseReq where
 
 instance ToJSON UpdateCaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+data ListRes = ListRes
+  { _cases :: [Case]
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON ListRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ListRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions

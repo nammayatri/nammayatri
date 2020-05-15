@@ -11,8 +11,8 @@ pipeline {
         anyOf {
           changeset "Jenkinsfile"
           expression { return hasChanged("Jenkinsfile") }
-          changeset "Dockerfile"
-          expression { return hasChanged("Dockerfile") }
+          changeset "Dockerfile*"
+          expression { return hasChanged("Dockerfile*") }
           changeset "Makefile"
           expression { return hasChanged("Makefile") }
           changeset "stack.yaml"
@@ -39,8 +39,8 @@ pipeline {
           branch "master"
           changeset "Jenkinsfile"
           expression { return hasChanged("Jenkinsfile") }
-          changeset "Dockerfile"
-          expression { return hasChanged("Dockerfile") }
+          changeset "Dockerfile*"
+          expression { return hasChanged("Dockerfile*") }
           changeset "Makefile"
           expression { return hasChanged("Makefile") }
           changeset "lib/**/*"

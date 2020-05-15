@@ -155,6 +155,7 @@ CREATE TABLE `product` (
   `organization_id` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `assigned_to` char(36) NULL,
   PRIMARY KEY (`id`),
   INDEX (`organization_id`),
   INDEX (`short_id`)

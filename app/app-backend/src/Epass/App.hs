@@ -7,7 +7,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
 import qualified Epass.App.Server as App
 import Epass.Constants.APIErrorCode
-import Epass.Storage.DB.Config
 import qualified Epass.Types.App as App
 import Epass.Utils.Storage
 import qualified EulerHS.Interpreters as R
@@ -27,6 +26,7 @@ import Network.Wai.Handler.Warp
   )
 import Servant
 import Servant.Server
+import Storage.DB.Config
 import qualified System.Environment as SE
 
 runEpassBackendApp :: IO ()

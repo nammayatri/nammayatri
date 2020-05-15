@@ -4,7 +4,6 @@
 module App.Routes where
 
 import qualified Beckn.Types.API.Confirm as Confirm
-import qualified Types.API.Confirm as ConfirmAPI
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
@@ -24,6 +23,7 @@ import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import Servant
 import qualified Types.API.Case as Case
+import qualified Types.API.Confirm as ConfirmAPI
 import Types.API.Registration
 import Types.App
 
@@ -34,8 +34,8 @@ type AppAPIs =
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> CaseAPIs
+           :<|> Epass.EPassAPIs
        )
-    :<|> Epass.EPassAPIs
 
 appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
@@ -47,8 +47,8 @@ appServer' key = do
       :<|> searchFlow
       :<|> confirmFlow
       :<|> caseFlow
+      :<|> Epass.epassServer' key
     )
-    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =
@@ -96,6 +96,7 @@ type ConfirmAPIs =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
+      :> "services"
       :> Header "token" RegToken
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
@@ -110,9 +111,13 @@ confirmFlow =
 type CaseAPIs =
   "case"
     :> Header "token" RegToken
-    :> Capture "caseId" CaseId
-    :> Get '[JSON] Case.StatusRes
+    :> ( "list"
+           :> Get '[JSON] Case.ListRes
+           :<|> Capture "caseId" CaseId
+           :> Get '[JSON] Case.StatusRes
+       )
 
 caseFlow :: FlowServer CaseAPIs
-caseFlow =
-  Case.status
+caseFlow regToken =
+  Case.list regToken
+    :<|> Case.status regToken

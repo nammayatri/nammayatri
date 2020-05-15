@@ -1,21 +1,21 @@
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.Location where
 
-import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
-import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
-import EulerHS.Prelude
-import Servant.API
-import Servant.Swagger
-import Beckn.Types.App
+import           Beckn.Types.App
+import           Data.Aeson
+import qualified Data.ByteString.Lazy      as BSL
+import           Data.Swagger
+import qualified Data.Text                 as T
+import qualified Data.Text.Encoding        as DT
+import           Data.Time.LocalTime
+import qualified Database.Beam             as B
+import           Database.Beam.Backend.SQL
+import           Database.Beam.MySQL
+import           EulerHS.Prelude
+import           Servant.API
+import           Servant.Swagger
 
 data LocationType = POINT | POLYGON | PINCODE | ADDRESS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -26,6 +26,8 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
 instance FromBackendRow MySQL LocationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
+deriving instance B.HasSqlEqualityCheck MySQL LocationType
+
 instance ToParamSchema LocationType
 
 instance FromHttpApiData LocationType where
@@ -34,20 +36,20 @@ instance FromHttpApiData LocationType where
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data LocationT f = Location
-  { _id :: B.C f LocationId,
+  { _id           :: B.C f LocationId,
     _locationType :: B.C f LocationType,
-    _lat :: B.C f (Maybe Double),
-    _long :: B.C f (Maybe Double),
-    _ward :: B.C f (Maybe Text),
-    _district :: B.C f (Maybe Text),
-    _city :: B.C f (Maybe Text),
-    _state :: B.C f (Maybe Text),
-    _country :: B.C f (Maybe Text),
-    _pincode :: B.C f (Maybe Text),
-    _address :: B.C f (Maybe Text),
-    _bound :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _lat          :: B.C f (Maybe Double),
+    _long         :: B.C f (Maybe Double),
+    _ward         :: B.C f (Maybe Text),
+    _district     :: B.C f (Maybe Text),
+    _city         :: B.C f (Maybe Text),
+    _state        :: B.C f (Maybe Text),
+    _country      :: B.C f (Maybe Text),
+    _pincode      :: B.C f (Maybe Text),
+    _address      :: B.C f (Maybe Text),
+    _bound        :: B.C f (Maybe Text),
+    _createdAt    :: B.C f LocalTime,
+    _updatedAt    :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 
