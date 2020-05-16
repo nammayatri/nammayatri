@@ -80,6 +80,11 @@ instance FromHttpApiData CaseStatus where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
+instance FromHttpApiData CaseType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+
 data CaseT f = Case
   { _id :: B.C f CaseId,
     _name :: B.C f (Maybe Text),

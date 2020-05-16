@@ -10,13 +10,16 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import Types.API.Products
+import Types.API.Case
 import qualified Storage.Queries.Case as CQ
+import Storage.Queries.Location as LQ
 import qualified Storage.Queries.CaseProduct as CPQ
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseP
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Person as SP
+import Beckn.Types.Storage.Location as Location
 import qualified Types.Storage.Driver as D
 import qualified Beckn.Types.Storage.Vehicle as V
 import qualified Storage.Queries.Vehicle as VQ
@@ -80,3 +83,28 @@ listRides regToken = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   rideList <- DB.findAllByAssignedTo $ _getPersonId (SP._id person)
   return $ rideList
+
+
+
+listCasesByProd :: Maybe Text -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
+listCasesByProd regToken productId csType  = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  cpList <- CPQ.findAllByProdId (ProductsId productId)
+  caseList <- case csType of
+    Just type_ -> CQ.findAllByIdType (CaseP._caseId <$> cpList) type_
+    Nothing -> CQ.findAllByIds (CaseP._caseId <$> cpList)
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
+  return $ catMaybes $ joinByIds locList <$> caseList
+  where
+    joinByIds locList cs =
+      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
+        Just k -> buildResponse k
+        Nothing -> Nothing
+      where
+        buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+        prepare cs from to =
+          CaseRes
+            { _case = cs,
+              _fromLocation = from,
+              _toLocation = to
+            }

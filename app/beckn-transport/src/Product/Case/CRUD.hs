@@ -168,24 +168,3 @@ mkOnSearchPayload c prods = do
       { context,
         message = service
       }
-
-listByProdId :: Maybe Text -> ProdTypeReq -> FlowHandler CaseListRes
-listByProdId regToken ProdTypeReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  cpList <- CPQ.findAllByProdId _productId
-  caseList <- Case.findAllByIdType (CaseP._caseId <$> cpList) _type
-  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-  return $ catMaybes $ joinByIds locList <$> caseList
-  where
-    joinByIds locList cs =
-      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
-      where
-        buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
-        prepare cs from to =
-          CaseRes
-            { _case = cs,
-              _fromLocation = from,
-              _toLocation = to
-            }
