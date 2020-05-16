@@ -19,11 +19,13 @@ import Network.Wai.Parse
 import Network.Wai.Parse
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
+import qualified Product.Info as Info
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import Servant
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
+import qualified Types.API.Location as Location
 import Types.API.Registration
 import Types.App
 
@@ -34,6 +36,7 @@ type AppAPIs =
            :<|> SearchAPIs
            :<|> ConfirmAPIs
            :<|> CaseAPIs
+           :<|> InfoAPIs
            :<|> Epass.EPassAPIs
        )
 
@@ -47,6 +50,7 @@ appServer' key = do
       :<|> searchFlow
       :<|> confirmFlow
       :<|> caseFlow
+      :<|> infoFlow
       :<|> Epass.epassServer' key
     )
 
@@ -121,3 +125,19 @@ caseFlow :: FlowServer CaseAPIs
 caseFlow regToken =
   Case.list regToken
     :<|> Case.status regToken
+
+-------- Info Flow ------
+type InfoAPIs =
+  Header "token" RegToken
+    :> ("product"
+        :> Capture "id" Text
+        :> Get '[JSON] Text
+      :<|>
+        "location"
+        :> Capture "caseId" Text
+        :> Get '[JSON] Location.GetLocationRes)
+
+infoFlow :: FlowServer InfoAPIs
+infoFlow regToken =
+  Info.getProductInfo regToken
+    :<|> Info.getLocation regToken
