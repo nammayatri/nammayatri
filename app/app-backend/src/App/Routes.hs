@@ -137,8 +137,8 @@ type InfoAPIs =
            :> Capture "id" Text
            :> Get '[JSON] Text
            :<|> "location"
-             :> Capture "caseId" Text
-             :> Get '[JSON] Location.GetLocationRes
+           :> Capture "caseId" Text
+           :> Get '[JSON] Location.GetLocationRes
        )
 
 infoFlow :: FlowServer InfoAPIs
@@ -153,7 +153,13 @@ type TrackTripAPIs =
     :> Header "token" RegToken
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
+    :<|> "on_track"
+      :> "trip"
+      :> Header "token" RegToken
+      :> ReqBody '[JSON] OnTrackTripReq
+      :> Post '[JSON] OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPIs
 trackTripFlow =
   TrackTrip.track
+    :<|> TrackTrip.track_cb
