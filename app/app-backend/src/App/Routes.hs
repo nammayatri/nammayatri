@@ -28,6 +28,7 @@ import Servant
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.Location as Location
+import Types.API.Product
 import Types.API.Registration
 import Types.App
 
@@ -135,7 +136,7 @@ type InfoAPIs =
   Header "token" RegToken
     :> ( "product"
            :> Capture "id" Text
-           :> Get '[JSON] Text
+           :> Get '[JSON] GetProductInfoRes
            :<|> "location"
            :> Capture "caseId" Text
            :> Get '[JSON] Location.GetLocationRes
