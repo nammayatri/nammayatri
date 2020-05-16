@@ -4,7 +4,11 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import Data.Aeson as A
+import Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as DT
+import qualified Data.Text.Encoding as DT
 import Data.Time
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock
@@ -13,10 +17,6 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
-import Data.Aeson
-import Data.ByteString.Base64 as DBB
-import qualified Data.Text.Encoding as DT
-import qualified Data.Text as DT
 
 getCurrTime :: L.Flow LocalTime
 getCurrTime = L.runIO $ do
@@ -64,6 +64,14 @@ withFlowHandler flow = do
   lift $ ExceptT $ try $ I.runFlow flowRt $ flow
 
 base64Decode :: Maybe Text -> Maybe Text
-base64Decode auth = DT.reverse <$> DT.drop 1
-                      <$> DT.reverse <$> DT.decodeUtf8
-                      <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+base64Decode auth =
+  DT.reverse <$> DT.drop 1
+    <$> DT.reverse
+    <$> DT.decodeUtf8
+    <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+
+decodeFromText :: FromJSON a => Text -> Maybe a
+decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
+
+encodeToText :: ToJSON a => a -> Text
+encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode

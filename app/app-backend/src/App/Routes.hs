@@ -5,6 +5,7 @@ module App.Routes where
 
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
+import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
@@ -22,6 +23,7 @@ import qualified Product.Confirm as Confirm
 import qualified Product.Info as Info
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
+import qualified Product.TrackTrip as TrackTrip
 import Servant
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
@@ -37,6 +39,7 @@ type AppAPIs =
            :<|> ConfirmAPIs
            :<|> CaseAPIs
            :<|> InfoAPIs
+           :<|> TrackTripAPIs
            :<|> Epass.EPassAPIs
        )
 
@@ -51,6 +54,7 @@ appServer' key = do
       :<|> confirmFlow
       :<|> caseFlow
       :<|> infoFlow
+      :<|> trackTripFlow
       :<|> Epass.epassServer' key
     )
 
@@ -129,15 +133,27 @@ caseFlow regToken =
 -------- Info Flow ------
 type InfoAPIs =
   Header "token" RegToken
-    :> ("product"
-        :> Capture "id" Text
-        :> Get '[JSON] Text
-      :<|>
-        "location"
-        :> Capture "caseId" Text
-        :> Get '[JSON] Location.GetLocationRes)
+    :> ( "product"
+           :> Capture "id" Text
+           :> Get '[JSON] Text
+           :<|> "location"
+             :> Capture "caseId" Text
+             :> Get '[JSON] Location.GetLocationRes
+       )
 
 infoFlow :: FlowServer InfoAPIs
 infoFlow regToken =
   Info.getProductInfo regToken
     :<|> Info.getLocation regToken
+
+------- Track trip Flow -------
+type TrackTripAPIs =
+  "track"
+    :> "trip"
+    :> Header "token" RegToken
+    :> ReqBody '[JSON] TrackTripReq
+    :> Post '[JSON] TrackTripRes
+
+trackTripFlow :: FlowServer TrackTripAPIs
+trackTripFlow =
+  TrackTrip.track

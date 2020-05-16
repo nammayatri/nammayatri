@@ -1,13 +1,14 @@
 module External.Gateway.Flow where
 
 import qualified Beckn.Types.API.Confirm as Confirm
-import Types.API.Location
 import Beckn.Types.API.Search
+import qualified Beckn.Types.API.Track as Track
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
 import Servant.Client
 import System.Environment
+import Types.API.Location
 
 search ::
   BaseUrl -> SearchReq -> L.Flow (Either Text ())
@@ -35,6 +36,14 @@ location url req = do
     L.logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
     L.logError "Location" ("error occurred while getting location: " <> (show err))
+  return $ first show res
+
+track :: BaseUrl -> Track.TrackTripReq -> L.Flow (Either Text ())
+track url req = do
+  res <- L.callAPI url $ API.trackTrip req
+  case res of
+    Left err -> L.logError "error occurred while track trip: " (show err)
+    Right _ -> L.logInfo "Track" "Track successfully delivered"
   return $ first show res
 
 getBaseUrl :: L.Flow BaseUrl
