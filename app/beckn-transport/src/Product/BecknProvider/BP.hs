@@ -316,33 +316,39 @@ trackTrip req = withFlowHandler $ do
   L.logInfo "track trip API Flow" $ show req
   let tripId = req ^. #message ^. #id
   case_ <- Case.findById (CaseId tripId)
+  parentCase <- Case.findById $ fetchMaybeValue $ case_ ^. #_parentCaseId
   --TODO : use forkFlow to notify gateway
-  notifyTripUrlToGateway case_
+  notifyTripUrlToGateway parentCase
   uuid <- L.generateGUID
   mkAckResponse uuid "track"
 
 notifyTripUrlToGateway :: Case -> L.Flow ()
-notifyTripUrlToGateway c = do
-  onTrackTripPayload <- mkOnTrackTripPayload $ c ^. #_shortId
+notifyTripUrlToGateway parentCase = do
+  onTrackTripPayload <- mkOnTrackTripPayload parentCase
   L.logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-mkOnTrackTripPayload :: Text -> L.Flow OnTrackTripReq
-mkOnTrackTripPayload c = do
+fetchMaybeValue :: forall a. Maybe a -> a
+fetchMaybeValue c = case c of
+  Just d -> d
+  Nothing -> undefined -- need to throw error
+
+mkOnTrackTripPayload :: Case -> L.Flow OnTrackTripReq
+mkOnTrackTripPayload pCase = do
   currTime <- getCurrTime
   let context =
         Context
           { domain = "MOBILITY",
             action = "on_track",
             version = Just $ "0.1",
-            transaction_id = c,
+            transaction_id = pCase ^. #_shortId,
             message_id = Nothing,
             timestamp = currTime,
             dummy = ""
           }
-  let data_url = GT.baseTrackingUrl <> "/" <> c
-  let embed_url = GT.baseTrackingUrl <> "/" <> c <> "/embed"
+  let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ pCase ^. #_id)
+  let embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ pCase ^. #_id) <> "/embed"
   return
     OnTrackTripReq
       { context,
