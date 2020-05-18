@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels      #-}
 module Types.API.Location where
 
 import qualified Beckn.Types.Storage.Location as SL
@@ -9,7 +8,6 @@ import Beckn.Utils.Extra
 import Beckn.Types.App
 import Beckn.Types.Common
 import EulerHS.Prelude
-import Data.Generics.Labels
 import Servant.Swagger
 
 data UpdateLocationReq = UpdateLocationReq
@@ -26,12 +24,6 @@ data UpdateLocationReq = UpdateLocationReq
   , bound :: Maybe Text
   }
   deriving (Generic, ToSchema,ToJSON, Show, FromJSON)
-
-data UpdateLocationRes = UpdateLocationRes
-  {
-    status :: Text
-  }
-  deriving (Generic, ToJSON, ToSchema)
 
 data GetLocationRes = GetLocationRes
   {

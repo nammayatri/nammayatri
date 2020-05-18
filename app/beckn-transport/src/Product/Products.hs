@@ -77,13 +77,26 @@ updateTrip productId k = do
   CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
   return "UPDATED"
 
-listRides :: Maybe Text -> FlowHandler RideList
+listRides :: Maybe Text -> FlowHandler ProdListRes
 listRides regToken = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   rideList <- DB.findAllByAssignedTo $ _getPersonId (SP._id person)
-  return $ rideList
-
+  locList <- LQ.findAllByLocIds (catMaybes (Storage._fromLocation <$> rideList)) (catMaybes (Storage._toLocation <$> rideList))
+  return $ catMaybes $ joinByIds locList <$> rideList
+  where
+    joinByIds locList ride =
+      case find (\x -> (Storage._fromLocation ride == Just (_getLocationId (Location._id x)))) locList of
+        Just k -> buildResponse k
+        Nothing -> Nothing
+      where
+        buildResponse k = (prepare ride k) <$> find (\x -> (Storage._toLocation ride == Just (_getLocationId (Location._id x)))) locList
+        prepare ride from to =
+          ProdRes
+            { _product = ride,
+              _fromLocation = from,
+              _toLocation = to
+            }
 
 
 listCasesByProd :: Maybe Text -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
