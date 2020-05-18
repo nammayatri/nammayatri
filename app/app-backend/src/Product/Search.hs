@@ -166,6 +166,7 @@ mkProduct item = do
         _fromLocation = Nothing, -- TODO: fix this
         _toLocation = Nothing, -- TODO: fix this
         _organizationId = "", -- TODO: fix this
+        _assignedTo = Nothing,
         _createdAt = now,
         _updatedAt = now
       }

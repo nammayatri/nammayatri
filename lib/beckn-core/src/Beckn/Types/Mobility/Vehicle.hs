@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Mobility.Vehicle where
 
 import Data.Generics.Labels
@@ -7,7 +8,7 @@ import EulerHS.Prelude
 
 data Vehicle = Vehicle
   { category :: Maybe Text, -- "CAR", "MOTORCYCLE", "BICYCLE", "TRUCK", "OTHER"
-    capaciity :: Maybe Int,
+    capacity :: Maybe Int,
     make :: Maybe Text,
     model :: Maybe Text,
     size :: Maybe Text,

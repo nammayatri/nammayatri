@@ -17,12 +17,14 @@ import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
+import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case as SC
 import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products as Product
+import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Accessor as Lens
@@ -42,10 +44,12 @@ import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.Products as Product
+import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
 import Utils.FCM
+import Utils.Utils
 
 -- 1) Create Parent Case with Customer Request Details
 -- 2) Notify all transporter using GCM
@@ -68,7 +72,7 @@ search req = withFlowHandler $ do
   transporters <- listOrganizations Nothing Nothing [Org.TRANSPORTER] [Org.APPROVED]
   -- TODO : Fix show
   admins <-
-    findAllByOrgIds
+    Person.findAllByOrgIds
       [Person.ADMIN]
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
   -- notifyTransporters c admins --TODO : Uncomment this once we start saving deviceToken
@@ -355,11 +359,14 @@ mkTrip maybeCase = case maybeCase of
     cp <- CaseProduct.findByCaseId $ c ^. #_id
     prod <- Product.findById $ cp ^. #_productId
     driver <- mkDriverInfo $ prod ^. #_assignedTo
+    vehicle <- mkVehicleInfo $ prod ^. #_udf3
+    -- let vehicleInfo = decodeMTypeFromText <$> prod ^. #_info
+    L.logInfo "vehicle" $ show vehicle
     return $
       Just
         Trip
           { id = _getCaseId $ c ^. #_id,
-            vehicle = Nothing, -- TODO: need to take it from product
+            vehicle = vehicle,
             driver =
               TripDriver
                 { persona = driver,
@@ -379,3 +386,10 @@ mkDriverInfo maybeDriverId = case maybeDriverId of
   Just val -> do
     person <- Person.findPersonById (PersonId val)
     GT.mkDriverObj person
+
+mkVehicleInfo :: Maybe Text -> L.Flow (Maybe BVehicle.Vehicle)
+mkVehicleInfo maybeVehicleId = case maybeVehicleId of
+  Nothing -> pure Nothing
+  Just val -> do
+    vehicle <- Vehicle.findVehicleById (VehicleId val)
+    GT.mkVehicleObj vehicle

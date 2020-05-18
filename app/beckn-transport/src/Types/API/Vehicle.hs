@@ -22,7 +22,6 @@ data CreateVehicleReq = CreateVehicleReq
     , _size :: Maybe Text
     , _variant :: Maybe Variant
     , _color :: Maybe Text
-    , _organizationId :: Text
     , _energyType :: Maybe EnergyType
     , _registrationNo :: Text
     , _registrationCategory :: Maybe RegistrationCategory
@@ -44,7 +43,7 @@ instance Transform2 CreateVehicleReq SV.Vehicle where
       , SV._make = req ^. #_make
       , SV._model = req ^. #_model
       , SV._size = req ^. #_size
-      , SV._organizationId = req ^. #_organizationId
+      , SV._organizationId = "WILL_BE_UPDATED_BEFORE_DB"
       , SV._variant = req ^. #_variant
       , SV._color = req ^. #_color
       , SV._energyType = req ^. #_energyType
@@ -60,8 +59,7 @@ data CreateVehicleRes = CreateVehicleRes
 
 data ListVehicleReq = ListVehicleReq
   {
-    _organizationId :: Text
-    , _limit :: Maybe Integer
+    _limit :: Maybe Integer
     , _offset :: Maybe Integer
   }
   deriving (Generic, ToSchema)
