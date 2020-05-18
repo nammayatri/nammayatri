@@ -6,6 +6,8 @@ import           Data.Time
 import           Beckn.Types.Common
 import           Beckn.Types.App
 import qualified Beckn.Types.Storage.Products   as Product
+import           Beckn.Types.Storage.Case
+import           Beckn.Types.Storage.Location
 import           EulerHS.Prelude
 import           Types.Storage.Driver
 import           Beckn.Types.Storage.Vehicle
@@ -27,4 +29,17 @@ instance ToJSON ProdReq where
 
 type ProdInfoRes = Product.Products
 
-type RideList = [Product.Products]
+data ProdRes = ProdRes
+  { _product   :: Product.Products,
+    _fromLocation  :: Location,
+    _toLocation  :: Location
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON ProdRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ProdRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+type ProdListRes = [ProdRes]
