@@ -48,6 +48,7 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
 onConfirm :: Maybe RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
 onConfirm regToken req = withFlowHandler $ do
   -- TODO: Verify api key here
+  L.logInfo "on_confirm req" (show req)
   let selectedItems = req ^. #message ^. #_selected_items
       trip = req ^. #message ^. #_trip
   ack <-
@@ -63,7 +64,7 @@ onConfirm regToken req = withFlowHandler $ do
                 { Products._status = Products.CONFIRMED,
                   Products._info = trackerInfo
                 }
-        Products.updateStatus pid Products.CONFIRMED
+        Products.updateMultiple (_getProductsId pid) uPrd
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
