@@ -82,3 +82,15 @@ updateMultiple id prd@Storage.Products {..} = do
           _toLocation <-. B.val_ (Storage._toLocation prd),
           _info <-. B.val_ (Storage._info prd)
         ]
+
+findAllByIdsAndStatus :: [ProductsId] -> Storage.ProductsStatus -> L.Flow [Storage.Products]
+findAllByIdsAndStatus pids status =
+  if null pids
+    then return []
+    else
+      DB.findAll dbTable (predicate pids status)
+        >>= either DB.throwDBError pure
+  where
+    predicate pids status Storage.Products {..} =
+      _id `B.in_` (B.val_ <$> pids)
+        &&. _status ==. (B.val_ status)
