@@ -111,8 +111,8 @@ createProduct cs price ctime orgId = do
           _organizationId = orgId,
           _createdAt = ctime,
           _updatedAt = currTime,
-          _fromLocation = Nothing,
-          _toLocation = Nothing,
+          _fromLocation = Just (Case._fromLocationId cs),
+          _toLocation = Just (Case._toLocationId cs),
           _assignedTo = Nothing
         }
 
