@@ -81,7 +81,6 @@ listRides regToken = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   rideList <- DB.findAllByAssignedTo $ _getPersonId (SP._id person)
-  L.logInfo "first" (show (head rideList))
   locList <- LQ.findAllByLocIds (catMaybes (Storage._fromLocation <$> rideList)) (catMaybes (Storage._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
