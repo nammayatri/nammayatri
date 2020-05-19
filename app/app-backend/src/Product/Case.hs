@@ -13,7 +13,7 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
-import Types.API.Case
+import Types.API.Case as API
 import Utils.Common (verifyToken)
 
 status ::
@@ -43,4 +43,9 @@ list regToken = withFlowHandler $ do
       >>= fromMaybeM500 "Could not find user"
 
   Case.findAllByPerson (_getPersonId $ person ^. #_id)
+    >>= traverse mapCaseProduct
     >>= return . ListRes
+  where
+    mapCaseProduct case_ = do
+      prds <- CaseProduct.findAllProductsByCaseId (Case._id case_)
+      return $ API.CaseProduct case_ prds
