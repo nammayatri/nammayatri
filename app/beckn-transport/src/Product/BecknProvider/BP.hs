@@ -329,11 +329,6 @@ notifyTripUrlToGateway parentCase = do
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-fetchMaybeValue :: forall a. Maybe a -> a
-fetchMaybeValue c = case c of
-  Just d -> d
-  Nothing -> undefined -- need to throw error
-
 mkOnTrackTripPayload :: Case -> L.Flow OnTrackTripReq
 mkOnTrackTripPayload pCase = do
   currTime <- getCurrTime
