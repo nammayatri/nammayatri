@@ -33,8 +33,20 @@ instance FromJSON UpdateCaseReq where
 instance ToJSON UpdateCaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+data CaseProduct = CaseProduct
+  { _case :: Case,
+    _products :: [Products]
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON CaseProduct where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON CaseProduct where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data ListRes = ListRes
-  { _cases :: [Case]
+  { _caseProducts :: [CaseProduct]
   }
   deriving (Show, Generic, ToSchema)
 

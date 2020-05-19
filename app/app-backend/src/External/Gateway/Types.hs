@@ -5,13 +5,14 @@ module External.Gateway.Types where
 
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
-import Types.API.Location
+import Beckn.Types.API.Track
 import EulerHS.Language (Flow)
 import EulerHS.Prelude
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import EulerHS.Types (client)
 import Servant
+import Types.API.Location
 
 type ConfirmAPI =
   "confirm" :> "services" :> ReqBody '[JSON] Confirm.ConfirmReq :> Post '[JSON] Confirm.ConfirmRes
@@ -36,11 +37,23 @@ search req =
 
 type LocationAPI =
   "location"
-     :> Capture "caseId" Text
-     :> Get '[JSON] GetLocationRes
+    :> Capture "caseId" Text
+    :> Get '[JSON] GetLocationRes
 
 locationAPI :: Proxy LocationAPI
 locationAPI = Proxy
 
 location caseId =
   client locationAPI caseId
+
+type TrackTripAPI =
+  "track"
+    :> "trip"
+    :> ReqBody '[JSON] TrackTripReq
+    :> Post '[JSON] TrackTripRes
+
+trackTripAPI :: Proxy TrackTripAPI
+trackTripAPI = Proxy
+
+trackTrip req =
+  void $ client trackTripAPI req

@@ -89,3 +89,12 @@ findByIdType ids type_ =
       ( _type ==. (B.val_ type_)
           &&. B.in_ _id (B.val_ <$> ids)
       )
+
+findAllByIdType :: [CaseId] -> Storage.CaseType -> L.Flow [Storage.Case]
+findAllByIdType ids type_ =
+  DB.findAllOrErr dbTable (predicate ids type_)
+  where
+    predicate ids type_ Storage.Case {..} =
+      ( _type ==. (B.val_ type_)
+          &&. B.in_ _id (B.val_ <$> ids)
+      )

@@ -11,6 +11,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import Types.API.Products
+import Types.API.Case
 import qualified Storage.Queries.Case as CQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.CaseProduct as CPQ
@@ -97,6 +98,30 @@ listRides regToken = withFlowHandler $ do
         prepare ride from to =
           ProdRes
             { _product = ride,
+              _fromLocation = from,
+              _toLocation = to
+            }
+
+
+listCasesByProd :: Maybe Text -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
+listCasesByProd regToken productId csType  = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  cpList <- CPQ.findAllByProdId (ProductsId productId)
+  caseList <- case csType of
+    Just type_ -> CQ.findAllByIdType (CaseP._caseId <$> cpList) type_
+    Nothing -> CQ.findAllByIds (CaseP._caseId <$> cpList)
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
+  return $ catMaybes $ joinByIds locList <$> caseList
+  where
+    joinByIds locList cs =
+      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
+        Just k -> buildResponse k
+        Nothing -> Nothing
+      where
+        buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+        prepare cs from to =
+          CaseRes
+            { _case = cs,
               _fromLocation = from,
               _toLocation = to
             }

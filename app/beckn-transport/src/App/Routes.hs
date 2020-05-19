@@ -168,11 +168,17 @@ type ProductAPIs =
              :> Capture "productId" Text
              :> ReqBody '[JSON] ProdReq
              :> Post '[JSON] ProdInfoRes
+           :<|> Header "authorization" Text
+             :> Capture "productId" Text
+             :> "cases"
+             :> QueryParam "type" CaseType
+             :> Get '[JSON] CaseListRes
        )
 
 productFlow =
   Product.listRides
     :<|> Product.update
+    :<|> Product.listCasesByProd
 
 -- Location update and get for tracking is as follows
 type LocationAPIs =

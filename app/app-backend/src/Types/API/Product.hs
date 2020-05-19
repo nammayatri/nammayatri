@@ -1,16 +1,20 @@
 module Types.API.Product where
 
 import Beckn.Types.Common
-import Beckn.Types.Storage.Vehicle
---import Beckn.Types.Storage.Driver
+import Beckn.Types.Core.Price
+import Beckn.Types.Mobility.Vehicle
+import Beckn.Types.Mobility.Trip
+import Beckn.Types.Mobility.Traveller
 import Data.Swagger
 import EulerHS.Prelude
 import Servant.Swagger
 
 data GetProductInfoRes = GetProductInfoRes
-  { vehicle :: Vehicle
+  { vehicle :: Maybe Vehicle
   , caseId :: Text
   , productId :: Text
-  --, driver :: Driver
+  , driver :: TripDriver
+  , fare :: Maybe Price
+  , travellers :: [Traveller]
   }
   deriving (Generic, ToJSON, FromJSON)

@@ -20,7 +20,6 @@ instance FromJSON CaseReq where
 instance ToJSON CaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-
 data CaseRes = CaseRes
   { _case   :: Case,
     _fromLocation  :: Location,

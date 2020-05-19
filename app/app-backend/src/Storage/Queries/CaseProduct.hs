@@ -5,6 +5,7 @@ import           Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case        as Case
 import qualified Beckn.Types.Storage.CaseProduct as Storage
 import qualified Beckn.Types.Storage.Products    as Products
+import qualified Storage.Queries.Products    as Products
 import           Beckn.Utils.Common
 import           Data.Time
 import           Database.Beam                   ((&&.), (<-.), (==.), (||.))
@@ -123,3 +124,8 @@ listAllCaseProduct id status = do
     predicate (ByCustomerId i) s Storage.CaseProduct {..} = (_personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
     predicate (ById i) [] Storage.CaseProduct {..} = (_productId ==. B.val_ i)
     predicate (ById i) s Storage.CaseProduct {..} = (_productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+
+findAllProductsByCaseId :: CaseId -> L.Flow [Products.Products]
+findAllProductsByCaseId caseId =
+  findAllByCaseId caseId
+    >>= Products.findAllByIds . map Storage._productId
