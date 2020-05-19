@@ -163,7 +163,7 @@ caseProductFlow =
 type ProductAPIs =
   "product"
     :> ( Header "authorization" Text
-           :> Get '[JSON] RideList
+           :> Get '[JSON] ProdListRes
            :<|> Header "authorization" Text
              :> Capture "productId" Text
              :> ReqBody '[JSON] ProdReq

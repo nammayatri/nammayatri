@@ -5,6 +5,7 @@ module External.Gateway.Types where
 
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
+import Types.API.Location
 import EulerHS.Language (Flow)
 import EulerHS.Prelude
 import EulerHS.Prelude
@@ -32,3 +33,14 @@ searchAPI = Proxy
 
 search req =
   void $ client searchAPI req
+
+type LocationAPI =
+  "location"
+     :> Capture "caseId" Text
+     :> Get '[JSON] GetLocationRes
+
+locationAPI :: Proxy LocationAPI
+locationAPI = Proxy
+
+location caseId =
+  client locationAPI caseId

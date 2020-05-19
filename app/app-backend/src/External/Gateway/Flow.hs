@@ -1,6 +1,7 @@
 module External.Gateway.Flow where
 
 import qualified Beckn.Types.API.Confirm as Confirm
+import Types.API.Location
 import Beckn.Types.API.Search
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -24,7 +25,16 @@ confirm url req = do
   whenLeft res $ \err ->
     L.logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    L.logError "Search" ("error occurred while search: " <> (show err))
+    L.logError "Confirm" ("error occurred while confirm: " <> (show err))
+  return $ first show res
+
+location :: BaseUrl -> Text -> L.Flow (Either Text GetLocationRes)
+location url req = do
+  res <- L.callAPI url $ API.location req
+  whenLeft res $ \err ->
+    L.logError "error occurred while confirm: " (show err)
+  whenLeft res $ \err ->
+    L.logError "Location" ("error occurred while getting location: " <> (show err))
   return $ first show res
 
 getBaseUrl :: L.Flow BaseUrl
