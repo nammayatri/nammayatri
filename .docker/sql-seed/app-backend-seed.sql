@@ -160,6 +160,7 @@ CREATE TABLE `product` (
   `info` TEXT NULL,
   `from_location_id` varchar(255) NULL,
   `to_location_id` varchar(255) NULL,
+  `assigned_to` varchar(36) NULL,
   `organization_id` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),

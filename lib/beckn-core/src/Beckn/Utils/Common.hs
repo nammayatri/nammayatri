@@ -4,7 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
-import Data.Aeson
+import Data.Aeson as A
 import Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as DT
@@ -74,3 +74,9 @@ fetchMaybeValue :: forall a. Maybe a -> a
 fetchMaybeValue c = case c of
   Just d -> d
   Nothing -> undefined -- need to throw error
+
+decodeFromText :: FromJSON a => Text -> Maybe a
+decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
+
+encodeToText :: ToJSON a => a -> Text
+encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode

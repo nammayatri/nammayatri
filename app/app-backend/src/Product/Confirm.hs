@@ -8,18 +8,24 @@ import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.CaseProduct as SCP
-import qualified Beckn.Types.Storage.Products as SProducts
-import Beckn.Utils.Common (withFlowHandler)
+import qualified Beckn.Types.Storage.Products as Products
+import Beckn.Utils.Common (encodeToText, withFlowHandler)
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as Gateway
+import Servant
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.CaseProduct as QCP
-import qualified Storage.Queries.Products as QProducts
+import qualified Storage.Queries.Products as Products
 import qualified Types.API.Confirm as API
 import Types.App
+import qualified Types.Storage.Tracker as Tracker
 import Utils.Common (verifyToken)
 import Utils.Routes
 
@@ -42,12 +48,23 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
 onConfirm :: Maybe RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
 onConfirm regToken req = withFlowHandler $ do
   -- TODO: Verify api key here
-  let update pid =
-        QProducts.updateStatus pid SProducts.CONFIRMED
-          >>= either (pure . Left) (\_ -> QCP.updateStatus pid SCP.CONFIRMED)
-  eres <- traverse (update . ProductsId) (req ^. #message ^. #_selected_items)
-  let ack =
-        case sequence eres of
-          Left err -> Ack "on_confirm" ("Err: " <> show err)
-          Right _ -> Ack "on_confirm" "Ok"
+  L.logInfo "on_confirm req" (show req)
+  let selectedItems = req ^. #message ^. #_selected_items
+      trip = req ^. #message ^. #_trip
+  ack <-
+    case length selectedItems of
+      0 -> return $ Ack "on_confirm" "Ok"
+      1 -> do
+        let pid = ProductsId (head selectedItems)
+            tracker = (flip Tracker.Tracker Nothing) <$> trip
+            trackerInfo = encodeToText <$> tracker
+        prd <- Products.findById pid
+        let uPrd =
+              prd
+                { Products._status = Products.CONFIRMED,
+                  Products._info = trackerInfo
+                }
+        Products.updateMultiple (_getProductsId pid) uPrd
+        return $ Ack "on_confirm" "Ok"
+      _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack

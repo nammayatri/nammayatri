@@ -50,13 +50,14 @@ findAllByIds pids =
 updateStatus ::
   ProductsId ->
   Storage.ProductsStatus ->
-  L.Flow (T.DBResult ())
+  L.Flow ()
 updateStatus id status = do
   (currTime :: LocalTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status currTime)
     (predicate id)
+    >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause status currTime Storage.Products {..} =
@@ -66,17 +67,30 @@ updateStatus id status = do
         ]
 
 updateMultiple :: Text -> Storage.Products -> L.Flow ()
-updateMultiple id pass@Storage.Products {..} = do
+updateMultiple id prd@Storage.Products {..} = do
   currTime <- getCurrTime
-  DB.update dbTable (setClause currTime pass) (predicate id)
+  DB.update dbTable (setClause currTime prd) (predicate id)
     >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ (ProductsId id)
-    setClause now pass Storage.Products {..} =
+    setClause now prd Storage.Products {..} =
       mconcat
         [ _updatedAt <-. B.val_ now,
-          _status <-. B.val_ (Storage._status pass),
-          --_personId <-. B.val_ (Storage._personId pass),
-          _fromLocation <-. B.val_ (Storage._fromLocation pass),
-          _toLocation <-. B.val_ (Storage._toLocation pass)
+          _status <-. B.val_ (Storage._status prd),
+          --_personId <-. B.val_ (Storage._personId prd),
+          _fromLocation <-. B.val_ (Storage._fromLocation prd),
+          _toLocation <-. B.val_ (Storage._toLocation prd),
+          _info <-. B.val_ (Storage._info prd)
         ]
+
+findAllByIdsAndStatus :: [ProductsId] -> Storage.ProductsStatus -> L.Flow [Storage.Products]
+findAllByIdsAndStatus pids status =
+  if null pids
+    then return []
+    else
+      DB.findAll dbTable (predicate pids status)
+        >>= either DB.throwDBError pure
+  where
+    predicate pids status Storage.Products {..} =
+      _id `B.in_` (B.val_ <$> pids)
+        &&. _status ==. (B.val_ status)
