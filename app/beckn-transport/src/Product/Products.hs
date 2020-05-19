@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 module Product.Products where
 
 import Beckn.Types.App
@@ -38,18 +39,22 @@ import Beckn.Utils.Common (withFlowHandler)
 update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  person <- QP.findPersonById (PersonId _EntityId)
+  user <- QP.findPersonById (PersonId _EntityId)
+  vehIdRes <- case _assignedTo of
+            Just k ->  whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER ) $
+              DB.updateVeh (ProductsId productId) _vehicleId
+            Nothing -> return ()
   infoRes <- case _driverInfo of
-            Just k -> updateInfo (ProductsId productId) _driverInfo _vehicleInfo
+            Just k -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
+              updateInfo (ProductsId productId) _driverInfo _vehicleInfo
             Nothing -> return ()
   dvrIdRes <- case _assignedTo of
-            Just k -> DB.updateDvr (ProductsId productId) _assignedTo
-            Nothing -> return ()
-  vehIdRes <- case _assignedTo of
-            Just k -> DB.updateVeh (ProductsId productId) _vehicleId
+            Just k -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
+              DB.updateDvr (ProductsId productId) _assignedTo
             Nothing -> return ()
   tripRes <- case _status of
-            Just c -> updateTrip (ProductsId productId) c
+            Just c -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
+              updateTrip (ProductsId productId) c
             Nothing -> return ()
   updatedProd <- DB.findById (ProductsId productId)
   return $ updatedProd
