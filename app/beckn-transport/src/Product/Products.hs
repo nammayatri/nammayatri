@@ -38,43 +38,42 @@ import Beckn.Utils.Common (withFlowHandler)
 update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  person <- QP.findPersonById (PersonId _EntityId)
   infoRes <- case _driverInfo of
             Just k -> updateInfo (ProductsId productId) _driverInfo _vehicleInfo
-            Nothing -> return $ "NO CHANGE"
-  idsRes <- case _assignedTo of
-            Just k -> updateIds (ProductsId productId) _assignedTo _vehicleId
-            Nothing -> return $ "NO CHANGE"
+            Nothing -> return ()
+  dvrIdRes <- case _assignedTo of
+            Just k -> DB.updateDvr (ProductsId productId) _assignedTo
+            Nothing -> return ()
+  vehIdRes <- case _assignedTo of
+            Just k -> DB.updateVeh (ProductsId productId) _vehicleId
+            Nothing -> return ()
   tripRes <- case _status of
             Just c -> updateTrip (ProductsId productId) c
-            Nothing -> return $ "NO CHANGE"
+            Nothing -> return ()
   updatedProd <- DB.findById (ProductsId productId)
   return $ updatedProd
 
-updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle  -> L.Flow Text
+updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle  -> L.Flow ()
 updateInfo productId driverInfo vehicleInfo = do
   let info = Just $ U.encodeTypeToText (prepareInfo driverInfo vehicleInfo)
   DB.updateInfo productId info
-  return "INFO UPDATED"
+  return ()
   where
     prepareInfo drivInfo vehiInfo = Storage.ProdInfo
           { driverInfo = U.encodeTypeToText drivInfo
           , vehicleInfo = U.encodeTypeToText vehiInfo
           }
 
--- update udf3 for vehicleId
-updateIds :: ProductsId -> Maybe Text -> Maybe Text -> L.Flow Text
-updateIds productId assignedTo vehId = do
-  DB.updateIds productId assignedTo vehId
-  return "IDs UPDATED"
 
-updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow Text
+updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
   case_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
   DB.updateStatus productId k
   CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
   CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
-  return "UPDATED"
+  return ()
 
 listRides :: Maybe Text -> FlowHandler ProdListRes
 listRides regToken = withFlowHandler $ do
