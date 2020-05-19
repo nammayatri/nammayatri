@@ -11,14 +11,10 @@ import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Tracker as Tracker
-import qualified Types.Storage.TripReference as TripReference
 
 data AppDb f = AppDb
   { _organization :: f (B.TableEntity Organization.OrganizationT),
     _location :: f (B.TableEntity Location.LocationT),
-    _tracker :: f (B.TableEntity Tracker.TrackerT),
-    _tripReference :: f (B.TableEntity TripReference.TripReferenceT),
     _person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
     _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
@@ -33,8 +29,6 @@ appDb =
     `B.withDbModification` B.dbModification
       { _organization = Organization.fieldEMod,
         _location = Location.fieldEMod,
-        _tracker = Tracker.fieldEMod,
-        _tripReference = TripReference.fieldEMod,
         _person = Person.fieldEMod,
         _case = Case.fieldEMod,
         _caseProduct = CaseProduct.fieldEMod,

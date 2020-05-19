@@ -316,33 +316,34 @@ trackTrip req = withFlowHandler $ do
   L.logInfo "track trip API Flow" $ show req
   let tripId = req ^. #message ^. #id
   case_ <- Case.findById (CaseId tripId)
+  parentCase <- Case.findById $ fetchMaybeValue $ case_ ^. #_parentCaseId
   --TODO : use forkFlow to notify gateway
-  notifyTripUrlToGateway case_
+  notifyTripUrlToGateway case_ parentCase
   uuid <- L.generateGUID
   mkAckResponse uuid "track"
 
-notifyTripUrlToGateway :: Case -> L.Flow ()
-notifyTripUrlToGateway c = do
-  onTrackTripPayload <- mkOnTrackTripPayload $ c ^. #_shortId
+notifyTripUrlToGateway :: Case -> Case -> L.Flow ()
+notifyTripUrlToGateway case_ parentCase = do
+  onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
   L.logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-mkOnTrackTripPayload :: Text -> L.Flow OnTrackTripReq
-mkOnTrackTripPayload c = do
+mkOnTrackTripPayload :: Case -> Case -> L.Flow OnTrackTripReq
+mkOnTrackTripPayload case_ pCase = do
   currTime <- getCurrTime
   let context =
         Context
           { domain = "MOBILITY",
             action = "on_track",
             version = Just $ "0.1",
-            transaction_id = c,
+            transaction_id = pCase ^. #_shortId,
             message_id = Nothing,
             timestamp = currTime,
             dummy = ""
           }
-  let data_url = GT.baseTrackingUrl <> "/" <> c
-  let embed_url = GT.baseTrackingUrl <> "/" <> c <> "/embed"
+  let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ case_ ^. #_id)
+  let embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ case_ ^. #_id) <> "/embed"
   return
     OnTrackTripReq
       { context,
@@ -355,7 +356,6 @@ mkTrip maybeCase = case maybeCase of
   Just c -> do
     let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id)
         embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
-    --TODO: get vehicle details and prepare
     cp <- CaseProduct.findByCaseId $ c ^. #_id
     prod <- Product.findById $ cp ^. #_productId
     driver <- mkDriverInfo $ prod ^. #_assignedTo
