@@ -318,19 +318,19 @@ trackTrip req = withFlowHandler $ do
   case_ <- Case.findById (CaseId tripId)
   parentCase <- Case.findById $ fetchMaybeValue $ case_ ^. #_parentCaseId
   --TODO : use forkFlow to notify gateway
-  notifyTripUrlToGateway parentCase
+  notifyTripUrlToGateway case_ parentCase
   uuid <- L.generateGUID
   mkAckResponse uuid "track"
 
-notifyTripUrlToGateway :: Case -> L.Flow ()
-notifyTripUrlToGateway parentCase = do
-  onTrackTripPayload <- mkOnTrackTripPayload parentCase
+notifyTripUrlToGateway :: Case -> Case -> L.Flow ()
+notifyTripUrlToGateway case_ parentCase = do
+  onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
   L.logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-mkOnTrackTripPayload :: Case -> L.Flow OnTrackTripReq
-mkOnTrackTripPayload pCase = do
+mkOnTrackTripPayload :: Case -> Case -> L.Flow OnTrackTripReq
+mkOnTrackTripPayload case_ pCase = do
   currTime <- getCurrTime
   let context =
         Context
@@ -342,8 +342,8 @@ mkOnTrackTripPayload pCase = do
             timestamp = currTime,
             dummy = ""
           }
-  let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ pCase ^. #_id)
-  let embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ pCase ^. #_id) <> "/embed"
+  let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ case_ ^. #_id)
+  let embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ case_ ^. #_id) <> "/embed"
   return
     OnTrackTripReq
       { context,
@@ -356,7 +356,6 @@ mkTrip maybeCase = case maybeCase of
   Just c -> do
     let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id)
         embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
-    --TODO: get vehicle details and prepare
     cp <- CaseProduct.findByCaseId $ c ^. #_id
     prod <- Product.findById $ cp ^. #_productId
     driver <- mkDriverInfo $ prod ^. #_assignedTo
