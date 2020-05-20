@@ -9,7 +9,6 @@ import qualified Beckn.Types.Storage.Products   as Product
 import           Beckn.Types.Storage.Case
 import           Beckn.Types.Storage.Location
 import           EulerHS.Prelude
-import           Types.Storage.Driver
 import           Beckn.Types.Storage.Vehicle
 
 data ProdReq = ProdReq

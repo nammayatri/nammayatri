@@ -21,10 +21,8 @@ import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Location as Location
-import qualified Types.Storage.Driver as D
 import qualified Beckn.Types.Storage.Vehicle as V
 import qualified Storage.Queries.Vehicle as VQ
-import qualified Storage.Queries.Driver as DQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Products as DB
 import qualified Beckn.Types.Storage.Products as Storage
