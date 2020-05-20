@@ -8,6 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Extra
 import Data.Aeson as A
@@ -18,13 +19,18 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import Data.Time.Calendar (Day (..))
-import Data.Time.Clock
-import Data.Time.LocalTime
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Network.HTTP.Types (hContentType)
 import Servant
 import System.Environment
+
+getCurrTime :: L.Flow LocalTime
+getCurrTime = L.runIO $ do
+  utc <- getCurrentTime
+  timezone <- getTimeZone utc
+  pure $ utcToLocalTime timezone utc
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
@@ -43,7 +49,7 @@ mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
 mkAckResponse' :: Text -> Text -> Text -> L.Flow AckResponse
 mkAckResponse' txnId action message = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  currTime <- getCurrTime
   return
     AckResponse
       { _context =
@@ -119,3 +125,40 @@ prepareAppOptions :: L.Flow ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
+
+throwJsonError :: ServerError -> Text -> Text -> L.Flow a
+throwJsonError err tag errMsg = do
+  L.logError tag errMsg
+  L.throwException
+    err
+      { errBody = A.encode $ getJsonError err errMsg,
+        errHeaders = [jsonHeader]
+      }
+  where
+    jsonHeader =
+      ( hContentType,
+        "application/json;charset=utf-8"
+      )
+
+throwJsonError500, throwJsonError501, throwJsonError400, throwJsonError401 :: Text -> Text -> L.Flow a
+throwJsonError500 = throwJsonError err500
+throwJsonError501 = throwJsonError err501
+throwJsonError400 = throwJsonError err400
+throwJsonError401 = throwJsonError err401
+
+throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandler a
+throwJsonErrorH = withFlowHandler ... throwJsonError
+
+throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandler a
+throwJsonError500H = throwJsonErrorH ... err500
+throwJsonError501H = throwJsonErrorH ... err501
+throwJsonError400H = throwJsonErrorH ... err400
+throwJsonError401H = throwJsonErrorH ... err401
+
+getJsonError :: ServerError -> Text -> JsonError
+getJsonError err msg =
+  JsonError
+    { _errorCode = show $ errHTTPCode err,
+      _errorMessage = msg,
+      _action = "NACK"
+    }
