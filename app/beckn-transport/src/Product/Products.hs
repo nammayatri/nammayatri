@@ -45,10 +45,6 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
             Just k ->  whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER ) $
               DB.updateVeh (ProductsId productId) _vehicleId
             Nothing -> return ()
-  infoRes <- case _driverInfo of
-            Just k -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
-              updateInfo (ProductsId productId) _driverInfo _vehicleInfo
-            Nothing -> return ()
   dvrIdRes <- case _assignedTo of
             Just k -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
               DB.updateDvr (ProductsId productId) _assignedTo
@@ -59,18 +55,6 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
             Nothing -> return ()
   updatedProd <- DB.findById (ProductsId productId)
   return $ updatedProd
-
-updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle  -> L.Flow ()
-updateInfo productId driverInfo vehicleInfo = do
-  let info = Just $ U.encodeTypeToText (prepareInfo driverInfo vehicleInfo)
-  DB.updateInfo productId info
-  return ()
-  where
-    prepareInfo drivInfo vehiInfo = Storage.ProdInfo
-          { driverInfo = U.encodeTypeToText drivInfo
-          , vehicleInfo = U.encodeTypeToText vehiInfo
-          }
-
 
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
