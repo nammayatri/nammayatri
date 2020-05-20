@@ -28,9 +28,9 @@ import System.Environment
 
 getCurrTime :: L.Flow LocalTime
 getCurrTime = L.runIO $ do
-  utc <- getCurrentTime
-  timezone <- getTimeZone utc
-  pure $ utcToLocalTime timezone utc
+  utc' <- getCurrentTime
+  timezone <- getTimeZone utc'
+  pure $ utcToLocalTime timezone utc'
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
@@ -79,7 +79,7 @@ base64Decode auth =
   T.reverse <$> T.drop 1
     <$> T.reverse
     <$> DT.decodeUtf8
-    <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> T.drop 6 <$> auth)
+    <$> (rightToMaybe =<< DBB.decode . DT.encodeUtf8 . T.drop 6 <$> auth)
 
 fetchMaybeValue :: forall a. Maybe a -> a
 fetchMaybeValue c = case c of
@@ -132,7 +132,7 @@ throwJsonError err tag errMsg = do
   L.throwException
     err
       { errBody = A.encode $ getJsonError err errMsg,
-        errHeaders = [jsonHeader]
+        errHeaders = pure jsonHeader
       }
   where
     jsonHeader =
