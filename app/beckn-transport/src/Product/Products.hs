@@ -41,7 +41,7 @@ update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   user <- QP.findPersonById (PersonId _EntityId)
-  vehIdRes <- case _assignedTo of
+  vehIdRes <- case _vehicleId of
             Just k ->  whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER ) $
               DB.updateVeh (ProductsId productId) _vehicleId
             Nothing -> return ()
