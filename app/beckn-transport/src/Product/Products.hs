@@ -24,7 +24,7 @@ import Beckn.Types.Storage.Location as Location
 import qualified Types.Storage.Driver as D
 import qualified Beckn.Types.Storage.Vehicle as V
 import qualified Storage.Queries.Vehicle as VQ
-import qualified Storage.Queries.Driver as VD
+import qualified Storage.Queries.Driver as DQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Products as DB
 import qualified Beckn.Types.Storage.Products as Storage
@@ -33,8 +33,7 @@ import           Types.API.CaseProduct
 import System.Environment
 import qualified Data.Text as T
 import Types.App
-import Utils.Utils as U
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (encodeToText, withFlowHandler)
 
 
 update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
@@ -53,8 +52,28 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
             Just c -> whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
               updateTrip (ProductsId productId) c
             Nothing -> return ()
+
   updatedProd <- DB.findById (ProductsId productId)
-  return $ updatedProd
+  driverInfo <- case (updatedProd ^. #_assignedTo) of
+    Just driverId ->  QP.findPersonById (PersonId driverId)
+    Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
+  vehicleInfo <- case (updatedProd ^. #_udf3) of
+    Just vehicleId -> VQ.findVehicleById (VehicleId vehicleId)
+    Nothing -> return Nothing
+  infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
+  return $ updatedProd { Storage._info = infoObj }
+
+updateInfo :: ProductsId -> Maybe SP.Person -> Maybe V.Vehicle  -> L.Flow (Maybe Text)
+updateInfo productId driverInfo vehicleInfo = do
+  let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
+  DB.updateInfo productId info
+  return info
+  where
+    mkInfoObj drivInfo vehiInfo =
+      Storage.ProdInfo
+        { driverInfo = encodeToText drivInfo
+        , vehicleInfo = encodeToText vehiInfo
+        }
 
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
