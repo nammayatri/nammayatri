@@ -5,8 +5,8 @@ module Product.Vehicle where
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.Vehicle as SV
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
 import Data.Generics.Labels
 import qualified EulerHS.Language as L
@@ -19,14 +19,14 @@ import Types.API.Vehicle
 
 createVehicle :: Maybe Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle token req = withFlowHandler $ do
-  orgId     <- validate token
-  vehicle   <- transformFlow req >>= addOrgId orgId
+  orgId <- validate token
+  vehicle <- transformFlow req >>= addOrgId orgId
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
 listVehicles :: Maybe Text -> ListVehicleReq -> FlowHandler ListVehicleRes
 listVehicles token req = withFlowHandler $ do
-  orgId     <- validate token
+  orgId <- validate token
   ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) [orgId])
 
 -- Core Utility methods are below
@@ -38,10 +38,18 @@ verifyAdmin user = do
   return $ fromMaybe "NEVER_SHOULD_BE_HERE" mOrgId
 
 addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
-addOrgId orgId vehicle = return $ vehicle{SV._organizationId = orgId}
+addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
 
 validate :: Maybe Text -> L.Flow Text
 validate token = do
   SR.RegistrationToken {..} <- QR.verifyAuth token
-  user                      <- QP.findPersonById (PersonId _EntityId)
+  user <- QP.findPersonById (PersonId _EntityId)
   verifyAdmin user
+
+updateVehicle :: Text -> Maybe Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
+updateVehicle vehicleId token req = withFlowHandler $ do
+  orgId <- validate token
+  vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
+  updatedVehicle <- transformFlow2 req vehicle
+  QV.updateVehicleRec updatedVehicle
+  return $ CreateVehicleRes {vehicle = updatedVehicle}
