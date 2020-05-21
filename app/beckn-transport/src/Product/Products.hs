@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 module Product.Products where
 
 import Beckn.Types.App
@@ -20,10 +21,8 @@ import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Location as Location
-import qualified Types.Storage.Driver as D
 import qualified Beckn.Types.Storage.Vehicle as V
 import qualified Storage.Queries.Vehicle as VQ
-import qualified Storage.Queries.Driver as VD
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Products as DB
 import qualified Beckn.Types.Storage.Products as Storage
@@ -32,50 +31,56 @@ import           Types.API.CaseProduct
 import System.Environment
 import qualified Data.Text as T
 import Types.App
-import Utils.Utils as U
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (encodeToText, withFlowHandler)
 
 
 update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  infoRes <- case _driverInfo of
-            Just k -> updateInfo (ProductsId productId) _driverInfo _vehicleInfo
-            Nothing -> return $ "NO CHANGE"
-  idsRes <- case _assignedTo of
-            Just k -> updateIds (ProductsId productId) _assignedTo _vehicleId
-            Nothing -> return $ "NO CHANGE"
+  user <- QP.findPersonById (PersonId _EntityId)
+  vehIdRes <- case _vehicleId of
+            Just k ->  whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER ) $
+              DB.updateVeh (ProductsId productId) _vehicleId
+            Nothing -> return ()
+  dvrIdRes <- case _assignedTo of
+            Just k -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
+              DB.updateDvr (ProductsId productId) _assignedTo
+            Nothing -> return ()
   tripRes <- case _status of
-            Just c -> updateTrip (ProductsId productId) c
-            Nothing -> return $ "NO CHANGE"
+            Just c -> whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
+              updateTrip (ProductsId productId) c
+            Nothing -> return ()
+
   updatedProd <- DB.findById (ProductsId productId)
-  return $ updatedProd
+  driverInfo <- case (updatedProd ^. #_assignedTo) of
+    Just driverId ->  QP.findPersonById (PersonId driverId)
+    Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
+  vehicleInfo <- case (updatedProd ^. #_udf3) of
+    Just vehicleId -> VQ.findVehicleById (VehicleId vehicleId)
+    Nothing -> return Nothing
+  infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
+  return $ updatedProd { Storage._info = infoObj }
 
-updateInfo :: ProductsId -> Maybe D.Driver -> Maybe V.Vehicle  -> L.Flow Text
+updateInfo :: ProductsId -> Maybe SP.Person -> Maybe V.Vehicle  -> L.Flow (Maybe Text)
 updateInfo productId driverInfo vehicleInfo = do
-  let info = Just $ U.encodeTypeToText (prepareInfo driverInfo vehicleInfo)
+  let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
   DB.updateInfo productId info
-  return "INFO UPDATED"
+  return info
   where
-    prepareInfo drivInfo vehiInfo = Storage.ProdInfo
-          { driverInfo = U.encodeTypeToText drivInfo
-          , vehicleInfo = U.encodeTypeToText vehiInfo
-          }
+    mkInfoObj drivInfo vehiInfo =
+      Storage.ProdInfo
+        { driverInfo = encodeToText drivInfo
+        , vehicleInfo = encodeToText vehiInfo
+        }
 
--- update udf3 for vehicleId
-updateIds :: ProductsId -> Maybe Text -> Maybe Text -> L.Flow Text
-updateIds productId assignedTo vehId = do
-  DB.updateIds productId assignedTo vehId
-  return "IDs UPDATED"
-
-updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow Text
+updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
   case_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
   DB.updateStatus productId k
   CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
   CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
-  return "UPDATED"
+  return ()
 
 listRides :: Maybe Text -> FlowHandler ProdListRes
 listRides regToken = withFlowHandler $ do

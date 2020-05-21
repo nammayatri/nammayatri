@@ -49,7 +49,6 @@ import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
 import Utils.FCM
-import Utils.Utils
 
 -- 1) Create Parent Case with Customer Request Details
 -- 2) Notify all transporter using GCM
@@ -360,7 +359,7 @@ mkTrip maybeCase = case maybeCase of
     prod <- Product.findById $ cp ^. #_productId
     driver <- mkDriverInfo $ prod ^. #_assignedTo
     vehicle <- mkVehicleInfo $ prod ^. #_udf3
-    -- let vehicleInfo = decodeMTypeFromText <$> prod ^. #_info
+    -- let vehicleInfo = decodeFromText <$> prod ^. #_info
     L.logInfo "vehicle" $ show vehicle
     return $
       Just
