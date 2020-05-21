@@ -14,6 +14,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
+import Servant
 import Servant.API
 import Servant.Swagger
 
@@ -167,3 +168,25 @@ fieldEMod =
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
+
+validateStateTransition :: CaseStatus -> CaseStatus -> Either Text ()
+validateStateTransition oldState newState = if t oldState newState
+  then Right ()
+  else
+    Left
+    $  "It is not allowed to change Case status from "
+    <> show oldState
+    <> " to "
+    <> show newState
+  where
+    t NEW                  CONFIRMED        = True
+    t NEW                  CLOSED           = True
+    t NEW                  _                = False
+    t CONFIRMED            INPROGRESS       = True
+    t CONFIRMED            CLOSED           = True
+    t CONFIRMED            _                = False
+    t INPROGRESS           COMPLETED        = True
+    t INPROGRESS           CLOSED           = True
+    t INPROGRESS           _                = False
+    t COMPLETED            _                = False
+    t CLOSED               _                = False

@@ -48,6 +48,7 @@ data CaseProductT f = CaseProduct
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime
   }
+
   deriving (Generic, B.Beamable)
 
 type CaseProduct = CaseProductT Identity
@@ -87,3 +88,24 @@ fieldEMod =
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
+
+validateStateTransition :: CaseProductStatus -> CaseProductStatus -> Either Text ()
+validateStateTransition oldState newState = if t oldState newState
+  then Right ()
+  else
+    Left
+    $  "It is not allowed to change CaseProduct status from "
+    <> show oldState
+    <> " to "
+    <> show newState
+  where
+    t VALID                CONFIRMED        = True
+    t VALID                _                = False
+    t CONFIRMED            INPROGRESS       = True
+    t CONFIRMED            _                = False
+    t INPROGRESS           COMPLETED        = True
+    t INPROGRESS           _                = False
+    t COMPLETED            _                = False
+    t INSTOCK              _                = False
+    t OUTOFSTOCK           _                = False
+    t INVALID              _                = False

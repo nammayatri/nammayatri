@@ -51,18 +51,23 @@ updateStatus ::
   ProductsId ->
   Storage.ProductsStatus ->
   L.Flow (T.DBResult ())
-updateStatus id status = do
+updateStatus id newStatus = do
+  -- check Product status transition correctness
+  product_ <- findById id
+  let oldStatus = Storage._status product_
+  Storage.validateStatusTransitionFlow oldStatus newStatus
+  -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
-    (setClause status currTime)
+    (setClause newStatus currTime)
     (predicate id)
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
-    setClause status currTime Storage.Products {..} =
+    setClause newStatus currTime Storage.Products {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ newStatus
         ]
 
 updateInfo :: ProductsId -> Maybe Text -> L.Flow ()

@@ -55,8 +55,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       QC.updateStatusAndUdfs caseId Case.COMPLETED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
-  QC.findById caseId
-    >>= return . PassApplicationRes'
+  PassApplicationRes' <$> QC.findById caseId
   where
     validApprovedCount count approvedCount =
       if approvedCount > count then count else approvedCount

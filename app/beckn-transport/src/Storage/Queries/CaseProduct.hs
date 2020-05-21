@@ -47,13 +47,13 @@ findAllByCaseId :: CaseId -> L.Flow [Storage.CaseProduct]
 findAllByCaseId id =
   DB.findAllOrErr dbTable (pred id)
   where
-    pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ id)
+    pred id Storage.CaseProduct {..} = _caseId ==. B.val_ id
 
 findByCaseId :: CaseId -> L.Flow Storage.CaseProduct
 findByCaseId id =
   DB.findOneWithErr dbTable (pred id)
   where
-    pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ id)
+    pred id Storage.CaseProduct {..} = _caseId ==. B.val_ id
 
 updateStatusForProducts :: ProductsId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
 updateStatusForProducts productId status = do
@@ -75,19 +75,25 @@ updateStatus ::
   ProductsId ->
   Storage.CaseProductStatus ->
   L.Flow (T.DBResult ())
-updateStatus caseId productId status = do
+updateStatus caseId productId newStatus = do
+  -- check CaseProducts statuses transition correctness
+  caseProductList <- findAllByCaseAndProductId caseId productId
+  traverse_
+    (\cp -> Storage.validateStatusTransitionFlow (Storage._status cp) newStatus)
+    caseProductList
+  -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
-    (setClause status currTime)
+    (setClause newStatus currTime)
     (predicate caseId productId)
   where
     predicate cId pId Storage.CaseProduct {..} =
       (_caseId ==. B.val_ cId) &&. (_productId ==. B.val_ pId)
-    setClause status currTime Storage.CaseProduct {..} =
+    setClause newStatus currTime Storage.CaseProduct {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ newStatus
         ]
 
 findAllByCaseIds :: [CaseId] -> L.Flow [Storage.CaseProduct]
@@ -212,3 +218,10 @@ caseProductJoinWithoutLimits csType orgId status = do
           CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
             B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)
+
+findAllByCaseAndProductId :: CaseId -> ProductsId -> L.Flow [Storage.CaseProduct]
+findAllByCaseAndProductId caseId productId =
+  DB.findAllOrErr dbTable (pred caseId productId)
+  where
+    pred caseId productId Storage.CaseProduct {..} =     _caseId ==. B.val_ caseId
+                                                     &&. _productId ==. B.val_ productId

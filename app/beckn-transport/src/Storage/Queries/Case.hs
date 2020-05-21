@@ -56,18 +56,23 @@ updateStatus ::
   CaseId ->
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
-updateStatus id status = do
+updateStatus id newStatus = do
+  -- check Case status transition correctness
+  case_ <- findById id
+  let oldStatus = Storage._status case_
+  Storage.validateStatusTransitionFlow oldStatus newStatus
+  -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
-    (setClause status currTime)
+    (setClause newStatus currTime)
     (predicate id)
   where
     predicate id Storage.Case {..} = _id ==. B.val_ id
-    setClause status currTime Storage.Case {..} =
+    setClause newStatus currTime Storage.Case {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ newStatus
         ]
 
 updateStatusByIds ::
