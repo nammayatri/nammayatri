@@ -64,6 +64,8 @@ onConfirm regToken req = withFlowHandler $ do
                 { Products._status = Products.CONFIRMED,
                   Products._info = trackerInfo
                 }
+
+        QCP.updateStatus pid Products.CONFIRMED
         Products.updateMultiple (_getProductsId pid) uPrd
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}

@@ -11,7 +11,6 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Customer as Customer
-import qualified Types.Storage.Driver as Driver
 import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
@@ -25,7 +24,6 @@ data TransporterDb f =
       _organization :: f (B.TableEntity Organization.OrganizationT)
     , _leads :: f (B.TableEntity Leads.LeadsT)
     , _customer :: f (B.TableEntity Customer.CustomerT)
-    , _driver :: f (B.TableEntity Driver.DriverT)
     , _location :: f (B.TableEntity Location.LocationT)
     , _quotation :: f (B.TableEntity Quotation.QuotationT)
     , _tracker :: f (B.TableEntity Tracker.TrackerT)
@@ -46,7 +44,6 @@ transporterDb =
     { _organization = Organization.fieldEMod
     , _leads = Leads.fieldEMod
     , _customer = Customer.fieldEMod
-    , _driver = Driver.fieldEMod
     , _location = Location.fieldEMod
     , _quotation = Quotation.fieldEMod
     , _tracker = Tracker.fieldEMod

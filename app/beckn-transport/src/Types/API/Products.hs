@@ -9,13 +9,10 @@ import qualified Beckn.Types.Storage.Products   as Product
 import           Beckn.Types.Storage.Case
 import           Beckn.Types.Storage.Location
 import           EulerHS.Prelude
-import           Types.Storage.Driver
 import           Beckn.Types.Storage.Vehicle
 
 data ProdReq = ProdReq
   { _status   :: Maybe Product.ProductsStatus,
-    _driverInfo  :: Maybe Driver,
-    _vehicleInfo :: Maybe Vehicle,
     _assignedTo :: Maybe Text,
     _vehicleId :: Maybe Text
   }

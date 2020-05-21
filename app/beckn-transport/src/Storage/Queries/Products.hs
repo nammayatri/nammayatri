@@ -77,19 +77,36 @@ updateInfo prodId info = do
       mconcat
         [ _info <-. B.val_ info ]
 
-updateIds :: ProductsId -> Maybe Text -> Maybe Text -> L.Flow ()
-updateIds prodId driverId vehId = do
+updateVeh :: ProductsId -> Maybe Text -> L.Flow ()
+updateVeh prodId vehId = do
+  (currTime :: LocalTime) <- getCurrTime
   DB.update
     dbTable
-    (setClause driverId vehId)
+    (setClause vehId currTime)
     (predicate prodId)
       >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
-    setClause driverId vehId Storage.Products {..} =
+    setClause vehId currTime Storage.Products {..} =
       mconcat
         [ _udf3 <-. B.val_ vehId
-        , _assignedTo <-. B.val_ driverId]
+        , _updatedAt <-. B.val_ currTime]
+
+updateDvr :: ProductsId -> Maybe Text -> L.Flow ()
+updateDvr prodId driverId = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause driverId currTime)
+    (predicate prodId)
+      >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Products {..} = _id ==. B.val_ id
+    setClause driverId currTime Storage.Products {..} =
+      mconcat
+        [ _assignedTo <-. B.val_ driverId
+        , _updatedAt <-. B.val_ currTime]
+
 
 findAllByAssignedTo :: Text -> L.Flow [Storage.Products]
 findAllByAssignedTo id =

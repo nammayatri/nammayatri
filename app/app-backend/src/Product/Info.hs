@@ -46,7 +46,7 @@ getProductInfo regToken prodId = withFlowHandler $ do
                 travellers = Trip.travellers trip,
                 fare = Trip.fare trip,
                 caseId = _getCaseId (SCP._caseId caseProduct),
-                productId = prodId
+                product = product
               }
     Nothing ->
       L.logInfo "get Product info" "No info found in products table"
