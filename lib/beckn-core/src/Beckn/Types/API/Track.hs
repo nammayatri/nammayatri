@@ -7,6 +7,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Mobility.Tracking
+import Beckn.Types.Mobility.Trip
 import Data.Generics.Labels
 import Data.Swagger
 import EulerHS.Prelude
@@ -20,9 +21,15 @@ data TrackTripReq = TrackTripReq
 
 type TrackTripRes = AckResponse
 
+data Tracker = Tracker
+  { trip :: Trip,
+    tracking :: Maybe Tracking
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 data OnTrackTripReq = OnTrackTripReq
   { context :: Context,
-    message :: Tracking
+    message :: Tracker
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

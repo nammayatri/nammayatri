@@ -21,7 +21,6 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Products as Products
-import qualified Types.Storage.Tracker as Tracker
 import Utils.Common (verifyToken)
 
 track :: Maybe Text -> TrackTripReq -> FlowHandler TrackTripRes
@@ -33,7 +32,7 @@ track regToken req = withFlowHandler $ do
   ack <-
     case decodeFromText =<< prd ^. #_info of
       Nothing -> return $ Ack "Error" "No product to track"
-      Just (tracker :: Tracker.Tracker) -> do
+      Just (tracker :: Tracker) -> do
         let gTripId = tracker ^. #trip ^. #id
         gatewayUrl <- Gateway.getBaseUrl
         eres <- Gateway.track gatewayUrl $ req & (#message . #id) .~ gTripId
@@ -66,17 +65,10 @@ track_cb apiKey req = withFlowHandler $ do
     Left err -> return $ AckResponse context (Ack "Error" err)
     Right _ -> return $ AckResponse context (Ack "Successful" "Ok")
 
-updateTracker :: Products.Products -> Tracking -> L.Flow (Either Text ())
-updateTracker product tracking = do
+updateTracker :: Products.Products -> Tracker -> L.Flow (Either Text ())
+updateTracker product tracker = do
   let info = product ^. #_info
-
-  case decodeFromText =<< info of
-    Nothing -> return $ Left "No tracking details found"
-    Just (tracker :: Tracker.Tracker) -> do
-      let updatedTck =
-            tracker {Tracker.tracking = Just tracking}
-          updatedPrd =
-            product {Products._info = Just $ encodeToText updatedTck}
-
-      Products.updateMultiple (_getProductsId $ product ^. #_id) updatedPrd
-      return $ Right ()
+  let updatedPrd =
+        product {Products._info = Just $ encodeToText tracker}
+  Products.updateMultiple (_getProductsId $ product ^. #_id) updatedPrd
+  return $ Right ()

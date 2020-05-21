@@ -261,8 +261,8 @@ mkOnConfirmPayload c prods trackerCase = do
             timestamp = currTime,
             dummy = ""
           }
-  trip <- mkTrip $ Just trackerCase
-  service <- GT.mkServiceOffer c prods trip
+  trip <- mkTrip trackerCase
+  service <- GT.mkServiceOffer c prods (Just trip)
   return
     OnConfirmReq
       { context,
@@ -302,7 +302,7 @@ mkOnServiceStatusPayload c prods trackerCase = do
             timestamp = currTime,
             dummy = ""
           }
-  trip <- mkTrip trackerCase
+  trip <- mapM mkTrip trackerCase
   service <- GT.mkServiceOffer c prods trip
   return
     OnStatusReq
@@ -343,41 +343,41 @@ mkOnTrackTripPayload case_ pCase = do
           }
   let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ case_ ^. #_id)
   let embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ case_ ^. #_id) <> "/embed"
+  trip <- mkTrip case_
+  let trackingUrl = GT.mkTracking "PULL" data_url embed_url
+  let tracker = Tracker trip (Just trackingUrl)
   return
     OnTrackTripReq
       { context,
-        message = GT.mkTracking "PULL" data_url embed_url
+        message = tracker
       }
 
-mkTrip :: Maybe Case -> L.Flow (Maybe Trip)
-mkTrip maybeCase = case maybeCase of
-  Nothing -> return Nothing
-  Just c -> do
-    let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id)
-        embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
-    cp <- CaseProduct.findByCaseId $ c ^. #_id
-    prod <- Product.findById $ cp ^. #_productId
-    driver <- mkDriverInfo $ prod ^. #_assignedTo
-    vehicle <- mkVehicleInfo $ prod ^. #_udf3
-    -- let vehicleInfo = decodeFromText <$> prod ^. #_info
-    L.logInfo "vehicle" $ show vehicle
-    return $
-      Just
-        Trip
-          { id = _getCaseId $ c ^. #_id,
-            vehicle = vehicle,
-            driver =
-              TripDriver
-                { persona = driver,
-                  rating = Nothing
-                },
-            travellers = [],
-            tracking = GT.mkTracking "PULL" data_url embed_url,
-            corridor_type = "ON-DEMAND",
-            state = "", -- TODO: need to take it from product
-            fare = Nothing, -- TODO: need to take it from product
-            route = Nothing
-          }
+mkTrip :: Case -> L.Flow Trip
+mkTrip c = do
+  let data_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id)
+      embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
+  cp <- CaseProduct.findByCaseId $ c ^. #_id
+  prod <- Product.findById $ cp ^. #_productId
+  driver <- mkDriverInfo $ prod ^. #_assignedTo
+  vehicle <- mkVehicleInfo $ prod ^. #_udf3
+  -- let vehicleInfo = decodeMTypeFromText <$> prod ^. #_info
+  L.logInfo "vehicle" $ show vehicle
+  return $
+    Trip
+      { id = _getCaseId $ c ^. #_id,
+        vehicle = vehicle,
+        driver =
+          TripDriver
+            { persona = driver,
+              rating = Nothing
+            },
+        travellers = [],
+        tracking = GT.mkTracking "PULL" data_url embed_url,
+        corridor_type = "ON-DEMAND",
+        state = "", -- TODO: need to take it from product
+        fare = Nothing, -- TODO: need to take it from product
+        route = Nothing
+      }
 
 mkDriverInfo :: Maybe Text -> L.Flow (Maybe Driver)
 mkDriverInfo maybeDriverId = case maybeDriverId of
