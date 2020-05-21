@@ -176,7 +176,7 @@ confirm req = withFlowHandler $ do
   case_ <- Case.findBySid caseShortId
   let caseId = _getCaseId $ case_ ^. #_id
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
-  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
+  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) Product.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -201,7 +201,7 @@ mkTrackerCaseProduct cpId caseId prodId currTime =
       _personId = Nothing,
       _quantity = 1,
       _price = 0,
-      _status = CaseProduct.INPROGRESS,
+      _status = Product.INPROGRESS,
       _info = Nothing,
       _createdAt = currTime,
       _updatedAt = currTime
