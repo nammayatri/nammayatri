@@ -39,14 +39,25 @@ import Types.API.Case
 import Types.API.Registration
 import qualified Utils.Defaults as Defaults
 
-list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
-list regToken CaseReq {..} = withFlowHandler $ do
+list :: Maybe Text -> Maybe CaseStatus -> Maybe CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
+list regToken _status _type _limitM _offsetM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   now <- getCurrTime
-  caseList <- Case.findAllByType _limit _offset _type _status now
+  caseList <- case _status of
+    Just status ->
+      case _type of
+        Just type_ -> Case.findAllByTypeStatus limit offset type_ status now
+        Nothing -> Case.findAllByStatus limit offset status now
+    Nothing ->
+      case _type of
+        Just type_ -> Case.findAllByType limit offset type_ now
+        Nothing -> Case.findAllWithLimits limit offset now
+
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
   where
+    limit = (toInteger $ fromMaybe 10 _limitM)
+    offset = (toInteger $ fromMaybe 0 _offsetM)
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
         Just k -> buildResponse k

@@ -136,8 +136,11 @@ organizationFlow =
 type CaseAPIs =
   "case"
     :> ( Header "authorization" Text
-           :> ReqBody '[JSON] CaseReq
-           :> Post '[JSON] CaseListRes
+           :> QueryParam "status" CaseStatus
+           :> QueryParam "type" CaseType
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] CaseListRes
            :<|> Header "authorization" Text
              :> Capture "caseId" Text
              :> ReqBody '[JSON] UpdateCaseReq

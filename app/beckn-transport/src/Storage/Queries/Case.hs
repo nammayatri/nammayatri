@@ -22,8 +22,8 @@ create Storage.Case {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
     >>= either DB.throwDBError pure
 
-findAllByType :: Integer -> Integer -> Storage.CaseType -> Storage.CaseStatus -> LocalTime -> L.Flow [Storage.Case]
-findAllByType limit offset caseType caseStatus now =
+findAllByTypeStatus :: Integer -> Integer -> Storage.CaseType -> Storage.CaseStatus -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatus limit offset caseType caseStatus now =
   DB.findAllWithLimitOffsetWhere dbTable (predicate caseType caseStatus now) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -33,6 +33,40 @@ findAllByType limit offset caseType caseStatus now =
           &&. _status ==. (B.val_ caseStatus)
           &&. _validTill B.>. (B.val_ now)
       )
+
+
+findAllByStatus :: Integer -> Integer -> Storage.CaseStatus -> LocalTime -> L.Flow [Storage.Case]
+findAllByStatus limit offset caseStatus now =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate caseStatus now) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate caseStatus now Storage.Case {..} =
+      ( _status ==. (B.val_ caseStatus)
+          &&. _validTill B.>. (B.val_ now)
+      )
+
+findAllByType :: Integer -> Integer -> Storage.CaseType -> LocalTime -> L.Flow [Storage.Case]
+findAllByType limit offset csType now =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType now) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate csType now Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. _validTill B.>. (B.val_ now)
+      )
+
+findAllWithLimits :: Integer -> Integer -> LocalTime -> L.Flow [Storage.Case]
+findAllWithLimits limit offset now =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate now) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate now Storage.Case {..} =
+      ( _validTill B.>. (B.val_ now)
+      )
+
 
 findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds ids =
