@@ -82,7 +82,7 @@ mkCase req userId from to = do
   id <- generateGUID
   let intent = req ^. #message
       context = req ^. #context
-      validTill = addLocalTime (60 * 30) now
+      validTill = addLocalTime (60 * 30) $ req ^. #message ^. #time
   return $
     Case.Case
       { _id = id,
@@ -93,7 +93,7 @@ mkCase req userId from to = do
         _type = Case.RIDEBOOK,
         _exchangeType = Case.FULFILLMENT,
         _status = Case.NEW,
-        _startTime = now,
+        _startTime = req ^. #message ^. #time,
         _endTime = Nothing,
         _validTill = validTill,
         _provider = Nothing,
