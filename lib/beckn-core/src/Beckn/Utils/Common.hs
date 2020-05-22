@@ -17,6 +17,7 @@ import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import System.Environment
 import Data.Time
 import Data.Time.Calendar (Day (..))
 import qualified EulerHS.Interpreters as I
@@ -24,7 +25,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Network.HTTP.Types (hContentType)
 import Servant
-import System.Environment
 
 getCurrTime :: L.Flow LocalTime
 getCurrTime = L.runIO $ do
@@ -131,7 +131,7 @@ throwJsonError err tag errMsg = do
   L.logError tag errMsg
   L.throwException
     err
-      { errBody = A.encode $ getJsonError err errMsg,
+      { errBody = A.encode $ getBecknError err errMsg,
         errHeaders = pure jsonHeader
       }
   where
@@ -139,6 +139,14 @@ throwJsonError err tag errMsg = do
       ( hContentType,
         "application/json;charset=utf-8"
       )
+
+getBecknError :: ServerError -> Text -> BecknError
+getBecknError err msg =
+  BecknError
+    { _errorCode = ErrorCode $ errHTTPCode err,
+      _errorMessage = ErrorMsg msg,
+      _action = "NACK"
+    }
 
 throwJsonError500, throwJsonError501, throwJsonError400, throwJsonError401 :: Text -> Text -> L.Flow a
 throwJsonError500 = throwJsonError err500
@@ -154,11 +162,3 @@ throwJsonError500H = throwJsonErrorH ... err500
 throwJsonError501H = throwJsonErrorH ... err501
 throwJsonError400H = throwJsonErrorH ... err400
 throwJsonError401H = throwJsonErrorH ... err401
-
-getJsonError :: ServerError -> Text -> JsonError
-getJsonError err msg =
-  JsonError
-    { _errorCode = show $ errHTTPCode err,
-      _errorMessage = msg,
-      _action = "NACK"
-    }

@@ -59,7 +59,8 @@ data SystemError = SystemError ErrorMsg
 data BecknError
   = BecknError
       { _errorCode :: ErrorCode,
-        _errorMessage :: ErrorMsg
+        _errorMessage :: ErrorMsg,
+        _action :: Text
       }
   deriving (Generic)
 
