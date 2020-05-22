@@ -24,7 +24,7 @@ data EpassError =
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data QuotaError = 
-    EpassNotFound
+    QuotaNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 
@@ -34,27 +34,26 @@ data CommentError =
 
 
 data HealthCheckError = 
-   CommentNotFound
+   HealthCheckNotFound
    deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 
 data BlacklistError = 
-   CommentNotFound
+   BlacklistNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 
 data TagError = 
-   CommentNotFound
+   TagNotFound
    deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 
 data OrganisationError = 
-   CommentNotFound
+   OrganisationNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 
-data SystemError = 
-     MethodNotAllowed
+data SystemError = SystemError ErrorMsg
  deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data BecknError
