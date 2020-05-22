@@ -12,6 +12,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Products
+import Beckn.Types.Storage.Person as SP
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -83,8 +84,10 @@ type PersonAPIs =
            :> Post '[JSON] UpdatePersonRes
            :<|> "list"
              :> Header "authorization" Text
-             :> ReqBody '[JSON] ListPersonReq
-             :> Post '[JSON] ListPersonRes
+             :> QueryParams "roles" SP.Role
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] ListPersonRes
            :<|> Capture "personId" Text
              :> Header "authorization" Text
              :> "update"

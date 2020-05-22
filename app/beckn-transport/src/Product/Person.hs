@@ -43,10 +43,10 @@ createPerson token req = withFlowHandler $ do
             whenM (isJust <$> (QP.findByMobileNumber mobileNumber)) $ L.throwException $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
           else return ()
 
-listPerson :: Maybe Text -> ListPersonReq -> FlowHandler ListPersonRes
-listPerson token req = withFlowHandler $ do
+listPerson :: Maybe Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
+listPerson token roles limitM offsetM = withFlowHandler $ do
   orgId <- validate token
-  ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [orgId]
+  ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
 
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
