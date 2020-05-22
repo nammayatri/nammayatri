@@ -28,7 +28,7 @@ instance B.HasSqlEqualityCheck MySQL CaseType
 instance FromBackendRow MySQL CaseType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
+data CaseStatus = NEW | INPROGRESS | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseStatus where

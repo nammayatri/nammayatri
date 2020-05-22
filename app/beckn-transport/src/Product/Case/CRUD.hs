@@ -132,7 +132,7 @@ createCaseProduct cs prod = do
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status = Product.INSTOCK,
+          _status = CaseP.INSTOCK,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime
@@ -144,13 +144,13 @@ notifyGateway c = do
   cps <- CPQ.findAllByCaseId (c ^. #_id)
   L.logInfo "notifyGateway" $ show cps
   prods <- PQ.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
-  onSearchPayload <- mkOnSearchPayload c prods
+  onSearchPayload <- mkOnSearchPayload c prods cps
   L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
-mkOnSearchPayload c prods = do
+mkOnSearchPayload :: Case -> [Products] -> [CaseProduct] -> L.Flow OnSearchReq
+mkOnSearchPayload c prods cps = do
   currTime <- getCurrTime
   let context =
         Context
@@ -162,7 +162,7 @@ mkOnSearchPayload c prods = do
             timestamp = currTime,
             dummy = ""
           }
-  service <- GT.mkServiceOffer c prods Nothing
+  service <- GT.mkServiceOffer c prods cps Nothing
   return
     OnSearchReq
       { context,

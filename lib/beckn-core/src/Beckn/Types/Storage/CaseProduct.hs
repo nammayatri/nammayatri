@@ -15,7 +15,14 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.Swagger
 
-type CaseProductStatus = ProductsStatus
+data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow MySQL CaseProductStatus where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data CaseProductT f = CaseProduct
   { _id :: B.C f CaseProductId,
