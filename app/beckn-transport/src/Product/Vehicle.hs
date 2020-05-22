@@ -24,10 +24,10 @@ createVehicle token req = withFlowHandler $ do
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
-listVehicles :: Maybe Text -> ListVehicleReq -> FlowHandler ListVehicleRes
-listVehicles token req = withFlowHandler $ do
+listVehicles :: Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler ListVehicleRes
+listVehicles token _limitM _offsetM = withFlowHandler $ do
   orgId     <- validate token
-  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) [orgId])
+  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds _limitM _offsetM [orgId])
 
 -- Core Utility methods are below
 verifyAdmin :: SP.Person -> L.Flow Text

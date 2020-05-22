@@ -106,8 +106,9 @@ type VehicleAPIs =
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
              :> Header "authorization" Text
-             :> ReqBody '[JSON] ListVehicleReq
-             :> Post '[JSON] ListVehicleRes
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] ListVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPIs
