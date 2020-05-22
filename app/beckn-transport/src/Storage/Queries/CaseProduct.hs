@@ -43,6 +43,21 @@ findByCaseId id =
   where
     pred id Storage.CaseProduct {..} = _caseId ==. (B.val_ id)
 
+updateStatusForProducts :: ProductsId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
+updateStatusForProducts productId status = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate productId)
+  where
+    predicate pId Storage.CaseProduct {..} = (_productId ==. B.val_ pId)
+    setClause status currTime Storage.CaseProduct {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
 updateStatus ::
   CaseId ->
   ProductsId ->

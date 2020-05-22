@@ -1,18 +1,19 @@
 module Types.API.Products where
 
-import           Data.Default
-import           Data.Swagger
-import           Data.Time
-import           Beckn.Types.Common
-import           Beckn.Types.App
-import qualified Beckn.Types.Storage.Products   as Product
-import           Beckn.Types.Storage.Case
-import           Beckn.Types.Storage.Location
-import           EulerHS.Prelude
-import           Beckn.Types.Storage.Vehicle
+import Beckn.Types.App
+import Beckn.Types.Common
+import Beckn.Types.Storage.Case
+import qualified Beckn.Types.Storage.CaseProduct as CaseP
+import Beckn.Types.Storage.Location
+import qualified Beckn.Types.Storage.Products as Product
+import Beckn.Types.Storage.Vehicle
+import Data.Default
+import Data.Swagger
+import Data.Time
+import EulerHS.Prelude
 
 data ProdReq = ProdReq
-  { _status   :: Maybe Product.ProductsStatus,
+  { _status :: Maybe CaseP.CaseProductStatus,
     _assignedTo :: Maybe Text,
     _vehicleId :: Maybe Text
   }
@@ -27,9 +28,9 @@ instance ToJSON ProdReq where
 type ProdInfoRes = Product.Products
 
 data ProdRes = ProdRes
-  { _product   :: Product.Products,
-    _fromLocation  :: Location,
-    _toLocation  :: Location
+  { _product :: Product.Products,
+    _fromLocation :: Location,
+    _toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 

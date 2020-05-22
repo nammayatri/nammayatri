@@ -34,6 +34,14 @@ findAllByType limit offset caseType caseStatus now =
           &&. _validTill B.>. (B.val_ now)
       )
 
+findAllByIdsAndType :: [CaseId] -> Storage.CaseType -> L.Flow [Storage.Case]
+findAllByIdsAndType ids type_ =
+  DB.findAllOrErr dbTable (pred ids type_)
+  where
+    pred ids type_ Storage.Case {..} =
+      B.in_ _id (B.val_ <$> ids)
+        &&. (_type ==. B.val_ type_)
+
 findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds ids =
   DB.findAllOrErr dbTable (pred ids)
