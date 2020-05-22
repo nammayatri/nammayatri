@@ -11,6 +11,7 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Products
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -155,8 +156,10 @@ caseFlow =
 type CaseProductAPIs =
   "caseProduct"
     :> ( Header "authorization" Text
-           :> ReqBody '[JSON] CaseProdReq
-           :> Post '[JSON] CaseProductList
+           :> QueryParam "status" ProductsStatus
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] CaseProductList
        )
 
 caseProductFlow =

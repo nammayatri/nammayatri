@@ -25,20 +25,24 @@ import Storage.Queries.Location as LQ
 import System.Environment
 import Types.API.CaseProduct
 
-list :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
-list regToken CaseProdReq {..} = withFlowHandler $ do
+list :: Maybe Text -> Maybe Product.ProductsStatus -> Maybe Int -> Maybe Int -> FlowHandler CaseProductList
+list regToken _status _limitM _offsetM  = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByTypeOrgId orgId _type
-      caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
+      prodList <- case _status of
+        Just status -> PQ.findAllByStatusOrgId orgId status
+        Nothing -> PQ.findAllByOrgId orgId
+      caseProdList <- DB.findAllByIds limit offset (Product._id <$> prodList)
       caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
+    limit = (toInteger $ fromMaybe 10 _limitM)
+    offset = (toInteger $ fromMaybe 0 _offsetM)
     joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> Storage.CaseProduct -> Maybe CaseProductRes
     joinIds prodList caseList locList caseProd =
       case find (\x -> (Storage._caseId caseProd) == Case._id x) caseList of
