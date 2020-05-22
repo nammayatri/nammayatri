@@ -6,20 +6,6 @@ import           Beckn.Types.Storage.Case
 import           Beckn.Types.Storage.Location
 import           EulerHS.Prelude
 
-data CaseReq = CaseReq
-  { _type   :: CaseType,
-    _limit  :: Integer,
-    _offset :: Integer,
-    _status :: CaseStatus
-  }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON CaseReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON CaseReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
 data CaseRes = CaseRes
   { _case   :: Case,
     _fromLocation  :: Location,

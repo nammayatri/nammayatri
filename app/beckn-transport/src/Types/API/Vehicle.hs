@@ -57,16 +57,6 @@ data CreateVehicleRes = CreateVehicleRes
   {  vehicle :: SV.Vehicle}
   deriving (Generic, ToJSON, ToSchema)
 
-data ListVehicleReq = ListVehicleReq
-  {
-    _limit :: Maybe Integer
-    , _offset :: Maybe Integer
-  }
-  deriving (Generic, ToSchema)
-
-instance FromJSON ListVehicleReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
 data ListVehicleRes = ListVehicleRes
   {  vehicles :: [SV.Vehicle] }
   deriving (Generic, ToJSON, ToSchema)

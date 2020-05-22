@@ -10,21 +10,6 @@ import qualified Beckn.Types.Storage.Case       as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import           EulerHS.Prelude
 
-data CaseProdReq = CaseProdReq
-  { _type   :: Product.ProductsStatus,
-    _limit :: Integer,
-    _offset :: Integer,
-    _fromTime :: LocalTime,
-    _toTime  :: LocalTime
-  }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON CaseProdReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON CaseProdReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
 
 data CaseProductRes = CaseProductRes
   { _case   :: Case.Case,
