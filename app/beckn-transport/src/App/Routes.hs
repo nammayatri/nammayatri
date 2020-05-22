@@ -118,17 +118,26 @@ vehicleFlow =
 type OrganizationAPIs =
   "transporter"
     :> ( Header "authorization" Text
+           :> Get '[JSON] TransporterRec
+           :<|> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
+           :<|> Capture "orgId" Text
+           :> Header "authorization" Text
+           :> "update"
+           :> ReqBody '[JSON] UpdateTransporterReq
+           :> Post '[JSON] TransporterRec
            :<|> "gateway"
-             :> Header "authorization" Text
-             :> ReqBody '[JSON] TransporterReq
-             :> Post '[JSON] GatewayRes
+           :> Header "authorization" Text
+           :> ReqBody '[JSON] TransporterReq
+           :> Post '[JSON] GatewayRes
        )
 
 organizationFlow :: FlowServer OrganizationAPIs
 organizationFlow =
-  Transporter.createTransporter
+  Transporter.getTransporter
+    :<|> Transporter.createTransporter
+    :<|> Transporter.updateTransporter
     :<|> Transporter.createGateway
 
 -----------------------------

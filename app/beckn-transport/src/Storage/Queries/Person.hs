@@ -1,19 +1,18 @@
 module Storage.Queries.Person where
 
-import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
-import           EulerHS.Prelude                  hiding (id)
-
-import qualified Storage.Queries            as DB
-import           Beckn.Types.App
-import           Beckn.Types.Common
-import qualified Types.Storage.DB                 as DB
-import qualified Beckn.Types.Storage.Person       as Storage
-import           Beckn.Utils.Common
-import           Beckn.Utils.Extra
-import           Data.Time
-import qualified Database.Beam                    as B
-import qualified EulerHS.Language                 as L
-import qualified EulerHS.Types                    as T
+import Beckn.Types.App
+import Beckn.Types.Common
+import qualified Beckn.Types.Storage.Person as Storage
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
+import Data.Time
+import Database.Beam ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam as B
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
+import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.transporterDb
@@ -32,6 +31,18 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
+findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> L.Flow Storage.Person
+findPersonByIdAndRoleAndOrgId id role orgId = do
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_DATA"
+  where
+    predicate Storage.Person {..} =
+      ( _id ==. B.val_ id
+          &&. _role ==. B.val_ role
+          &&. _organizationId ==. B.val_ (Just orgId)
+      )
+
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
@@ -44,27 +55,26 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
       foldl
         (&&.)
         (B.val_ True)
-        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles
-        , _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
+          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
         ]
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
-    DB.findAllOrErr dbTable (predicate roles orgIds)
+  DB.findAllOrErr dbTable (predicate roles orgIds)
   where
     predicate roles orgIds Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles
-        , _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
+          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
         ]
 
 complementVal l
   | (null l) = B.val_ True
   | otherwise = B.val_ False
-
 
 findByIdentifier ::
   Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
@@ -76,14 +86,14 @@ findByIdentifier idType mb =
       _identifierType ==. B.val_ idType
         &&. _mobileNumber ==. B.val_ (Just mb)
 
-findByMobileNumber::
+findByMobileNumber ::
   Text -> L.Flow (Maybe Storage.Person)
 findByMobileNumber identifier =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-        _mobileNumber ==. B.val_ (Just identifier)
+      _mobileNumber ==. B.val_ (Just identifier)
 
 updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
@@ -93,12 +103,12 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
   where
     setClause orgId n Storage.Person {..} =
       mconcat
-        [
-           _organizationId <-. B.val_ (Just orgId)
-          , _role <-. B.val_ Storage.ADMIN
-          , _updatedAt <-. B.val_ n
+        [ _organizationId <-. B.val_ (Just orgId),
+          _role <-. B.val_ Storage.ADMIN,
+          _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
+
 updatePersonRec :: PersonId -> Storage.Person -> L.Flow ()
 updatePersonRec personId person = do
   now <- getCurrentTimeUTC
@@ -107,23 +117,22 @@ updatePersonRec personId person = do
   where
     setClause person n Storage.Person {..} =
       mconcat
-        [
-          _firstName <-. B.val_ (Storage._firstName person)
-          , _middleName <-. B.val_ (Storage._middleName person)
-          , _lastName <-. B.val_ (Storage._lastName person)
-          , _fullName <-. B.val_ (Storage._fullName person)
-          , _role <-. B.val_ (Storage._role person)
-          , _gender <-. B.val_ (Storage._gender person)
-          , _email <-. B.val_ (Storage._email person)
-          , _identifier <-. B.val_ (Storage._identifier person)
-          , _rating <-. B.val_ (Storage._rating person)
-          , _deviceToken <-. B.val_ (Storage._deviceToken person)
-          , _udf1 <-. B.val_ (Storage._udf1 person)
-          , _udf2 <-. B.val_ (Storage._udf2 person)
-          , _organizationId <-. B.val_ (Storage._organizationId person)
-          , _description <-. B.val_ (Storage._description person)
-          , _locationId <-. B.val_ (Storage._locationId person)
-          , _updatedAt <-. B.val_ n
+        [ _firstName <-. B.val_ (Storage._firstName person),
+          _middleName <-. B.val_ (Storage._middleName person),
+          _lastName <-. B.val_ (Storage._lastName person),
+          _fullName <-. B.val_ (Storage._fullName person),
+          _role <-. B.val_ (Storage._role person),
+          _gender <-. B.val_ (Storage._gender person),
+          _email <-. B.val_ (Storage._email person),
+          _identifier <-. B.val_ (Storage._identifier person),
+          _rating <-. B.val_ (Storage._rating person),
+          _deviceToken <-. B.val_ (Storage._deviceToken person),
+          _udf1 <-. B.val_ (Storage._udf1 person),
+          _udf2 <-. B.val_ (Storage._udf2 person),
+          _organizationId <-. B.val_ (Storage._organizationId person),
+          _description <-. B.val_ (Storage._description person),
+          _locationId <-. B.val_ (Storage._locationId person),
+          _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 

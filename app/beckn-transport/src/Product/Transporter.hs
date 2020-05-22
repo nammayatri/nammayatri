@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Transporter where
 
 import Beckn.TypeClass.Transform
@@ -33,6 +35,31 @@ createTransporter auth req = withFlowHandler $ do
 createGateway :: Maybe Text -> TransporterReq -> FlowHandler GatewayRes
 createGateway auth req = withFlowHandler $ do
   QO.verifyAuth auth
-  organization              <- transformFlow req
+  organization <- transformFlow req
   QO.create organization
-  return $ GatewayRes organization
+  return $ TransporterRec organization
+
+updateTransporter :: Text -> Maybe Text -> UpdateTransporterReq -> FlowHandler TransporterRec
+updateTransporter orgId auth req = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth auth
+  person <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
+  validation person
+  org <- QO.findOrganizationById $ OrganizationId orgId
+  organization <- transformFlow2 req org
+  QO.updateOrganizationRec organization
+  return $ TransporterRec organization
+  where
+    validation person = do
+      whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+
+getTransporter :: Maybe Text -> FlowHandler TransporterRec
+getTransporter auth = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth auth
+  person <- QP.findPersonById (PersonId _EntityId)
+  validation person
+  org <- QO.findOrganizationById (OrganizationId (fetchMaybeValue $ person ^. #_organizationId))
+  return $ TransporterRec org
+  where
+    validation person = do
+      whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+      whenM (return $ SP._organizationId person == Nothing) $ L.throwException $ err400 {errBody = "user not registered an organization"}
