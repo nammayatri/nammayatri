@@ -31,7 +31,9 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByTypeOrgId orgId _type
+      prodList <- case _type of
+        Just statusList -> PQ.findAllByTypeOrgId orgId statusList
+        Nothing -> PQ.findAllByOrgId orgId
       caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
       caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)

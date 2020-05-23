@@ -22,15 +22,15 @@ create Storage.Products {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
     >>= either DB.throwDBError pure
 
-findAllByTypeOrgId :: Text -> Storage.ProductsStatus -> L.Flow [Storage.Products]
+findAllByTypeOrgId :: Text -> [Storage.ProductsStatus] -> L.Flow [Storage.Products]
 findAllByTypeOrgId orgId status =
   DB.findAll dbTable (predicate orgId status)
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
     predicate orgId status Storage.Products {..} =
-      ( _status ==. (B.val_ status)
-          &&. _organizationId ==. (B.val_ orgId)
+      (  _organizationId ==. (B.val_ orgId)
+        &&. B.in_ _status (B.val_ <$> status)
       )
 
 findAllById :: [ProductsId] -> L.Flow [Storage.Products]
@@ -114,3 +114,14 @@ findAllByAssignedTo id =
     >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))
+
+
+findAllByOrgId :: Text -> L.Flow [Storage.Products]
+findAllByOrgId orgId =
+  DB.findAll dbTable (predicate orgId)
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Products {..} = B.desc_ _createdAt
+    predicate orgId Storage.Products {..} =
+      ( _organizationId ==. (B.val_ orgId)
+      )

@@ -11,11 +11,11 @@ import qualified Beckn.Types.Storage.Location as Loc
 import           EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
-  { _type   :: Product.ProductsStatus,
+  { _type   :: Maybe [Product.ProductsStatus],
     _limit :: Integer,
     _offset :: Integer,
-    _fromTime :: LocalTime,
-    _toTime  :: LocalTime
+    _fromTime :: Maybe LocalTime,
+    _toTime  :: Maybe LocalTime
   }
   deriving (Show, Generic, ToSchema)
 
