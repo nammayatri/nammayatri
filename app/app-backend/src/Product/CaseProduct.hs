@@ -33,7 +33,7 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   caseProdList <-
     join
       <$> traverse
-        (\caseId -> CaseProduct.listAllCaseProductWithOffset _limit _offset (CaseProduct.ByApplicationId caseId) [_type])
+        (\caseId -> CaseProduct.listAllCaseProductWithOffset _limit _offset (CaseProduct.ByApplicationId caseId) _type)
         (Case._id <$> caseList)
   prodList <- Products.findAllByIds (CaseProduct._productId <$> caseProdList)
   locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))
