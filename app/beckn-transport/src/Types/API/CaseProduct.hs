@@ -1,21 +1,21 @@
 module Types.API.CaseProduct where
 
-import           Beckn.Types.App
-import           Data.Default
-import           Data.Swagger
-import           Data.Time
-import           Beckn.Types.Storage.CaseProduct
-import qualified Beckn.Types.Storage.Products   as Product
-import qualified Beckn.Types.Storage.Case       as Case
+import Beckn.Types.App
+import qualified Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.CaseProduct
 import qualified Beckn.Types.Storage.Location as Loc
-import           EulerHS.Prelude
+import qualified Beckn.Types.Storage.Products as Product
+import Data.Default
+import Data.Swagger
+import Data.Time
+import EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
-  { _type   :: Product.ProductsStatus,
+  { _status :: [CaseProductStatus], --TODO: Need to rename this field to status
     _limit :: Integer,
     _offset :: Integer,
-    _fromTime :: LocalTime,
-    _toTime  :: LocalTime
+    _fromTime :: Maybe LocalTime,
+    _toTime :: Maybe LocalTime
   }
   deriving (Show, Generic, ToSchema)
 
@@ -25,10 +25,9 @@ instance FromJSON CaseProdReq where
 instance ToJSON CaseProdReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-
 data CaseProductRes = CaseProductRes
-  { _case   :: Case.Case,
-    _product  :: Product.Products,
+  { _case :: Case.Case,
+    _product :: Product.Products,
     _caseProduct :: CaseProduct,
     _fromLocation :: Maybe Loc.Location,
     _toLocation :: Maybe Loc.Location
@@ -40,6 +39,5 @@ instance FromJSON CaseProductRes where
 
 instance ToJSON CaseProductRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
-
 
 type CaseProductList = [CaseProductRes]
