@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.CaseProduct where
 
 import Beckn.Types.App
@@ -33,9 +35,11 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
     Just orgId -> do
       prodList <- PQ.findAllByTypeOrgId orgId _type --TODO: need to apply limit/offset here
       caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
-      caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
+      caseList <- CQ.findAllByIdType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
+      let caseIds = (\x -> x ^. #_id) <$> caseList
+      let filteredCPL = filter (\x -> elem (x ^. #_caseId) caseIds) caseProdList
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-      return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
+      return $ catMaybes $ joinIds prodList caseList locList <$> filteredCPL
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
