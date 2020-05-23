@@ -116,9 +116,9 @@ findAllByAssignedTo id =
     predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))
 
 
-findAllByOrgId :: Text -> L.Flow [Storage.Products]
-findAllByOrgId orgId =
-  DB.findAll dbTable (predicate orgId)
+findAllByOrgIdWithLimits :: Text -> Integer -> Integer -> L.Flow [Storage.Products]
+findAllByOrgIdWithLimits orgId limit offset =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate orgId) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
