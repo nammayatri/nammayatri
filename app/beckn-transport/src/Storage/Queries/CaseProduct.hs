@@ -69,8 +69,8 @@ findAllByProdId id =
   where
     pred id Storage.CaseProduct {..} = _productId ==. (B.val_ id)
 
-findAllByTypeIds :: Integer -> Integer -> [Storage.CaseProductStatus] -> [ProductsId] -> L.Flow [Storage.CaseProduct]
-findAllByTypeIds limit offset status ids =
+findAllByStatusIds :: Integer -> Integer -> [Storage.CaseProductStatus] -> [ProductsId] -> L.Flow [Storage.CaseProduct]
+findAllByStatusIds limit offset status ids =
   DB.findAllWithLimitOffsetWhere dbTable (pred ids status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where

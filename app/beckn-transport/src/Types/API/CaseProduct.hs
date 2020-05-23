@@ -11,7 +11,7 @@ import Data.Time
 import EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
-  { _type :: [CaseProductStatus], --TODO: Need to rename this field to status
+  { _status :: [CaseProductStatus], --TODO: Need to rename this field to status
     _limit :: Integer,
     _offset :: Integer,
     _fromTime :: Maybe LocalTime,
