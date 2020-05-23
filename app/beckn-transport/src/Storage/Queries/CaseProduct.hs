@@ -76,6 +76,10 @@ findAllByStatusIds limit offset status ids =
   where
     orderByDesc Storage.CaseProduct {..} = B.desc_ _createdAt
     pred ids status Storage.CaseProduct {..} =
-      ( B.in_ _status (B.val_ <$> status)
-        &&. B.in_ _productId (B.val_ <$> ids)
+      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
+          &&. B.in_ _productId (B.val_ <$> ids)
       )
+
+complementVal l
+  | (null l) = B.val_ True
+  | otherwise = B.val_ False
