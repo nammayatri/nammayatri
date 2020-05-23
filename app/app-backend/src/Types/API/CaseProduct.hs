@@ -12,7 +12,7 @@ import Data.Time
 import EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
-  { _type :: CaseProduct.CaseProductStatus,
+  { _status :: [CaseProduct.CaseProductStatus],
     _limit :: Integer,
     _offset :: Integer
   }
