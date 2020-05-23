@@ -30,7 +30,7 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   let personId = PersonId _EntityId
   person <- Person.findById personId
   caseProdList <-
-    CaseProduct.listAllCaseProductWithOffset _limit _offset (CaseProduct.ByCustomerId personId) _type
+    CaseProduct.listAllCaseProductWithOffset _limit _offset (CaseProduct.ByCustomerId personId) _status
   caseList <- Case.findAllByIds (CaseProduct._caseId <$> caseProdList)
   prodList <- Products.findAllByIds (CaseProduct._productId <$> caseProdList)
   locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))
