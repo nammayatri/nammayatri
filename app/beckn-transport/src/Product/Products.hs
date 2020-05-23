@@ -1,67 +1,82 @@
 {-# LANGUAGE OverloadedLabels #-}
+
 module Product.Products where
 
 import Beckn.Types.App
 import Beckn.Types.Common as BC
+import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.CaseProduct as CaseP
+import Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.Products as Storage
+import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Vehicle as V
+import Beckn.Utils.Common (encodeToText, withFlowHandler)
+import Beckn.Utils.Extra (headMaybe)
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Product.BecknProvider.BP as BP
 import Servant
-import Types.API.Products
-import Types.API.Case
 import qualified Storage.Queries.Case as CQ
-import Storage.Queries.Location as LQ
 import qualified Storage.Queries.CaseProduct as CPQ
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseP
-import qualified Beckn.Types.Storage.Products as Product
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Vehicle as V
-import qualified Storage.Queries.Vehicle as VQ
+import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Products as DB
-import qualified Beckn.Types.Storage.Products as Storage
 import qualified Storage.Queries.RegistrationToken as QR
-import           Types.API.CaseProduct
+import qualified Storage.Queries.Vehicle as VQ
 import System.Environment
-import qualified Data.Text as T
+import Types.API.Case
+import Types.API.CaseProduct
+import Types.API.Products
 import Types.App
-import Beckn.Utils.Common (encodeToText, withFlowHandler)
-
 
 update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   user <- QP.findPersonById (PersonId _EntityId)
   vehIdRes <- case _vehicleId of
-            Just k ->  whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER ) $
-              DB.updateVeh (ProductsId productId) _vehicleId
-            Nothing -> return ()
+    Just k ->
+      whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
+        DB.updateVeh (ProductsId productId) _vehicleId
+    Nothing -> return ()
   dvrIdRes <- case _assignedTo of
-            Just k -> whenM (return $ (user ^. #_role) == SP.ADMIN ) $
-              DB.updateDvr (ProductsId productId) _assignedTo
-            Nothing -> return ()
+    Just k ->
+      whenM (return $ (user ^. #_role) == SP.ADMIN) $
+        DB.updateDvr (ProductsId productId) _assignedTo
+    Nothing -> return ()
   tripRes <- case _status of
-            Just c -> whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
-              updateTrip (ProductsId productId) c
-            Nothing -> return ()
+    Just c ->
+      whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
+        updateTrip (ProductsId productId) c
+    Nothing -> return ()
 
   updatedProd <- DB.findById (ProductsId productId)
   driverInfo <- case (updatedProd ^. #_assignedTo) of
-    Just driverId ->  QP.findPersonById (PersonId driverId)
+    Just driverId -> QP.findPersonById (PersonId driverId)
     Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
   vehicleInfo <- case (updatedProd ^. #_udf3) of
     Just vehicleId -> VQ.findVehicleById (VehicleId vehicleId)
     Nothing -> return Nothing
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
-  return $ updatedProd { Storage._info = infoObj }
+  notifyTripDataToGateway (ProductsId productId)
+  return $ updatedProd {Storage._info = infoObj}
 
-updateInfo :: ProductsId -> Maybe SP.Person -> Maybe V.Vehicle  -> L.Flow (Maybe Text)
+notifyTripDataToGateway :: ProductsId -> L.Flow ()
+notifyTripDataToGateway productId = do
+  cps <- CPQ.findAllByProdId productId
+  cases <- CQ.findAllByIds (CaseP._caseId <$> cps)
+  let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.TRACKER) cases
+  let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDEBOOK) cases
+  case (trackerCase, parentCase) of
+    (Just x, Just y) -> BP.notifyTripUrlToGateway x y
+    _ -> return ()
+
+updateInfo :: ProductsId -> Maybe SP.Person -> Maybe V.Vehicle -> L.Flow (Maybe Text)
 updateInfo productId driverInfo vehicleInfo = do
   let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
   DB.updateInfo productId info
@@ -69,8 +84,8 @@ updateInfo productId driverInfo vehicleInfo = do
   where
     mkInfoObj drivInfo vehiInfo =
       Storage.ProdInfo
-        { driverInfo = encodeToText drivInfo
-        , vehicleInfo = encodeToText vehiInfo
+        { driverInfo = encodeToText drivInfo,
+          vehicleInfo = encodeToText vehiInfo
         }
 
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
@@ -103,9 +118,8 @@ listRides regToken = withFlowHandler $ do
               _toLocation = to
             }
 
-
 listCasesByProd :: Maybe Text -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
-listCasesByProd regToken productId csType  = withFlowHandler $ do
+listCasesByProd regToken productId csType = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   cpList <- CPQ.findAllByProdId (ProductsId productId)
   caseList <- case csType of
