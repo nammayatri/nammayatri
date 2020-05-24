@@ -8,7 +8,6 @@ import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location as BL
@@ -49,10 +48,10 @@ import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
-import Utils.FCM
+import Beckn.External.FCM.Flow
 
 -- 1) Create Parent Case with Customer Request Details
--- 2) Notify all transporter using GCM
+-- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
 search :: SearchReq -> FlowHandler AckResponse
@@ -75,7 +74,7 @@ search req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
-  -- notifyTransporters c admins --TODO : Uncomment this once we start saving deviceToken
+  notifyTransporters c admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -91,21 +90,14 @@ cancel req = withFlowHandler $ do
   mkAckResponse uuid "cancel"
 
 notifyTransporters :: Case -> [Person] -> L.Flow ()
-notifyTransporters c admins =
-  -- TODO : Get Token from Person
-  traverse_ (\p -> sendNotification mkCaseNotification "deviceToken") admins
-  where
-    mkCaseNotification =
-      Notification
-        { _type = LEAD,
-          _payload = c
-        }
+notifyTransporters c =
+  traverse_ (notifyPerson "title" "body" c)
 
 getValidTime :: LocalTime -> L.Flow LocalTime
 getValidTime now = pure $ addLocalTime (60 * 30 :: NominalDiffTime) now
 
 mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
-mkFromLocation req uuid now loc = do
+mkFromLocation req uuid now loc =
   case loc ^. #_type of
     "gps" -> case loc ^. #_gps of
       Just (val :: GPS) -> mkLocationRecord uuid now SL.POINT (Just $ read $ T.unpack $ val ^. #lat) (Just $ read $ T.unpack $ val ^. #lon) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -150,7 +142,7 @@ mkLocationRecord idr time typ lat lon ward dis city state country pincode addres
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do
-  let intent = (req ^. #message)
+  let intent = req ^. #message
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
@@ -202,7 +194,7 @@ confirm req = withFlowHandler $ do
   notifyGateway case_ prodId trackerCase
   mkAckResponse uuid "confirm"
 
--- TODO : Add notifying transporter admin with GCM
+-- TODO : Add notifying transporter admin with FCM
 
 mkTrackerCaseProduct :: Text -> CaseId -> ProductsId -> LocalTime -> CaseProduct.CaseProduct
 mkTrackerCaseProduct cpId caseId prodId currTime =
@@ -220,7 +212,7 @@ mkTrackerCaseProduct cpId caseId prodId currTime =
     }
 
 mkTrackerCase :: SC.Case -> Text -> LocalTime -> Text -> SC.Case
-mkTrackerCase case_ uuid now shortId = do
+mkTrackerCase case_ uuid now shortId =
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,

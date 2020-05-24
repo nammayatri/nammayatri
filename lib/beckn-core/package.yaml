@@ -60,6 +60,7 @@ dependencies:
 - cryptonite
 - data-default
 - euler-hs
+- fcm-client
 - http-api-data
 - http-client
 - http-types
@@ -83,6 +84,7 @@ dependencies:
 - template-haskell
 - generic-lens
 - base64-bytestring
+- utf8-string
 
 library:
   source-dirs:

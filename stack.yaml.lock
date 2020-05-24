@@ -5,9 +5,6 @@
 
 packages:
 - completed:
-    cabal-file:
-      size: 5363
-      sha256: f6af18b9538cad9e0a00ca000db540536cc1f0d7b459c16366f04c3c035c30a8
     name: hedis
     version: 0.12.8
     git: https://github.com/juspay/hedis.git
@@ -20,9 +17,16 @@ packages:
     commit: ce6de8f158e87414cf11bcba4e95d54a9c3185f3
 - completed:
     subdir: lib/euler-hs
+<<<<<<< HEAD
     cabal-file:
       size: 8180
       sha256: d663bcc51e488f216141c71cbb26cb2e06c0653972b38557f52326bd30216e33
+||||||| merged common ancestors
+    cabal-file:
+      size: 8122
+      sha256: 4ef0f9f9d7ade6c636f0180a9ac596e8b7870f1bbf7b7ec550b7c5f03a61c365
+=======
+>>>>>>> Add FCM integration code
     name: euler-hs
     version: 1.9.5.0
     git: git@bitbucket.org:juspay/euler-hs.git
@@ -35,9 +39,6 @@ packages:
     git: git@bitbucket.org:juspay/euler-hs.git
     commit: a1347057def25cdf9db0c826f56d2135f8bb8be7
 - completed:
-    cabal-file:
-      size: 2282
-      sha256: 6c64358de5094463a70e8c71dbc99a38ae937d04a44cee9858e8a0779bb7b8dd
     name: beam-mysql
     version: 0.2.0.0
     git: https://github.com/juspay/beam-mysql
@@ -96,6 +97,7 @@ packages:
       size: 6558
       sha256: a1043c1719491764f0fa37a1fd70d9451080548a41632fee88d8e1b8db4942d6
   original:
+<<<<<<< HEAD
     hackage: time-1.9.3@sha256:8f1b5448722a12a952248b356c9eb366e351226543d9086a2da71270522d5f45,5679
 - completed:
     hackage: unix-2.7.2.2@sha256:9e93f93cc5a065248120136e83a0a6d1ce93d6eb5ef2a2543f9593e93e164d24,3496
@@ -104,6 +106,18 @@ packages:
       sha256: 0b54bf49636d2a8c06e28315710e4437e001e05b4523d6e3cb083ba2426a38b2
   original:
     hackage: unix-2.7.2.2@sha256:9e93f93cc5a065248120136e83a0a6d1ce93d6eb5ef2a2543f9593e93e164d24,3496
+||||||| merged common ancestors
+    hackage: random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
+=======
+    hackage: random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
+- completed:
+    hackage: fcm-client-0.2.0.0@sha256:6b67f0d23a09504f763ef547306b015b93af376e922583c7e3a4a7f494f85539,3206
+    pantry-tree:
+      size: 604
+      sha256: 256a6516e98537e08c1884d7381cf2c4fe413cf4eb2c391649ec92ecae2d934c
+  original:
+    hackage: fcm-client-0.2.0.0@sha256:6b67f0d23a09504f763ef547306b015b93af376e922583c7e3a4a7f494f85539,3206
+>>>>>>> Add FCM integration code
 snapshots:
 - completed:
     size: 524996
