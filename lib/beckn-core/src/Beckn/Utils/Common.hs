@@ -145,7 +145,7 @@ getBecknError err msg =
   BecknError
     { _errorCode = ErrorCode $ errHTTPCode err,
       _errorMessage = ErrorMsg msg,
-      _action = "NACK"
+      _action = NACK
     }
 
 throwJsonError500, throwJsonError501, throwJsonError400, throwJsonError401 :: Text -> Text -> L.Flow a

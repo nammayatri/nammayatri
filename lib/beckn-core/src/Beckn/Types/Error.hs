@@ -4,9 +4,13 @@ module Beckn.Types.Error where
 
 import EulerHS.Prelude
 
-newtype ErrorCode = ErrorCode Int deriving (Generic, Eq, Show, FromJSON, ToJSON)
+data Action = ACK | NACK deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
 
-newtype ErrorMsg = ErrorMsg Text deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
+newtype ErrorCode = ErrorCode Int 
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+newtype ErrorMsg = ErrorMsg Text
+  deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
 
 data DomainError = 
    EpassErr EpassError
@@ -27,26 +31,21 @@ data QuotaError =
     QuotaNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-
 data CommentError = 
    CommentNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
 
 data HealthCheckError = 
    HealthCheckNotFound
    deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-
 data BlacklistError = 
    BlacklistNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-
 data TagError = 
    TagNotFound
    deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
 
 data OrganisationError = 
    OrganisationNotFound
@@ -54,13 +53,13 @@ data OrganisationError =
 
 
 data SystemError = SystemError ErrorMsg
- deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data BecknError
   = BecknError
       { _errorCode :: ErrorCode,
         _errorMessage :: ErrorMsg,
-        _action :: Text
+        _action :: Action
       }
   deriving (Generic)
 
