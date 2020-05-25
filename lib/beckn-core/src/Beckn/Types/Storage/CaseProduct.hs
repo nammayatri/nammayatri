@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.CaseProduct where
 
 import Beckn.Types.App
+import Beckn.Types.Storage.Products (ProductsStatus (..))
 import Data.Generics.Labels
 import Data.Swagger
 import qualified Data.Text as T
@@ -14,28 +15,20 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.Swagger
 
-data CaseProductStatus = VALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+type CaseProductStatus = ProductsStatus
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow MySQL CaseProductStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data CaseProductT f
-  = CaseProduct
-      { _id :: B.C f CaseProductId,
-        _caseId :: B.C f CaseId,
-        _productId :: B.C f ProductsId,
-        _personId :: B.C f (Maybe PersonId),
-        _quantity :: B.C f Int,
-        _price :: B.C f Double,
-        _status :: B.C f CaseProductStatus,
-        _info :: B.C f (Maybe Text),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data CaseProductT f = CaseProduct
+  { _id :: B.C f CaseProductId,
+    _caseId :: B.C f CaseId,
+    _productId :: B.C f ProductsId,
+    _personId :: B.C f (Maybe PersonId),
+    _quantity :: B.C f Int,
+    _price :: B.C f Double,
+    _status :: B.C f CaseProductStatus,
+    _info :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type CaseProduct = CaseProductT Identity

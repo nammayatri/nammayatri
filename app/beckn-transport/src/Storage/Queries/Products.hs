@@ -22,15 +22,15 @@ create Storage.Products {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
     >>= either DB.throwDBError pure
 
-findAllByTypeOrgId :: Text -> Storage.ProductsStatus -> L.Flow [Storage.Products]
+findAllByTypeOrgId :: Text -> [Storage.ProductsStatus] -> L.Flow [Storage.Products]
 findAllByTypeOrgId orgId status =
   DB.findAll dbTable (predicate orgId status)
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
     predicate orgId status Storage.Products {..} =
-      ( _status ==. (B.val_ status)
-          &&. _organizationId ==. (B.val_ orgId)
+      (  _organizationId ==. (B.val_ orgId)
+        &&. B.in_ _status (B.val_ <$> status)
       )
 
 findAllById :: [ProductsId] -> L.Flow [Storage.Products]
@@ -77,19 +77,36 @@ updateInfo prodId info = do
       mconcat
         [ _info <-. B.val_ info ]
 
-updateIds :: ProductsId -> Maybe Text -> Maybe Text -> L.Flow ()
-updateIds prodId driverId vehId = do
+updateVeh :: ProductsId -> Maybe Text -> L.Flow ()
+updateVeh prodId vehId = do
+  (currTime :: LocalTime) <- getCurrTime
   DB.update
     dbTable
-    (setClause driverId vehId)
+    (setClause vehId currTime)
     (predicate prodId)
       >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
-    setClause driverId vehId Storage.Products {..} =
+    setClause vehId currTime Storage.Products {..} =
       mconcat
         [ _udf3 <-. B.val_ vehId
-        , _assignedTo <-. B.val_ driverId]
+        , _updatedAt <-. B.val_ currTime]
+
+updateDvr :: ProductsId -> Maybe Text -> L.Flow ()
+updateDvr prodId driverId = do
+  (currTime :: LocalTime) <- getCurrTime
+  DB.update
+    dbTable
+    (setClause driverId currTime)
+    (predicate prodId)
+      >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Products {..} = _id ==. B.val_ id
+    setClause driverId currTime Storage.Products {..} =
+      mconcat
+        [ _assignedTo <-. B.val_ driverId
+        , _updatedAt <-. B.val_ currTime]
+
 
 findAllByAssignedTo :: Text -> L.Flow [Storage.Products]
 findAllByAssignedTo id =
@@ -97,3 +114,14 @@ findAllByAssignedTo id =
     >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))
+
+
+findAllByOrgId :: Text -> L.Flow [Storage.Products]
+findAllByOrgId orgId =
+  DB.findAll dbTable (predicate orgId)
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Products {..} = B.desc_ _createdAt
+    predicate orgId Storage.Products {..} =
+      ( _organizationId ==. (B.val_ orgId)
+      )

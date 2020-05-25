@@ -3,6 +3,7 @@
 module Product.Confirm where
 
 import Beckn.Types.API.Confirm
+import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
@@ -25,7 +26,6 @@ import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Products as Products
 import qualified Types.API.Confirm as API
 import Types.App
-import qualified Types.Storage.Tracker as Tracker
 import Utils.Common (verifyToken)
 import Utils.Routes
 
@@ -56,7 +56,7 @@ onConfirm regToken req = withFlowHandler $ do
       0 -> return $ Ack "on_confirm" "Ok"
       1 -> do
         let pid = ProductsId (head selectedItems)
-            tracker = (flip Tracker.Tracker Nothing) <$> trip
+            tracker = (flip Track.Tracker Nothing) <$> trip
             trackerInfo = encodeToText <$> tracker
         prd <- Products.findById pid
         let uPrd =
@@ -64,6 +64,8 @@ onConfirm regToken req = withFlowHandler $ do
                 { Products._status = Products.CONFIRMED,
                   Products._info = trackerInfo
                 }
+
+        QCP.updateStatus pid Products.CONFIRMED
         Products.updateMultiple (_getProductsId pid) uPrd
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}

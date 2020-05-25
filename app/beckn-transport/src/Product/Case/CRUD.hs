@@ -43,7 +43,7 @@ list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   now <- getCurrTime
-  caseList <- Case.findAllByType _limit _offset _type _status now
+  caseList <- Case.findAllByTypeStatuses _limit _offset _type _status now
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
   where
@@ -95,7 +95,7 @@ createProduct cs price ctime orgId = do
           _description = Case._description cs,
           _industry = Case._industry cs,
           _type = RIDE,
-          _status = Product.INPROGRESS,
+          _status = Product.INSTOCK,
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
@@ -132,7 +132,7 @@ createCaseProduct cs prod = do
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status = CaseP.INPROGRESS,
+          _status = Product.INSTOCK,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime

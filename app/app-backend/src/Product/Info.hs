@@ -1,5 +1,6 @@
 module Product.Info where
 
+import qualified Beckn.Types.API.Track as Tracker
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
@@ -23,7 +24,6 @@ import qualified Storage.Queries.Products as QProducts
 import Types.API.Location
 import Types.API.Product
 import Types.App
-import qualified Types.Storage.Tracker as Tracker
 import Utils.Common (verifyToken)
 import Utils.Routes
 

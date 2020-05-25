@@ -25,6 +25,7 @@ import Data.Time.LocalTime (addLocalTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import Servant
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
@@ -64,13 +65,19 @@ search_cb regToken req = withFlowHandler $ do
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
+      case_ <- Case.findById caseId
+      personId <-
+        maybe
+          (L.throwException $ err500 {errBody = "No person linked to case"})
+          (return . PersonId)
+          (Case._requestor case_)
       let items = catalog ^. #_items
       products <- traverse mkProduct items
       let pids = (^. #_id) <$> products
       traverse_ Products.create products
 
       traverse_
-        (\product -> mkCaseProduct caseId product >>= CaseProduct.create)
+        (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
 
   let ack = Ack "on_search" "OK"
@@ -82,7 +89,7 @@ mkCase req userId from to = do
   id <- generateGUID
   let intent = req ^. #message
       context = req ^. #context
-      validTill = addLocalTime (60 * 30) now
+      validTill = addLocalTime (60 * 30) $ req ^. #message ^. #time
   return $
     Case.Case
       { _id = id,
@@ -93,7 +100,7 @@ mkCase req userId from to = do
         _type = Case.RIDEBOOK,
         _exchangeType = Case.FULFILLMENT,
         _status = Case.NEW,
-        _startTime = now,
+        _startTime = req ^. #message ^. #time,
         _endTime = Nothing,
         _validTill = validTill,
         _provider = Nothing,
@@ -171,8 +178,8 @@ mkProduct item = do
         _updatedAt = now
       }
 
-mkCaseProduct :: CaseId -> Products.Products -> L.Flow CaseProduct.CaseProduct
-mkCaseProduct caseId product = do
+mkCaseProduct :: CaseId -> PersonId -> Products.Products -> L.Flow CaseProduct.CaseProduct
+mkCaseProduct caseId personId product = do
   let productId = product ^. #_id
       price = product ^. #_price
   now <- getCurrTime
@@ -182,10 +189,10 @@ mkCaseProduct caseId product = do
       { _id = id,
         _caseId = caseId,
         _productId = productId,
-        _personId = Nothing, -- TODO: fix this
+        _personId = Just personId,
         _quantity = 1,
         _price = price,
-        _status = CaseProduct.INSTOCK,
+        _status = Products.INSTOCK,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now

@@ -19,6 +19,7 @@ import EulerHS.Prelude
 import Network.Wai.Parse
 import Network.Wai.Parse
 import qualified Product.Case as Case
+import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Confirm as Confirm
 import qualified Product.Info as Info
 import qualified Product.Registration as Registration
@@ -26,6 +27,7 @@ import qualified Product.Search as Search
 import qualified Product.TrackTrip as TrackTrip
 import Servant
 import qualified Types.API.Case as Case
+import qualified Types.API.CaseProduct as CaseProduct
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.Location as Location
 import Types.API.Product
@@ -41,6 +43,7 @@ type AppAPIs =
            :<|> CaseAPIs
            :<|> InfoAPIs
            :<|> TrackTripAPIs
+           :<|> CaseProductAPIs
            :<|> Epass.EPassAPIs
        )
 
@@ -56,6 +59,7 @@ appServer' key = do
       :<|> caseFlow
       :<|> infoFlow
       :<|> trackTripFlow
+      :<|> caseProductFlow
       :<|> Epass.epassServer' key
     )
 
@@ -155,12 +159,23 @@ type TrackTripAPIs =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
-      :> "trip"
-      :> Header "token" RegToken
-      :> ReqBody '[JSON] OnTrackTripReq
-      :> Post '[JSON] OnTrackTripRes
+    :> "trip"
+    :> Header "token" RegToken
+    :> ReqBody '[JSON] OnTrackTripReq
+    :> Post '[JSON] OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPIs
 trackTripFlow =
   TrackTrip.track
     :<|> TrackTrip.track_cb
+
+-------- CaseProduct Flow----------
+type CaseProductAPIs =
+  "caseProduct"
+    :> ( Header "token" Text
+           :> ReqBody '[JSON] CaseProduct.CaseProdReq
+           :> Post '[JSON] CaseProduct.CaseProductList
+       )
+
+caseProductFlow =
+  CaseProduct.list
