@@ -3,6 +3,7 @@ module Types.API.CaseProduct where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.CaseProduct
+import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Products as Product
 import Data.Default
@@ -11,11 +12,9 @@ import Data.Time
 import EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
-  { _status :: [CaseProductStatus], --TODO: Need to rename this field to status
+  { _status :: [CaseProduct.CaseProductStatus],
     _limit :: Integer,
-    _offset :: Integer,
-    _fromTime :: Maybe LocalTime,
-    _toTime :: Maybe LocalTime
+    _offset :: Integer
   }
   deriving (Show, Generic, ToSchema)
 

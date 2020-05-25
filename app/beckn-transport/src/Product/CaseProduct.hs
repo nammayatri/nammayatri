@@ -1,11 +1,15 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.CaseProduct where
 
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as Storage
-import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.Location as Loc
+import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
 import qualified Data.Accessor as Lens
 import Data.Aeson
@@ -14,14 +18,12 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Case as CQ
 import qualified Storage.Queries.CaseProduct as DB
-import qualified Storage.Queries.Products as PQ
 import Storage.Queries.Location as LQ
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Products as PQ
+import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import Types.API.CaseProduct
 
@@ -31,9 +33,9 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByTypeOrgId orgId _type
-      caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
-      caseList <- CQ.findAllByIds (Storage._caseId <$> caseProdList)
+      prodList <- PQ.findAllByOrgId orgId
+      caseProdList <- DB.findAllByStatusIds _limit _offset _status (Product._id <$> prodList)
+      caseList <- CQ.findAllByIdType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
     Nothing ->
