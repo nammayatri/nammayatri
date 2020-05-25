@@ -8,6 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
+import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (encodeToText, withFlowHandler)
@@ -61,11 +62,11 @@ onConfirm regToken req = withFlowHandler $ do
         prd <- Products.findById pid
         let uPrd =
               prd
-                { Products._status = Products.CONFIRMED,
-                  Products._info = trackerInfo
+                { Products._info = trackerInfo
                 }
-
-        QCP.updateStatus pid Products.CONFIRMED
+        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        QCP.updateStatus pid SCP.CONFIRMED
+        QCase.updateStatus (SCP._caseId caseProduct) SC.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}

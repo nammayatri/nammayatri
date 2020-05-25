@@ -56,9 +56,9 @@ getLocation :: Maybe RegToken -> Text -> FlowHandler GetLocationRes
 getLocation regToken caseId = withFlowHandler $ do
   verifyToken regToken
   baseUrl <- External.getBaseUrl
-  caseProducts <- QCP.listAllCaseProduct (QCP.ByApplicationId $ CaseId caseId) []
+  caseProducts <- QCP.listAllCaseProduct (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
   when (null caseProducts) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
-  products <- QProducts.findAllByIdsAndStatus (SCP._productId <$> caseProducts) (SProducts.CONFIRMED)
+  products <- QProducts.findAllByIds (SCP._productId <$> caseProducts)
   product <-
     if null products
       then L.throwException $ err400 {errBody = "NO_CONFIRMED_PROUCTS"}

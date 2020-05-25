@@ -48,10 +48,9 @@ track_cb apiKey req = withFlowHandler $ do
       tracking = req ^. #message
       caseId = CaseId $ req ^. #context ^. #transaction_id
   case_ <- Case.findById caseId
-  cp <- CaseProduct.findAllByCaseId caseId
+  cp <- CaseProduct.listAllCaseProduct (CaseProduct.ByApplicationId caseId) [CaseProduct.CONFIRMED]
   let pids = map CaseProduct._productId cp
-  products <- Products.findAllByIds pids
-  let confirmedProducts = filter (\prd -> Products.CONFIRMED == Products._status prd) products
+  confirmedProducts <- Products.findAllByIds pids
 
   res <-
     case length confirmedProducts of
