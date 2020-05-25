@@ -83,3 +83,18 @@ findAllByProdId id =
   DB.findAllOrErr dbTable (pred id)
   where
     pred id Storage.CaseProduct {..} = _productId ==. (B.val_ id)
+
+findAllByStatusIds :: Integer -> Integer -> [Storage.CaseProductStatus] -> [ProductsId] -> L.Flow [Storage.CaseProduct]
+findAllByStatusIds limit offset status ids =
+  DB.findAllWithLimitOffsetWhere dbTable (pred ids status) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.CaseProduct {..} = B.desc_ _createdAt
+    pred ids status Storage.CaseProduct {..} =
+      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
+          &&. B.in_ _productId (B.val_ <$> ids)
+      )
+
+complementVal l
+  | (null l) = B.val_ True
+  | otherwise = B.val_ False

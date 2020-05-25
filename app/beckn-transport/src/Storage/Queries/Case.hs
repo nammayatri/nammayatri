@@ -106,3 +106,15 @@ findAllByIdType ids type_ =
       ( _type ==. (B.val_ type_)
           &&. B.in_ _id (B.val_ <$> ids)
       )
+
+findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatuses limit offset csType statuses now =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses now) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate csType caseStatus now Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. _validTill B.>. (B.val_ now)
+      )

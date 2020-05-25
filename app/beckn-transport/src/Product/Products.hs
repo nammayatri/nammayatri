@@ -13,6 +13,7 @@ import qualified Beckn.Types.Storage.Products as Storage
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
 import Beckn.Utils.Common (encodeToText, withFlowHandler)
+import Beckn.Utils.Extra (headMaybe)
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
@@ -20,6 +21,7 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Product.BecknProvider.BP as BP
 import Servant
 import qualified Storage.Queries.Case as CQ
 import qualified Storage.Queries.CaseProduct as CPQ
@@ -62,7 +64,18 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Just vehicleId -> VQ.findVehicleById (VehicleId vehicleId)
     Nothing -> return Nothing
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
+  notifyTripDataToGateway (ProductsId productId)
   return $ updatedProd {Storage._info = infoObj}
+
+notifyTripDataToGateway :: ProductsId -> L.Flow ()
+notifyTripDataToGateway productId = do
+  cps <- CPQ.findAllByProdId productId
+  cases <- CQ.findAllByIds (CaseP._caseId <$> cps)
+  let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.TRACKER) cases
+  let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDEBOOK) cases
+  case (trackerCase, parentCase) of
+    (Just x, Just y) -> BP.notifyTripUrlToGateway x y
+    _ -> return ()
 
 updateInfo :: ProductsId -> Maybe SP.Person -> Maybe V.Vehicle -> L.Flow (Maybe Text)
 updateInfo productId driverInfo vehicleInfo = do

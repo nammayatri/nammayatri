@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.CaseProduct where
 
 import Beckn.Types.App
@@ -31,9 +33,9 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByTypeOrgId orgId _type
-      caseProdList <- DB.findAllByIds _limit _offset (Product._id <$> prodList)
-      caseList <- CQ.findAllByIdsAndType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
+      prodList <- PQ.findAllByOrgId orgId
+      caseProdList <- DB.findAllByStatusIds _limit _offset _status (Product._id <$> prodList)
+      caseList <- CQ.findAllByIdType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
     Nothing ->
