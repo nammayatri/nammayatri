@@ -12,8 +12,8 @@ import EulerHS.Prelude
 
 data CaseProdReq = CaseProdReq
   { _status :: [CaseProductStatus], --TODO: Need to rename this field to status
-    _limit :: Integer,
-    _offset :: Integer,
+    _limit :: Int,
+    _offset :: Int,
     _fromTime :: Maybe LocalTime,
     _toTime :: Maybe LocalTime
   }

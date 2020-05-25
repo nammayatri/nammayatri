@@ -33,11 +33,11 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByOrgIdWithLimits orgId _limit _offset
+      prodList <- PQ.findAllByOrgId orgId
       caseProdList <- DB.findAllByStatusIds _status (Product._id <$> prodList)
       caseList <- CQ.findAllByIdType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-      return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
+      return $ take _limit $ drop _offset $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
