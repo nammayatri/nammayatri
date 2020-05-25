@@ -27,14 +27,11 @@ import Utils.Common (verifyToken)
 list :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
 list regToken CaseProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- verifyToken regToken
-  let personId = _EntityId
-  person <- Person.findById (PersonId personId)
-  caseList <- Case.findAllByPerson personId
+  let personId = PersonId _EntityId
+  person <- Person.findById personId
   caseProdList <-
-    join
-      <$> traverse
-        (\caseId -> CaseProduct.listAllCaseProductWithOffset _limit _offset (CaseProduct.ByApplicationId caseId) [_type])
-        (Case._id <$> caseList)
+    CaseProduct.listAllCaseProductWithOffset _limit _offset (CaseProduct.ByCustomerId personId) _status
+  caseList <- Case.findAllByIds (CaseProduct._caseId <$> caseProdList)
   prodList <- Products.findAllByIds (CaseProduct._productId <$> caseProdList)
   locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))
   return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
