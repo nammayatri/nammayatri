@@ -97,13 +97,13 @@ complementVal l
 
 caseProductJoin :: Int -> Int -> Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
 caseProductJoin _limit _offset csType orgId status = do
-  joinedValues <- DB.findAllByJoin limit offset (joinQuery csTable prodTable dbTable Storage._caseId Storage._productId  (pred1 csType) (pred2 orgId) (pred3 status))
+  joinedValues <- DB.findAllByJoin limit offset orderByDesc (joinQuery csTable prodTable dbTable Storage._caseId Storage._productId  (pred1 csType) (pred2 orgId) (pred3 status))
                     >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
     limit = (toInteger _limit)
     offset = (toInteger _offset)
-    orderByDesc Storage.CaseProduct {..} = B.desc_ _createdAt
+    orderByDesc (_,_,Storage.CaseProduct {..}) = B.desc_ _createdAt
     pred1 csType Case.Case {..} =
       ( _type ==. (B.val_ csType)
       )
