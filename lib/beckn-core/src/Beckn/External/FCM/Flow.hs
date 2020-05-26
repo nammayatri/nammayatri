@@ -59,7 +59,9 @@ sendMessage msg = do
 notifyPerson :: ToJSON a => Text -> Text -> a -> Person -> L.Flow (Either Text FCMResponseBody)
 notifyPerson title body msgData person =
   case Person._deviceToken person of
-    Nothing -> pure $ Left $ "device token of a person " <> show (Person._id person) <> "not found"
+    Nothing -> do
+      L.logInfo (T.pack "FCM") $ "device token of a person " <> show (Person._id person) <> "not found"
+      pure $ Left $ "device token of a person " <> show (Person._id person) <> "not found"
     Just token ->
       sendMessage $
         createMessage msgData (createNotification title body) token
