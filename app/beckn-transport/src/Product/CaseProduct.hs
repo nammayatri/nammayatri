@@ -56,3 +56,26 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
               _fromLocation = find (\x -> (Case._fromLocationId cs == _getLocationId (Loc._id x))) locList,
               _toLocation = find (\x -> (Case._toLocationId cs == _getLocationId (Loc._id x))) locList
             }
+
+
+testlist :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
+testlist regToken CaseProdReq {..} = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  person <- QP.findPersonById (PersonId _EntityId)
+  case SP._organizationId person of
+    Just orgId -> do
+      result <- DB.triplejoinAndFindFilter _limit _offset Case.RIDEBOOK orgId _status
+      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
+      return $ buildResponse locList <$> result
+    Nothing ->
+      L.throwException $ err400 {errBody = "organisation id is missing"}
+  where
+    buildResponse ::  [Loc.Location] -> CaseProductRes -> CaseProductRes
+    buildResponse locList res =
+          CaseProductRes
+            { _case = res ^. #_case,
+              _product = res ^. #_product,
+              _caseProduct = res ^. #_caseProduct,
+              _fromLocation = find (\x -> (Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList,
+              _toLocation = find (\x -> (Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList
+            }

@@ -8,6 +8,8 @@ import qualified Storage.DB.Config      as DB
 import qualified Database.Beam                as B
 import qualified Database.Beam.MySQL          as BM
 import qualified Database.Beam.Query.Internal as BI
+import Beckn.Types.Storage.Case
+import  Beckn.Types.Storage.Products
 import qualified EulerHS.Language             as L
 import qualified EulerHS.Types                as T
 import           Servant                      (err500, errBody)
@@ -223,3 +225,12 @@ findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.filter_ predicate $ B.orderBy_ orderBy $ B.all_ dbTable
 
 aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggregate_ aggregator $ B.filter_ predicate $ B.all_ dbTable
+
+threeJoinWithFilter dbTable1 dbTable2 dbTable3 pred1 pred2 pred3 getKey1 getKey2 limit offset =
+  run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ tripleJoinWithFilter dbTable1 dbTable2 dbTable3 getKey1 getKey2 pred1 pred2 pred3
+
+tripleJoinWithFilter tbl1 tbl2 tbl3 getKey1 getKey2 pred1 pred2 pred3 = do
+  i <- B.filter_ pred1 $ B.all_ tbl1
+  j <- B.filter_ pred2 $ B.all_ tbl2
+  k <- B.filter_ pred3 $ B.join_ tbl3 (\line -> (CasePrimaryKey (getKey1 line) B.==. (B.primaryKey i)) B.&&. (ProductsPrimaryKey (getKey2 line) B.==. (B.primaryKey j)))
+  pure (i,j,k)

@@ -3,6 +3,9 @@ module Storage.Queries.CaseProduct where
 import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.CaseProduct as Storage
+import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Products as Product
+import Types.API.CaseProduct
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -16,6 +19,12 @@ import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseProductT)
 dbTable = DB._caseProduct DB.transporterDb
+
+csTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT)
+csTable = DB._case DB.transporterDb
+
+prodTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Product.ProductsT)
+prodTable = DB._products DB.transporterDb
 
 create :: Storage.CaseProduct -> L.Flow ()
 create Storage.CaseProduct {..} =
@@ -83,3 +92,28 @@ findAllByStatusIds status ids =
 complementVal l
   | (null l) = B.val_ True
   | otherwise = B.val_ False
+
+triplejoinAndFindFilter :: Int -> Int -> Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
+triplejoinAndFindFilter _limit _offset csType orgId status = do
+  joinedValues <- DB.threeJoinWithFilter csTable prodTable dbTable (pred1 csType) (pred2 orgId) (pred3 status)  Storage._caseId Storage._productId limit offset
+                    >>= either DB.throwDBError pure
+  return $ mkJoinRes <$> joinedValues
+  where
+    limit = (toInteger _limit)
+    offset = (toInteger _offset)
+    pred1 csType Case.Case {..} =
+      ( _type ==. (B.val_ csType)
+      )
+    pred2 orgId Product.Products {..} =
+      ( _organizationId ==. (B.val_ orgId)
+      )
+    pred3 status Storage.CaseProduct {..} =
+      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
+      )
+    mkJoinRes (cs , pr , cpr) = CaseProductRes {
+      _case = cs ,
+      _product = pr ,
+      _caseProduct = cpr ,
+      _fromLocation = Nothing ,
+      _toLocation = Nothing
+    }
