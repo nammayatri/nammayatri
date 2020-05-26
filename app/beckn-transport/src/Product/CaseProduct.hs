@@ -64,7 +64,7 @@ testlist regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      result <- DB.triplejoinAndFindFilter _limit _offset Case.RIDEBOOK orgId _status
+      result <- DB.caseProductJoin _limit _offset Case.RIDEBOOK orgId _status
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->

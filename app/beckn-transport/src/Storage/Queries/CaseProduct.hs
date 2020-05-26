@@ -93,8 +93,8 @@ complementVal l
   | (null l) = B.val_ True
   | otherwise = B.val_ False
 
-triplejoinAndFindFilter :: Int -> Int -> Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
-triplejoinAndFindFilter _limit _offset csType orgId status = do
+caseProductJoin :: Int -> Int -> Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
+caseProductJoin _limit _offset csType orgId status = do
   joinedValues <- DB.threeJoinWithFilter csTable prodTable dbTable (pred1 csType) (pred2 orgId) (pred3 status)  Storage._caseId Storage._productId limit offset
                     >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
