@@ -154,15 +154,10 @@ type CaseProductAPIs =
     :> ( Header "authorization" Text
            :> ReqBody '[JSON] CaseProdReq
            :> Post '[JSON] CaseProductList
-         :<|> "test"
-              :> Header "authorization" Text
-              :> ReqBody '[JSON] CaseProdReq
-              :> Post '[JSON] CaseProductList
        )
 
 caseProductFlow =
   CaseProduct.list
-  :<|> CaseProduct.testlist
 
 
 -------- Product Flow----------

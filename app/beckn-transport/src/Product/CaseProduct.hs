@@ -33,37 +33,6 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByOrgId orgId
-      caseProdList <- DB.findAllByStatusIds _status (Product._id <$> prodList)
-      caseList <- CQ.findAllByIdType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
-      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-      return $ take _limit $ drop _offset $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
-    Nothing ->
-      L.throwException $ err400 {errBody = "organisation id is missing"}
-  where
-    joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> Storage.CaseProduct -> Maybe CaseProductRes
-    joinIds prodList caseList locList caseProd =
-      case find (\x -> (Storage._caseId caseProd) == Case._id x) caseList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
-      where
-        buildResponse k = (prepare locList caseProd k) <$> find (\z -> (Storage._productId caseProd) == Product._id z) prodList
-        prepare locList caseProd cs prod =
-          CaseProductRes
-            { _case = cs,
-              _product = prod,
-              _caseProduct = caseProd,
-              _fromLocation = find (\x -> (Case._fromLocationId cs == _getLocationId (Loc._id x))) locList,
-              _toLocation = find (\x -> (Case._toLocationId cs == _getLocationId (Loc._id x))) locList
-            }
-
-
-testlist :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
-testlist regToken CaseProdReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  person <- QP.findPersonById (PersonId _EntityId)
-  case SP._organizationId person of
-    Just orgId -> do
       result <- DB.caseProductJoin _limit _offset Case.RIDEBOOK orgId _status
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
