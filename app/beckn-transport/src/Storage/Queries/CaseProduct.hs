@@ -2,6 +2,8 @@ module Storage.Queries.CaseProduct where
 
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.CaseProduct as Storage
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Product
@@ -95,12 +97,13 @@ complementVal l
 
 caseProductJoin :: Int -> Int -> Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
 caseProductJoin _limit _offset csType orgId status = do
-  joinedValues <- DB.threeJoinWithFilter csTable prodTable dbTable (pred1 csType) (pred2 orgId) (pred3 status)  Storage._caseId Storage._productId limit offset
+  joinedValues <- DB.findAllByJoin limit offset (joinQuery csTable prodTable dbTable Storage._caseId Storage._productId  (pred1 csType) (pred2 orgId) (pred3 status))
                     >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
     limit = (toInteger _limit)
     offset = (toInteger _offset)
+    orderByDesc Storage.CaseProduct {..} = B.desc_ _createdAt
     pred1 csType Case.Case {..} =
       ( _type ==. (B.val_ csType)
       )
@@ -117,3 +120,8 @@ caseProductJoin _limit _offset csType orgId status = do
       _fromLocation = Nothing ,
       _toLocation = Nothing
     }
+    joinQuery tbl1 tbl2 tbl3 getKey1 getKey2 pred1 pred2 pred3 = do
+      i <- B.filter_ pred1 $ B.all_ tbl1
+      j <- B.filter_ pred2 $ B.all_ tbl2
+      k <- B.filter_ pred3 $ B.join_ tbl3 (\line -> (CasePrimaryKey (getKey1 line) B.==. (B.primaryKey i)) B.&&. (ProductsPrimaryKey (getKey2 line) B.==. (B.primaryKey j)))
+      pure (i,j,k)
