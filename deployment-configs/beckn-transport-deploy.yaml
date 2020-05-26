@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-transport
+  name: beckn-transport-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: beckn-transport
+      app: beckn-transport-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: beckn-transport
+        app: beckn-transport-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -100,7 +100,7 @@ spec:
               name: beckn-transport-configs
               key: BECKN_GATEWAY_PORT
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
-        name: beckn-transport
+        name: beckn-transport-$DEPLOY_VARIANT
         ports:
         - containerPort: 8014
           name: transport-http
@@ -141,7 +141,7 @@ spec:
         - --binaryPath
         - /usr/local/bin/envoy
         - --serviceCluster
-        - beckn-transport.$(POD_NAMESPACE)
+        - beckn-transport-$DEPLOY_VARIANT.$(POD_NAMESPACE)
         - --drainDuration
         - 45s
         - --parentShutdownDuration
@@ -194,7 +194,7 @@ spec:
             {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
         - name: ISTIO_METAJSON_LABELS
           value: |
-            {"app":"beckn-transport","version":"latest"}
+            {"app":"beckn-transport-$DEPLOY_VARIANT","version":"latest"}
         image: docker.io/istio/proxyv2:1.2.2
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -284,13 +284,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-transport
+  name: beckn-transport-$DEPLOY_VARIANT
   labels:
-    app: beckn-transport
+    app: beckn-transport-$DEPLOY_VARIANT
 spec:
   ports:
   - port: 8014
     targetPort: 8014
     name: transport-http
   selector:
-    app: beckn-transport
+    app: beckn-transport-$DEPLOY_VARIANT

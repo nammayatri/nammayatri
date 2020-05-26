@@ -1,0 +1,126 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: atlas-vs
+  namespace: atlas
+spec:
+  gateways:
+  - atlas-internal
+  hosts:
+  - api.sandbox.beckn.juspay.in
+  http:
+  - match:
+    - uri:
+        prefix: /gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: gateway-api
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /simulator/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: simulator-api
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /map/otp/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: otp-api
+        port:
+          number: 8080
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /otp/
+    route:
+    - destination:
+        host: otp-api
+        port:
+          number: 8080
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /map/grphr/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: graphhopper
+        port:
+          number: 8989
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /maps/
+    - uri:
+        prefix: /info
+    - uri:
+        prefix: /i18n/
+    - uri:
+        prefix: /route
+    route:
+    - destination:
+        host: graphhopper
+        port:
+          number: 8989
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /epass/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-epass-api
+        port:
+          number: 8012
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /app/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-master
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /transport/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-master
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /sandbox/app/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-staging
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /sandbox/transport/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-staging
+        port:
+          number: 8014
+    timeout: 40s
