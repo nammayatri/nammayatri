@@ -39,6 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        #------ DB configs ------#
         - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
@@ -54,6 +55,17 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: MYSQL_DB
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_PASSWORD
+        #------ Redis configs ------#
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
@@ -69,16 +81,7 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: REDIS_DB
-        - name: MYSQL_USER
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MYSQL_USER
-        - name: MYSQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MYSQL_PASSWORD
+        #------ SMS provider configs ------#
         - name: SMS_GATEWAY_USERNAME
           valueFrom:
             secretKeyRef:
@@ -89,11 +92,9 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: MY_VALUE_FIRST_PASSWORD
+        #------ Gateway configs ------#
         - name: BECKN_GATEWAY_BASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: beckn-transport-configs
-              key: BECKN_GATEWAY_BASE_URL
+          value: beckn-app-backend-$DEPLOY_VARIANT.atlas
         - name: BECKN_GATEWAY_PORT
           valueFrom:
             configMapKeyRef:
