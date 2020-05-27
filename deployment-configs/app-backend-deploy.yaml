@@ -94,10 +94,7 @@ spec:
               key: MY_VALUE_FIRST_PASSWORD
         #------ Gateway configs ------#
         - name: GATEWAY_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: beckn-app-backend-configs
-              key: GATEWAY_HOST
+          value: beckn-transport-$DEPLOY_VARIANT.atlas
         - name: GATEWAY_PORT
           valueFrom:
             configMapKeyRef:
