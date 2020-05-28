@@ -61,7 +61,7 @@ runAppBackend' port settings = do
 appExceptionResponse :: SomeException -> Response
 appExceptionResponse exception = do
   let anyException = fromException exception
-  case (anyException :: _) of
+  case anyException of
     Just ex ->
       responseLBS
         (H.Status (errHTTPCode ex) $ BS.pack $ errReasonPhrase ex)
