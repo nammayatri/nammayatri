@@ -382,7 +382,7 @@ mkTrip c = do
 mkDriverInfo :: Text -> L.Flow Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById (PersonId driverId)
-  GT.mkDriverObj person
+  return $ GT.mkDriverObj person
 
 mkVehicleInfo :: Text -> L.Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
