@@ -5,9 +5,10 @@ module App where
 import qualified App.Server as App
 import App.Types
 import Beckn.Constants.APIErrorCode
+import Beckn.External.FCM.Utils
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
-import Beckn.Utils.Common (prepareAppOptions, runFlowR)
+import Beckn.Utils.Common
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -31,9 +32,15 @@ import qualified System.Environment as SE
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
   port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runTransporterBackendApp' port $
-    setOnExceptionResponse transporterExceptionResponse $
-      setPort port defaultSettings
+  runTransporterBackendApp' port
+    $ setOnExceptionResponse transporterExceptionResponse
+    $ setPort port defaultSettings
+
+-- | Prepare common applications options
+prepareAppOptions :: Flow ()
+prepareAppOptions =
+  -- FCM token ( options key = FCMTokenKey )
+  createFCMTokenRefreshThread
 
 runTransporterBackendApp' :: Int -> Settings -> IO ()
 runTransporterBackendApp' port settings = do
