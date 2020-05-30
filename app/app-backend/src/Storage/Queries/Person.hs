@@ -3,6 +3,7 @@
 module Storage.Queries.Person where
 
 import App.Types
+import Beckn.External.Encryption
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -17,8 +18,9 @@ dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.appDb
 
 create :: Storage.Person -> Flow ()
-create Storage.Person {..} =
-  DB.createOne dbTable (Storage.insertExpression Storage.Person {..})
+create person = do
+  person' <- encrypt person
+  DB.createOne dbTable (Storage.insertExpression person')
     >>= either DB.throwDBError pure
 
 findById ::
@@ -26,6 +28,7 @@ findById ::
 findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
 
@@ -33,6 +36,7 @@ findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
+    >>= decrypt
   where
     predicate roles orgIds Storage.Person {..} =
       foldl
@@ -51,21 +55,23 @@ findByIdentifier ::
 findByIdentifier idType mb =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} =
       _identifierType ==. B.val_ idType
-        &&. _mobileNumber ==. B.val_ (Just mb)
+        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mb)
 
 findByRoleAndMobileNumber ::
   Storage.Role -> Text -> Text -> Flow (Maybe Storage.Person)
 findByRoleAndMobileNumber role countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} =
       _role ==. B.val_ role
         &&. _mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. _mobileNumber ==. B.val_ (Just mobileNumber)
+        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
 
 updateMultiple :: PersonId -> Storage.Person -> Flow ()
 updateMultiple personId person = do
@@ -139,6 +145,7 @@ findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> Flow
 findAllWithLimitOffsetByRole mlimit moffset roles =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -151,6 +158,7 @@ findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [Organiz
 findAllWithLimitOffsetBy mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset

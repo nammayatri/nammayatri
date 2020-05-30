@@ -50,6 +50,11 @@ packages:
 extra-deps:
   - git: https://github.com/juspay/hedis.git
     commit: 4ea54f16c0057acc99a9f0e9b63ea51ea4bf420e
+  - git: ssh://git@bitbucket.org/juspay/passetto-hs
+    commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
+    subdirs:
+    - core
+    - client
   - git: git@bitbucket.org:juspay/euler-hs.git
     commit: 4d852dbd7fd17bbc0b683d6e79218051e68b66ea
   - git: https://github.com/juspay/beam-mysql
@@ -70,6 +75,7 @@ extra-deps:
   - dependent-sum-0.7.1.0@sha256:5599aa89637db434431b1dd3fa7c34bc3d565ee44f0519bfbc877be1927c2531,2068
   - constraints-extras-0.3.0.2@sha256:bf6884be65958e9188ae3c9e5547abfd6d201df021bff8a4704c2c4fe1e1ae5b,1784
   - generic-lens-1.1.0.0 # random breakage without this
+  - hex-text-0.1.0.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

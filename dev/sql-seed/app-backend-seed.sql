@@ -250,7 +250,8 @@ CREATE TABLE atlas_app.person (
     gender character varying(255) NOT NULL,
     identifier_type character varying(255),
     email character varying(255),
-    mobile_number character varying(255),
+    mobile_number_encrypted character varying(255),
+    mobile_number_hash bytea,
     mobile_country_code character varying(255),
     identifier character varying(255),
     rating character varying(255),
@@ -339,6 +340,10 @@ CREATE TABLE atlas_app.tag (
 
 ALTER TABLE atlas_app.tag OWNER TO atlas;
 
+/* FIXME Remove these? We can't put mobile numbers statically anymore.
+Probably it's worth adding helpers for calling client methods and generating payload for them - already in this PR.
+*/
+
 --
 -- Data for Name: case; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
 --
@@ -407,8 +412,8 @@ COPY atlas_app.organization (id, name, gstin, status, type, verified, enabled, l
 -- Data for Name: person; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
 --
 
-COPY atlas_app.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) FROM stdin;
-ec34eede-5a3e-4a41-89d4-7290a0d7a629	\N	\N	\N	\N	ADMIN	UNKNOWN	MOBILENUMBER	\N	+919999999999	\N	+919999999999	\N	f	\N	\N	INACTIVE	\N	\N	\N	\N	2020-05-12 10:23:01+00	2020-05-12 10:23:01+00
+COPY atlas_app.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) FROM stdin;
+ec34eede-5a3e-4a41-89d4-7290a0d7a629	\N	\N	\N	\N	ADMIN	UNKNOWN	MOBILENUMBER	\N	some_encrypted_stuff	zxcv	\N	+9	\N	f	\N	\N	INACTIVE	\N	\N	\N	\N	2020-05-12 10:23:01+00	2020-05-12 10:23:01+00
 \.
 
 
@@ -509,7 +514,7 @@ ALTER TABLE ONLY atlas_app.person
     ADD CONSTRAINT idx_16451_primary PRIMARY KEY (id);
 
 ALTER TABLE ONLY atlas_app.person
-  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number);
+  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_encrypted);
 
 ALTER TABLE ONLY atlas_app.person
   ADD CONSTRAINT unique_identifier UNIQUE (identifier);
@@ -719,4 +724,3 @@ CREATE INDEX idx_16475_tag_type ON atlas_app.tag USING btree (tag_type);
 --
 -- PostgreSQL database dump complete
 --
-

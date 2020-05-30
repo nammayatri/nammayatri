@@ -1,6 +1,7 @@
 module Storage.Queries.Customer where
 
 import App.Types
+import Beckn.External.Encryption
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -13,8 +14,9 @@ dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT
 dbTable = DB._customer DB.transporterDb
 
 create :: Storage.Customer -> Flow ()
-create Storage.Customer {..} =
-  DB.createOne dbTable (Storage.insertExpression Storage.Customer {..})
+create customer = do
+  customer' <- encrypt customer
+  DB.createOne dbTable (Storage.insertExpression customer')
     >>= either DB.throwDBError pure
 
 findCustomerById ::
@@ -22,5 +24,6 @@ findCustomerById ::
 findCustomerById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Customer {..} = _id ==. B.val_ id
