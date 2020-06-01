@@ -42,12 +42,15 @@ createGateway auth req = withFlowHandler $ do
 updateTransporter :: Text -> Maybe Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter orgId auth req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth auth
-  person <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
-  validation person
-  org <- QO.findOrganizationById $ OrganizationId orgId
-  organization <- transformFlow2 req org
-  QO.updateOrganizationRec organization
-  return $ TransporterRec organization
+  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
+  case maybePerson of
+    Just person -> do
+      validation person
+      org <- QO.findOrganizationById $ OrganizationId orgId
+      organization <- transformFlow2 req org
+      QO.updateOrganizationRec organization
+      return $ TransporterRec organization
+    Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
   where
     validation person = do
       whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}

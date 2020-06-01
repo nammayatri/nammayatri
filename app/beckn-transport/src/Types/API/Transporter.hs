@@ -120,12 +120,10 @@ instance Transform UpdateTransporterReq SO.Organization where
     return $
       org
         { SO._name = fromMaybe (org ^. #_name) (req ^. #name),
-          SO._description = ifJust (req ^. #description) (org ^. #_description),
-          SO._headCount = ifJust (req ^. #headCount) (org ^. #_headCount),
+          SO._description = maybe (org ^. #_description) Just (req ^. #description),
+          SO._headCount = maybe (org ^. #_headCount) Just (req ^. #headCount),
           SO._enabled = fromMaybe (org ^. #_enabled) (req ^. #enabled),
           SO._updatedAt = now
         }
-
-type UpdateTransporterRes = TransporterRec
 
 ifJust a b = if isJust a then a else b

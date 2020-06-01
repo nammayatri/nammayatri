@@ -31,11 +31,10 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
-findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> L.Flow Storage.Person
+findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> L.Flow (Maybe Storage.Person)
 findPersonByIdAndRoleAndOrgId id role orgId = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_DATA"
   where
     predicate Storage.Person {..} =
       ( _id ==. B.val_ id
