@@ -84,7 +84,7 @@ cancel req = withFlowHandler $ do
   uuid <- L.generateGUID
   let productId = req ^. #message ^. #_id
   cprList <- CaseProduct.findAllByProdId (ProductsId productId)
-  Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CANCELLED
+  Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
   CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) Product.CANCELLED
   Product.updateStatus (ProductsId productId) Product.CANCELLED
   mkAckResponse uuid "cancel"
