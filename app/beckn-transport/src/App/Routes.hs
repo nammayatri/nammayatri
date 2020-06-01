@@ -107,12 +107,17 @@ type VehicleAPIs =
              :> Header "authorization" Text
              :> ReqBody '[JSON] ListVehicleReq
              :> Post '[JSON] ListVehicleRes
+           :<|> Capture "vehicleId" Text
+             :> Header "authorization" Text
+             :> ReqBody '[JSON] UpdateVehicleReq
+             :> Post '[JSON] UpdateVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPIs
 vehicleFlow =
   Vehicle.createVehicle
     :<|> Vehicle.listVehicles
+    :<|> Vehicle.updateVehicle
 
 -- Following is organization creation
 type OrganizationAPIs =
