@@ -3,8 +3,8 @@
 module Data.Accessor where
 
 import EulerHS.Prelude
-import Types.API.Registration
 import Types.API.Person
+import Types.API.Registration
 
 makeFieldsNoPrefix 'LoginReq
 makeFieldsNoPrefix 'InitiateLoginReq

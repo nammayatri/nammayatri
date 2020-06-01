@@ -1,19 +1,18 @@
 module Epass.Storage.Queries.Organization where
 
-import qualified Beckn.Types.Storage.Location     as BTL
-import           Data.Time
-import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam                    as B
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Storage.DB           as DB
+import qualified Beckn.Types.Storage.Location as BTL
+import Data.Time
+import Database.Beam ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam as B
+import Epass.Types.App
+import Epass.Types.Common
+import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.Organization as Storage
-import           Epass.Utils.Common
-import qualified EulerHS.Language                 as L
-import           EulerHS.Prelude                  hiding (id)
-import qualified EulerHS.Types                    as T
-import qualified Storage.Queries                  as DB
-
+import Epass.Utils.Common
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.becknDb

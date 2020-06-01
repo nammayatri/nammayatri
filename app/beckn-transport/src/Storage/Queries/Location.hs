@@ -1,18 +1,18 @@
 module Storage.Queries.Location where
 
+import Beckn.Types.App
+import Beckn.Types.Common
+import qualified Beckn.Types.Storage.Location as Storage
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified Storage.Queries as DB
-import Beckn.Types.Common
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Beckn.Types.App
-import Beckn.Utils.Extra
+import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
-import qualified Beckn.Types.Storage.Location as Storage
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT)
 dbTable = DB._location DB.transporterDb
@@ -39,26 +39,26 @@ updateLocationRec locationId location = do
   where
     setClause location n Storage.Location {..} =
       mconcat
-        [ _locationType <-. B.val_ (Storage._locationType  location)
-        , _lat <-. B.val_ (Storage._lat  location)
-        , _long <-. B.val_ (Storage._long  location)
-        , _ward <-. B.val_ (Storage._ward  location)
-        , _district <-. B.val_ (Storage._district  location)
-        , _city <-. B.val_ (Storage._city  location)
-        , _state <-. B.val_ (Storage._state  location)
-        , _country <-. B.val_ (Storage._country  location)
-        , _pincode <-. B.val_ (Storage._pincode  location)
-        , _address <-. B.val_ (Storage._address  location)
-        , _bound <-. B.val_ (Storage._bound  location)
-        , _updatedAt <-. B.val_ n
+        [ _locationType <-. B.val_ (Storage._locationType location),
+          _lat <-. B.val_ (Storage._lat location),
+          _long <-. B.val_ (Storage._long location),
+          _ward <-. B.val_ (Storage._ward location),
+          _district <-. B.val_ (Storage._district location),
+          _city <-. B.val_ (Storage._city location),
+          _state <-. B.val_ (Storage._state location),
+          _country <-. B.val_ (Storage._country location),
+          _pincode <-. B.val_ (Storage._pincode location),
+          _address <-. B.val_ (Storage._address location),
+          _bound <-. B.val_ (Storage._bound location),
+          _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Location {..} = _id ==. B.val_ id
 
-
-findAllByLocIds :: [Text] -> [Text] ->  L.Flow [Storage.Location]
+findAllByLocIds :: [Text] -> [Text] -> L.Flow [Storage.Location]
 findAllByLocIds fromIds toIds =
   DB.findAllOrErr dbTable (pred (LocationId <$> fromIds) (LocationId <$> toIds))
   where
     pred fromIds toIds Storage.Location {..} =
-      (B.in_ _id (B.val_ <$> fromIds)
-        ||. B.in_ _id (B.val_ <$> toIds))
+      ( B.in_ _id (B.val_ <$> fromIds)
+          ||. B.in_ _id (B.val_ <$> toIds)
+      )
