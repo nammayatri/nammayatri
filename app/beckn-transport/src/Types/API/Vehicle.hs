@@ -94,18 +94,16 @@ instance Transform UpdateVehicleReq SV.Vehicle where
     return $
       vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-          SV._capacity = ifJust (req ^. #_capacity) (vehicle ^. #_capacity),
-          SV._category = ifJust (req ^. #_category) (vehicle ^. #_category),
-          SV._make = ifJust (req ^. #_make) (vehicle ^. #_make),
-          SV._model = ifJust (req ^. #_model) (vehicle ^. #_model),
-          SV._size = ifJust (req ^. #_size) (vehicle ^. #_size),
-          SV._variant = ifJust (req ^. #_variant) (vehicle ^. #_variant),
-          SV._color = ifJust (req ^. #_color) (vehicle ^. #_color),
-          SV._energyType = ifJust (req ^. #_energyType) (vehicle ^. #_energyType),
-          SV._registrationCategory = ifJust (req ^. #_registrationCategory) (vehicle ^. #_registrationCategory),
+          SV._capacity = maybe (vehicle ^. #_capacity) Just (req ^. #_capacity),
+          SV._category = maybe (vehicle ^. #_category) Just (req ^. #_category),
+          SV._make = maybe (vehicle ^. #_make) Just (req ^. #_make),
+          SV._model = maybe (vehicle ^. #_model) Just (req ^. #_model),
+          SV._size = maybe (vehicle ^. #_size) Just (req ^. #_size),
+          SV._variant = maybe (vehicle ^. #_variant) Just (req ^. #_variant),
+          SV._color = maybe (vehicle ^. #_color) Just (req ^. #_color),
+          SV._energyType = maybe (vehicle ^. #_energyType) Just (req ^. #_energyType),
+          SV._registrationCategory = maybe (vehicle ^. #_registrationCategory) Just (req ^. #_registrationCategory),
           SV._updatedAt = now
         }
 
 type UpdateVehicleRes = CreateVehicleRes
-
-ifJust a b = if isJust a then a else b

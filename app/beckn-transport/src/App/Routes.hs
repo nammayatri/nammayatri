@@ -109,7 +109,6 @@ type VehicleAPIs =
              :> Post '[JSON] ListVehicleRes
            :<|> Capture "vehicleId" Text
              :> Header "authorization" Text
-             :> "update"
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
        )

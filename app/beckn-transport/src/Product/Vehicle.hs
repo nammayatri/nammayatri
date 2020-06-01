@@ -29,10 +29,18 @@ listVehicles token req = withFlowHandler $ do
   orgId <- validate token
   ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) [orgId])
 
+updateVehicle :: Text -> Maybe Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
+updateVehicle vehicleId token req = withFlowHandler $ do
+  orgId <- validate token
+  vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
+  updatedVehicle <- transformFlow2 req vehicle
+  QV.updateVehicleRec updatedVehicle
+  return $ CreateVehicleRes {vehicle = updatedVehicle}
+
 -- Core Utility methods are below
-verifyAdmin :: SP.Person -> L.Flow Text
-verifyAdmin user = do
-  whenM (return $ (user ^. #_role) /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
+verifyUser :: SP.Person -> L.Flow Text
+verifyUser user = do
+  whenM (return $ not $ elem (user ^. #_role) [SP.ADMIN, SP.DRIVER]) $ L.throwException $ err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
   let mOrgId = user ^. #_organizationId
   whenM (return $ isNothing mOrgId) $ L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
   return $ fromMaybe "NEVER_SHOULD_BE_HERE" mOrgId
@@ -44,12 +52,4 @@ validate :: Maybe Text -> L.Flow Text
 validate token = do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   user <- QP.findPersonById (PersonId _EntityId)
-  verifyAdmin user
-
-updateVehicle :: Text -> Maybe Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
-updateVehicle vehicleId token req = withFlowHandler $ do
-  orgId <- validate token
-  vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
-  updatedVehicle <- transformFlow2 req vehicle
-  QV.updateVehicleRec updatedVehicle
-  return $ CreateVehicleRes {vehicle = updatedVehicle}
+  verifyUser user
