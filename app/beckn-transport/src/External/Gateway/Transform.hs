@@ -97,33 +97,31 @@ mkPullTrackingData dataUrl embed =
       embed_url = embed
     }
 
-mkDriverObj :: Person.Person -> L.Flow (Maybe Driver)
+mkDriverObj :: Person.Person -> Driver
 mkDriverObj person =
-  return $
-    Just
-      Driver
-        { descriptor = mkPerson person,
-          experience = Nothing
-        }
+  Driver
+    { descriptor = mkPerson person,
+      experience = Nothing
+    }
 
 mkPerson :: Person.Person -> BPerson.Person
 mkPerson person =
   BPerson.Person
     { title = "",
-      first_name = "",
-      middle_name = "",
-      last_name = "",
-      full_name = "",
+      first_name = fromMaybe "" (person ^. #_firstName),
+      middle_name = fromMaybe "" (person ^. #_middleName),
+      last_name = fromMaybe "" (person ^. #_lastName),
+      full_name = fromMaybe "" (person ^. #_fullName),
       image = Nothing,
       dob = Nothing,
       gender = show $ person ^. #_gender,
       contact =
         Contact
-          { email = Nothing,
+          { email = person ^. #_email,
             mobile =
               Just
                 Mobile
-                  { country_code = Nothing,
+                  { country_code = person ^. #_mobileCountryCode,
                     number = person ^. #_mobileNumber -- TODO: need to take last 10
                   },
             landline = Nothing,
@@ -131,25 +129,21 @@ mkPerson person =
           }
     }
 
-mkVehicleObj :: Maybe Vehicle.Vehicle -> L.Flow (Maybe BVehicle.Vehicle)
-mkVehicleObj v = case v of
-  Nothing -> return Nothing
-  Just val ->
-    return $
-      Just
-        BVehicle.Vehicle
-          { category = Nothing,
-            capacity = Nothing,
-            make = Nothing,
-            model = Nothing,
-            size = Nothing,
-            variant = "",
-            color = Nothing,
-            energy_type = Nothing,
-            registration =
-              Just
-                Registration
-                  { category = "COMMERCIAL",
-                    number = val ^. #_registrationNo
-                  }
-          }
+mkVehicleObj :: Vehicle.Vehicle -> BVehicle.Vehicle
+mkVehicleObj vehicle =
+  BVehicle.Vehicle
+    { category = show <$> vehicle ^. #_category,
+      capacity = vehicle ^. #_capacity,
+      make = vehicle ^. #_make,
+      model = vehicle ^. #_model,
+      size = vehicle ^. #_size,
+      variant = maybe "" show (vehicle ^. #_variant),
+      color = vehicle ^. #_color,
+      energy_type = show <$> vehicle ^. #_energyType,
+      registration =
+        Just
+          Registration
+            { category = maybe "COMMERCIAL" show (vehicle ^. #_registrationCategory),
+              number = vehicle ^. #_registrationNo
+            }
+    }

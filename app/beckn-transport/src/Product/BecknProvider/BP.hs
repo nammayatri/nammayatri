@@ -358,8 +358,8 @@ mkTrip c = do
       embed_url = GT.baseTrackingUrl <> "/" <> (_getCaseId $ c ^. #_id) <> "/embed"
   cp <- CaseProduct.findByCaseId $ c ^. #_id
   prod <- Product.findById $ cp ^. #_productId
-  driver <- mkDriverInfo $ prod ^. #_assignedTo
-  vehicle <- mkVehicleInfo $ prod ^. #_udf3
+  driver <- mapM mkDriverInfo $ prod ^. #_assignedTo
+  vehicle <- join <$> mapM mkVehicleInfo (prod ^. #_udf3)
   -- let vehicleInfo = decodeMTypeFromText <$> prod ^. #_info
   L.logInfo "vehicle" $ show vehicle
   return $
@@ -379,16 +379,12 @@ mkTrip c = do
         route = Nothing
       }
 
-mkDriverInfo :: Maybe Text -> L.Flow (Maybe Driver)
-mkDriverInfo maybeDriverId = case maybeDriverId of
-  Nothing -> pure Nothing
-  Just val -> do
-    person <- Person.findPersonById (PersonId val)
-    GT.mkDriverObj person
+mkDriverInfo :: Text -> L.Flow Driver
+mkDriverInfo driverId = do
+  person <- Person.findPersonById (PersonId driverId)
+  return $ GT.mkDriverObj person
 
-mkVehicleInfo :: Maybe Text -> L.Flow (Maybe BVehicle.Vehicle)
-mkVehicleInfo maybeVehicleId = case maybeVehicleId of
-  Nothing -> pure Nothing
-  Just val -> do
-    vehicle <- Vehicle.findVehicleById (VehicleId val)
-    GT.mkVehicleObj vehicle
+mkVehicleInfo :: Text -> L.Flow (Maybe BVehicle.Vehicle)
+mkVehicleInfo vehicleId = do
+  vehicle <- Vehicle.findVehicleById (VehicleId vehicleId)
+  return $ GT.mkVehicleObj <$> vehicle
