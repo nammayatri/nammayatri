@@ -5,6 +5,7 @@ module Product.BecknProvider.BP where
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
+import Beckn.Types.API.Cancel
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.App
@@ -76,6 +77,17 @@ search req = withFlowHandler $ do
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
   -- notifyTransporters c admins --TODO : Uncomment this once we start saving deviceToken
   mkAckResponse uuid "search"
+
+cancel :: CancelReq -> FlowHandler AckResponse
+cancel req = withFlowHandler $ do
+  --TODO: Need to add authenticator
+  uuid <- L.generateGUID
+  let productId = req ^. #message ^. #_id
+  cprList <- CaseProduct.findAllByProdId (ProductsId productId)
+  Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CANCELLED
+  CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) Product.CANCELLED
+  Product.updateStatus (ProductsId productId) Product.CANCELLED
+  mkAckResponse uuid "cancel"
 
 notifyTransporters :: Case -> [Person] -> L.Flow ()
 notifyTransporters c admins =
@@ -328,6 +340,14 @@ notifyTripUrlToGateway case_ parentCase = do
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
+
+notifyCancelToGateway :: ProductsId -> L.Flow ()
+notifyCancelToGateway prodId = do
+  onCancelPayload <- mkCancelRidePayload prodId
+  L.logInfo "notifyGateway Request" $ show onCancelPayload
+  Gateway.onCancel onCancelPayload
+  return ()
+
 mkOnTrackTripPayload :: Case -> Case -> L.Flow OnTrackTripReq
 mkOnTrackTripPayload case_ pCase = do
   currTime <- getCurrTime
@@ -388,3 +408,23 @@ mkVehicleInfo :: Text -> L.Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (VehicleId vehicleId)
   return $ GT.mkVehicleObj <$> vehicle
+
+mkCancelRidePayload :: ProductsId -> L.Flow OnCancelReq
+mkCancelRidePayload prodId = do
+  currTime <- getCurrTime
+  let context =
+        Context
+          { domain = "MOBILITY",
+            action = "on_cancel",
+            version = Just $ "0.1",
+            transaction_id = "",
+            message_id = Nothing,
+            timestamp = currTime,
+            dummy = ""
+          }
+  let cancelObj = CancelObj prodId
+  return
+    OnCancelReq
+      { context,
+        message = cancelObj
+      }
