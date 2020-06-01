@@ -124,7 +124,6 @@ type OrganizationAPIs =
            :> Post '[JSON] TransporterRes
            :<|> Capture "orgId" Text
            :> Header "authorization" Text
-           :> "update"
            :> ReqBody '[JSON] UpdateTransporterReq
            :> Post '[JSON] TransporterRec
            :<|> "gateway"
