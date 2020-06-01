@@ -91,7 +91,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-master
+        host: beckn-app-backend-release
     timeout: 40s
   - match:
     - uri:
@@ -100,7 +100,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-master
+        host: beckn-transport-release
         port:
           number: 8014
     timeout: 40s
@@ -111,7 +111,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-staging
+        host: beckn-app-backend-master
     timeout: 40s
   - match:
     - uri:
@@ -120,7 +120,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-staging
+        host: beckn-transport-master
         port:
           number: 8014
     timeout: 40s

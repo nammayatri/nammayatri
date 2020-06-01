@@ -37,7 +37,7 @@ pipeline {
       when {
         anyOf {
           branch "master"
-          branch "staging"
+          branch "release"
           changeset "Jenkinsfile"
           expression { return hasChanged("Jenkinsfile") }
           changeset "Dockerfile*"
@@ -69,7 +69,7 @@ pipeline {
           when {
             anyOf {
               branch "master"
-              branch "staging"
+              branch "release"
             }
           }
 

@@ -10,5 +10,5 @@ data:
   REDIS_HOST: "ec-redis-beta-001.bfw4iw.0001.apse1.cache.amazonaws.com"
   REDIS_PORT: "6379"
   REDIS_DB: "20"
-  # BECKN_GATEWAY_BASE_URL: "beckn-app-backend.atlas" ## Changed based on deployment variant (master/staging)
+  # BECKN_GATEWAY_BASE_URL: "beckn-app-backend.atlas" ## Changed based on deployment variant (master/release)
   BECKN_GATEWAY_PORT: "8013"
