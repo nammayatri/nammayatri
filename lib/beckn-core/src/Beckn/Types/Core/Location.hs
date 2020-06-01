@@ -1,9 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Core.Location where
 
 import Beckn.Types.Core.Scalar
-import Data.Text
 import Data.Generics.Labels
+import Data.Text
 import EulerHS.Prelude
 
 data Location = Location
@@ -42,7 +43,8 @@ data Address = Address
     area_code :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
--- Can we add district and state in Address? 
+
+-- Can we add district and state in Address?
 data City = City
   { name :: Text,
     code :: Text

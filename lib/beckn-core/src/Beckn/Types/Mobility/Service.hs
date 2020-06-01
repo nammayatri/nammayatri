@@ -17,7 +17,6 @@ import Data.Text
 import Data.Time
 import EulerHS.Prelude
 
-
 data Service = Service
   { _id :: Text,
     _catalog :: Maybe Catalog,

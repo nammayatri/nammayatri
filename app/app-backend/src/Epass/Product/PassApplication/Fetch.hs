@@ -1,43 +1,43 @@
 module Epass.Product.PassApplication.Fetch where
 
-import qualified Beckn.Types.Storage.Case              as Case
-import qualified Beckn.Types.Storage.Location          as Location
-import qualified Beckn.Types.Storage.Location          as BTL
+import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import           Data.Aeson
-import           Data.List
-import           Data.Maybe
-import qualified Epass.Data.Accessor                   as Accessor
-import qualified Epass.Storage.Queries.Blacklist       as Blacklist
-import qualified Epass.Storage.Queries.Comment         as Comment
-import qualified Epass.Storage.Queries.Customer        as Customer
-import qualified Epass.Storage.Queries.Document        as Document
-import qualified Epass.Storage.Queries.EntityDocument  as EntityDocument
-import qualified Epass.Storage.Queries.EntityTag       as EntityTag
-import qualified Epass.Storage.Queries.Organization    as Organization
+import Data.Aeson
+import Data.List
+import Data.Maybe
+import qualified Epass.Data.Accessor as Accessor
+import qualified Epass.Storage.Queries.Blacklist as Blacklist
+import qualified Epass.Storage.Queries.Comment as Comment
+import qualified Epass.Storage.Queries.Customer as Customer
+import qualified Epass.Storage.Queries.Document as Document
+import qualified Epass.Storage.Queries.EntityDocument as EntityDocument
+import qualified Epass.Storage.Queries.EntityTag as EntityTag
+import qualified Epass.Storage.Queries.Organization as Organization
 import qualified Epass.Storage.Queries.PassApplication as DB
-import qualified Epass.Storage.Queries.Tag             as Tag
-import qualified Epass.Types.API.PassApplication       as API
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Common                    as Location (Location (..))
-import qualified Epass.Types.Storage.Customer          as Customer
-import qualified Epass.Types.Storage.Document          as Document
-import qualified Epass.Types.Storage.EntityDocument    as EntityDocument
-import qualified Epass.Types.Storage.EntityTag         as EntityTag
-import           Epass.Types.Storage.PassApplication
-import qualified Epass.Types.Storage.Tag               as Document
-import           Epass.Utils.Common
-import           Epass.Utils.Routes
-import           Epass.Utils.Storage
-import qualified EulerHS.Language                      as L
-import           EulerHS.Prelude
-import           Servant
-import qualified Storage.Queries.Case                  as QC
-import qualified Storage.Queries.CaseProduct           as QCP
-import qualified Storage.Queries.Location              as QLoc
-import qualified Storage.Queries.Person                as QP
-import qualified Storage.Queries.Products              as QProd
+import qualified Epass.Storage.Queries.Tag as Tag
+import qualified Epass.Types.API.PassApplication as API
+import Epass.Types.App
+import Epass.Types.Common
+import qualified Epass.Types.Common as Location (Location (..))
+import qualified Epass.Types.Storage.Customer as Customer
+import qualified Epass.Types.Storage.Document as Document
+import qualified Epass.Types.Storage.EntityDocument as EntityDocument
+import qualified Epass.Types.Storage.EntityTag as EntityTag
+import Epass.Types.Storage.PassApplication
+import qualified Epass.Types.Storage.Tag as Document
+import Epass.Utils.Common
+import Epass.Utils.Routes
+import Epass.Utils.Storage
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
+import Servant
+import qualified Storage.Queries.Case as QC
+import qualified Storage.Queries.CaseProduct as QCP
+import qualified Storage.Queries.Location as QLoc
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Products as QProd
 
 listPassApplication ::
   Maybe Text ->
@@ -69,11 +69,10 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
     caseApps <- traverse getCaseAppInfo cases
     return $ API.ListPassApplicationRes caseApps
 
-
 getLocationIds :: [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> L.Flow [LocationId]
 getLocationIds pins cities states districts wards = do
   locs <- QLoc.findAllWithLimitOffsetWhere (show <$> pins) cities states districts wards Nothing Nothing
-  return $  Location._id <$> locs
+  return $ Location._id <$> locs
 
 getPassAppInfo :: PassApplication -> L.Flow API.PassAppInfo
 getPassAppInfo PassApplication {..} = do
@@ -133,7 +132,6 @@ getPassAppInfo PassApplication {..} = do
         ..
       }
 
-
 getCaseAppInfo :: Case.Case -> L.Flow API.CaseInfo
 getCaseAppInfo Case.Case {..} = do
   morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) $ _udf2
@@ -150,28 +148,27 @@ getCaseAppInfo Case.Case {..} = do
   toLocation <- QLoc.findLocationById $ LocationId _toLocationId
   pure
     API.CaseInfo
-      {  _Customer = mcustomer
-        , _Tags = tags
-        , _Comments = comments
-        , _Documents = docs
-        , _Organization = morg
-        , _isBlacklistedOrganization = isBlacklistedOrg
-        , _isBlacklistedLocation = False
-        , _fromLocation = fromLocation
-        , _toLocation = toLocation
-        , _passType = _udf1
-        , _fromDate = _startTime
-        , _toDate = _endTime
-        , _purpose = Nothing
-        , _AssignedTo = Nothing
-        , _CreatedBy = _requestor
-        , _count = _udf3
-        , _approvedCount = _udf4
-        , _TenantOrganizationId = Nothing
-        , _remarks = _udf5
-        ,..
+      { _Customer = mcustomer,
+        _Tags = tags,
+        _Comments = comments,
+        _Documents = docs,
+        _Organization = morg,
+        _isBlacklistedOrganization = isBlacklistedOrg,
+        _isBlacklistedLocation = False,
+        _fromLocation = fromLocation,
+        _toLocation = toLocation,
+        _passType = _udf1,
+        _fromDate = _startTime,
+        _toDate = _endTime,
+        _purpose = Nothing,
+        _AssignedTo = Nothing,
+        _CreatedBy = _requestor,
+        _count = _udf3,
+        _approvedCount = _udf4,
+        _TenantOrganizationId = Nothing,
+        _remarks = _udf5,
+        ..
       }
-
 
 getPassApplicationById :: Maybe Text -> CaseId -> FlowHandler API.CaseInfo
 getPassApplicationById regToken caseId = withFlowHandler $
@@ -185,4 +182,4 @@ scopeEntityAccess :: RegistrationToken.RegistrationToken -> Maybe CustomerId
 scopeEntityAccess RegistrationToken.RegistrationToken {..} =
   case _entityType of
     RegistrationToken.CUSTOMER -> Just (CustomerId _EntityId)
-    RegistrationToken.USER     -> Nothing
+    RegistrationToken.USER -> Nothing

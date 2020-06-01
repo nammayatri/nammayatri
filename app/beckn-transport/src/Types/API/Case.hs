@@ -1,14 +1,14 @@
 module Types.API.Case where
 
-import           Data.Default
-import           Data.Swagger
-import           Beckn.Types.Storage.Case
-import           Beckn.Types.Storage.Location
-import           EulerHS.Prelude
+import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Location
+import Data.Default
+import Data.Swagger
+import EulerHS.Prelude
 
 data CaseReq = CaseReq
-  { _type   :: CaseType,
-    _limit  :: Integer,
+  { _type :: CaseType,
+    _limit :: Integer,
     _offset :: Integer,
     _status :: [CaseStatus]
   }
@@ -21,9 +21,9 @@ instance ToJSON CaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data CaseRes = CaseRes
-  { _case   :: Case,
-    _fromLocation  :: Location,
-    _toLocation  :: Location
+  { _case :: Case,
+    _fromLocation :: Location,
+    _toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 
@@ -36,8 +36,8 @@ instance ToJSON CaseRes where
 type CaseListRes = [CaseRes]
 
 data UpdateCaseReq = UpdateCaseReq
-  { _quote             :: Maybe Double
-  , _transporterChoice :: Text
+  { _quote :: Maybe Double,
+    _transporterChoice :: Text
   }
   deriving (Show, Generic, ToSchema)
 

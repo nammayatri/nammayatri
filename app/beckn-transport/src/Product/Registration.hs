@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Registration where
 
 import qualified Beckn.External.MyValuesFirst.Flow as Sms
@@ -12,11 +13,11 @@ import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
 import Data.Aeson
+import Data.Generics.Labels
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Data.Generics.Labels
 import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR

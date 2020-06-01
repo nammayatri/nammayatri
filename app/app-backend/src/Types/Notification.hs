@@ -5,14 +5,13 @@
 
 module Types.Notification where
 
-import Beckn.Types.Storage.Person
-import Data.Swagger
 import Beckn.Types.Common
+import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
+import Data.Swagger
 import EulerHS.Prelude
 import Servant.Swagger
-import Beckn.Types.Storage.Case
-
 
 data NotificationType
   = LEAD
@@ -22,11 +21,10 @@ data NotificationType
 instance FromJSON NotificationType where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data Notification a =
-  Notification
-    { _type    :: NotificationType
-    , _payload :: a
-    }
+data Notification a = Notification
+  { _type :: NotificationType,
+    _payload :: a
+  }
   deriving (Generic, ToJSON)
 
 instance FromJSON a => FromJSON (Notification a) where

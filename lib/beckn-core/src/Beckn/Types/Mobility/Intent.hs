@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Mobility.Intent where
 
 import Beckn.Types.Core.Location
@@ -8,9 +9,9 @@ import Beckn.Types.Core.ScalarRange
 import Beckn.Types.Core.Tag
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
+import Data.Generics.Labels
 import Data.Text
 import Data.Time
-import Data.Generics.Labels
 import EulerHS.Prelude
 
 data Intent = Intent

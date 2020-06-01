@@ -1,12 +1,12 @@
 module Epass.Product.Tag where
 
+import Beckn.Types.Storage.RegistrationToken
 import Epass.Storage.Queries.EntityTag as EntityTag
 import Epass.Storage.Queries.Tag as Tag
 import Epass.Types.API.Tag
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.EntityTag as EntityTag
-import Beckn.Types.Storage.RegistrationToken
 import qualified Epass.Types.Storage.Tag as Tag
 import Epass.Utils.Common
 import Epass.Utils.Routes

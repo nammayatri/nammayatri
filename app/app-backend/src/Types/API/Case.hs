@@ -1,17 +1,17 @@
 module Types.API.Case where
 
-import           Beckn.Types.Storage.Case
-import           Beckn.Types.Storage.Location
-import           Beckn.Types.Storage.Products
-import           Data.Default
-import           Data.Swagger
-import           EulerHS.Prelude
+import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Location
+import Beckn.Types.Storage.Products
+import Data.Default
+import Data.Swagger
+import EulerHS.Prelude
 
 data StatusRes = StatusRes
-  { _case         :: Case,
-    _product      :: [Products],
+  { _case :: Case,
+    _product :: [Products],
     _fromLocation :: Location,
-    _toLocation   :: Location
+    _toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 
@@ -22,7 +22,7 @@ instance ToJSON StatusRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data UpdateCaseReq = UpdateCaseReq
-  { _quote             :: Maybe Double,
+  { _quote :: Maybe Double,
     _transporterChoice :: Text
   }
   deriving (Show, Generic, ToSchema)
@@ -34,10 +34,10 @@ instance ToJSON UpdateCaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data CaseProduct = CaseProduct
-  { _case         :: Case,
-    _products     :: [Products],
+  { _case :: Case,
+    _products :: [Products],
     _fromLocation :: Maybe Location,
-    _toLocation   :: Maybe Location
+    _toLocation :: Maybe Location
   }
   deriving (Show, Generic, ToSchema)
 

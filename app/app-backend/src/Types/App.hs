@@ -1,17 +1,19 @@
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Types.App where
 
-import           Data.Swagger
-import           Database.Beam.Backend.SQL     (FromBackendRow,
-                                                HasSqlValueSyntax)
-import           Database.Beam.MySQL           (MySQL, MysqlValueSyntax)
-import           Database.Beam.MySQL.FromField
-import           Epass.Utils.TH
-import           EulerHS.Prelude
+import Data.Swagger
+import Database.Beam.Backend.SQL
+  ( FromBackendRow,
+    HasSqlValueSyntax,
+  )
+import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
+import Database.Beam.MySQL.FromField
+import Epass.Utils.TH
+import EulerHS.Prelude
 
 newtype CustomerId = CustomerId
   { _getCustomerId :: Text

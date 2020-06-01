@@ -3,6 +3,7 @@
 
 module Beckn.Types.Storage.Vehicle where
 
+import Beckn.Types.App
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -15,7 +16,6 @@ import Database.Beam.MySQL
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
-import Beckn.Types.App
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

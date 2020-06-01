@@ -1,20 +1,20 @@
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes                #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Utils.TH where
 
-import           Beckn.Types.Common
-import           Data.Aeson                (FromJSON, ToJSON)
-import           Data.Swagger
-import           Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
-import           Database.Beam.MySQL       (MySQL, MysqlValueSyntax)
-import           Database.Beam.Query       (HasSqlEqualityCheck)
-import           EulerHS.Prelude
-import qualified Language.Haskell.TH       as TH
-import           Servant                   (FromHttpApiData, ToHttpApiData)
+import Beckn.Types.Common
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Swagger
+import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
+import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
+import Database.Beam.Query (HasSqlEqualityCheck)
+import EulerHS.Prelude
+import qualified Language.Haskell.TH as TH
+import Servant (FromHttpApiData, ToHttpApiData)
 
 -- | A set of instances common for all identifier newtypes.
 deriveIdentifierInstances :: TH.Name -> TH.Q [TH.Dec]
