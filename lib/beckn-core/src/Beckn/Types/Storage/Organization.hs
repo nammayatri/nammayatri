@@ -64,6 +64,7 @@ data OrganizationT f = Organization
     _headCount :: B.C f (Maybe Int),
     _status :: B.C f Status,
     _verified :: B.C f Bool,
+    _enabled :: B.C f Bool,
     _apiKey :: B.C f (Maybe Text),
     _callbackUrl :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
