@@ -2,37 +2,38 @@
 
 module Product.Search where
 
-import Beckn.Types.API.Search
-import Beckn.Types.App
-import Beckn.Types.Common
-  ( AckResponse (..),
-    generateGUID,
-  )
-import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Item as Core
-import qualified Beckn.Types.Core.Location as Core
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Products as Products
+import           Beckn.Types.API.Search
+import           Beckn.Types.App
+import           Beckn.Types.Common                    (AckResponse (..),
+                                                        generateGUID)
+import           Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Item                 as Core
+import qualified Beckn.Types.Core.Location             as Core
+import qualified Beckn.Types.Storage.Case              as Case
+import qualified Beckn.Types.Storage.CaseProduct       as CaseProduct
+import qualified Beckn.Types.Storage.Location          as Location
+import qualified Beckn.Types.Storage.Products          as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
-import Data.Aeson (encode)
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Data.Time.LocalTime (addLocalTime)
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
-import Servant
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
-import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Products as Products
-import Types.App
-import Utils.Common (verifyToken)
+import           Beckn.Utils.Common                    (fromMaybeM500,
+                                                        getCurrTime,
+                                                        withFlowHandler)
+import           Data.Aeson                            (encode)
+import qualified Data.ByteString.Lazy                  as BSL
+import qualified Data.Text                             as T
+import qualified Data.Text.Encoding                    as T
+import           Data.Time.LocalTime                   (addLocalTime)
+import           Data.Time.LocalTime
+import qualified EulerHS.Language                      as L
+import           EulerHS.Prelude
+import qualified External.Gateway.Flow                 as Gateway
+import           Servant
+import qualified Storage.Queries.Case                  as Case
+import qualified Storage.Queries.CaseProduct           as CaseProduct
+import qualified Storage.Queries.Location              as Location
+import qualified Storage.Queries.Person                as Person
+import qualified Storage.Queries.Products              as Products
+import           Types.App
+import           Utils.Common                          (verifyToken)
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
@@ -40,21 +41,27 @@ search regToken req = withFlowHandler $ do
   person <-
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
-
+  validateDateTime req
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
-
   gatewayUrl <- Gateway.getBaseUrl
   eres <- Gateway.search gatewayUrl $ req & (#context . #transaction_id) .~ (_getCaseId $ case_ ^. #_id)
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
-          Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
+          Right _  -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
+ where
+   validateDateTime req = do
+     currTime <- getCurrTime
+     when ((req ^. #message ^. #time) < currTime)
+       $ L.throwException
+       $ err400 {errBody = "Invalid start time"}
+
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
 search_cb regToken req = withFlowHandler $ do
