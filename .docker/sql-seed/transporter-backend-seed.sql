@@ -15,6 +15,7 @@ CREATE TABLE `organization` (
   `status` varchar(255) NULL,
   `type` varchar(255) NULL,
   `verified` boolean NOT NULL,
+  `enabled` boolean NOT NULL DEFAULT TRUE,
   `location_id` varchar(255) NULL,
   `description` TEXT NULL,
   `mobile_number` TEXT NULL,
