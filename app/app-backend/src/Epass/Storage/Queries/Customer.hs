@@ -76,6 +76,7 @@ updateDetails customerId nameM orgIdM = do
             <> maybe [] (\orgId -> [_OrganizationId <-. B.val_ (Just orgId)]) orgIdM
         )
     predicate id C.Customer {..} = _id ==. B.val_ id
+
 --updateDocument :: CustomerId -> [DocumentId] -> L.Flow ()
 --updateDocument cust docs =
 --DB.update dbTable (setClause docs) (predicate cust)
