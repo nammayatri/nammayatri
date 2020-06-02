@@ -3,6 +3,7 @@
 module Beckn.Types.API.Cancel where
 
 import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
@@ -13,7 +14,7 @@ import Servant.Swagger
 
 data CancelReq = CancelReq
   { context :: Context,
-    message :: Service
+    message :: IdObject
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -23,14 +24,14 @@ data CancelRes = CancelRes
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data CancelObj = CancelObj
-  { prodId :: ProductsId
+data Trip = Trip
+  { id :: ProductsId
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data OnCancelReq = OnCancelReq
   { context :: Context,
-    message :: CancelObj
+    message :: Trip
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

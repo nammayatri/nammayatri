@@ -87,6 +87,7 @@ cancel req = withFlowHandler $ do
   Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
   CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) Product.CANCELLED
   Product.updateStatus (ProductsId productId) Product.CANCELLED
+  notifyCancelToGateway (ProductsId productId)
   mkAckResponse uuid "cancel"
 
 notifyTransporters :: Case -> [Person] -> L.Flow ()
@@ -422,9 +423,9 @@ mkCancelRidePayload prodId = do
             timestamp = currTime,
             dummy = ""
           }
-  let cancelObj = CancelObj prodId
+  let tripObj = Trip (ProductsId prodId)
   return
     OnCancelReq
       { context,
-        message = cancelObj
+        message = tripObj
       }
