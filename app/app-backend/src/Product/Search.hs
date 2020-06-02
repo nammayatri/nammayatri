@@ -26,6 +26,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time.LocalTime (addLocalTime)
+import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -47,14 +48,13 @@ search regToken req = withFlowHandler $ do
   person <-
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
-
+  validateDateTime req
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
-
   gatewayUrl <- Gateway.getBaseUrl
   eres <- Gateway.search gatewayUrl $ req & (#context . #transaction_id) .~ (_getCaseId $ case_ ^. #_id)
   let ack =
@@ -62,6 +62,12 @@ search regToken req = withFlowHandler $ do
           Left err -> Ack "Error" (show err)
           Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
+  where
+    validateDateTime req = do
+      currTime <- getCurrTime
+      when ((req ^. #message ^. #time) < currTime)
+        $ L.throwException
+        $ err400 {errBody = "Invalid start time"}
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
 search_cb regToken req = withFlowHandler $ do
