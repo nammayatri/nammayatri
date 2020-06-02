@@ -4,13 +4,13 @@
 
 module Epass.Types.Storage.Tag where
 
+import Beckn.Types.Storage.RegistrationToken (RTEntityType (..))
 import Data.Aeson
 import Data.Default
 import Data.Swagger hiding (Tag)
 import Data.Time
 import qualified Database.Beam as B
 import Epass.Types.App
-import Beckn.Types.Storage.RegistrationToken (RTEntityType (..))
 import qualified Epass.Utils.Defaults as Defaults
 import EulerHS.Prelude
 

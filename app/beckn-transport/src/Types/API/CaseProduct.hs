@@ -41,5 +41,3 @@ instance ToJSON CaseProductRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 type CaseProductList = [CaseProductRes]
-
-

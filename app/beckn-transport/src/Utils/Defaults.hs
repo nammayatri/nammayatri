@@ -1,6 +1,5 @@
 module Utils.Defaults where
 
-
 import Data.Time
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock

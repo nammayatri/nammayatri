@@ -1,8 +1,8 @@
 module Epass.Types.API.Customer where
 
+import Beckn.Types.Storage.Person
 import Data.Aeson
 import Data.Swagger
-import Beckn.Types.Storage.Person
 import EulerHS.Prelude
 import Servant.Swagger
 

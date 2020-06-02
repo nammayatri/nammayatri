@@ -39,12 +39,12 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
-    buildResponse ::  [Loc.Location] -> CaseProductRes -> CaseProductRes
+    buildResponse :: [Loc.Location] -> CaseProductRes -> CaseProductRes
     buildResponse locList res =
-          CaseProductRes
-            { _case = res ^. #_case,
-              _product = res ^. #_product,
-              _caseProduct = res ^. #_caseProduct,
-              _fromLocation = find (\x -> (Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList,
-              _toLocation = find (\x -> (Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList
-            }
+      CaseProductRes
+        { _case = res ^. #_case,
+          _product = res ^. #_product,
+          _caseProduct = res ^. #_caseProduct,
+          _fromLocation = find (\x -> (Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList,
+          _toLocation = find (\x -> (Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList
+        }
