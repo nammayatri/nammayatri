@@ -16,7 +16,11 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Utils.Common
+  ( fromMaybeM500,
+    getCurrTime,
+    withFlowHandler,
+  )
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -32,7 +36,10 @@ import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
 import Types.App
-import Utils.Common (verifyToken)
+import Utils.Common
+  ( generateShortId,
+    verifyToken,
+  )
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
@@ -87,6 +94,11 @@ mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow 
 mkCase req userId from to = do
   now <- getCurrTime
   id <- generateGUID
+  -- TODO: consider collision probability for shortId
+  -- Currently it's a random 10 char alphanumeric string
+  -- If the insert fails, maybe retry automatically as there
+  -- is a unique constraint on `shortId`
+  shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
       validTill = addLocalTime (60 * 30) $ req ^. #message ^. #time
@@ -95,7 +107,7 @@ mkCase req userId from to = do
       { _id = id,
         _name = Nothing,
         _description = Just "Case to create a Ride",
-        _shortId = context ^. #transaction_id,
+        _shortId = shortId,
         _industry = Case.MOBILITY,
         _type = Case.RIDEBOOK,
         _exchangeType = Case.FULFILLMENT,
@@ -113,7 +125,7 @@ mkCase req userId from to = do
         _udf1 = Just $ intent ^. #vehicle ^. #variant,
         _udf2 = Just $ show $ intent ^. #payload ^. #travellers ^. #count,
         _udf3 = Nothing,
-        _udf4 = Nothing,
+        _udf4 = Just $ context ^. #transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,
