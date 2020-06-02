@@ -23,6 +23,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time.LocalTime (addLocalTime)
+import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -34,7 +35,10 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
 import Types.App
 import Types.ProductInfo
-import Utils.Common (verifyToken)
+import Utils.Common
+  ( generateShortId,
+    verifyToken,
+  )
 
 search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
@@ -42,6 +46,7 @@ search regToken req = withFlowHandler $ do
   person <-
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
+  validateDateTime req
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
@@ -55,6 +60,12 @@ search regToken req = withFlowHandler $ do
           Left err -> Ack "Error" (show err)
           Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
   return $ AckResponse (req ^. #context) ack
+  where
+    validateDateTime req = do
+      currTime <- getCurrTime
+      when ((req ^. #message ^. #time) < currTime)
+        $ L.throwException
+        $ err400 {errBody = "Invalid start time"}
 
 search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
 search_cb regToken req = withFlowHandler $ do
@@ -86,6 +97,11 @@ mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow 
 mkCase req userId from to = do
   now <- getCurrTime
   id <- generateGUID
+  -- TODO: consider collision probability for shortId
+  -- Currently it's a random 10 char alphanumeric string
+  -- If the insert fails, maybe retry automatically as there
+  -- is a unique constraint on `shortId`
+  shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
       validTill = addLocalTime (60 * 30) $ req ^. #message ^. #time
@@ -94,7 +110,7 @@ mkCase req userId from to = do
       { _id = id,
         _name = Nothing,
         _description = Just "Case to create a Ride",
-        _shortId = context ^. #transaction_id,
+        _shortId = shortId,
         _industry = Case.MOBILITY,
         _type = Case.RIDEBOOK,
         _exchangeType = Case.FULFILLMENT,
@@ -112,7 +128,7 @@ mkCase req userId from to = do
         _udf1 = Just $ intent ^. #vehicle ^. #variant,
         _udf2 = Just $ show $ intent ^. #payload ^. #travellers ^. #count,
         _udf3 = Nothing,
-        _udf4 = Nothing,
+        _udf4 = Just $ context ^. #transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,
