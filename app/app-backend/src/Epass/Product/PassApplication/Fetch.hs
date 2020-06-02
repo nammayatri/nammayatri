@@ -63,7 +63,6 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
     let entityId = scopeEntityAccess token
     fromLocationIds <- getLocationIds fPins fCities fStates fDists fWards
     toLocationIds <- getLocationIds toPins toCities toStates toDists toWards
-
     cases <- QC.findAllWithLimitOffsetWhere (_getLocationId <$> fromLocationIds) (_getLocationId <$> toLocationIds) [Case.PASSAPPLICATION] statuses (passType) limitM offsetM
     -- TODO: embed docs, comments, location and tags to the passapplication list response, once those are migrated
     caseApps <- traverse getCaseAppInfo cases

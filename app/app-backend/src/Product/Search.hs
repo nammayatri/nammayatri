@@ -11,16 +11,13 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Location as Core
+import qualified Beckn.Types.Core.Provider as Core
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Common
-  ( fromMaybeM500,
-    getCurrTime,
-    withFlowHandler,
-  )
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, getCurrTime, withFlowHandler)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -37,6 +34,7 @@ import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
 import Types.App
+import Types.ProductInfo
 import Utils.Common
   ( generateShortId,
     verifyToken,
@@ -73,6 +71,7 @@ search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
 search_cb regToken req = withFlowHandler $ do
   -- TODO: Verify api key here
   let service = req ^. #message
+      mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
       caseId = CaseId $ req ^. #context ^. #transaction_id --CaseId $ service ^. #_id
   case mcatalog of
@@ -85,14 +84,12 @@ search_cb regToken req = withFlowHandler $ do
           (return . PersonId)
           (Case._requestor case_)
       let items = catalog ^. #_items
-      products <- traverse mkProduct items
+      products <- traverse (mkProduct mprovider) items
       let pids = (^. #_id) <$> products
       traverse_ Products.create products
-
       traverse_
         (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
-
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
 
@@ -161,10 +158,11 @@ mkLocation loc = do
         _updatedAt = now
       }
 
-mkProduct :: Core.Item -> L.Flow Products.Products
-mkProduct item = do
+mkProduct :: Maybe Core.Provider -> Core.Item -> L.Flow Products.Products
+mkProduct mprovider item = do
   now <- getCurrTime
   let validTill = addLocalTime (60 * 30) now
+  let info = ProductInfo mprovider Nothing
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transpoter and app-backend
   return $
@@ -187,7 +185,7 @@ mkProduct item = do
         _udf3 = Nothing,
         _udf4 = Nothing,
         _udf5 = Nothing,
-        _info = Nothing,
+        _info = Just $ encodeToText info,
         _fromLocation = Nothing, -- TODO: fix this
         _toLocation = Nothing, -- TODO: fix this
         _organizationId = "", -- TODO: fix this

@@ -14,6 +14,7 @@ import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Location as Location
+import Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -30,6 +31,7 @@ import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Location as LQ
+import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
@@ -73,7 +75,7 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
       "ACCEPTED" -> do
         p <- createProduct c _quote Defaults.localTime orgId
         cp <- createCaseProduct c p
-        notifyGateway c
+        notifyGateway c p orgId
         return c
       "DECLINED" -> return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
@@ -138,19 +140,18 @@ createCaseProduct cs prod = do
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> L.Flow ()
-notifyGateway c = do
+notifyGateway :: Case -> Products -> Text -> L.Flow ()
+notifyGateway c p orgId = do
   L.logInfo "notifyGateway" $ show c
-  cps <- CPQ.findAllByCaseId (c ^. #_id)
-  L.logInfo "notifyGateway" $ show cps
-  prods <- PQ.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
-  onSearchPayload <- mkOnSearchPayload c prods
+  L.logInfo "notifyGateway" $ show p
+  orgInfo <- OQ.findOrganizationById (OrganizationId orgId)
+  onSearchPayload <- mkOnSearchPayload c [p] orgInfo
   L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
-mkOnSearchPayload c prods = do
+mkOnSearchPayload :: Case -> [Products] -> Organization -> L.Flow OnSearchReq
+mkOnSearchPayload c prods orgInfo = do
   currTime <- getCurrTime
   let context =
         Context
@@ -162,7 +163,7 @@ mkOnSearchPayload c prods = do
             timestamp = currTime,
             dummy = ""
           }
-  service <- GT.mkServiceOffer c prods Nothing
+  service <- GT.mkServiceOffer c prods Nothing (Just orgInfo)
   return
     OnSearchReq
       { context,

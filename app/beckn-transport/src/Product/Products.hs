@@ -54,7 +54,6 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
       whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
         updateTrip (ProductsId productId) c
     Nothing -> return ()
-
   updatedProd <- DB.findById (ProductsId productId)
   driverInfo <- case (updatedProd ^. #_assignedTo) of
     Just driverId -> QP.findPersonById (PersonId driverId)
