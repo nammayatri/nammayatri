@@ -7,6 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
+import Beckn.Types.Mobility.Trip
 import Data.Generics.Labels
 import Data.Swagger
 import EulerHS.Prelude
@@ -23,11 +24,6 @@ data CancelRes = CancelRes
     message :: Ack
   }
   deriving (Generic, Show, ToJSON, FromJSON)
-
-data Trip = Trip
-  { id :: ProductsId
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
 
 data OnCancelReq = OnCancelReq
   { context :: Context,

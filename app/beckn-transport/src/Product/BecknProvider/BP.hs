@@ -82,12 +82,12 @@ cancel :: CancelReq -> FlowHandler AckResponse
 cancel req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
-  let productId = req ^. #message ^. #_id
+  let productId = req ^. #message ^. #id
   cprList <- CaseProduct.findAllByProdId (ProductsId productId)
   Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
   CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) Product.CANCELLED
   Product.updateStatus (ProductsId productId) Product.CANCELLED
-  notifyCancelToGateway (ProductsId productId)
+  notifyCancelToGateway productId
   mkAckResponse uuid "cancel"
 
 notifyTransporters :: Case -> [Person] -> L.Flow ()
@@ -342,7 +342,7 @@ notifyTripUrlToGateway case_ parentCase = do
   return ()
 
 
-notifyCancelToGateway :: ProductsId -> L.Flow ()
+notifyCancelToGateway :: Text -> L.Flow ()
 notifyCancelToGateway prodId = do
   onCancelPayload <- mkCancelRidePayload prodId
   L.logInfo "notifyGateway Request" $ show onCancelPayload
@@ -410,7 +410,7 @@ mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (VehicleId vehicleId)
   return $ GT.mkVehicleObj <$> vehicle
 
-mkCancelRidePayload :: ProductsId -> L.Flow OnCancelReq
+mkCancelRidePayload :: Text -> L.Flow OnCancelReq
 mkCancelRidePayload prodId = do
   currTime <- getCurrTime
   let context =
@@ -423,9 +423,23 @@ mkCancelRidePayload prodId = do
             timestamp = currTime,
             dummy = ""
           }
-  let tripObj = Trip (ProductsId prodId)
+  let tripObj = mkCancelTripObj prodId
   return
     OnCancelReq
       { context,
         message = tripObj
       }
+
+mkCancelTripObj :: Text -> Trip
+mkCancelTripObj prodId =
+  Trip
+    { id = prodId,
+      vehicle = Nothing,
+      driver = TripDriver Nothing Nothing,
+      travellers = [],
+      tracking = Tracking "" Nothing,
+      corridor_type = "",
+      state = "",
+      fare = Nothing,
+      route = Nothing
+    }
