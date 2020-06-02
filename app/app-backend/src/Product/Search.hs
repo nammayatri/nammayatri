@@ -94,6 +94,10 @@ mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow 
 mkCase req userId from to = do
   now <- getCurrTime
   id <- generateGUID
+  -- TODO: consider collision probability for shortId
+  -- Currently it's a random 10 char alphanumeric string
+  -- If the insert fails, maybe retry automatically as there
+  -- is a unique constraint on `shortId`
   shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
