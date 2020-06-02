@@ -3,6 +3,7 @@
 
 module App.Routes where
 
+import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
@@ -18,6 +19,7 @@ import EulerHS.Prelude
 import EulerHS.Prelude
 import Network.Wai.Parse
 import Network.Wai.Parse
+import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Confirm as Confirm
@@ -44,6 +46,7 @@ type AppAPIs =
            :<|> InfoAPIs
            :<|> TrackTripAPIs
            :<|> CaseProductAPIs
+           :<|> CancelAPIs
            :<|> Epass.EPassAPIs
        )
 
@@ -60,6 +63,7 @@ appServer' key = do
       :<|> infoFlow
       :<|> trackTripFlow
       :<|> caseProductFlow
+      :<|> cancelFlow
       :<|> Epass.epassServer' key
     )
 
@@ -179,3 +183,15 @@ type CaseProductAPIs =
 
 caseProductFlow =
   CaseProduct.list
+
+-------- Cancel Flow----------
+type CancelAPIs =
+  "cancel"
+    :> "services"
+    :> ( Header "token" Text
+           :> ReqBody '[JSON] Cancel.CancelReq
+           :> Post '[JSON] Cancel.CancelRes
+       )
+
+cancelFlow =
+  Cancel.cancel
