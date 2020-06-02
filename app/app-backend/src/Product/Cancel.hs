@@ -4,6 +4,7 @@ module Product.Cancel where
 
 import Beckn.Types.API.Cancel
 import Beckn.Types.App
+import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Products
@@ -19,10 +20,10 @@ cancel :: Maybe RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
   verifyToken regToken
   let context = req ^. #context
-  let productId = req ^. #message ^. #_id
+  let productId = req ^. #message ^. #id
   cp <- CaseProduct.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple caseproducts exists for one product
   baseUrl <- Gateway.getBaseUrl
-  eres <- Gateway.cancel baseUrl (CancelReq context productId)
+  eres <- Gateway.cancel baseUrl (CancelReq context (IdObject productId))
   let ack =
         case eres of
           Left err -> Ack "confirm" ("Err: " <> show err)
@@ -33,7 +34,7 @@ cancel regToken req = withFlowHandler $ do
 onCancel :: OnCancelReq -> FlowHandler OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
-  let productId = ProductsId (req ^. #message ^. #_id)
+  let productId = ProductsId (req ^. #message ^. #id)
 
   Products.updateStatus productId Products.CANCELLED
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
@@ -45,4 +46,4 @@ onCancel req = withFlowHandler $ do
     then Case.updateStatus caseId Case.CLOSED -- Only update case status if it has only one product
     else return ()
 
-  return $ CancelRes context (Ack "cancel" "Ok")
+  return $ OnCancelRes context (Ack "cancel" "Ok")
