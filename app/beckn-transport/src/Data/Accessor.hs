@@ -7,6 +7,9 @@ import Types.API.Person
 import Types.API.Registration
 
 makeFieldsNoPrefix 'LoginReq
+
 makeFieldsNoPrefix 'InitiateLoginReq
+
 makeFieldsNoPrefix 'ReInitiateLoginReq
+
 makeFieldsNoPrefix 'UpdatePersonReq

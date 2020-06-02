@@ -8,6 +8,9 @@ import Epass.Types.API.Registration
 import EulerHS.Prelude
 
 makeFieldsNoPrefix 'LoginReq
+
 makeFieldsNoPrefix 'InitiateLoginReq
+
 makeFieldsNoPrefix 'ReInitiateLoginReq
+
 makeFieldsNoPrefix 'CreateOrganizationReq

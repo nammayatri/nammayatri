@@ -53,11 +53,9 @@ bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
     (isNothing _OrganizationId)
     (L.throwException $ err400 {errBody = "OrganizationId cannot be empty"})
   let organizationId = fromJust _OrganizationId
-
   when
     (isNothing _count || _count == Just 0)
     (L.throwException $ err400 {errBody = "Count cannot be 0"})
-
   QO.findOrganizationById organizationId
     >>= fromMaybeM400 "Organization does not exists"
   getCaseInfo token req Nothing
@@ -73,7 +71,6 @@ selfFlow token req@API.CreatePassApplicationReq {..} = do
   let customerId = fromJust _CustomerId
       travellerID = fromJust _travellerID
       travellerIDType = mapIdType' <$> _travellerIDType
-
   when
     (customerId /= (PersonId (RegistrationToken._EntityId token)))
     (L.throwException $ err400 {errBody = "CustomerId mismatch"})
@@ -85,7 +82,6 @@ sponsorFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _travellerName || isNothing _travellerIDType || isNothing _travellerID)
     (L.throwException $ err400 {errBody = "travellerName, travellerIDType and travellerID cannot be empty"})
-
   let travellerName = fromJust _travellerName
       travellerID = fromJust _travellerID
       travellerIDType = mapIdType' $ fromJust _travellerIDType

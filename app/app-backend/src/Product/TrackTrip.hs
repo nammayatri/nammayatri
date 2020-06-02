@@ -21,6 +21,8 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Products as Products
+import Types.ProductInfo as ProductInfo
+import Types.ProductInfo as ProductInfo
 import Utils.Common (verifyToken)
 
 track :: Maybe Text -> TrackTripReq -> FlowHandler TrackTripRes
@@ -30,15 +32,18 @@ track regToken req = withFlowHandler $ do
       tripId = req ^. #message ^. #id
   prd <- Products.findById $ ProductsId tripId
   ack <-
-    case decodeFromText =<< prd ^. #_info of
+    case decodeFromText =<< (prd ^. #_info) of
       Nothing -> return $ Ack "Error" "No product to track"
-      Just (tracker :: Tracker) -> do
-        let gTripId = tracker ^. #trip ^. #id
-        gatewayUrl <- Gateway.getBaseUrl
-        eres <- Gateway.track gatewayUrl $ req & (#message . #id) .~ gTripId
-        case eres of
-          Left err -> return $ Ack "Error" (show err)
-          Right _ -> return $ Ack "Successful" "Tracking initiated"
+      Just (info :: ProductInfo) -> do
+        case ProductInfo._tracker info of
+          Nothing -> return $ Ack "Error" "No product to track"
+          Just tracker -> do
+            let gTripId = tracker ^. #trip ^. #id
+            gatewayUrl <- Gateway.getBaseUrl
+            eres <- Gateway.track gatewayUrl $ req & (#message . #id) .~ gTripId
+            case eres of
+              Left err -> return $ Ack "Error" (show err)
+              Right _ -> return $ Ack "Successful" "Tracking initiated"
   return $ AckResponse context ack
 
 track_cb :: Maybe Text -> OnTrackTripReq -> FlowHandler OnTrackTripRes
@@ -52,7 +57,6 @@ track_cb apiKey req = withFlowHandler $ do
   let pids = map CaseProduct._productId cp
   products <- Products.findAllByIds pids
   let confirmedProducts = filter (\prd -> Products.CONFIRMED == Products._status prd) products
-
   res <-
     case length confirmedProducts of
       0 -> return $ Right ()
@@ -60,15 +64,15 @@ track_cb apiKey req = withFlowHandler $ do
         let product = head confirmedProducts
         updateTracker product tracking
       _ -> return $ Left "Multiple products confirmed, ambiguous selection"
-
   case res of
     Left err -> return $ AckResponse context (Ack "Error" err)
     Right _ -> return $ AckResponse context (Ack "Successful" "Ok")
 
 updateTracker :: Products.Products -> Tracker -> L.Flow (Either Text ())
 updateTracker product tracker = do
-  let info = product ^. #_info
+  let minfo = decodeFromText =<< product ^. #_info
+  let uInfo = (\info -> info {ProductInfo._tracker = Just tracker}) <$> minfo
   let updatedPrd =
-        product {Products._info = Just $ encodeToText tracker}
+        product {Products._info = Just $ encodeToText uInfo}
   Products.updateMultiple (_getProductsId $ product ^. #_id) updatedPrd
   return $ Right ()

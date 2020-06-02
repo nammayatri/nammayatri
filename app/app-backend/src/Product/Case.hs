@@ -41,7 +41,6 @@ list regToken = withFlowHandler $ do
   person <-
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
-
   Case.findAllByPerson (_getPersonId $ person ^. #_id)
     >>= traverse mapCaseProduct
     >>= return . ListRes

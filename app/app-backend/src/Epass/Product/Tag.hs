@@ -59,13 +59,11 @@ tagEntity :: Maybe RegistrationTokenText -> TagEntityReq -> FlowHandler TagEntit
 tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
   L.logInfo "tagEntity" "In here"
   RegistrationToken {..} <- verifyToken regToken
-
   Tag.findById (TagId _TagId)
     >>= fromMaybeM400 "Invalid Tag id"
   id <- generateGUID
   let createByEntityType = _entityType
       createdById = _EntityId
-
   --TODO add checks for entity
   entityTag <- getEntityTag id createdById createByEntityType
   EntityTag.create entityTag

@@ -21,7 +21,6 @@ main =
   -- writeSwaggerJSON
   --PSGen.main
   runAppBackend
-
 --todoSwagger :: Swagger
 --todoSwagger = toSwagger epassAPIs
 -- & info.title   .~ "Epass API"
