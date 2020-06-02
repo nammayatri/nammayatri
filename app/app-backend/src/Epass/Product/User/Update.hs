@@ -33,12 +33,10 @@ update regToken userId req@UpdateReq {..} = withFlowHandler $ do
   person <-
     Person.findById userId
       >>= fromMaybeM500 "Couldnot find user"
-
   let role = person ^. #_role
   when
     (isJust _status && (role == Person.DRIVER || role == Person.USER))
     (L.throwException $ err500 {errBody = "UNAUTHORIZED"})
-
   let updatedPerson =
         person
           { Person._firstName = _middleName <|> (person ^. #_firstName),
