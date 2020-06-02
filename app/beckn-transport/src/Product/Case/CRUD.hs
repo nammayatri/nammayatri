@@ -73,7 +73,7 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
       "ACCEPTED" -> do
         p <- createProduct c _quote Defaults.localTime orgId
         cp <- createCaseProduct c p
-        notifyGateway c
+        notifyGateway c p
         return c
       "DECLINED" -> return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
@@ -138,13 +138,11 @@ createCaseProduct cs prod = do
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> L.Flow ()
-notifyGateway c = do
+notifyGateway :: Case -> Products -> L.Flow ()
+notifyGateway c p = do
   L.logInfo "notifyGateway" $ show c
-  cps <- CPQ.findAllByCaseId (c ^. #_id)
-  L.logInfo "notifyGateway" $ show cps
-  prods <- PQ.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
-  onSearchPayload <- mkOnSearchPayload c prods
+  L.logInfo "notifyGateway" $ show p
+  onSearchPayload <- mkOnSearchPayload c [p]
   L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch onSearchPayload
   return ()
