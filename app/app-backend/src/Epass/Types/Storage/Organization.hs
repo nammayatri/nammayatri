@@ -1,24 +1,23 @@
-{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Epass.Types.Storage.Organization where
 
 import qualified Beckn.Types.Storage.Location as BTL
-import           Data.Aeson
-import qualified Data.ByteString.Lazy         as BSL
-import           Data.Swagger
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as DT
-import           Data.Time.LocalTime
-import qualified Database.Beam                as B
-import           Database.Beam.Backend.SQL
-import           Database.Beam.MySQL
-import           Epass.Types.App
-import           Epass.Types.Common
-import           EulerHS.Prelude
-import           Servant.API
-import           Servant.Swagger
-
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
+import Data.Swagger
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import Data.Time.LocalTime
+import qualified Database.Beam as B
+import Database.Beam.Backend.SQL
+import Database.Beam.MySQL
+import Epass.Types.App
+import Epass.Types.Common
+import EulerHS.Prelude
+import Servant.API
+import Servant.Swagger
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -37,25 +36,25 @@ instance FromHttpApiData Status where
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data OrganizationT f = Organization
-  { _id           :: B.C f OrganizationId,
-    _name         :: B.C f Text,
-    _gstin        :: B.C f (Maybe Text),
-    _status       :: B.C f Status,
-    _verified     :: B.C f Bool,
+  { _id :: B.C f OrganizationId,
+    _name :: B.C f Text,
+    _gstin :: B.C f (Maybe Text),
+    _status :: B.C f Status,
+    _verified :: B.C f Bool,
     _locationType :: B.C f (Maybe BTL.LocationType),
-    _lat          :: B.C f (Maybe Double),
-    _long         :: B.C f (Maybe Double),
-    _bound        :: B.C f (Maybe Bound),
-    _ward         :: B.C f (Maybe Text),
-    _district     :: B.C f (Maybe Text),
-    _city         :: B.C f Text,
-    _state        :: B.C f Text,
-    _country      :: B.C f Text,
-    _pincode      :: B.C f Int,
-    _address      :: B.C f Text,
-    _info         :: B.C f (Maybe Text),
-    _createdAt    :: B.C f LocalTime,
-    _updatedAt    :: B.C f LocalTime
+    _lat :: B.C f (Maybe Double),
+    _long :: B.C f (Maybe Double),
+    _bound :: B.C f (Maybe Bound),
+    _ward :: B.C f (Maybe Text),
+    _district :: B.C f (Maybe Text),
+    _city :: B.C f Text,
+    _state :: B.C f Text,
+    _country :: B.C f Text,
+    _pincode :: B.C f Int,
+    _address :: B.C f Text,
+    _info :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

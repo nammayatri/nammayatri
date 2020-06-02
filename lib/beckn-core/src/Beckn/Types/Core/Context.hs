@@ -1,9 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+
 module Beckn.Types.Core.Context where
 
+import Data.Generics.Labels
 import Data.Text
 import Data.Time.LocalTime
-import Data.Generics.Labels
 import EulerHS.Prelude
 
 data Context = Context

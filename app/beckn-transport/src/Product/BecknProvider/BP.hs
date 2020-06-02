@@ -275,7 +275,7 @@ mkOnConfirmPayload c prods trackerCase = do
             dummy = ""
           }
   trip <- mkTrip trackerCase
-  service <- GT.mkServiceOffer c prods (Just trip)
+  service <- GT.mkServiceOffer c prods (Just trip) Nothing
   return
     OnConfirmReq
       { context,
@@ -316,7 +316,7 @@ mkOnServiceStatusPayload c prods trackerCase = do
             dummy = ""
           }
   trip <- mapM mkTrip trackerCase
-  service <- GT.mkServiceOffer c prods trip
+  service <- GT.mkServiceOffer c prods trip Nothing
   return
     OnStatusReq
       { context,

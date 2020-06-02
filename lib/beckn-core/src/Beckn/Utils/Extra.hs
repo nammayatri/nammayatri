@@ -22,4 +22,4 @@ isExpired nominal time = do
 
 headMaybe :: [a] -> Maybe a
 headMaybe [] = Nothing
-headMaybe (x: _) = Just x
+headMaybe (x : _) = Just x

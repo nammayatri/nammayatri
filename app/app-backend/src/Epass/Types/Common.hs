@@ -1,30 +1,30 @@
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Epass.Types.Common where
 
-import           Beckn.Types.Storage.Location (LocationType (..))
-import           Data.Aeson
-import qualified Data.Aeson                   as Aeson
-import qualified Data.ByteString.Lazy         as BSL
-import           Data.Default
-import           Data.Swagger
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as DT
-import           Database.Beam.Backend.SQL
-import           Database.Beam.MySQL
-import           Database.Beam.Query          (HasSqlEqualityCheck)
-import           EulerHS.Prelude
-import           Servant
-import           Servant.Swagger
-import           Web.HttpApiData
+import Beckn.Types.Storage.Location (LocationType (..))
+import Data.Aeson
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as BSL
+import Data.Default
+import Data.Swagger
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import Database.Beam.Backend.SQL
+import Database.Beam.MySQL
+import Database.Beam.Query (HasSqlEqualityCheck)
+import EulerHS.Prelude
+import Servant
+import Servant.Swagger
+import Web.HttpApiData
 
 data ErrorResponse = ErrorResponse
-  { status          :: Text,
-    responseCode    :: Text,
+  { status :: Text,
+    responseCode :: Text,
     responseMessage :: Text
   }
   deriving (Show, Generic, ToJSON, ToSchema)
@@ -108,17 +108,17 @@ instance FromHttpApiData PassType where
 --   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data Location = Location
-  { _type     :: LocationType,
-    _lat      :: Maybe Double,
-    _long     :: Maybe Double,
-    _ward     :: Maybe Text,
+  { _type :: LocationType,
+    _lat :: Maybe Double,
+    _long :: Maybe Double,
+    _ward :: Maybe Text,
     _district :: Maybe Text,
-    _city     :: Maybe Text,
-    _state    :: Maybe Text,
-    _country  :: Maybe Text,
-    _pincode  :: Maybe Int,
-    _address  :: Maybe Text,
-    _bound    :: Maybe Bound
+    _city :: Maybe Text,
+    _state :: Maybe Text,
+    _country :: Maybe Text,
+    _pincode :: Maybe Int,
+    _address :: Maybe Text,
+    _bound :: Maybe Bound
   }
   deriving (Show, Generic, ToSchema)
 
@@ -175,7 +175,7 @@ instance FromHttpApiData EntityType where
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data Ack = Ack
-  { _action  :: Text,
+  { _action :: Text,
     _message :: Text
   }
   deriving (Generic, Show, ToSchema)
