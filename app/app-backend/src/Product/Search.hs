@@ -40,14 +40,12 @@ search regToken req = withFlowHandler $ do
   person <-
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
-
   fromLocation <- mkLocation (req ^. #message ^. #origin)
   toLocation <- mkLocation (req ^. #message ^. #destination)
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
-
   gatewayUrl <- Gateway.getBaseUrl
   eres <- Gateway.search gatewayUrl $ req & (#context . #transaction_id) .~ (_getCaseId $ case_ ^. #_id)
   let ack =
@@ -75,11 +73,9 @@ search_cb regToken req = withFlowHandler $ do
       products <- traverse mkProduct items
       let pids = (^. #_id) <$> products
       traverse_ Products.create products
-
       traverse_
         (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
-
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
 

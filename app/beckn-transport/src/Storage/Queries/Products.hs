@@ -124,3 +124,13 @@ findAllByOrgId orgId =
     predicate orgId Storage.Products {..} =
       ( _organizationId ==. (B.val_ orgId)
       )
+
+findAllByIdsOrgId :: Text -> [ProductsId] -> L.Flow [Storage.Products]
+findAllByIdsOrgId orgId ids =
+  DB.findAll dbTable (predicate orgId ids)
+    >>= either DB.throwDBError pure
+  where
+    predicate orgId ids Storage.Products {..} =
+      ( _organizationId ==. (B.val_ orgId)
+          &&. B.in_ _id (B.val_ <$> ids)
+      )

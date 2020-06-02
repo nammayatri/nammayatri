@@ -52,7 +52,6 @@ track_cb apiKey req = withFlowHandler $ do
   let pids = map CaseProduct._productId cp
   products <- Products.findAllByIds pids
   let confirmedProducts = filter (\prd -> Products.CONFIRMED == Products._status prd) products
-
   res <-
     case length confirmedProducts of
       0 -> return $ Right ()
@@ -60,7 +59,6 @@ track_cb apiKey req = withFlowHandler $ do
         let product = head confirmedProducts
         updateTracker product tracking
       _ -> return $ Left "Multiple products confirmed, ambiguous selection"
-
   case res of
     Left err -> return $ AckResponse context (Ack "Error" err)
     Right _ -> return $ AckResponse context (Ack "Successful" "Ok")

@@ -64,7 +64,6 @@ onConfirm regToken req = withFlowHandler $ do
                 { Products._status = Products.CONFIRMED,
                   Products._info = trackerInfo
                 }
-
         QCP.updateStatus pid Products.CONFIRMED
         Products.updateMultiple (_getProductsId pid) uPrd
         return $ Ack "on_confirm" "Ok"
