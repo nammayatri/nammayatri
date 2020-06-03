@@ -56,9 +56,13 @@ list regToken CaseReq {..} = withFlowHandler $ do
         if not (org ^. #_enabled)
           then Case.findAllByTypeStatusTime _limit _offset _type _status now $ fromMaybe now (org ^. #_fromTime)
           else Case.findAllByTypeStatuses _limit _offset _type _status now
-      resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
-      let csIgnoreList = Case._id <$> (CPR._case <$> resList)
-      let finalCaseList = filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
+      finalCaseList <-
+        case _ignoreOffered of
+          True -> do
+            resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
+            let csIgnoreList = Case._id <$> (CPR._case <$> resList)
+            return $ filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
+          False -> return caseList
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> finalCaseList) (Case._toLocationId <$> finalCaseList)
       return $ catMaybes $ joinByIds locList <$> finalCaseList
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
