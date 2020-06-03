@@ -1,9 +1,9 @@
 module Types.API.Registration where
 
-import Beckn.Types.Storage.Person
-import Data.Swagger
 import Beckn.Types.Common
+import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
+import Data.Swagger
 import EulerHS.Prelude
 import Servant.Swagger
 

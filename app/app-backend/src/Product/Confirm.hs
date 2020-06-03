@@ -11,7 +11,7 @@ import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (encodeToText, withFlowHandler)
+import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -27,6 +27,7 @@ import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Products as Products
 import qualified Types.API.Confirm as API
 import Types.App
+import qualified Types.ProductInfo as Products
 import Utils.Common (verifyToken)
 import Utils.Routes
 
@@ -58,11 +59,12 @@ onConfirm regToken req = withFlowHandler $ do
       1 -> do
         let pid = ProductsId (head selectedItems)
             tracker = (flip Track.Tracker Nothing) <$> trip
-            trackerInfo = encodeToText <$> tracker
         prd <- Products.findById pid
+        let mprdInfo = decodeFromText =<< (prd ^. #_info)
+        let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
         let uPrd =
               prd
-                { Products._info = trackerInfo
+                { Products._info = encodeToText <$> uInfo
                 }
         caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
         QCP.updateStatus pid SCP.CONFIRMED

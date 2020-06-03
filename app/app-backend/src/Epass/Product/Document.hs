@@ -1,5 +1,6 @@
 module Epass.Product.Document where
 
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Digest.Pure.MD5
@@ -17,7 +18,6 @@ import Epass.Types.Storage.Document as SD
 import Epass.Types.Storage.EntityDocument as SED
 import Epass.Types.Storage.EntityDocument
 import Epass.Types.Storage.PassApplication as SPA
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Epass.Types.Storage.User as SU
 import Epass.Utils.Common
 import Epass.Utils.Extra

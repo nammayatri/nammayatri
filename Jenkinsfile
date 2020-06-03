@@ -37,6 +37,7 @@ pipeline {
       when {
         anyOf {
           branch "master"
+          branch "staging"
           changeset "Jenkinsfile"
           expression { return hasChanged("Jenkinsfile") }
           changeset "Dockerfile*"
@@ -64,8 +65,13 @@ pipeline {
           }
         }
 
-        stage('Deploy') {
-          when { branch "master" }
+        stage('Deployment stage') {
+          when {
+            anyOf {
+              branch "master"
+              branch "staging"
+            }
+          }
 
           stages {
 
@@ -75,12 +81,13 @@ pipeline {
               }
             }
 
-            stage('Deploy to staging') {
+            stage('Deploy') {
               environment {
                   BUILD_VERSION="""${sh(
                         returnStdout: true,
                         script: 'git rev-parse --short HEAD'
                     )}"""
+                  DEPLOY_VARIANT="${env.BRANCH_NAME}"
               }
 
               steps {
@@ -105,6 +112,10 @@ pipeline {
 // i.e., on the first build run, it doesn't find any file changes.
 // Work around this using `git diff`
 def boolean hasChanged(String glob) {
+  // Run git checks only for PR's
+  if (!env.CHANGE_TARGET) {
+    return true
+  }
   // `changeset` also remembers the file changes between subsequent builds
   // This cannot be emulated using this work around, hence we only run this on first build run
   if (env.BUILD_NUMBER != "1") {

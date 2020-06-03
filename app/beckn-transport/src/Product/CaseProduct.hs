@@ -33,26 +33,18 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      prodList <- PQ.findAllByOrgId orgId
-      caseProdList <- DB.findAllByStatusIds _limit _offset _status (Product._id <$> prodList)
-      caseList <- CQ.findAllByIdType (Storage._caseId <$> caseProdList) Case.RIDEBOOK
-      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-      return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
+      result <- DB.caseProductJoin _limit _offset Case.RIDEBOOK orgId _status
+      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
+      return $ buildResponse locList <$> result
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
-    joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> Storage.CaseProduct -> Maybe CaseProductRes
-    joinIds prodList caseList locList caseProd =
-      case find (\x -> (Storage._caseId caseProd) == Case._id x) caseList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
-      where
-        buildResponse k = (prepare locList caseProd k) <$> find (\z -> (Storage._productId caseProd) == Product._id z) prodList
-        prepare locList caseProd cs prod =
-          CaseProductRes
-            { _case = cs,
-              _product = prod,
-              _caseProduct = caseProd,
-              _fromLocation = find (\x -> (Case._fromLocationId cs == _getLocationId (Loc._id x))) locList,
-              _toLocation = find (\x -> (Case._toLocationId cs == _getLocationId (Loc._id x))) locList
-            }
+    buildResponse :: [Loc.Location] -> CaseProductRes -> CaseProductRes
+    buildResponse locList res =
+      CaseProductRes
+        { _case = res ^. #_case,
+          _product = res ^. #_product,
+          _caseProduct = res ^. #_caseProduct,
+          _fromLocation = find (\x -> (Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList,
+          _toLocation = find (\x -> (Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList
+        }

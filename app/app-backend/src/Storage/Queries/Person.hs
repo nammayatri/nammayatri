@@ -2,19 +2,19 @@
 
 module Storage.Queries.Person where
 
-import           Beckn.Types.App
+import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
-import           Data.Time
-import           Database.Beam              ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam              as B
-import           Epass.Types.Common
-import           Epass.Utils.Common
-import           Epass.Utils.Extra
-import qualified EulerHS.Language           as L
-import           EulerHS.Prelude            hiding (id)
-import qualified EulerHS.Types              as T
-import qualified Storage.Queries            as DB
-import qualified Types.Storage.DB           as DB
+import Data.Time
+import Database.Beam ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam as B
+import Epass.Types.Common
+import Epass.Utils.Common
+import Epass.Utils.Extra
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
+import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.appDb
