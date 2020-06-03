@@ -39,7 +39,6 @@ list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
       =<< Person.findById (PersonId $ SR._EntityId reg)
   when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER) $ do
     L.throwException $ err400 {errBody = "UNAUTHORIZED_USER"}
-
   getUsers limitM offsetM locateM roleM locate user
 
 getUsers ::

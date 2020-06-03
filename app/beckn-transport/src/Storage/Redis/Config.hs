@@ -54,7 +54,6 @@ prepareRedisConnections = do
   let kvDBConfig' = case mConfig of
         Nothing -> kvDBConfig
         Just config -> config
-
   kvConn <- L.getOrInitKVDBConn kvDBConfig'
   throwOnFailedWithLog
     kvConn

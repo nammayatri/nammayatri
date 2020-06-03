@@ -3,6 +3,7 @@ module Utils.Common where
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Utils.Extra as Utils
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Clock
 import Data.Time.LocalTime
@@ -10,6 +11,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified Test.RandomStrings as RS
 
 verifyToken :: Maybe Text -> L.Flow SR.RegistrationToken
 verifyToken (Just token) =
@@ -45,3 +47,6 @@ getCurrTime = L.runIO $ do
   utc <- getCurrentTime
   timezone <- getTimeZone utc
   pure $ utcToLocalTime timezone utc
+
+generateShortId :: L.Flow Text
+generateShortId = T.pack <$> (L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
