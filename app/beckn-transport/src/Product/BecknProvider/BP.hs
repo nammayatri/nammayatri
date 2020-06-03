@@ -423,23 +423,30 @@ mkCancelRidePayload prodId = do
             timestamp = currTime,
             dummy = ""
           }
-  let tripObj = mkCancelTripObj prodId
+  tripObj <- mkCancelTripObj prodId
   return
     OnCancelReq
       { context,
         message = tripObj
       }
 
-mkCancelTripObj :: Text -> Trip
-mkCancelTripObj prodId =
-  Trip
-    { id = prodId,
-      vehicle = Nothing,
-      driver = TripDriver Nothing Nothing,
-      travellers = [],
-      tracking = Tracking "" Nothing,
-      corridor_type = "",
-      state = "",
-      fare = Nothing,
-      route = Nothing
-    }
+mkCancelTripObj :: Text -> L.Flow Trip
+mkCancelTripObj prodId = do
+  prod <- Product.findById (ProductsId prodId)
+  driver <- mapM mkDriverInfo $ prod ^. #_assignedTo
+  vehicle <- join <$> mapM mkVehicleInfo (prod ^. #_udf3)
+  return $
+    Trip
+      { id = prodId,
+        vehicle = vehicle,
+        driver = TripDriver
+                   { persona = driver,
+                     rating = Nothing
+                   },
+        travellers = [],
+        tracking = Tracking "" Nothing,
+        corridor_type = "",
+        state = show $ prod ^. #_status,
+        fare = Just $ GT.mkPrice prod,
+        route = Nothing
+      }
