@@ -91,8 +91,8 @@ updateInfo productId driverInfo vehicleInfo = do
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
-  parentCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
-  trackerCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.RIDEBOOK)
+  trackerCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
+  parentCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.RIDEBOOK)
   case k of
     Product.CANCELLED -> do
       DB.updateStatus productId k
