@@ -1,7 +1,19 @@
 # beckn
+Beckn is an open protocol that enables location-aware, local commerce across industries.
 
-## This contains two libraries namely (beckn-epass, beckn-core)
-* `beckn-core` is the common library where the API types, unified data models will be there
+More about beckn:
+* [whitepaper](https://beckn.org/wp-content/uploads/2020/04/WhatIsBeckn.pdf)
+* [mobility](https://beckn.org/wp-content/uploads/2020/04/ImaginingMobilityWithBeckn.pdf)
+* [spec](https://github.com/beckn/protocol-specifications/)
+* [website](https://beckn.org/)
+
+## This contains two modules
+* `app-backend` - frontend facing APIs (BA), has more end-user specific implementations
+* `beckn-transport` - beckn provider (BP), implmenting mobility spec
+* `epass-backend` - e-pass for travelling, has consumer and approver flows
+
+## Shared libraries
+* `beckn-core` - is the common library where the API types, unified data models will be there
 
 ## How to run Beckn backends in a dev environment:
 
