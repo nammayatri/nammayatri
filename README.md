@@ -5,17 +5,34 @@
 
 ## How to run Beckn backends in a dev environment:
 
-#### Compile the project with
-  ```stack build```
+### Setup
 
-#### Run the databases inside Docker
+Set up your development environment
 
-```cd .docker && docker-compose up```
+```
+stack build
+```
 
-#### Start the app-backend server
+### Compile the project with
 
-```stack exec app-backend-exe```
+```
+stack build
+```
 
-#### Start the transporter server
+### Run the databases inside Docker
 
-```BECKN_GATEWAY_BASE_URL="localhost" BECKN_GATEWAY_PORT="8013" stack exec beckn-transport-exe```
+```
+cd dev && docker-compose up
+```
+
+### Start the app-backend server
+
+```
+stack exec app-backend-exe
+```
+
+### Start the transporter server
+
+```
+BECKN_GATEWAY_BASE_URL="localhost" BECKN_GATEWAY_PORT="8013" stack exec beckn-transport-exe
+```
