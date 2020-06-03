@@ -49,10 +49,16 @@ onCancel req = withFlowHandler $ do
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
   CaseProduct.updateStatus productId Products.CANCELLED
   let caseId = cpProducts ^. #_caseId
-  cpCase <- CaseProduct.findAllByCaseId caseId
-
-  if length cpCase == 1
-    then Case.updateStatus caseId Case.CLOSED -- Only update case status if it has only one product
+  arrCPCase <- CaseProduct.findAllByCaseId caseId
+  let arrTerminalCP =
+        filter
+          ( \cp -> do
+              let status = cp ^. #_status
+              status == Products.COMPLETED || status == Products.OUTOFSTOCK || status == Products.CANCELLED || status == Products.INVALID
+          )
+          arrCPCase
+  if length arrTerminalCP == length arrCPCase
+    then Case.updateStatus caseId Case.CLOSED
     else return ()
 
   mkAckResponse txnId "cancel"
