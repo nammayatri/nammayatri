@@ -4,6 +4,7 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
+import Beckn.Types.API.Cancel
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -41,6 +42,17 @@ onConfirm req = do
   whenLeft res $ \err ->
     L.logError "error occurred while sending onConfirm Callback: " (show err)
   return $ first show res
+
+onCancel :: OnCancelReq -> L.Flow (Either Text ())
+onCancel req = do
+  url <- getBaseUrl
+  res <- L.callAPI url $ API.onCancel req
+  whenRight res $ \_ ->
+    L.logInfo "OnCancel" $ "OnCancel callback successfully delivered"
+  whenLeft res $ \err ->
+    L.logError "error occurred while sending onCancel Callback: " (show err)
+  return $ first show res
+
 
 onStatus :: OnStatusReq -> L.Flow (Either Text ())
 onStatus req = do

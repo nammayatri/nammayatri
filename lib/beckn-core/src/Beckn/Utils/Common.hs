@@ -37,7 +37,10 @@ fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 mkAckResponse :: Text -> Text -> L.Flow AckResponse
-mkAckResponse txnId action = do
+mkAckResponse txnId action = mkAckResponse' txnId action "OK"
+
+mkAckResponse' :: Text -> Text -> Text -> L.Flow AckResponse
+mkAckResponse' txnId action message = do
   (currTime :: LocalTime) <- getCurrTime
   return
     AckResponse
@@ -54,7 +57,7 @@ mkAckResponse txnId action = do
         _message =
           Ack
             { _action = action,
-              _message = ""
+              _message = message
             }
       }
 

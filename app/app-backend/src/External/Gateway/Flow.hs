@@ -1,5 +1,6 @@
 module External.Gateway.Flow where
 
+import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
 import qualified Beckn.Types.API.Track as Track
@@ -44,6 +45,14 @@ track url req = do
   case res of
     Left err -> L.logError "error occurred while track trip: " (show err)
     Right _ -> L.logInfo "Track" "Track successfully delivered"
+  return $ first show res
+
+cancel :: BaseUrl -> Cancel.CancelReq -> L.Flow (Either Text ())
+cancel url req = do
+  res <- L.callAPI url $ API.cancel req
+  case res of
+    Left err -> L.logError "error occurred while cancel trip: " (show err)
+    Right _ -> L.logInfo "Cancel" "Cancel successfully delivered"
   return $ first show res
 
 getBaseUrl :: L.Flow BaseUrl

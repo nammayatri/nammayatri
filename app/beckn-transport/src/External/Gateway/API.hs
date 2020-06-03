@@ -2,6 +2,7 @@ module External.Gateway.API where
 
 import Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
+import Beckn.Types.API.Cancel
 import Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
 import EulerHS.Prelude
@@ -46,6 +47,18 @@ confirmAPI = Proxy
 
 onConfirm req =
   void $ ET.client confirmAPI req
+
+type CancelAPI =
+  "on_cancel"
+    :> "services"
+    :> ReqBody '[JSON] OnCancelReq
+    :> Post '[JSON] OnCancelRes
+
+cancelAPI :: Proxy CancelAPI
+cancelAPI = Proxy
+
+onCancel req =
+  void $ ET.client cancelAPI req
 
 type StatusAPI =
   "on_status"
