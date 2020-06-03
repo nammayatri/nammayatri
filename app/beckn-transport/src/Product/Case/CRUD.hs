@@ -56,8 +56,7 @@ list regToken CaseReq {..} = withFlowHandler $ do
         if not (org ^. #_enabled)
           then Case.findAllByTypeStatusTime _limit _offset _type _status now $ fromMaybe now (org ^. #_fromTime)
           else Case.findAllByTypeStatuses _limit _offset _type _status now
-
-      resList <- CPQ.caseProductJoin 100 0 _type orgId []
+      resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
       let csIgnoreList = Case._id <$> (CPR._case <$> resList)
       let finalCaseList = filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> finalCaseList) (Case._toLocationId <$> finalCaseList)

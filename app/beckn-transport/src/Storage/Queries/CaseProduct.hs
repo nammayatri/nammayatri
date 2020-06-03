@@ -134,3 +134,39 @@ caseProductJoin _limit _offset csType orgId status = do
           CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
             B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)
+
+caseProductJoinWithoutLimits :: Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
+caseProductJoinWithoutLimits csType orgId status = do
+  joinedValues <-
+    DB.findAllByJoinWithoutLimits
+      orderByDesc
+      (joinQuery csTable prodTable dbTable (pred1 csType) (pred2 orgId) (pred3 status))
+      >>= either DB.throwDBError pure
+  return $ mkJoinRes <$> joinedValues
+  where
+    orderByDesc (_, _, Storage.CaseProduct {..}) = B.desc_ _createdAt
+    pred1 csType Case.Case {..} =
+      ( _type ==. (B.val_ csType)
+      )
+    pred2 orgId Product.Products {..} =
+      ( _organizationId ==. (B.val_ orgId)
+      )
+    pred3 status Storage.CaseProduct {..} =
+      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
+      )
+    mkJoinRes (cs, pr, cpr) =
+      CaseProductRes
+        { _case = cs,
+          _product = pr,
+          _caseProduct = cpr,
+          _fromLocation = Nothing,
+          _toLocation = Nothing
+        }
+    joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+      i <- B.filter_ pred1 $ B.all_ tbl1
+      j <- B.filter_ pred2 $ B.all_ tbl2
+      k <- B.filter_ pred3 $ B.join_ tbl3 $
+        \line ->
+          CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+            B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
+      pure (i, j, k)
