@@ -48,21 +48,21 @@ list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
-  let orgId = (person ^. #_organizationId)
   now <- getCurrentTimeUTC
-  resList <- CPQ.caseProductJoin 100 0 _type (fromMaybe "" orgId) []
-  let csIgnoreList = Case._id <$> (CPR._case <$> resList)
-  caseList <-
-    case orgId of
-      Just k -> do
-        org <- OQ.findOrganizationById (OrganizationId k)
+  case (person ^. #_organizationId) of
+    Just orgId -> do
+      org <- OQ.findOrganizationById (OrganizationId orgId)
+      caseList <-
         if not (org ^. #_enabled)
-          then  Case.findAllByTypeStatusTime _limit _offset _type _status now $ fromMaybe now (org ^. #_fromTime)
+          then Case.findAllByTypeStatusTime _limit _offset _type _status now $ fromMaybe now (org ^. #_fromTime)
           else Case.findAllByTypeStatuses _limit _offset _type _status now
-      Nothing -> Case.findAllByTypeStatuses _limit _offset _type _status now
-  let finalCaseList = filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
-  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> finalCaseList) (Case._toLocationId <$> finalCaseList)
-  return $ catMaybes $ joinByIds locList <$> finalCaseList
+
+      resList <- CPQ.caseProductJoin 100 0 _type orgId []
+      let csIgnoreList = Case._id <$> (CPR._case <$> resList)
+      let finalCaseList = filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
+      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> finalCaseList) (Case._toLocationId <$> finalCaseList)
+      return $ catMaybes $ joinByIds locList <$> finalCaseList
+    Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
   where
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
@@ -76,6 +76,7 @@ list regToken CaseReq {..} = withFlowHandler $ do
               _fromLocation = from,
               _toLocation = to
             }
+
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
