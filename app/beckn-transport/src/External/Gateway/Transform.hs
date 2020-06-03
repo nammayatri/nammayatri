@@ -3,19 +3,23 @@
 module External.Gateway.Transform where
 
 import Beckn.Types.App
+import Beckn.Types.Core.Api
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
+import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
+import Beckn.Types.Core.Provider
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Products as Product
@@ -26,6 +30,7 @@ import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Utils.Defaults as Defaults
 
 mkCatalog :: [Products] -> Catalog
 mkCatalog prods =
@@ -63,8 +68,8 @@ mkPrice prod =
       _tax = Nothing
     }
 
-mkServiceOffer :: Case -> [Products] -> Maybe Trip -> L.Flow Service
-mkServiceOffer c prods trip =
+mkServiceOffer :: Case -> [Products] -> Maybe Trip -> Maybe Organization -> L.Flow Service
+mkServiceOffer c prods trip orgInfo =
   let x =
         Service
           { _id = _getCaseId $ c ^. #_id,
@@ -73,7 +78,7 @@ mkServiceOffer c prods trip =
             _selected_items = catMaybes $ (\x -> if x ^. #_status == Product.CONFIRMED then Just (_getProductsId $ x ^. #_id) else Nothing) <$> prods,
             _fare_product = Nothing,
             _offers = [],
-            _provider = Nothing,
+            _provider = mkProvider <$> orgInfo,
             _trip = trip,
             _policies = [],
             _billing_address = Nothing
@@ -146,4 +151,23 @@ mkVehicleObj vehicle =
             { category = maybe "COMMERCIAL" show (vehicle ^. #_registrationCategory),
               number = vehicle ^. #_registrationNo
             }
+    }
+
+mkProvider :: Organization -> Provider
+mkProvider orgInfo =
+  Provider
+    { _id = _getOrganizationId $ orgInfo ^. #_id,
+      _name = orgInfo ^. #_name,
+      _website = fromMaybe "" (orgInfo ^. #_callbackUrl),
+      _contact = mkContact (orgInfo ^. #_mobileNumber),
+      _api = Api "" Defaults.localTime
+    }
+
+mkContact :: Maybe Text -> Contact
+mkContact mobileNumber =
+  Contact
+    { email = Nothing,
+      mobile = Just (Mobile Nothing mobileNumber),
+      landline = Nothing,
+      ivr = []
     }

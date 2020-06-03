@@ -40,19 +40,15 @@ listLocation ::
 listLocation regToken offset limit distinctBy filterByT filterBy =
   withFlowHandler $ do
     verifyToken regToken
-
     -- :TODO move the nubBy function to beam (or check nub suits )
     locations <-
       List.nubBy (\l1 l2 -> getF l1 l2 distinctBy)
         <$> (DB.findByStOrDistrict offset limit filterByT filterBy)
     let locIds = (locationId <$> locations)
-
     -- Add Blacklist Information
     blacklist <- DB.findAllByEntityId LOCATION locIds
-
     -- Get All tags for the location
     locationTags <- ETag.findAllById (EntityTagId <$> locIds)
-
     tags <- Tag.findAllById (tagId <$> locationTags)
     return
       ListLocationRes
