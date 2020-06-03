@@ -11,7 +11,7 @@ data CaseReq = CaseReq
     _limit :: Integer,
     _offset :: Integer,
     _status :: [CaseStatus],
-    _ignoreOffered :: Bool
+    _ignoreOffered :: Maybe Bool
   }
   deriving (Show, Generic, ToSchema)
 
