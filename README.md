@@ -23,7 +23,7 @@ More about beckn:
 Set up your development environment
 
 ```
-stack build
+./dev/setup.sh
 ```
 
 ### Compile the project with
