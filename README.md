@@ -20,7 +20,7 @@ More about beckn:
 
 ### Setup
 
-Set up your development environment
+Set up your development environment, from project root run:
 
 ```
 ./dev/setup.sh
@@ -32,7 +32,7 @@ Set up your development environment
 stack build
 ```
 
-### Run the databases inside Docker
+### Run the databases and redis inside Docker
 
 ```
 cd dev && docker-compose up
