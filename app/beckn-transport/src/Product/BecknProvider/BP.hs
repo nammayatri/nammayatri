@@ -417,7 +417,7 @@ mkCancelRidePayload prodId = do
         Context
           { domain = "MOBILITY",
             action = "on_cancel",
-            version = Just $ "0.1",
+            version = Just $ "0.7.1",
             transaction_id = "",
             message_id = Nothing,
             timestamp = currTime,
