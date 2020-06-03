@@ -19,17 +19,27 @@ import Utils.Common (verifyToken)
 cancel :: Maybe RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
   verifyToken regToken
-  let context = req ^. #context
   let productId = req ^. #message ^. #id
   cp <- CaseProduct.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple caseproducts exists for one product
-  baseUrl <- Gateway.getBaseUrl
-  eres <- Gateway.cancel baseUrl (CancelReq context (IdObject productId))
-  let ack =
-        case eres of
-          Left err -> Ack "confirm" ("Err: " <> show err)
-          Right _ -> Ack "confirm" "Ok"
-
-  return $ CancelRes context ack
+  case cp ^. #_status of
+    Products.CONFIRMED -> sendCancelReq productId
+    Products.VALID -> sendCancelReq productId
+    Products.INPROGRESS -> sendCancelReq productId
+    _ -> errResp
+  where
+    sendCancelReq productId = do
+      let context = req ^. #context
+      baseUrl <- Gateway.getBaseUrl
+      eres <- Gateway.cancel baseUrl (CancelReq context (IdObject productId))
+      let ack =
+            case eres of
+              Left err -> Ack "cancel" ("Err: " <> show err)
+              Right _ -> Ack "cancel" "Ok"
+      return $ CancelRes context ack
+    errResp = do
+      let context = req ^. #context
+      let ack = Ack "cancel" ("Err: Cannot cancel ride")
+      return $ CancelRes context ack
 
 onCancel :: OnCancelReq -> FlowHandler OnCancelRes
 onCancel req = withFlowHandler $ do
