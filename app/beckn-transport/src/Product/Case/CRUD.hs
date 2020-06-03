@@ -18,6 +18,7 @@ import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
@@ -33,6 +34,7 @@ import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Organization as OQ
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
@@ -42,8 +44,17 @@ import qualified Utils.Defaults as Defaults
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  now <- getCurrTime
-  caseList <- Case.findAllByTypeStatuses _limit _offset _type _status now
+  person <- QP.findPersonById (PersonId _EntityId)
+  let orgId = (person ^. #_organizationId)
+  now <- getCurrentTimeUTC
+  caseList <-
+    case orgId of
+      Just k -> do
+        org <- OQ.findOrganizationById (OrganizationId k)
+        if not (org ^. #_enabled)
+          then  Case.findAllByTypeStatusTime _limit _offset _type _status now $ fromMaybe now (org ^. #_fromTime)
+          else Case.findAllByTypeStatuses _limit _offset _type _status now
+      Nothing -> Case.findAllByTypeStatuses _limit _offset _type _status now
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
   where

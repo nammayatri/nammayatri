@@ -99,6 +99,7 @@ updateOrganizationRec org = do
           _description <-. B.val_ (Storage._description org),
           _headCount <-. B.val_ (Storage._headCount org),
           _enabled <-. B.val_ (Storage._enabled org),
-          _updatedAt <-. B.val_ (Storage._updatedAt org)
+          _updatedAt <-. B.val_ (Storage._updatedAt org),
+          _fromTime <-. B.val_ (Storage._fromTime org)
         ]
     predicate id Storage.Organization {..} = _id ==. B.val_ id
