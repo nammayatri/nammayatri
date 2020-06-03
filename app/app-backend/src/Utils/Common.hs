@@ -1,6 +1,7 @@
 module Utils.Common where
 
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Utils.Extra as Utils
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Time as DT
 import Data.Time.Clock
@@ -35,7 +36,7 @@ fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 isExpired :: DT.NominalDiffTime -> LocalTime -> L.Flow Bool
 isExpired nominal time = do
-  now <- getCurrentTimeUTC
+  now <- Utils.getCurrentTimeUTC
   let addedLocalTime = DT.addLocalTime nominal time
   return $ now > addedLocalTime
 

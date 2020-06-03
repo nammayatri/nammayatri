@@ -2,6 +2,7 @@ module Storage.Queries.Organization where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as Storage
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
