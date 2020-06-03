@@ -84,15 +84,18 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
   case (SP._organizationId person) of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
-        p <- createProduct c _quote Defaults.localTime orgId
+        p <- createProduct c _quote Defaults.localTime orgId Product.INSTOCK
         cp <- createCaseProduct c p
         notifyGateway c p orgId
         return c
-      "DECLINED" -> return c
+      "DECLINED" -> do
+        p <- createProduct c _quote Defaults.localTime orgId Product.OUTOFSTOCK
+        cp <- createCaseProduct c p
+        return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Double -> LocalTime -> Text -> L.Flow Products
-createProduct cs price ctime orgId = do
+createProduct :: Case -> Maybe Double -> LocalTime -> Text -> Product.ProductsStatus -> L.Flow Products
+createProduct cs price ctime orgId status = do
   prodId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrTime
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -108,7 +111,7 @@ createProduct cs price ctime orgId = do
           _description = Case._description cs,
           _industry = Case._industry cs,
           _type = RIDE,
-          _status = Product.INSTOCK,
+          _status = status,
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
@@ -145,7 +148,7 @@ createCaseProduct cs prod = do
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status = Product.INSTOCK,
+          _status =  Product._status prod,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime
