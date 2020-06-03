@@ -51,7 +51,7 @@ updateStatus ::
   Storage.ProductsStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -79,7 +79,7 @@ updateInfo prodId info = do
 
 updateVeh :: ProductsId -> Maybe Text -> L.Flow ()
 updateVeh prodId vehId = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause vehId currTime)
@@ -95,7 +95,7 @@ updateVeh prodId vehId = do
 
 updateDvr :: ProductsId -> Maybe Text -> L.Flow ()
 updateDvr prodId driverId = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause driverId currTime)

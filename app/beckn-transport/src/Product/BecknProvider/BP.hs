@@ -250,7 +250,7 @@ notifyGateway c prodId trackerCase = do
 
 mkOnConfirmPayload :: Case -> [Products] -> Case -> L.Flow OnConfirmReq
 mkOnConfirmPayload c prods trackerCase = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -291,7 +291,7 @@ notifyServiceStatusToGateway c prods trackerCase = do
 
 mkOnServiceStatusPayload :: Case -> [Products] -> Maybe Case -> L.Flow OnStatusReq
 mkOnServiceStatusPayload c prods trackerCase = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -330,7 +330,7 @@ notifyTripUrlToGateway case_ parentCase = do
 
 mkOnTrackTripPayload :: Case -> Case -> L.Flow OnTrackTripReq
 mkOnTrackTripPayload case_ pCase = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",

@@ -42,7 +42,7 @@ import qualified Utils.Defaults as Defaults
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   caseList <- Case.findAllByTypeStatuses _limit _offset _type _status now
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
@@ -81,7 +81,7 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
 createProduct :: Case -> Maybe Double -> LocalTime -> Text -> L.Flow Products
 createProduct cs price ctime orgId = do
   prodId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let product = getProduct prodId price cs ctime currTime orgId shortId
   PQ.create product
@@ -119,7 +119,7 @@ createProduct cs price ctime orgId = do
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
   cpId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   let caseProd = getCaseProd cpId cs prod currTime
   CPQ.create caseProd
   return $ caseProd
@@ -151,7 +151,7 @@ notifyGateway c = do
 
 mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
 mkOnSearchPayload c prods = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",

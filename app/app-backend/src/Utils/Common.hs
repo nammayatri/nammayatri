@@ -35,7 +35,7 @@ fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 isExpired :: DT.NominalDiffTime -> LocalTime -> L.Flow Bool
 isExpired nominal time = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   let addedLocalTime = DT.addLocalTime nominal time
   return $ now > addedLocalTime
 

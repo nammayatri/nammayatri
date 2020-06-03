@@ -101,7 +101,7 @@ update ::
   Maybe Text ->
   L.Flow ()
 update id statusM nameM emailM roleM identTypeM identM = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause statusM nameM emailM roleM identM identTypeM currTime)

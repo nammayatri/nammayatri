@@ -68,7 +68,7 @@ updateStatus ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)

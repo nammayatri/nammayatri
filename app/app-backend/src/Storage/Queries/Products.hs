@@ -52,7 +52,7 @@ updateStatus ::
   Storage.ProductsStatus ->
   L.Flow ()
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -68,7 +68,7 @@ updateStatus id status = do
 
 updateMultiple :: Text -> Storage.Products -> L.Flow ()
 updateMultiple id prd@Storage.Products {..} = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   DB.update dbTable (setClause currTime prd) (predicate id)
     >>= either DB.throwDBError pure
   where

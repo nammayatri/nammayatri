@@ -60,7 +60,7 @@ updateStatus ::
   Storage.CaseProductStatus ->
   L.Flow (T.DBResult ())
 updateStatus caseId productId status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)

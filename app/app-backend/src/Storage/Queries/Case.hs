@@ -58,7 +58,7 @@ findAllByPerson perId =
 
 updateStatus :: CaseId -> Storage.CaseStatus -> L.Flow ()
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -74,7 +74,7 @@ updateStatus id status = do
 
 updateStatusAndUdfs :: CaseId -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow ()
 updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status udf1 udf2 udf3 udf4 udf5 currTime)

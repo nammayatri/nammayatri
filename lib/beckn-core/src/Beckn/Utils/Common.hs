@@ -38,7 +38,7 @@ fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 mkAckResponse :: Text -> Text -> L.Flow AckResponse
 mkAckResponse txnId action = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   return
     AckResponse
       { _context =

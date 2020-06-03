@@ -17,6 +17,7 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -85,7 +86,7 @@ search_cb regToken req = withFlowHandler $ do
 
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
 mkCase req userId from to = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   let intent = req ^. #message
       context = req ^. #context
@@ -122,7 +123,7 @@ mkCase req userId from to = do
 
 mkLocation :: Core.Location -> L.Flow Location.Location
 mkLocation loc = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   let mgps = loc ^. #_gps
   return $
@@ -145,7 +146,7 @@ mkLocation loc = do
 
 mkProduct :: Core.Item -> L.Flow Products.Products
 mkProduct item = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transpoter and app-backend
@@ -182,7 +183,7 @@ mkCaseProduct :: CaseId -> PersonId -> Products.Products -> L.Flow CaseProduct.C
 mkCaseProduct caseId personId product = do
   let productId = product ^. #_id
       price = product ^. #_price
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   return $
     CaseProduct.CaseProduct
