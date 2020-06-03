@@ -1,6 +1,7 @@
 module Epass.Product.Tag where
 
 import Beckn.Types.Storage.RegistrationToken
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Epass.Storage.Queries.EntityTag as EntityTag
 import Epass.Storage.Queries.Tag as Tag
 import Epass.Types.API.Tag
@@ -27,7 +28,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
     >>= return . CreateRes
   where
     getTag id createdById createByEntityType = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return $
         Tag.Tag
           { _id = id,
@@ -72,7 +73,7 @@ tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
     >>= return . TagEntityRes
   where
     getEntityTag id createdById createByEntityType = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return $
         EntityTag.EntityTag
           { _id = id,

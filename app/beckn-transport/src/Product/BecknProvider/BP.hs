@@ -2,10 +2,10 @@
 
 module Product.BecknProvider.BP where
 
+import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
-import Beckn.Types.API.Cancel
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.App
@@ -263,7 +263,7 @@ notifyGateway c prodId trackerCase = do
 
 mkOnConfirmPayload :: Case -> [Products] -> Case -> L.Flow OnConfirmReq
 mkOnConfirmPayload c prods trackerCase = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -304,7 +304,7 @@ notifyServiceStatusToGateway c prods trackerCase = do
 
 mkOnServiceStatusPayload :: Case -> [Products] -> Maybe Case -> L.Flow OnStatusReq
 mkOnServiceStatusPayload c prods trackerCase = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -341,7 +341,6 @@ notifyTripUrlToGateway case_ parentCase = do
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-
 notifyCancelToGateway :: Text -> L.Flow ()
 notifyCancelToGateway prodId = do
   onCancelPayload <- mkCancelRidePayload prodId
@@ -351,7 +350,7 @@ notifyCancelToGateway prodId = do
 
 mkOnTrackTripPayload :: Case -> Case -> L.Flow OnTrackTripReq
 mkOnTrackTripPayload case_ pCase = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -412,7 +411,7 @@ mkVehicleInfo vehicleId = do
 
 mkCancelRidePayload :: Text -> L.Flow OnCancelReq
 mkCancelRidePayload prodId = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -439,10 +438,11 @@ mkCancelTripObj prodId = do
     Trip
       { id = prodId,
         vehicle = vehicle,
-        driver = TripDriver
-                   { persona = driver,
-                     rating = Nothing
-                   },
+        driver =
+          TripDriver
+            { persona = driver,
+              rating = Nothing
+            },
         travellers = [],
         tracking = Tracking "" Nothing,
         corridor_type = "",

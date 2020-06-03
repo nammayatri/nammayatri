@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -68,7 +69,7 @@ updateStatus ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -86,7 +87,7 @@ updateStatusByIds ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatusByIds ids status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -98,7 +99,6 @@ updateStatusByIds ids status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
-
 
 findByIdType :: [CaseId] -> Storage.CaseType -> L.Flow Storage.Case
 findByIdType ids type_ =

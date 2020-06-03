@@ -23,7 +23,6 @@ import qualified Epass.Types.Storage.EntityTag as ET
 import Epass.Types.Storage.Location as L
 import Epass.Types.Storage.PassApplication
 import Epass.Types.Storage.Tag as T
-import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L

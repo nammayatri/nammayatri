@@ -104,7 +104,7 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
 createProduct :: Case -> Maybe Double -> LocalTime -> Text -> Product.ProductsStatus -> L.Flow Products
 createProduct cs price ctime orgId status = do
   prodId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let product = getProduct prodId price cs ctime currTime orgId shortId
   PQ.create product
@@ -142,7 +142,7 @@ createProduct cs price ctime orgId status = do
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
   cpId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   let caseProd = getCaseProd cpId cs prod currTime
   CPQ.create caseProd
   return $ caseProd
@@ -171,9 +171,10 @@ notifyGateway c p orgId = do
   Gateway.onSearch onSearchPayload
   return ()
 
+
 mkOnSearchPayload :: Case -> [Products] -> Organization -> L.Flow OnSearchReq
 mkOnSearchPayload c prods orgInfo = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",

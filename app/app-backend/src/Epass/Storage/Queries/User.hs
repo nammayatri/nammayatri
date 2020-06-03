@@ -2,13 +2,13 @@
 
 module Epass.Storage.Queries.User where
 
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import Epass.Types.App
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.User as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
@@ -75,7 +75,7 @@ update ::
   Maybe Storage.Role ->
   L.Flow ()
 update id status nameM roleM = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status nameM roleM currTime)
