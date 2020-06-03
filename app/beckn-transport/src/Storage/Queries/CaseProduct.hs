@@ -159,18 +159,18 @@ caseProductJoinWithoutLimits csType orgId status = do
   joinedValues <-
     DB.findAllByJoinWithoutLimits
       orderByDesc
-      (joinQuery csTable prodTable dbTable (pred1 csType) (pred2 orgId) (pred3 status))
+      (joinQuery csTable prodTable dbTable (csPred csType) (prodPred orgId) (cprPred status))
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
     orderByDesc (_, _, Storage.CaseProduct {..}) = B.desc_ _createdAt
-    pred1 csType Case.Case {..} =
+    csPred csType Case.Case {..} =
       ( _type ==. (B.val_ csType)
       )
-    pred2 orgId Product.Products {..} =
+    prodPred orgId Product.Products {..} =
       ( _organizationId ==. (B.val_ orgId)
       )
-    pred3 status Storage.CaseProduct {..} =
+    cprPred status Storage.CaseProduct {..} =
       ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
       )
     mkJoinRes (cs, pr, cpr) =

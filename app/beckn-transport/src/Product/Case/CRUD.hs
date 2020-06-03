@@ -61,7 +61,7 @@ list regToken CaseReq {..} = withFlowHandler $ do
           then do
             resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
-            return $ filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
+            return $ filter (\cs -> not (elem (Case._id cs) csIgnoreList)) caseList
           else return caseList
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> finalCaseList) (Case._toLocationId <$> finalCaseList)
       return $ catMaybes $ joinByIds locList <$> finalCaseList
