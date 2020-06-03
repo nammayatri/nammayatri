@@ -8,7 +8,7 @@ import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
@@ -25,25 +25,24 @@ cancel regToken req = withFlowHandler $ do
     Products.CONFIRMED -> sendCancelReq productId
     Products.VALID -> sendCancelReq productId
     Products.INPROGRESS -> sendCancelReq productId
-    _ -> errResp
+    status -> errResp (show status)
   where
     sendCancelReq productId = do
       let context = req ^. #context
+      let txnId = context ^. #transaction_id
       baseUrl <- Gateway.getBaseUrl
       eres <- Gateway.cancel baseUrl (CancelReq context (IdObject productId))
-      let ack =
-            case eres of
-              Left err -> Ack "cancel" ("Err: " <> show err)
-              Right _ -> Ack "cancel" "Ok"
-      return $ CancelRes context ack
-    errResp = do
-      let context = req ^. #context
-      let ack = Ack "cancel" ("Err: Cannot cancel ride")
-      return $ CancelRes context ack
+      case eres of
+        Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
+        Right _ -> mkAckResponse txnId "cancel"
+    errResp pStatus = do
+      let txnId = req ^. #context ^. #transaction_id
+      mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
 onCancel :: OnCancelReq -> FlowHandler OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
+  let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
 
   Products.updateStatus productId Products.CANCELLED
@@ -56,4 +55,4 @@ onCancel req = withFlowHandler $ do
     then Case.updateStatus caseId Case.CLOSED -- Only update case status if it has only one product
     else return ()
 
-  return $ OnCancelRes context (Ack "cancel" "Ok")
+  mkAckResponse txnId "cancel"

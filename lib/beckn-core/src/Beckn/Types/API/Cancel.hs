@@ -19,11 +19,7 @@ data CancelReq = CancelReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data CancelRes = CancelRes
-  { context :: Context,
-    message :: Ack
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
+type CancelRes = AckResponse
 
 data OnCancelReq = OnCancelReq
   { context :: Context,
@@ -31,8 +27,4 @@ data OnCancelReq = OnCancelReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data OnCancelRes = OnCancelRes
-  { context :: Context,
-    message :: Ack
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
+type OnCancelRes = AckResponse
