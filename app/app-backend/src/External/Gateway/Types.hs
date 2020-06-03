@@ -3,6 +3,7 @@
 
 module External.Gateway.Types where
 
+import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
@@ -57,3 +58,15 @@ trackTripAPI = Proxy
 
 trackTrip req =
   void $ client trackTripAPI req
+
+type CancelAPI =
+  "cancel"
+    :> "services"
+    :> ReqBody '[JSON] Cancel.CancelReq
+    :> Post '[JSON] Cancel.CancelRes
+
+cancelAPI :: Proxy CancelAPI
+cancelAPI = Proxy
+
+cancel req =
+  void $ client cancelAPI req

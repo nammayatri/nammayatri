@@ -8,6 +8,7 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
+import Beckn.Types.API.Cancel
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
@@ -44,6 +45,7 @@ type TransporterAPIs =
            :<|> OrganizationAPIs --Transporter
            :<|> SearchAPIs
            :<|> ConfirmAPIs
+           :<|> CancelAPIs
            :<|> StatusAPIs
            :<|> TrackApis
            :<|> CaseAPIs
@@ -221,6 +223,7 @@ transporterServer' key =
     :<|> organizationFlow
     :<|> searchApiFlow
     :<|> confirmApiFlow
+    :<|> cancelApiFlow
     :<|> statusApiFlow
     :<|> trackApiFlow
     :<|> caseFlow
@@ -248,6 +251,16 @@ type ConfirmAPIs =
 
 confirmApiFlow :: FlowServer ConfirmAPIs
 confirmApiFlow = BP.confirm
+
+type CancelAPIs =
+  "cancel"
+    :> "services"
+    :> ( ReqBody '[JSON] CancelReq
+           :> Post '[JSON] AckResponse
+       )
+
+cancelApiFlow :: FlowServer CancelAPIs
+cancelApiFlow = BP.cancel
 
 type StatusAPIs =
   "status"
