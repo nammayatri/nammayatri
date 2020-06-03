@@ -96,26 +96,21 @@ updateTrip productId k = do
   case k of
     Product.CANCELLED -> do
       DB.updateStatus productId k
-      CPQ.updateStatus (Case._id case_) productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
       CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
       return ()
     Product.INPROGRESS -> do
       DB.updateStatus productId k
-      CPQ.updateStatus (Case._id case_) productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList)  k
       CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
       return ()
     Product.COMPLETED -> do
       DB.updateStatus productId k
-      CPQ.updateStatus (Case._id case_) productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
       return ()
     _ -> return ()
-
-  DB.updateStatus productId k
-  CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
-  CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
-  return ()
 
 listRides :: Maybe Text -> FlowHandler ProdListRes
 listRides regToken = withFlowHandler $ do
