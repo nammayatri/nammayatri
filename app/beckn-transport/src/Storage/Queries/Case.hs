@@ -140,5 +140,5 @@ findAllByTypeStatusTime limit offset csType statuses now fromTime =
       ( _type ==. (B.val_ csType)
           &&. B.in_ _status (B.val_ <$> statuses)
           &&. _validTill B.>. (B.val_ now)
-            &&. _createdAt B.<. (B.val_ fromTime)
+          &&. _createdAt B.<. (B.val_ fromTime)
       )

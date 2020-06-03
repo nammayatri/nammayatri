@@ -33,15 +33,15 @@ import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
+import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.Organization as OQ
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
-import Types.API.Registration
 import qualified Types.API.CaseProduct as CPR
+import Types.API.Registration
 import qualified Utils.Defaults as Defaults
 
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
@@ -155,7 +155,7 @@ createCaseProduct cs prod = do
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status =  Product._status prod,
+          _status = Product._status prod,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime
@@ -170,7 +170,6 @@ notifyGateway c p orgId = do
   L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch onSearchPayload
   return ()
-
 
 mkOnSearchPayload :: Case -> [Products] -> Organization -> L.Flow OnSearchReq
 mkOnSearchPayload c prods orgInfo = do

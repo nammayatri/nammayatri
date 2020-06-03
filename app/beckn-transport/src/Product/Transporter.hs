@@ -49,9 +49,10 @@ updateTransporter orgId auth req = withFlowHandler $ do
     Just person -> do
       validation person
       org <- QO.findOrganizationById $ OrganizationId orgId
-      organization <- if not (fromMaybe True (req ^. #enabled))
-                        then transformFlow2 req org >>= addTime (Just now)
-                        else transformFlow2 req org
+      organization <-
+        if not (fromMaybe True (req ^. #enabled))
+          then transformFlow2 req org >>= addTime (Just now)
+          else transformFlow2 req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
     Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
