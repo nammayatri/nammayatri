@@ -188,10 +188,15 @@ caseProductFlow =
 type CancelAPIs =
   "cancel"
     :> "services"
-    :> ( Header "token" Text
-           :> ReqBody '[JSON] Cancel.CancelReq
-           :> Post '[JSON] Cancel.CancelRes
-       )
+    :> Header "token" Text
+    :> ReqBody '[JSON] Cancel.CancelReq
+    :> Post '[JSON] Cancel.CancelRes
+    -- on cancel
+    :<|> "on_cancel"
+    :> "services"
+    :> ReqBody '[JSON] Cancel.OnCancelReq
+    :> Post '[JSON] Cancel.OnCancelRes
 
 cancelFlow =
   Cancel.cancel
+    :<|> Cancel.onCancel
