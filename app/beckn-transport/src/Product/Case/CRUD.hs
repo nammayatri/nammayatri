@@ -41,6 +41,7 @@ import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
 import Types.API.Registration
+import qualified Types.API.CaseProduct as CPR
 import qualified Utils.Defaults as Defaults
 
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
@@ -49,6 +50,8 @@ list regToken CaseReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   let orgId = (person ^. #_organizationId)
   now <- getCurrentTimeUTC
+  resList <- CPQ.caseProductJoin 100 0 _type (fromMaybe "" orgId) []
+  let csIgnoreList = Case._id <$> (CPR._case <$> resList)
   caseList <-
     case orgId of
       Just k -> do
@@ -57,8 +60,9 @@ list regToken CaseReq {..} = withFlowHandler $ do
           then  Case.findAllByTypeStatusTime _limit _offset _type _status now $ fromMaybe now (org ^. #_fromTime)
           else Case.findAllByTypeStatuses _limit _offset _type _status now
       Nothing -> Case.findAllByTypeStatuses _limit _offset _type _status now
-  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-  return $ catMaybes $ joinByIds locList <$> caseList
+  let finalCaseList = filter (\cs -> (elem (Case._id cs) csIgnoreList) == False) caseList
+  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> finalCaseList) (Case._toLocationId <$> finalCaseList)
+  return $ catMaybes $ joinByIds locList <$> finalCaseList
   where
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
@@ -72,7 +76,6 @@ list regToken CaseReq {..} = withFlowHandler $ do
               _fromLocation = from,
               _toLocation = to
             }
-
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
