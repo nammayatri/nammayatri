@@ -1,6 +1,7 @@
 module Epass.Product.Quota where
 
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import Data.Default
 import Data.Time
@@ -39,7 +40,7 @@ create mRegToken CreateReq {..} = withFlowHandler $ do
   where
     throwUnauthorized = L.throwException $ err401 {errBody = "Unauthorized"}
     quotaRec id orgId = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return
         Storage.Quota
           { _id = id,

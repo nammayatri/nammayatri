@@ -5,7 +5,7 @@ import Beckn.Types.Core.Api
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Provider
-import Epass.Utils.Extra
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

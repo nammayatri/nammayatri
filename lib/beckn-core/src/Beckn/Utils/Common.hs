@@ -19,12 +19,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 
-getCurrTime :: L.Flow LocalTime
-getCurrTime = L.runIO $ do
-  utc <- getCurrentTime
-  timezone <- getTimeZone utc
-  pure $ utcToLocalTime timezone utc
-
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 

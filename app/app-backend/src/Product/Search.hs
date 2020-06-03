@@ -17,7 +17,7 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
@@ -63,7 +63,7 @@ search regToken req = withFlowHandler $ do
   return $ AckResponse (req ^. #context) ack
   where
     validateDateTime req = do
-      currTime <- getCurrTime
+      currTime <- getCurrentTimeUTC
       when ((req ^. #message ^. #time) < currTime)
         $ L.throwException
         $ err400 {errBody = "Invalid start time"}

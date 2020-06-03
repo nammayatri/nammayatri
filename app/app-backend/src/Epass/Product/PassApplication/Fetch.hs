@@ -27,7 +27,6 @@ import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import Epass.Types.Storage.PassApplication
 import qualified Epass.Types.Storage.Tag as Document
-import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
