@@ -16,12 +16,6 @@ class GuidLike a where
 instance GuidLike Text where
   generateGUID = L.generateGUID
 
-getCurrTime :: L.Flow LocalTime
-getCurrTime = L.runIO $ do
-  utc <- getCurrentTime
-  timezone <- getTimeZone utc
-  pure $ utcToLocalTime timezone utc
-
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 

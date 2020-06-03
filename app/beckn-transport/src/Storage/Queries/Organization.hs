@@ -6,6 +6,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -75,7 +76,7 @@ update ::
   Storage.Status ->
   L.Flow (T.DBResult ())
 update id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)

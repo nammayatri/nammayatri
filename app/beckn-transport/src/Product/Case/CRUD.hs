@@ -19,6 +19,7 @@ import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
@@ -44,7 +45,7 @@ import qualified Utils.Defaults as Defaults
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   caseList <- Case.findAllByTypeStatuses _limit _offset _type _status now
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
@@ -83,7 +84,7 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
 createProduct :: Case -> Maybe Double -> LocalTime -> Text -> L.Flow Products
 createProduct cs price ctime orgId = do
   prodId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let product = getProduct prodId price cs ctime currTime orgId shortId
   PQ.create product
@@ -121,7 +122,7 @@ createProduct cs price ctime orgId = do
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
   cpId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   let caseProd = getCaseProd cpId cs prod currTime
   CPQ.create caseProd
   return $ caseProd
@@ -150,9 +151,10 @@ notifyGateway c p orgId = do
   Gateway.onSearch onSearchPayload
   return ()
 
+
 mkOnSearchPayload :: Case -> [Products] -> Organization -> L.Flow OnSearchReq
 mkOnSearchPayload c prods orgInfo = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
