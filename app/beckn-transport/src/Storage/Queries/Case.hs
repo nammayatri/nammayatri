@@ -82,6 +82,24 @@ updateStatus id status = do
           _status <-. B.val_ status
         ]
 
+updateStatusByIds ::
+  [CaseId] ->
+  Storage.CaseStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.Case {..} = B.in_ _id (B.val_ <$> ids)
+    setClause status currTime Storage.Case {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
 findByIdType :: [CaseId] -> Storage.CaseType -> L.Flow Storage.Case
 findByIdType ids type_ =
   DB.findOneWithErr dbTable (predicate ids type_)

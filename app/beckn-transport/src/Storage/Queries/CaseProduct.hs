@@ -75,6 +75,24 @@ updateStatus caseId productId status = do
           _status <-. B.val_ status
         ]
 
+updateStatusByIds ::
+  [CaseProductId] ->
+  Storage.CaseProductStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.CaseProduct {..} = B.in_ _id (B.val_ <$> ids)
+    setClause status currTime Storage.CaseProduct {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
 findAllByProdId :: ProductsId -> L.Flow [Storage.CaseProduct]
 findAllByProdId id =
   DB.findAllOrErr dbTable (pred id)
