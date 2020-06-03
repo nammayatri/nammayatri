@@ -91,11 +91,26 @@ updateInfo productId driverInfo vehicleInfo = do
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
-  case_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
-  DB.updateStatus productId k
-  CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
-  CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
-  return ()
+  trackerCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
+  parentCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.RIDEBOOK)
+  case k of
+    Product.CANCELLED -> do
+      DB.updateStatus productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      return ()
+    Product.INPROGRESS -> do
+      DB.updateStatus productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList)  k
+      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
+      return ()
+    Product.COMPLETED -> do
+      DB.updateStatus productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
+      CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
+      return ()
+    _ -> return ()
 
 listRides :: Maybe Text -> FlowHandler ProdListRes
 listRides regToken = withFlowHandler $ do

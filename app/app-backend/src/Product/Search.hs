@@ -84,7 +84,7 @@ search_cb regToken req = withFlowHandler $ do
           (return . PersonId)
           (Case._requestor case_)
       let items = catalog ^. #_items
-      products <- traverse (mkProduct mprovider) items
+      products <- traverse (mkProduct case_ mprovider) items
       let pids = (^. #_id) <$> products
       traverse_ Products.create products
       traverse_
@@ -158,25 +158,26 @@ mkLocation loc = do
         _updatedAt = now
       }
 
-mkProduct :: Maybe Core.Provider -> Core.Item -> L.Flow Products.Products
-mkProduct mprovider item = do
+mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> L.Flow Products.Products
+mkProduct case_ mprovider item = do
   now <- getCurrTime
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
   -- There is loss of data in coversion Product -> Item -> Product
-  -- In api exchange between transpoter and app-backend
+  -- In api exchange between transporter and app-backend
+  -- TODO: fit public transport, where case.startTime != product.startTime, etc
   return $
     Products.Products
       { _id = ProductsId $ item ^. #_id,
         _shortId = "",
         _name = Just $ item ^. #_name,
         _description = Just $ item ^. #_description,
-        _industry = Case.MOBILITY, -- TODO: fix this
+        _industry = case_ ^. #_industry,
         _type = Products.RIDE,
         _status = Products.INSTOCK,
-        _startTime = now, -- TODO: fix this
+        _startTime = case_ ^. #_startTime,
         _endTime = Nothing, -- TODO: fix this
-        _validTill = validTill,
+        _validTill = case_ ^. #_validTill,
         _price = item ^. #_price ^. #_listed_value,
         _rating = Nothing,
         _review = Nothing,
@@ -185,9 +186,9 @@ mkProduct mprovider item = do
         _udf3 = Nothing,
         _udf4 = Nothing,
         _udf5 = Nothing,
+        _fromLocation = Just $ case_ ^. #_fromLocationId,
+        _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _fromLocation = Nothing, -- TODO: fix this
-        _toLocation = Nothing, -- TODO: fix this
         _organizationId = "", -- TODO: fix this
         _assignedTo = Nothing,
         _createdAt = now,
