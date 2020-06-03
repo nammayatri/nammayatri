@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -43,17 +44,22 @@ updateTransporter :: Text -> Maybe Text -> UpdateTransporterReq -> FlowHandler T
 updateTransporter orgId auth req = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth auth
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
+  now <- getCurrentTimeUTC
   case maybePerson of
     Just person -> do
       validation person
       org <- QO.findOrganizationById $ OrganizationId orgId
-      organization <- transformFlow2 req org
+      organization <- if not (fromMaybe True (req ^. #enabled))
+                        then transformFlow2 req org >>= addTime (Just now)
+                        else transformFlow2 req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
     Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
   where
     validation person = do
       whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+    addTime fromTime org =
+      return $ org {SO._fromTime = fromTime}
 
 getTransporter :: Maybe Text -> FlowHandler TransporterRec
 getTransporter auth = withFlowHandler $ do

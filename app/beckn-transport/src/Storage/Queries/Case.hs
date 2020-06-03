@@ -124,8 +124,21 @@ findAllByTypeStatuses limit offset csType statuses now =
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate csType caseStatus now Storage.Case {..} =
+    predicate csType statuses now Storage.Case {..} =
       ( _type ==. (B.val_ csType)
           &&. B.in_ _status (B.val_ <$> statuses)
           &&. _validTill B.>. (B.val_ now)
+      )
+
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatusTime limit offset csType statuses now fromTime =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses now fromTime) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate csType statuses now fromTime Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. _validTill B.>. (B.val_ now)
+            &&. _createdAt B.<. (B.val_ fromTime)
       )
