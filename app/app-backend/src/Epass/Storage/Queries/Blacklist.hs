@@ -2,6 +2,7 @@
 
 module Epass.Storage.Queries.Blacklist where
 
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.), in_)
@@ -14,7 +15,6 @@ import qualified Epass.Types.Storage.Blacklist as Storage
 import qualified Epass.Types.Storage.Blacklist as Storage
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.DB as DB
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -42,7 +42,7 @@ update ::
   API.UpdateReq ->
   L.Flow (T.DBResult ())
 update id API.UpdateReq {..} = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause _remarks _TenantOrganizationId _info _entityType _EntityId _startTime _endTime currTime)

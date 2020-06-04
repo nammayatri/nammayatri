@@ -1,21 +1,51 @@
 # beckn
+Beckn is an open protocol that enables location-aware, local commerce across industries.
 
-## This contains two libraries namely (beckn-epass, beckn-core)
-* `beckn-core` is the common library where the API types, unified data models will be there
+More about beckn:
+
+* [whitepaper](https://beckn.org/wp-content/uploads/2020/04/WhatIsBeckn.pdf)
+* [mobility](https://beckn.org/wp-content/uploads/2020/04/ImaginingMobilityWithBeckn.pdf)
+* [spec](https://github.com/beckn/protocol-specifications/)
+* [website](https://beckn.org/)
+
+## This project contains two modules
+* `app-backend` - frontend facing APIs (BA), has more end-user specific implementations
+* `beckn-transport` - beckn provider (BP), implmenting mobility spec
+* `epass-backend` - e-pass for travelling, has consumer and approver flows
+
+## Shared libraries
+* `beckn-core` - is the common library where the API types, unified data models will be there
 
 ## How to run Beckn backends in a dev environment:
 
-#### Compile the project with
-  ```stack build```
+### Setup
 
-#### Run the databases inside Docker
+Set up your development environment, from project root run:
 
-```cd .docker && docker-compose up```
+```
+./dev/setup.sh
+```
 
-#### Start the app-backend server
+### Compile the project with
 
-```stack exec app-backend-exe```
+```
+stack build
+```
 
-#### Start the transporter server
+### Run the databases and redis inside Docker
 
-```BECKN_GATEWAY_BASE_URL="localhost" BECKN_GATEWAY_PORT="8013" stack exec beckn-transport-exe```
+```
+cd dev && docker-compose up
+```
+
+### Start the app-backend server
+
+```
+stack exec app-backend-exe
+```
+
+### Start the transporter server
+
+```
+BECKN_GATEWAY_BASE_URL="localhost" BECKN_GATEWAY_PORT="8013" stack exec beckn-transport-exe
+```

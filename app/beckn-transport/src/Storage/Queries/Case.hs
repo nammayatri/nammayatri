@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -68,7 +69,7 @@ updateStatus ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -86,7 +87,7 @@ updateStatusByIds ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatusByIds ids status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -98,7 +99,6 @@ updateStatusByIds ids status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
-
 
 findByIdType :: [CaseId] -> Storage.CaseType -> L.Flow Storage.Case
 findByIdType ids type_ =
@@ -124,8 +124,21 @@ findAllByTypeStatuses limit offset csType statuses now =
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate csType caseStatus now Storage.Case {..} =
+    predicate csType statuses now Storage.Case {..} =
       ( _type ==. (B.val_ csType)
           &&. B.in_ _status (B.val_ <$> statuses)
           &&. _validTill B.>. (B.val_ now)
+      )
+
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatusTime limit offset csType statuses now fromTime =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses now fromTime) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate csType statuses now fromTime Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. _validTill B.>. (B.val_ now)
+          &&. _createdAt B.<. (B.val_ fromTime)
       )

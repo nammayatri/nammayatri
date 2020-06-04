@@ -1,0 +1,25 @@
+#!/bin/bash
+
+HS_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.hs")
+
+if ! which ormolu >& /dev/null; then
+  echo "Could not find 'ormolu', is it installed?"
+  exit 1
+fi
+
+for file in $HS_FILES; do
+  if ! ormolu -m check "$file"; then
+    echo "Check failed: ${file}"
+    ORMOLU_FAIL="true"
+  fi
+done
+
+if [ -n "$ORMOLU_FAIL" ]; then
+  echo "Code style issues found in the above file(s). Did you forget to run Ormolu?"
+fi
+
+if [ -n "$ORMOLU_FAIL" ]; then
+  exit 1
+fi
+
+exit 0

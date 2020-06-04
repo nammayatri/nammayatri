@@ -12,7 +12,6 @@ import Beckn.Utils.Common (decodeFromText, withFlowHandler)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as DTE
-import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET

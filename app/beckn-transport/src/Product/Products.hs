@@ -101,7 +101,7 @@ updateTrip productId k = do
       return ()
     Product.INPROGRESS -> do
       DB.updateStatus productId k
-      CPQ.updateStatusByIds (CaseP._id <$> cpList)  k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
       CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
       return ()
     Product.COMPLETED -> do

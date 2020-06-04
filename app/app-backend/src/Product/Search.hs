@@ -17,7 +17,8 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -62,7 +63,7 @@ search regToken req = withFlowHandler $ do
   return $ AckResponse (req ^. #context) ack
   where
     validateDateTime req = do
-      currTime <- getCurrTime
+      currTime <- getCurrentTimeUTC
       when ((req ^. #message ^. #time) < currTime)
         $ L.throwException
         $ err400 {errBody = "Invalid start time"}
@@ -98,7 +99,7 @@ search_cb regToken req = withFlowHandler $ do
 
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
 mkCase req userId from to = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
@@ -140,7 +141,7 @@ mkCase req userId from to = do
 
 mkLocation :: Core.Location -> L.Flow Location.Location
 mkLocation loc = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   let mgps = loc ^. #_gps
   return $
@@ -163,7 +164,7 @@ mkLocation loc = do
 
 mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> L.Flow Products.Products
 mkProduct case_ mprovider item = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
   -- There is loss of data in coversion Product -> Item -> Product
@@ -202,7 +203,7 @@ mkCaseProduct :: CaseId -> PersonId -> Products.Products -> L.Flow CaseProduct.C
 mkCaseProduct caseId personId product = do
   let productId = product ^. #_id
       price = product ^. #_price
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   return $
     CaseProduct.CaseProduct

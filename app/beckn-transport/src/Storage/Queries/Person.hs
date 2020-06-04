@@ -157,7 +157,7 @@ update ::
   Bool ->
   L.Flow ()
 update id status verified = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status verified currTime)

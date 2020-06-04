@@ -6,7 +6,6 @@ import Data.Time.LocalTime
 import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Blacklist
-import Epass.Utils.Common
 import EulerHS.Prelude
 
 data CreateReq = CreateReq

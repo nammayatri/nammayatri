@@ -1,6 +1,7 @@
 module Epass.Storage.Queries.Organization where
 
 import qualified Beckn.Types.Storage.Location as BTL
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -8,7 +9,6 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.Organization as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
@@ -61,7 +61,7 @@ update ::
   Storage.Status ->
   L.Flow (T.DBResult ())
 update id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)

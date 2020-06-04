@@ -6,6 +6,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as Storage
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -68,7 +69,7 @@ updateStatus ::
   Storage.CaseProductStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -99,7 +100,7 @@ updateAllCaseProductsByCaseId caseId status = do
 
 updateAllProductsByCaseId :: CaseId -> Products.ProductsStatus -> L.Flow (T.DBResult ())
 updateAllProductsByCaseId caseId status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   caseProducts <- findAllByCaseId caseId
   let productIds = Storage._productId <$> caseProducts
   DB.update

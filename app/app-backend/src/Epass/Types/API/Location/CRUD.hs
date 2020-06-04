@@ -9,7 +9,6 @@ import Epass.Types.Storage.Blacklist
 import Epass.Types.Storage.EntityTag
 import Epass.Types.Storage.Location
 import Epass.Types.Storage.Tag
-import Epass.Utils.Common
 import EulerHS.Prelude
 
 data ListLocationRes = ListLocationRes

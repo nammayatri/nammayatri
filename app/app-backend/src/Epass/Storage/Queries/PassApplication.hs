@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.PassApplication where
 
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time.LocalTime
 import Database.Beam
   ( (&&.),
@@ -12,7 +13,6 @@ import Epass.Types.App
 import qualified Epass.Types.Common as Storage (PassType (..))
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.PassApplication as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
@@ -122,7 +122,7 @@ complementVal l
 
 update :: PassApplicationId -> Storage.Status -> Maybe Int -> Maybe Text -> L.Flow ()
 update id status approvedCountM remarksM = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status approvedCountM remarksM currTime)

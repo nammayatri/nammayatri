@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import Beckn.Utils.Extra
 import Data.Aeson as A
 import Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
@@ -17,12 +18,6 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
-
-getCurrTime :: L.Flow LocalTime
-getCurrTime = L.runIO $ do
-  utc <- getCurrentTime
-  timezone <- getTimeZone utc
-  pure $ utcToLocalTime timezone utc
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
@@ -41,7 +36,7 @@ mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
 mkAckResponse' :: Text -> Text -> Text -> L.Flow AckResponse
 mkAckResponse' txnId action message = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   return
     AckResponse
       { _context =
