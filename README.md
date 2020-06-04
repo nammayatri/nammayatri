@@ -8,7 +8,7 @@ More about beckn:
 * [spec](https://github.com/beckn/protocol-specifications/)
 * [website](https://beckn.org/)
 
-## This project contains two modules
+## This project contains three modules
 * `app-backend` - frontend facing APIs (BA), has more end-user specific implementations
 * `beckn-transport` - beckn provider (BP), implmenting mobility spec
 * `epass-backend` - e-pass for travelling, has consumer and approver flows
@@ -47,5 +47,5 @@ stack exec app-backend-exe
 ### Start the transporter server
 
 ```
-BECKN_GATEWAY_BASE_URL="localhost" BECKN_GATEWAY_PORT="8013" stack exec beckn-transport-exe
+stack exec beckn-transport-exe
 ```

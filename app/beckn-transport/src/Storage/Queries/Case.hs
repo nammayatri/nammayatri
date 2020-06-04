@@ -118,27 +118,29 @@ findAllByIdType ids type_ =
           &&. B.in_ _id (B.val_ <$> ids)
       )
 
-findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> LocalTime -> L.Flow [Storage.Case]
-findAllByTypeStatuses limit offset csType statuses now =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses now) limit offset orderByDesc
+findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatuses limit offset csType statuses ignoreIds now =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses ignoreIds now) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate csType statuses now Storage.Case {..} =
+    predicate csType statuses ignoreIds now Storage.Case {..} =
       ( _type ==. (B.val_ csType)
           &&. B.in_ _status (B.val_ <$> statuses)
+          &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
           &&. _validTill B.>. (B.val_ now)
       )
 
-findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
-findAllByTypeStatusTime limit offset csType statuses now fromTime =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses now fromTime) limit offset orderByDesc
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses ignoreIds now fromTime) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate csType statuses now fromTime Storage.Case {..} =
+    predicate csType statuses ignoreIds now fromTime Storage.Case {..} =
       ( _type ==. (B.val_ csType)
           &&. B.in_ _status (B.val_ <$> statuses)
+          &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
           &&. _validTill B.>. (B.val_ now)
           &&. _createdAt B.<. (B.val_ fromTime)
       )
