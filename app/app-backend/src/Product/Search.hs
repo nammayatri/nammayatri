@@ -78,6 +78,9 @@ search_cb regToken req = withFlowHandler $ do
     Nothing -> return ()
     Just catalog -> do
       case_ <- Case.findById caseId
+      when
+        (case_ ^. #_status == Case.CLOSED)
+        (L.throwException $ err400 {errBody = "Case expired"})
       personId <-
         maybe
           (L.throwException $ err500 {errBody = "No person linked to case"})
