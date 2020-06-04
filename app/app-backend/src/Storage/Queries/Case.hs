@@ -56,6 +56,23 @@ findAllByPerson perId =
   where
     predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
+findAllByValidTillAndStatus :: [Storage.CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> L.Flow [Storage.Case]
+findAllByValidTillAndStatus statuses maybeFrom maybeTo = do
+  (now :: LocalTime) <- getCurrTime
+  DB.findAll dbTable (predicate now maybeFrom maybeTo)
+    >>= either DB.throwDBError pure
+  where
+    predicate now maybeFrom maybeTo Storage.Case {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        ( [ (_status `B.in_` ((B.val_) <$> statuses)),
+            (_validTill B.<=. (B.val_ now))
+          ]
+            <> (maybe [] (\from -> [_createdAt B.>=. (B.val_ from)]) maybeFrom)
+            <> (maybe [] (\to -> [_createdAt B.<=. (B.val_ to)]) maybeTo)
+        )
+
 updateStatus :: CaseId -> Storage.CaseStatus -> L.Flow ()
 updateStatus id status = do
   (currTime :: LocalTime) <- getCurrTime
