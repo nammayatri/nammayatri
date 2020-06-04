@@ -6,7 +6,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/app-backend-seed.sql
+      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/app-backend-seed.sql:Z
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=atlas_app
@@ -19,7 +19,7 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/transporter-backend-seed.sql
+      - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/transporter-backend-seed.sql:Z
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=atlas_transporter
