@@ -2,36 +2,44 @@
 
 module Product.Cancel where
 
-import Beckn.Types.API.Cancel
+import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
 import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
+import EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Products as Products
+import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
 
 cancel :: Maybe RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
   verifyToken regToken
+  let scope = req ^. #message ^. #scope
+  case scope of
+    Cancel.CASE -> cancelCase req
+    Cancel.PRODUCT -> cancelProduct req
+
+cancelProduct :: CancelReq -> L.Flow CancelRes
+cancelProduct req = do
   let productId = req ^. #message ^. #id
   cp <- CaseProduct.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple caseproducts exists for one product
-  case cp ^. #_status of
-    Products.CONFIRMED -> sendCancelReq productId
-    Products.VALID -> sendCancelReq productId
-    Products.INPROGRESS -> sendCancelReq productId
-    status -> errResp (show status)
+  case isCaseProductCancellable cp of
+    True -> sendCancelReq productId
+    False -> errResp (show (cp ^. #_status))
   where
     sendCancelReq productId = do
       let context = req ^. #context
       let txnId = context ^. #transaction_id
       baseUrl <- Gateway.getBaseUrl
-      eres <- Gateway.cancel baseUrl (CancelReq context (IdObject productId))
+      eres <- Gateway.cancel baseUrl (API.CancelReq context (IdObject productId))
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
@@ -39,7 +47,46 @@ cancel regToken req = withFlowHandler $ do
       let txnId = req ^. #context ^. #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
-onCancel :: OnCancelReq -> FlowHandler OnCancelRes
+cancelCase :: CancelReq -> L.Flow CancelRes
+cancelCase req = do
+  let caseId = req ^. #message ^. #id
+  case_ <- Case.findById (CaseId caseId)
+  case isCaseCancellable case_ of
+    False -> do
+      let txnId = req ^. #context ^. #transaction_id
+      mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> (show (case_ ^. #_status)) <> " status")
+    True -> do
+      caseProducts <- CaseProduct.findAllByCaseId (CaseId caseId)
+      let cancelCPs = filter isCaseProductCancellable caseProducts
+      let context = req ^. #context
+      let txnId = context ^. #transaction_id
+      baseUrl <- Gateway.getBaseUrl
+      eres <- traverse (callCancelApi context baseUrl) cancelCPs
+      case sequence eres of
+        Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
+        Right _ -> mkAckResponse txnId "cancel"
+  where
+    callCancelApi context baseUrl cp = do
+      let productId = _getProductsId $ cp ^. #_productId
+      Gateway.cancel baseUrl (API.CancelReq context (IdObject productId))
+
+isCaseProductCancellable :: CaseProduct.CaseProduct -> Bool
+isCaseProductCancellable cp =
+  case cp ^. #_status of
+    Products.CONFIRMED -> True
+    Products.VALID -> True
+    Products.INPROGRESS -> True
+    _ -> False
+
+isCaseCancellable :: Case.Case -> Bool
+isCaseCancellable case_ =
+  case case_ ^. #_status of
+    Case.NEW -> True
+    Case.INPROGRESS -> True
+    Case.CONFIRMED -> True
+    _ -> False
+
+onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
