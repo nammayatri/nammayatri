@@ -59,7 +59,7 @@ findAllByPerson perId =
 
 findAllByValidTillAndStatus :: [Storage.CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> L.Flow [Storage.Case]
 findAllByValidTillAndStatus statuses maybeFrom maybeTo = do
-  (now :: LocalTime) <- getCurrTime
+  (now :: LocalTime) <- getCurrentTimeUTC
   DB.findAll dbTable (predicate now maybeFrom maybeTo)
     >>= either DB.throwDBError pure
   where

@@ -84,7 +84,7 @@ updateStatus id status = do
 
 updateAllCaseProductsByCaseId :: CaseId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
 updateAllCaseProductsByCaseId caseId status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   caseProducts <- findAllByCaseId caseId
   DB.update
     dbTable
