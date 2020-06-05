@@ -7,10 +7,12 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (base64Decode, withFlowHandler)
+import Beckn.Utils.Common (withFlowHandler)
 import qualified Data.Accessor as Lens
 import Data.Aeson
+import qualified Data.ByteString.Base64 as DBB
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -26,8 +28,8 @@ import qualified Types.API.Cron as API
 import Utils.Common (verifyToken)
 
 updateCases :: Maybe Text -> API.ExpireCaseReq -> FlowHandler API.ExpireCaseRes
-updateCases auth API.ExpireCaseReq {..} = withFlowHandler $ do
-  --TODO: add key auth
+updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
+  authenticate maybeAuth
   cases <- (Case.findAllExpiredByStatus [Case.NEW] from to)
   let caseIds = Case._id <$> cases
   traverse
@@ -38,3 +40,19 @@ updateCases auth API.ExpireCaseReq {..} = withFlowHandler $ do
     )
     caseIds
   pure $ API.ExpireCaseRes $ length caseIds
+
+authenticate :: Maybe Text -> L.Flow ()
+authenticate maybeAuth = do
+  keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
+  let x = join $ (T.stripPrefix "Basic ") <$> maybeAuth
+  -- let decodedAuthM = (DT.decodeUtf8 . DBB.decodeLenient . DT.encodeUtf8) <$> x
+  let decodedAuthM = DT.decodeUtf8 <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> x))
+  case (decodedAuthM, keyM) of
+    (Just auth, Just key) -> do
+      when ((T.pack key) /= auth) throw401
+      return ()
+    _ -> throw401
+  where
+    throw401 =
+      L.throwException $
+        err401 {errBody = "Invalid Auth"}
