@@ -52,6 +52,7 @@ default-extensions:
 dependencies:
 - aeson
 - aeson-pretty
+- aeson-casing
 - base >= 4.7 && < 5
 - beam-core
 - beam-mysql
@@ -59,8 +60,8 @@ dependencies:
 - containers
 - cryptonite
 - data-default
+- data-default-class
 - euler-hs
-- fcm-client
 - http-api-data
 - http-client
 - http-types

@@ -2,6 +2,8 @@
 
 module Product.BecknProvider.BP where
 
+import Beckn.External.FCM.Flow as FCM
+import Beckn.External.FCM.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -31,6 +33,7 @@ import Data.Accessor as Lens
 import Data.Aeson
 import Data.ByteString.Lazy.Char8
 import Data.Text as T
+import Data.Time
 import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
@@ -48,7 +51,6 @@ import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
-import Beckn.External.FCM.Flow
 
 -- 1) Create Parent Case with Customer Request Details
 -- 2) Notify all transporter using FCM
@@ -77,6 +79,21 @@ search req = withFlowHandler $ do
   notifyTransporters c admins
   mkAckResponse uuid "search"
 
+-- | Send FCM notification to provider admins
+notifyTransporters :: Case -> [Person] -> L.Flow ()
+notifyTransporters c admins = do
+  traverse_ (FCM.notifyPerson title body notificationData) admins
+  where
+    notificationData =
+      FCMData
+        { _fcmNotificationType = "REGISTRATION_APPROVED",
+          _fcmShowNotification = "true",
+          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
+          _fcmEntityType = "Organization"
+        }
+    title = "You have a new ride request"
+    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+
 cancel :: CancelReq -> FlowHandler AckResponse
 cancel req = withFlowHandler $ do
   --TODO: Need to add authenticator
@@ -88,10 +105,6 @@ cancel req = withFlowHandler $ do
   Product.updateStatus (ProductsId productId) Product.CANCELLED
   notifyCancelToGateway productId
   mkAckResponse uuid "cancel"
-
-notifyTransporters :: Case -> [Person] -> L.Flow ()
-notifyTransporters c =
-  traverse_ (notifyPerson "title" "body" c)
 
 getValidTime :: LocalTime -> L.Flow LocalTime
 getValidTime now = pure $ addLocalTime (60 * 30 :: NominalDiffTime) now

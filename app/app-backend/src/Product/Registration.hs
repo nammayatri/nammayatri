@@ -2,6 +2,8 @@
 
 module Product.Registration where
 
+import Beckn.External.FCM.Flow as FCM
+import Beckn.External.FCM.Types
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
@@ -11,6 +13,7 @@ import Beckn.Utils.Extra (getCurrentTimeUTC)
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
 import Data.Aeson
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Epass.External.MyValuesFirst.Flow as Sms
@@ -36,14 +39,25 @@ initiateLogin req =
 initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
   let mobileNumber = req ^. Lens.identifier
-  entityId <-
+  person <-
     Person.findByRoleAndIdentifier SP.USER SP.MOBILENUMBER mobileNumber
-      >>= maybe (createPerson req) (return . _getPersonId . SP._id)
+      >>= maybe (createPerson req) pure
+  let entityId = _getPersonId . SP._id $ person
   regToken <- makeSession req entityId
   RegistrationToken.create regToken
   sendOTP mobileNumber (SR._authValueHash regToken)
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
+      notificationData =
+        FCMData
+          { _fcmNotificationType = "REGISTRATION_APPROVED",
+            _fcmShowNotification = "true",
+            _fcmEntityIds = show regToken,
+            _fcmEntityType = "Organization"
+          }
+      title = "Registration Completed!"
+      body = "You can now book rides for travel or apply for a travel pass for yourself, family, or for work."
+  FCM.notifyPerson title body notificationData person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
@@ -68,7 +82,7 @@ makePerson req = do
         _rating = Nothing,
         _verified = False,
         _status = SP.INACTIVE,
-        _deviceToken = Nothing,
+        _deviceToken = req ^. #_deviceToken,
         _udf1 = Nothing,
         _udf2 = Nothing,
         _organizationId = Nothing,
@@ -163,11 +177,11 @@ getRegistrationTokenE :: Text -> L.Flow SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM400 "INVALID_TOKEN"
 
-createPerson :: InitiateLoginReq -> L.Flow Text
+createPerson :: InitiateLoginReq -> L.Flow SP.Person
 createPerson req = do
   person <- makePerson req
   Person.create person
-  return $ _getPersonId $ SP._id person
+  pure person
 
 checkPersonExists :: Text -> L.Flow SP.Person
 checkPersonExists _EntityId =
