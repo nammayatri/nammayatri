@@ -5,12 +5,12 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
 import EulerHS.Prelude
 
-data Scope = CASE | PRODUCT
+data Entity = CASE | PRODUCT
   deriving (Eq, Generic, Show, FromJSON, ToJSON)
 
 data Cancel = Cancel
-  { id :: Text,
-    scope :: Scope
+  { entityId :: Text,
+    entityType :: Entity
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

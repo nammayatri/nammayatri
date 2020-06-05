@@ -22,14 +22,14 @@ import Utils.Common (verifyToken)
 cancel :: Maybe RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
   verifyToken regToken
-  let scope = req ^. #message ^. #scope
-  case scope of
+  let entityType = req ^. #message ^. #entityType
+  case entityType of
     Cancel.CASE -> cancelCase req
     Cancel.PRODUCT -> cancelProduct req
 
 cancelProduct :: CancelReq -> L.Flow CancelRes
 cancelProduct req = do
-  let productId = req ^. #message ^. #id
+  let productId = req ^. #message ^. #entityId
   cp <- CaseProduct.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple caseproducts exists for one product
   case isCaseProductCancellable cp of
     True -> sendCancelReq productId
@@ -49,7 +49,7 @@ cancelProduct req = do
 
 cancelCase :: CancelReq -> L.Flow CancelRes
 cancelCase req = do
-  let caseId = req ^. #message ^. #id
+  let caseId = req ^. #message ^. #entityId
   case_ <- Case.findById (CaseId caseId)
   case isCaseCancellable case_ of
     False -> do
