@@ -76,23 +76,8 @@ search req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
-  notifyTransporters c admins
+  notifyTransportersOnSerch c admins
   mkAckResponse uuid "search"
-
--- | Send FCM notification to provider admins
-notifyTransporters :: Case -> [Person] -> L.Flow ()
-notifyTransporters c admins = do
-  traverse_ (FCM.notifyPerson title body notificationData) admins
-  where
-    notificationData =
-      FCMData
-        { _fcmNotificationType = "REGISTRATION_APPROVED",
-          _fcmShowNotification = "true",
-          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = "Organization"
-        }
-    title = "You have a new ride request"
-    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
 
 cancel :: CancelReq -> FlowHandler AckResponse
 cancel req = withFlowHandler $ do
@@ -191,6 +176,7 @@ confirm req = withFlowHandler $ do
   let prodId = (req ^. #message ^. #_selected_items) !! 0
   let caseShortId = req ^. #context ^. #transaction_id -- change to message.transactionId
   case_ <- Case.findBySid caseShortId
+  product <- Product.findById (ProductsId prodId)
   let caseId = _getCaseId $ case_ ^. #_id
   Case.updateStatus (CaseId caseId) SC.CONFIRMED
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) Product.CONFIRMED
@@ -205,6 +191,9 @@ confirm req = withFlowHandler $ do
   let trackerCaseProduct = mkTrackerCaseProduct uuid1 (trackerCase ^. #_id) (ProductsId prodId) currTime
   CaseProduct.create trackerCaseProduct
   notifyGateway case_ prodId trackerCase
+  admins <-
+    Person.findAllByOrgIds [Person.ADMIN] [Product._organizationId product]
+  notifyTransportersOnConfirm case_ admins
   mkAckResponse uuid "confirm"
 
 -- TODO : Add notifying transporter admin with FCM
@@ -455,3 +444,33 @@ mkCancelTripObj prodId = do
         fare = Just $ GT.mkPrice prod,
         route = Nothing
       }
+
+-- | Send FCM "search" notification to provider admins
+notifyTransportersOnSerch :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnSerch c =
+  traverse_ (FCM.notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCMData
+        { _fcmNotificationType = "SEARCH_REQUEST",
+          _fcmShowNotification = "true",
+          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
+          _fcmEntityType = "Organization"
+        }
+    title = "You have a new ride request"
+    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+
+-- | Send FCM "search" notification to provider admins
+notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnConfirm c =
+  traverse_ (FCM.notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCMData
+        { _fcmNotificationType = "CONFIRM_REQUEST",
+          _fcmShowNotification = "true",
+          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
+          _fcmEntityType = "Organization"
+        }
+    title = "Customer has confimed a ride"
+    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
