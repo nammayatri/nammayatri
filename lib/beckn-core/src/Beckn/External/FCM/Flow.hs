@@ -48,6 +48,16 @@ notifyPerson title body msgData person =
     Just token ->
       sendMessage $ FCMRequest $ createMessage title body msgData token
 
+-- | Send FCM message to a person
+notifyPersonTmp :: (Text -> L.Flow (Maybe Text)) -> Text -> Text -> FCMData -> Person -> L.Flow (Either Text ())
+notifyPersonTmp f title body msgData person =
+  case Person._deviceToken person of
+    Nothing -> do
+      L.logInfo (T.pack "FCM") $ "device token of a person " <> show (Person._id person) <> "not found"
+      pure $ Left $ "device token of a person " <> show (Person._id person) <> "not found"
+    Just token ->
+      sendMessageTmp f $ FCMRequest $ createMessage title body msgData token
+
 type FCMSendMessageAPI =
   Header "Authorization" FCMAuthToken
     :> ReqBody '[JSON] FCMRequest
@@ -69,6 +79,20 @@ defaultBaseUrl =
 sendMessage :: FCMRequest -> L.Flow (Either Text ())
 sendMessage fcmMsg = do
   authToken <- L.runIO $ FCMAuthToken . T.pack . ("Bearer " <>) <$> getEnv "FCM_AUTH_TOKEN"
+  res <- L.callAPI defaultBaseUrl $ callFCM (Just authToken) fcmMsg
+  L.logInfo (T.pack "FCM") $ case res of
+    Right _ -> "message sent successfully to" <> ""
+    Left x -> "error: " <> show x
+  return $ first show res
+  where
+    callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
+
+-- | Send FCM message to a registered device
+sendMessageTmp :: (Text -> L.Flow (Maybe Text)) -> FCMRequest -> L.Flow (Either Text ())
+sendMessageTmp f fcmMsg = do
+  -- authToken <- L.runIO $ FCMAuthToken . T.pack . ("Bearer " <>) <$> getEnv "FCM_AUTH_TOKEN"
+  -- token <- f "fcm_auth_token"
+  authToken <- FCMAuthToken . ("Bearer " <>) . fromMaybe "" <$> f "fcm_auth_token"
   res <- L.callAPI defaultBaseUrl $ callFCM (Just authToken) fcmMsg
   L.logInfo (T.pack "FCM") $ case res of
     Right _ -> "message sent successfully to" <> ""

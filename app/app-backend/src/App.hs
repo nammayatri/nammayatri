@@ -26,6 +26,7 @@ import Network.Wai.Handler.Warp
 import Servant
 import Servant.Server
 import Storage.DB.Config
+import Storage.Redis.Config
 import qualified System.Environment as SE
 
 runAppBackend :: IO ()
@@ -50,8 +51,11 @@ runAppBackend' port settings = do
     try (R.runFlow flowRt prepare) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
-        putStrLn @String
-          ("Runtime created. Starting server at port " <> show port)
+        putStrLn @String "Initializing Redis Connections..."
+        try (R.runFlow flowRt prepareRedisConnections) >>= \case
+          Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+          Right _ -> do
+            putStrLn @String ("Runtime created. Starting server at port " <> show port)
         runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 appExceptionResponse :: SomeException -> Response

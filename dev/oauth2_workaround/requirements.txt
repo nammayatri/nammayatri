@@ -1,0 +1,4 @@
+google-auth
+cryptography
+requests
+redis

@@ -28,6 +28,7 @@ import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
+import Storage.Redis.Queries
 import qualified Types.API.Confirm as API
 import Types.App
 import qualified Types.ProductInfo as Products
@@ -96,7 +97,7 @@ notifyOnConfirmCb personId caseId =
                   }
               title = "New ride options available!"
               body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
-          FCM.notifyPerson title body notificationData p
+          FCM.notifyPersonTmp getKeyRedisText title body notificationData p
           pure ()
         _ -> pure ()
     else pure ()

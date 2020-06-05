@@ -28,6 +28,7 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
+import Storage.Redis.Queries
 import Types.ProductInfo as ProductInfo
 import Utils.Common (verifyToken)
 
@@ -107,7 +108,7 @@ notifyOnTrackCb personId tracker caseId =
                 maybe "unknown" (\x -> x ^. #descriptor ^. #first_name) driver
               title = "Ride details updated!"
               body = "Driver: " <> driver_name <> ", vehicle type: " <> vehicle_type
-          FCM.notifyPerson title body notificationData p
+          FCM.notifyPersonTmp getKeyRedisText title body notificationData p
           pure ()
         _ -> pure ()
     else pure ()
