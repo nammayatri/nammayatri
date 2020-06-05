@@ -56,15 +56,20 @@ cancelCase req = do
       let txnId = req ^. #context ^. #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> (show (case_ ^. #_status)) <> " status")
     True -> do
-      caseProducts <- CaseProduct.findAllByCaseId (CaseId caseId)
-      let cancelCPs = filter isCaseProductCancellable caseProducts
       let context = req ^. #context
       let txnId = context ^. #transaction_id
-      baseUrl <- Gateway.getBaseUrl
-      eres <- traverse (callCancelApi context baseUrl) cancelCPs
-      case sequence eres of
-        Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
-        Right _ -> mkAckResponse txnId "cancel"
+      caseProducts <- CaseProduct.findAllByCaseId (CaseId caseId)
+      if null caseProducts
+        then do
+          Case.updateStatus (CaseId caseId) Case.CLOSED
+          mkAckResponse txnId "cancel"
+        else do
+          let cancelCPs = filter isCaseProductCancellable caseProducts
+          baseUrl <- Gateway.getBaseUrl
+          eres <- traverse (callCancelApi context baseUrl) cancelCPs
+          case sequence eres of
+            Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
+            Right _ -> mkAckResponse txnId "cancel"
   where
     callCancelApi context baseUrl cp = do
       let productId = _getProductsId $ cp ^. #_productId
@@ -75,14 +80,13 @@ isCaseProductCancellable cp =
   case cp ^. #_status of
     Products.CONFIRMED -> True
     Products.VALID -> True
-    Products.INPROGRESS -> True
+    Products.INSTOCK -> True
     _ -> False
 
 isCaseCancellable :: Case.Case -> Bool
 isCaseCancellable case_ =
   case case_ ^. #_status of
     Case.NEW -> True
-    Case.INPROGRESS -> True
     Case.CONFIRMED -> True
     _ -> False
 
