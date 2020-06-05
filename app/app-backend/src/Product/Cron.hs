@@ -7,7 +7,7 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (base64Decode, withFlowHandler)
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
@@ -28,13 +28,13 @@ import Utils.Common (verifyToken)
 updateCases :: Maybe Text -> API.ExpireCaseReq -> FlowHandler API.ExpireCaseRes
 updateCases auth API.ExpireCaseReq {..} = withFlowHandler $ do
   --TODO: add key auth
-  cases <- (Case.findAllByValidTillAndStatus [Case.NEW] from to)
+  cases <- (Case.findAllExpiredByStatus [Case.NEW] from to)
   let caseIds = Case._id <$> cases
   traverse
     ( \cId -> do
         Case.updateStatus cId Case.CLOSED
-        CaseProduct.updateAllCaseProductsByCaseId cId Product.OUTOFSTOCK
-        CaseProduct.updateAllProductsByCaseId cId Product.OUTOFSTOCK
+        CaseProduct.updateAllCaseProductsByCaseId cId Product.EXPIRED
+        CaseProduct.updateAllProductsByCaseId cId Product.EXPIRED
     )
     caseIds
   pure $ API.ExpireCaseRes $ length caseIds

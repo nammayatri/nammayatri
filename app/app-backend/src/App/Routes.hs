@@ -213,5 +213,6 @@ type CronAPIs =
     :> ReqBody '[JSON] Cron.ExpireCaseReq
     :> Post '[JSON] Cron.ExpireCaseRes
 
+cronFlow :: FlowServer CronAPIs
 cronFlow =
   Cron.updateCases

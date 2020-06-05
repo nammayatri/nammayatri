@@ -57,8 +57,8 @@ findAllByPerson perId =
   where
     predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
-findAllByValidTillAndStatus :: [Storage.CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> L.Flow [Storage.Case]
-findAllByValidTillAndStatus statuses maybeFrom maybeTo = do
+findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> L.Flow [Storage.Case]
+findAllExpiredByStatus statuses maybeFrom maybeTo = do
   (now :: LocalTime) <- getCurrentTimeUTC
   DB.findAll dbTable (predicate now maybeFrom maybeTo)
     >>= either DB.throwDBError pure
