@@ -44,9 +44,10 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
 authenticate :: Maybe Text -> L.Flow ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let x = join $ (T.stripPrefix "Basic ") <$> maybeAuth
-  -- let decodedAuthM = (DT.decodeUtf8 . DBB.decodeLenient . DT.encodeUtf8) <$> x
-  let decodedAuthM = DT.decodeUtf8 <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> x))
+  let authHeader = join $ (T.stripPrefix "Basic ") <$> maybeAuth
+      decodedAuthM =
+        DT.decodeUtf8
+          <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> authHeader))
   case (decodedAuthM, keyM) of
     (Just auth, Just key) -> do
       when ((T.pack key) /= auth) throw401
