@@ -125,3 +125,21 @@ findAllByOrgId orgId =
     predicate orgId Storage.Products {..} =
       ( _organizationId ==. (B.val_ orgId)
       )
+
+updateStatusByIds ::
+  [ProductsId] ->
+  Storage.ProductsStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.Products {..} = B.in_ _id (B.val_ <$> ids)
+    setClause status currTime Storage.Products {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
