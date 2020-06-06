@@ -129,22 +129,22 @@ type OrganizationAPIs =
            :<|> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
-           :<|> Capture "orgId" Text
-           :> Header "authorization" Text
-           :> ReqBody '[JSON] UpdateTransporterReq
-           :> Post '[JSON] TransporterRec
            :<|> "gateway"
            :> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] GatewayRes
+           :<|> Capture "orgId" Text
+           :> Header "authorization" Text
+           :> ReqBody '[JSON] UpdateTransporterReq
+           :> Post '[JSON] TransporterRec
        )
 
 organizationFlow :: FlowServer OrganizationAPIs
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.createTransporter
-    :<|> Transporter.updateTransporter
     :<|> Transporter.createGateway
+    :<|> Transporter.updateTransporter
 
 -----------------------------
 -------- Case Flow----------
