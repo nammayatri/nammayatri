@@ -64,7 +64,9 @@ dependencies:
 - euler-hs
 - http-api-data
 - http-client
+- http-client-tls
 - http-types
+- jwt
 - lens
 - pureMD5
 - random-strings
