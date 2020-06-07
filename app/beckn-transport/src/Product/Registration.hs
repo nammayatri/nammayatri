@@ -37,9 +37,10 @@ initiateFlow req = do
   entityId <- do
     QP.findByMobileNumber mobileNumber
       >>= maybe (createPerson req) (return . _getPersonId . SP._id)
-  regToken <- makeSession req entityId SR.USER
+  useFakeOtpM <- L.runIO $ lookupEnv "USE_FAKE_SMS"
+  regToken <- makeSession req entityId SR.USER (T.pack <$> useFakeOtpM)
   QR.create regToken
-  sendOTP mobileNumber (SR._authValueHash regToken)
+  --  sendOTP mobileNumber (SR._authValueHash regToken)
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
   return $ InitiateLoginRes {attempts, tokenId}
@@ -77,9 +78,11 @@ makePerson req = do
       }
 
 makeSession ::
-  InitiateLoginReq -> Text -> SR.RTEntityType -> L.Flow SR.RegistrationToken
-makeSession req entityId entityType = do
-  otp <- generateOTPCode
+  InitiateLoginReq -> Text -> SR.RTEntityType -> Maybe Text -> L.Flow SR.RegistrationToken
+makeSession req entityId entityType fakeOtp = do
+  otp <- case fakeOtp of
+    Just otp -> return otp
+    Nothing -> generateOTPCode
   id <- L.generateGUID
   token <- L.generateGUID
   now <- getCurrentTimeUTC
