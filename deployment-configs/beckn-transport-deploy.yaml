@@ -100,6 +100,11 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: BECKN_GATEWAY_PORT
+        - name: USE_FAKE_SMS
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: USE_FAKE_SMS
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
         name: beckn-transport-$DEPLOY_VARIANT
         ports:
