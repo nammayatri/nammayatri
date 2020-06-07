@@ -13,4 +13,4 @@ data:
   # GATEWAY_HOST: "beckn-transport.atlas" ## Changed based on deployment variant (master/staging)
   GATEWAY_PORT: "8014"
   GATEWAY_PATH: "/v1"
-  USE_FAKE_SMS: 7891
+  USE_FAKE_SMS: "7891"
