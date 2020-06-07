@@ -330,11 +330,14 @@ trackTrip req = withFlowHandler $ do
   L.logInfo "track trip API Flow" $ show req
   let tripId = req ^. #message ^. #id
   case_ <- Case.findById (CaseId tripId)
-  parentCase <- Case.findById $ fetchMaybeValue $ case_ ^. #_parentCaseId
-  --TODO : use forkFlow to notify gateway
-  notifyTripUrlToGateway case_ parentCase
-  uuid <- L.generateGUID
-  mkAckResponse uuid "track"
+  case case_ ^. #_parentCaseId of
+    Just parentCaseId -> do
+      parentCase <- Case.findById parentCaseId
+      --TODO : use forkFlow to notify gateway
+      notifyTripUrlToGateway case_ parentCase
+      uuid <- L.generateGUID
+      mkAckResponse uuid "track"
+    Nothing -> L.throwException $ err400 {errBody = "Case does not have an associated parent case"}
 
 notifyTripUrlToGateway :: Case -> Case -> L.Flow ()
 notifyTripUrlToGateway case_ parentCase = do
