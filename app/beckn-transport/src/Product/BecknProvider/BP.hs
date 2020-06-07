@@ -48,7 +48,6 @@ import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.Products as Product
 import Storage.Queries.Vehicle as Vehicle
-import Storage.Redis.Queries
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
@@ -449,7 +448,7 @@ mkCancelTripObj prodId = do
 -- | Send FCM "search" notification to provider admins
 notifyTransportersOnSerch :: Case -> [Person] -> L.Flow ()
 notifyTransportersOnSerch c =
-  traverse_ (FCM.notifyPersonTmp getKeyRedisText title body notificationData)
+  traverse_ (FCM.notifyPerson title body notificationData)
   where
     notificationData =
       FCMData
@@ -464,7 +463,7 @@ notifyTransportersOnSerch c =
 -- | Send FCM "search" notification to provider admins
 notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
 notifyTransportersOnConfirm c =
-  traverse_ (FCM.notifyPersonTmp getKeyRedisText title body notificationData)
+  traverse_ (FCM.notifyPerson title body notificationData)
   where
     notificationData =
       FCMData

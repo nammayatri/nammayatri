@@ -23,7 +23,6 @@ import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import Storage.Redis.Queries
 import System.Environment
 import Types.API.Registration
 
@@ -55,7 +54,7 @@ initiateFlow req = do
           }
       title = "Registration Completed!"
       body = "You can now start accepting rides!"
-  FCM.notifyPersonTmp getKeyRedisText title body notificationData person
+  FCM.notifyPerson title body notificationData person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person

@@ -1,87 +1,99 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
-
+{-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Utils.JWT where
 
-import Data.Maybe
-import Data.Either
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as E
-import Data.String
-import Data.Bool
-import qualified Data.Map as Map
-import Data.Time.Clock.POSIX
-
 import Control.Applicative
-import Control.Monad
-import Web.JWT as JWT
-
 import Control.Lens.TH
+import Control.Monad
 import qualified Data.Aeson as J
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Aeson.Types
-import Data.Default.Class
+import Data.Bool
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as C8
+import qualified Data.ByteString.Lazy as BL
+import Data.Default.Class
+import Data.Either
+import qualified Data.Map as Map
+import Data.Maybe
+import Data.String
+import qualified Data.Text as T
+import Data.Time.Clock
+import Data.Time.Clock.POSIX
 import EulerHS.Prelude hiding (exp, fromRight)
+import Network.HTTP.Client
+import Network.HTTP.Client.TLS
+import Network.HTTP.Types
+import System.Environment
+import Web.JWT
+import Web.JWT (NumericDate)
 
-import           Network.HTTP.Client.TLS
-import           Network.HTTP.Client
-import           Network.HTTP.Types
-
-
-data ServiceAccount = ServiceAccount
-  { _saType :: !T.Text
-  , _saProjectId :: !T.Text
-  , _saPrivateKeyId :: !T.Text
-  , _saPrivateKey :: !String
-  , _saClientEmail :: !T.Text
-  , _saClientId :: !T.Text
-  , _saAuthUri :: !T.Text
-  , _saTokenUri :: !T.Text
-  , _saAuthProviderX509CertUrl :: !T.Text
-  , _saClientX509CertUrl :: !T.Text
-  } deriving (Show, Eq, Generic)
+data ServiceAccount
+  = ServiceAccount
+      { _saType :: !T.Text,
+        _saProjectId :: !T.Text,
+        _saPrivateKeyId :: !T.Text,
+        _saPrivateKey :: !String,
+        _saClientEmail :: !T.Text,
+        _saClientId :: !T.Text,
+        _saAuthUri :: !T.Text,
+        _saTokenUri :: !T.Text,
+        _saAuthProviderX509CertUrl :: !T.Text,
+        _saClientX509CertUrl :: !T.Text
+      }
+  deriving (Show, Eq, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
-
-data JWTBody = JWTBody
-  { _jwtAssertion :: !T.Text
-  , _jwtGrantType :: !T.Text
-  } deriving (Show, Eq, Generic)
+data JWTBody
+  = JWTBody
+      { _jwtAssertion :: !T.Text,
+        _jwtGrantType :: !T.Text
+      }
+  deriving (Show, Eq, Generic)
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWTBody)
 
-data JWTResponseBody = JWTResponseBody
-  { _jwtAccessToken :: !T.Text
-  , _jwtExpiresIn :: Integer
-  , _jwtTokenType :: !Text
-  } deriving (Show, Eq, Generic)
+data JWToken
+  = JWToken
+      { _jwtAccessToken :: !T.Text,
+        _jwtExpiresIn :: Integer,
+        _jwtTokenType :: !Text
+      }
+  deriving (Show, Eq, Generic)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''JWTResponseBody)
+$(deriveFromJSON (aesonPrefix snakeCase) ''JWToken)
 
-
-getJSON :: IO BL.ByteString
-getJSON = BL.readFile "/home/jerry/Projects/juspay/token/jp-beckn-dev-4fbd238801a3.json"
+getJSON :: IO (Either String BL.ByteString)
+getJSON = do
+  saFileName <- lookupEnv "FCM_JSON_PATH"
+  case saFileName of
+    Nothing -> pure $ Left "FCM service account json not found"
+    Just f -> do
+      bs <- BL.readFile f
+      pure $ Right bs
 
 getServiceAccount :: IO (Either String ServiceAccount)
-getServiceAccount = J.eitherDecode <$> getJSON
+getServiceAccount = do
+  res <- getJSON
+  pure $ case res of
+    Left err -> Left err
+    Right json -> J.eitherDecode json
 
-createJWT :: ServiceAccount -> IO (Either String Text)
+createJWT :: ServiceAccount -> IO (Either String (JWTClaimsSet, Text))
 createJWT sa = do
   let iss = stringOrURI . _saClientEmail $ sa
   let aud = Left <$> (stringOrURI . _saTokenUri $ sa)
   let unregisteredClaims = ClaimsMap $ Map.fromList [("scope", String "https://www.googleapis.com/auth/firebase.messaging")]
-  let jwtHeader = JOSEHeader {
-          typ = Just "JWT"
-        , cty = Nothing
-        , alg = Just RS256
-        , kid = Just $ _saPrivateKeyId sa
-        }
+  let jwtHeader =
+        JOSEHeader
+          { typ = Just "JWT",
+            cty = Nothing,
+            alg = Just RS256,
+            kid = Just $ _saPrivateKeyId sa
+          }
   let mkey = readRsaSecret . C8.pack $ _saPrivateKey sa
   case mkey of
     Nothing -> pure $ Left "Bad RSA key!"
@@ -89,23 +101,25 @@ createJWT sa = do
       let key = RSAPrivateKey pkey
       iat <- numericDate <$> getPOSIXTime
       exp <- numericDate . (+ 3600) <$> getPOSIXTime
-      let cs = mempty {
-              exp = exp
-            , iat = iat
-            , iss = iss
-            , aud = aud
-            , unregisteredClaims = unregisteredClaims
-            }
-      pure $ Right (encodeSigned key jwtHeader cs)
+      let cs =
+            mempty
+              { exp = exp,
+                iat = iat,
+                iss = iss,
+                aud = aud,
+                unregisteredClaims = unregisteredClaims
+              }
+      pure $ Right (cs, (encodeSigned key jwtHeader cs))
 
 jwtRequest :: T.Text -> BL.ByteString -> IO Request
 jwtRequest tokenUri body = do
-  print tokenUri
   req <- parseRequest $ T.unpack tokenUri
-  pure $ req { method = "POST"
-             , requestHeaders = [ (hContentType, "application/json") ]
-             , requestBody = RequestBodyLBS body
-             }
+  pure $
+    req
+      { method = "POST",
+        requestHeaders = [(hContentType, "application/json")],
+        requestBody = RequestBodyLBS body
+      }
 
 refreshToken :: IO (Either String Text)
 refreshToken = do
@@ -113,21 +127,45 @@ refreshToken = do
   case sAccount of
     Left err -> pure $ Left err
     Right sa -> do
-      jwt <- createJWT sa
-      case jwt of
+      jwtPair <- createJWT sa
+      case jwtPair of
         Left err -> pure $ Left err
-        Right assertion -> do
+        Right (claimPairs, assertion) -> do
+          let issuedAt = iat claimPairs
           manager <- newManager tlsManagerSettings
-          let body = JWTBody {
-                  _jwtAssertion = assertion
-                , _jwtGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
-                }
+          let body =
+                JWTBody
+                  { _jwtAssertion = assertion,
+                    _jwtGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+                  }
           req <- jwtRequest (_saTokenUri sa) (J.encode body)
-          print req
-          print body
           res <- httpLbs req manager
           let rBody = J.eitherDecode $ responseBody res
           case rBody of
             Left err -> pure $ Left err
-            Right respBody -> pure $ Right $ (_jwtTokenType respBody) <> (T.pack " ") <>  (_jwtAccessToken respBody)
-          --pure $ Right ""
+            Right respBody -> do
+              let token = _jwtTokenType respBody <> T.pack " " <> _jwtAccessToken respBody
+              setEnv "FCM_AUTH_TOKEN" $ T.unpack token
+              setEnv "FCM_AUTH_TOKEN_EXPIRY" $ show $ getExpiry issuedAt (_jwtExpiresIn respBody)
+              pure $ Right token
+
+getExpiry :: Maybe NumericDate -> Integer -> Integer
+getExpiry Nothing expiresIn = expiresIn
+getExpiry (Just d) expiresIn =
+  expiresIn + (round $ nominalDiffTimeToSeconds (secondsSinceEpoch d))
+
+getToken :: IO (Either String Text)
+getToken = do
+  token <- lookupEnv "FCM_AUTH_TOKEN"
+  expiry <- lookupEnv "FCM_AUTH_TOKEN_EXPIRY"
+  case token of
+    Nothing -> refreshToken
+    Just t ->
+      case expiry of
+        Nothing -> refreshToken
+        Just e -> do
+          let expInt = read e :: Integer
+          curInt <- round <$> getPOSIXTime
+          if curInt > expInt - 60
+            then refreshToken
+            else pure . Right $ T.pack t

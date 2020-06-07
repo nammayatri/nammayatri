@@ -36,7 +36,6 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
-import Storage.Redis.Queries
 import Types.App
 import Types.ProductInfo
 import Utils.Common
@@ -234,6 +233,6 @@ notifyOnSearchCb personId caseId = do
               }
           title = "New ride options available!"
           body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
-      FCM.notifyPersonTmp getKeyRedisText title body notificationData p
+      FCM.notifyPerson title body notificationData p
       pure ()
     _ -> pure ()
