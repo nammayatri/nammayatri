@@ -76,7 +76,7 @@ search req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
-  notifyTransportersOnSerch c admins
+  notifyTransportersOnSearch c admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -446,8 +446,8 @@ mkCancelTripObj prodId = do
       }
 
 -- | Send FCM "search" notification to provider admins
-notifyTransportersOnSerch :: Case -> [Person] -> L.Flow ()
-notifyTransportersOnSerch c =
+notifyTransportersOnSearch :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnSearch c =
   traverse_ (FCM.notifyPerson title body notificationData)
   where
     notificationData =

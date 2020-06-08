@@ -26,7 +26,6 @@ import Network.Wai.Handler.Warp
 import Servant
 import Servant.Server
 import Storage.DB.Config
-import Storage.Redis.Config
 import qualified System.Environment as SE
 
 runAppBackend :: IO ()
