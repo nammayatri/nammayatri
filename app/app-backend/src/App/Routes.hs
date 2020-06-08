@@ -3,7 +3,7 @@
 
 module App.Routes where
 
-import qualified Beckn.Types.API.Cancel as Cancel
+import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes (..))
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
@@ -28,6 +28,7 @@ import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.TrackTrip as TrackTrip
 import Servant
+import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
 import qualified Types.API.CaseProduct as CaseProduct
 import qualified Types.API.Confirm as ConfirmAPI
