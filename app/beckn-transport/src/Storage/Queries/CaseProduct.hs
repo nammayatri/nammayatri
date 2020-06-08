@@ -75,6 +75,14 @@ updateStatus caseId productId status = do
           _status <-. B.val_ status
         ]
 
+findAllByCaseIds :: [CaseId] -> L.Flow [Storage.CaseProduct]
+findAllByCaseIds ids =
+  DB.findAll dbTable (pred ids)
+    >>= either DB.throwDBError pure
+  where
+    pred ids Storage.CaseProduct {..} =
+      B.in_ _caseId (B.val_ <$> ids)
+
 updateStatusByIds ::
   [CaseProductId] ->
   Storage.CaseProductStatus ->

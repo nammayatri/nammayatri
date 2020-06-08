@@ -82,6 +82,22 @@ updateStatus id status = do
           _status <-. B.val_ status
         ]
 
+updateAllCaseProductsByCaseId :: CaseId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
+updateAllCaseProductsByCaseId caseId status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  caseProducts <- findAllByCaseId caseId
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate (Storage._id <$> caseProducts))
+  where
+    predicate ids Storage.CaseProduct {..} = _id `B.in_` (B.val_ <$> ids)
+    setClause status currTime Storage.CaseProduct {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
 updateAllProductsByCaseId :: CaseId -> Products.ProductsStatus -> L.Flow (T.DBResult ())
 updateAllProductsByCaseId caseId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
