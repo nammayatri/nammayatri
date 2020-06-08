@@ -1,9 +1,13 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Beckn.Utils.Common where
 
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Extra
 import Data.Aeson as A
 import Data.ByteString.Base64 as DBB
@@ -94,3 +98,12 @@ authenticate maybeAuth = do
     throw401 =
       L.throwException $
         err401 {errBody = "Invalid Auth"}
+
+maskPerson :: Person.Person -> Person.Person
+maskPerson person =
+  person {Person._deviceToken = (FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken) <$> (person ^. #_deviceToken)}
+  where
+    trimToken token =
+      if length token > 6
+        then T.take 3 token <> "..." <> T.takeEnd 3 token
+        else "..."

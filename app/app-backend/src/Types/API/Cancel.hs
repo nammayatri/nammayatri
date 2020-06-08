@@ -8,18 +8,16 @@ import EulerHS.Prelude
 data Entity = CASE | PRODUCT
   deriving (Eq, Generic, Show, FromJSON, ToJSON)
 
-data Cancel
-  = Cancel
-      { entityId :: Text,
-        entityType :: Entity
-      }
+data Cancel = Cancel
+  { entityId :: Text,
+    entityType :: Entity
+  }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data CancelReq
-  = CancelReq
-      { context :: Context,
-        message :: Cancel
-      }
+data CancelReq = CancelReq
+  { context :: Context,
+    message :: Cancel
+  }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type CancelRes = AckResponse
