@@ -61,7 +61,7 @@ search req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime $ req ^. #message ^. #time
+  validity <- getValidTime $ currTime
   uuid1 <- L.generateGUID
   let fromLocation = mkFromLocation req uuid1 currTime $ req ^. #message ^. #origin
   uuid2 <- L.generateGUID
@@ -91,8 +91,10 @@ cancel req = withFlowHandler $ do
   notifyCancelToGateway productId
   mkAckResponse uuid "cancel"
 
+-- TODO: Move this to core Utils.hs
+-- Putting a static expiry of 2hrs
 getValidTime :: LocalTime -> L.Flow LocalTime
-getValidTime now = pure $ addLocalTime (60 * 30 :: NominalDiffTime) now
+getValidTime now = pure $ addLocalTime (60 * 30 * 2) $ now
 
 mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
 mkFromLocation req uuid now loc =

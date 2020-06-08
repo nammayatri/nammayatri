@@ -111,7 +111,9 @@ mkCase req userId from to = do
   shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
-      validTill = addLocalTime (60 * 30) $ req ^. #message ^. #time
+      -- TODO: Fix this
+      -- putting static expiry of 2hrs
+      validTill = addLocalTime (60 * 60 * 2) $ now
   return $
     Case.Case
       { _id = id,
