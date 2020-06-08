@@ -50,7 +50,7 @@ extra-deps:
     commit: a1347057def25cdf9db0c826f56d2135f8bb8be7
     subdirs:
       - lib/euler-hs
-  - git: https://github.com/juspay/beam-mysql
+  - git: https://github.com/juspay/beam-mysql2
     commit: 3d03598b11be40929ee95984a83c3d9ed4be8536
   - crc16-0.1.0@sha256:da3e4b82e437a054159ecc497372c997f784d77babcee641a5f657f6a0a8eb80,624
   - directory-1.3.6.1@sha256:3dc9c69c8e09ec95a7a45c6d06abe0f0d2f604439c37e5f88e5a6c335b088d71,2810

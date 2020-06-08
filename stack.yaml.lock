@@ -40,13 +40,13 @@ packages:
       sha256: 6c64358de5094463a70e8c71dbc99a38ae937d04a44cee9858e8a0779bb7b8dd
     name: beam-mysql
     version: 0.2.0.0
-    git: https://github.com/juspay/beam-mysql
+    git: https://github.com/juspay/beam-mysql2
     pantry-tree:
       size: 542
       sha256: 2ec8c8ac068ed54bd8dcff219e9c247b657ce1c51186922afe56ef4fb8b63f46
     commit: 3d03598b11be40929ee95984a83c3d9ed4be8536
   original:
-    git: https://github.com/juspay/beam-mysql
+    git: https://github.com/juspay/beam-mysql2
     commit: 3d03598b11be40929ee95984a83c3d9ed4be8536
 - completed:
     hackage: crc16-0.1.0@sha256:da3e4b82e437a054159ecc497372c997f784d77babcee641a5f657f6a0a8eb80,624
