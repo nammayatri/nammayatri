@@ -2,6 +2,8 @@
 
 module Product.Search where
 
+import Beckn.External.FCM.Flow as FCM
+import Beckn.External.FCM.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -94,6 +96,7 @@ search_cb regToken req = withFlowHandler $ do
       traverse_
         (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
+      notifyOnSearchCb personId caseId
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
 
@@ -218,3 +221,21 @@ mkCaseProduct caseId personId product = do
         _createdAt = now,
         _updatedAt = now
       }
+
+notifyOnSearchCb :: PersonId -> CaseId -> L.Flow ()
+notifyOnSearchCb personId caseId = do
+  person <- Person.findById personId
+  case person of
+    Just p -> do
+      let notificationData =
+            FCMData
+              { _fcmNotificationType = "SEARCH_CALLBACK",
+                _fcmShowNotification = "true",
+                _fcmEntityIds = show $ _getCaseId caseId,
+                _fcmEntityType = "Case"
+              }
+          title = "New ride options available!"
+          body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
+      FCM.notifyPerson title body notificationData p
+      pure ()
+    _ -> pure ()
