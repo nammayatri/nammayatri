@@ -210,7 +210,7 @@ cancelFlow =
 type CronAPIs =
   "cron"
     :> "expire_cases"
-    :> Header "Authorization" Text
+    :> Header "Authorization" CronAuthKey
     :> ReqBody '[JSON] Cron.ExpireCaseReq
     :> Post '[JSON] Cron.ExpireCaseRes
 

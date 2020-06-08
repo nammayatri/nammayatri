@@ -7,11 +7,8 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (authenticate, withFlowHandler)
 import Data.Aeson
-import qualified Data.ByteString.Base64 as DBB
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -22,7 +19,7 @@ import qualified Storage.Queries.Products as PQ
 import System.Environment
 import Types.API.Cron
 
-expire :: Maybe Text -> ExpireCaseReq -> FlowHandler ExpireCaseRes
+expire :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireCaseRes
 expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
   cases <- CQ.findAllExpiredByStatus [Case.NEW] Case.RIDEBOOK from to
@@ -32,20 +29,3 @@ expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   CPQ.updateStatusByIds (CaseProduct._id <$> caseProducts) Product.EXPIRED
   PQ.updateStatusByIds (Product._id <$> products) Product.EXPIRED
   pure $ ExpireCaseRes $ length cases
-
-authenticate :: Maybe Text -> L.Flow ()
-authenticate maybeAuth = do
-  keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let authHeader = join $ (T.stripPrefix "Basic ") <$> maybeAuth
-      decodedAuthM =
-        DT.decodeUtf8
-          <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> authHeader))
-  case (decodedAuthM, keyM) of
-    (Just auth, Just key) -> do
-      when ((T.pack key) /= auth) throw401
-      return ()
-    _ -> throw401
-  where
-    throw401 =
-      L.throwException $
-        err401 {errBody = "Invalid Auth"}

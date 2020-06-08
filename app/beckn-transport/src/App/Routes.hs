@@ -269,7 +269,7 @@ cancelApiFlow = BP.cancel
 type CronAPIs =
   "cron"
     :> "expire_cases"
-    :> Header "Authorization" Text
+    :> Header "Authorization" CronAuthKey
     :> ReqBody '[JSON] ExpireCaseReq
     :> Post '[JSON] ExpireCaseRes
 

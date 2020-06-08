@@ -7,8 +7,9 @@ import Beckn.Types.Core.Context
 import Beckn.Utils.Extra
 import Data.Aeson as A
 import Data.ByteString.Base64 as DBB
+import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as DT
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import Data.Time.Calendar (Day (..))
@@ -18,6 +19,7 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import System.Environment
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
@@ -63,10 +65,10 @@ withFlowHandler flow = do
 
 base64Decode :: Maybe Text -> Maybe Text
 base64Decode auth =
-  DT.reverse <$> DT.drop 1
-    <$> DT.reverse
+  T.reverse <$> T.drop 1
+    <$> T.reverse
     <$> DT.decodeUtf8
-    <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> DT.drop 6 <$> auth)
+    <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> T.drop 6 <$> auth)
 
 fetchMaybeValue :: forall a. Maybe a -> a
 fetchMaybeValue c = case c of
@@ -78,3 +80,20 @@ decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 
 encodeToText :: ToJSON a => a -> Text
 encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
+
+authenticate :: Maybe CronAuthKey -> L.Flow ()
+authenticate maybeAuth = do
+  keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
+  let authHeader = join $ (T.stripPrefix "Basic ") <$> maybeAuth
+      decodedAuthM =
+        DT.decodeUtf8
+          <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> authHeader))
+  case (decodedAuthM, keyM) of
+    (Just auth, Just key) -> do
+      when ((T.pack key) /= auth) throw401
+      return ()
+    _ -> throw401
+  where
+    throw401 =
+      L.throwException $
+        err401 {errBody = "Invalid Auth"}

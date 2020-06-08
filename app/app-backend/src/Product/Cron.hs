@@ -7,7 +7,7 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (authenticate, withFlowHandler)
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.ByteString.Base64 as DBB
@@ -27,7 +27,7 @@ import Types.API.CaseProduct
 import qualified Types.API.Cron as API
 import Utils.Common (verifyToken)
 
-updateCases :: Maybe Text -> API.ExpireCaseReq -> FlowHandler API.ExpireCaseRes
+updateCases :: Maybe CronAuthKey -> API.ExpireCaseReq -> FlowHandler API.ExpireCaseRes
 updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
   cases <- (Case.findAllExpiredByStatus [Case.NEW] from to)
@@ -40,20 +40,3 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
     )
     caseIds
   pure $ API.ExpireCaseRes $ length caseIds
-
-authenticate :: Maybe Text -> L.Flow ()
-authenticate maybeAuth = do
-  keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let authHeader = join $ (T.stripPrefix "Basic ") <$> maybeAuth
-      decodedAuthM =
-        DT.decodeUtf8
-          <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> authHeader))
-  case (decodedAuthM, keyM) of
-    (Just auth, Just key) -> do
-      when ((T.pack key) /= auth) throw401
-      return ()
-    _ -> throw401
-  where
-    throw401 =
-      L.throwException $
-        err401 {errBody = "Invalid Auth"}
