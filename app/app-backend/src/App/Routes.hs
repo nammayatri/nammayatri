@@ -10,6 +10,7 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
@@ -134,6 +135,10 @@ type CaseAPIs =
   "case"
     :> Header "token" RegToken
     :> ( "list"
+           :> MandatoryQueryParam "type" Case.CaseType
+           :> QueryParams "status" Case.CaseStatus
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
            :> Get '[JSON] Case.ListRes
            :<|> Capture "caseId" CaseId
            :> Get '[JSON] Case.StatusRes

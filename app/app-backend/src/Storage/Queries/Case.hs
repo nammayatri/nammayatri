@@ -23,16 +23,28 @@ create Storage.Case {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
     >>= either DB.throwDBError pure
 
-findAllByType :: Integer -> Integer -> Storage.CaseType -> Storage.CaseStatus -> L.Flow [Storage.Case]
-findAllByType limit offset caseType caseStatus =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate caseType caseStatus) limit offset orderByDesc
-    >>= either DB.throwDBError pure
+findAllByTypeAndStatuses ::
+  PersonId ->
+  Storage.CaseType ->
+  [Storage.CaseStatus] ->
+  Maybe Integer ->
+  Maybe Integer ->
+  L.Flow [Storage.Case]
+findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset =
+  let limit = fromMaybe 100 mlimit
+      offset = fromMaybe 0 moffset
+   in DB.findAllWithLimitOffsetWhere dbTable (predicate personId caseType caseStatuses) limit offset orderByDesc
+        >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate caseType caseStatus Storage.Case {..} =
-      ( _type ==. (B.val_ caseType)
-          &&. _status ==. (B.val_ caseStatus)
-      )
+    predicate personId caseType caseStatuses Storage.Case {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _type ==. (B.val_ caseType),
+          B.in_ _status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
+          _requestor ==. B.val_ (Just $ _getPersonId personId)
+        ]
 
 findById :: CaseId -> L.Flow Storage.Case
 findById caseId =
