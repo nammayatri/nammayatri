@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -23,10 +23,10 @@ data LocationType = POINT | POLYGON | PINCODE | ADDRESS
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL LocationType where
+instance FromBackendRow Postgres LocationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-deriving instance B.HasSqlEqualityCheck MySQL LocationType
+deriving instance B.HasSqlEqualityCheck Postgres LocationType
 
 instance ToParamSchema LocationType
 
@@ -35,22 +35,23 @@ instance FromHttpApiData LocationType where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data LocationT f = Location
-  { _id :: B.C f LocationId,
-    _locationType :: B.C f LocationType,
-    _lat :: B.C f (Maybe Double),
-    _long :: B.C f (Maybe Double),
-    _ward :: B.C f (Maybe Text),
-    _district :: B.C f (Maybe Text),
-    _city :: B.C f (Maybe Text),
-    _state :: B.C f (Maybe Text),
-    _country :: B.C f (Maybe Text),
-    _pincode :: B.C f (Maybe Text),
-    _address :: B.C f (Maybe Text),
-    _bound :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data LocationT f
+  = Location
+      { _id :: B.C f LocationId,
+        _locationType :: B.C f LocationType,
+        _lat :: B.C f (Maybe Double),
+        _long :: B.C f (Maybe Double),
+        _ward :: B.C f (Maybe Text),
+        _district :: B.C f (Maybe Text),
+        _city :: B.C f (Maybe Text),
+        _state :: B.C f (Maybe Text),
+        _country :: B.C f (Maybe Text),
+        _pincode :: B.C f (Maybe Text),
+        _address :: B.C f (Maybe Text),
+        _bound :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type Location = LocationT Identity

@@ -11,8 +11,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Backend
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -23,7 +23,7 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Category where
+instance FromBackendRow Postgres Category where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Category
@@ -40,7 +40,7 @@ data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Variant where
+instance FromBackendRow Postgres Variant where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Variant
@@ -57,7 +57,7 @@ data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EnergyType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL EnergyType where
+instance FromBackendRow Postgres EnergyType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema EnergyType
@@ -74,7 +74,7 @@ data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegistrationCategory where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL RegistrationCategory where
+instance FromBackendRow Postgres RegistrationCategory where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema RegistrationCategory
@@ -84,22 +84,23 @@ instance FromHttpApiData RegistrationCategory where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data VehicleT f = Vehicle
-  { _id :: B.C f VehicleId,
-    _capacity :: B.C f (Maybe Int),
-    _organizationId :: B.C f Text,
-    _category :: B.C f (Maybe Category),
-    _make :: B.C f (Maybe Text),
-    _model :: B.C f (Maybe Text),
-    _size :: B.C f (Maybe Text),
-    _variant :: B.C f (Maybe Variant),
-    _color :: B.C f (Maybe Text),
-    _energyType :: B.C f (Maybe EnergyType),
-    _registrationNo :: B.C f Text,
-    _registrationCategory :: B.C f (Maybe RegistrationCategory),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data VehicleT f
+  = Vehicle
+      { _id :: B.C f VehicleId,
+        _capacity :: B.C f (Maybe Int),
+        _organizationId :: B.C f Text,
+        _category :: B.C f (Maybe Category),
+        _make :: B.C f (Maybe Text),
+        _model :: B.C f (Maybe Text),
+        _size :: B.C f (Maybe Text),
+        _variant :: B.C f (Maybe Variant),
+        _color :: B.C f (Maybe Text),
+        _energyType :: B.C f (Maybe EnergyType),
+        _registrationNo :: B.C f Text,
+        _registrationCategory :: B.C f (Maybe RegistrationCategory),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type Vehicle = VehicleT Identity

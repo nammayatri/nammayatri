@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -23,9 +23,9 @@ data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION | TRACKER
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL CaseType
+instance B.HasSqlEqualityCheck Postgres CaseType
 
-instance FromBackendRow MySQL CaseType where
+instance FromBackendRow Postgres CaseType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
@@ -34,9 +34,9 @@ data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL CaseStatus
+instance B.HasSqlEqualityCheck Postgres CaseStatus
 
-instance FromBackendRow MySQL CaseStatus where
+instance FromBackendRow Postgres CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data Industry = MOBILITY | GOVT | GROCERY
@@ -45,7 +45,7 @@ data Industry = MOBILITY | GOVT | GROCERY
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Industry where
+instance FromBackendRow Postgres Industry where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ExchangeType = ORDER | FULFILLMENT
@@ -54,7 +54,7 @@ data ExchangeType = ORDER | FULFILLMENT
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExchangeType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL ExchangeType where
+instance FromBackendRow Postgres ExchangeType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RequestorType = CONSUMER
@@ -63,7 +63,7 @@ data RequestorType = CONSUMER
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RequestorType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL RequestorType where
+instance FromBackendRow Postgres RequestorType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
@@ -72,7 +72,7 @@ data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL ProviderType where
+instance FromBackendRow Postgres ProviderType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData CaseStatus where
@@ -85,34 +85,35 @@ instance FromHttpApiData CaseType where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data CaseT f = Case
-  { _id :: B.C f CaseId,
-    _name :: B.C f (Maybe Text),
-    _description :: B.C f (Maybe Text),
-    _shortId :: B.C f Text,
-    _industry :: B.C f Industry,
-    _type :: B.C f CaseType,
-    _exchangeType :: B.C f ExchangeType,
-    _status :: B.C f CaseStatus,
-    _startTime :: B.C f LocalTime,
-    _endTime :: B.C f (Maybe LocalTime),
-    _validTill :: B.C f LocalTime,
-    _provider :: B.C f (Maybe Text),
-    _providerType :: B.C f (Maybe ProviderType),
-    _requestor :: B.C f (Maybe Text),
-    _requestorType :: B.C f (Maybe RequestorType),
-    _parentCaseId :: B.C f (Maybe CaseId),
-    _fromLocationId :: B.C f Text,
-    _toLocationId :: B.C f Text,
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _udf3 :: B.C f (Maybe Text),
-    _udf4 :: B.C f (Maybe Text),
-    _udf5 :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data CaseT f
+  = Case
+      { _id :: B.C f CaseId,
+        _name :: B.C f (Maybe Text),
+        _description :: B.C f (Maybe Text),
+        _shortId :: B.C f Text,
+        _industry :: B.C f Industry,
+        _type :: B.C f CaseType,
+        _exchangeType :: B.C f ExchangeType,
+        _status :: B.C f CaseStatus,
+        _startTime :: B.C f LocalTime,
+        _endTime :: B.C f (Maybe LocalTime),
+        _validTill :: B.C f LocalTime,
+        _provider :: B.C f (Maybe Text),
+        _providerType :: B.C f (Maybe ProviderType),
+        _requestor :: B.C f (Maybe Text),
+        _requestorType :: B.C f (Maybe RequestorType),
+        _parentCaseId :: B.C f (Maybe CaseId),
+        _fromLocationId :: B.C f Text,
+        _toLocationId :: B.C f Text,
+        _udf1 :: B.C f (Maybe Text),
+        _udf2 :: B.C f (Maybe Text),
+        _udf3 :: B.C f (Maybe Text),
+        _udf4 :: B.C f (Maybe Text),
+        _udf5 :: B.C f (Maybe Text),
+        _info :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 --TODO: assignedTo, requestor - -- need to point to primarykey of Person

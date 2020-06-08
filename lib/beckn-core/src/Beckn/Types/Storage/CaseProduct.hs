@@ -11,24 +11,25 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.Swagger
 
 type CaseProductStatus = ProductsStatus
 
-data CaseProductT f = CaseProduct
-  { _id :: B.C f CaseProductId,
-    _caseId :: B.C f CaseId,
-    _productId :: B.C f ProductsId,
-    _personId :: B.C f (Maybe PersonId),
-    _quantity :: B.C f Int,
-    _price :: B.C f Double,
-    _status :: B.C f CaseProductStatus,
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data CaseProductT f
+  = CaseProduct
+      { _id :: B.C f CaseProductId,
+        _caseId :: B.C f CaseId,
+        _productId :: B.C f ProductsId,
+        _personId :: B.C f (Maybe PersonId),
+        _quantity :: B.C f Int,
+        _price :: B.C f Double,
+        _status :: B.C f CaseProductStatus,
+        _info :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type CaseProduct = CaseProductT Identity
