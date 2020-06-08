@@ -11,7 +11,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -23,7 +23,7 @@ data Status = NOT_STARTED | WAITING | ON_GOING | COMPLETED | CANCELLED
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Status
@@ -33,18 +33,19 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data TripReferenceT f = TripReference
-  { _id :: B.C f TripReferenceId,
-    _customerId :: B.C f Text,
-    _quotationId :: B.C f Text,
-    _driverId :: B.C f (Maybe Text),
-    _leadsId :: B.C f Text,
-    _vehicleId :: B.C f (Maybe Text),
-    _shortId :: B.C f Text,
-    _status :: B.C f Status,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data TripReferenceT f
+  = TripReference
+      { _id :: B.C f TripReferenceId,
+        _customerId :: B.C f Text,
+        _quotationId :: B.C f Text,
+        _driverId :: B.C f (Maybe Text),
+        _leadsId :: B.C f Text,
+        _vehicleId :: B.C f (Maybe Text),
+        _shortId :: B.C f Text,
+        _status :: B.C f Status,
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type TripReference = TripReferenceT Identity

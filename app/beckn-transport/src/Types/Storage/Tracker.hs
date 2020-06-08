@@ -10,8 +10,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Backend
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -23,7 +23,7 @@ data Type = DRIVER | CUSTOMER | TRIP
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Type where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Type where
+instance FromBackendRow Postgres Type where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Type
@@ -33,16 +33,17 @@ instance FromHttpApiData Type where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data TrackerT f = Tracker
-  { _id :: B.C f TrackerId,
-    _type :: B.C f Type,
-    _referenceId :: B.C f Text,
-    _long :: B.C f Text,
-    _lat :: B.C f Text,
-    _gps :: B.C f Text,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data TrackerT f
+  = Tracker
+      { _id :: B.C f TrackerId,
+        _type :: B.C f Type,
+        _referenceId :: B.C f Text,
+        _long :: B.C f Text,
+        _lat :: B.C f Text,
+        _gps :: B.C f Text,
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type Tracker = TrackerT Identity

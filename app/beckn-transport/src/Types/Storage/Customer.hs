@@ -11,21 +11,22 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
 import Types.App
 
-data CustomerT f = Customer
-  { _id :: B.C f CustomerId,
-    _referenceId :: B.C f Text,
-    _name :: B.C f Text,
-    _mobileNumber :: B.C f Text,
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data CustomerT f
+  = Customer
+      { _id :: B.C f CustomerId,
+        _referenceId :: B.C f Text,
+        _name :: B.C f Text,
+        _mobileNumber :: B.C f Text,
+        _info :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type Customer = CustomerT Identity
