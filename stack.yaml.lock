@@ -5,6 +5,9 @@
 
 packages:
 - completed:
+    cabal-file:
+      size: 5363
+      sha256: f6af18b9538cad9e0a00ca000db540536cc1f0d7b459c16366f04c3c035c30a8
     name: hedis
     version: 0.12.8
     git: https://github.com/juspay/hedis.git
@@ -32,6 +35,9 @@ packages:
     git: git@bitbucket.org:juspay/euler-hs.git
     commit: a1347057def25cdf9db0c826f56d2135f8bb8be7
 - completed:
+    cabal-file:
+      size: 2282
+      sha256: 6c64358de5094463a70e8c71dbc99a38ae937d04a44cee9858e8a0779bb7b8dd
     name: beam-mysql
     version: 0.2.0.0
     git: https://github.com/juspay/beam-mysql
