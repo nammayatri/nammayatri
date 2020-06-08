@@ -5,7 +5,7 @@ module Product.Registration where
 import Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types
 import Beckn.Types.App
-import Beckn.Types.Common as BC
+import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
@@ -157,15 +157,19 @@ login tokenId req =
     when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
     checkForExpiry _authExpiry _updatedAt
     let isValid =
-          _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type
-            && _authValueHash
-              == req
-              ^. Lens.hash
+          _authMedium == req ^. Lens.medium
+            && _authType == req ^. Lens._type
+            && _authValueHash == req ^. Lens.hash
     if isValid
       then do
         person <- checkPersonExists _EntityId
         let personId = person ^. #_id
-        Person.update personId (Just SP.ACTIVE) Nothing Nothing Nothing Nothing Nothing
+            updatedPerson =
+              person
+                { SP._status = SP.ACTIVE,
+                  SP._deviceToken = maybe (person ^. #_deviceToken) Just (req ^. #_deviceToken)
+                }
+        Person.updateMultiple personId updatedPerson
         Person.findById personId
           >>= fromMaybeM500 "Could not find user"
           >>= return . LoginRes _token

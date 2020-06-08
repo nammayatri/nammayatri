@@ -86,7 +86,13 @@ updateMultiple personId person = do
           _organizationId <-. B.val_ (person ^. #_organizationId),
           _locationId <-. B.val_ (person ^. #_locationId),
           _description <-. B.val_ (person ^. #_description),
-          _status <-. B.val_ (person ^. #_status)
+          _status <-. B.val_ (person ^. #_status),
+          _role <-. B.val_ (person ^. #_role),
+          _identifier <-. B.val_ (person ^. #_identifier),
+          _rating <-. B.val_ (person ^. #_rating),
+          _deviceToken <-. B.val_ (person ^. #_deviceToken),
+          _udf1 <-. B.val_ (person ^. #_udf1),
+          _udf2 <-. B.val_ (person ^. #_udf2)
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
