@@ -10,7 +10,7 @@ import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
-import qualified Beckn.Types.Storage.Case as C
+import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
@@ -73,8 +73,9 @@ onConfirm regToken req = withFlowHandler $ do
                 }
         QCP.updateStatus pid Products.CONFIRMED
         Products.updateMultiple (_getProductsId pid) uPrd
+        QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId
-        let personId = C._requestor case_
+        let personId = Case._requestor case_
         notifyOnConfirmCb personId caseId
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}

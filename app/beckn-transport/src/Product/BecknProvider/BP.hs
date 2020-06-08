@@ -178,7 +178,7 @@ confirm req = withFlowHandler $ do
   case_ <- Case.findBySid caseShortId
   product <- Product.findById (ProductsId prodId)
   let caseId = _getCaseId $ case_ ^. #_id
-  Case.updateStatus (CaseId caseId) SC.CONFIRMED
+  Case.updateStatus (CaseId caseId) SC.INPROGRESS
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) Product.CONFIRMED
   Product.updateStatus (ProductsId prodId) Product.CONFIRMED
   --TODO: need to update other product status to VOID for this case
