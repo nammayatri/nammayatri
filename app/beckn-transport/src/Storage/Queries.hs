@@ -10,23 +10,23 @@ import Servant (err500, errBody)
 import qualified Storage.DB.Config as DB
 import Types.Config (Config (..))
 
-type MySqlTable table db =
+type PgTable table db =
   ( B.Beamable table,
     B.Database Postgres db
   )
 
-type RunMySqlTable table db =
-  ( MySqlTable table db,
+type RunPgTable table db =
+  ( PgTable table db,
     Config T.PostgresConfig
   )
 
-type ReadableMySqlTable table db =
-  ( MySqlTable table db,
+type ReadablePgTable table db =
+  ( PgTable table db,
     B.FromBackendRow Postgres (table Identity)
   )
 
-type RunReadableMySqlTable table db =
-  ( ReadableMySqlTable table db,
+type RunReadablePgTable table db =
+  ( ReadablePgTable table db,
     T.JSONEx (table Identity),
     Config T.PostgresConfig
   )
@@ -44,7 +44,7 @@ run query = do
 
 -- find queries
 findOneWithErr ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.Flow (table Identity)
@@ -56,14 +56,14 @@ findOneWithErr dbTable predicate = do
     Left err -> L.throwException err500 {errBody = ("DBError: " <> show err)}
 
 findOne ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.Flow (T.DBResult (Maybe (table Identity)))
 findOne dbTable predicate = run $ findOne' dbTable predicate
 
 findOne' ::
-  ReadableMySqlTable table db =>
+  ReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.SqlDB Pg (Maybe (table Identity))
@@ -71,7 +71,7 @@ findOne' dbTable predicate =
   L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAllOrErr ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.Flow [table Identity]
@@ -82,14 +82,14 @@ findAllOrErr dbTable predicate = do
     Left err -> L.throwException err500 {errBody = ("DBError: " <> show err)}
 
 findAll ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.Flow (T.DBResult ([table Identity]))
 findAll dbTable predicate = run $ findAll' dbTable predicate
 
 findAll' ::
-  ReadableMySqlTable table db =>
+  ReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.SqlDB Pg [table Identity]
@@ -98,28 +98,28 @@ findAll' dbTable predicate =
 
 -- TODO: protect from multiple inserts
 createOne ::
-  RunMySqlTable table db =>
+  RunPgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) -> -- dbTable
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.Flow (T.DBResult ())
 createOne dbTable insertExpression = bulkInsert dbTable insertExpression
 
 createOne' ::
-  MySqlTable table db =>
+  PgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
 createOne' dbTable insertExpression = bulkInsert' dbTable insertExpression
 
 bulkInsert ::
-  RunMySqlTable table db =>
+  RunPgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.Flow (T.DBResult ())
 bulkInsert dbTable insertExpressions = run $ bulkInsert' dbTable insertExpressions
 
 bulkInsert' ::
-  MySqlTable table db =>
+  PgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
@@ -127,7 +127,7 @@ bulkInsert' dbTable insertExpressions =
   L.insertRows $ B.insert dbTable $ insertExpressions
 
 findOrCreateOne ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
@@ -136,7 +136,7 @@ findOrCreateOne dbTable findPredicate insertExpression =
   run $ findOrCreateOne' dbTable findPredicate insertExpression
 
 findOrCreateOne' ::
-  ReadableMySqlTable table db =>
+  ReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
@@ -152,19 +152,19 @@ findOrCreateOne' dbTable findPredicate insertExpression =
         else error "multiple rows found"
 
 findAllRows ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   L.Flow (T.DBResult ([table Identity]))
 findAllRows dbTable = run $ findAllRows' dbTable
 
 findAllRows' ::
-  ReadableMySqlTable table db =>
+  ReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   L.SqlDB Pg [table Identity]
 findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
 
 update ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   (B.DatabaseEntity Postgres db (B.TableEntity table)) ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
@@ -172,7 +172,7 @@ update ::
 update dbTable setClause predicate = run $ update' dbTable setClause predicate
 
 update' ::
-  ReadableMySqlTable table db =>
+  ReadablePgTable table db =>
   (B.DatabaseEntity Postgres db (B.TableEntity table)) ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
@@ -180,14 +180,14 @@ update' ::
 update' dbTable setClause predicate = L.updateRows $ B.update dbTable setClause predicate
 
 delete ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   F L.FlowMethod (T.DBResult ())
 delete dbTable predicate = run $ delete' dbTable predicate
 
 delete' ::
-  ReadableMySqlTable table db =>
+  ReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
@@ -201,7 +201,7 @@ throwDBError err =
 type Scope3 = BI.QNested (BI.QNested (BI.QNested B.QBaseScope))
 
 findAllWithLimitOffset ::
-  RunReadableMySqlTable table db =>
+  RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   Integer ->
   Integer ->
@@ -211,7 +211,7 @@ findAllWithLimitOffset dbTable limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
 --findAllWithLimitOffsetWhere ::
---RunReadableMySqlTable table db
+--RunReadablePgTable table db
 -- => B.DatabaseEntity .Postgres db (B.TableEntity table)
 -- -> (table (B.QExpr .Postgres B.QBaseScope) -> B.QExpr .Postgres B.QBaseScope Bool)
 -- -> Integer
