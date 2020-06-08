@@ -100,11 +100,17 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: BECKN_GATEWAY_PORT
+        #------ General configs ------#
         - name: USE_FAKE_SMS
           valueFrom:
             configMapKeyRef:
               name: beckn-transport-configs
               key: USE_FAKE_SMS
+        - name: CRON_AUTH_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CRON_AUTH_KEY
         - name: FCM_JSON_PATH
           value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
