@@ -95,7 +95,6 @@ onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
-
   Products.updateStatus productId Products.CANCELLED
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
   CaseProduct.updateStatus productId Products.CANCELLED
@@ -111,5 +110,4 @@ onCancel req = withFlowHandler $ do
   if length arrTerminalCP == length arrCPCase
     then Case.updateStatus caseId Case.CLOSED
     else return ()
-
   mkAckResponse txnId "cancel"

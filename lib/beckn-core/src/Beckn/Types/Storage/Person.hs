@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Person where
 
 import Beckn.Types.App
+import Beckn.External.FCM.Types as FCM
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -111,7 +112,7 @@ data PersonT f = Person
     _status :: B.C f Status,
     _organizationId :: B.C f (Maybe Text),
     _locationId :: B.C f (Maybe Text),
-    _deviceToken :: B.C f (Maybe Text),
+    _deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
     _description :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime

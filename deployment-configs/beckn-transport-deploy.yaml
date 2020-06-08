@@ -105,6 +105,8 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: USE_FAKE_SMS
+        - name: FCM_JSON_PATH
+          value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
         name: beckn-transport-$DEPLOY_VARIANT
         ports:
@@ -135,6 +137,10 @@ spec:
           limits:
             cpu: 1000m
             memory: 1024Mi
+        volumeMounts:
+        - mountPath: "/var/local/beckn"
+          name: fcm-key
+          readOnly: true
         securityContext:
           privileged: false
       - args:
@@ -280,6 +286,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: istio-envoy
+      - name: fcm-key
+        secret:
+          secretName: beckn-fcm-key
       - name: istio-certs
         secret:
           optional: true
