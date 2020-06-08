@@ -144,3 +144,17 @@ findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
           &&. _validTill B.>. (B.val_ now)
           &&. _createdAt B.<. (B.val_ fromTime)
       )
+
+findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
+findAllExpiredByStatus statuses csType from to = do
+  (now :: LocalTime) <- getCurrentTimeUTC
+  DB.findAll dbTable (predicate now from to)
+    >>= either DB.throwDBError pure
+  where
+    predicate now from to Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. _validTill B.<=. (B.val_ now)
+          &&. _createdAt B.>=. (B.val_ from)
+          &&. _createdAt B.<=. (B.val_ to)
+      )

@@ -91,26 +91,26 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
   case (SP._organizationId person) of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
-        p <- createProduct c _quote Defaults.localTime orgId Product.INSTOCK
+        p <- createProduct c _quote orgId Product.INSTOCK
         cp <- createCaseProduct c p
         notifyGateway c p orgId
         return c
       "DECLINED" -> do
-        p <- createProduct c _quote Defaults.localTime orgId Product.OUTOFSTOCK
+        p <- createProduct c _quote orgId Product.OUTOFSTOCK
         cp <- createCaseProduct c p
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Double -> LocalTime -> Text -> Product.ProductsStatus -> L.Flow Products
-createProduct cs price ctime orgId status = do
+createProduct :: Case -> Maybe Double -> Text -> Product.ProductsStatus -> L.Flow Products
+createProduct cs price orgId status = do
   prodId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  let product = getProduct prodId price cs ctime currTime orgId shortId
+  let product = getProduct prodId price cs currTime orgId shortId
   PQ.create product
   return $ product
   where
-    getProduct prodId price cs ctime currTime orgId shortId =
+    getProduct prodId price cs currTime orgId shortId =
       Products
         { _id = ProductsId prodId,
           _shortId = T.pack shortId,
@@ -132,7 +132,7 @@ createProduct cs price ctime orgId status = do
           _udf5 = Case._udf5 cs,
           _info = Case._info cs,
           _organizationId = orgId,
-          _createdAt = ctime,
+          _createdAt = currTime,
           _updatedAt = currTime,
           _fromLocation = Just (Case._fromLocationId cs),
           _toLocation = Just (Case._toLocationId cs),

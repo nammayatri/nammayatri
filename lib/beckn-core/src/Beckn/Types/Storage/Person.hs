@@ -3,8 +3,8 @@
 
 module Beckn.Types.Storage.Person where
 
-import Beckn.Types.App
 import Beckn.External.FCM.Types as FCM
+import Beckn.Types.App
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger

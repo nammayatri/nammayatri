@@ -24,38 +24,35 @@ import Network.HTTP.Types
 import System.Environment
 import Web.JWT
 
-data ServiceAccount
-  = ServiceAccount
-      { _saType :: !T.Text,
-        _saProjectId :: !T.Text,
-        _saPrivateKeyId :: !T.Text,
-        _saPrivateKey :: !String,
-        _saClientEmail :: !T.Text,
-        _saClientId :: !T.Text,
-        _saAuthUri :: !T.Text,
-        _saTokenUri :: !T.Text,
-        _saAuthProviderX509CertUrl :: !T.Text,
-        _saClientX509CertUrl :: !T.Text
-      }
+data ServiceAccount = ServiceAccount
+  { _saType :: !T.Text,
+    _saProjectId :: !T.Text,
+    _saPrivateKeyId :: !T.Text,
+    _saPrivateKey :: !String,
+    _saClientEmail :: !T.Text,
+    _saClientId :: !T.Text,
+    _saAuthUri :: !T.Text,
+    _saTokenUri :: !T.Text,
+    _saAuthProviderX509CertUrl :: !T.Text,
+    _saClientX509CertUrl :: !T.Text
+  }
   deriving (Show, Eq, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
-data JWTBody
-  = JWTBody
-      { _jwtAssertion :: !T.Text,
-        _jwtGrantType :: !T.Text
-      }
+data JWTBody = JWTBody
+  { _jwtAssertion :: !T.Text,
+    _jwtGrantType :: !T.Text
+  }
   deriving (Show, Eq, Generic)
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWTBody)
 
-data JWToken
-  = JWToken
-      { _jwtAccessToken :: !T.Text,
-        _jwtExpiresIn :: Integer,
-        _jwtTokenType :: !Text
-      }
+data JWToken = JWToken
+  { _jwtAccessToken :: !T.Text,
+    _jwtExpiresIn :: Integer,
+    _jwtTokenType :: !Text
+  }
   deriving (Show, Eq, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) ''JWToken)

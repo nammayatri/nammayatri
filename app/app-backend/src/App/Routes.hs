@@ -10,6 +10,7 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
@@ -23,6 +24,7 @@ import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Confirm as Confirm
+import qualified Product.Cron as Cron
 import qualified Product.Info as Info
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
@@ -32,6 +34,7 @@ import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
 import qualified Types.API.CaseProduct as CaseProduct
 import qualified Types.API.Confirm as ConfirmAPI
+import qualified Types.API.Cron as Cron
 import qualified Types.API.Location as Location
 import Types.API.Product
 import Types.API.Registration
@@ -48,6 +51,7 @@ type AppAPIs =
            :<|> TrackTripAPIs
            :<|> CaseProductAPIs
            :<|> CancelAPIs
+           :<|> CronAPIs
            :<|> Epass.EPassAPIs
        )
 
@@ -65,6 +69,7 @@ appServer' key = do
       :<|> trackTripFlow
       :<|> caseProductFlow
       :<|> cancelFlow
+      :<|> cronFlow
       :<|> Epass.epassServer' key
     )
 
@@ -130,6 +135,10 @@ type CaseAPIs =
   "case"
     :> Header "token" RegToken
     :> ( "list"
+           :> MandatoryQueryParam "type" Case.CaseType
+           :> QueryParams "status" Case.CaseStatus
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
            :> Get '[JSON] Case.ListRes
            :<|> Capture "caseId" CaseId
            :> Get '[JSON] Case.StatusRes
@@ -201,3 +210,15 @@ type CancelAPIs =
 cancelFlow =
   Cancel.cancel
     :<|> Cancel.onCancel
+
+-------- Cron APIs --------
+type CronAPIs =
+  "cron"
+    :> "expire_cases"
+    :> Header "Authorization" CronAuthKey
+    :> ReqBody '[JSON] Cron.ExpireCaseReq
+    :> Post '[JSON] Cron.ExpireCaseRes
+
+cronFlow :: FlowServer CronAPIs
+cronFlow =
+  Cron.updateCases

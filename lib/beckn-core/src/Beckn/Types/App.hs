@@ -75,3 +75,5 @@ type Limit = Int
 type Offset = Int
 
 type RegToken = Text
+
+type CronAuthKey = Text
