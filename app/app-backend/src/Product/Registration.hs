@@ -8,7 +8,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (maskPerson, withFlowHandler)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
@@ -172,7 +172,7 @@ login tokenId req =
         Person.updateMultiple personId updatedPerson
         Person.findById personId
           >>= fromMaybeM500 "Could not find user"
-          >>= return . LoginRes _token
+          >>= return . LoginRes _token . maskPerson
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =

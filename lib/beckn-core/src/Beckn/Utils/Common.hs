@@ -1,9 +1,13 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Beckn.Utils.Common where
 
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Extra
 import Data.Aeson as A
 import Data.ByteString.Base64 as DBB
@@ -78,3 +82,12 @@ decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 
 encodeToText :: ToJSON a => a -> Text
 encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
+
+maskPerson :: Person.Person -> Person.Person
+maskPerson person =
+  person {Person._deviceToken = (FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken) <$> (person ^. #_deviceToken)}
+  where
+    trimToken token =
+      if length token > 6
+        then DT.take 3 token <> "..." <> DT.takeEnd 3 token
+        else "..."

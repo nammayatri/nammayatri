@@ -164,7 +164,7 @@ login tokenId req =
         QR.updateVerified tokenId True
         QP.update (SP._id person) SP.ACTIVE True (req ^. #_deviceToken)
         updatedPerson <- QP.findPersonById (SP._id person)
-        return $ LoginRes _token (Just updatedPerson)
+        return $ LoginRes _token (Just $ maskPerson updatedPerson)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =
