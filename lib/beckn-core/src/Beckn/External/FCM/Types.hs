@@ -9,14 +9,11 @@
 module Beckn.External.FCM.Types where
 
 import Beckn.Utils.TH
-import Control.Applicative
 import Control.Lens.TH
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
-import Data.Aeson.Types
 import Data.Default.Class
-import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Text (Text)
 import EulerHS.Prelude
@@ -193,7 +190,9 @@ $(makeLenses ''FCMAndroidNotification)
 $(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidNotification)
 
 instance Default FCMAndroidNotification where
-  def = FCMAndroidNotification Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  def =
+    let z = Nothing
+     in FCMAndroidNotification z z z z z z z z z z z z z z z z z z z z z
 
 -- | Android specific options for messages sent through FCM connection server
 data FCMAndroidConfig
@@ -214,7 +213,9 @@ $(makeLenses ''FCMAndroidConfig)
 $(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidConfig)
 
 instance Default FCMAndroidConfig where
-  def = FCMAndroidConfig Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  def =
+    let z = Nothing
+     in FCMAndroidConfig z z z z z z z z
 
 -- | Apple Push Notification Service specific options
 data FCMApnsConfig
@@ -270,7 +271,9 @@ $(makeLenses ''FCMMessage)
 $(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMMessage)
 
 instance Default FCMMessage where
-  def = FCMMessage Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  def =
+    let z = Nothing
+     in FCMMessage z z z z z z z z z z
 
 data FCMRequest
   = FCMRequest

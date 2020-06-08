@@ -4,17 +4,12 @@
 module Beckn.Utils.JWT where
 
 import Control.Applicative
-import Control.Lens.TH
-import Control.Monad
 import qualified Data.Aeson as J
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Aeson.Types
-import Data.Bool
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BL
-import Data.Default.Class
 import Data.Either
 import qualified Data.Map as Map
 import Data.Maybe
@@ -28,7 +23,6 @@ import Network.HTTP.Client.TLS
 import Network.HTTP.Types
 import System.Environment
 import Web.JWT
-import Web.JWT (NumericDate)
 
 data ServiceAccount
   = ServiceAccount
@@ -82,11 +76,11 @@ getServiceAccount = do
     Left err -> Left err
     Right json -> J.eitherDecode json
 
-createJWT :: ServiceAccount -> IO (Either String (JWTClaimsSet, Text))
-createJWT sa = do
+createJWT :: ServiceAccount -> [(Text, Value)] -> IO (Either String (JWTClaimsSet, Text))
+createJWT sa additionalClaims = do
   let iss = stringOrURI . _saClientEmail $ sa
   let aud = Left <$> (stringOrURI . _saTokenUri $ sa)
-  let unregisteredClaims = ClaimsMap $ Map.fromList [("scope", String "https://www.googleapis.com/auth/firebase.messaging")]
+  let unregisteredClaims = ClaimsMap $ Map.fromList additionalClaims
   let jwtHeader =
         JOSEHeader
           { typ = Just "JWT",
@@ -127,7 +121,7 @@ refreshToken = do
   case sAccount of
     Left err -> pure $ Left err
     Right sa -> do
-      jwtPair <- createJWT sa
+      jwtPair <- createJWT sa [("scope", String "https://www.googleapis.com/auth/firebase.messaging")]
       case jwtPair of
         Left err -> pure $ Left err
         Right (claimPairs, assertion) -> do
