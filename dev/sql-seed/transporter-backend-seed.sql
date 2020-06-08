@@ -205,7 +205,7 @@ INSERT INTO `organization` (`id`, `name`, `gstin`, `status`, `type`, `verified`,
   VALUES ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', "juspay", null, "PENDING_VERIFICATION", "GATEWAY", TRUE, null, null, null, null, null, "iamfromjuspay", null, null, now(), now());
 
 INSERT INTO `person` (`id`, `first_name`, `middle_name`, `last_name`, `full_name`, `role`, `gender`, `identifier_type`, `email`, `mobile_number`, `mobile_country_code`, `identifier`, `rating`, `verified`, `udf1`, `udf2`, `status`, `organization_id`, `location_id`, `device_token`, `description`, `created_at`, `updated_at`)
-  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, TRUE, NULL, NULL, 'INACTIVE', "1926d40f-1223-4eb2-ba5d-7983bde2fd02", NULL, 'cCef1d6O0p0:APA91bFWHmOcQMNJvFAEo3aOrqVvMQcxRdWhX_Vd9vvWW2LujcADm9czxzC-thkekxLQb245eAJeUZCRCBVIJakK26pSlomx26E69pHmzFfYKCp7RAaKW2RXhJJ_D0k2FCqS-PWErb2u', NULL, now(), now());
+  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, TRUE, NULL, NULL, 'INACTIVE', "1926d40f-1223-4eb2-ba5d-7983bde2fd02", NULL, NULL, NULL, now(), now());
 
 INSERT INTO `registration_token` (`id`, `token`, `attempts`, `auth_medium`, `auth_type`, `auth_value_hash`, `verified`, `auth_expiry`, `token_expiry`, `entity_id`, `entity_type`, `created_at`, `updated_at`, `info`)
   VALUES ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'ea37f941-427a-4085-a7d0-96240f166672', 3, 'SMS', 'OTP', '3249', TRUE, 3, 365, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', now(), now(), NULL);
