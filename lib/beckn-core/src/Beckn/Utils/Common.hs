@@ -105,5 +105,5 @@ maskPerson person =
   where
     trimToken token =
       if length token > 6
-        then DT.take 3 token <> "..." <> DT.takeEnd 3 token
+        then T.take 3 token <> "..." <> T.takeEnd 3 token
         else "..."
