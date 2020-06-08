@@ -6,6 +6,7 @@ module Beckn.Types.Storage.CaseProduct where
 import Beckn.Types.App
 import Beckn.Types.Storage.Products (ProductsStatus (..))
 import Data.Generics.Labels
+import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
 import Data.Time.LocalTime
@@ -24,7 +25,7 @@ data CaseProductT f
         _productId :: B.C f ProductsId,
         _personId :: B.C f (Maybe PersonId),
         _quantity :: B.C f Int,
-        _price :: B.C f Double,
+        _price :: B.C f Scientific,
         _status :: B.C f CaseProductStatus,
         _info :: B.C f (Maybe Text),
         _createdAt :: B.C f LocalTime,

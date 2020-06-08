@@ -5,6 +5,7 @@ module Beckn.Types.Storage.Products where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
+import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
 import Data.Time.LocalTime
@@ -64,7 +65,7 @@ data ProductsT f
         _startTime :: B.C f LocalTime,
         _endTime :: B.C f (Maybe LocalTime),
         _validTill :: B.C f LocalTime,
-        _price :: B.C f Double,
+        _price :: B.C f Scientific,
         _rating :: B.C f (Maybe Text),
         _review :: B.C f (Maybe Text),
         _udf1 :: B.C f (Maybe Text),

@@ -23,6 +23,7 @@ import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Scientific
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time.LocalTime (addLocalTime)
@@ -187,7 +188,7 @@ mkProduct case_ mprovider item = do
         _startTime = case_ ^. #_startTime,
         _endTime = Nothing, -- TODO: fix this
         _validTill = case_ ^. #_validTill,
-        _price = item ^. #_price ^. #_listed_value,
+        _price = fromFloatDigits $ item ^. (#_price . #_listed_value),
         _rating = Nothing,
         _review = Nothing,
         _udf1 = Nothing,

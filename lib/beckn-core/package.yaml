@@ -70,6 +70,7 @@ dependencies:
 - lens
 - pureMD5
 - random-strings
+- scientific
 - servant
 - servant-client
 - servant-multipart
