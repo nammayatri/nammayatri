@@ -15,18 +15,20 @@ import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck)
 import EulerHS.Prelude
 import Servant
 import Servant.Swagger
 import Web.HttpApiData
 
-data ErrorResponse = ErrorResponse
-  { status :: Text,
-    responseCode :: Text,
-    responseMessage :: Text
-  }
+data ErrorResponse
+  = ErrorResponse
+      { status :: Text,
+        responseCode :: Text,
+        responseMessage :: Text
+      }
   deriving (Show, Generic, ToJSON, ToSchema)
 
 data LoginMode
@@ -80,7 +82,7 @@ instance ToParamSchema PassType
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be PassType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL PassType where
+instance FromBackendRow Postgres PassType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData PassType where
@@ -94,12 +96,12 @@ instance FromHttpApiData PassType where
 --   | PINCODE
 --   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
--- deriving instance HasSqlEqualityCheck MySQL LocationType
+-- deriving instance HasSqlEqualityCheck Postgres LocationType
 
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
 --   sqlValueSyntax = autoSqlValueSyntax
 
--- instance FromBackendRow MySQL LocationType where
+-- instance FromBackendRow Postgres LocationType where
 --   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 -- instance FromHttpApiData LocationType where
@@ -107,19 +109,20 @@ instance FromHttpApiData PassType where
 --   parseQueryParam = parseUrlPiece
 --   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data Location = Location
-  { _type :: LocationType,
-    _lat :: Maybe Double,
-    _long :: Maybe Double,
-    _ward :: Maybe Text,
-    _district :: Maybe Text,
-    _city :: Maybe Text,
-    _state :: Maybe Text,
-    _country :: Maybe Text,
-    _pincode :: Maybe Int,
-    _address :: Maybe Text,
-    _bound :: Maybe Bound
-  }
+data Location
+  = Location
+      { _type :: LocationType,
+        _lat :: Maybe Double,
+        _long :: Maybe Double,
+        _ward :: Maybe Text,
+        _district :: Maybe Text,
+        _city :: Maybe Text,
+        _state :: Maybe Text,
+        _country :: Maybe Text,
+        _pincode :: Maybe Int,
+        _address :: Maybe Text,
+        _bound :: Maybe Bound
+      }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON Location where
@@ -136,9 +139,9 @@ instance ToSchema Bound where
   declareNamedSchema _ =
     return $ NamedSchema (Just "Bound") (sketchSchema Aeson.Null)
 
-deriving newtype instance HasSqlValueSyntax MysqlValueSyntax Bound
+deriving newtype instance HasSqlValueSyntax PgValueSyntax Bound
 
-deriving newtype instance FromBackendRow MySQL Bound
+deriving newtype instance FromBackendRow Postgres Bound
 
 data QuotaType
   = DAILY
@@ -148,7 +151,7 @@ data QuotaType
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be QuotaType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL QuotaType where
+instance FromBackendRow Postgres QuotaType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData QuotaType where
@@ -161,12 +164,12 @@ data EntityType
   | ORG
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-deriving instance HasSqlEqualityCheck MySQL EntityType
+deriving instance HasSqlEqualityCheck Postgres EntityType
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EntityType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL EntityType where
+instance FromBackendRow Postgres EntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData EntityType where
@@ -174,10 +177,11 @@ instance FromHttpApiData EntityType where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data Ack = Ack
-  { _action :: Text,
-    _message :: Text
-  }
+data Ack
+  = Ack
+      { _action :: Text,
+        _message :: Text
+      }
   deriving (Generic, Show, ToSchema)
 
 instance FromJSON Ack where
@@ -193,12 +197,12 @@ data DocumentEntity
   | ORGANIZATIONS -- plural to prevent naming conflict
   deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq, Enum, Bounded)
 
-deriving instance HasSqlEqualityCheck MySQL DocumentEntity
+deriving instance HasSqlEqualityCheck Postgres DocumentEntity
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DocumentEntity where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL DocumentEntity where
+instance FromBackendRow Postgres DocumentEntity where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData DocumentEntity where
@@ -211,12 +215,12 @@ data DocumentByType
   | CREATOR
   deriving (Generic, ToSchema, ToJSON, FromJSON, Read, Show, Eq, Enum, Bounded)
 
-deriving instance HasSqlEqualityCheck MySQL DocumentByType
+deriving instance HasSqlEqualityCheck Postgres DocumentByType
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DocumentByType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL DocumentByType where
+instance FromBackendRow Postgres DocumentByType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData DocumentByType where

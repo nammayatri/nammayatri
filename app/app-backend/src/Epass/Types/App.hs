@@ -15,8 +15,9 @@ import Database.Beam.Backend.SQL
   ( FromBackendRow,
     HasSqlValueSyntax,
   )
-import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
-import Database.Beam.MySQL.FromField
+import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax (PgValueSyntax)
+import Database.PostgreSQL.Simple.FromField
 import Epass.Utils.TH
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
@@ -25,9 +26,10 @@ import qualified EulerHS.Runtime as R
 import Servant
 import Servant.Swagger
 
-newtype CustomerId = CustomerId
-  { _getCustomerId :: Text
-  }
+newtype CustomerId
+  = CustomerId
+      { _getCustomerId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''CustomerId
@@ -39,44 +41,50 @@ deriveIdentifierInstances ''CustomerId
 
 -- deriveIdentifierInstances ''OrganizationId
 
-newtype TenantOrganizationId = TenantOrganizationId
-  { _getTenantOrganizationId :: Text
-  }
+newtype TenantOrganizationId
+  = TenantOrganizationId
+      { _getTenantOrganizationId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''TenantOrganizationId
 
-newtype BusinessAddressId = BusinessAddressId
-  { _getBusinessAddressId :: Text
-  }
+newtype BusinessAddressId
+  = BusinessAddressId
+      { _getBusinessAddressId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''BusinessAddressId
 
-newtype PassApplicationId = PassApplicationId
-  { _getPassApplicationId :: Text
-  }
+newtype PassApplicationId
+  = PassApplicationId
+      { _getPassApplicationId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''PassApplicationId
 
-newtype FromLocationId = FromLocationId
-  { _getFromLocationId :: Text
-  }
+newtype FromLocationId
+  = FromLocationId
+      { _getFromLocationId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''FromLocationId
 
-newtype ToLocationId = ToLocationId
-  { _getToLocationId :: Text
-  }
+newtype ToLocationId
+  = ToLocationId
+      { _getToLocationId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''ToLocationId
 
-newtype AssignedTo = AssignedTo
-  { _getAssignedTo :: Text
-  }
+newtype AssignedTo
+  = AssignedTo
+      { _getAssignedTo :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''AssignedTo
@@ -88,101 +96,114 @@ deriveIdentifierInstances ''AssignedTo
 
 -- deriveIdentifierInstances ''LocationId
 
-newtype QuotaId = QuotaId
-  { _getQuotaId :: Text
-  }
+newtype QuotaId
+  = QuotaId
+      { _getQuotaId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''QuotaId
 
-newtype BlacklistedBy = BlacklistedBy
-  { _getBlacklistedBy :: Text
-  }
+newtype BlacklistedBy
+  = BlacklistedBy
+      { _getBlacklistedBy :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''BlacklistedBy
 
-newtype CustomerDetailId = CustomerDetailId
-  { _getCustomerDetailId :: Text
-  }
+newtype CustomerDetailId
+  = CustomerDetailId
+      { _getCustomerDetailId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''CustomerDetailId
 
-newtype PassId = PassId
-  { _getPassId :: Text
-  }
+newtype PassId
+  = PassId
+      { _getPassId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''PassId
 
-newtype UserId = UserId
-  { _getUserId :: Text
-  }
+newtype UserId
+  = UserId
+      { _getUserId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''UserId
 
-newtype RegistrationTokenId = RegistrationTokenId
-  { _getRegistrationTokenId :: Text
-  }
+newtype RegistrationTokenId
+  = RegistrationTokenId
+      { _getRegistrationTokenId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''RegistrationTokenId
 
-newtype BlacklistId = BlacklistId
-  { _getBlacklistId :: Text
-  }
+newtype BlacklistId
+  = BlacklistId
+      { _getBlacklistId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''BlacklistId
 
-newtype AllocatedQuotaId = AllocatedQuotaId
-  { _getAllocatedQuotaId :: Text
-  }
+newtype AllocatedQuotaId
+  = AllocatedQuotaId
+      { _getAllocatedQuotaId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''AllocatedQuotaId
 
 type RegistrationTokenText = Text
 
-newtype TagId = TagId
-  { _getTagId :: Text
-  }
+newtype TagId
+  = TagId
+      { _getTagId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''TagId
 
-newtype DocumentId = DocumentId
-  { _getDocumentId :: Text
-  }
+newtype DocumentId
+  = DocumentId
+      { _getDocumentId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''DocumentId
 
 instance FromField [DocumentId]
 
-instance FromBackendRow MySQL [DocumentId]
+instance FromBackendRow Postgres [DocumentId]
 
-instance HasSqlValueSyntax MysqlValueSyntax [DocumentId]
+instance HasSqlValueSyntax PgValueSyntax [DocumentId]
 
-newtype EntityTagId = EntityTagId
-  { _getEntityTagId :: Text
-  }
+newtype EntityTagId
+  = EntityTagId
+      { _getEntityTagId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''EntityTagId
 
-newtype EntityDocumentId = EntityDocumentId
-  { _getEntityDocumentId :: Text
-  }
+newtype EntityDocumentId
+  = EntityDocumentId
+      { _getEntityDocumentId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''EntityDocumentId
 
-newtype CommentId = CommentId
-  { _getCommentId :: Text
-  }
+newtype CommentId
+  = CommentId
+      { _getCommentId :: Text
+      }
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''CommentId

@@ -9,7 +9,7 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import EulerHS.Prelude
 import Servant.Swagger
@@ -22,21 +22,22 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType wher
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 
-instance FromBackendRow MySQL IdentifierType where
+instance FromBackendRow Postgres IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CustomerDetailT f = CustomerDetail
-  { _id :: B.C f CustomerDetailId,
-    _CustomerId :: B.C f CustomerId,
-    _uniqueIdentifier :: B.C f Text,
-    _identifierType :: B.C f IdentifierType,
-    _value :: B.C f Value,
-    _verified :: B.C f Bool,
-    _primaryIdentifier :: B.C f Bool,
-    _info :: B.C f Text,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data CustomerDetailT f
+  = CustomerDetail
+      { _id :: B.C f CustomerDetailId,
+        _CustomerId :: B.C f CustomerId,
+        _uniqueIdentifier :: B.C f Text,
+        _identifierType :: B.C f IdentifierType,
+        _value :: B.C f Value,
+        _verified :: B.C f Bool,
+        _primaryIdentifier :: B.C f Bool,
+        _info :: B.C f Text,
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type CustomerDetail = CustomerDetailT Identity

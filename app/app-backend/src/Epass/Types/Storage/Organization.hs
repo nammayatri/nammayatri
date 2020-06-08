@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import Epass.Types.Common
 import EulerHS.Prelude
@@ -25,7 +25,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Status
@@ -35,27 +35,28 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data OrganizationT f = Organization
-  { _id :: B.C f OrganizationId,
-    _name :: B.C f Text,
-    _gstin :: B.C f (Maybe Text),
-    _status :: B.C f Status,
-    _verified :: B.C f Bool,
-    _locationType :: B.C f (Maybe BTL.LocationType),
-    _lat :: B.C f (Maybe Double),
-    _long :: B.C f (Maybe Double),
-    _bound :: B.C f (Maybe Bound),
-    _ward :: B.C f (Maybe Text),
-    _district :: B.C f (Maybe Text),
-    _city :: B.C f Text,
-    _state :: B.C f Text,
-    _country :: B.C f Text,
-    _pincode :: B.C f Int,
-    _address :: B.C f Text,
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data OrganizationT f
+  = Organization
+      { _id :: B.C f OrganizationId,
+        _name :: B.C f Text,
+        _gstin :: B.C f (Maybe Text),
+        _status :: B.C f Status,
+        _verified :: B.C f Bool,
+        _locationType :: B.C f (Maybe BTL.LocationType),
+        _lat :: B.C f (Maybe Double),
+        _long :: B.C f (Maybe Double),
+        _bound :: B.C f (Maybe Bound),
+        _ward :: B.C f (Maybe Text),
+        _district :: B.C f (Maybe Text),
+        _city :: B.C f Text,
+        _state :: B.C f Text,
+        _country :: B.C f Text,
+        _pincode :: B.C f Int,
+        _address :: B.C f Text,
+        _info :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type Organization = OrganizationT Identity

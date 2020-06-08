@@ -56,7 +56,6 @@ dependencies:
 - base64-bytestring
 - beam-core
 - beam-postgres
-- beam-mysql
 - bytestring
 - containers
 - cryptonite
@@ -66,6 +65,7 @@ dependencies:
 - http-client
 - http-types
 - lens
+- postgresql-simple
 - pureMD5
 - purescript-bridge
 - servant

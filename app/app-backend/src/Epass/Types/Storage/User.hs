@@ -14,7 +14,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import qualified Epass.Utils.Defaults as Defaults
 import EulerHS.Prelude
@@ -27,7 +27,7 @@ data Status = ACTIVE | INACTIVE
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema Status
@@ -48,9 +48,9 @@ data Role
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL Role
+instance B.HasSqlEqualityCheck Postgres Role
 
-instance FromBackendRow MySQL Role where
+instance FromBackendRow Postgres Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema Role
@@ -62,22 +62,23 @@ instance FromHttpApiData Role where
   parseQueryParam = parseBoundedTextData
   parseHeader = parseBoundedTextData . DT.decodeUtf8
 
-data UserT f = User
-  { _id :: B.C f UserId,
-    _OrganizationId :: B.C f OrganizationId,
-    _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
-    _name :: B.C f Text,
-    _username :: B.C f (Maybe Text),
-    _mobileNumber :: B.C f Text,
-    _email :: B.C f (Maybe Text),
-    _LocationId :: B.C f Text,
-    _role :: B.C f Role,
-    _verified :: B.C f Bool,
-    _status :: B.C f Status,
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data UserT f
+  = User
+      { _id :: B.C f UserId,
+        _OrganizationId :: B.C f OrganizationId,
+        _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
+        _name :: B.C f Text,
+        _username :: B.C f (Maybe Text),
+        _mobileNumber :: B.C f Text,
+        _email :: B.C f (Maybe Text),
+        _LocationId :: B.C f Text,
+        _role :: B.C f Role,
+        _verified :: B.C f Bool,
+        _status :: B.C f Status,
+        _info :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type User = UserT Identity

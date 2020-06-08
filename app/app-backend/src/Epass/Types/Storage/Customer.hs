@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import EulerHS.Prelude
 import Servant.Swagger
@@ -19,20 +19,21 @@ data CustomerRole = BUSINESSADMIN | INDIVIDUAL
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CustomerRole where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL CustomerRole where
+instance FromBackendRow Postgres CustomerRole where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CustomerT f = Customer
-  { _id :: B.C f CustomerId,
-    _name :: B.C f (Maybe Text),
-    _OrganizationId :: B.C f (Maybe OrganizationId),
-    _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
-    _verified :: B.C f Bool,
-    _role :: B.C f CustomerRole,
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
-  }
+data CustomerT f
+  = Customer
+      { _id :: B.C f CustomerId,
+        _name :: B.C f (Maybe Text),
+        _OrganizationId :: B.C f (Maybe OrganizationId),
+        _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
+        _verified :: B.C f Bool,
+        _role :: B.C f CustomerRole,
+        _info :: B.C f (Maybe Text),
+        _createdAt :: B.C f LocalTime,
+        _updatedAt :: B.C f LocalTime
+      }
   deriving (Generic, B.Beamable)
 
 type Customer = CustomerT Identity
