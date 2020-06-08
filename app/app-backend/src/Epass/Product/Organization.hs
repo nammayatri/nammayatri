@@ -3,7 +3,8 @@ module Epass.Product.Organization where
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Aeson
 import qualified Epass.Data.Accessor as Lens
 import qualified Epass.Storage.Queries.Blacklist as Blacklist
@@ -23,8 +24,6 @@ import qualified Epass.Types.Storage.EntityTag as EntityTag
 import qualified Epass.Types.Storage.Location as SL
 import Epass.Types.Storage.Organization
 import qualified Epass.Types.Storage.Tag as Tag
-import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

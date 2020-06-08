@@ -10,6 +10,7 @@ module Epass.Types.App
 where
 
 import Beckn.Types.App
+import Beckn.Utils.TH
 import Data.Swagger
 import Database.Beam.Backend.SQL
   ( FromBackendRow,
@@ -17,7 +18,6 @@ import Database.Beam.Backend.SQL
   )
 import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
 import Database.Beam.MySQL.FromField
-import Epass.Utils.TH
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
