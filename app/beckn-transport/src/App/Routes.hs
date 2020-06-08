@@ -275,7 +275,7 @@ type CronAPIs =
 
 cronFlow :: FlowServer CronAPIs
 cronFlow =
-  Cron.updateCases
+  Cron.expire
 
 type StatusAPIs =
   "status"

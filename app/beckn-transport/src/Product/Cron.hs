@@ -22,8 +22,8 @@ import qualified Storage.Queries.Products as PQ
 import System.Environment
 import Types.API.Cron
 
-updateCases :: Maybe Text -> ExpireCaseReq -> FlowHandler ExpireCaseRes
-updateCases maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
+expire :: Maybe Text -> ExpireCaseReq -> FlowHandler ExpireCaseRes
+expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
   cases <- CQ.findAllExpiredByStatus [Case.NEW] Case.RIDEBOOK from to
   caseProducts <- CPQ.findAllByCaseIds (Case._id <$> cases)
