@@ -2,12 +2,13 @@
 
 module Product.BecknProvider.BP where
 
+import Beckn.External.FCM.Flow as FCM
+import Beckn.External.FCM.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
-import Beckn.Types.App
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -32,6 +33,7 @@ import Data.Accessor as Lens
 import Data.Aeson
 import Data.ByteString.Lazy.Char8
 import Data.Text as T
+import Data.Time
 import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
@@ -49,10 +51,9 @@ import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
-import Utils.FCM
 
 -- 1) Create Parent Case with Customer Request Details
--- 2) Notify all transporter using GCM
+-- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
 search :: SearchReq -> FlowHandler AckResponse
@@ -75,7 +76,7 @@ search req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
-  -- notifyTransporters c admins --TODO : Uncomment this once we start saving deviceToken
+  notifyTransportersOnSearch c admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -90,22 +91,11 @@ cancel req = withFlowHandler $ do
   notifyCancelToGateway productId
   mkAckResponse uuid "cancel"
 
-notifyTransporters :: Case -> [Person] -> L.Flow ()
-notifyTransporters c admins =
-  -- TODO : Get Token from Person
-  traverse_ (\p -> sendNotification mkCaseNotification "deviceToken") admins
-  where
-    mkCaseNotification =
-      Notification
-        { _type = LEAD,
-          _payload = c
-        }
-
 getValidTime :: LocalTime -> L.Flow LocalTime
 getValidTime now = pure $ addLocalTime (60 * 30 :: NominalDiffTime) now
 
 mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
-mkFromLocation req uuid now loc = do
+mkFromLocation req uuid now loc =
   case loc ^. #_type of
     "gps" -> case loc ^. #_gps of
       Just (val :: GPS) -> mkLocationRecord uuid now SL.POINT (Just $ read $ T.unpack $ val ^. #lat) (Just $ read $ T.unpack $ val ^. #lon) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -150,7 +140,7 @@ mkLocationRecord idr time typ lat lon ward dis city state country pincode addres
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do
-  let intent = (req ^. #message)
+  let intent = req ^. #message
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
@@ -186,6 +176,7 @@ confirm req = withFlowHandler $ do
   let prodId = (req ^. #message ^. #_selected_items) !! 0
   let caseShortId = req ^. #context ^. #transaction_id -- change to message.transactionId
   case_ <- Case.findBySid caseShortId
+  product <- Product.findById (ProductsId prodId)
   let caseId = _getCaseId $ case_ ^. #_id
   Case.updateStatus (CaseId caseId) SC.INPROGRESS
   CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) Product.CONFIRMED
@@ -200,9 +191,12 @@ confirm req = withFlowHandler $ do
   let trackerCaseProduct = mkTrackerCaseProduct uuid1 (trackerCase ^. #_id) (ProductsId prodId) currTime
   CaseProduct.create trackerCaseProduct
   notifyGateway case_ prodId trackerCase
+  admins <-
+    Person.findAllByOrgIds [Person.ADMIN] [Product._organizationId product]
+  notifyTransportersOnConfirm case_ admins
   mkAckResponse uuid "confirm"
 
--- TODO : Add notifying transporter admin with GCM
+-- TODO : Add notifying transporter admin with FCM
 
 mkTrackerCaseProduct :: Text -> CaseId -> ProductsId -> LocalTime -> CaseProduct.CaseProduct
 mkTrackerCaseProduct cpId caseId prodId currTime =
@@ -220,7 +214,7 @@ mkTrackerCaseProduct cpId caseId prodId currTime =
     }
 
 mkTrackerCase :: SC.Case -> Text -> LocalTime -> Text -> SC.Case
-mkTrackerCase case_ uuid now shortId = do
+mkTrackerCase case_ uuid now shortId =
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
@@ -450,3 +444,33 @@ mkCancelTripObj prodId = do
         fare = Just $ GT.mkPrice prod,
         route = Nothing
       }
+
+-- | Send FCM "search" notification to provider admins
+notifyTransportersOnSearch :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnSearch c =
+  traverse_ (FCM.notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCMData
+        { _fcmNotificationType = "SEARCH_REQUEST",
+          _fcmShowNotification = "true",
+          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
+          _fcmEntityType = "Organization"
+        }
+    title = "You have a new ride request"
+    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+
+-- | Send FCM "search" notification to provider admins
+notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnConfirm c =
+  traverse_ (FCM.notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCMData
+        { _fcmNotificationType = "CONFIRM_REQUEST",
+          _fcmShowNotification = "true",
+          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
+          _fcmEntityType = "Organization"
+        }
+    title = "Customer has confimed a ride"
+    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
