@@ -162,7 +162,7 @@ login tokenId req =
       then do
         person <- checkPersonExists _EntityId
         QR.updateVerified tokenId True
-        QP.update (SP._id person) SP.ACTIVE True
+        QP.update (SP._id person) SP.ACTIVE True (req ^. #_deviceToken)
         updatedPerson <- QP.findPersonById (SP._id person)
         return $ LoginRes _token (Just updatedPerson)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}

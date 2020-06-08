@@ -1,5 +1,6 @@
 module Storage.Queries.Person where
 
+import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Person as Storage
@@ -155,20 +156,22 @@ update ::
   PersonId ->
   Storage.Status ->
   Bool ->
+  Maybe FCM.FCMRecipientToken ->
   L.Flow ()
-update id status verified = do
+update id status verified deviceTokenM = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
-    (setClause status verified currTime)
+    (setClause status verified currTime deviceTokenM)
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause status verified currTime Storage.Person {..} =
+    setClause status verified currTime deviceToken Storage.Person {..} =
       mconcat
         ( [ _status <-. B.val_ status,
             _updatedAt <-. B.val_ currTime,
-            _verified <-. B.val_ verified
+            _verified <-. B.val_ verified,
+            _deviceToken <-. B.val_ deviceToken
           ]
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
