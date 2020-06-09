@@ -51,9 +51,13 @@ listPerson token req = withFlowHandler $ do
 deletePerson :: Text -> Maybe Text -> FlowHandler DeletePersonRes
 deletePerson personId token = withFlowHandler $ do
   validate token
-  QP.deleteById (PersonId personId)
-  QR.deleteByEntitiyId personId
-  return $ DeletePersonRes personId
+  person <- QP.findPersonById (PersonId personId)
+  case person ^. #_role of
+    SP.DRIVER -> do
+      QP.deleteById (PersonId personId)
+      QR.deleteByEntitiyId personId
+      return $ DeletePersonRes personId
+    _ -> L.throwException $ err400 {errBody = "SHOULD_BE_A_DRIVER"}
 
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
