@@ -1,11 +1,12 @@
 module Epass.Product.Comment where
 
+import Beckn.Types.Storage.RegistrationToken
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Epass.Storage.Queries.Comment as Comment
 import Epass.Types.API.Comment
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Comment as Comment
-import Beckn.Types.Storage.RegistrationToken
 import Epass.Utils.Common
 import Epass.Utils.Routes
 import Epass.Utils.Storage
@@ -23,7 +24,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
     >>= return . CreateRes
   where
     getComment id entityType entityId = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return $
         Comment.Comment
           { _id = id,

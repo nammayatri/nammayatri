@@ -15,6 +15,7 @@ CREATE TABLE `organization` (
   `status` varchar(255) NULL,
   `type` varchar(255) NULL,
   `verified` boolean NOT NULL,
+  `enabled` boolean NOT NULL DEFAULT TRUE,
   `location_type` varchar(255) NULL,
   `lat` double NULL,
   `long` double NULL,
@@ -115,7 +116,7 @@ CREATE TABLE `case` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`short_id`),
+  UNIQUE (`short_id`),
   INDEX (`provider`),
   INDEX (`requestor`)
 );

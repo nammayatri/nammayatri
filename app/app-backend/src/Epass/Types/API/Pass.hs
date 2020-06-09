@@ -1,5 +1,7 @@
 module Epass.Types.API.Pass where
 
+import Beckn.Types.Storage.CaseProduct
+import qualified Beckn.Types.Storage.Person as SP
 import Data.Swagger
 import Data.Time.LocalTime
 import Epass.Types.App
@@ -8,9 +10,7 @@ import qualified Epass.Types.Storage.Comment as SCM
 import qualified Epass.Types.Storage.Customer as SC
 import qualified Epass.Types.Storage.Document as SD
 import qualified Epass.Types.Storage.Organization as SO
-import qualified Beckn.Types.Storage.Person as SP
 import Epass.Types.Storage.Pass
-import Beckn.Types.Storage.CaseProduct
 import qualified Epass.Types.Storage.Tag as ST
 import EulerHS.Prelude
 

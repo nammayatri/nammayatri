@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Products as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -29,8 +30,8 @@ findAllByTypeOrgId orgId status =
   where
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
     predicate orgId status Storage.Products {..} =
-      (  _organizationId ==. (B.val_ orgId)
-        &&. B.in_ _status (B.val_ <$> status)
+      ( _organizationId ==. (B.val_ orgId)
+          &&. B.in_ _status (B.val_ <$> status)
       )
 
 findAllById :: [ProductsId] -> L.Flow [Storage.Products]
@@ -51,7 +52,7 @@ updateStatus ::
   Storage.ProductsStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -75,38 +76,39 @@ updateInfo prodId info = do
     predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause info Storage.Products {..} =
       mconcat
-        [ _info <-. B.val_ info ]
+        [_info <-. B.val_ info]
 
 updateVeh :: ProductsId -> Maybe Text -> L.Flow ()
 updateVeh prodId vehId = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause vehId currTime)
     (predicate prodId)
-      >>= either DB.throwDBError pure
+    >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause vehId currTime Storage.Products {..} =
       mconcat
-        [ _udf3 <-. B.val_ vehId
-        , _updatedAt <-. B.val_ currTime]
+        [ _udf3 <-. B.val_ vehId,
+          _updatedAt <-. B.val_ currTime
+        ]
 
 updateDvr :: ProductsId -> Maybe Text -> L.Flow ()
 updateDvr prodId driverId = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause driverId currTime)
     (predicate prodId)
-      >>= either DB.throwDBError pure
+    >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause driverId currTime Storage.Products {..} =
       mconcat
-        [ _assignedTo <-. B.val_ driverId
-        , _updatedAt <-. B.val_ currTime]
-
+        [ _assignedTo <-. B.val_ driverId,
+          _updatedAt <-. B.val_ currTime
+        ]
 
 findAllByAssignedTo :: Text -> L.Flow [Storage.Products]
 findAllByAssignedTo id =
@@ -115,12 +117,29 @@ findAllByAssignedTo id =
   where
     predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))
 
-
 findAllByOrgId :: Text -> L.Flow [Storage.Products]
-findAllByOrgId orgId  =
+findAllByOrgId orgId =
   DB.findAll dbTable (predicate orgId)
     >>= either DB.throwDBError pure
   where
     predicate orgId Storage.Products {..} =
       ( _organizationId ==. (B.val_ orgId)
       )
+
+updateStatusByIds ::
+  [ProductsId] ->
+  Storage.ProductsStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.Products {..} = B.in_ _id (B.val_ <$> ids)
+    setClause status currTime Storage.Products {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]

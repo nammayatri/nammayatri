@@ -11,7 +11,6 @@ import Epass.Types.Common
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import qualified Epass.Types.Storage.Tag as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T

@@ -14,10 +14,12 @@ import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Location as Location
+import Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
@@ -30,22 +32,40 @@ import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Location as LQ
+import Storage.Queries.Organization as OQ
+import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
+import qualified Types.API.CaseProduct as CPR
 import Types.API.Registration
 import qualified Utils.Defaults as Defaults
 
 list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
 list regToken CaseReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
-  now <- getCurrTime
-  caseList <- Case.findAllByTypeStatuses _limit _offset _type _status now
-  locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
-  return $ catMaybes $ joinByIds locList <$> caseList
+  person <- QP.findPersonById (PersonId _EntityId)
+  now <- getCurrentTimeUTC
+  case (person ^. #_organizationId) of
+    Just orgId -> do
+      org <- OQ.findOrganizationById (OrganizationId orgId)
+      ignoreList <-
+        if (fromMaybe False _ignoreOffered)
+          then do
+            resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
+            let csIgnoreList = Case._id <$> (CPR._case <$> resList)
+            return csIgnoreList
+          else return []
+      caseList <-
+        if not (org ^. #_enabled)
+          then Case.findAllByTypeStatusTime _limit _offset _type _status ignoreList now $ fromMaybe now (org ^. #_fromTime)
+          else Case.findAllByTypeStatuses _limit _offset _type _status ignoreList now
+      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
+      return $ catMaybes $ joinByIds locList <$> caseList
+    Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
   where
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
@@ -71,23 +91,26 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
   case (SP._organizationId person) of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
-        p <- createProduct c _quote Defaults.localTime orgId
+        p <- createProduct c _quote orgId Product.INSTOCK
         cp <- createCaseProduct c p
-        notifyGateway c
+        notifyGateway c p orgId
         return c
-      "DECLINED" -> return c
+      "DECLINED" -> do
+        p <- createProduct c _quote orgId Product.OUTOFSTOCK
+        cp <- createCaseProduct c p
+        return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Double -> LocalTime -> Text -> L.Flow Products
-createProduct cs price ctime orgId = do
+createProduct :: Case -> Maybe Double -> Text -> Product.ProductsStatus -> L.Flow Products
+createProduct cs price orgId status = do
   prodId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  let product = getProduct prodId price cs ctime currTime orgId shortId
+  let product = getProduct prodId price cs currTime orgId shortId
   PQ.create product
   return $ product
   where
-    getProduct prodId price cs ctime currTime orgId shortId =
+    getProduct prodId price cs currTime orgId shortId =
       Products
         { _id = ProductsId prodId,
           _shortId = T.pack shortId,
@@ -95,7 +118,7 @@ createProduct cs price ctime orgId = do
           _description = Case._description cs,
           _industry = Case._industry cs,
           _type = RIDE,
-          _status = Product.INSTOCK,
+          _status = status,
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
@@ -109,7 +132,7 @@ createProduct cs price ctime orgId = do
           _udf5 = Case._udf5 cs,
           _info = Case._info cs,
           _organizationId = orgId,
-          _createdAt = ctime,
+          _createdAt = currTime,
           _updatedAt = currTime,
           _fromLocation = Just (Case._fromLocationId cs),
           _toLocation = Just (Case._toLocationId cs),
@@ -119,7 +142,7 @@ createProduct cs price ctime orgId = do
 createCaseProduct :: Case -> Products -> L.Flow CaseProduct
 createCaseProduct cs prod = do
   cpId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   let caseProd = getCaseProd cpId cs prod currTime
   CPQ.create caseProd
   return $ caseProd
@@ -132,26 +155,25 @@ createCaseProduct cs prod = do
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status = Product.INSTOCK,
+          _status = Product._status prod,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> L.Flow ()
-notifyGateway c = do
+notifyGateway :: Case -> Products -> Text -> L.Flow ()
+notifyGateway c p orgId = do
   L.logInfo "notifyGateway" $ show c
-  cps <- CPQ.findAllByCaseId (c ^. #_id)
-  L.logInfo "notifyGateway" $ show cps
-  prods <- PQ.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
-  onSearchPayload <- mkOnSearchPayload c prods
+  L.logInfo "notifyGateway" $ show p
+  orgInfo <- OQ.findOrganizationById (OrganizationId orgId)
+  onSearchPayload <- mkOnSearchPayload c [p] orgInfo
   L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [Products] -> L.Flow OnSearchReq
-mkOnSearchPayload c prods = do
-  currTime <- getCurrTime
+mkOnSearchPayload :: Case -> [Products] -> Organization -> L.Flow OnSearchReq
+mkOnSearchPayload c prods orgInfo = do
+  currTime <- getCurrentTimeUTC
   let context =
         Context
           { domain = "MOBILITY",
@@ -162,7 +184,7 @@ mkOnSearchPayload c prods = do
             timestamp = currTime,
             dummy = ""
           }
-  service <- GT.mkServiceOffer c prods Nothing
+  service <- GT.mkServiceOffer c prods Nothing (Just orgInfo)
   return
     OnSearchReq
       { context,

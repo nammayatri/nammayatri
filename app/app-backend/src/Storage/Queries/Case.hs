@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -22,16 +23,28 @@ create Storage.Case {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
     >>= either DB.throwDBError pure
 
-findAllByType :: Integer -> Integer -> Storage.CaseType -> Storage.CaseStatus -> L.Flow [Storage.Case]
-findAllByType limit offset caseType caseStatus =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate caseType caseStatus) limit offset orderByDesc
-    >>= either DB.throwDBError pure
+findAllByTypeAndStatuses ::
+  PersonId ->
+  Storage.CaseType ->
+  [Storage.CaseStatus] ->
+  Maybe Integer ->
+  Maybe Integer ->
+  L.Flow [Storage.Case]
+findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset =
+  let limit = fromMaybe 100 mlimit
+      offset = fromMaybe 0 moffset
+   in DB.findAllWithLimitOffsetWhere dbTable (predicate personId caseType caseStatuses) limit offset orderByDesc
+        >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
-    predicate caseType caseStatus Storage.Case {..} =
-      ( _type ==. (B.val_ caseType)
-          &&. _status ==. (B.val_ caseStatus)
-      )
+    predicate personId caseType caseStatuses Storage.Case {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [ _type ==. (B.val_ caseType),
+          B.in_ _status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
+          _requestor ==. B.val_ (Just $ _getPersonId personId)
+        ]
 
 findById :: CaseId -> L.Flow Storage.Case
 findById caseId =
@@ -56,9 +69,26 @@ findAllByPerson perId =
   where
     predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
+findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> L.Flow [Storage.Case]
+findAllExpiredByStatus statuses maybeFrom maybeTo = do
+  (now :: LocalTime) <- getCurrentTimeUTC
+  DB.findAll dbTable (predicate now maybeFrom maybeTo)
+    >>= either DB.throwDBError pure
+  where
+    predicate now maybeFrom maybeTo Storage.Case {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        ( [ (_status `B.in_` ((B.val_) <$> statuses)),
+            (_validTill B.<=. (B.val_ now))
+          ]
+            <> (maybe [] (\from -> [_createdAt B.>=. (B.val_ from)]) maybeFrom)
+            <> (maybe [] (\to -> [_createdAt B.<=. (B.val_ to)]) maybeTo)
+        )
+
 updateStatus :: CaseId -> Storage.CaseStatus -> L.Flow ()
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -74,7 +104,7 @@ updateStatus id status = do
 
 updateStatusAndUdfs :: CaseId -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow ()
 updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status udf1 udf2 udf3 udf4 udf5 currTime)

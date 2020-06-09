@@ -54,7 +54,6 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
       whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
         updateTrip (ProductsId productId) c
     Nothing -> return ()
-
   updatedProd <- DB.findById (ProductsId productId)
   driverInfo <- case (updatedProd ^. #_assignedTo) of
     Just driverId -> QP.findPersonById (PersonId driverId)
@@ -64,6 +63,7 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Nothing -> return Nothing
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
   notifyTripDataToGateway (ProductsId productId)
+  notifyCancelReq productId _status
   return $ updatedProd {Storage._info = infoObj}
 
 notifyTripDataToGateway :: ProductsId -> L.Flow ()
@@ -91,11 +91,26 @@ updateInfo productId driverInfo vehicleInfo = do
 updateTrip :: ProductsId -> Product.ProductsStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
-  case_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
-  DB.updateStatus productId k
-  CQ.updateStatus (Case._id case_) (read (show k) :: Case.CaseStatus)
-  CPQ.updateStatus (Case._id case_) productId (read (show k) :: CaseP.CaseProductStatus)
-  return ()
+  trackerCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
+  parentCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.RIDEBOOK)
+  case k of
+    Product.CANCELLED -> do
+      DB.updateStatus productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      return ()
+    Product.INPROGRESS -> do
+      DB.updateStatus productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
+      return ()
+    Product.COMPLETED -> do
+      DB.updateStatus productId k
+      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
+      CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
+      return ()
+    _ -> return ()
 
 listRides :: Maybe Text -> FlowHandler ProdListRes
 listRides regToken = withFlowHandler $ do
@@ -140,3 +155,11 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
               _fromLocation = from,
               _toLocation = to
             }
+
+notifyCancelReq :: Text -> Maybe Product.ProductsStatus -> L.Flow ()
+notifyCancelReq prodId status = do
+  case status of
+    Just k -> case k of
+      Product.CANCELLED -> BP.notifyCancelToGateway prodId
+      _ -> return ()
+    Nothing -> return ()

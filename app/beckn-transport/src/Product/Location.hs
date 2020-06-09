@@ -1,15 +1,16 @@
-{-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Location where
 
 import Beckn.Types.App
-import Beckn.Utils.Common
-import EulerHS.Prelude
-import Types.API.Location
-import Data.Generics.Labels
 import qualified Beckn.Types.Storage.Location as SL
+import Beckn.Utils.Common
+import Data.Generics.Labels
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis
-import qualified EulerHS.Language as L
+import Types.API.Location
 
 updateLocation :: Text -> Maybe Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation caseId token req = withFlowHandler $ do

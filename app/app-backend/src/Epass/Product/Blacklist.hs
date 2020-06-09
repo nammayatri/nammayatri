@@ -3,6 +3,7 @@
 module Epass.Product.Blacklist where
 
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import Data.Default
 import Data.Time
@@ -40,7 +41,7 @@ create mRegToken CreateReq {..} = withFlowHandler $ do
     RegToken.CUSTOMER -> L.throwException $ err401 {errBody = "Unauthorized"}
   where
     blacklistRec id userId = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return
         Storage.Blacklist
           { _id = id,

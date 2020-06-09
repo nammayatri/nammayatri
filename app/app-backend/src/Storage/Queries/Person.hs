@@ -2,19 +2,18 @@
 
 module Storage.Queries.Person where
 
-import           Beckn.Types.App
+import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
-import           Data.Time
-import           Database.Beam              ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam              as B
-import           Epass.Types.Common
-import           Epass.Utils.Common
-import           Epass.Utils.Extra
-import qualified EulerHS.Language           as L
-import           EulerHS.Prelude            hiding (id)
-import qualified EulerHS.Types              as T
-import qualified Storage.Queries            as DB
-import qualified Types.Storage.DB           as DB
+import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Data.Time
+import Database.Beam ((&&.), (<-.), (==.), (||.))
+import qualified Database.Beam as B
+import Epass.Types.Common
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
+import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.appDb
@@ -87,7 +86,13 @@ updateMultiple personId person = do
           _organizationId <-. B.val_ (person ^. #_organizationId),
           _locationId <-. B.val_ (person ^. #_locationId),
           _description <-. B.val_ (person ^. #_description),
-          _status <-. B.val_ (person ^. #_status)
+          _status <-. B.val_ (person ^. #_status),
+          _role <-. B.val_ (person ^. #_role),
+          _identifier <-. B.val_ (person ^. #_identifier),
+          _rating <-. B.val_ (person ^. #_rating),
+          _deviceToken <-. B.val_ (person ^. #_deviceToken),
+          _udf1 <-. B.val_ (person ^. #_udf1),
+          _udf2 <-. B.val_ (person ^. #_udf2)
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
@@ -101,7 +106,7 @@ update ::
   Maybe Text ->
   L.Flow ()
 update id statusM nameM emailM roleM identTypeM identM = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause statusM nameM emailM roleM identM identTypeM currTime)

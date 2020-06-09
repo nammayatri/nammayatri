@@ -8,7 +8,6 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.EntityDocument as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
