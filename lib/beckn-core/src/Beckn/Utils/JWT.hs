@@ -24,38 +24,41 @@ import Network.HTTP.Types
 import System.Environment
 import Web.JWT
 
-data ServiceAccount = ServiceAccount
-  { _saType :: !T.Text,
-    _saProjectId :: !T.Text,
-    _saPrivateKeyId :: !T.Text,
-    _saPrivateKey :: !String,
-    _saClientEmail :: !T.Text,
-    _saClientId :: !T.Text,
-    _saAuthUri :: !T.Text,
-    _saTokenUri :: !T.Text,
-    _saAuthProviderX509CertUrl :: !T.Text,
-    _saClientX509CertUrl :: !T.Text
-  }
+data ServiceAccount
+  = ServiceAccount
+      { _saType :: !T.Text,
+        _saProjectId :: !T.Text,
+        _saPrivateKeyId :: !T.Text,
+        _saPrivateKey :: !String,
+        _saClientEmail :: !T.Text,
+        _saClientId :: !T.Text,
+        _saAuthUri :: !T.Text,
+        _saTokenUri :: !T.Text,
+        _saAuthProviderX509CertUrl :: !T.Text,
+        _saClientX509CertUrl :: !T.Text
+      }
   deriving (Show, Eq, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
-data JWTBody = JWTBody
-  { _jwtAssertion :: !T.Text,
-    _jwtGrantType :: !T.Text
-  }
+data JWTBody
+  = JWTBody
+      { _jwtAssertion :: !T.Text,
+        _jwtGrantType :: !T.Text
+      }
   deriving (Show, Eq, Generic)
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWTBody)
 
-data JWToken = JWToken
-  { _jwtAccessToken :: !T.Text,
-    _jwtExpiresIn :: Integer,
-    _jwtTokenType :: !Text
-  }
+data JWToken
+  = JWToken
+      { _jwtAccessToken :: !T.Text,
+        _jwtExpiresIn :: Integer,
+        _jwtTokenType :: !T.Text
+      }
   deriving (Show, Eq, Generic)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''JWToken)
+$(deriveJSON (aesonPrefix snakeCase) ''JWToken)
 
 getJSON :: IO (Either String BL.ByteString)
 getJSON = do
@@ -100,7 +103,7 @@ createJWT sa additionalClaims = do
                 aud = aud,
                 unregisteredClaims = unregisteredClaims
               }
-      pure $ Right (cs, (encodeSigned key jwtHeader cs))
+      pure $ Right (cs, encodeSigned key jwtHeader cs)
 
 jwtRequest :: T.Text -> BL.ByteString -> IO Request
 jwtRequest tokenUri body = do
@@ -112,7 +115,7 @@ jwtRequest tokenUri body = do
         requestBody = RequestBodyLBS body
       }
 
-refreshToken :: IO (Either String Text)
+refreshToken :: IO (Either String JWToken)
 refreshToken = do
   sAccount <- getServiceAccount
   case sAccount of
@@ -134,29 +137,21 @@ refreshToken = do
           let rBody = J.eitherDecode $ responseBody res
           case rBody of
             Left err -> pure $ Left err
-            Right respBody -> do
-              let token = _jwtTokenType respBody <> T.pack " " <> _jwtAccessToken respBody
-              setEnv "FCM_AUTH_TOKEN" $ T.unpack token
-              setEnv "FCM_AUTH_TOKEN_EXPIRY" $ show $ getExpiry issuedAt (_jwtExpiresIn respBody)
-              pure $ Right token
+            Right respBody@JWToken {..} -> do
+              let expiry = getExpiry issuedAt _jwtExpiresIn
+              pure $
+                Right
+                  respBody
+                    { _jwtExpiresIn = expiry
+                    }
 
 getExpiry :: Maybe NumericDate -> Integer -> Integer
 getExpiry Nothing expiresIn = expiresIn
 getExpiry (Just d) expiresIn =
   expiresIn + (round $ nominalDiffTimeToSeconds (secondsSinceEpoch d))
 
-getToken :: IO (Either String Text)
-getToken = do
-  token <- lookupEnv "FCM_AUTH_TOKEN"
-  expiry <- lookupEnv "FCM_AUTH_TOKEN_EXPIRY"
-  case token of
-    Nothing -> refreshToken
-    Just t ->
-      case expiry of
-        Nothing -> refreshToken
-        Just e -> do
-          let expInt = read e :: Integer
-          curInt <- round <$> getPOSIXTime
-          if curInt > expInt - 60
-            then refreshToken
-            else pure . Right $ T.pack t
+isValid :: JWToken -> IO Bool
+isValid token = do
+  let expiry = _jwtExpiresIn token
+  curInt <- round <$> getPOSIXTime
+  pure $ curInt < expiry - 60

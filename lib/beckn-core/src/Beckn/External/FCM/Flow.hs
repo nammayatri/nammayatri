@@ -5,7 +5,7 @@ module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
 import Beckn.Types.Storage.Person as Person
-import Beckn.Utils.JWT as JWT
+import qualified Beckn.Utils.JWT as JWT
 import Control.Lens
 import Data.Default.Class
 import qualified Data.Text as T
@@ -39,15 +39,18 @@ createAndroidConfig title body tag =
         & fcmdTag ?~ tag
 
 -- | Send FCM message to a person
-notifyPerson :: Text -> Text -> FCMData -> Person -> L.Flow (Either Text ())
+notifyPerson :: Text -> Text -> FCMData -> Person -> L.Flow ()
 notifyPerson title body msgData person =
-  case Person._deviceToken person of
-    Nothing -> do
-      L.logInfo (T.pack "FCM") $ "device token of a person " <> show (Person._id person) <> "not found"
-      pure $ Left $ "device token of a person " <> show (Person._id person) <> "not found"
-    Just token ->
-      sendMessage $ FCMRequest $ createMessage title body msgData token
+  let pid = show (Person._id person)
+      tokenNotFound = "device token of a person " <> show pid <> " not found"
+   in case Person._deviceToken person of
+        Nothing -> do
+          L.logInfo (T.pack "FCM") tokenNotFound
+          pure ()
+        Just token ->
+          sendMessage (FCMRequest (createMessage title body msgData token)) pid
 
+-- | Google API interface
 type FCMSendMessageAPI =
   Header "Authorization" FCMAuthToken
     :> ReqBody '[JSON] FCMRequest
@@ -66,18 +69,53 @@ defaultBaseUrl =
     }
 
 -- | Send FCM message to a registered device
-sendMessage :: FCMRequest -> L.Flow (Either Text ())
-sendMessage fcmMsg = do
-  authToken <- L.runIO JWT.getToken
+sendMessage :: FCMRequest -> String -> L.Flow ()
+sendMessage fcmMsg toWhom = L.forkFlow desc $ do
+  authToken <- getToken
   case authToken of
     Right token -> do
       res <- L.callAPI defaultBaseUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
       L.logInfo (T.pack "FCM") $ case res of
-        Right _ -> "message sent successfully to" <> ""
+        Right _ -> "message sent successfully to " <> T.pack toWhom
         Left x -> "error: " <> show x
-      pure $ first show res
+      pure ()
     Left err -> do
-      L.logInfo (T.pack "JWT") $ "error: " <> show err
-      pure $ Left (T.pack err)
+      L.logInfo (T.pack "FCM") $ "error: " <> show err
+      pure ()
   where
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
+    desc = "FCM send message forked flow"
+
+-- | get FCM text token and refresh it if needed
+getToken :: L.Flow (Either String Text)
+getToken = do
+  token <- checkAndGetToken
+  pure $ case token of
+    Left err -> Left err
+    Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
+
+-- | check FCM token and refresh if it is invalid
+checkAndGetToken :: L.Flow (Either String FCMToken)
+checkAndGetToken = do
+  token <- L.getOption FCMTokenKey
+  case token of
+    Nothing ->
+      refreshToken -- token not found
+    Just t -> do
+      valid <- L.runIO $ JWT.isValid t
+      if valid
+        then pure $ Right t -- do nothing, token is ok
+        else refreshToken -- token is invalid
+  where
+    refreshToken = do
+      L.logInfo (T.pack "FCM") "Refreshing token"
+      t <- L.runIO JWT.refreshToken
+      case t of
+        Left err -> do
+          L.logInfo (T.pack "FCM") $ T.pack err
+          L.delOption FCMTokenKey
+          pure $ Left err
+        Right token -> do
+          L.logInfo (T.pack "FCM") $ T.pack "Success"
+          L.setOption FCMTokenKey token
+          pure $ Right token

@@ -3,6 +3,7 @@
 module App where
 
 import qualified App.Server as App
+import qualified Beckn.External.FCM.Flow as FCM
 import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -50,8 +51,11 @@ runAppBackend' port settings = do
     try (R.runFlow flowRt prepare) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
-        putStrLn @String
-          ("Runtime created. Starting server at port " <> show port)
+        putStrLn @String "Initializing Options..."
+        try (R.runFlow flowRt prepareOptions) >>= \case
+          Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+          Right _ ->
+            putStrLn @String ("Runtime created. Starting server at port " <> show port)
         runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 appExceptionResponse :: SomeException -> Response
@@ -68,3 +72,18 @@ appExceptionResponse exception = do
         H.internalServerError500
         [(H.hContentType, "application/json")]
         (Aeson.encode $ internalServerErr)
+
+prepareOptions :: L.Flow ()
+prepareOptions =
+  -- FCM token ( options key = FCMTokenKey )
+  createFCMTokenRefreshThread
+
+createFCMTokenRefreshThread :: L.Flow ()
+createFCMTokenRefreshThread =
+  L.forkFlow forkDesc $ do
+    forever $ do
+      FCM.getToken
+      L.runIO $ threadDelay (25 * 1000000)
+    pure ()
+  where
+    forkDesc = "Forever loop that checks and refreshes FCM token every 25 seconds"

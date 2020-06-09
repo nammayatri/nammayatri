@@ -4,6 +4,7 @@ module App where
 
 import qualified App.Server as App
 import Beckn.Constants.APIErrorCode
+import qualified Beckn.External.FCM.Flow as FCM
 import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -55,8 +56,12 @@ runTransporterBackendApp' port settings = do
         try (R.runFlow flowRt prepareRedisConnections) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ -> do
-            putStrLn @String ("Runtime created. Starting server at port " <> show port)
-        runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
+            putStrLn @String "Initializing Options..."
+            try (R.runFlow flowRt prepareOptions) >>= \case
+              Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+              Right _ ->
+                putStrLn @String ("Runtime created. Starting server at port " <> show port)
+            runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse exception = do
@@ -72,3 +77,18 @@ transporterExceptionResponse exception = do
         H.internalServerError500
         [(H.hContentType, "application/json")]
         (Aeson.encode $ internalServerErr)
+
+prepareOptions :: L.Flow ()
+prepareOptions =
+  -- FCM token ( options key = FCMTokenKey )
+  createFCMTokenRefreshThread
+
+createFCMTokenRefreshThread :: L.Flow ()
+createFCMTokenRefreshThread =
+  L.forkFlow forkDesc $ do
+    forever $ do
+      FCM.getToken
+      L.runIO $ threadDelay (25 * 1000000)
+    pure ()
+  where
+    forkDesc = "Forever loop that checks and refreshes FCM token every 25 seconds"
