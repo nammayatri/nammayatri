@@ -36,6 +36,7 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
+import System.Environment
 import Types.App
 import Types.ProductInfo
 import Utils.Common
@@ -111,9 +112,7 @@ mkCase req userId from to = do
   shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
-      -- TODO: Fix this
-      -- putting static expiry of 2hrs
-      validTill = addLocalTime (60 * 60 * 2) $ now
+  validTill <- getCaseExpiry (req ^. #message ^. #time)
   return $
     Case.Case
       { _id = id,
@@ -143,6 +142,16 @@ mkCase req userId from to = do
         _createdAt = now,
         _updatedAt = now
       }
+  where
+    getCaseExpiry :: LocalTime -> L.Flow LocalTime
+    getCaseExpiry startTime = do
+      now <- getCurrentTimeUTC
+      caseExpiry <- pure . fromMaybe 7200 . join . (readMaybe <$>) =<< L.runIO (lookupEnv "DEFAULT_CASE_EXPIRY")
+      let minExpiry = 300 -- 5 minutes
+          timeToRide = startTime `diffLocalTime` now
+          defaultExpiry = (fromInteger caseExpiry) `addLocalTime` now
+          validTill = addLocalTime (minimum [(fromInteger caseExpiry), maximum [minExpiry, timeToRide]]) now
+      pure validTill
 
 mkLocation :: Core.Location -> L.Flow Location.Location
 mkLocation loc = do
