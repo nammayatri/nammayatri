@@ -18,7 +18,7 @@ defaultBaseUrl :: BaseUrl
 defaultBaseUrl =
   BaseUrl
     { baseUrlScheme = Https,
-      baseUrlHost = "www.myvaluefirst.com",
+      baseUrlHost = "http.myvfirst.com",
       baseUrlPort = 443,
       baseUrlPath = ""
     }

@@ -4,6 +4,7 @@ module App.Routes where
 -- import           Beckn.Types.API.Confirm
 -- import           Beckn.Types.Common
 
+import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
@@ -18,6 +19,7 @@ import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
 import qualified Product.CaseProduct as CaseProduct
+import qualified Product.Cron as Cron
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Products as Product
@@ -28,6 +30,7 @@ import Servant
 import Servant.Multipart
 import Types.API.Case
 import Types.API.CaseProduct
+import Types.API.Cron
 import Types.API.Location
 import Types.API.Person
 import Types.API.Products
@@ -44,9 +47,11 @@ type TransporterAPIs =
            :<|> OrganizationAPIs --Transporter
            :<|> SearchAPIs
            :<|> ConfirmAPIs
+           :<|> CancelAPIs
            :<|> StatusAPIs
            :<|> TrackApis
            :<|> CaseAPIs
+           :<|> CronAPIs
            :<|> CaseProductAPIs
            :<|> VehicleAPIs
            :<|> LocationAPIs
@@ -221,9 +226,11 @@ transporterServer' key =
     :<|> organizationFlow
     :<|> searchApiFlow
     :<|> confirmApiFlow
+    :<|> cancelApiFlow
     :<|> statusApiFlow
     :<|> trackApiFlow
     :<|> caseFlow
+    :<|> cronFlow
     :<|> caseProductFlow
     :<|> vehicleFlow
     :<|> locationFlow
@@ -248,6 +255,27 @@ type ConfirmAPIs =
 
 confirmApiFlow :: FlowServer ConfirmAPIs
 confirmApiFlow = BP.confirm
+
+type CancelAPIs =
+  "cancel"
+    :> "services"
+    :> ( ReqBody '[JSON] CancelReq
+           :> Post '[JSON] AckResponse
+       )
+
+cancelApiFlow :: FlowServer CancelAPIs
+cancelApiFlow = BP.cancel
+
+type CronAPIs =
+  "cron"
+    :> "expire_cases"
+    :> Header "Authorization" CronAuthKey
+    :> ReqBody '[JSON] ExpireCaseReq
+    :> Post '[JSON] ExpireCaseRes
+
+cronFlow :: FlowServer CronAPIs
+cronFlow =
+  Cron.expire
 
 type StatusAPIs =
   "status"

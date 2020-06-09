@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Products as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -51,7 +52,7 @@ updateStatus ::
   Storage.ProductsStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -79,7 +80,7 @@ updateInfo prodId info = do
 
 updateVeh :: ProductsId -> Maybe Text -> L.Flow ()
 updateVeh prodId vehId = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause vehId currTime)
@@ -95,7 +96,7 @@ updateVeh prodId vehId = do
 
 updateDvr :: ProductsId -> Maybe Text -> L.Flow ()
 updateDvr prodId driverId = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause driverId currTime)
@@ -124,3 +125,21 @@ findAllByOrgId orgId =
     predicate orgId Storage.Products {..} =
       ( _organizationId ==. (B.val_ orgId)
       )
+
+updateStatusByIds ::
+  [ProductsId] ->
+  Storage.ProductsStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.Products {..} = B.in_ _id (B.val_ <$> ids)
+    setClause status currTime Storage.Products {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]

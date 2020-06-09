@@ -1,11 +1,11 @@
 module Epass.Utils.Storage where
 
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import qualified Data.Time as DT
 import Data.Time.Clock
 import Data.Time.LocalTime
 import Epass.Utils.Common
-import Epass.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T

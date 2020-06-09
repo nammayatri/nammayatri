@@ -225,3 +225,6 @@ aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggrega
 
 findAllByJoin limit offset orderBy joinQuery =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ joinQuery
+
+findAllByJoinWithoutLimits orderBy joinQuery =
+  run $ L.findRows $ B.select $ B.orderBy_ orderBy $ joinQuery

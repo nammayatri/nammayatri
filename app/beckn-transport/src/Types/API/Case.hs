@@ -10,7 +10,8 @@ data CaseReq = CaseReq
   { _type :: CaseType,
     _limit :: Integer,
     _offset :: Integer,
-    _status :: [CaseStatus]
+    _status :: [CaseStatus],
+    _ignoreOffered :: Maybe Bool
   }
   deriving (Show, Generic, ToSchema)
 

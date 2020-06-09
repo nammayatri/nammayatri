@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.CaseProduct as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -56,7 +57,7 @@ findByCaseId id =
 
 updateStatusForProducts :: ProductsId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
 updateStatusForProducts productId status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -75,7 +76,7 @@ updateStatus ::
   Storage.CaseProductStatus ->
   L.Flow (T.DBResult ())
 updateStatus caseId productId status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -83,6 +84,32 @@ updateStatus caseId productId status = do
   where
     predicate cId pId Storage.CaseProduct {..} =
       (_caseId ==. B.val_ cId) &&. (_productId ==. B.val_ pId)
+    setClause status currTime Storage.CaseProduct {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
+findAllByCaseIds :: [CaseId] -> L.Flow [Storage.CaseProduct]
+findAllByCaseIds ids =
+  DB.findAll dbTable (pred ids)
+    >>= either DB.throwDBError pure
+  where
+    pred ids Storage.CaseProduct {..} =
+      B.in_ _caseId (B.val_ <$> ids)
+
+updateStatusByIds ::
+  [CaseProductId] ->
+  Storage.CaseProductStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.CaseProduct {..} = B.in_ _id (B.val_ <$> ids)
     setClause status currTime Storage.CaseProduct {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
@@ -131,6 +158,42 @@ caseProductJoin _limit _offset csType orgId status = do
       ( _organizationId ==. (B.val_ orgId)
       )
     pred3 status Storage.CaseProduct {..} =
+      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
+      )
+    mkJoinRes (cs, pr, cpr) =
+      CaseProductRes
+        { _case = cs,
+          _product = pr,
+          _caseProduct = cpr,
+          _fromLocation = Nothing,
+          _toLocation = Nothing
+        }
+    joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+      i <- B.filter_ pred1 $ B.all_ tbl1
+      j <- B.filter_ pred2 $ B.all_ tbl2
+      k <- B.filter_ pred3 $ B.join_ tbl3 $
+        \line ->
+          CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+            B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
+      pure (i, j, k)
+
+caseProductJoinWithoutLimits :: Case.CaseType -> Text -> [Storage.CaseProductStatus] -> L.Flow CaseProductList
+caseProductJoinWithoutLimits csType orgId status = do
+  joinedValues <-
+    DB.findAllByJoinWithoutLimits
+      orderByDesc
+      (joinQuery csTable prodTable dbTable (csPred csType) (prodPred orgId) (cprPred status))
+      >>= either DB.throwDBError pure
+  return $ mkJoinRes <$> joinedValues
+  where
+    orderByDesc (_, _, Storage.CaseProduct {..}) = B.desc_ _createdAt
+    csPred csType Case.Case {..} =
+      ( _type ==. (B.val_ csType)
+      )
+    prodPred orgId Product.Products {..} =
+      ( _organizationId ==. (B.val_ orgId)
+      )
+    cprPred status Storage.CaseProduct {..} =
       ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
       )
     mkJoinRes (cs, pr, cpr) =

@@ -2,6 +2,8 @@
 
 module Product.Registration where
 
+import Beckn.External.FCM.Flow as FCM
+import Beckn.External.FCM.Types
 import qualified Beckn.External.MyValuesFirst.Flow as Sms
 import qualified Beckn.External.MyValuesFirst.Types as Sms
 import Beckn.Types.App
@@ -34,14 +36,26 @@ initiateLogin req =
 initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
   let mobileNumber = req ^. Lens.identifier
-  entityId <- do
+  person <-
     QP.findByMobileNumber mobileNumber
-      >>= maybe (createPerson req) (return . _getPersonId . SP._id)
-  regToken <- makeSession req entityId SR.USER
+      >>= maybe (createPerson req) pure
+  let entityId = _getPersonId . SP._id $ person
+  useFakeOtpM <- L.runIO $ lookupEnv "USE_FAKE_SMS"
+  regToken <- makeSession req entityId SR.USER (T.pack <$> useFakeOtpM)
   QR.create regToken
-  sendOTP mobileNumber (SR._authValueHash regToken)
+  --  sendOTP mobileNumber (SR._authValueHash regToken)
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
+      notificationData =
+        FCMData
+          { _fcmNotificationType = "REGISTRATION_APPROVED",
+            _fcmShowNotification = "true",
+            _fcmEntityIds = show regToken,
+            _fcmEntityType = "Organization"
+          }
+      title = "Registration Completed!"
+      body = "You can now start accepting rides!"
+  FCM.notifyPerson title body notificationData person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
@@ -68,7 +82,7 @@ makePerson req = do
         _status = SP.INACTIVE,
         _udf1 = Nothing,
         _udf2 = Nothing,
-        _deviceToken = Nothing,
+        _deviceToken = req ^. #_deviceToken,
         _organizationId = Nothing,
         _locationId = Nothing,
         _description = Nothing,
@@ -77,9 +91,11 @@ makePerson req = do
       }
 
 makeSession ::
-  InitiateLoginReq -> Text -> SR.RTEntityType -> L.Flow SR.RegistrationToken
-makeSession req entityId entityType = do
-  otp <- generateOTPCode
+  InitiateLoginReq -> Text -> SR.RTEntityType -> Maybe Text -> L.Flow SR.RegistrationToken
+makeSession req entityId entityType fakeOtp = do
+  otp <- case fakeOtp of
+    Just otp -> return otp
+    Nothing -> generateOTPCode
   id <- L.generateGUID
   token <- L.generateGUID
   now <- getCurrentTimeUTC
@@ -146,9 +162,9 @@ login tokenId req =
       then do
         person <- checkPersonExists _EntityId
         QR.updateVerified tokenId True
-        QP.update (SP._id person) SP.ACTIVE True
+        QP.update (SP._id person) SP.ACTIVE True (maybe (person ^. #_deviceToken) Just (req ^. #_deviceToken))
         updatedPerson <- QP.findPersonById (SP._id person)
-        return $ LoginRes _token (Just updatedPerson)
+        return $ LoginRes _token (Just $ maskPerson updatedPerson)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =
@@ -160,11 +176,11 @@ checkRegistrationTokenExists :: Text -> L.Flow SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
 
-createPerson :: InitiateLoginReq -> L.Flow Text
+createPerson :: InitiateLoginReq -> L.Flow SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
-  return $ _getPersonId $ SP._id person
+  pure person
 
 checkPersonExists :: Text -> L.Flow SP.Person
 checkPersonExists _EntityId =

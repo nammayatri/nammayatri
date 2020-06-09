@@ -5,6 +5,7 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import qualified Data.Text as DT
 import qualified Epass.Data.Accessor as Accessor
@@ -75,7 +76,7 @@ createPass :: Case.Case -> L.Flow Products.Products
 createPass c@(Case.Case {..}) = do
   id <- generateGUID
   cpId <- generateGUID
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let orgId = "" --TODO: this should be optional
       product =
         Products.Products

@@ -35,13 +35,17 @@ status regToken caseId = withFlowHandler $ do
 
 list ::
   Maybe RegToken ->
+  Case.CaseType ->
+  [Case.CaseStatus] ->
+  Maybe Integer ->
+  Maybe Integer ->
   FlowHandler ListRes
-list regToken = withFlowHandler $ do
+list regToken caseType statuses mlimit moffset = withFlowHandler $ do
   token <- verifyToken regToken
   person <-
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
-  Case.findAllByPerson (_getPersonId $ person ^. #_id)
+  Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
     >>= traverse mapCaseProduct
     >>= return . ListRes
   where

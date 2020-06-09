@@ -1,11 +1,11 @@
 module Epass.Storage.Queries.Pass where
 
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import Epass.Types.App
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.Pass as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
@@ -78,7 +78,7 @@ listAllPasses id status = do
 
 updateMultiple :: Text -> Storage.Pass -> L.Flow ()
 updateMultiple id pass@Storage.Pass {..} = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   DB.update dbTable (setClause currTime pass) (predicate id)
     >>= either DB.throwDBError pure
   where

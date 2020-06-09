@@ -2,6 +2,8 @@
 
 module Product.Search where
 
+import Beckn.External.FCM.Flow as FCM
+import Beckn.External.FCM.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -17,7 +19,8 @@ import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -62,7 +65,7 @@ search regToken req = withFlowHandler $ do
   return $ AckResponse (req ^. #context) ack
   where
     validateDateTime req = do
-      currTime <- getCurrTime
+      currTime <- getCurrentTimeUTC
       when ((req ^. #message ^. #time) < currTime)
         $ L.throwException
         $ err400 {errBody = "Invalid start time"}
@@ -78,6 +81,9 @@ search_cb regToken req = withFlowHandler $ do
     Nothing -> return ()
     Just catalog -> do
       case_ <- Case.findById caseId
+      when
+        (case_ ^. #_status == Case.CLOSED)
+        (L.throwException $ err400 {errBody = "Case expired"})
       personId <-
         maybe
           (L.throwException $ err500 {errBody = "No person linked to case"})
@@ -90,12 +96,13 @@ search_cb regToken req = withFlowHandler $ do
       traverse_
         (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
+      notifyOnSearchCb personId caseId
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
 
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
 mkCase req userId from to = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
@@ -104,7 +111,9 @@ mkCase req userId from to = do
   shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
-      validTill = addLocalTime (60 * 30) $ req ^. #message ^. #time
+      -- TODO: Fix this
+      -- putting static expiry of 2hrs
+      validTill = addLocalTime (60 * 60 * 2) $ now
   return $
     Case.Case
       { _id = id,
@@ -137,7 +146,7 @@ mkCase req userId from to = do
 
 mkLocation :: Core.Location -> L.Flow Location.Location
 mkLocation loc = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   let mgps = loc ^. #_gps
   return $
@@ -160,7 +169,7 @@ mkLocation loc = do
 
 mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> L.Flow Products.Products
 mkProduct case_ mprovider item = do
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
   -- There is loss of data in coversion Product -> Item -> Product
@@ -199,7 +208,7 @@ mkCaseProduct :: CaseId -> PersonId -> Products.Products -> L.Flow CaseProduct.C
 mkCaseProduct caseId personId product = do
   let productId = product ^. #_id
       price = product ^. #_price
-  now <- getCurrTime
+  now <- getCurrentTimeUTC
   id <- generateGUID
   return $
     CaseProduct.CaseProduct
@@ -214,3 +223,21 @@ mkCaseProduct caseId personId product = do
         _createdAt = now,
         _updatedAt = now
       }
+
+notifyOnSearchCb :: PersonId -> CaseId -> L.Flow ()
+notifyOnSearchCb personId caseId = do
+  person <- Person.findById personId
+  case person of
+    Just p -> do
+      let notificationData =
+            FCMData
+              { _fcmNotificationType = "SEARCH_CALLBACK",
+                _fcmShowNotification = "true",
+                _fcmEntityIds = show $ _getCaseId caseId,
+                _fcmEntityType = "Case"
+              }
+          title = "New ride options available!"
+          body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
+      FCM.notifyPerson title body notificationData p
+      pure ()
+    _ -> pure ()

@@ -6,6 +6,7 @@ import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
@@ -22,7 +23,6 @@ import qualified Epass.Types.Storage.Customer as Customer
 import qualified Epass.Types.Storage.CustomerDetail as CD
 import Epass.Types.Storage.PassApplication
 import Epass.Utils.Common
-import Epass.Utils.Extra
 import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
@@ -89,7 +89,7 @@ sponsorFlow token req@API.CreatePassApplicationReq {..} = do
     >>= \case
       Just cust -> getCaseInfo token req (Just $ SP._id cust)
       Nothing -> do
-        currTime <- getCurrTime
+        currTime <- getCurrentTimeUTC
         pId <- L.generateGUID
         QP.create
           SP.Person
@@ -143,7 +143,7 @@ getLocation :: API.CreatePassApplicationReq -> L.Flow (Loc.Location, Loc.Locatio
 getLocation API.CreatePassApplicationReq {..} = do
   toId <- BTC.generateGUID
   fromId <- BTC.generateGUID
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   let fromLocation =
         Loc.Location
           { _id = toId,
@@ -188,7 +188,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   QL.create toLoc
   customer <- QP.findById (PersonId $ SR._EntityId token)
   let customerOrgId = join (SP._organizationId <$> customer)
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   count <- getCount _type _count
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let toLocationId = _getLocationId $ Loc._id toLoc

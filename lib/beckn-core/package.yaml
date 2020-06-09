@@ -52,6 +52,7 @@ default-extensions:
 dependencies:
 - aeson
 - aeson-pretty
+- aeson-casing
 - base >= 4.7 && < 5
 - beam-core
 - beam-mysql
@@ -59,10 +60,13 @@ dependencies:
 - containers
 - cryptonite
 - data-default
+- data-default-class
 - euler-hs
 - http-api-data
 - http-client
+- http-client-tls
 - http-types
+- jwt
 - lens
 - pureMD5
 - random-strings
@@ -83,6 +87,7 @@ dependencies:
 - template-haskell
 - generic-lens
 - base64-bytestring
+- utf8-string
 
 library:
   source-dirs:

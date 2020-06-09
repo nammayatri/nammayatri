@@ -18,7 +18,6 @@ import Epass.Types.Common
 import qualified Epass.Types.Storage.Location as Location
 import qualified Epass.Types.Storage.Organization as Org
 import Epass.Utils.Common
-import Epass.Utils.Extra
 import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L

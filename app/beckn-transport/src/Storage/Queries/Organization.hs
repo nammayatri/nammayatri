@@ -6,6 +6,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -75,7 +76,7 @@ update ::
   Storage.Status ->
   L.Flow (T.DBResult ())
 update id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -99,6 +100,7 @@ updateOrganizationRec org = do
           _description <-. B.val_ (Storage._description org),
           _headCount <-. B.val_ (Storage._headCount org),
           _enabled <-. B.val_ (Storage._enabled org),
-          _updatedAt <-. B.val_ (Storage._updatedAt org)
+          _updatedAt <-. B.val_ (Storage._updatedAt org),
+          _fromTime <-. B.val_ (Storage._fromTime org)
         ]
     predicate id Storage.Organization {..} = _id ==. B.val_ id

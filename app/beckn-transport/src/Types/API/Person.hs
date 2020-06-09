@@ -2,6 +2,7 @@
 
 module Types.API.Person where
 
+import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
@@ -26,7 +27,7 @@ data UpdatePersonReq = UpdatePersonReq
     _email :: Maybe Text,
     _identifier :: Maybe Text,
     _rating :: Maybe Text,
-    _deviceToken :: Maybe Text,
+    _deviceToken :: Maybe FCM.FCMRecipientToken,
     _udf1 :: Maybe Text,
     _udf2 :: Maybe Text,
     _organizationId :: Maybe Text,
@@ -141,7 +142,7 @@ data CreatePersonReq = CreatePersonReq
     _identifier :: Maybe Text,
     _identifierType :: Maybe SP.IdentifierType,
     _rating :: Maybe Text,
-    _deviceToken :: Maybe Text,
+    _deviceToken :: Maybe FCM.FCMRecipientToken,
     _mobileNumber :: Maybe Text,
     _mobileCountryCode :: Maybe Text,
     _udf1 :: Maybe Text,
