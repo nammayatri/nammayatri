@@ -12,6 +12,9 @@ import System.Environment
 import Types.Config (Config (..))
 import qualified Prelude as P (show)
 
+dbSchema :: Text
+dbSchema = "atlas_app"
+
 instance Config T.PostgresConfig where
   theConfig =
     T.PostgresConfig

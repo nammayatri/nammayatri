@@ -13,6 +13,9 @@ import System.Environment
 import Types.Config (Config (..))
 import qualified Prelude as P (show)
 
+dbSchema :: Text
+dbSchema = "atlas_transporter"
+
 instance Config T.PostgresConfig where
   theConfig =
     T.PostgresConfig
