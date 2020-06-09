@@ -48,6 +48,13 @@ listPerson token req = withFlowHandler $ do
   orgId <- validate token
   ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [orgId]
 
+deletePerson :: Text -> Maybe Text -> FlowHandler DeletePersonRes
+deletePerson personId token = withFlowHandler $ do
+  validate token
+  QP.deleteById (PersonId personId)
+  QR.deleteByEntitiyId personId
+  return $ DeletePersonRes personId
+
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
 verifyAdmin user = do

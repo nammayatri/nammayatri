@@ -37,6 +37,12 @@ updateVehicle vehicleId token req = withFlowHandler $ do
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
+deleteVehicle :: Text -> Maybe Text -> FlowHandler DeleteVehicleRes
+deleteVehicle vehicleId token = withFlowHandler $ do
+  validate token
+  QV.deleteById (VehicleId vehicleId)
+  return $ DeleteVehicleRes vehicleId
+
 -- Core Utility methods are below
 verifyUser :: SP.Person -> L.Flow Text
 verifyUser user = do

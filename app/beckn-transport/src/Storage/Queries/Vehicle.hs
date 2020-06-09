@@ -90,3 +90,10 @@ updateVehicleRec vehicle = do
           _updatedAt <-. B.val_ (Storage._updatedAt vehicle)
         ]
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
+
+deleteById :: VehicleId -> L.Flow ()
+deleteById id = do
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Vehicle {..} = (_id ==. B.val_ id)
