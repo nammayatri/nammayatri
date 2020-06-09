@@ -97,9 +97,21 @@ search_cb regToken req = withFlowHandler $ do
       traverse_
         (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
+      extendCaseExpiry case_
       notifyOnSearchCb personId caseId
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
+  where
+    extendCaseExpiry :: Case.Case -> L.Flow ()
+    extendCaseExpiry Case.Case {..} = do
+      now <- getCurrentTimeUTC
+      confirmExpiry <-
+        pure . fromMaybe 1800 . join
+          . (readMaybe <$>)
+          =<< L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
+      let newValidTill = (fromInteger confirmExpiry) `addLocalTime` now
+      when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
+      pure ()
 
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
 mkCase req userId from to = do
