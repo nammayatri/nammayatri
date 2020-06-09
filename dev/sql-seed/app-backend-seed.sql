@@ -196,3 +196,85 @@ INSERT INTO `person` (`id`, `first_name`, `middle_name`, `last_name`, `full_name
 
 INSERT INTO `registration_token` (`id`, `token`, `attempts`, `auth_medium`, `auth_type`, `auth_value_hash`, `verified`, `auth_expiry`, `token_expiry`, `entity_id`, `entity_type`, `created_at`, `updated_at`, `info`)
   VALUES ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'ea37f941-427a-4085-a7d0-96240f166672', 3, 'SMS', 'OTP', '3249', FALSE, 3, 365, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:00.582107', '2020-05-12 10:23:00.582107', NULL);
+
+
+CREATE TABLE `entity_document` (
+  `id` char(36) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `document_id` char(36) NOT NULL,
+  `document_type` varchar(255) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `created_by_entity_type` varchar(255) NOT NULL,
+  `verified` tinyint(1) NOT NULL,
+  `verified_by` char(36) DEFAULT NULL,
+  `verified_by_entity_type` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `info` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `entity_id` (`entity_id`),
+  KEY `entity_type` (`entity_type`),
+  KEY `document_id` (`document_id`)
+);
+
+
+CREATE TABLE `entity_tag` (
+  `id` char(36) NOT NULL,
+  `tagged_by` char(36) NOT NULL,
+  `tagged_by_entity_id` varchar(255) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `tag_id` char(36) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `info` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `entity_id` (`entity_id`),
+  KEY `entity_type` (`entity_type`),
+  KEY `tag_id` (`tag_id`)
+);
+
+
+CREATE TABLE `comment` (
+  `id` char(36) NOT NULL,
+  `commented_on_entity_id` char(36) NOT NULL,
+  `commented_on_entity_type` varchar(255) NOT NULL,
+  `commented_by` char(36) NOT NULL,
+  `commented_by_entity_type` varchar(255) NOT NULL,
+  `value` varchar(1024) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `info` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `commented_on_entity_id` (`commented_on_entity_id`),
+  KEY `commented_on_entity_type` (`commented_on_entity_type`)
+);
+
+
+CREATE TABLE `document` (
+  `id` char(36) NOT NULL,
+  `file_url` varchar(1024) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `format` varchar(255) NOT NULL,
+  `size` int(11) NOT NULL,
+  `file_hash` varchar(1024) NOT NULL,
+  `info` text,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `tag` (
+  `id` char(36) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `created_by_entity_type` varchar(255) NOT NULL,
+  `tag_type` varchar(255) NOT NULL,
+  `tag` varchar(255) NOT NULL,
+  `info` text,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `tag_type` (`tag_type`),
+  KEY `tag` (`tag`)
+);
