@@ -16,7 +16,7 @@ instance Config T.PostgresConfig where
   theConfig =
     T.PostgresConfig
       { connectHost = "127.0.0.1",
-        connectPort = 5432,
+        connectPort = 5433,
         connectUser = "atlas",
         connectPassword = "atlas",
         connectDatabase = "atlas_app"
