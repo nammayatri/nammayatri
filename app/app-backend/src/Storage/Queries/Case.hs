@@ -86,6 +86,22 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
             <> (maybe [] (\to -> [_createdAt B.<=. (B.val_ to)]) maybeTo)
         )
 
+updateValidTill :: CaseId -> LocalTime -> L.Flow ()
+updateValidTill id validTill = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause validTill currTime)
+    (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    setClause validTill currTime Storage.Case {..} =
+      mconcat
+        [ _validTill <-. B.val_ validTill,
+          _updatedAt <-. B.val_ currTime
+        ]
+    predicate id Storage.Case {..} = _id ==. B.val_ id
+
 updateStatus :: CaseId -> Storage.CaseStatus -> L.Flow ()
 updateStatus id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
