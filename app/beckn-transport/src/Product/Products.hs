@@ -112,11 +112,13 @@ updateTrip productId k = do
       return ()
     _ -> return ()
 
-listRides :: Maybe Text -> FlowHandler ProdListRes
-listRides regToken = withFlowHandler $ do
+listRides :: Maybe Text -> Maybe Text -> FlowHandler ProdListRes
+listRides regToken vehicleIdM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
-  rideList <- DB.findAllByAssignedTo $ _getPersonId (SP._id person)
+  rideList <- case vehicleIdM of
+    Just _ -> DB.findAllByVehicleId vehicleIdM
+    Nothing -> DB.findAllByAssignedTo $ _getPersonId (SP._id person)
   locList <- LQ.findAllByLocIds (catMaybes (Storage._fromLocation <$> rideList)) (catMaybes (Storage._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where

@@ -117,6 +117,13 @@ findAllByAssignedTo id =
   where
     predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))
 
+findAllByVehicleId :: Maybe Text -> L.Flow [Storage.Products]
+findAllByVehicleId id =
+  DB.findAll dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Products {..} = (_udf3 ==. (B.val_ id))
+
 findAllByOrgId :: Text -> L.Flow [Storage.Products]
 findAllByOrgId orgId =
   DB.findAll dbTable (predicate orgId)

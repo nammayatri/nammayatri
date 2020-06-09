@@ -189,6 +189,7 @@ caseProductFlow =
 type ProductAPIs =
   "product"
     :> ( Header "authorization" Text
+           :> QueryParam "vehicleId" Text
            :> Get '[JSON] ProdListRes
            :<|> Header "authorization" Text
              :> Capture "productId" Text
