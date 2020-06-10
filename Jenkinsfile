@@ -33,7 +33,7 @@ pipeline {
       when {
         anyOf {
           branch "master"
-          branch "release"
+          branch "sandbox"
           changeset "Jenkinsfile"
           changeset "Dockerfile*"
           changeset "Makefile"
@@ -62,7 +62,7 @@ pipeline {
           when {
             anyOf {
               branch "master"
-              branch "release"
+              branch "sandbox"
             }
           }
 
