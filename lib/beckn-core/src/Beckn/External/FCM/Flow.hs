@@ -7,6 +7,7 @@ import Beckn.External.FCM.Types
 import Beckn.Types.Storage.Person as Person
 import qualified Beckn.Utils.JWT as JWT
 import Control.Lens
+import Data.Bool
 import Data.Default.Class
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -86,36 +87,65 @@ sendMessage fcmMsg toWhom = L.forkFlow desc $ do
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
     desc = "FCM send message forked flow"
 
--- | get FCM text token and refresh it if needed
+-- | try to get FCM text token
 getToken :: L.Flow (Either String Text)
 getToken = do
-  token <- checkAndGetToken
+  token <- checkToken
   pure $ case token of
     Left err -> Left err
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
+checkToken :: L.Flow (Either String FCMToken)
+checkToken = checkAndGetToken True
+
+checkAndRefreshToken :: L.Flow (Either String FCMToken)
+checkAndRefreshToken = checkAndGetToken False
+
 -- | check FCM token and refresh if it is invalid
-checkAndGetToken :: L.Flow (Either String FCMToken)
-checkAndGetToken = do
+checkAndGetToken :: Bool -> L.Flow (Either String FCMToken)
+checkAndGetToken readOnly = do
   token <- L.getOption FCMTokenKey
   case token of
     Nothing ->
-      refreshToken -- token not found
+      -- token not found
+      if readOnly
+        then pure $ Left "Token not found"
+        else refreshToken
     Just t -> do
-      valid <- L.runIO $ JWT.isValid t
-      if valid
-        then pure $ Right t -- do nothing, token is ok
-        else refreshToken -- token is invalid
+      validityStatus <- L.runIO $ JWT.isValid t
+      if readOnly
+        then pure $ case validityStatus of
+          JWT.JWTValid _ -> Right t
+          JWT.JWTExpired _ -> Left "Token expired"
+          JWT.JWTInvalid -> Left "Token is invalid"
+        else case validityStatus of
+          JWT.JWTValid x ->
+            if x < 300
+              then pure $ Right t -- do nothing, token is ok
+              else do
+                -- close to expiration, start trying to refresh token
+                L.logInfo fcm "Token is about to be expiried, trying to refresh it"
+                refreshToken
+          JWT.JWTExpired x -> do
+            -- token expired
+            L.logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
+            L.delOption FCMTokenKey
+            refreshToken
+          JWT.JWTInvalid -> do
+            -- token is invalid
+            L.logInfo fcm "Token is invalid, trying to refresh it"
+            L.delOption FCMTokenKey
+            refreshToken
   where
+    fcm = T.pack "FCM"
     refreshToken = do
-      L.logInfo (T.pack "FCM") "Refreshing token"
+      L.logInfo fcm "Refreshing token"
       t <- L.runIO JWT.refreshToken
       case t of
         Left err -> do
-          L.logInfo (T.pack "FCM") $ T.pack err
-          L.delOption FCMTokenKey
+          L.logInfo fcm $ T.pack err
           pure $ Left err
         Right token -> do
-          L.logInfo (T.pack "FCM") $ T.pack "Success"
+          L.logInfo fcm $ T.pack "Success"
           L.setOption FCMTokenKey token
           pure $ Right token

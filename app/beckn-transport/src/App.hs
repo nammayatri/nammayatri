@@ -6,6 +6,7 @@ import qualified App.Server as App
 import Beckn.Constants.APIErrorCode
 import qualified Beckn.External.FCM.Flow as FCM
 import qualified Beckn.Types.App as App
+import qualified Beckn.Utils.JWT as JWT
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -84,11 +85,25 @@ prepareOptions =
   createFCMTokenRefreshThread
 
 createFCMTokenRefreshThread :: L.Flow ()
-createFCMTokenRefreshThread =
-  L.forkFlow forkDesc $ do
-    forever $ do
-      FCM.getToken
-      L.runIO $ threadDelay (25 * 1000000)
-    pure ()
+createFCMTokenRefreshThread = do
+  fcmEnabled <- L.runIO $ SE.lookupEnv "FCM_JSON_PATH"
+  case fcmEnabled of
+    Nothing -> pure () --report error here if FCM is crucial
+    Just _ -> L.forkFlow forkDesc $ do
+      forever $ do
+        token <- FCM.checkAndRefreshToken
+        L.runIO $ case token of
+          Left _ -> threadDelay $ 10 * 1000000 -- bad token? retry
+          Right t -> do
+            validityStatus <- JWT.isValid t
+            threadDelay $
+              1000000 * case validityStatus of
+                JWT.JWTValid x ->
+                  -- seconds to token expiration
+                  if x > 300
+                    then (fromInteger x) - 300
+                    else 10
+                _ -> 10 -- just a caution, it shuold be valid by this moment
+      pure ()
   where
-    forkDesc = "Forever loop that checks and refreshes FCM token every 25 seconds"
+    forkDesc = "Forever loop that checks and refreshes FCM token"
