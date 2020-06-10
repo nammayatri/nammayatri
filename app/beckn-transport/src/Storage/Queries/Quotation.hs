@@ -1,14 +1,15 @@
 module Storage.Queries.Quotation where
 
+import Beckn.Types.Common
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified Storage.Queries as DB
-import Beckn.Types.Common
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Quotation as Storage
@@ -53,7 +54,7 @@ update ::
   Storage.Status ->
   L.Flow (T.DBResult ())
 update id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)

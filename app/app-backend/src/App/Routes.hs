@@ -3,12 +3,14 @@
 
 module App.Routes where
 
+import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes (..))
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
@@ -18,15 +20,21 @@ import EulerHS.Prelude
 import EulerHS.Prelude
 import Network.Wai.Parse
 import Network.Wai.Parse
+import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
+import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Confirm as Confirm
+import qualified Product.Cron as Cron
 import qualified Product.Info as Info
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.TrackTrip as TrackTrip
 import Servant
+import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
+import qualified Types.API.CaseProduct as CaseProduct
 import qualified Types.API.Confirm as ConfirmAPI
+import qualified Types.API.Cron as Cron
 import qualified Types.API.Location as Location
 import Types.API.Product
 import Types.API.Registration
@@ -41,6 +49,9 @@ type AppAPIs =
            :<|> CaseAPIs
            :<|> InfoAPIs
            :<|> TrackTripAPIs
+           :<|> CaseProductAPIs
+           :<|> CancelAPIs
+           :<|> CronAPIs
            :<|> Epass.EPassAPIs
        )
 
@@ -56,6 +67,9 @@ appServer' key = do
       :<|> caseFlow
       :<|> infoFlow
       :<|> trackTripFlow
+      :<|> caseProductFlow
+      :<|> cancelFlow
+      :<|> cronFlow
       :<|> Epass.epassServer' key
     )
 
@@ -121,6 +135,10 @@ type CaseAPIs =
   "case"
     :> Header "token" RegToken
     :> ( "list"
+           :> MandatoryQueryParam "type" Case.CaseType
+           :> QueryParams "status" Case.CaseStatus
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
            :> Get '[JSON] Case.ListRes
            :<|> Capture "caseId" CaseId
            :> Get '[JSON] Case.StatusRes
@@ -155,12 +173,52 @@ type TrackTripAPIs =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
-      :> "trip"
-      :> Header "token" RegToken
-      :> ReqBody '[JSON] OnTrackTripReq
-      :> Post '[JSON] OnTrackTripRes
+    :> "trip"
+    :> Header "token" RegToken
+    :> ReqBody '[JSON] OnTrackTripReq
+    :> Post '[JSON] OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPIs
 trackTripFlow =
   TrackTrip.track
     :<|> TrackTrip.track_cb
+
+-------- CaseProduct Flow----------
+type CaseProductAPIs =
+  "caseProduct"
+    :> ( Header "token" Text
+           :> ReqBody '[JSON] CaseProduct.CaseProdReq
+           :> Post '[JSON] CaseProduct.CaseProductList
+       )
+
+caseProductFlow =
+  CaseProduct.list
+
+-------- Cancel Flow----------
+type CancelAPIs =
+  "cancel"
+    :> "services"
+    :> Header "token" Text
+    :> ReqBody '[JSON] Cancel.CancelReq
+    :> Post '[JSON] Cancel.CancelRes
+    -- on cancel
+    :<|> "on_cancel"
+    :> "services"
+    :> ReqBody '[JSON] Cancel.OnCancelReq
+    :> Post '[JSON] Cancel.OnCancelRes
+
+cancelFlow =
+  Cancel.cancel
+    :<|> Cancel.onCancel
+
+-------- Cron APIs --------
+type CronAPIs =
+  "cron"
+    :> "expire_cases"
+    :> Header "Authorization" CronAuthKey
+    :> ReqBody '[JSON] Cron.ExpireCaseReq
+    :> Post '[JSON] Cron.ExpireCaseRes
+
+cronFlow :: FlowServer CronAPIs
+cronFlow =
+  Cron.updateCases

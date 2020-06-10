@@ -3,7 +3,7 @@
 -- Host: localhost    Database: atlasdb
 -- ------------------------------------------------------
 -- Server version	8.0.18
-GRANT ALL PRIVILEGES ON atlas_transporter.* TO 'atlas'@'%';
+GRANT ALL PRIVILEGES ON atlas_app.* TO 'atlas'@'%';
 
 
 DROP TABLE IF EXISTS `organization`;
@@ -15,17 +15,26 @@ CREATE TABLE `organization` (
   `status` varchar(255) NULL,
   `type` varchar(255) NULL,
   `verified` boolean NOT NULL,
-  `location_id` varchar(255) NULL,
-  `description` TEXT NULL,
-  `mobile_number` TEXT NULL,
-  `from_time` TEXT NULL,
-  `to_time` TEXT NULL,
-  `api_key` TEXT NULL,
-  `callback_url` TEXT NULL,
-  `head_count` integer NULL,
+  `enabled` boolean NOT NULL DEFAULT TRUE,
+  `location_type` varchar(255) NULL,
+  `lat` double NULL,
+  `long` double NULL,
+  `ward` varchar(255) NULL,
+  `district` varchar(255) NULL,
+  `city` varchar(255) NULL,
+  `state` varchar(255) NULL,
+  `country` varchar(255) NULL,
+  `pincode` integer NULL,
+  `address` varchar(1024) NULL,
+  `bound` TEXT NULL,
+  `info` TEXT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX (`ward`),
+  INDEX (`district`),
+  INDEX (`city`),
+  INDEX (`pincode`)
 );
 
 DROP TABLE IF EXISTS `person`;
@@ -107,7 +116,7 @@ CREATE TABLE `case` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (`id`),
-  INDEX (`short_id`),
+  UNIQUE (`short_id`),
   INDEX (`provider`),
   INDEX (`requestor`)
 );
@@ -132,8 +141,8 @@ CREATE TABLE `case_product` (
 DROP TABLE IF EXISTS `product`;
 CREATE TABLE `product` (
   `id` char(36) NOT NULL,
+  `short_id` char(36) NULL,
   `name` varchar(255) NULL,
-  `short_id` varchar(36) NOT NULL,
   `description` varchar(1024) NULL,
   `industry` varchar(1024) NOT NULL,
   `type` varchar(255) NOT NULL,
@@ -152,13 +161,12 @@ CREATE TABLE `product` (
   `info` TEXT NULL,
   `from_location_id` varchar(255) NULL,
   `to_location_id` varchar(255) NULL,
+  `assigned_to` varchar(36) NULL,
   `organization_id` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  `assigned_to` char(36) NULL,
   PRIMARY KEY (`id`),
-  INDEX (`organization_id`),
-  INDEX (`short_id`)
+  INDEX (`organization_id`)
 );
 
 DROP TABLE IF EXISTS `location`;
@@ -175,6 +183,7 @@ CREATE TABLE `location` (
   , `pincode` varchar(255) NULL
   , `address` varchar(255) NULL
   , `bound` varchar(255) NULL
+  , `info` TEXT NULL
   , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
   , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
   , PRIMARY KEY (`id`)
@@ -182,29 +191,90 @@ CREATE TABLE `location` (
   , INDEX (`state`)
 );
 
-DROP TABLE IF EXISTS `vehicle`;
-CREATE TABLE `vehicle` (
-  `id` char(36) NOT NULL
-  , `capacity` integer NULL
-  , `category` varchar(255) NULL
-  , `make` varchar(255) NULL
-  , `model` varchar(255) NULL
-  , `size` varchar(255) NULL
-  , `variant` varchar(255) NULL
-  , `color` varchar(255) NULL
-  , `energy_type` varchar(255) NULL
-  , `registration_no` varchar(255) NOT NULL
-  , `registration_category` varchar(255) NULL
-  , `organization_id` char(36) Null
-  , `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
-  , `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP()
-);
-
-INSERT INTO `organization` (`id`, `name`, `gstin`, `status`, `type`, `verified`, `location_id`, `description`, `mobile_number`, `from_time`, `to_time`, `api_key`, `callback_url`, `head_count`, `created_at`, `updated_at`)
-  VALUES ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', "juspay", null, "PENDING_VERIFICATION", "GATEWAY", TRUE, null, null, null, null, null, "iamfromjuspay", null, null, now(), now());
-
 INSERT INTO `person` (`id`, `first_name`, `middle_name`, `last_name`, `full_name`, `role`, `gender`, `identifier_type`, `email`, `mobile_number`, `mobile_country_code`, `identifier`, `rating`, `verified`, `udf1`, `udf2`, `status`, `organization_id`, `location_id`, `device_token`, `description`, `created_at`, `updated_at`)
-  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, TRUE, NULL, NULL, 'INACTIVE', "1926d40f-1223-4eb2-ba5d-7983bde2fd02", NULL, NULL, NULL, now(), now());
+  VALUES ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '+919999999999', NULL, '+919999999999', NULL, FALSE, NULL, NULL, 'INACTIVE', NULL, NULL, NULL, NULL, '2020-05-12 10:23:00.578424', '2020-05-12 10:23:00.578424');
 
 INSERT INTO `registration_token` (`id`, `token`, `attempts`, `auth_medium`, `auth_type`, `auth_value_hash`, `verified`, `auth_expiry`, `token_expiry`, `entity_id`, `entity_type`, `created_at`, `updated_at`, `info`)
-  VALUES ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'ea37f941-427a-4085-a7d0-96240f166672', 3, 'SMS', 'OTP', '3249', TRUE, 3, 365, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', now(), now(), NULL);
+  VALUES ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'ea37f941-427a-4085-a7d0-96240f166672', 3, 'SMS', 'OTP', '3249', FALSE, 3, 365, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:00.582107', '2020-05-12 10:23:00.582107', NULL);
+
+
+CREATE TABLE `entity_document` (
+  `id` char(36) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `document_id` char(36) NOT NULL,
+  `document_type` varchar(255) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `created_by_entity_type` varchar(255) NOT NULL,
+  `verified` tinyint(1) NOT NULL,
+  `verified_by` char(36) DEFAULT NULL,
+  `verified_by_entity_type` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `info` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `entity_id` (`entity_id`),
+  KEY `entity_type` (`entity_type`),
+  KEY `document_id` (`document_id`)
+);
+
+
+CREATE TABLE `entity_tag` (
+  `id` char(36) NOT NULL,
+  `tagged_by` char(36) NOT NULL,
+  `tagged_by_entity_id` varchar(255) NOT NULL,
+  `entity_id` char(36) NOT NULL,
+  `entity_type` varchar(255) NOT NULL,
+  `tag_id` char(36) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `info` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `entity_id` (`entity_id`),
+  KEY `entity_type` (`entity_type`),
+  KEY `tag_id` (`tag_id`)
+);
+
+
+CREATE TABLE `comment` (
+  `id` char(36) NOT NULL,
+  `commented_on_entity_id` char(36) NOT NULL,
+  `commented_on_entity_type` varchar(255) NOT NULL,
+  `commented_by` char(36) NOT NULL,
+  `commented_by_entity_type` varchar(255) NOT NULL,
+  `value` varchar(1024) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `info` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `commented_on_entity_id` (`commented_on_entity_id`),
+  KEY `commented_on_entity_type` (`commented_on_entity_type`)
+);
+
+
+CREATE TABLE `document` (
+  `id` char(36) NOT NULL,
+  `file_url` varchar(1024) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `format` varchar(255) NOT NULL,
+  `size` int(11) NOT NULL,
+  `file_hash` varchar(1024) NOT NULL,
+  `info` text,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `tag` (
+  `id` char(36) NOT NULL,
+  `created_by` char(36) NOT NULL,
+  `created_by_entity_type` varchar(255) NOT NULL,
+  `tag_type` varchar(255) NOT NULL,
+  `tag` varchar(255) NOT NULL,
+  `info` text,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `tag_type` (`tag_type`),
+  KEY `tag` (`tag`)
+);

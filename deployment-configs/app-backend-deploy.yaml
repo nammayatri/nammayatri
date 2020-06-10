@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-app-backend
+  name: beckn-app-backend-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: beckn-app-backend
+      app: beckn-app-backend-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: beckn-app-backend
+        app: beckn-app-backend-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -94,10 +94,7 @@ spec:
               key: MY_VALUE_FIRST_PASSWORD
         #------ Gateway configs ------#
         - name: GATEWAY_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: beckn-app-backend-configs
-              key: GATEWAY_HOST
+          value: beckn-transport-$DEPLOY_VARIANT.atlas
         - name: GATEWAY_PORT
           valueFrom:
             configMapKeyRef:
@@ -108,8 +105,21 @@ spec:
             configMapKeyRef:
               name: beckn-app-backend-configs
               key: GATEWAY_PATH
+        #------ General configs ------#
+        # - name: USE_FAKE_SMS
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: beckn-app-backend-configs
+        #       key: USE_FAKE_SMS
+        - name: CRON_AUTH_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CRON_AUTH_KEY
+        - name: FCM_JSON_PATH
+          value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
-        name: beckn-app-backend
+        name: beckn-app-backend-$DEPLOY_VARIANT
         ports:
         - containerPort: 8013
           name: app-http
@@ -140,6 +150,10 @@ spec:
             memory: 1024Mi
         securityContext:
           privileged: false
+        volumeMounts:
+        - mountPath: "/var/local/beckn"
+          name: fcm-key
+          readOnly: true
       - args:
         - proxy
         - sidecar
@@ -150,7 +164,7 @@ spec:
         - --binaryPath
         - /usr/local/bin/envoy
         - --serviceCluster
-        - beckn-app-backend.$(POD_NAMESPACE)
+        - beckn-app-backend-$DEPLOY_VARIANT.$(POD_NAMESPACE)
         - --drainDuration
         - 45s
         - --parentShutdownDuration
@@ -203,7 +217,7 @@ spec:
             {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
         - name: ISTIO_METAJSON_LABELS
           value: |
-            {"app":"beckn-app-backend","version":"latest"}
+            {"app":"beckn-app-backend-$DEPLOY_VARIANT","version":"latest"}
         image: docker.io/istio/proxyv2:1.2.2
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -283,6 +297,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: istio-envoy
+      - name: fcm-key
+        secret:
+          secretName: beckn-fcm-key
       - name: istio-certs
         secret:
           optional: true
@@ -293,13 +310,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-app-backend
+  name: beckn-app-backend-$DEPLOY_VARIANT
   labels:
-    app: beckn-app-backend
+    app: beckn-app-backend-$DEPLOY_VARIANT
 spec:
   ports:
   - port: 8013
     targetPort: 8013
     name: app-http
   selector:
-    app: beckn-app-backend
+    app: beckn-app-backend-$DEPLOY_VARIANT

@@ -2,6 +2,7 @@
 
 module Epass.Storage.Queries.Quota where
 
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.))
@@ -10,7 +11,6 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.DB as DB
 import qualified Epass.Types.Storage.Quota as Storage
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
@@ -49,7 +49,7 @@ update ::
   Maybe LocalTime ->
   L.Flow (T.DBResult ())
 update id maxAllowedM startTimeM endTimeM = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause maxAllowedM startTimeM endTimeM currTime)

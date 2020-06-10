@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Products as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -52,7 +53,7 @@ updateStatus ::
   Storage.ProductsStatus ->
   L.Flow ()
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -68,7 +69,7 @@ updateStatus id status = do
 
 updateMultiple :: Text -> Storage.Products -> L.Flow ()
 updateMultiple id prd@Storage.Products {..} = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTimeUTC
   DB.update dbTable (setClause currTime prd) (predicate id)
     >>= either DB.throwDBError pure
   where

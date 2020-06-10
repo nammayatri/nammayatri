@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-transport
+  name: beckn-transport-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: beckn-transport
+      app: beckn-transport-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: beckn-transport
+        app: beckn-transport-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -39,6 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        #------ DB configs ------#
         - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
@@ -54,6 +55,17 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: MYSQL_DB
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_PASSWORD
+        #------ Redis configs ------#
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
@@ -69,16 +81,7 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: REDIS_DB
-        - name: MYSQL_USER
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MYSQL_USER
-        - name: MYSQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MYSQL_PASSWORD
+        #------ SMS provider configs ------#
         - name: SMS_GATEWAY_USERNAME
           valueFrom:
             secretKeyRef:
@@ -89,18 +92,29 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: MY_VALUE_FIRST_PASSWORD
+        #------ Gateway configs ------#
         - name: BECKN_GATEWAY_BASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: beckn-transport-configs
-              key: BECKN_GATEWAY_BASE_URL
+          value: beckn-app-backend-$DEPLOY_VARIANT.atlas
         - name: BECKN_GATEWAY_PORT
           valueFrom:
             configMapKeyRef:
               name: beckn-transport-configs
               key: BECKN_GATEWAY_PORT
+        #------ General configs ------#
+        # - name: USE_FAKE_SMS
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: beckn-transport-configs
+        #       key: USE_FAKE_SMS
+        - name: CRON_AUTH_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CRON_AUTH_KEY
+        - name: FCM_JSON_PATH
+          value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
-        name: beckn-transport
+        name: beckn-transport-$DEPLOY_VARIANT
         ports:
         - containerPort: 8014
           name: transport-http
@@ -129,6 +143,10 @@ spec:
           limits:
             cpu: 1000m
             memory: 1024Mi
+        volumeMounts:
+        - mountPath: "/var/local/beckn"
+          name: fcm-key
+          readOnly: true
         securityContext:
           privileged: false
       - args:
@@ -141,7 +159,7 @@ spec:
         - --binaryPath
         - /usr/local/bin/envoy
         - --serviceCluster
-        - beckn-transport.$(POD_NAMESPACE)
+        - beckn-transport-$DEPLOY_VARIANT.$(POD_NAMESPACE)
         - --drainDuration
         - 45s
         - --parentShutdownDuration
@@ -194,7 +212,7 @@ spec:
             {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
         - name: ISTIO_METAJSON_LABELS
           value: |
-            {"app":"beckn-transport","version":"latest"}
+            {"app":"beckn-transport-$DEPLOY_VARIANT","version":"latest"}
         image: docker.io/istio/proxyv2:1.2.2
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -274,6 +292,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: istio-envoy
+      - name: fcm-key
+        secret:
+          secretName: beckn-fcm-key
       - name: istio-certs
         secret:
           optional: true
@@ -284,13 +305,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-transport
+  name: beckn-transport-$DEPLOY_VARIANT
   labels:
-    app: beckn-transport
+    app: beckn-transport-$DEPLOY_VARIANT
 spec:
   ports:
   - port: 8014
     targetPort: 8014
     name: transport-http
   selector:
-    app: beckn-transport
+    app: beckn-transport-$DEPLOY_VARIANT

@@ -1,12 +1,13 @@
 module Epass.Product.Tag where
 
+import Beckn.Types.Storage.RegistrationToken
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Epass.Storage.Queries.EntityTag as EntityTag
 import Epass.Storage.Queries.Tag as Tag
 import Epass.Types.API.Tag
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.EntityTag as EntityTag
-import Beckn.Types.Storage.RegistrationToken
 import qualified Epass.Types.Storage.Tag as Tag
 import Epass.Utils.Common
 import Epass.Utils.Routes
@@ -27,7 +28,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
     >>= return . CreateRes
   where
     getTag id createdById createByEntityType = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return $
         Tag.Tag
           { _id = id,
@@ -59,13 +60,11 @@ tagEntity :: Maybe RegistrationTokenText -> TagEntityReq -> FlowHandler TagEntit
 tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
   L.logInfo "tagEntity" "In here"
   RegistrationToken {..} <- verifyToken regToken
-
   Tag.findById (TagId _TagId)
     >>= fromMaybeM400 "Invalid Tag id"
   id <- generateGUID
   let createByEntityType = _entityType
       createdById = _EntityId
-
   --TODO add checks for entity
   entityTag <- getEntityTag id createdById createByEntityType
   EntityTag.create entityTag
@@ -74,7 +73,7 @@ tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
     >>= return . TagEntityRes
   where
     getEntityTag id createdById createByEntityType = do
-      now <- getCurrTime
+      now <- getCurrentTimeUTC
       return $
         EntityTag.EntityTag
           { _id = id,

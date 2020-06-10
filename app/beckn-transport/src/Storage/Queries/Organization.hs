@@ -1,20 +1,22 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.Organization where
 
-import           Database.Beam                    ((&&.), (<-.), (==.), (||.))
-import           EulerHS.Prelude                  hiding (id)
-
-import qualified Storage.Queries            as DB
-import           Beckn.Types.App
-import           Beckn.Types.Common
-import qualified Types.Storage.DB                 as DB
+import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as Storage
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
+import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.transporterDb
@@ -36,11 +38,11 @@ verifyAuth auth = do
   where
     predicate apiKey Storage.Organization {..} = (_apiKey ==. B.val_ apiKey)
 
-findOrganizationById ::
-  OrganizationId -> L.Flow (Maybe Storage.Organization)
+findOrganizationById :: OrganizationId -> L.Flow Storage.Organization
 findOrganizationById id = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_ORG_ID"
   where
     predicate Storage.Organization {..} = (_id ==. B.val_ id)
 
@@ -74,7 +76,7 @@ update ::
   Storage.Status ->
   L.Flow (T.DBResult ())
 update id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
@@ -86,3 +88,19 @@ update id status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+updateOrganizationRec :: Storage.Organization -> L.Flow ()
+updateOrganizationRec org = do
+  DB.update dbTable (setClause org) (predicate $ org ^. #_id)
+    >>= either DB.throwDBError pure
+  where
+    setClause org Storage.Organization {..} =
+      mconcat
+        [ _name <-. B.val_ (Storage._name org),
+          _description <-. B.val_ (Storage._description org),
+          _headCount <-. B.val_ (Storage._headCount org),
+          _enabled <-. B.val_ (Storage._enabled org),
+          _updatedAt <-. B.val_ (Storage._updatedAt org),
+          _fromTime <-. B.val_ (Storage._fromTime org)
+        ]
+    predicate id Storage.Organization {..} = _id ==. B.val_ id

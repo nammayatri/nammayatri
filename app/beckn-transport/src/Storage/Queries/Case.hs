@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -33,7 +34,6 @@ findAllByTypeStatus limit offset caseType caseStatus now =
           &&. _status ==. (B.val_ caseStatus)
           &&. _validTill B.>. (B.val_ now)
       )
-
 
 findAllByStatus :: Integer -> Integer -> Storage.CaseStatus -> LocalTime -> L.Flow [Storage.Case]
 findAllByStatus limit offset caseStatus now =
@@ -66,7 +66,6 @@ findAllWithLimits limit offset now =
     predicate now Storage.Case {..} =
       ( _validTill B.>. (B.val_ now)
       )
-
 
 findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds ids =
@@ -102,13 +101,31 @@ updateStatus ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrTime
+  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
     (predicate id)
   where
     predicate id Storage.Case {..} = _id ==. B.val_ id
+    setClause status currTime Storage.Case {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
+updateStatusByIds ::
+  [CaseId] ->
+  Storage.CaseStatus ->
+  L.Flow (T.DBResult ())
+updateStatusByIds ids status = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause status currTime)
+    (predicate ids)
+  where
+    predicate ids Storage.Case {..} = B.in_ _id (B.val_ <$> ids)
     setClause status currTime Storage.Case {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
@@ -131,4 +148,45 @@ findAllByIdType ids type_ =
     predicate ids type_ Storage.Case {..} =
       ( _type ==. (B.val_ type_)
           &&. B.in_ _id (B.val_ <$> ids)
+      )
+
+findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatuses limit offset csType statuses ignoreIds now =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses ignoreIds now) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate csType statuses ignoreIds now Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
+          &&. _validTill B.>. (B.val_ now)
+      )
+
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
+findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate csType statuses ignoreIds now fromTime) limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    predicate csType statuses ignoreIds now fromTime Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
+          &&. _validTill B.>. (B.val_ now)
+          &&. _createdAt B.<. (B.val_ fromTime)
+      )
+
+findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
+findAllExpiredByStatus statuses csType from to = do
+  (now :: LocalTime) <- getCurrentTimeUTC
+  DB.findAll dbTable (predicate now from to)
+    >>= either DB.throwDBError pure
+  where
+    predicate now from to Storage.Case {..} =
+      ( _type ==. (B.val_ csType)
+          &&. B.in_ _status (B.val_ <$> statuses)
+          &&. _validTill B.<=. (B.val_ now)
+          &&. _createdAt B.>=. (B.val_ from)
+          &&. _createdAt B.<=. (B.val_ to)
       )

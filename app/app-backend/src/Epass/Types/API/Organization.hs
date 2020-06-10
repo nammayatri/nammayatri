@@ -1,23 +1,23 @@
 module Epass.Types.API.Organization where
 
-import qualified Beckn.Types.Storage.Location     as BTL
-import           Data.Aeson
-import           Data.Default
-import           Data.Swagger
-import           Data.Time
-import           Epass.Types.App
-import           Epass.Types.Common
-import qualified Epass.Types.Storage.Comment      as SC
-import qualified Epass.Types.Storage.Document     as SD
-import           Epass.Types.Storage.Organization
-import qualified Epass.Types.Storage.Tag          as ST
-import           EulerHS.Prelude
+import qualified Beckn.Types.Storage.Location as BTL
+import Data.Aeson
+import Data.Default
+import Data.Swagger
+import Data.Time
+import Epass.Types.App
+import Epass.Types.Common
+import qualified Epass.Types.Storage.Comment as SC
+import qualified Epass.Types.Storage.Document as SD
+import Epass.Types.Storage.Organization
+import qualified Epass.Types.Storage.Tag as ST
+import EulerHS.Prelude
 
 data CreateOrganizationReq = CreateOrganizationReq
-  { _name    :: Text,
-    _gstin   :: Maybe Text,
-    _city    :: Text,
-    _state   :: Text,
+  { _name :: Text,
+    _gstin :: Maybe Text,
+    _city :: Text,
+    _state :: Text,
     _country :: Text,
     _pincode :: Int,
     _address :: Text
@@ -38,16 +38,16 @@ data GetOrganizationRes = GetOrganizationRes
   deriving (Generic, ToJSON, ToSchema)
 
 data ListOrganizationReq = ListOrganizationReq
-  { limit        :: Maybe Int,
-    offset       :: Maybe Int,
+  { limit :: Maybe Int,
+    offset :: Maybe Int,
     locationType :: [BTL.LocationType],
-    pincode      :: [Int],
-    city         :: [Text],
-    district     :: [Text],
-    ward         :: [Text],
-    state        :: [Text],
-    status       :: [Status],
-    verified     :: Maybe Bool
+    pincode :: [Int],
+    city :: [Text],
+    district :: [Text],
+    ward :: [Text],
+    state :: [Text],
+    status :: [Status],
+    verified :: Maybe Bool
   }
   deriving (Generic, ToSchema)
 
@@ -82,20 +82,20 @@ data ListOrganizationRes = ListOrganizationRes
   deriving (Generic, ToSchema)
 
 data OrgInfo = OrgInfo
-  { _id                        :: OrganizationId,
-    _gstin                     :: (Maybe Text),
-    _status                    :: Status,
-    _verified                  :: Bool,
-    _Tags                      :: [ST.Tag],
-    _Documents                 :: [SD.Document],
-    _Comments                  :: [SC.Comment],
+  { _id :: OrganizationId,
+    _gstin :: (Maybe Text),
+    _status :: Status,
+    _verified :: Bool,
+    _Tags :: [ST.Tag],
+    _Documents :: [SD.Document],
+    _Comments :: [SC.Comment],
     _isBlacklistedOrganization :: Bool,
-    _isBlacklistedLocation     :: Bool,
-    _status                    :: Status,
-    _location                  :: Location,
-    _info                      :: (Maybe Text),
-    _createdAt                 :: LocalTime,
-    _updatedAt                 :: LocalTime
+    _isBlacklistedLocation :: Bool,
+    _status :: Status,
+    _location :: Location,
+    _info :: (Maybe Text),
+    _createdAt :: LocalTime,
+    _updatedAt :: LocalTime
   }
   deriving (Generic, ToSchema)
 

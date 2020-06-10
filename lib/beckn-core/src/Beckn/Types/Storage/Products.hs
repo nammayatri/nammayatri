@@ -6,9 +6,9 @@ module Beckn.Types.Storage.Products where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
@@ -33,7 +33,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
 instance FromBackendRow MySQL ProductsType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK | INVALID
+data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK | CANCELLED | INVALID | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where
