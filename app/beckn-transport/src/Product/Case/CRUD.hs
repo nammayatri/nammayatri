@@ -44,7 +44,7 @@ import qualified Types.API.CaseProduct as CPR
 import Types.API.Registration
 
 list :: Maybe Text -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
-list regToken _status _type _limitM _offsetM _ignoreOffered = withFlowHandler $ do
+list regToken status csType limitM offsetM _ignoreOffered = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   now <- getCurrentTimeUTC
@@ -54,20 +54,20 @@ list regToken _status _type _limitM _offsetM _ignoreOffered = withFlowHandler $ 
       ignoreList <-
         if (fromMaybe False _ignoreOffered)
           then do
-            resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
+            resList <- CPQ.caseProductJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
             return csIgnoreList
           else return []
       caseList <-
         if not (org ^. #_enabled)
-          then Case.findAllByTypeStatusTime limit offset _type _status ignoreList now $ fromMaybe now (org ^. #_fromTime)
-          else Case.findAllByTypeStatuses limit offset _type _status ignoreList now
+          then Case.findAllByTypeStatusTime limit offset csType status ignoreList now $ fromMaybe now (org ^. #_fromTime)
+          else Case.findAllByTypeStatuses limit offset csType status ignoreList now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
   where
-    limit = (toInteger $ fromMaybe 10 _limitM)
-    offset = (toInteger $ fromMaybe 0 _offsetM)
+    limit = (toInteger $ fromMaybe 10 limitM)
+    offset = (toInteger $ fromMaybe 0 offsetM)
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
         Just k -> buildResponse k

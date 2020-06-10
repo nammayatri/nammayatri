@@ -28,19 +28,19 @@ import System.Environment
 import Types.API.CaseProduct
 
 list :: Maybe Text -> [CaseP.CaseProductStatus] -> Maybe Int -> Maybe Int -> FlowHandler CaseProductList
-list regToken _status _limitM _offsetM = withFlowHandler $ do
+list regToken status limitM offsetM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      result <- DB.caseProductJoin limit offset Case.RIDEBOOK orgId _status
+      result <- DB.caseProductJoin limit offset Case.RIDEBOOK orgId status
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
-    limit = fromMaybe 10 _limitM
-    offset = fromMaybe 0 _offsetM
+    limit = fromMaybe 10 limitM
+    offset = fromMaybe 0 offsetM
     buildResponse :: [Loc.Location] -> CaseProductRes -> CaseProductRes
     buildResponse locList res =
       CaseProductRes
