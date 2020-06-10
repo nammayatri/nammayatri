@@ -44,7 +44,7 @@ import qualified Types.API.CaseProduct as CPR
 import Types.API.Registration
 
 list :: Maybe Text -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
-list regToken status csType limitM offsetM _ignoreOffered = withFlowHandler $ do
+list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   now <- getCurrentTimeUTC
@@ -52,7 +52,7 @@ list regToken status csType limitM offsetM _ignoreOffered = withFlowHandler $ do
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
       ignoreList <-
-        if (fromMaybe False _ignoreOffered)
+        if (fromMaybe False ignoreOffered)
           then do
             resList <- CPQ.caseProductJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
