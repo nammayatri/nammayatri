@@ -94,6 +94,9 @@ type PersonAPIs =
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
+           :<|> Header "authorization" Text
+             :> Capture "personId" Text
+             :> Get '[JSON] PersonRes
        )
 
 personFlow :: FlowServer PersonAPIs
@@ -101,6 +104,7 @@ personFlow =
   Person.createPerson
     :<|> Person.listPerson
     :<|> Person.updatePerson
+    :<|> Person.getPerson
 
 -- Following is vehicle flow
 type VehicleAPIs =
