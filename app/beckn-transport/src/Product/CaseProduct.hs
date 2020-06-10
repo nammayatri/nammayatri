@@ -26,6 +26,7 @@ import qualified Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import Types.API.CaseProduct
+import qualified Utils.Defaults as Default
 
 list :: Maybe Text -> [CaseP.CaseProductStatus] -> Maybe Int -> Maybe Int -> FlowHandler CaseProductList
 list regToken status limitM offsetM = withFlowHandler $ do
@@ -39,8 +40,8 @@ list regToken status limitM offsetM = withFlowHandler $ do
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
-    limit = fromMaybe 10 limitM
-    offset = fromMaybe 0 offsetM
+    limit = fromMaybe Default.limit limitM
+    offset = fromMaybe Default.offset offsetM
     buildResponse :: [Loc.Location] -> CaseProductRes -> CaseProductRes
     buildResponse locList res =
       CaseProductRes

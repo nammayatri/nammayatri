@@ -42,6 +42,7 @@ import qualified Test.RandomStrings as RS
 import Types.API.Case
 import qualified Types.API.CaseProduct as CPR
 import Types.API.Registration
+import qualified Utils.Defaults as Default
 
 list :: Maybe Text -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
 list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
@@ -66,8 +67,8 @@ list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
       return $ catMaybes $ joinByIds locList <$> caseList
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
   where
-    limit = (toInteger $ fromMaybe 10 limitM)
-    offset = (toInteger $ fromMaybe 0 offsetM)
+    limit = (toInteger $ fromMaybe Default.limit limitM)
+    offset = (toInteger $ fromMaybe Default.offset offsetM)
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
         Just k -> buildResponse k
