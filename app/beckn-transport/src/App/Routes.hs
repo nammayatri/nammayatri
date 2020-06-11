@@ -12,6 +12,7 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Vehicle
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -116,6 +117,10 @@ type VehicleAPIs =
              :> Header "authorization" Text
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
+           :<|> Header "authorization" Text
+             :> MandatoryQueryParam "regNo" Text
+             :> MandatoryQueryParam "regCategory" RegistrationCategory
+             :> Get '[JSON] CreateVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPIs
@@ -123,6 +128,7 @@ vehicleFlow =
   Vehicle.createVehicle
     :<|> Vehicle.listVehicles
     :<|> Vehicle.updateVehicle
+    :<|> Vehicle.getVehicle
 
 -- Following is organization creation
 type OrganizationAPIs =

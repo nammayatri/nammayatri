@@ -90,3 +90,12 @@ updateVehicleRec vehicle = do
           _updatedAt <-. B.val_ (Storage._updatedAt vehicle)
         ]
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
+
+findByRegNoCategory :: Text -> Storage.RegistrationCategory -> L.Flow Storage.Vehicle
+findByRegNoCategory regNo regCategory = do
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.Vehicle {..} =
+      ( _registrationNo ==. (B.val_ regNo)
+          &&. _registrationCategory ==. B.val_ (Just regCategory)
+      )

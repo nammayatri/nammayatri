@@ -37,6 +37,19 @@ updateVehicle vehicleId token req = withFlowHandler $ do
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
+getVehicle :: Maybe Text -> Text -> SV.RegistrationCategory -> FlowHandler CreateVehicleRes
+getVehicle token regNo regCategory = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  user <- QP.findPersonById (PersonId _EntityId)
+  vehicle <- QV.findByRegNoCategory regNo regCategory
+  hasAccess user vehicle
+  return $ CreateVehicleRes vehicle
+  where
+    hasAccess user vehicle =
+      whenM (return $ (user ^. #_organizationId) /= Just (vehicle ^. #_organizationId))
+        $ L.throwException
+        $ err401 {errBody = "Unauthorized"}
+
 -- Core Utility methods are below
 verifyUser :: SP.Person -> L.Flow Text
 verifyUser user = do
