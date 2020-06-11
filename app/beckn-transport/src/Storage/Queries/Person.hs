@@ -76,10 +76,6 @@ complementVal l
   | (null l) = B.val_ True
   | otherwise = B.val_ False
 
-ignoreNull l = case l of
-  Just k -> B.val_ True
-  Nothing -> B.val_ False
-
 findByIdentifier ::
   Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
 findByIdentifier idType mb =
@@ -104,13 +100,10 @@ findByAnyOf mobileM emailM identifierM =
   DB.findOneWithErr dbTable (predicate mobileM emailM identifierM)
   where
     predicate mobileM emailM identifierM Storage.Person {..} =
-      foldl
-        (||.)
-        (B.val_ False)
-        [ (ignoreNull identifierM) &&. _identifier ==. B.val_ identifierM,
-          (ignoreNull mobileM) &&. _mobileNumber ==. B.val_ mobileM,
-          (ignoreNull emailM) &&. _email ==. B.val_ emailM
-        ]
+      ( B.val_ (isJust identifierM) &&. _identifier ==. B.val_ identifierM
+          ||. B.val_ (isJust mobileM) &&. _mobileNumber ==. B.val_ mobileM
+          ||. B.val_ (isJust emailM) &&. _email ==. B.val_ emailM
+      )
 
 updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
