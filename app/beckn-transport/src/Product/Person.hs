@@ -48,15 +48,20 @@ listPerson token req = withFlowHandler $ do
   orgId <- validate token
   ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [orgId]
 
-getPerson :: Maybe Text -> Text -> FlowHandler PersonRes
-getPerson token personId = withFlowHandler $ do
+getPerson :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
+getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   user <- QP.findPersonById (PersonId _EntityId)
-  person <- QP.findPersonById (PersonId personId)
-  hasAccess user (PersonId personId)
+  person <- case idM of
+    Just personId -> QP.findPersonById (PersonId personId)
+    Nothing -> QP.findByAnyOf mobileM emailM identifierM
+  hasAccess user person
   return $ PersonRes person
   where
-    hasAccess user personId = whenM (return $ (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= personId) $ L.throwException $ err401 {errBody = "Unauthorized"}
+    hasAccess user person =
+      whenM (return $ (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id))
+        $ L.throwException
+        $ err401 {errBody = "Unauthorized"}
 
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
