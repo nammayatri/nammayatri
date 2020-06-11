@@ -15,7 +15,7 @@ import Types.API.Location
 updateLocation :: Text -> Maybe Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation caseId token req = withFlowHandler $ do
   QR.verifyAuth token -- TODO: Move this verification to redis
-    -- TODO: Add a driver and case check
+  -- TODO: Add a driver and case check
   Redis.setKeyRedis caseId req
   return $ UpdateLocationRes "SUCCESS"
 
