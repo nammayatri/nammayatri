@@ -116,12 +116,21 @@ listRides :: Maybe Text -> Maybe Text -> FlowHandler ProdListRes
 listRides regToken vehicleIdM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
+  whenM (validateOrg vehicleIdM person) $ L.throwException $ err401 {errBody = "Unauthorized"}
   rideList <- case vehicleIdM of
     Just _ -> DB.findAllByVehicleId vehicleIdM
     Nothing -> DB.findAllByAssignedTo $ _getPersonId (SP._id person)
   locList <- LQ.findAllByLocIds (catMaybes (Storage._fromLocation <$> rideList)) (catMaybes (Storage._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
+    validateOrg vehicleM person = do
+      case vehicleM of
+        Just vehicleId -> do
+          vehicle <- VQ.findVehicleById (VehicleId vehicleId)
+          if SP._organizationId person /= Nothing && (SP._organizationId person == (V._organizationId <$> vehicle))
+            then return False
+            else return True
+        Nothing -> return False
     joinByIds locList ride =
       case find (\x -> (Storage._fromLocation ride == Just (_getLocationId (Location._id x)))) locList of
         Just k -> buildResponse k
