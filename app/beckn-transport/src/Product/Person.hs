@@ -50,9 +50,9 @@ listPerson token req = withFlowHandler $ do
 
 deletePerson :: Text -> Maybe Text -> FlowHandler DeletePersonRes
 deletePerson personId token = withFlowHandler $ do
-  orgIdM <- validate token
+  orgId <- validate token
   person <- QP.findPersonById (PersonId personId)
-  if person ^. #_organizationId == Just orgIdM
+  if person ^. #_organizationId == Just orgId
     then do
       QP.deleteById (PersonId personId)
       QR.deleteByEntitiyId personId
