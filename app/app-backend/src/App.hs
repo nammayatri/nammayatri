@@ -86,7 +86,7 @@ createFCMTokenRefreshThread = do
     Nothing -> pure () --report error here if FCM is crucial
     Just _ -> L.forkFlow forkDesc $ do
       forever $ do
-        token <- FCM.checkAndRefreshToken
+        token <- FCM.checkAndGetToken
         L.runIO $ case token of
           Left _ -> threadDelay $ 5 * 1000000 -- bad token? retry
           Right t -> do
@@ -94,7 +94,7 @@ createFCMTokenRefreshThread = do
             threadDelay $
               1000000 * case validityStatus of
                 JWT.JWTValid x ->
-                  -- seconds to token expiration
+                  -- seconds before token expiration
                   if x > 300
                     then (fromInteger x) - 300
                     else 10

@@ -72,7 +72,7 @@ defaultBaseUrl =
 -- | Send FCM message to a registered device
 sendMessage :: FCMRequest -> String -> L.Flow ()
 sendMessage fcmMsg toWhom = L.forkFlow desc $ do
-  authToken <- getToken
+  authToken <- getTokenText
   case authToken of
     Right token -> do
       res <- L.callAPI defaultBaseUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
@@ -88,64 +88,67 @@ sendMessage fcmMsg toWhom = L.forkFlow desc $ do
     desc = "FCM send message forked flow"
 
 -- | try to get FCM text token
-getToken :: L.Flow (Either String Text)
-getToken = do
-  token <- checkToken
+getTokenText :: L.Flow (Either String Text)
+getTokenText = do
+  token <- getToken
   pure $ case token of
     Left err -> Left err
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
-checkToken :: L.Flow (Either String FCMToken)
-checkToken = checkAndGetToken True
-
-checkAndRefreshToken :: L.Flow (Either String FCMToken)
-checkAndRefreshToken = checkAndGetToken False
-
 -- | check FCM token and refresh if it is invalid
-checkAndGetToken :: Bool -> L.Flow (Either String FCMToken)
-checkAndGetToken readOnly = do
+checkAndGetToken :: L.Flow (Either String FCMToken)
+checkAndGetToken = do
   token <- L.getOption FCMTokenKey
   case token of
-    Nothing ->
-      -- token not found
-      if readOnly
-        then pure $ Left "Token not found"
-        else refreshToken
+    Nothing -> refreshToken
     Just t -> do
       validityStatus <- L.runIO $ JWT.isValid t
-      if readOnly
-        then pure $ case validityStatus of
-          JWT.JWTValid _ -> Right t
-          JWT.JWTExpired _ -> Left "Token expired"
-          JWT.JWTInvalid -> Left "Token is invalid"
-        else case validityStatus of
-          JWT.JWTValid x ->
-            if x < 300
-              then pure $ Right t -- do nothing, token is ok
-              else do
-                -- close to expiration, start trying to refresh token
-                L.logInfo fcm "Token is about to be expiried, trying to refresh it"
-                refreshToken
-          JWT.JWTExpired x -> do
-            -- token expired
-            L.logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
-            L.delOption FCMTokenKey
-            refreshToken
-          JWT.JWTInvalid -> do
-            -- token is invalid
-            L.logInfo fcm "Token is invalid, trying to refresh it"
-            L.delOption FCMTokenKey
-            refreshToken
+      case validityStatus of
+        JWT.JWTValid x ->
+          if x < 300
+            then pure $ Right t -- do nothing, token is ok
+            else do
+              -- close to expiration, start trying to refresh token
+              L.logInfo fcm "Token is about to be expiried, trying to refresh it"
+              refreshToken
+        JWT.JWTExpired x -> do
+          -- token expired
+          L.logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
+          L.delOption FCMTokenKey
+          refreshToken
+        JWT.JWTInvalid -> do
+          -- token is invalid
+          L.logInfo fcm "Token is invalid, trying to refresh it"
+          L.delOption FCMTokenKey
+          refreshToken
   where
     fcm = T.pack "FCM"
-    refreshToken = do
-      L.logInfo fcm "Refreshing token"
-      t <- L.runIO JWT.refreshToken
-      case t of
-        Left err -> do
-          L.logInfo fcm $ T.pack err
-          pure $ Left err
-        Right token -> do
-          L.logInfo fcm $ T.pack "Success"
-          L.setOption FCMTokenKey token
-          pure $ Right token
+
+-- | Get token (do not refresh it if it is expired / invalid)
+getToken :: L.Flow (Either String FCMToken)
+getToken = do
+  token <- L.getOption FCMTokenKey
+  case token of
+    Nothing -> pure $ Left "Token not found"
+    Just t -> do
+      validityStatus <- L.runIO $ JWT.isValid t
+      pure $ case validityStatus of
+        JWT.JWTValid _ -> Right t
+        JWT.JWTExpired _ -> Left "Token expired"
+        JWT.JWTInvalid -> Left "Token is invalid"
+
+-- | Refresh token
+refreshToken :: L.Flow (Either String FCMToken)
+refreshToken = do
+  L.logInfo fcm "Refreshing token"
+  t <- L.runIO JWT.refreshToken
+  case t of
+    Left err -> do
+      L.logInfo fcm $ T.pack err
+      pure $ Left err
+    Right token -> do
+      L.logInfo fcm $ T.pack "Success"
+      L.setOption FCMTokenKey token
+      pure $ Right token
+  where
+    fcm = T.pack "FCM"
