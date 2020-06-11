@@ -25,6 +25,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import Types.API.Registration
+import qualified Utils.Defaults as Default
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -49,7 +50,7 @@ initiateFlow req = do
     Nothing -> do
       token <- makeSession req entityId SR.USER Nothing
       QR.create token
-      sendOTP mobileNumber (SR._authValueHash token)
+      sendOTP (Default.countryCode <> mobileNumber) (SR._authValueHash token)
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -82,7 +83,7 @@ makePerson req = do
         _identifierType = SP.MOBILENUMBER,
         _email = Nothing,
         _mobileNumber = Just $ req ^. #_identifier,
-        _mobileCountryCode = Nothing,
+        _mobileCountryCode = Just Default.countryCode,
         _identifier = Just $ req ^. #_identifier,
         _rating = Nothing,
         _verified = False,
@@ -200,7 +201,7 @@ reInitiateLogin tokenId req =
     void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
-        sendOTP (req ^. Lens.identifier) _authValueHash
+        sendOTP (Default.countryCode <> req ^. Lens.identifier) _authValueHash
         QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}
