@@ -158,8 +158,9 @@ mkCase req userId from to = do
     getCaseExpiry :: LocalTime -> L.Flow LocalTime
     getCaseExpiry startTime = do
       now <- getCurrentTimeUTC
-      caseExpiry <- pure . fromMaybe 7200 . join . (readMaybe <$>) =<< L.runIO (lookupEnv "DEFAULT_CASE_EXPIRY")
-      let minExpiry = 300 -- 5 minutes
+      caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
+      let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
+          minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffLocalTime` now
           defaultExpiry = (fromInteger caseExpiry) `addLocalTime` now
           validTill = addLocalTime (minimum [(fromInteger caseExpiry), maximum [minExpiry, timeToRide]]) now

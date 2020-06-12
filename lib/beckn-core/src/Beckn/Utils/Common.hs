@@ -88,10 +88,12 @@ encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 authenticate :: Maybe CronAuthKey -> L.Flow ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let authHeader = join $ (T.stripPrefix "Basic ") <$> maybeAuth
+  let authHeader = (T.stripPrefix "Basic ") =<< maybeAuth
       decodedAuthM =
         DT.decodeUtf8
-          <$> (join $ ((rightToMaybe . DBB.decode . DT.encodeUtf8) <$> authHeader))
+          <$> ( (rightToMaybe . DBB.decode . DT.encodeUtf8)
+                  =<< authHeader
+              )
   case (decodedAuthM, keyM) of
     (Just auth, Just key) -> do
       when ((T.pack key) /= auth) throw401
