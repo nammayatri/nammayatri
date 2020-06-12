@@ -4,10 +4,10 @@
 module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
+import Beckn.Types.App (_getPersonId)
 import Beckn.Types.Storage.Person as Person
 import qualified Beckn.Utils.JWT as JWT
 import Control.Lens
-import Data.Bool
 import Data.Default.Class
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -19,9 +19,9 @@ import Servant.Client
 -- | Create FCM message
 -- Note that data should be formed as key-value pairs list
 -- recipientId::FCMToken is an app's registration token
-createMessage :: Text -> Text -> FCMData -> FCMRecipientToken -> FCMMessage
+createMessage :: FCMNotificationTitle -> FCMNotificationBody -> FCMData -> FCMRecipientToken -> FCMMessage
 createMessage title body msgData recipientId =
-  def & fcmToken ?~ getFCMRecipientToken recipientId
+  def & fcmToken ?~ recipientId
     & fcmData ?~ msgData
     & fcmAndroid ?~ androidCfg
   where
@@ -29,21 +29,23 @@ createMessage title body msgData recipientId =
     androidCfg = createAndroidConfig title body tag
 
 -- | Android Notification details
-createAndroidConfig :: Text -> Text -> Text -> FCMAndroidConfig
+createAndroidConfig :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidConfig
 createAndroidConfig title body tag =
   def & fcmdNotification ?~ notification
   where
     notification =
       def & fcmdTitle ?~ title
         & fcmdBody ?~ body
-        & fcmdIcon ?~ "https://api.sandbox.beckn.juspay.in/static/images/ride-success.png"
+        & fcmdIcon
+          ?~ FCMNotificationIconUrl
+            "https://api.sandbox.beckn.juspay.in/static/images/ride-success.png"
         & fcmdTag ?~ tag
 
 -- | Send FCM message to a person
-notifyPerson :: Text -> Text -> FCMData -> Person -> L.Flow ()
+notifyPerson :: FCMNotificationTitle -> FCMNotificationBody -> FCMData -> Person -> L.Flow ()
 notifyPerson title body msgData person =
-  let pid = show (Person._id person)
-      tokenNotFound = "device token of a person " <> show pid <> " not found"
+  let pid = _getPersonId $ Person._id person
+      tokenNotFound = "device token of a person " <> pid <> " not found"
    in case Person._deviceToken person of
         Nothing -> do
           L.logInfo (T.pack "FCM") tokenNotFound
@@ -70,22 +72,23 @@ defaultBaseUrl =
     }
 
 -- | Send FCM message to a registered device
-sendMessage :: FCMRequest -> String -> L.Flow ()
+sendMessage :: FCMRequest -> T.Text -> L.Flow ()
 sendMessage fcmMsg toWhom = L.forkFlow desc $ do
   authToken <- getTokenText
   case authToken of
     Right token -> do
       res <- L.callAPI defaultBaseUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
-      L.logInfo (T.pack "FCM") $ case res of
-        Right _ -> "message sent successfully to " <> T.pack toWhom
+      L.logInfo fcm $ case res of
+        Right _ -> "message sent successfully to a person with id = " <> toWhom
         Left x -> "error: " <> show x
       pure ()
     Left err -> do
-      L.logInfo (T.pack "FCM") $ "error: " <> show err
+      L.logError fcm $ "error: " <> show err
       pure ()
   where
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
     desc = "FCM send message forked flow"
+    fcm = T.pack "FCM"
 
 -- | try to get FCM text token
 getTokenText :: L.Flow (Either String Text)
@@ -96,7 +99,7 @@ getTokenText = do
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
 -- | check FCM token and refresh if it is invalid
-checkAndGetToken :: L.Flow (Either String FCMToken)
+checkAndGetToken :: L.Flow (Either String JWT.JWToken)
 checkAndGetToken = do
   token <- L.getOption FCMTokenKey
   case token of
@@ -105,7 +108,7 @@ checkAndGetToken = do
       validityStatus <- L.runIO $ JWT.isValid t
       case validityStatus of
         JWT.JWTValid x ->
-          if x < 300
+          if x > 300
             then pure $ Right t -- do nothing, token is ok
             else do
               -- close to expiration, start trying to refresh token
@@ -125,7 +128,7 @@ checkAndGetToken = do
     fcm = T.pack "FCM"
 
 -- | Get token (do not refresh it if it is expired / invalid)
-getToken :: L.Flow (Either String FCMToken)
+getToken :: L.Flow (Either String JWT.JWToken)
 getToken = do
   token <- L.getOption FCMTokenKey
   case token of
@@ -138,7 +141,7 @@ getToken = do
         JWT.JWTInvalid -> Left "Token is invalid"
 
 -- | Refresh token
-refreshToken :: L.Flow (Either String FCMToken)
+refreshToken :: L.Flow (Either String JWT.JWToken)
 refreshToken = do
   L.logInfo fcm "Refreshing token"
   t <- L.runIO JWT.refreshToken

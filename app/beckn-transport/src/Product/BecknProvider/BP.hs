@@ -2,8 +2,8 @@
 
 module Product.BecknProvider.BP where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -453,14 +453,16 @@ notifyTransportersOnSearch c =
   traverse_ (FCM.notifyPerson title body notificationData)
   where
     notificationData =
-      FCMData
-        { _fcmNotificationType = "SEARCH_REQUEST",
-          _fcmShowNotification = "true",
+      FCM.FCMData
+        { _fcmNotificationType = FCM.SEARCH_REQUEST,
+          _fcmShowNotification = FCM.SHOW,
           _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = "Organization"
+          _fcmEntityType = FCM.Organization
         }
-    title = "You have a new ride request"
-    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+    title = FCM.FCMNotificationTitle $ T.pack "You have a new ride request"
+    body =
+      FCM.FCMNotificationBody $ T.pack $
+        "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
 
 -- | Send FCM "search" notification to provider admins
 notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
@@ -468,11 +470,13 @@ notifyTransportersOnConfirm c =
   traverse_ (FCM.notifyPerson title body notificationData)
   where
     notificationData =
-      FCMData
-        { _fcmNotificationType = "CONFIRM_REQUEST",
-          _fcmShowNotification = "true",
+      FCM.FCMData
+        { _fcmNotificationType = FCM.CONFIRM_REQUEST,
+          _fcmShowNotification = FCM.SHOW,
           _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = "Organization"
+          _fcmEntityType = FCM.Organization
         }
-    title = "Customer has confimed a ride"
-    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+    title = FCM.FCMNotificationTitle $ T.pack "Customer has confimed a ride"
+    body =
+      FCM.FCMNotificationBody $ T.pack $
+        "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)

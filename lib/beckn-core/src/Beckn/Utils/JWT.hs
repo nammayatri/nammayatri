@@ -75,7 +75,6 @@ getJSON = do
     Nothing -> pure $ Left "FCM_JSON_PATH is not set, ignoring"
     Just f -> do
       res <- try (BL.readFile f)
-      --      pure $ either (\(_::SomeException )-> Left "Error on reading FCM json file") Right res
       pure $ case res of
         Left (e :: SomeException) -> Left $ "Error on reading FCM json file [" <> f <> "]: " <> displayException e
         Right content -> Right content
@@ -183,7 +182,10 @@ isValid :: JWToken -> IO JWTValidity
 isValid token = do
   let expiry = _jwtExpiresIn token
   curInt <- round <$> getPOSIXTime
-  -- TODO: check a signature here
+  -- check a signature here, not sure it is possible,
+  -- for this we'd need to get a "public" key which is stored in google
+  -- PS we can keep claims in options, this will allow us
+  -- recreating the token and verifying it
   let valid = True
   let expired = curInt > expiry
   let diff = abs $ curInt - expiry

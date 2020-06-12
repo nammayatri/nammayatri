@@ -3,6 +3,7 @@
 module Beckn.Utils.Common where
 
 import qualified Beckn.External.FCM.Types as FCM
+import Beckn.External.FCM.Utils (createFCMTokenRefreshThread)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
@@ -107,3 +108,9 @@ maskPerson person =
       if length token > 6
         then T.take 3 token <> "..." <> T.takeEnd 3 token
         else "..."
+
+-- | Prepare common applications options
+prepareAppOptions :: L.Flow ()
+prepareAppOptions =
+  -- FCM token ( options key = FCMTokenKey )
+  createFCMTokenRefreshThread

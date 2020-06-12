@@ -38,31 +38,85 @@ newtype FCMAuthToken
 
 deriveIdentifierInstances ''FCMAuthToken
 
+-- | FCM notification title
+newtype FCMNotificationTitle
+  = FCMNotificationTitle
+      { getFCMNotificationTitle :: Text
+      }
+  deriving (Show)
+
+deriveIdentifierInstances ''FCMNotificationTitle
+
+-- | FCM notification body
+newtype FCMNotificationBody
+  = FCMNotificationBody
+      { getFCMNotificationBody :: Text
+      }
+  deriving (Show)
+
+deriveIdentifierInstances ''FCMNotificationBody
+
+-- | Notification image / icon path
+newtype FCMNotificationIconUrl
+  = FCMNotificationIconUrl
+      { getFCMNotificationIconUrl :: Text
+      }
+  deriving (Show)
+
+deriveIdentifierInstances ''FCMNotificationIconUrl
+
+-- | Notification types
+data FCMNotificationType
+  = CONFIRM_CALLBACK
+  | REGISTRATION_APPROVED
+  | TRACKING_CALLBACK
+  | SEARCH_REQUEST
+  | SEARCH_CALLBACK
+  | CONFIRM_REQUEST
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+-- | Entity types types
+data FCMEntityType = Case | Organization
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
 -- | Priority of a message to send to Android devices
 data FCMAndroidMessagePriority = NORMAL | HIGH
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Priority levels of a notification
-data FCMNotificationPriority = PRIORITY_UNSPECIFIED | PRIORITY_MIN | PRIORITY_LOW | PRIORITY_DEFAULT | PRIORITY_HIGH | PRIORITY_MAX
+data FCMNotificationPriority
+  = PRIORITY_UNSPECIFIED
+  | PRIORITY_MIN
+  | PRIORITY_LOW
+  | PRIORITY_DEFAULT
+  | PRIORITY_HIGH
+  | PRIORITY_MAX
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Different visibility levels of a notification
 data FCMNotificationVisibility = VISIBILITY_UNSPECIFIED | PRIVATE | PUBLIC | SECRET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
+data FCMShowNotification = SHOW | DO_NOT_SHOW
+  deriving (Show, Eq, Read, Generic)
+
+instance ToJSON FCMShowNotification where
+  toJSON SHOW = "true"
+  toJSON _ = "false"
+
 -- | FCM payload
 data FCMData
   = FCMData
-      { _fcmNotificationType :: Text,
-        _fcmShowNotification :: Text,
+      { _fcmNotificationType :: FCMNotificationType,
+        _fcmShowNotification :: FCMShowNotification,
         _fcmEntityIds :: Text,
-        _fcmEntityType :: Text
+        _fcmEntityType :: FCMEntityType
       }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMData)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMData)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMData)
 
 -- | HTTP request headers
 type FCMHeaders = Map Text Text
@@ -82,7 +136,7 @@ data FCMColor
 
 $(makeLenses ''FCMColor)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMColor)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMColor)
 
 -- | Options for features provided by the FCM SDK for Android.
 data FCMAndroidOptions
@@ -93,7 +147,7 @@ data FCMAndroidOptions
 
 $(makeLenses ''FCMAndroidOptions)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidOptions)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidOptions)
 
 instance Default FCMAndroidOptions where
   def = FCMAndroidOptions Nothing
@@ -102,13 +156,13 @@ instance Default FCMAndroidOptions where
 data FCMApnsOptions
   = FCMApnsOptions
       { _fcmaAnalyticsLabel :: !(Maybe Text),
-        _fcmaImage :: !(Maybe Text)
+        _fcmaImage :: !(Maybe FCMNotificationIconUrl)
       }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMApnsOptions)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsOptions)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsOptions)
 
 instance Default FCMApnsOptions where
   def = FCMApnsOptions Nothing Nothing
@@ -123,7 +177,7 @@ data FCMWebpushOptions
 
 $(makeLenses ''FCMWebpushOptions)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushOptions)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushOptions)
 
 instance Default FCMWebpushOptions where
   def = FCMWebpushOptions Nothing Nothing
@@ -139,7 +193,7 @@ data FCMLightSettings
 
 $(makeLenses ''FCMLightSettings)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMLightSettings)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMLightSettings)
 
 instance Default FCMLightSettings where
   def = FCMLightSettings Nothing Nothing Nothing
@@ -147,15 +201,15 @@ instance Default FCMLightSettings where
 -- | Basic notification template to use across all platforms
 data FCMNotification
   = FCMNotification
-      { _fcmTitle :: !(Maybe Text),
-        _fcmBody :: !(Maybe Text),
-        _fcmImage :: !(Maybe Text)
+      { _fcmTitle :: !(Maybe FCMNotificationTitle),
+        _fcmBody :: !(Maybe FCMNotificationBody),
+        _fcmImage :: !(Maybe FCMNotificationIconUrl)
       }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMNotification)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMNotification)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMNotification)
 
 instance Default FCMNotification where
   def = FCMNotification Nothing Nothing Nothing
@@ -163,12 +217,12 @@ instance Default FCMNotification where
 -- | Notification to send to android devices
 data FCMAndroidNotification
   = FCMAndroidNotification
-      { _fcmdTitle :: !(Maybe Text),
-        _fcmdBody :: !(Maybe Text),
-        _fcmdIcon :: !(Maybe Text),
+      { _fcmdTitle :: !(Maybe FCMNotificationTitle),
+        _fcmdBody :: !(Maybe FCMNotificationBody),
+        _fcmdIcon :: !(Maybe FCMNotificationIconUrl),
         _fcmdColor :: !(Maybe Text),
         _fcmdSound :: !(Maybe Text),
-        _fcmdTag :: !(Maybe Text),
+        _fcmdTag :: !(Maybe FCMNotificationType),
         _fcmdClickAction :: !(Maybe Text),
         _fcmdBodyLocKey :: !(Maybe Text),
         _fcmdBodyLockArgs :: !(Maybe [Text]),
@@ -189,7 +243,7 @@ data FCMAndroidNotification
 
 $(makeLenses ''FCMAndroidNotification)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidNotification)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidNotification)
 
 instance Default FCMAndroidNotification where
   def =
@@ -212,7 +266,7 @@ data FCMAndroidConfig
 
 $(makeLenses ''FCMAndroidConfig)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidConfig)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidConfig)
 
 instance Default FCMAndroidConfig where
   def =
@@ -230,7 +284,7 @@ data FCMApnsConfig
 
 $(makeLenses ''FCMApnsConfig)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsConfig)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsConfig)
 
 instance Default FCMApnsConfig where
   def = FCMApnsConfig Nothing Nothing Nothing
@@ -247,7 +301,7 @@ data FCMWebpushConfig
 
 $(makeLenses ''FCMWebpushConfig)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushConfig)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushConfig)
 
 instance Default FCMWebpushConfig where
   def = FCMWebpushConfig Nothing Nothing Nothing Nothing
@@ -255,10 +309,9 @@ instance Default FCMWebpushConfig where
 -- | Message to send by Firebase Cloud Messaging Service
 data FCMMessage
   = FCMMessage
-      { _fcmToken :: !(Maybe Text),
+      { _fcmToken :: !(Maybe FCMRecipientToken),
         _fcmTopic :: !(Maybe Text),
         _fcmCondition :: !(Maybe Text),
-        _fcmName :: !(Maybe Text),
         _fcmData :: !(Maybe FCMData),
         _fcmNotification :: !(Maybe FCMNotification),
         _fcmAndroid :: !(Maybe FCMAndroidConfig),
@@ -270,14 +323,14 @@ data FCMMessage
 
 $(makeLenses ''FCMMessage)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMMessage)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMMessage)
 
 instance Default FCMMessage where
   def =
     let z = Nothing
-     in FCMMessage z z z z z z z z z z
+     in FCMMessage z z z z z z z z z
 
-data FCMRequest
+newtype FCMRequest
   = FCMRequest
       { _fcmeMessage :: FCMMessage
       }
@@ -285,7 +338,7 @@ data FCMRequest
 
 $(makeLenses ''FCMRequest)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMRequest)
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMRequest)
 
 -- | Priority levels of a notification
 data FCMErrorCode
@@ -315,40 +368,28 @@ data FCMErrorCode
 
 data FCMError
   = FCMError
-      { _fcmerrCode :: !Int,
-        _fcmerrStatus :: !FCMErrorCode,
+      { _fcmerrCode :: Int,
+        _fcmerrStatus :: FCMErrorCode,
         _fcmerrMessage :: !Text
       }
-  deriving (Eq, Show)
+  deriving (Show, Eq, Read, Generic)
 
 $(makeLenses ''FCMError)
 
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMError)
+$(deriveFromJSON (aesonPrefix snakeCase) ''FCMError)
 
-data FCMClientError
-  = FCMClientError
-      { _fcmerrError :: FCMError
-      }
-  deriving (Eq, Show)
-
-$(makeLenses ''FCMClientError)
-
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMClientError)
-
+-- | Message to send by Firebase Cloud Messaging Service
 data FCMResponse
-  = FCMResponseSuccess !FCMMessage
-  | FCMResponseError !FCMClientError
-  deriving (Show)
+  = FCMResponse
+      { _fcmName :: Maybe Text,
+        _fcmerrError :: Maybe FCMError
+      }
+  deriving (Show, Eq, Read, Generic)
 
-$(makeLenses ''FCMResponse)
+$(deriveFromJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMResponse)
 
-$(makePrisms ''FCMResponse)
-
-$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMResponse)
-
-type FCMToken = JWT.JWToken
-
+-- | Data type for runtime options key
 data FCMTokenKey = FCMTokenKey
   deriving (Generic, Typeable, Show, Eq, ToJSON, FromJSON)
 
-instance T.OptionEntity FCMTokenKey FCMToken
+instance T.OptionEntity FCMTokenKey JWT.JWToken
