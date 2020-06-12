@@ -95,7 +95,7 @@ type PersonAPIs =
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
            :<|> "by-mobile-number"
-             :> Capture "registrationNo" Text
+             :> Capture "mobileNumber" Text
              :> Header "authorization" Text
              :> Get '[JSON] PersonRes
            :<|> "by-id"
