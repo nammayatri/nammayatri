@@ -88,6 +88,7 @@ dependencies:
 - generic-lens
 - base64-bytestring
 - utf8-string
+- geojson
 
 library:
   source-dirs:
