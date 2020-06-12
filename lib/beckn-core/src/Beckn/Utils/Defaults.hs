@@ -9,3 +9,6 @@ localTime = LocalTime (ModifiedJulianDay 58930) (TimeOfDay 1 1 1)
 
 orgId :: Text
 orgId = "9617486e522f44c6b6d54f6ca0d2731d"
+
+countryCode :: Text
+countryCode = "+91"

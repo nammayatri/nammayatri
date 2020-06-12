@@ -11,6 +11,7 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Defaults as Default
 import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
@@ -25,7 +26,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import Types.API.Registration
-import qualified Utils.Defaults as Default
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
