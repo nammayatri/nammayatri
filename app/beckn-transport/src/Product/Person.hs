@@ -48,67 +48,12 @@ listPerson token req = withFlowHandler $ do
   orgId <- validate token
   ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [orgId]
 
-getByMobileNumber :: Text -> Maybe Text -> FlowHandler PersonRes
-getByMobileNumber mobileNumber token = withFlowHandler $ do
+getPerson :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
+getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   user <- QP.findPersonById (PersonId _EntityId)
   person <-
-    QP.findByMobileNumber mobileNumber
-      >>= fromMaybeM400 "PERSON NOT FOUND"
-  hasAccess user person
-  return $ PersonRes person
-  where
-    hasAccess user person =
-      whenM
-        ( return $
-            (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
-              && (user ^. #_organizationId) /= (person ^. #_organizationId)
-        )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
-
-getById :: Text -> Maybe Text -> FlowHandler PersonRes
-getById personId token = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth token
-  user <- QP.findPersonById (PersonId _EntityId)
-  person <- QP.findPersonById (PersonId personId)
-  hasAccess user person
-  return $ PersonRes person
-  where
-    hasAccess user person =
-      whenM
-        ( return $
-            (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
-              && (user ^. #_organizationId) /= (person ^. #_organizationId)
-        )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
-
-getByIdentifier :: Text -> Maybe Text -> FlowHandler PersonRes
-getByIdentifier identifier token = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth token
-  user <- QP.findPersonById (PersonId _EntityId)
-  person <-
-    QP.findByIdentifier identifier
-      >>= fromMaybeM400 "PERSON NOT FOUND"
-  hasAccess user person
-  return $ PersonRes person
-  where
-    hasAccess user person =
-      whenM
-        ( return $
-            (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
-              && (user ^. #_organizationId) /= (person ^. #_organizationId)
-        )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
-
-getByEmail :: Text -> Maybe Text -> FlowHandler PersonRes
-getByEmail emailId token = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth token
-  user <- QP.findPersonById (PersonId _EntityId)
-  person <-
-    QP.findByEmailId emailId
+    QP.findByAnyOf idM mobileM emailM identifierM
       >>= fromMaybeM400 "PERSON NOT FOUND"
   hasAccess user person
   return $ PersonRes person
