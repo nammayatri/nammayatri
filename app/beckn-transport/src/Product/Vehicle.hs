@@ -37,11 +37,24 @@ updateVehicle vehicleId token req = withFlowHandler $ do
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
-getVehicle :: Maybe Text -> Text -> SV.RegistrationCategory -> FlowHandler CreateVehicleRes
-getVehicle token regNo regCategory = withFlowHandler $ do
+getByRegistrationNo :: Text -> Maybe Text -> FlowHandler CreateVehicleRes
+getByRegistrationNo registrationNo token = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   user <- QP.findPersonById (PersonId _EntityId)
-  vehicle <- QV.findByRegNoCategory regNo regCategory
+  vehicle <- QV.findByRegistrationNo registrationNo
+  hasAccess user vehicle
+  return $ CreateVehicleRes vehicle
+  where
+    hasAccess user vehicle =
+      whenM (return $ (user ^. #_organizationId) /= Just (vehicle ^. #_organizationId))
+        $ L.throwException
+        $ err401 {errBody = "Unauthorized"}
+
+getByVehicleId :: Text -> Maybe Text -> FlowHandler CreateVehicleRes
+getByVehicleId vehicleId token = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  user <- QP.findPersonById (PersonId _EntityId)
+  vehicle <- QV.findById (VehicleId vehicleId)
   hasAccess user vehicle
   return $ CreateVehicleRes vehicle
   where

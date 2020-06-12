@@ -117,9 +117,13 @@ type VehicleAPIs =
              :> Header "authorization" Text
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
-           :<|> Header "authorization" Text
-             :> MandatoryQueryParam "regNo" Text
-             :> MandatoryQueryParam "regCategory" RegistrationCategory
+           :<|> "byRegistrationNo"
+             :> Capture "registrationNo" Text
+             :> Header "authorization" Text
+             :> Get '[JSON] CreateVehicleRes
+           :<|> "byId"
+             :> Capture "vehicleId" Text
+             :> Header "authorization" Text
              :> Get '[JSON] CreateVehicleRes
        )
 
@@ -128,7 +132,8 @@ vehicleFlow =
   Vehicle.createVehicle
     :<|> Vehicle.listVehicles
     :<|> Vehicle.updateVehicle
-    :<|> Vehicle.getVehicle
+    :<|> Vehicle.getByRegistrationNo
+    :<|> Vehicle.getByVehicleId
 
 -- Following is organization creation
 type OrganizationAPIs =
