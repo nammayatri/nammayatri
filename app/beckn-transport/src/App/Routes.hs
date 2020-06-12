@@ -116,11 +116,11 @@ type VehicleAPIs =
              :> Header "authorization" Text
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
-           :<|> "byRegistrationNo"
+           :<|> "by-registration-no"
              :> Capture "registrationNo" Text
              :> Header "authorization" Text
              :> Get '[JSON] CreateVehicleRes
-           :<|> "byId"
+           :<|> "by-id"
              :> Capture "vehicleId" Text
              :> Header "authorization" Text
              :> Get '[JSON] CreateVehicleRes
