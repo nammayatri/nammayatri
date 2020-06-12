@@ -12,7 +12,6 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Vehicle
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude

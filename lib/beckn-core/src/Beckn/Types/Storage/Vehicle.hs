@@ -74,8 +74,6 @@ data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegistrationCategory where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL RegistrationCategory
-
 instance FromBackendRow MySQL RegistrationCategory where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
