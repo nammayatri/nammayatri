@@ -94,11 +94,21 @@ type PersonAPIs =
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
-           :<|> Header "authorization" Text
-             :> QueryParam "personId" Text
-             :> QueryParam "mobile" Text
-             :> QueryParam "email" Text
-             :> QueryParam "identifier" Text
+           :<|> "by-mobile-number"
+             :> Capture "registrationNo" Text
+             :> Header "authorization" Text
+             :> Get '[JSON] PersonRes
+           :<|> "by-id"
+             :> Capture "personId" Text
+             :> Header "authorization" Text
+             :> Get '[JSON] PersonRes
+           :<|> "by-identifier"
+             :> Capture "identifier" Text
+             :> Header "authorization" Text
+             :> Get '[JSON] PersonRes
+           :<|> "by-email"
+             :> Capture "emailId" Text
+             :> Header "authorization" Text
              :> Get '[JSON] PersonRes
        )
 
@@ -107,7 +117,10 @@ personFlow =
   Person.createPerson
     :<|> Person.listPerson
     :<|> Person.updatePerson
-    :<|> Person.getPerson
+    :<|> Person.getByMobileNumber
+    :<|> Person.getById
+    :<|> Person.getByIdentifier
+    :<|> Person.getByEmail
 
 -- Following is vehicle flow
 type VehicleAPIs =
