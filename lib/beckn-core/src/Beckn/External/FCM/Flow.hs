@@ -1,6 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- |
+-- Module      : FCM.Flow
+-- Description : Firebase Cloud Messaging module
+--
+-- FCM description: https://firebase.google.com/docs/cloud-messaging
+-- Firebase Cloud Messaging (FCM) is a cross-platform messaging solution
+-- that lets you reliably send messages at no cost. Using FCM, you can notify
+-- a client app that new email or other data is available to sync. You can
+-- send notification messages to drive user re-engagement and retention.
+-- For use cases such as instant messaging, a message can transfer
+-- a payload of up to 4KB to a client app.
+--
+-- Protocol description : https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages
 module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
