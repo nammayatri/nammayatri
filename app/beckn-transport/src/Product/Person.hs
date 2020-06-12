@@ -52,9 +52,11 @@ getPerson :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text 
 getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   user <- QP.findPersonById (PersonId _EntityId)
-  person <-
-    QP.findByAnyOf idM mobileM emailM identifierM
-      >>= fromMaybeM400 "PERSON NOT FOUND"
+  person <- case (idM, mobileM, emailM, identifierM) of
+    (Nothing, Nothing, Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
+    _ ->
+      QP.findByAnyOf idM mobileM emailM identifierM
+        >>= fromMaybeM400 "PERSON NOT FOUND"
   hasAccess user person
   return $ PersonRes person
   where
