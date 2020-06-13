@@ -31,8 +31,8 @@ import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Accessor as Lens
 import Data.Aeson
-import Data.ByteString.Lazy.Char8
-import Data.Text as T
+import qualified Data.ByteString.Lazy.Char8 as BSL
+import qualified Data.Text as T
 import Data.Time
 import Data.Time.Clock
 import Data.Time.LocalTime
@@ -61,7 +61,7 @@ search req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime $ currTime
+  validity <- getValidTime currTime (req ^. #message ^. #time)
   uuid1 <- L.generateGUID
   let fromLocation = mkFromLocation req uuid1 currTime $ req ^. #message ^. #origin
   uuid2 <- L.generateGUID
@@ -92,9 +92,15 @@ cancel req = withFlowHandler $ do
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
--- Putting a static expiry of 2hrs
-getValidTime :: LocalTime -> L.Flow LocalTime
-getValidTime now = pure $ addLocalTime (60 * 30 * 2) $ now
+getValidTime :: LocalTime -> LocalTime -> L.Flow LocalTime
+getValidTime now startTime = do
+  caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
+  let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
+      minExpiry = 300 -- 5 minutes
+      timeToRide = startTime `diffLocalTime` now
+      defaultExpiry = (fromInteger caseExpiry) `addLocalTime` now
+      validTill = addLocalTime (minimum [(fromInteger caseExpiry), maximum [minExpiry, timeToRide]]) now
+  pure validTill
 
 mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
 mkFromLocation req uuid now loc =
