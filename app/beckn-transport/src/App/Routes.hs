@@ -94,6 +94,9 @@ type PersonAPIs =
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
+           :<|> Capture "personId" Text
+             :> Header "authorization" Text
+             :> Delete '[JSON] DeletePersonRes
        )
 
 personFlow :: FlowServer PersonAPIs
@@ -101,6 +104,7 @@ personFlow =
   Person.createPerson
     :<|> Person.listPerson
     :<|> Person.updatePerson
+    :<|> Person.deletePerson
 
 -- Following is vehicle flow
 type VehicleAPIs =
@@ -116,6 +120,9 @@ type VehicleAPIs =
              :> Header "authorization" Text
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
+           :<|> Capture "vehicleId" Text
+             :> Header "authorization" Text
+             :> Delete '[JSON] DeleteVehicleRes
            :<|> Header "authorization" Text
              :> QueryParam "registrationNo" Text
              :> QueryParam "vehicleId" Text
@@ -127,6 +134,7 @@ vehicleFlow =
   Vehicle.createVehicle
     :<|> Vehicle.listVehicles
     :<|> Vehicle.updateVehicle
+    :<|> Vehicle.deleteVehicle
     :<|> Vehicle.getVehicle
 
 -- Following is organization creation
@@ -186,6 +194,7 @@ caseProductFlow =
 type ProductAPIs =
   "product"
     :> ( Header "authorization" Text
+           :> QueryParam "vehicleId" Text
            :> Get '[JSON] ProdListRes
            :<|> Header "authorization" Text
              :> Capture "productId" Text

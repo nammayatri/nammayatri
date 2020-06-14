@@ -91,6 +91,13 @@ updateVehicleRec vehicle = do
         ]
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
 
+deleteById :: VehicleId -> L.Flow ()
+deleteById id = do
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Vehicle {..} = (_id ==. B.val_ id)
+
 findByAnyOf :: Maybe Text -> Maybe Text -> L.Flow (Maybe Storage.Vehicle)
 findByAnyOf registrationNoM vehicleIdM =
   DB.findOne dbTable predicate

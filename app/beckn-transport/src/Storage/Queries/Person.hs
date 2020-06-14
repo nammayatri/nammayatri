@@ -175,3 +175,10 @@ update id status verified deviceTokenM = do
           ]
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
+
+deleteById :: PersonId -> L.Flow ()
+deleteById id = do
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Person {..} = (_id ==. B.val_ id)
