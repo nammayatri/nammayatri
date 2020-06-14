@@ -90,3 +90,13 @@ updateVehicleRec vehicle = do
           _updatedAt <-. B.val_ (Storage._updatedAt vehicle)
         ]
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
+
+findByAnyOf :: Maybe Text -> Maybe Text -> L.Flow (Maybe Storage.Vehicle)
+findByAnyOf registrationNoM vehicleIdM =
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Vehicle {..} =
+      ( (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (VehicleId (fromMaybe "DONT_MATCH" vehicleIdM)))
+          &&. (B.val_ (isNothing registrationNoM) ||. _registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
+      )

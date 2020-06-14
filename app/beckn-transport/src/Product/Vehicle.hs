@@ -37,6 +37,23 @@ updateVehicle vehicleId token req = withFlowHandler $ do
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
+getVehicle :: Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
+getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  user <- QP.findPersonById (PersonId _EntityId)
+  vehicle <- case (registrationNoM, vehicleIdM) of
+    (Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
+    _ ->
+      QV.findByAnyOf registrationNoM vehicleIdM
+        >>= fromMaybeM400 "VEHICLE NOT FOUND"
+  hasAccess user vehicle
+  return $ CreateVehicleRes vehicle
+  where
+    hasAccess user vehicle =
+      whenM (return $ (user ^. #_organizationId) /= Just (vehicle ^. #_organizationId))
+        $ L.throwException
+        $ err401 {errBody = "Unauthorized"}
+
 -- Core Utility methods are below
 verifyUser :: SP.Person -> L.Flow Text
 verifyUser user = do
