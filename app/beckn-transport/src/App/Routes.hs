@@ -123,6 +123,10 @@ type VehicleAPIs =
            :<|> Capture "vehicleId" Text
              :> Header "authorization" Text
              :> Delete '[JSON] DeleteVehicleRes
+           :<|> Header "authorization" Text
+             :> QueryParam "registrationNo" Text
+             :> QueryParam "vehicleId" Text
+             :> Get '[JSON] CreateVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPIs
@@ -131,6 +135,7 @@ vehicleFlow =
     :<|> Vehicle.listVehicles
     :<|> Vehicle.updateVehicle
     :<|> Vehicle.deleteVehicle
+    :<|> Vehicle.getVehicle
 
 -- Following is organization creation
 type OrganizationAPIs =
@@ -140,22 +145,22 @@ type OrganizationAPIs =
            :<|> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
-           :<|> Capture "orgId" Text
-           :> Header "authorization" Text
-           :> ReqBody '[JSON] UpdateTransporterReq
-           :> Post '[JSON] TransporterRec
            :<|> "gateway"
            :> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] GatewayRes
+           :<|> Capture "orgId" Text
+           :> Header "authorization" Text
+           :> ReqBody '[JSON] UpdateTransporterReq
+           :> Post '[JSON] TransporterRec
        )
 
 organizationFlow :: FlowServer OrganizationAPIs
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.createTransporter
-    :<|> Transporter.updateTransporter
     :<|> Transporter.createGateway
+    :<|> Transporter.updateTransporter
 
 -----------------------------
 -------- Case Flow----------

@@ -13,6 +13,7 @@ pipeline {
           changeset "Dockerfile*"
           changeset "Makefile"
           changeset "stack.yaml"
+          changeset "stack.yaml.lock"
           changeset "**/package.yaml"
           expression {
             // build dep on the first run
@@ -32,13 +33,14 @@ pipeline {
       when {
         anyOf {
           branch "master"
-          branch "staging"
+          branch "sandbox"
           changeset "Jenkinsfile"
           changeset "Dockerfile*"
           changeset "Makefile"
           changeset "lib/**/*"
           changeset "app/**/*"
           changeset "stack.yaml"
+          changeset "stack.yaml.lock"
           changeset "**/package.yaml"
           changeset "deployment-configs/*deploy.yaml"
           expression {
@@ -60,7 +62,7 @@ pipeline {
           when {
             anyOf {
               branch "master"
-              branch "staging"
+              branch "sandbox"
             }
           }
 
