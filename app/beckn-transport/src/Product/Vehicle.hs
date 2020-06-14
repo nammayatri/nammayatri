@@ -39,9 +39,15 @@ updateVehicle vehicleId token req = withFlowHandler $ do
 
 deleteVehicle :: Text -> Maybe Text -> FlowHandler DeleteVehicleRes
 deleteVehicle vehicleId token = withFlowHandler $ do
-  validate token
-  QV.deleteById (VehicleId vehicleId)
-  return $ DeleteVehicleRes vehicleId
+  orgId <- validate token
+  vehicle <-
+    QV.findVehicleById (VehicleId vehicleId)
+      >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
+  if vehicle ^. #_organizationId == orgId
+    then do
+      QV.deleteById (VehicleId vehicleId)
+      return $ DeleteVehicleRes vehicleId
+    else L.throwException $ err401 {errBody = "Unauthorized"}
 
 getVehicle :: Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
 getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
