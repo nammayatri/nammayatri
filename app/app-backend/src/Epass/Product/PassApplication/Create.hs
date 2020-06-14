@@ -34,7 +34,7 @@ import qualified Test.RandomStrings as RS
 import qualified Utils.Common as UC
 
 createPassApplication ::
-  Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
+  RegToken -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
 createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowHandler $ do
   token <- UC.verifyToken regToken
   caseInfo <-

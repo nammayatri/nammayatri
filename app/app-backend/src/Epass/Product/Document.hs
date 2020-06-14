@@ -29,7 +29,7 @@ import Servant
 import Servant.Multipart
 
 upload ::
-  Maybe Text -> DocumentEntity -> Text -> MultipartData Mem -> FlowHandler DocumentRes
+  RegToken -> DocumentEntity -> Text -> MultipartData Mem -> FlowHandler DocumentRes
 upload regToken enType enId multipartData = withFlowHandler $ do
   reg <- verifyToken regToken
   orgId <- getOrgId enId enType
@@ -43,7 +43,7 @@ upload regToken enType enId multipartData = withFlowHandler $ do
     $ _getDocumentId . SD._id <$> documents
 
 listDocuments ::
-  Maybe Text -> DocumentByType -> Text -> FlowHandler [ListDocumentRes]
+  RegToken -> DocumentByType -> Text -> FlowHandler [ListDocumentRes]
 listDocuments regToken dt en = withFlowHandler $ do
   verifyToken regToken
   eds <- QED.findAllIds en dt

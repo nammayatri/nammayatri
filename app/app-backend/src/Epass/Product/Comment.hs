@@ -13,7 +13,7 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
+create :: RegToken -> CreateReq -> FlowHandler CreateRes
 create regToken CreateReq {..} = withFlowHandler $ do
   RegistrationToken {..} <- verifyToken regToken
   id <- generateGUID
@@ -36,7 +36,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
             ..
           }
 
-list :: Maybe RegistrationTokenText -> Text -> Text -> FlowHandler ListRes
+list :: RegToken -> Text -> Text -> FlowHandler ListRes
 list regToken commentedOnEntityType commentedOnEntityId = withFlowHandler $ do
   RegistrationToken {..} <- verifyToken regToken
   Comment.findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId

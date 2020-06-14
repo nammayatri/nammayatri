@@ -16,7 +16,7 @@ import Servant
 import qualified Storage.Queries.Person as QP
 
 getCustomerInfo ::
-  Maybe Text -> Text -> FlowHandler GetCustomerRes
+  RegToken -> Text -> FlowHandler GetCustomerRes
 getCustomerInfo regToken customerId = withFlowHandler $ do
   reg <- verifyToken regToken
   customer <-

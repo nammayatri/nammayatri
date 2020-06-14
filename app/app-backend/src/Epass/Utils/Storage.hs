@@ -29,12 +29,11 @@ throwFailedWithLog mkException msg = do
   L.logError ("" :: Text) $ msg <> ""
   L.throwException $ mkException $ msg <> ""
 
-verifyToken :: Maybe Text -> L.Flow SR.RegistrationToken
-verifyToken (Just token) =
+verifyToken :: Text -> L.Flow SR.RegistrationToken
+verifyToken token =
   QR.findByToken token
     >>= fromMaybeM400 "INVALID_TOKEN"
     >>= validateToken
-verifyToken _ = L.throwException $ err400 {errBody = "NO_TOKEN_FOUND"}
 
 validateToken :: SR.RegistrationToken -> L.Flow SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do

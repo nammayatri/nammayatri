@@ -31,7 +31,7 @@ import qualified Storage.Queries.Products as QProd
 import qualified Test.RandomStrings as RS
 
 updatePassApplication ::
-  Maybe Text ->
+  RegToken ->
   CaseId ->
   UpdatePassApplicationReq ->
   FlowHandler PassApplicationRes'

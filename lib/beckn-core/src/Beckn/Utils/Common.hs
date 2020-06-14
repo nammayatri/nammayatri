@@ -17,7 +17,6 @@ import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import System.Environment
 import Data.Time
 import Data.Time.Calendar (Day (..))
 import qualified EulerHS.Interpreters as I
@@ -25,6 +24,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Network.HTTP.Types (hContentType)
 import Servant
+import System.Environment
 
 getCurrTime :: L.Flow LocalTime
 getCurrTime = L.runIO $ do
@@ -73,13 +73,6 @@ withFlowHandler :: L.Flow a -> FlowHandler a
 withFlowHandler flow = do
   (Env flowRt) <- ask
   lift $ ExceptT $ try $ I.runFlow flowRt $ flow
-
-base64Decode :: Maybe Text -> Maybe Text
-base64Decode auth =
-  T.reverse <$> T.drop 1
-    <$> T.reverse
-    <$> DT.decodeUtf8
-    <$> (rightToMaybe =<< DBB.decode . DT.encodeUtf8 . T.drop 6 <$> auth)
 
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8

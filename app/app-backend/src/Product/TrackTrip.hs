@@ -31,7 +31,7 @@ import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
 import Utils.Common (verifyToken)
 
-track :: Maybe Text -> TrackTripReq -> FlowHandler TrackTripRes
+track :: RegToken -> TrackTripReq -> FlowHandler TrackTripRes
 track regToken req = withFlowHandler $ do
   verifyToken regToken
   let context = req ^. #context
@@ -52,8 +52,8 @@ track regToken req = withFlowHandler $ do
               Right _ -> return $ Ack "Successful" "Tracking initiated"
   return $ AckResponse context ack
 
-track_cb :: Maybe Text -> OnTrackTripReq -> FlowHandler OnTrackTripRes
-track_cb apiKey req = withFlowHandler $ do
+track_cb :: RegToken -> OnTrackTripReq -> FlowHandler OnTrackTripRes
+track_cb regToken req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message

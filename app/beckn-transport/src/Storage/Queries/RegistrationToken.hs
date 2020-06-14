@@ -2,6 +2,7 @@
 
 module Storage.Queries.RegistrationToken where
 
+import Beckn.Types.App
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
@@ -43,20 +44,18 @@ updateVerified id verified = do
         )
     predicate id Storage.RegistrationToken {..} = _id ==. B.val_ id
 
-verifyAuth :: Maybe Text -> L.Flow Storage.RegistrationToken
-verifyAuth auth = do
-  L.logInfo "verifying auth" $ show auth
-  let token = base64Decode auth
-  -- did atob of auth by removing basic in front and after atob, `:` in the end
-  L.logInfo "verifying token" $ show token
-  findRegistrationTokenByToken token
+verifyToken :: RegToken -> L.Flow Storage.RegistrationToken
+verifyToken regToken = do
+  L.logInfo "verifying token" $ show regToken
+  findRegistrationTokenByToken regToken
 
-findRegistrationTokenByToken :: Maybe Text -> L.Flow Storage.RegistrationToken
-findRegistrationTokenByToken idM = do
-  id <- fromMaybeM400 "INVALID_TOKEN" idM
-  DB.findOne dbTable (predicate id) >>= either DB.throwDBError pure >>= fromMaybeM400 "INVALID_TOKEN"
+findRegistrationTokenByToken :: RegToken -> L.Flow Storage.RegistrationToken
+findRegistrationTokenByToken regToken =
+  DB.findOne dbTable (predicate regToken)
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_TOKEN"
   where
-    predicate id Storage.RegistrationToken {..} = (_token ==. B.val_ id)
+    predicate regToken Storage.RegistrationToken {..} = (_token ==. B.val_ regToken)
 
 updateAttempts :: Int -> Text -> L.Flow Storage.RegistrationToken
 updateAttempts attemps id = do

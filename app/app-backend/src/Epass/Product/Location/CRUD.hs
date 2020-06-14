@@ -29,7 +29,7 @@ import Servant
 
 -- WIP
 listLocation ::
-  Maybe Text ->
+  RegToken ->
   Maybe Int ->
   Maybe Int ->
   LocateBy -> -- distinct

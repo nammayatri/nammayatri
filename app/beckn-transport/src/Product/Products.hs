@@ -35,9 +35,9 @@ import Types.API.CaseProduct
 import Types.API.Products
 import Types.App
 
-update :: Maybe Text -> Text -> ProdReq -> FlowHandler ProdInfoRes
+update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId ProdReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyAuth regToken
+  SR.RegistrationToken {..} <- RQ.verifyToken regToken
   user <- PersQ.findPersonById (PersonId _EntityId)
   vehIdRes <- case _vehicleId of
     Just k ->
@@ -114,9 +114,9 @@ updateTrip productId k = do
       return ()
     _ -> return ()
 
-listRides :: Maybe Text -> Maybe Text -> FlowHandler ProdListRes
+listRides :: RegToken -> Maybe Text -> FlowHandler ProdListRes
 listRides regToken vehicleIdM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyAuth regToken
+  SR.RegistrationToken {..} <- RQ.verifyToken regToken
   person <- PersQ.findPersonById (PersonId _EntityId)
   whenM (validateOrg vehicleIdM person) $ L.throwException $ err401 {errBody = "Unauthorized"}
   rideList <- case vehicleIdM of
@@ -146,9 +146,9 @@ listRides regToken vehicleIdM = withFlowHandler $ do
               _toLocation = to
             }
 
-listCasesByProd :: Maybe Text -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
+listCasesByProd :: RegToken -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
 listCasesByProd regToken productId csType = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyAuth regToken
+  SR.RegistrationToken {..} <- RQ.verifyToken regToken
   cpList <- CPQ.findAllByProdId (ProductsId productId)
   caseList <- case csType of
     Just type_ -> CQ.findAllByIdType (CaseP._caseId <$> cpList) type_
