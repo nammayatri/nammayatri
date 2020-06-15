@@ -28,40 +28,37 @@ import Web.JWT
 -- | Google cloud service account json file format
 -- it contains key id, private key and other data needed to get JWT
 -- https://cloud.google.com/compute/docs/access/service-accounts
-data ServiceAccount
-  = ServiceAccount
-      { _saType :: !T.Text,
-        _saProjectId :: !T.Text,
-        _saPrivateKeyId :: !T.Text,
-        _saPrivateKey :: !String,
-        _saClientEmail :: !T.Text,
-        _saClientId :: !T.Text,
-        _saAuthUri :: !T.Text,
-        _saTokenUri :: !T.Text,
-        _saAuthProviderX509CertUrl :: !T.Text,
-        _saClientX509CertUrl :: !T.Text
-      }
+data ServiceAccount = ServiceAccount
+  { _saType :: !T.Text,
+    _saProjectId :: !T.Text,
+    _saPrivateKeyId :: !T.Text,
+    _saPrivateKey :: !String,
+    _saClientEmail :: !T.Text,
+    _saClientId :: !T.Text,
+    _saAuthUri :: !T.Text,
+    _saTokenUri :: !T.Text,
+    _saAuthProviderX509CertUrl :: !T.Text,
+    _saClientX509CertUrl :: !T.Text
+  }
   deriving (Show, Eq, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
 -- | JWT body format, is is used for retrieving JWT token
-data JWTBody
-  = JWTBody
-      { _jwtAssertion :: !T.Text,
-        _jwtGrantType :: !T.Text
-      }
+data JWTBody = JWTBody
+  { _jwtAssertion :: !T.Text,
+    _jwtGrantType :: !T.Text
+  }
   deriving (Show, Eq, Generic)
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWTBody)
 
 -- | JWT token returned from token url
-data JWToken
-  = JWToken
-      { _jwtAccessToken :: !T.Text,
-        _jwtExpiresIn :: Integer,
-        _jwtTokenType :: !T.Text
-      }
+data JWToken = JWToken
+  { _jwtAccessToken :: !T.Text,
+    _jwtExpiresIn :: Integer,
+    _jwtTokenType :: !T.Text
+  }
   deriving (Show, Eq, Generic)
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWToken)

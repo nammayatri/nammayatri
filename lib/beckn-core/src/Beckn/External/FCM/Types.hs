@@ -21,46 +21,41 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 
 -- | Device token
-newtype FCMRecipientToken
-  = FCMRecipientToken
-      { getFCMRecipientToken :: Text
-      }
+newtype FCMRecipientToken = FCMRecipientToken
+  { getFCMRecipientToken :: Text
+  }
   deriving (Show)
 
 deriveIdentifierInstances ''FCMRecipientToken
 
 -- | FCM authorization token
-newtype FCMAuthToken
-  = FCMAuthToken
-      { getFCMAuthToken :: Text
-      }
+newtype FCMAuthToken = FCMAuthToken
+  { getFCMAuthToken :: Text
+  }
   deriving (Show)
 
 deriveIdentifierInstances ''FCMAuthToken
 
 -- | FCM notification title
-newtype FCMNotificationTitle
-  = FCMNotificationTitle
-      { getFCMNotificationTitle :: Text
-      }
+newtype FCMNotificationTitle = FCMNotificationTitle
+  { getFCMNotificationTitle :: Text
+  }
   deriving (Show)
 
 deriveIdentifierInstances ''FCMNotificationTitle
 
 -- | FCM notification body
-newtype FCMNotificationBody
-  = FCMNotificationBody
-      { getFCMNotificationBody :: Text
-      }
+newtype FCMNotificationBody = FCMNotificationBody
+  { getFCMNotificationBody :: Text
+  }
   deriving (Show)
 
 deriveIdentifierInstances ''FCMNotificationBody
 
 -- | Notification image / icon path
-newtype FCMNotificationIconUrl
-  = FCMNotificationIconUrl
-      { getFCMNotificationIconUrl :: Text
-      }
+newtype FCMNotificationIconUrl = FCMNotificationIconUrl
+  { getFCMNotificationIconUrl :: Text
+  }
   deriving (Show)
 
 deriveIdentifierInstances ''FCMNotificationIconUrl
@@ -105,13 +100,12 @@ instance ToJSON FCMShowNotification where
   toJSON _ = "false"
 
 -- | FCM payload
-data FCMData
-  = FCMData
-      { _fcmNotificationType :: FCMNotificationType,
-        _fcmShowNotification :: FCMShowNotification,
-        _fcmEntityIds :: Text,
-        _fcmEntityType :: FCMEntityType
-      }
+data FCMData = FCMData
+  { _fcmNotificationType :: FCMNotificationType,
+    _fcmShowNotification :: FCMShowNotification,
+    _fcmEntityIds :: Text,
+    _fcmEntityType :: FCMEntityType
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMData)
@@ -125,13 +119,12 @@ type FCMHeaders = Map Text Text
 -- data FCMTarget = FCMTopic Text | FCMToken Text | FCMCondition Text
 
 -- | Represents a color in the RGBA color space
-data FCMColor
-  = FCMColor
-      { _fcmRed :: Int,
-        _fcmGreen :: Int,
-        _fcmBlue :: Int,
-        _fcmAlpha :: Int
-      }
+data FCMColor = FCMColor
+  { _fcmRed :: Int,
+    _fcmGreen :: Int,
+    _fcmBlue :: Int,
+    _fcmAlpha :: Int
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMColor)
@@ -139,10 +132,9 @@ $(makeLenses ''FCMColor)
 $(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMColor)
 
 -- | Options for features provided by the FCM SDK for Android.
-data FCMAndroidOptions
-  = FCMAndroidOptions
-      { _fcmdAnalyticsLabel :: !(Maybe Text)
-      }
+data FCMAndroidOptions = FCMAndroidOptions
+  { _fcmdAnalyticsLabel :: !(Maybe Text)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMAndroidOptions)
@@ -153,11 +145,10 @@ instance Default FCMAndroidOptions where
   def = FCMAndroidOptions Nothing
 
 -- | Options for features provided by the FCM SDK for iOS
-data FCMApnsOptions
-  = FCMApnsOptions
-      { _fcmaAnalyticsLabel :: !(Maybe Text),
-        _fcmaImage :: !(Maybe FCMNotificationIconUrl)
-      }
+data FCMApnsOptions = FCMApnsOptions
+  { _fcmaAnalyticsLabel :: !(Maybe Text),
+    _fcmaImage :: !(Maybe FCMNotificationIconUrl)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMApnsOptions)
@@ -168,11 +159,10 @@ instance Default FCMApnsOptions where
   def = FCMApnsOptions Nothing Nothing
 
 -- | Options for features provided by the FCM SDK for iOS
-data FCMWebpushOptions
-  = FCMWebpushOptions
-      { _fcmwAnalyticsLabel :: !(Maybe Text),
-        _fcmwLink :: !(Maybe Text)
-      }
+data FCMWebpushOptions = FCMWebpushOptions
+  { _fcmwAnalyticsLabel :: !(Maybe Text),
+    _fcmwLink :: !(Maybe Text)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMWebpushOptions)
@@ -183,12 +173,11 @@ instance Default FCMWebpushOptions where
   def = FCMWebpushOptions Nothing Nothing
 
 -- | Settings to control notification LED
-data FCMLightSettings
-  = FCMLightSettings
-      { _fcmLightOnDuration :: !(Maybe Text),
-        _fcmLightOffDuration :: !(Maybe Text),
-        _fcmColor :: !(Maybe FCMColor)
-      }
+data FCMLightSettings = FCMLightSettings
+  { _fcmLightOnDuration :: !(Maybe Text),
+    _fcmLightOffDuration :: !(Maybe Text),
+    _fcmColor :: !(Maybe FCMColor)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMLightSettings)
@@ -199,12 +188,11 @@ instance Default FCMLightSettings where
   def = FCMLightSettings Nothing Nothing Nothing
 
 -- | Basic notification template to use across all platforms
-data FCMNotification
-  = FCMNotification
-      { _fcmTitle :: !(Maybe FCMNotificationTitle),
-        _fcmBody :: !(Maybe FCMNotificationBody),
-        _fcmImage :: !(Maybe FCMNotificationIconUrl)
-      }
+data FCMNotification = FCMNotification
+  { _fcmTitle :: !(Maybe FCMNotificationTitle),
+    _fcmBody :: !(Maybe FCMNotificationBody),
+    _fcmImage :: !(Maybe FCMNotificationIconUrl)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMNotification)
@@ -215,30 +203,29 @@ instance Default FCMNotification where
   def = FCMNotification Nothing Nothing Nothing
 
 -- | Notification to send to android devices
-data FCMAndroidNotification
-  = FCMAndroidNotification
-      { _fcmdTitle :: !(Maybe FCMNotificationTitle),
-        _fcmdBody :: !(Maybe FCMNotificationBody),
-        _fcmdIcon :: !(Maybe FCMNotificationIconUrl),
-        _fcmdColor :: !(Maybe Text),
-        _fcmdSound :: !(Maybe Text),
-        _fcmdTag :: !(Maybe FCMNotificationType),
-        _fcmdClickAction :: !(Maybe Text),
-        _fcmdBodyLocKey :: !(Maybe Text),
-        _fcmdBodyLockArgs :: !(Maybe [Text]),
-        _fcmdTitleLocKey :: !(Maybe Text),
-        _fcmdTitleLockArgs :: !(Maybe [Text]),
-        _fcmdChannelId :: !(Maybe Text),
-        _fcmdTicker :: !(Maybe Text),
-        _fcmdSticky :: !(Maybe Bool),
-        _fcmdEventTime :: !(Maybe Text),
-        _fcmdLocalOnly :: !(Maybe Bool),
-        _fcmdNotificationPriority :: !(Maybe FCMNotificationPriority),
-        _fcmdDefaultSound :: !(Maybe Bool),
-        _fcmdDefalutVibrateTimings :: !(Maybe Bool),
-        _fcmdDefaultLightSettings :: !(Maybe Bool),
-        _fcmdVibrateTimings :: !(Maybe [Text])
-      }
+data FCMAndroidNotification = FCMAndroidNotification
+  { _fcmdTitle :: !(Maybe FCMNotificationTitle),
+    _fcmdBody :: !(Maybe FCMNotificationBody),
+    _fcmdIcon :: !(Maybe FCMNotificationIconUrl),
+    _fcmdColor :: !(Maybe Text),
+    _fcmdSound :: !(Maybe Text),
+    _fcmdTag :: !(Maybe FCMNotificationType),
+    _fcmdClickAction :: !(Maybe Text),
+    _fcmdBodyLocKey :: !(Maybe Text),
+    _fcmdBodyLockArgs :: !(Maybe [Text]),
+    _fcmdTitleLocKey :: !(Maybe Text),
+    _fcmdTitleLockArgs :: !(Maybe [Text]),
+    _fcmdChannelId :: !(Maybe Text),
+    _fcmdTicker :: !(Maybe Text),
+    _fcmdSticky :: !(Maybe Bool),
+    _fcmdEventTime :: !(Maybe Text),
+    _fcmdLocalOnly :: !(Maybe Bool),
+    _fcmdNotificationPriority :: !(Maybe FCMNotificationPriority),
+    _fcmdDefaultSound :: !(Maybe Bool),
+    _fcmdDefalutVibrateTimings :: !(Maybe Bool),
+    _fcmdDefaultLightSettings :: !(Maybe Bool),
+    _fcmdVibrateTimings :: !(Maybe [Text])
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMAndroidNotification)
@@ -251,17 +238,16 @@ instance Default FCMAndroidNotification where
      in FCMAndroidNotification z z z z z z z z z z z z z z z z z z z z z
 
 -- | Android specific options for messages sent through FCM connection server
-data FCMAndroidConfig
-  = FCMAndroidConfig
-      { _fcmdCollapseKey :: !(Maybe Text),
-        _fcmdPriority :: !(Maybe FCMAndroidMessagePriority),
-        _fcmdTtl :: !(Maybe Text),
-        _fcmdRestrictedPackageName :: !(Maybe Text),
-        _fcmdData :: !(Maybe FCMData),
-        _fcmdNotification :: !(Maybe FCMAndroidNotification),
-        _fcmdOptions :: !(Maybe FCMAndroidOptions),
-        _fcmdDirectBootOk :: !(Maybe Bool)
-      }
+data FCMAndroidConfig = FCMAndroidConfig
+  { _fcmdCollapseKey :: !(Maybe Text),
+    _fcmdPriority :: !(Maybe FCMAndroidMessagePriority),
+    _fcmdTtl :: !(Maybe Text),
+    _fcmdRestrictedPackageName :: !(Maybe Text),
+    _fcmdData :: !(Maybe FCMData),
+    _fcmdNotification :: !(Maybe FCMAndroidNotification),
+    _fcmdOptions :: !(Maybe FCMAndroidOptions),
+    _fcmdDirectBootOk :: !(Maybe Bool)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMAndroidConfig)
@@ -274,12 +260,11 @@ instance Default FCMAndroidConfig where
      in FCMAndroidConfig z z z z z z z z
 
 -- | Apple Push Notification Service specific options
-data FCMApnsConfig
-  = FCMApnsConfig
-      { _fcmaHeaders :: !(Maybe FCMHeaders),
-        _fcmaPayload :: !(Maybe Value),
-        _fcmaOptions :: !(Maybe FCMApnsOptions)
-      }
+data FCMApnsConfig = FCMApnsConfig
+  { _fcmaHeaders :: !(Maybe FCMHeaders),
+    _fcmaPayload :: !(Maybe Value),
+    _fcmaOptions :: !(Maybe FCMApnsOptions)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMApnsConfig)
@@ -290,13 +275,12 @@ instance Default FCMApnsConfig where
   def = FCMApnsConfig Nothing Nothing Nothing
 
 -- | Webpush protocol specific options
-data FCMWebpushConfig
-  = FCMWebpushConfig
-      { _fcmwHeaders :: !(Maybe FCMHeaders),
-        _fcmwData :: !(Maybe FCMData),
-        _fcmwNotification :: !(Maybe Value),
-        _fcmwOptions :: !(Maybe FCMWebpushOptions)
-      }
+data FCMWebpushConfig = FCMWebpushConfig
+  { _fcmwHeaders :: !(Maybe FCMHeaders),
+    _fcmwData :: !(Maybe FCMData),
+    _fcmwNotification :: !(Maybe Value),
+    _fcmwOptions :: !(Maybe FCMWebpushOptions)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMWebpushConfig)
@@ -307,18 +291,17 @@ instance Default FCMWebpushConfig where
   def = FCMWebpushConfig Nothing Nothing Nothing Nothing
 
 -- | Message to send by Firebase Cloud Messaging Service
-data FCMMessage
-  = FCMMessage
-      { _fcmToken :: !(Maybe FCMRecipientToken),
-        _fcmTopic :: !(Maybe Text),
-        _fcmCondition :: !(Maybe Text),
-        _fcmData :: !(Maybe FCMData),
-        _fcmNotification :: !(Maybe FCMNotification),
-        _fcmAndroid :: !(Maybe FCMAndroidConfig),
-        _fcmWebpush :: !(Maybe FCMWebpushConfig),
-        _fcmApns :: !(Maybe FCMApnsConfig),
-        _fcmOptions :: !(Maybe FCMAndroidOptions)
-      }
+data FCMMessage = FCMMessage
+  { _fcmToken :: !(Maybe FCMRecipientToken),
+    _fcmTopic :: !(Maybe Text),
+    _fcmCondition :: !(Maybe Text),
+    _fcmData :: !(Maybe FCMData),
+    _fcmNotification :: !(Maybe FCMNotification),
+    _fcmAndroid :: !(Maybe FCMAndroidConfig),
+    _fcmWebpush :: !(Maybe FCMWebpushConfig),
+    _fcmApns :: !(Maybe FCMApnsConfig),
+    _fcmOptions :: !(Maybe FCMAndroidOptions)
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMMessage)
@@ -330,10 +313,9 @@ instance Default FCMMessage where
     let z = Nothing
      in FCMMessage z z z z z z z z z
 
-newtype FCMRequest
-  = FCMRequest
-      { _fcmeMessage :: FCMMessage
-      }
+newtype FCMRequest = FCMRequest
+  { _fcmeMessage :: FCMMessage
+  }
   deriving (Eq, Show)
 
 $(makeLenses ''FCMRequest)
@@ -366,12 +348,11 @@ data FCMErrorCode
   | UNAUTHENTICATED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
-data FCMError
-  = FCMError
-      { _fcmerrCode :: Int,
-        _fcmerrStatus :: FCMErrorCode,
-        _fcmerrMessage :: !Text
-      }
+data FCMError = FCMError
+  { _fcmerrCode :: Int,
+    _fcmerrStatus :: FCMErrorCode,
+    _fcmerrMessage :: !Text
+  }
   deriving (Show, Eq, Read, Generic)
 
 $(makeLenses ''FCMError)
@@ -379,11 +360,10 @@ $(makeLenses ''FCMError)
 $(deriveFromJSON (aesonPrefix snakeCase) ''FCMError)
 
 -- | Message to send by Firebase Cloud Messaging Service
-data FCMResponse
-  = FCMResponse
-      { _fcmName :: Maybe Text,
-        _fcmerrError :: Maybe FCMError
-      }
+data FCMResponse = FCMResponse
+  { _fcmName :: Maybe Text,
+    _fcmerrError :: Maybe FCMError
+  }
   deriving (Show, Eq, Read, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMResponse)
