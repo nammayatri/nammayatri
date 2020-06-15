@@ -63,7 +63,7 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Nothing -> return Nothing
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
   notifyTripDataToGateway (ProductsId productId)
-  notifyCancelReq productId _status
+  notifyCancelReq updatedProd _status
   return $ updatedProd {Storage._info = infoObj}
 
 notifyTripDataToGateway :: ProductsId -> L.Flow ()
@@ -167,10 +167,14 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
               _toLocation = to
             }
 
-notifyCancelReq :: Text -> Maybe Product.ProductsStatus -> L.Flow ()
-notifyCancelReq prodId status = do
+notifyCancelReq :: Product.Products -> Maybe Product.ProductsStatus -> L.Flow ()
+notifyCancelReq prod status = do
   case status of
     Just k -> case k of
-      Product.CANCELLED -> BP.notifyCancelToGateway prodId
+      Product.CANCELLED -> do
+        admins <-
+          QP.findAllByOrgIds [SP.ADMIN] [Product._organizationId prod]
+        BP.notifyCancelToGateway (_getProductsId $ prod ^. #_id)
+        BP.notifyTransportersOnCancel prod admins
       _ -> return ()
     Nothing -> return ()

@@ -482,3 +482,17 @@ notifyTransportersOnConfirm c =
         }
     title = "Customer has confimed a ride"
     body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+
+notifyTransportersOnCancel :: Products -> [Person] -> L.Flow ()
+notifyTransportersOnCancel p =
+  traverse_ (FCM.notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCMData
+        { _fcmNotificationType = "CANCEL_REQUEST",
+          _fcmShowNotification = "true",
+          _fcmEntityIds = show $ _getProductsId $ p ^. #_id,
+          _fcmEntityType = "Organization"
+        }
+    title = "Driver has cancelled the ride"
+    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (Product._startTime p)
