@@ -107,3 +107,7 @@ instance Transform UpdateVehicleReq SV.Vehicle where
         }
 
 type UpdateVehicleRes = CreateVehicleRes
+
+data DeleteVehicleRes = DeleteVehicleRes
+  {vehicleId :: Text}
+  deriving (Generic, ToJSON, ToSchema)

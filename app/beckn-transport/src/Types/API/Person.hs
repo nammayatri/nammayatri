@@ -242,4 +242,7 @@ data ListPersonRes = ListPersonRes
 
 data PersonRes = PersonRes
   {user :: SP.Person}
+
+data DeletePersonRes = DeletePersonRes
+  {personId :: Text}
   deriving (Generic, ToJSON, ToSchema)

@@ -177,3 +177,10 @@ findByAnyOf idM mobileM emailM identifierM =
           &&. (B.val_ (isNothing mobileM) ||. _mobileNumber ==. B.val_ mobileM)
           &&. (B.val_ (isNothing emailM) ||. _email ==. B.val_ emailM)
       )
+
+deleteById :: PersonId -> L.Flow ()
+deleteById id = do
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Person {..} = (_id ==. B.val_ id)

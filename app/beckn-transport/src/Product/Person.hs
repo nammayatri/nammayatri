@@ -69,6 +69,17 @@ getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
 
+deletePerson :: Text -> Maybe Text -> FlowHandler DeletePersonRes
+deletePerson personId token = withFlowHandler $ do
+  orgId <- validate token
+  person <- QP.findPersonById (PersonId personId)
+  if person ^. #_organizationId == Just orgId
+    then do
+      QP.deleteById (PersonId personId)
+      QR.deleteByEntitiyId personId
+      return $ DeletePersonRes personId
+    else L.throwException $ err401 {errBody = "Unauthorized"}
+
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
 verifyAdmin user = do
