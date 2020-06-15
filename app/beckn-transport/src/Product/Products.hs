@@ -12,7 +12,7 @@ import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.Products as Storage
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
-import Beckn.Utils.Common (encodeToText, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, fromMaybeM400, withFlowHandler)
 import Beckn.Utils.Extra (headMaybe)
 import qualified Data.Accessor as Lens
 import Data.Aeson
@@ -59,9 +59,11 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Just driverId -> QP.findPersonById (PersonId driverId)
     Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
   vehicleInfo <- case (updatedProd ^. #_udf3) of
-    Just vehicleId -> VQ.findVehicleById (VehicleId vehicleId)
-    Nothing -> return Nothing
-  infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
+    Just vehicleId ->
+      VQ.findVehicleById (VehicleId vehicleId)
+        >>= fromMaybeM400 "VEHICLE NOT FOUND"
+    Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
+  infoObj <- updateInfo (ProductsId productId) (Just driverInfo) (Just vehicleInfo)
   notifyTripDataToGateway (ProductsId productId)
   notifyCancelReq productId _status
   return $ updatedProd {Storage._info = infoObj}
