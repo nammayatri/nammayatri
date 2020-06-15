@@ -52,19 +52,21 @@ getPerson :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text 
 getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth token
   user <- QP.findPersonById (PersonId _EntityId)
+  L.logInfo "************" (show user)
   person <- case (idM, mobileM, emailM, identifierM) of
     (Nothing, Nothing, Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
     _ ->
       QP.findByAnyOf idM mobileM emailM identifierM
         >>= fromMaybeM400 "PERSON NOT FOUND"
+  L.logInfo "$$$$$$$$$$$$$$" (show person)
   hasAccess user person
   return $ PersonRes person
   where
     hasAccess user person =
       whenM
         ( return $
-            (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
-              && (user ^. #_organizationId) /= (person ^. #_organizationId)
+            ((user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id))
+              || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
