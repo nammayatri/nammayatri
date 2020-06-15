@@ -11,7 +11,6 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import qualified Beckn.Utils.Defaults as Default
 import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
@@ -50,7 +49,7 @@ initiateFlow req = do
     Nothing -> do
       token <- makeSession req entityId SR.USER Nothing
       QR.create token
-      sendOTP (Default.countryCode <> mobileNumber) (SR._authValueHash token)
+      sendOTP mobileNumber (SR._authValueHash token)
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -83,7 +82,7 @@ makePerson req = do
         _identifierType = SP.MOBILENUMBER,
         _email = Nothing,
         _mobileNumber = Just $ req ^. #_identifier,
-        _mobileCountryCode = Just Default.countryCode,
+        _mobileCountryCode = Nothing,
         _identifier = Just $ req ^. #_identifier,
         _rating = Nothing,
         _verified = False,
@@ -201,7 +200,7 @@ reInitiateLogin tokenId req =
     void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
-        sendOTP (Default.countryCode <> req ^. Lens.identifier) _authValueHash
+        sendOTP (req ^. Lens.identifier) _authValueHash
         QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}
