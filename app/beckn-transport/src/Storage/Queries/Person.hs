@@ -78,12 +78,12 @@ complementVal l
 
 findByMobileNumber ::
   Text -> L.Flow (Maybe Storage.Person)
-findByMobileNumber mobileNumber =
+findByMobileNumber identifier =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-      _mobileNumber ==. B.val_ (Just mobileNumber)
+      _mobileNumber ==. B.val_ (Just identifier)
 
 updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
