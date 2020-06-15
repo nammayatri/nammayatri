@@ -99,6 +99,15 @@ type PersonAPIs =
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
+           :<|> Header "authorization" Text
+             :> QueryParam "personId" Text
+             :> QueryParam "mobileNumber" Text
+             :> QueryParam "email" Text
+             :> QueryParam "identifier" Text
+             :> Get '[JSON] PersonRes
+           :<|> Capture "personId" Text
+             :> Header "authorization" Text
+             :> Delete '[JSON] DeletePersonRes
        )
 
 personFlow :: FlowServer PersonAPIs
@@ -106,6 +115,8 @@ personFlow =
   Person.createPerson
     :<|> Person.listPerson
     :<|> Person.updatePerson
+    :<|> Person.getPerson
+    :<|> Person.deletePerson
 
 -- Following is vehicle flow
 type VehicleAPIs =
@@ -122,6 +133,13 @@ type VehicleAPIs =
              :> Header "authorization" Text
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
+           :<|> Capture "vehicleId" Text
+             :> Header "authorization" Text
+             :> Delete '[JSON] DeleteVehicleRes
+           :<|> Header "authorization" Text
+             :> QueryParam "registrationNo" Text
+             :> QueryParam "vehicleId" Text
+             :> Get '[JSON] CreateVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPIs
@@ -129,6 +147,8 @@ vehicleFlow =
   Vehicle.createVehicle
     :<|> Vehicle.listVehicles
     :<|> Vehicle.updateVehicle
+    :<|> Vehicle.deleteVehicle
+    :<|> Vehicle.getVehicle
 
 -- Following is organization creation
 type OrganizationAPIs =
@@ -138,22 +158,22 @@ type OrganizationAPIs =
            :<|> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
-           :<|> Capture "orgId" Text
-           :> Header "authorization" Text
-           :> ReqBody '[JSON] UpdateTransporterReq
-           :> Post '[JSON] TransporterRec
            :<|> "gateway"
            :> Header "authorization" Text
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] GatewayRes
+           :<|> Capture "orgId" Text
+           :> Header "authorization" Text
+           :> ReqBody '[JSON] UpdateTransporterReq
+           :> Post '[JSON] TransporterRec
        )
 
 organizationFlow :: FlowServer OrganizationAPIs
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.createTransporter
-    :<|> Transporter.updateTransporter
     :<|> Transporter.createGateway
+    :<|> Transporter.updateTransporter
 
 -----------------------------
 -------- Case Flow----------
@@ -193,6 +213,7 @@ caseProductFlow =
 type ProductAPIs =
   "product"
     :> ( Header "authorization" Text
+           :> QueryParam "vehicleId" Text
            :> Get '[JSON] ProdListRes
            :<|> Header "authorization" Text
              :> Capture "productId" Text

@@ -116,6 +116,16 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: CRON_AUTH_KEY
+        - name: DEFAULT_CASE_EXPIRY
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-app-backend-configs
+              key: DEFAULT_CASE_EXPIRY
+        - name: DEFAULT_CONFIRM_EXPIRY
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-app-backend-configs
+              key: DEFAULT_CONFIRM_EXPIRY
         - name: FCM_JSON_PATH
           value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION

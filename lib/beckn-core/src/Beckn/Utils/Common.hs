@@ -3,6 +3,7 @@
 module Beckn.Utils.Common where
 
 import qualified Beckn.External.FCM.Types as FCM
+import Beckn.External.FCM.Utils (createFCMTokenRefreshThread)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
@@ -88,7 +89,12 @@ encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 authenticate :: Maybe CronAuthKey -> L.Flow ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let decodedAuthM = base64Decode maybeAuth
+  let authHeader = (T.stripPrefix "Basic ") =<< maybeAuth
+      decodedAuthM =
+        DT.decodeUtf8
+          <$> ( (rightToMaybe . DBB.decode . DT.encodeUtf8)
+                  =<< authHeader
+              )
   case (decodedAuthM, keyM) of
     (Just auth, Just key) -> do
       when ((T.pack key) /= auth) throw401
@@ -107,3 +113,9 @@ maskPerson person =
       if length token > 6
         then T.take 3 token <> "..." <> T.takeEnd 3 token
         else "..."
+
+-- | Prepare common applications options
+prepareAppOptions :: L.Flow ()
+prepareAppOptions =
+  -- FCM token ( options key = FCMTokenKey )
+  createFCMTokenRefreshThread

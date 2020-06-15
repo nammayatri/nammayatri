@@ -91,7 +91,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-master
+        host: beckn-app-backend-sandbox
     timeout: 40s
   - match:
     - uri:
@@ -100,27 +100,27 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-master
+        host: beckn-transport-sandbox
         port:
           number: 8014
     timeout: 40s
   - match:
     - uri:
-        prefix: /sandbox/app/
+        prefix: /dev/app/
     rewrite:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-staging
+        host: beckn-app-backend-master
     timeout: 40s
   - match:
     - uri:
-        prefix: /sandbox/transport/
+        prefix: /dev/transport/
     rewrite:
       uri: /
     route:
     - destination:
-        host: beckn-transport-staging
+        host: beckn-transport-master
         port:
           number: 8014
     timeout: 40s

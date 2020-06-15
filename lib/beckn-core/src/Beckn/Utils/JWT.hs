@@ -4,6 +4,7 @@
 module Beckn.Utils.JWT where
 
 import Control.Applicative
+import Control.Exception (SomeException, displayException, try)
 import qualified Data.Aeson as J
 import Data.Aeson.Casing
 import Data.Aeson.TH
@@ -17,13 +18,16 @@ import Data.String
 import qualified Data.Text as T
 import Data.Time.Clock
 import Data.Time.Clock.POSIX
-import EulerHS.Prelude hiding (exp, fromRight)
+import EulerHS.Prelude hiding (exp, fromRight, try)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Network.HTTP.Types
 import System.Environment
 import Web.JWT
 
+-- | Google cloud service account json file format
+-- it contains key id, private key and other data needed to get JWT
+-- https://cloud.google.com/compute/docs/access/service-accounts
 data ServiceAccount = ServiceAccount
   { _saType :: !T.Text,
     _saProjectId :: !T.Text,
@@ -40,6 +44,7 @@ data ServiceAccount = ServiceAccount
 
 $(deriveFromJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
+-- | JWT body format, is is used for retrieving JWT token
 data JWTBody = JWTBody
   { _jwtAssertion :: !T.Text,
     _jwtGrantType :: !T.Text
@@ -48,24 +53,30 @@ data JWTBody = JWTBody
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWTBody)
 
+-- | JWT token returned from token url
 data JWToken = JWToken
   { _jwtAccessToken :: !T.Text,
     _jwtExpiresIn :: Integer,
-    _jwtTokenType :: !Text
+    _jwtTokenType :: !T.Text
   }
   deriving (Show, Eq, Generic)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''JWToken)
+$(deriveJSON (aesonPrefix snakeCase) ''JWToken)
 
+-- | Load google service account JSON file
+-- A path to the file is kept in system env variable "FCM_JSON_PATH"
 getJSON :: IO (Either String BL.ByteString)
 getJSON = do
   saFileName <- lookupEnv "FCM_JSON_PATH"
   case saFileName of
-    Nothing -> pure $ Left "FCM service account json not found"
+    Nothing -> pure $ Left "FCM_JSON_PATH is not set, ignoring"
     Just f -> do
-      bs <- BL.readFile f
-      pure $ Right bs
+      res <- try (BL.readFile f)
+      pure $ case res of
+        Left (e :: SomeException) -> Left $ "Error on reading FCM json file [" <> f <> "]: " <> displayException e
+        Right content -> Right content
 
+-- | Load and parse service account information
 getServiceAccount :: IO (Either String ServiceAccount)
 getServiceAccount = do
   res <- getJSON
@@ -73,6 +84,9 @@ getServiceAccount = do
     Left err -> Left err
     Right json -> J.eitherDecode json
 
+-- | Prepare claims and assertion needed for getting JWT
+-- It is possible to add user-defined claims using the additionalClaims parameter
+-- Returns a pair of claims and assertion of these claims
 createJWT :: ServiceAccount -> [(Text, Value)] -> IO (Either String (JWTClaimsSet, Text))
 createJWT sa additionalClaims = do
   let iss = stringOrURI . _saClientEmail $ sa
@@ -83,7 +97,7 @@ createJWT sa additionalClaims = do
           { typ = Just "JWT",
             cty = Nothing,
             alg = Just RS256,
-            kid = Just $ _saPrivateKeyId sa
+            kid = Just $ _saPrivateKeyId sa -- key id from sa json file
           }
   let mkey = readRsaSecret . C8.pack $ _saPrivateKey sa
   case mkey of
@@ -94,14 +108,15 @@ createJWT sa additionalClaims = do
       exp <- numericDate . (+ 3600) <$> getPOSIXTime
       let cs =
             mempty
-              { exp = exp,
-                iat = iat,
-                iss = iss,
-                aud = aud,
-                unregisteredClaims = unregisteredClaims
+              { exp = exp, -- Expired at
+                iat = iat, -- Issued at
+                iss = iss, -- Issuer (client email)
+                aud = aud, -- Audience (endpoints where JWT will be used)
+                unregisteredClaims = unregisteredClaims -- additional claims
               }
-      pure $ Right (cs, (encodeSigned key jwtHeader cs))
+      pure $ Right (cs, encodeSigned key jwtHeader cs)
 
+-- | Prepare a request to the token URL
 jwtRequest :: T.Text -> BL.ByteString -> IO Request
 jwtRequest tokenUri body = do
   req <- parseRequest $ T.unpack tokenUri
@@ -112,7 +127,9 @@ jwtRequest tokenUri body = do
         requestBody = RequestBodyLBS body
       }
 
-refreshToken :: IO (Either String Text)
+-- | Geto or refresh JWT token
+-- Note at the moment it is used with FCM service so scope is hardcoded
+refreshToken :: IO (Either String JWToken)
 refreshToken = do
   sAccount <- getServiceAccount
   case sAccount of
@@ -134,29 +151,42 @@ refreshToken = do
           let rBody = J.eitherDecode $ responseBody res
           case rBody of
             Left err -> pure $ Left err
-            Right respBody -> do
-              let token = _jwtTokenType respBody <> T.pack " " <> _jwtAccessToken respBody
-              setEnv "FCM_AUTH_TOKEN" $ T.unpack token
-              setEnv "FCM_AUTH_TOKEN_EXPIRY" $ show $ getExpiry issuedAt (_jwtExpiresIn respBody)
-              pure $ Right token
+            Right respBody@JWToken {..} -> do
+              let expiry = getExpiry issuedAt _jwtExpiresIn
+              pure $
+                Right
+                  respBody
+                    { _jwtExpiresIn = expiry
+                    }
 
+-- | Get token expiration date
 getExpiry :: Maybe NumericDate -> Integer -> Integer
 getExpiry Nothing expiresIn = expiresIn
 getExpiry (Just d) expiresIn =
   expiresIn + (round $ nominalDiffTimeToSeconds (secondsSinceEpoch d))
 
-getToken :: IO (Either String Text)
-getToken = do
-  token <- lookupEnv "FCM_AUTH_TOKEN"
-  expiry <- lookupEnv "FCM_AUTH_TOKEN_EXPIRY"
-  case token of
-    Nothing -> refreshToken
-    Just t ->
-      case expiry of
-        Nothing -> refreshToken
-        Just e -> do
-          let expInt = read e :: Integer
-          curInt <- round <$> getPOSIXTime
-          if curInt > expInt - 60
-            then refreshToken
-            else pure . Right $ T.pack t
+-- | JWT token validation status
+data JWTValidity
+  = JWTValid Integer -- valid and expires in X seconds
+  | JWTInvalid -- invalid (bad signautre)
+  | JWTExpired Integer -- expired X seconds ago
+  deriving (Show, Eq, Generic)
+
+$(deriveJSON (aesonPrefix snakeCase) ''JWTValidity)
+
+-- | Check token validity
+isValid :: JWToken -> IO JWTValidity
+isValid token = do
+  let expiry = _jwtExpiresIn token
+  curInt <- round <$> getPOSIXTime
+  -- check a signature here, not sure it is possible,
+  -- for this we'd need to get a "public" key which is stored in google
+  -- PS we can keep claims in options, this will allow us
+  -- recreating the token and verifying it
+  let valid = True
+  let expired = curInt > expiry
+  let diff = abs $ curInt - expiry
+  pure $ case (expired, valid) of
+    (True, _) -> JWTExpired diff
+    (_, True) -> JWTValid diff
+    _ -> JWTInvalid

@@ -76,16 +76,6 @@ complementVal l
   | (null l) = B.val_ True
   | otherwise = B.val_ False
 
-findByIdentifier ::
-  Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
-findByIdentifier idType mb =
-  DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
-  where
-    predicate Storage.Person {..} =
-      _identifierType ==. B.val_ idType
-        &&. _mobileNumber ==. B.val_ (Just mb)
-
 findByMobileNumber ::
   Text -> L.Flow (Maybe Storage.Person)
 findByMobileNumber identifier =
@@ -175,3 +165,22 @@ update id status verified deviceTokenM = do
           ]
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
+
+findByAnyOf :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow (Maybe Storage.Person)
+findByAnyOf idM mobileM emailM identifierM =
+  DB.findOne dbTable (predicate idM mobileM emailM identifierM)
+    >>= either DB.throwDBError pure
+  where
+    predicate idM mobileM emailM identifierM Storage.Person {..} =
+      ( (B.val_ (isNothing idM) ||. _id ==. B.val_ (PersonId (fromMaybe "DONT_MATCH" idM)))
+          &&. (B.val_ (isNothing identifierM) ||. _identifier ==. B.val_ identifierM)
+          &&. (B.val_ (isNothing mobileM) ||. _mobileNumber ==. B.val_ mobileM)
+          &&. (B.val_ (isNothing emailM) ||. _email ==. B.val_ emailM)
+      )
+
+deleteById :: PersonId -> L.Flow ()
+deleteById id = do
+  DB.delete dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.Person {..} = (_id ==. B.val_ id)
