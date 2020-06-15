@@ -2,8 +2,8 @@
 
 module Product.Search where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -252,14 +252,16 @@ notifyOnSearchCb personId caseId = do
   case person of
     Just p -> do
       let notificationData =
-            FCMData
-              { _fcmNotificationType = "SEARCH_CALLBACK",
-                _fcmShowNotification = "true",
+            FCM.FCMData
+              { _fcmNotificationType = FCM.SEARCH_CALLBACK,
+                _fcmShowNotification = FCM.SHOW,
                 _fcmEntityIds = show $ _getCaseId caseId,
-                _fcmEntityType = "Case"
+                _fcmEntityType = FCM.Case
               }
-          title = "New ride options available!"
-          body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
+          title = FCM.FCMNotificationTitle $ T.pack "New ride options available!"
+          body =
+            FCM.FCMNotificationBody $
+              T.pack "You have a new reply for your ride request! Head to the beckn app for details."
       FCM.notifyPerson title body notificationData p
       pure ()
     _ -> pure ()
