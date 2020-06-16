@@ -9,7 +9,11 @@ data:
   MYSQL_DB: "atlas_app02"
   REDIS_HOST: "ec-redis-beta-001.bfw4iw.0001.apse1.cache.amazonaws.com"
   REDIS_PORT: "6379"
-  REDIS_DB: "20"
+  REDIS_DB: "1"
+  REDIS_AUTH: "Nothing" # fix this later
+  REDIS_MAX_CONNECTIONS: "50"
+  REDIS_MAX_IDLE_TIME: "30"
+  REDIS_CONNECTION_TIMEOUT: "100"
   # GATEWAY_HOST: "beckn-transport.atlas" ## Changed based on deployment variant (dev/sandbox)
   GATEWAY_PORT: "8014"
   GATEWAY_PATH: "/v1"
