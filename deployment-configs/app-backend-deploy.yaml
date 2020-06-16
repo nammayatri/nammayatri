@@ -81,6 +81,26 @@ spec:
             configMapKeyRef:
               name: beckn-app-backend-configs
               key: REDIS_DB
+        - name: REDIS_AUTH
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-app-backend-configs
+              key: REDIS_AUTH
+        - name: REDIS_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-app-backend-configs
+              key: REDIS_MAX_CONNECTIONS
+        - name: REDIS_MAX_IDLE_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-app-backend-configs
+              key: REDIS_MAX_IDLE_TIME
+        - name: REDIS_CONNECTION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-app-backend-configs
+              key: REDIS_CONNECTION_TIMEOUT
         #------ SMS provider configs ------#
         - name: SMS_GATEWAY_USERNAME
           valueFrom:
