@@ -239,3 +239,11 @@ instance FromJSON ListPersonReq where
 data ListPersonRes = ListPersonRes
   {users :: [SP.Person]}
   deriving (Generic, ToJSON, ToSchema)
+
+data PersonRes = PersonRes
+  {user :: SP.Person}
+  deriving (Generic, ToJSON, ToSchema)
+
+data DeletePersonRes = DeletePersonRes
+  {personId :: Text}
+  deriving (Generic, ToJSON, ToSchema)

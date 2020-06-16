@@ -11,7 +11,7 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
-import Beckn.Utils.Common (encodeToText, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, fromMaybeM400, withFlowHandler)
 import Beckn.Utils.Extra (headMaybe)
 import qualified Data.Accessor as Lens
 import Data.Aeson
@@ -60,9 +60,11 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Just driverId -> PersQ.findPersonById (PersonId driverId)
     Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
   vehicleInfo <- case (updatedProd ^. #_udf3) of
-    Just vehicleId -> VQ.findVehicleById (VehicleId vehicleId)
-    Nothing -> return Nothing
-  infoObj <- updateInfo (ProductsId productId) (Just driverInfo) vehicleInfo
+    Just vehicleId ->
+      VQ.findVehicleById (VehicleId vehicleId)
+        >>= fromMaybeM400 "VEHICLE NOT FOUND"
+    Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
+  infoObj <- updateInfo (ProductsId productId) (Just driverInfo) (Just vehicleInfo)
   notifyTripDataToGateway (ProductsId productId)
   notifyCancelReq productId _status
   return $ updatedProd {Product._info = infoObj}
@@ -112,14 +114,25 @@ updateTrip productId k = do
       return ()
     _ -> return ()
 
-listRides :: Maybe Text -> FlowHandler ProdListRes
-listRides regToken = withFlowHandler $ do
+listRides :: Maybe Text -> Maybe Text -> FlowHandler ProdListRes
+listRides regToken vehicleIdM = withFlowHandler $ do
   SR.RegistrationToken {..} <- RQ.verifyAuth regToken
   person <- PersQ.findPersonById (PersonId _EntityId)
-  rideList <- PQ.findAllByAssignedTo $ _getPersonId (SP._id person)
+  whenM (validateOrg vehicleIdM person) $ L.throwException $ err401 {errBody = "Unauthorized"}
+  rideList <- case vehicleIdM of
+    Just _ -> PQ.findAllByVehicleId vehicleIdM
+    Nothing -> PQ.findAllByAssignedTo $ _getPersonId (SP._id person)
   locList <- LQ.findAllByLocIds (catMaybes (Product._fromLocation <$> rideList)) (catMaybes (Product._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
+    validateOrg vehicleM person = do
+      case vehicleM of
+        Just vehicleId -> do
+          vehicle <- VQ.findVehicleById (VehicleId vehicleId)
+          if SP._organizationId person /= Nothing && (SP._organizationId person == (V._organizationId <$> vehicle))
+            then return False
+            else return True
+        Nothing -> return False
     joinByIds locList ride =
       case find (\x -> (Product._fromLocation ride == Just (_getLocationId (Location._id x)))) locList of
         Just k -> buildResponse k

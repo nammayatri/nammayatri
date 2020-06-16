@@ -81,6 +81,26 @@ spec:
             configMapKeyRef:
               name: beckn-transport-configs
               key: REDIS_DB
+        - name: REDIS_AUTH
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: REDIS_AUTH
+        - name: REDIS_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: REDIS_MAX_CONNECTIONS
+        - name: REDIS_MAX_IDLE_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: REDIS_MAX_IDLE_TIME
+        - name: REDIS_CONNECTION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: REDIS_CONNECTION_TIMEOUT
         #------ SMS provider configs ------#
         - name: SMS_GATEWAY_USERNAME
           valueFrom:
@@ -101,16 +121,26 @@ spec:
               name: beckn-transport-configs
               key: BECKN_GATEWAY_PORT
         #------ General configs ------#
-        - name: USE_FAKE_SMS
-          valueFrom:
-            configMapKeyRef:
-              name: beckn-transport-configs
-              key: USE_FAKE_SMS
+        # - name: USE_FAKE_SMS
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: beckn-transport-configs
+        #       key: USE_FAKE_SMS
         - name: CRON_AUTH_KEY
           valueFrom:
             secretKeyRef:
               name: app-secrets
               key: CRON_AUTH_KEY
+        - name: DEFAULT_CASE_EXPIRY
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: DEFAULT_CASE_EXPIRY
+        - name: DEFAULT_CONFIRM_EXPIRY
+          valueFrom:
+            configMapKeyRef:
+              name: beckn-transport-configs
+              key: DEFAULT_CONFIRM_EXPIRY
         - name: FCM_JSON_PATH
           value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
         image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION

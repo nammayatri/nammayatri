@@ -2,8 +2,8 @@
 
 module Product.Registration where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValuesFirst.Flow as Sms
 import qualified Beckn.External.MyValuesFirst.Types as Sms
 import Beckn.Types.App
@@ -41,20 +41,27 @@ initiateFlow req = do
       >>= maybe (createPerson req) pure
   let entityId = _getPersonId . SP._id $ person
   useFakeOtpM <- L.runIO $ lookupEnv "USE_FAKE_SMS"
-  regToken <- makeSession req entityId SR.USER (T.pack <$> useFakeOtpM)
-  QR.create regToken
-  --  sendOTP mobileNumber (SR._authValueHash regToken)
+  regToken <- case useFakeOtpM of
+    Just _ -> do
+      token <- makeSession req entityId SR.USER (T.pack <$> useFakeOtpM)
+      QR.create token
+      return token
+    Nothing -> do
+      token <- makeSession req entityId SR.USER Nothing
+      QR.create token
+      sendOTP mobileNumber (SR._authValueHash token)
+      return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
       notificationData =
-        FCMData
-          { _fcmNotificationType = "REGISTRATION_APPROVED",
-            _fcmShowNotification = "true",
+        FCM.FCMData
+          { _fcmNotificationType = FCM.REGISTRATION_APPROVED,
+            _fcmShowNotification = FCM.SHOW,
             _fcmEntityIds = show regToken,
-            _fcmEntityType = "Organization"
+            _fcmEntityType = FCM.Organization
           }
-      title = "Registration Completed!"
-      body = "You can now start accepting rides!"
+      title = FCM.FCMNotificationTitle $ T.pack "Registration Completed!"
+      body = FCM.FCMNotificationBody $ T.pack "You can now start accepting rides!"
   FCM.notifyPerson title body notificationData person
   return $ InitiateLoginRes {attempts, tokenId}
 
