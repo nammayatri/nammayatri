@@ -4,6 +4,7 @@ module App where
 
 import qualified App.Server as App
 import qualified Beckn.Types.App as App
+import Beckn.Utils.Common (prepareAppOptions)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -50,8 +51,11 @@ runAppBackend' port settings = do
     try (R.runFlow flowRt prepare) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
-        putStrLn @String
-          ("Runtime created. Starting server at port " <> show port)
+        putStrLn @String "Initializing Options..."
+        try (R.runFlow flowRt prepareAppOptions) >>= \case
+          Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+          Right _ ->
+            putStrLn @String ("Runtime created. Starting server at port " <> show port)
         runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 appExceptionResponse :: SomeException -> Response

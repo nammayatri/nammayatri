@@ -48,6 +48,27 @@ listPerson token req = withFlowHandler $ do
   orgId <- validate token
   ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [orgId]
 
+getPerson :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
+getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyAuth token
+  user <- QP.findPersonById (PersonId _EntityId)
+  person <- case (idM, mobileM, emailM, identifierM) of
+    (Nothing, Nothing, Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
+    _ ->
+      QP.findByAnyOf idM mobileM emailM identifierM
+        >>= fromMaybeM400 "PERSON NOT FOUND"
+  hasAccess user person
+  return $ PersonRes person
+  where
+    hasAccess user person =
+      whenM
+        ( return $
+            ((user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id))
+              || (user ^. #_organizationId) /= (person ^. #_organizationId)
+        )
+        $ L.throwException
+        $ err401 {errBody = "Unauthorized"}
+
 deletePerson :: Text -> Maybe Text -> FlowHandler DeletePersonRes
 deletePerson personId token = withFlowHandler $ do
   orgId <- validate token

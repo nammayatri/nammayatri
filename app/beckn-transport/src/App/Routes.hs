@@ -94,6 +94,12 @@ type PersonAPIs =
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
+           :<|> Header "authorization" Text
+             :> QueryParam "personId" Text
+             :> QueryParam "mobileNumber" Text
+             :> QueryParam "email" Text
+             :> QueryParam "identifier" Text
+             :> Get '[JSON] PersonRes
            :<|> Capture "personId" Text
              :> Header "authorization" Text
              :> Delete '[JSON] DeletePersonRes
@@ -104,6 +110,7 @@ personFlow =
   Person.createPerson
     :<|> Person.listPerson
     :<|> Person.updatePerson
+    :<|> Person.getPerson
     :<|> Person.deletePerson
 
 -- Following is vehicle flow
