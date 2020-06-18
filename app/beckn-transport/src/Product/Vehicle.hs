@@ -24,10 +24,10 @@ createVehicle token req = withFlowHandler $ do
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
-listVehicles :: Maybe Text -> ListVehicleReq -> FlowHandler ListVehicleRes
-listVehicles token req = withFlowHandler $ do
+listVehicles :: Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler ListVehicleRes
+listVehicles token limitM offsetM = withFlowHandler $ do
   orgId <- validate token
-  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) [orgId])
+  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds limitM offsetM [orgId])
 
 updateVehicle :: Text -> Maybe Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle vehicleId token req = withFlowHandler $ do

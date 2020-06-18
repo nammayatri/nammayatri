@@ -26,6 +26,5 @@ expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   caseProducts <- CPQ.findAllByCaseIds (Case._id <$> cases)
   products <- PQ.findAllById (CaseProduct._productId <$> caseProducts)
   CQ.updateStatusByIds (Case._id <$> cases) Case.CLOSED
-  CPQ.updateStatusByIds (CaseProduct._id <$> caseProducts) Product.EXPIRED
-  PQ.updateStatusByIds (Product._id <$> products) Product.EXPIRED
+  CPQ.updateStatusByIds (CaseProduct._id <$> caseProducts) CaseProduct.EXPIRED
   pure $ ExpireCaseRes $ length cases
