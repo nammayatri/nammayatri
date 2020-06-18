@@ -5,6 +5,7 @@ import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
@@ -30,8 +31,6 @@ import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import Epass.Types.Storage.Pass
 import qualified Epass.Types.Storage.PassApplication as PassApplication
-import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)

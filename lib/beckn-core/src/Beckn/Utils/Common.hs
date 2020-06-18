@@ -75,11 +75,6 @@ base64Decode auth =
     <$> DT.decodeUtf8
     <$> (rightToMaybe =<< DBB.decode <$> DT.encodeUtf8 <$> T.drop 6 <$> auth)
 
-fetchMaybeValue :: forall a. Maybe a -> a
-fetchMaybeValue c = case c of
-  Just d -> d
-  Nothing -> undefined -- need to throw error
-
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 
