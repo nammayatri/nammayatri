@@ -2,19 +2,26 @@
 
 module Product.Cancel where
 
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
 import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
+import qualified Data.Text as T
+import Data.Time
+import Data.Time.LocalTime
 import EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
@@ -98,6 +105,11 @@ onCancel req = withFlowHandler $ do
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
   CaseProduct.updateStatus productId CaseProduct.CANCELLED
   let caseId = cpProducts ^. #_caseId
+  -- notify customer
+  case_ <- Case.findById caseId
+  let personId = Case._requestor case_
+  notifyOnProductCancelCb personId case_ productId
+  --
   arrCPCase <- CaseProduct.findAllByCaseId caseId
   let arrTerminalCP =
         filter
@@ -110,3 +122,44 @@ onCancel req = withFlowHandler $ do
     then Case.updateStatus caseId Case.CLOSED
     else return ()
   mkAckResponse txnId "cancel"
+
+-- @boazjohn:
+-- When customer searches case is created in the BA, and search request is
+-- sent to BP, which creates a case in the BP also. When someone responds to
+-- that saying, they can offer this ride, onSearch is called to BP for each
+-- of these and product/caseProduct is created. Then the customer would
+-- confirm one of these product. Which would be basically choosing on of
+-- the offers. Only these are cancellable in the BP, which needs to send
+-- a notification in BA as a part of onCancel. Similary, when BA is cancelling,
+-- cancel should send a notification to the provider who had the ride.
+-- This will be basically cancelling the product/caseProduct. Here, when the
+-- onCancel comes, it would be ideal not to send a notification in BA. But
+-- it's also okay to send this in the first cut. The BA also has a case
+-- cancellation flow, which basically cancels the case with or without products.
+-- If the case with product is being cancelled, you have to send notification
+-- in the BP for each product. Here it would be mostly one product again.
+-- When case doesn't have any product, there is no notification.
+notifyOnProductCancelCb :: Maybe Text -> Case.Case -> ProductsId -> L.Flow ()
+notifyOnProductCancelCb personId c productId =
+  if isJust personId
+    then do
+      person <- Person.findById $ PersonId (fromJust personId)
+      case person of
+        Just p -> do
+          let notificationData =
+                FCM.FCMData
+                  { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
+                    _fcmShowNotification = FCM.SHOW,
+                    _fcmEntityIds = show $ _getProductsId productId,
+                    _fcmEntityType = FCM.Product
+                  }
+              title = FCM.FCMNotificationTitle $ T.pack "Ride cancelled!"
+              body =
+                FCM.FCMNotificationBody $ T.pack $
+                  " Cancelled rhe tide scheduled for "
+                    <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
+                    <> ". Check the app for more details."
+          FCM.notifyPerson title body notificationData p
+          pure ()
+        _ -> pure ()
+    else pure ()

@@ -34,7 +34,6 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Data.Text as T
 import Data.Time
-import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -75,7 +74,7 @@ search req = withFlowHandler $ do
   admins <-
     Person.findAllByOrgIds
       [Person.ADMIN]
-      ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
+      (_getOrganizationId . Org._id <$> transporters)
   notifyTransportersOnSearch c admins
   mkAckResponse uuid "search"
 
@@ -85,9 +84,18 @@ cancel req = withFlowHandler $ do
   uuid <- L.generateGUID
   let productId = req ^. #message ^. #id
   cprList <- CaseProduct.findAllByProdId (ProductsId productId)
+  -- TODO: Should we check if all case's products were cancelled
+  -- before cancelling a case?
   Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
   CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) CaseProduct.CANCELLED
   notifyCancelToGateway productId
+  admins <-
+    Person.findAllByOrgIds [Person.ADMIN] [productId]
+  case cprList of
+    [] -> pure ()
+    cp : _ -> do
+      c <- Case.findById $ CaseProduct._caseId cp
+      notifyTransportersOnCancel c productId admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
@@ -466,12 +474,14 @@ notifyTransportersOnSearch c =
           _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
           _fcmEntityType = FCM.Organization
         }
-    title = FCM.FCMNotificationTitle $ T.pack "You have a new ride request"
+    title = FCM.FCMNotificationTitle $ T.pack "New ride request!"
     body =
       FCM.FCMNotificationBody $ T.pack $
-        "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+        "You have a new ride request for "
+          <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+          <> " Check the app to accept or decline and see more details."
 
--- | Send FCM "search" notification to provider admins
+-- | Send FCM "confirm" notification to provider admins
 notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
 notifyTransportersOnConfirm c =
   traverse_ (FCM.notifyPerson title body notificationData)
@@ -483,7 +493,28 @@ notifyTransportersOnConfirm c =
           _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
           _fcmEntityType = FCM.Organization
         }
-    title = FCM.FCMNotificationTitle $ T.pack "Customer has confimed a ride"
+    title = FCM.FCMNotificationTitle $ T.pack "Customer has confimed the ride!"
     body =
       FCM.FCMNotificationBody $ T.pack $
-        "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+        "The ride for "
+          <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+          <> " is confirmed. Check the app to assign driver details."
+
+-- | Send FCM "cancel" notification to provider admins
+notifyTransportersOnCancel :: Case -> T.Text -> [Person] -> L.Flow ()
+notifyTransportersOnCancel c productId =
+  traverse_ (FCM.notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCM.FCMData
+        { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityIds = show productId,
+          _fcmEntityType = FCM.Product
+        }
+    title = FCM.FCMNotificationTitle $ T.pack "Ride cancelled!"
+    body =
+      FCM.FCMNotificationBody $ T.pack $
+        " Cancelled the tide scheduled for "
+          <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
+          <> ". Check the app for more details."

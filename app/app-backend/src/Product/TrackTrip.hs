@@ -17,10 +17,13 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
+import Control.Lens.Prism (_Just)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import Data.Time
+import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -69,7 +72,7 @@ track_cb req = withFlowHandler $ do
       1 -> do
         let product = head confirmedProducts
             personId = Case._requestor case_
-        notifyOnTrackCb personId tracking caseId
+        notifyOnTrackCb personId tracking case_
         updateTracker product tracking
       _ -> return $ Left "Multiple products confirmed, ambiguous selection"
   case res of
@@ -85,10 +88,11 @@ updateTracker product tracker = do
   Products.updateMultiple (_getProductsId $ product ^. #_id) updatedPrd
   return $ Right ()
 
-notifyOnTrackCb :: Maybe Text -> Tracker -> CaseId -> L.Flow ()
-notifyOnTrackCb personId tracker caseId =
+notifyOnTrackCb :: Maybe Text -> Tracker -> Case.Case -> L.Flow ()
+notifyOnTrackCb personId tracker c =
   if isJust personId
     then do
+      let caseId = Case._id c
       person <- Person.findById $ PersonId (fromJust personId)
       case person of
         Just p -> do
@@ -99,17 +103,22 @@ notifyOnTrackCb personId tracker caseId =
                     _fcmEntityIds = show caseId,
                     _fcmEntityType = FCM.Case
                   }
-              vehicle = tracker ^. #trip ^. #vehicle
-              driver = tracker ^. #trip ^. #driver ^. #persona
-              vehicle_type =
-                maybe "no vehicle" (\x -> fromMaybe "unknown" (x ^. #category)) vehicle
+              trip = tracker ^. #trip
+              reg_number =
+                trip ^. #vehicle . _Just . #registration . _Just . #number
+              model =
+                fromMaybe reg_number $ trip ^. #vehicle . _Just . #model
               driver_name =
-                maybe "unknown" (\x -> x ^. #descriptor ^. #first_name) driver
+                trip ^. #driver . #persona . _Just . #descriptor . #first_name
               title = FCM.FCMNotificationTitle $ T.pack "Ride details updated!"
               body =
                 FCM.FCMNotificationBody $
-                  "Driver: " <> driver_name <> ", vehicle type: " <> vehicle_type
+                  "Your ride with " <> driver_name <> ", " <> model
+                    <> T.pack
+                      ( " is scheduled for "
+                          <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
+                          <> ".  You can see more details in the app."
+                      )
           FCM.notifyPerson title body notificationData p
-          pure ()
         _ -> pure ()
     else pure ()

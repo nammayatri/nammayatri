@@ -19,6 +19,8 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import Data.Time
+import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -81,13 +83,13 @@ onConfirm req = withFlowHandler $ do
         QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId
         let personId = Case._requestor case_
-        notifyOnConfirmCb personId caseId
+        notifyOnConfirmCb personId case_
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
 
-notifyOnConfirmCb :: Maybe Text -> CaseId -> L.Flow ()
-notifyOnConfirmCb personId caseId =
+notifyOnConfirmCb :: Maybe Text -> Case.Case -> L.Flow ()
+notifyOnConfirmCb personId c =
   if isJust personId
     then do
       person <- Person.findById $ PersonId (fromJust personId)
@@ -97,13 +99,15 @@ notifyOnConfirmCb personId caseId =
                 FCM.FCMData
                   { _fcmNotificationType = FCM.CONFIRM_CALLBACK,
                     _fcmShowNotification = FCM.SHOW,
-                    _fcmEntityIds = show $ _getCaseId caseId,
+                    _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
                     _fcmEntityType = FCM.Case
                   }
-              title = FCM.FCMNotificationTitle $ T.pack "New ride options available!"
+              title = FCM.FCMNotificationTitle $ T.pack "Your ride is now confirmed!"
               body =
-                FCM.FCMNotificationBody $
-                  T.pack "You have a new reply for your ride request! Head to the beckn app for details."
+                FCM.FCMNotificationBody $ T.pack $
+                  "Your booking is confirmed for "
+                    <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
+                    <> "."
           FCM.notifyPerson title body notificationData p
           pure ()
         _ -> pure ()
