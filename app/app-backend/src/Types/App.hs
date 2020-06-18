@@ -6,6 +6,7 @@
 module Types.App where
 
 import Beckn.Utils.TH
+import Beckn.Utils.TH
 import Data.Swagger
 import Database.Beam.Backend.SQL
   ( FromBackendRow,
@@ -13,7 +14,6 @@ import Database.Beam.Backend.SQL
   )
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
-import Epass.Utils.TH
 import EulerHS.Prelude
 
 newtype CustomerId = CustomerId

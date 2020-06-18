@@ -11,6 +11,7 @@ where
 
 import Beckn.Types.App
 import Beckn.Utils.TH
+import Beckn.Utils.TH
 import Data.Swagger
 import Database.Beam.Backend.SQL
   ( FromBackendRow,
@@ -19,7 +20,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import Database.PostgreSQL.Simple.FromField
-import Epass.Utils.TH
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

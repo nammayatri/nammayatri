@@ -26,9 +26,9 @@ data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL CaseProductStatus
+instance B.HasSqlEqualityCheck Postgres CaseProductStatus
 
-instance FromBackendRow MySQL CaseProductStatus where
+instance FromBackendRow Postgres CaseProductStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData CaseProductStatus where
