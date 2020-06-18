@@ -22,24 +22,23 @@ import qualified Epass.Types.Storage.User as User
 import EulerHS.Prelude hiding (id)
 import Storage.DB.Config (dbSchema)
 
-data EpassDb f
-  = EpassDb
-      { _user :: f (B.TableEntity User.UserT),
-        _quota :: f (B.TableEntity Quota.QuotaT),
-        _location :: f (B.TableEntity Location.LocationT),
-        _Blacklist :: f (B.TableEntity Blacklist.BlacklistT),
-        _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT),
-        _customer :: f (B.TableEntity Customer.CustomerT),
-        _CustomerDetail :: f (B.TableEntity CustomerDetail.CustomerDetailT),
-        _organization :: f (B.TableEntity Organization.OrganizationT),
-        _pass :: f (B.TableEntity Pass.PassT),
-        _passApplication :: f (B.TableEntity PassApplication.PassApplicationT),
-        _document :: f (B.TableEntity Document.DocumentT),
-        _entityTag :: f (B.TableEntity EntityTag.EntityTagT),
-        _entityDocument :: f (B.TableEntity EntityDocument.EntityDocumentT),
-        _comment :: f (B.TableEntity Comment.CommentT),
-        _tag :: f (B.TableEntity Tag.TagT)
-      }
+data EpassDb f = EpassDb
+  { _user :: f (B.TableEntity User.UserT),
+    _quota :: f (B.TableEntity Quota.QuotaT),
+    _location :: f (B.TableEntity Location.LocationT),
+    _Blacklist :: f (B.TableEntity Blacklist.BlacklistT),
+    _allocatedQuota :: f (B.TableEntity AllocatedQuota.AllocatedQuotaT),
+    _customer :: f (B.TableEntity Customer.CustomerT),
+    _CustomerDetail :: f (B.TableEntity CustomerDetail.CustomerDetailT),
+    _organization :: f (B.TableEntity Organization.OrganizationT),
+    _pass :: f (B.TableEntity Pass.PassT),
+    _passApplication :: f (B.TableEntity PassApplication.PassApplicationT),
+    _document :: f (B.TableEntity Document.DocumentT),
+    _entityTag :: f (B.TableEntity EntityTag.EntityTagT),
+    _entityDocument :: f (B.TableEntity EntityDocument.EntityDocumentT),
+    _comment :: f (B.TableEntity Comment.CommentT),
+    _tag :: f (B.TableEntity Tag.TagT)
+  }
   deriving (Generic, B.Database be)
 
 becknDb :: B.DatabaseSettings be EpassDb

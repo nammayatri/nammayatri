@@ -2,8 +2,8 @@
 
 module Product.TrackTrip where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
@@ -59,10 +59,10 @@ track_cb apiKey req = withFlowHandler $ do
       tracking = req ^. #message
       caseId = CaseId $ req ^. #context ^. #transaction_id
   case_ <- Case.findById caseId
-  cp <- CaseProduct.findAllByCaseId caseId
+  cp <- CaseProduct.listAllCaseProduct (CaseProduct.ByApplicationId caseId) [CaseProduct.CONFIRMED]
   let pids = map CaseProduct._productId cp
-  products <- Products.findAllByIds pids
-  let confirmedProducts = filter (\prd -> Products.CONFIRMED == Products._status prd) products
+  confirmedProducts <- Products.findAllByIds pids
+
   res <-
     case length confirmedProducts of
       0 -> return $ Right ()
@@ -93,11 +93,11 @@ notifyOnTrackCb personId tracker caseId =
       case person of
         Just p -> do
           let notificationData =
-                FCMData
-                  { _fcmNotificationType = "TRACKING_CALLBACK",
-                    _fcmShowNotification = "true",
+                FCM.FCMData
+                  { _fcmNotificationType = FCM.TRACKING_CALLBACK,
+                    _fcmShowNotification = FCM.SHOW,
                     _fcmEntityIds = show caseId,
-                    _fcmEntityType = "Case"
+                    _fcmEntityType = FCM.Case
                   }
               vehicle = tracker ^. #trip ^. #vehicle
               driver = tracker ^. #trip ^. #driver ^. #persona
@@ -105,8 +105,10 @@ notifyOnTrackCb personId tracker caseId =
                 maybe "no vehicle" (\x -> fromMaybe "unknown" (x ^. #category)) vehicle
               driver_name =
                 maybe "unknown" (\x -> x ^. #descriptor ^. #first_name) driver
-              title = "Ride details updated!"
-              body = "Driver: " <> driver_name <> ", vehicle type: " <> vehicle_type
+              title = FCM.FCMNotificationTitle $ T.pack "Ride details updated!"
+              body =
+                FCM.FCMNotificationBody $
+                  "Driver: " <> driver_name <> ", vehicle type: " <> vehicle_type
           FCM.notifyPerson title body notificationData p
           pure ()
         _ -> pure ()

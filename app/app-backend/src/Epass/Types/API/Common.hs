@@ -25,11 +25,10 @@ import EulerHS.Prelude
 import Servant
 import Servant.Swagger
 
-data UserInfo
-  = UserInfo
-      { _user :: Person,
-        _locationInfo :: Maybe LocationInfo
-      }
+data UserInfo = UserInfo
+  { _user :: Person,
+    _locationInfo :: Maybe LocationInfo
+  }
   deriving (Generic, Show)
 
 instance ToJSON UserInfo where
@@ -38,12 +37,11 @@ instance ToJSON UserInfo where
 instance FromJSON UserInfo where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data LocationInfo
-  = LocationInfo
-      { _location :: Location,
-        _blacklistInfo :: Maybe Blacklist,
-        _tagInfo :: [TagInfo]
-      }
+data LocationInfo = LocationInfo
+  { _location :: Location,
+    _blacklistInfo :: Maybe Blacklist,
+    _tagInfo :: [TagInfo]
+  }
   deriving (Show, Generic)
 
 instance ToJSON LocationInfo where
@@ -52,11 +50,10 @@ instance ToJSON LocationInfo where
 instance FromJSON LocationInfo where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data TagInfo
-  = TagInfo
-      { tag :: Tag,
-        entityTag :: EntityTag
-      }
+data TagInfo = TagInfo
+  { tag :: Tag,
+    entityTag :: EntityTag
+  }
   deriving (Show, Generic)
 
 instance ToJSON TagInfo where

@@ -23,12 +23,11 @@ import Servant
 import Servant.Swagger
 import Web.HttpApiData
 
-data ErrorResponse
-  = ErrorResponse
-      { status :: Text,
-        responseCode :: Text,
-        responseMessage :: Text
-      }
+data ErrorResponse = ErrorResponse
+  { status :: Text,
+    responseCode :: Text,
+    responseMessage :: Text
+  }
   deriving (Show, Generic, ToJSON, ToSchema)
 
 data LoginMode
@@ -109,20 +108,19 @@ instance FromHttpApiData PassType where
 --   parseQueryParam = parseUrlPiece
 --   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data Location
-  = Location
-      { _type :: LocationType,
-        _lat :: Maybe Double,
-        _long :: Maybe Double,
-        _ward :: Maybe Text,
-        _district :: Maybe Text,
-        _city :: Maybe Text,
-        _state :: Maybe Text,
-        _country :: Maybe Text,
-        _pincode :: Maybe Int,
-        _address :: Maybe Text,
-        _bound :: Maybe Bound
-      }
+data Location = Location
+  { _type :: LocationType,
+    _lat :: Maybe Double,
+    _long :: Maybe Double,
+    _ward :: Maybe Text,
+    _district :: Maybe Text,
+    _city :: Maybe Text,
+    _state :: Maybe Text,
+    _country :: Maybe Text,
+    _pincode :: Maybe Int,
+    _address :: Maybe Text,
+    _bound :: Maybe Bound
+  }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON Location where
@@ -177,11 +175,10 @@ instance FromHttpApiData EntityType where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data Ack
-  = Ack
-      { _action :: Text,
-        _message :: Text
-      }
+data Ack = Ack
+  { _action :: Text,
+    _message :: Text
+  }
   deriving (Generic, Show, ToSchema)
 
 instance FromJSON Ack where

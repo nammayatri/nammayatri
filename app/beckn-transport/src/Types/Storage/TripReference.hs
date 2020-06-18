@@ -33,19 +33,18 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data TripReferenceT f
-  = TripReference
-      { _id :: B.C f TripReferenceId,
-        _customerId :: B.C f Text,
-        _quotationId :: B.C f Text,
-        _driverId :: B.C f (Maybe Text),
-        _leadsId :: B.C f Text,
-        _vehicleId :: B.C f (Maybe Text),
-        _shortId :: B.C f Text,
-        _status :: B.C f Status,
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data TripReferenceT f = TripReference
+  { _id :: B.C f TripReferenceId,
+    _customerId :: B.C f Text,
+    _quotationId :: B.C f Text,
+    _driverId :: B.C f (Maybe Text),
+    _leadsId :: B.C f Text,
+    _vehicleId :: B.C f (Maybe Text),
+    _shortId :: B.C f Text,
+    _status :: B.C f Status,
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type TripReference = TripReferenceT Identity

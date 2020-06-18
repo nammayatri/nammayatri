@@ -25,19 +25,18 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 instance FromBackendRow Postgres IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CustomerDetailT f
-  = CustomerDetail
-      { _id :: B.C f CustomerDetailId,
-        _CustomerId :: B.C f CustomerId,
-        _uniqueIdentifier :: B.C f Text,
-        _identifierType :: B.C f IdentifierType,
-        _value :: B.C f Value,
-        _verified :: B.C f Bool,
-        _primaryIdentifier :: B.C f Bool,
-        _info :: B.C f Text,
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data CustomerDetailT f = CustomerDetail
+  { _id :: B.C f CustomerDetailId,
+    _CustomerId :: B.C f CustomerId,
+    _uniqueIdentifier :: B.C f Text,
+    _identifierType :: B.C f IdentifierType,
+    _value :: B.C f Value,
+    _verified :: B.C f Bool,
+    _primaryIdentifier :: B.C f Bool,
+    _info :: B.C f Text,
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type CustomerDetail = CustomerDetailT Identity

@@ -84,23 +84,22 @@ instance FromHttpApiData RegistrationCategory where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data VehicleT f
-  = Vehicle
-      { _id :: B.C f VehicleId,
-        _capacity :: B.C f (Maybe Int),
-        _organizationId :: B.C f Text,
-        _category :: B.C f (Maybe Category),
-        _make :: B.C f (Maybe Text),
-        _model :: B.C f (Maybe Text),
-        _size :: B.C f (Maybe Text),
-        _variant :: B.C f (Maybe Variant),
-        _color :: B.C f (Maybe Text),
-        _energyType :: B.C f (Maybe EnergyType),
-        _registrationNo :: B.C f Text,
-        _registrationCategory :: B.C f (Maybe RegistrationCategory),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data VehicleT f = Vehicle
+  { _id :: B.C f VehicleId,
+    _capacity :: B.C f (Maybe Int),
+    _organizationId :: B.C f Text,
+    _category :: B.C f (Maybe Category),
+    _make :: B.C f (Maybe Text),
+    _model :: B.C f (Maybe Text),
+    _size :: B.C f (Maybe Text),
+    _variant :: B.C f (Maybe Variant),
+    _color :: B.C f (Maybe Text),
+    _energyType :: B.C f (Maybe EnergyType),
+    _registrationNo :: B.C f Text,
+    _registrationCategory :: B.C f (Maybe RegistrationCategory),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type Vehicle = VehicleT Identity

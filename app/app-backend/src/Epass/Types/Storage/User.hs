@@ -62,23 +62,22 @@ instance FromHttpApiData Role where
   parseQueryParam = parseBoundedTextData
   parseHeader = parseBoundedTextData . DT.decodeUtf8
 
-data UserT f
-  = User
-      { _id :: B.C f UserId,
-        _OrganizationId :: B.C f OrganizationId,
-        _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
-        _name :: B.C f Text,
-        _username :: B.C f (Maybe Text),
-        _mobileNumber :: B.C f Text,
-        _email :: B.C f (Maybe Text),
-        _LocationId :: B.C f Text,
-        _role :: B.C f Role,
-        _verified :: B.C f Bool,
-        _status :: B.C f Status,
-        _info :: B.C f (Maybe Text),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data UserT f = User
+  { _id :: B.C f UserId,
+    _OrganizationId :: B.C f OrganizationId,
+    _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
+    _name :: B.C f Text,
+    _username :: B.C f (Maybe Text),
+    _mobileNumber :: B.C f Text,
+    _email :: B.C f (Maybe Text),
+    _LocationId :: B.C f Text,
+    _role :: B.C f Role,
+    _verified :: B.C f Bool,
+    _status :: B.C f Status,
+    _info :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type User = UserT Identity

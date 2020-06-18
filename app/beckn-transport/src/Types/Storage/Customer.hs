@@ -17,16 +17,15 @@ import Servant.API
 import Servant.Swagger
 import Types.App
 
-data CustomerT f
-  = Customer
-      { _id :: B.C f CustomerId,
-        _referenceId :: B.C f Text,
-        _name :: B.C f Text,
-        _mobileNumber :: B.C f Text,
-        _info :: B.C f (Maybe Text),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data CustomerT f = Customer
+  { _id :: B.C f CustomerId,
+    _referenceId :: B.C f Text,
+    _name :: B.C f Text,
+    _mobileNumber :: B.C f Text,
+    _info :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type Customer = CustomerT Identity

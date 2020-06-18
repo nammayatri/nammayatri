@@ -22,18 +22,17 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be CustomerRole where
 instance FromBackendRow Postgres CustomerRole where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CustomerT f
-  = Customer
-      { _id :: B.C f CustomerId,
-        _name :: B.C f (Maybe Text),
-        _OrganizationId :: B.C f (Maybe OrganizationId),
-        _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
-        _verified :: B.C f Bool,
-        _role :: B.C f CustomerRole,
-        _info :: B.C f (Maybe Text),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data CustomerT f = Customer
+  { _id :: B.C f CustomerId,
+    _name :: B.C f (Maybe Text),
+    _OrganizationId :: B.C f (Maybe OrganizationId),
+    _TenantOrganizationId :: B.C f (Maybe TenantOrganizationId),
+    _verified :: B.C f Bool,
+    _role :: B.C f CustomerRole,
+    _info :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type Customer = CustomerT Identity

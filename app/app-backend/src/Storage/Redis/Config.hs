@@ -41,7 +41,7 @@ loadRedisConfig = do
       T.RedisConfig
         { connectHost = host,
           connectPort = p,
-          connectAuth = T.pack <$> mauth,
+          connectAuth = Nothing, -- FIXME: this should use auth
           connectDatabase = read db,
           connectMaxConnections = read maxConnections,
           connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime,

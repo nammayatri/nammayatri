@@ -51,26 +51,25 @@ instance FromHttpApiData OrganizationType where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data OrganizationT f
-  = Organization
-      { _id :: B.C f OrganizationId,
-        _name :: B.C f Text,
-        _description :: B.C f (Maybe Text),
-        _mobileNumber :: B.C f (Maybe Text),
-        _gstin :: B.C f (Maybe Text),
-        _type :: B.C f OrganizationType,
-        _locationId :: B.C f (Maybe Text),
-        _fromTime :: B.C f (Maybe LocalTime),
-        _toTime :: B.C f (Maybe LocalTime),
-        _headCount :: B.C f (Maybe Int),
-        _status :: B.C f Status,
-        _verified :: B.C f Bool,
-        _enabled :: B.C f Bool,
-        _apiKey :: B.C f (Maybe Text),
-        _callbackUrl :: B.C f (Maybe Text),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data OrganizationT f = Organization
+  { _id :: B.C f OrganizationId,
+    _name :: B.C f Text,
+    _description :: B.C f (Maybe Text),
+    _mobileNumber :: B.C f (Maybe Text),
+    _gstin :: B.C f (Maybe Text),
+    _type :: B.C f OrganizationType,
+    _locationId :: B.C f (Maybe Text),
+    _fromTime :: B.C f (Maybe LocalTime),
+    _toTime :: B.C f (Maybe LocalTime),
+    _headCount :: B.C f (Maybe Int),
+    _status :: B.C f Status,
+    _verified :: B.C f Bool,
+    _enabled :: B.C f Bool,
+    _apiKey :: B.C f (Maybe Text),
+    _callbackUrl :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type Organization = OrganizationT Identity

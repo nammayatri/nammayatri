@@ -14,16 +14,15 @@ import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import Storage.DB.Config (dbSchema)
 
-data AppDb f
-  = AppDb
-      { _organization :: f (B.TableEntity Organization.OrganizationT),
-        _location :: f (B.TableEntity Location.LocationT),
-        _person :: f (B.TableEntity Person.PersonT),
-        _case :: f (B.TableEntity Case.CaseT),
-        _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
-        _products :: f (B.TableEntity Products.ProductsT),
-        _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
-      }
+data AppDb f = AppDb
+  { _organization :: f (B.TableEntity Organization.OrganizationT),
+    _location :: f (B.TableEntity Location.LocationT),
+    _person :: f (B.TableEntity Person.PersonT),
+    _case :: f (B.TableEntity Case.CaseT),
+    _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
+    _products :: f (B.TableEntity Products.ProductsT),
+    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
+  }
   deriving (Generic, B.Database be)
 
 appDb :: B.DatabaseSettings be AppDb

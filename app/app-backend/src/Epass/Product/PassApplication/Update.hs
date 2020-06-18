@@ -1,11 +1,13 @@
 module Epass.Product.PassApplication.Update where
 
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Aeson
 import qualified Data.Text as DT
 import qualified Epass.Data.Accessor as Accessor
@@ -18,8 +20,6 @@ import qualified Epass.Types.Common as Location (Location (..))
 import qualified Epass.Types.Storage.Pass as Pass
 import Epass.Types.Storage.PassApplication
 import qualified Epass.Types.Storage.PassApplication as PassApplication
-import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -42,7 +42,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   -- verifyIfStatusUpdatable (PassApplication._status pA) _status
   case _status of
     REVOKED -> do
-      QCP.updateAllProductsByCaseId caseId Products.INVALID
+      QCP.updateAllProductsByCaseId caseId Products.OUTOFSTOCK
       QC.updateStatusAndUdfs caseId Case.CLOSED Nothing Nothing Nothing Nothing _remarks
     APPROVED -> do
       when
@@ -51,7 +51,8 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       let approvedCount = fromJust _approvedCount
       -- Create passes
       replicateM approvedCount (createPass pA)
-      QC.updateStatusAndUdfs caseId Case.CONFIRMED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
+      --TODO: should we need to update case product to CONFIRMED?
+      QC.updateStatusAndUdfs caseId Case.COMPLETED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
   QC.findById caseId
@@ -83,7 +84,7 @@ createPass c@(Case.Case {..}) = do
             _createdAt = currTime,
             _updatedAt = currTime,
             _type = Products.PASS,
-            _status = Products.CONFIRMED,
+            _status = Products.INSTOCK,
             _fromLocation = Just _fromLocationId,
             _toLocation = Just _toLocationId,
             _organizationId = orgId,
@@ -100,7 +101,7 @@ createPass c@(Case.Case {..}) = do
             _productId = ProductsId id,
             _quantity = 0,
             _price = 0.0,
-            _status = Products.CONFIRMED,
+            _status = CaseProduct.CONFIRMED,
             _info = Nothing,
             _personId = Nothing, -- TODO: this column should be removed?
             _createdAt = currTime,

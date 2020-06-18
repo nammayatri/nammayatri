@@ -2,8 +2,8 @@
 
 module Product.Confirm where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Confirm
 import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
@@ -38,6 +38,10 @@ confirm :: Maybe RegToken -> API.ConfirmReq -> FlowHandler AckResponse
 confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   verifyToken regToken
   lt <- getCurrentTimeUTC
+  case_ <- QCase.findById $ CaseId caseId
+  when ((case_ ^. #_validTill) < lt)
+    $ L.throwException
+    $ err400 {errBody = "Case has expired"}
   caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
@@ -68,10 +72,11 @@ onConfirm regToken req = withFlowHandler $ do
         let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
         let uPrd =
               prd
-                { Products._status = Products.CONFIRMED,
-                  Products._info = encodeToText <$> uInfo
+                { Products._info = encodeToText <$> uInfo
                 }
-        QCP.updateStatus pid Products.CONFIRMED
+        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        QCP.updateStatus pid SCP.CONFIRMED
+        QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId
@@ -89,14 +94,16 @@ notifyOnConfirmCb personId caseId =
       case person of
         Just p -> do
           let notificationData =
-                FCMData
-                  { _fcmNotificationType = "CONFIRM_CALLBACK",
-                    _fcmShowNotification = "true",
+                FCM.FCMData
+                  { _fcmNotificationType = FCM.CONFIRM_CALLBACK,
+                    _fcmShowNotification = FCM.SHOW,
                     _fcmEntityIds = show $ _getCaseId caseId,
-                    _fcmEntityType = "Case"
+                    _fcmEntityType = FCM.Case
                   }
-              title = "New ride options available!"
-              body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
+              title = FCM.FCMNotificationTitle $ T.pack "New ride options available!"
+              body =
+                FCM.FCMNotificationBody $
+                  T.pack "You have a new reply for your ride request! Head to the beckn app for details."
           FCM.notifyPerson title body notificationData p
           pure ()
         _ -> pure ()

@@ -5,6 +5,7 @@ module App where
 import qualified App.Server as App
 import Beckn.Constants.APIErrorCode
 import qualified Beckn.Types.App as App
+import Beckn.Utils.Common (prepareAppOptions)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -55,8 +56,12 @@ runTransporterBackendApp' port settings = do
         try (R.runFlow flowRt prepareRedisConnections) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ -> do
-            putStrLn @String ("Runtime created. Starting server at port " <> show port)
-        runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
+            putStrLn @String "Initializing Options..."
+            try (R.runFlow flowRt prepareAppOptions) >>= \case
+              Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+              Right _ ->
+                putStrLn @String ("Runtime created. Starting server at port " <> show port)
+            runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse exception = do

@@ -35,8 +35,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
   traverse
     ( \cId -> do
         Case.updateStatus cId Case.CLOSED
-        CaseProduct.updateAllCaseProductsByCaseId cId Product.EXPIRED
-        CaseProduct.updateAllProductsByCaseId cId Product.EXPIRED
+        CaseProduct.updateAllCaseProductsByCaseId cId CaseProduct.EXPIRED
     )
     caseIds
   pure $ API.ExpireCaseRes $ length caseIds

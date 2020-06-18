@@ -33,16 +33,15 @@ instance FromHttpApiData Status where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data QuotationT f
-  = Quotation
-      { _id :: B.C f QuotationId,
-        _leadsId :: B.C f Text,
-        _amount :: B.C f Text,
-        _organizationId :: B.C f Text,
-        _status :: B.C f Status,
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data QuotationT f = Quotation
+  { _id :: B.C f QuotationId,
+    _leadsId :: B.C f Text,
+    _amount :: B.C f Text,
+    _organizationId :: B.C f Text,
+    _status :: B.C f Status,
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type Quotation = QuotationT Identity

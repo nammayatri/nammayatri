@@ -20,22 +20,21 @@ import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TripReference as TripReference
 
-data TransporterDb f
-  = TransporterDb
-      { _organization :: f (B.TableEntity Organization.OrganizationT),
-        _leads :: f (B.TableEntity Leads.LeadsT),
-        _customer :: f (B.TableEntity Customer.CustomerT),
-        _location :: f (B.TableEntity Location.LocationT),
-        _quotation :: f (B.TableEntity Quotation.QuotationT),
-        _tracker :: f (B.TableEntity Tracker.TrackerT),
-        _tripReference :: f (B.TableEntity TripReference.TripReferenceT),
-        _vehicle :: f (B.TableEntity Vehicle.VehicleT),
-        _person :: f (B.TableEntity Person.PersonT),
-        _case :: f (B.TableEntity Case.CaseT),
-        _products :: f (B.TableEntity Product.ProductsT),
-        _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
-        _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
-      }
+data TransporterDb f = TransporterDb
+  { _organization :: f (B.TableEntity Organization.OrganizationT),
+    _leads :: f (B.TableEntity Leads.LeadsT),
+    _customer :: f (B.TableEntity Customer.CustomerT),
+    _location :: f (B.TableEntity Location.LocationT),
+    _quotation :: f (B.TableEntity Quotation.QuotationT),
+    _tracker :: f (B.TableEntity Tracker.TrackerT),
+    _tripReference :: f (B.TableEntity TripReference.TripReferenceT),
+    _vehicle :: f (B.TableEntity Vehicle.VehicleT),
+    _person :: f (B.TableEntity Person.PersonT),
+    _case :: f (B.TableEntity Case.CaseT),
+    _products :: f (B.TableEntity Product.ProductsT),
+    _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
+    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
+  }
   deriving (Generic, B.Database be)
 
 transporterDb :: B.DatabaseSettings be TransporterDb

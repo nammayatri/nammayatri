@@ -1,6 +1,3 @@
-# Override envars using -e
-# make release -e NS=docker.io/juspay/test -e VERSION=1.2.3 -e IMAGE_NAME=docker-test
-
 NS ?= asia.gcr.io/jp-k8s-internal
 VERSION ?= latest
 
@@ -12,7 +9,7 @@ DEP_IMAGE ?= beckn
 
 DEP_LABEL ?= master
 
-.PHONY: build push shell run start stop rm release
+.PHONY: build-dep push-dep build push
 
 build-dep: Dockerfile.dep
 	$(info Building $(NS)/$(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))

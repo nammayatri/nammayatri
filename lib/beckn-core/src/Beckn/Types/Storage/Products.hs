@@ -5,21 +5,24 @@ module Beckn.Types.Storage.Products where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
+import Servant.API
 import Servant.Swagger
 
-data ProdInfo
-  = ProdInfo
-      { driverInfo :: Text,
-        vehicleInfo :: Text
-      }
+data ProdInfo = ProdInfo
+  { driverInfo :: Text,
+    vehicleInfo :: Text
+  }
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data ProductsType = RIDE | PASS
@@ -31,7 +34,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
 instance FromBackendRow Postgres ProductsType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductsStatus = CONFIRMED | COMPLETED | VALID | INPROGRESS | INSTOCK | OUTOFSTOCK | CANCELLED | INVALID | EXPIRED
+data ProductsStatus = INSTOCK | OUTOFSTOCK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where
@@ -41,6 +44,11 @@ instance B.HasSqlEqualityCheck Postgres ProductsStatus
 
 instance FromBackendRow Postgres ProductsStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData ProductsStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 type ProductsIndustry = Case.Industry
 
@@ -53,34 +61,33 @@ type ProductsIndustry = Case.Industry
 -- instance FromBackendRow MySQL ProductsIndustry where
 --   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductsT f
-  = Products
-      { _id :: B.C f ProductsId,
-        _shortId :: B.C f Text,
-        _name :: B.C f (Maybe Text),
-        _description :: B.C f (Maybe Text),
-        _industry :: B.C f ProductsIndustry,
-        _type :: B.C f ProductsType,
-        _status :: B.C f ProductsStatus,
-        _startTime :: B.C f LocalTime,
-        _endTime :: B.C f (Maybe LocalTime),
-        _validTill :: B.C f LocalTime,
-        _price :: B.C f Scientific,
-        _rating :: B.C f (Maybe Text),
-        _review :: B.C f (Maybe Text),
-        _udf1 :: B.C f (Maybe Text),
-        _udf2 :: B.C f (Maybe Text),
-        _udf3 :: B.C f (Maybe Text),
-        _udf4 :: B.C f (Maybe Text),
-        _udf5 :: B.C f (Maybe Text),
-        _info :: B.C f (Maybe Text),
-        _fromLocation :: B.C f (Maybe Text),
-        _toLocation :: B.C f (Maybe Text),
-        _organizationId :: B.C f Text,
-        _assignedTo :: B.C f (Maybe Text),
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data ProductsT f = Products
+  { _id :: B.C f ProductsId,
+    _shortId :: B.C f Text,
+    _name :: B.C f (Maybe Text),
+    _description :: B.C f (Maybe Text),
+    _industry :: B.C f ProductsIndustry,
+    _type :: B.C f ProductsType,
+    _status :: B.C f ProductsStatus,
+    _startTime :: B.C f LocalTime,
+    _endTime :: B.C f (Maybe LocalTime),
+    _validTill :: B.C f LocalTime,
+    _price :: B.C f Scientific,
+    _rating :: B.C f (Maybe Text),
+    _review :: B.C f (Maybe Text),
+    _udf1 :: B.C f (Maybe Text),
+    _udf2 :: B.C f (Maybe Text),
+    _udf3 :: B.C f (Maybe Text),
+    _udf4 :: B.C f (Maybe Text),
+    _udf5 :: B.C f (Maybe Text),
+    _info :: B.C f (Maybe Text),
+    _fromLocation :: B.C f (Maybe Text),
+    _toLocation :: B.C f (Maybe Text),
+    _organizationId :: B.C f Text,
+    _assignedTo :: B.C f (Maybe Text),
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 --TODO: _organizationId - -- need to point to primarykey

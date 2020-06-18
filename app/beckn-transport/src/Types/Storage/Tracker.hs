@@ -33,17 +33,16 @@ instance FromHttpApiData Type where
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data TrackerT f
-  = Tracker
-      { _id :: B.C f TrackerId,
-        _type :: B.C f Type,
-        _referenceId :: B.C f Text,
-        _long :: B.C f Text,
-        _lat :: B.C f Text,
-        _gps :: B.C f Text,
-        _createdAt :: B.C f LocalTime,
-        _updatedAt :: B.C f LocalTime
-      }
+data TrackerT f = Tracker
+  { _id :: B.C f TrackerId,
+    _type :: B.C f Type,
+    _referenceId :: B.C f Text,
+    _long :: B.C f Text,
+    _lat :: B.C f Text,
+    _gps :: B.C f Text,
+    _createdAt :: B.C f LocalTime,
+    _updatedAt :: B.C f LocalTime
+  }
   deriving (Generic, B.Beamable)
 
 type Tracker = TrackerT Identity

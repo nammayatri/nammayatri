@@ -2,8 +2,8 @@
 
 module Product.Registration where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValuesFirst.Flow as Sms
 import qualified Beckn.External.MyValuesFirst.Types as Sms
 import Beckn.Types.App
@@ -54,14 +54,14 @@ initiateFlow req = do
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
       notificationData =
-        FCMData
-          { _fcmNotificationType = "REGISTRATION_APPROVED",
-            _fcmShowNotification = "true",
+        FCM.FCMData
+          { _fcmNotificationType = FCM.REGISTRATION_APPROVED,
+            _fcmShowNotification = FCM.SHOW,
             _fcmEntityIds = show regToken,
-            _fcmEntityType = "Organization"
+            _fcmEntityType = FCM.Organization
           }
-      title = "Registration Completed!"
-      body = "You can now start accepting rides!"
+      title = FCM.FCMNotificationTitle $ T.pack "Registration Completed!"
+      body = FCM.FCMNotificationBody $ T.pack "You can now start accepting rides!"
   FCM.notifyPerson title body notificationData person
   return $ InitiateLoginRes {attempts, tokenId}
 

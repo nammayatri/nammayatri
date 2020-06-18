@@ -2,8 +2,8 @@
 
 module Product.Search where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
+import qualified Beckn.External.FCM.Flow as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -37,6 +37,7 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as Products
+import System.Environment
 import Types.App
 import Types.ProductInfo
 import Utils.Common
@@ -97,9 +98,21 @@ search_cb regToken req = withFlowHandler $ do
       traverse_
         (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
         products
+      extendCaseExpiry case_
       notifyOnSearchCb personId caseId
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
+  where
+    extendCaseExpiry :: Case.Case -> L.Flow ()
+    extendCaseExpiry Case.Case {..} = do
+      now <- getCurrentTimeUTC
+      confirmExpiry <-
+        pure . fromMaybe 1800 . join
+          . (readMaybe <$>)
+          =<< L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
+      let newValidTill = (fromInteger confirmExpiry) `addLocalTime` now
+      when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
+      pure ()
 
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
 mkCase req userId from to = do
@@ -112,9 +125,7 @@ mkCase req userId from to = do
   shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
-      -- TODO: Fix this
-      -- putting static expiry of 2hrs
-      validTill = addLocalTime (60 * 60 * 2) $ now
+  validTill <- getCaseExpiry (req ^. #message ^. #time)
   return $
     Case.Case
       { _id = id,
@@ -144,6 +155,17 @@ mkCase req userId from to = do
         _createdAt = now,
         _updatedAt = now
       }
+  where
+    getCaseExpiry :: LocalTime -> L.Flow LocalTime
+    getCaseExpiry startTime = do
+      now <- getCurrentTimeUTC
+      caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
+      let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
+          minExpiry = 300 -- 5 minutes
+          timeToRide = startTime `diffLocalTime` now
+          defaultExpiry = (fromInteger caseExpiry) `addLocalTime` now
+          validTill = addLocalTime (minimum [(fromInteger caseExpiry), maximum [minExpiry, timeToRide]]) now
+      pure validTill
 
 mkLocation :: Core.Location -> L.Flow Location.Location
 mkLocation loc = do
@@ -219,7 +241,7 @@ mkCaseProduct caseId personId product = do
         _personId = Just personId,
         _quantity = 1,
         _price = price,
-        _status = Products.INSTOCK,
+        _status = CaseProduct.INSTOCK,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now
@@ -231,14 +253,16 @@ notifyOnSearchCb personId caseId = do
   case person of
     Just p -> do
       let notificationData =
-            FCMData
-              { _fcmNotificationType = "SEARCH_CALLBACK",
-                _fcmShowNotification = "true",
+            FCM.FCMData
+              { _fcmNotificationType = FCM.SEARCH_CALLBACK,
+                _fcmShowNotification = FCM.SHOW,
                 _fcmEntityIds = show $ _getCaseId caseId,
-                _fcmEntityType = "Case"
+                _fcmEntityType = FCM.Case
               }
-          title = "New ride options available!"
-          body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
+          title = FCM.FCMNotificationTitle $ T.pack "New ride options available!"
+          body =
+            FCM.FCMNotificationBody $
+              T.pack "You have a new reply for your ride request! Head to the beckn app for details."
       FCM.notifyPerson title body notificationData p
       pure ()
     _ -> pure ()
