@@ -66,10 +66,10 @@ getTransporter :: Maybe Text -> FlowHandler TransporterRec
 getTransporter auth = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth auth
   person <- QP.findPersonById (PersonId _EntityId)
-  validation person
-  org <- QO.findOrganizationById (OrganizationId (fetchMaybeValue $ person ^. #_organizationId))
-  return $ TransporterRec org
+  validate person
+  case person ^. #_organizationId of
+    Just orgId -> TransporterRec <$> QO.findOrganizationById (OrganizationId orgId)
+    Nothing -> L.throwException $ err400 {errBody = "user not registered an organization"}
   where
-    validation person = do
-      whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
-      whenM (return $ SP._organizationId person == Nothing) $ L.throwException $ err400 {errBody = "user not registered an organization"}
+    validate person =
+      when (not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}

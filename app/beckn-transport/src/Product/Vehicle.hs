@@ -70,9 +70,9 @@ getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
 verifyUser :: SP.Person -> L.Flow Text
 verifyUser user = do
   whenM (return $ not $ elem (user ^. #_role) [SP.ADMIN, SP.DRIVER]) $ L.throwException $ err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
-  let mOrgId = user ^. #_organizationId
-  whenM (return $ isNothing mOrgId) $ L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
-  return $ fromMaybe "NEVER_SHOULD_BE_HERE" mOrgId
+  case user ^. #_organizationId of
+    Just orgId -> return orgId
+    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
 
 addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
