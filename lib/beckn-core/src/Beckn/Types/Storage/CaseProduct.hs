@@ -5,14 +5,18 @@ module Beckn.Types.Storage.CaseProduct where
 
 import Beckn.Types.App
 import Beckn.Types.Storage.Products (ProductsStatus (..))
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Generics.Labels
 import Data.Swagger
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.MySQL
 import EulerHS.Prelude
+import Servant.API
 import Servant.Swagger
 
 data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
@@ -21,8 +25,15 @@ data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck MySQL CaseProductStatus
+
 instance FromBackendRow MySQL CaseProductStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData CaseProductStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 data CaseProductT f = CaseProduct
   { _id :: B.C f CaseProductId,

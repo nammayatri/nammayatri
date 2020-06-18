@@ -12,6 +12,9 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.CaseProduct
+import Beckn.Types.Storage.Person as SP
+import Beckn.Types.Storage.Products
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -87,8 +90,10 @@ type PersonAPIs =
            :> Post '[JSON] UpdatePersonRes
            :<|> "list"
              :> Header "authorization" Text
-             :> ReqBody '[JSON] ListPersonReq
-             :> Post '[JSON] ListPersonRes
+             :> QueryParams "roles" SP.Role
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] ListPersonRes
            :<|> Capture "personId" Text
              :> Header "authorization" Text
              :> "update"
@@ -121,8 +126,9 @@ type VehicleAPIs =
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
              :> Header "authorization" Text
-             :> ReqBody '[JSON] ListVehicleReq
-             :> Post '[JSON] ListVehicleRes
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] ListVehicleRes
            :<|> Capture "vehicleId" Text
              :> Header "authorization" Text
              :> ReqBody '[JSON] UpdateVehicleReq
@@ -174,12 +180,16 @@ organizationFlow =
 type CaseAPIs =
   "case"
     :> ( Header "authorization" Text
-           :> ReqBody '[JSON] CaseReq
-           :> Post '[JSON] CaseListRes
+           :> QueryParams "status" CaseStatus
+           :> MandatoryQueryParam "type" CaseType
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> QueryParam "ignoreOffered" Bool
+           :> Get '[JSON] CaseListRes
            :<|> Header "authorization" Text
-             :> Capture "caseId" Text
-             :> ReqBody '[JSON] UpdateCaseReq
-             :> Post '[JSON] Case
+           :> Capture "caseId" Text
+           :> ReqBody '[JSON] UpdateCaseReq
+           :> Post '[JSON] Case
        )
 
 caseFlow =
@@ -190,8 +200,10 @@ caseFlow =
 type CaseProductAPIs =
   "caseProduct"
     :> ( Header "authorization" Text
-           :> ReqBody '[JSON] CaseProdReq
-           :> Post '[JSON] CaseProductList
+           :> QueryParams "status" CaseProductStatus
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] CaseProductList
        )
 
 caseProductFlow =

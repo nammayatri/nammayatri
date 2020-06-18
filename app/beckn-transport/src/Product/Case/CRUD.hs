@@ -42,10 +42,10 @@ import qualified Test.RandomStrings as RS
 import Types.API.Case
 import qualified Types.API.CaseProduct as CPR
 import Types.API.Registration
-import qualified Utils.Defaults as Defaults
+import qualified Utils.Defaults as Default
 
-list :: Maybe Text -> CaseReq -> FlowHandler CaseListRes
-list regToken CaseReq {..} = withFlowHandler $ do
+list :: Maybe Text -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
+list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
   SR.RegistrationToken {..} <- QR.verifyAuth regToken
   person <- QP.findPersonById (PersonId _EntityId)
   now <- getCurrentTimeUTC
@@ -53,20 +53,22 @@ list regToken CaseReq {..} = withFlowHandler $ do
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
       ignoreList <-
-        if (fromMaybe False _ignoreOffered)
+        if (fromMaybe False ignoreOffered)
           then do
-            resList <- CPQ.caseProductJoinWithoutLimits _type orgId []
+            resList <- CPQ.caseProductJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
             return csIgnoreList
           else return []
       caseList <-
         if not (org ^. #_enabled)
-          then Case.findAllByTypeStatusTime _limit _offset _type _status ignoreList now $ fromMaybe now (org ^. #_fromTime)
-          else Case.findAllByTypeStatuses _limit _offset _type _status ignoreList now
+          then Case.findAllByTypeStatusTime limit offset csType status ignoreList now $ fromMaybe now (org ^. #_fromTime)
+          else Case.findAllByTypeStatuses limit offset csType status ignoreList now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
   where
+    limit = (toInteger $ fromMaybe Default.limit limitM)
+    offset = (toInteger $ fromMaybe Default.offset offsetM)
     joinByIds locList cs =
       case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
         Just k -> buildResponse k

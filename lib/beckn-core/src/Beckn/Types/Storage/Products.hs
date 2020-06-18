@@ -5,13 +5,17 @@ module Beckn.Types.Storage.Products where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.MySQL
 import EulerHS.Prelude
+import Servant.API
 import Servant.Swagger
 
 data ProdInfo = ProdInfo
@@ -39,6 +43,11 @@ instance B.HasSqlEqualityCheck MySQL ProductsStatus
 
 instance FromBackendRow MySQL ProductsStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData ProductsStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 type ProductsIndustry = Case.Industry
 

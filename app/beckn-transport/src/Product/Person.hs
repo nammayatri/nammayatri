@@ -36,17 +36,16 @@ createPerson token req = withFlowHandler $ do
   return $ UpdatePersonRes person
   where
     validateDriver req =
-      if (req ^. #_role == Just SP.DRIVER)
-        then do
-          let mobileNumber = fromMaybe "MOBILE_NUMBER_NULL" (req ^. #_mobileNumber)
-          whenM (return $ mobileNumber == "MOBILE_NUMBER_NULL") $ L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
-          whenM (isJust <$> (QP.findByMobileNumber mobileNumber)) $ L.throwException $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
-        else return ()
+      when (req ^. #_role == Just SP.DRIVER) $
+        case req ^. #_mobileNumber of
+          Just mobileNumber ->
+            whenM (isJust <$> QP.findByMobileNumber mobileNumber) $ L.throwException $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
+          Nothing -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
 
-listPerson :: Maybe Text -> ListPersonReq -> FlowHandler ListPersonRes
-listPerson token req = withFlowHandler $ do
+listPerson :: Maybe Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
+listPerson token roles limitM offsetM = withFlowHandler $ do
   orgId <- validate token
-  ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) (req ^. #_roles) [orgId]
+  ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
 
 getPerson :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
 getPerson token idM mobileM emailM identifierM = withFlowHandler $ do
@@ -84,9 +83,9 @@ deletePerson personId token = withFlowHandler $ do
 verifyAdmin :: SP.Person -> L.Flow Text
 verifyAdmin user = do
   whenM (return $ (user ^. #_role) /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
-  let mOrgId = user ^. #_organizationId
-  whenM (return $ isNothing mOrgId) $ L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
-  return $ fromMaybe "NEVER_SHOULD_BE_HERE" mOrgId
+  case user ^. #_organizationId of
+    Just orgId -> return orgId
+    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
 
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}

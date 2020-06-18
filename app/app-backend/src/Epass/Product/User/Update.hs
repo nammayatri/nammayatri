@@ -5,6 +5,7 @@ module Epass.Product.User.Update where
 
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.List as List
 import Data.Time
@@ -18,7 +19,6 @@ import Epass.Types.Common
 import qualified Epass.Types.Storage.Location as Location
 import qualified Epass.Types.Storage.Organization as Org
 import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
