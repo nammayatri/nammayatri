@@ -42,7 +42,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   -- verifyIfStatusUpdatable (PassApplication._status pA) _status
   case _status of
     REVOKED -> do
-      QCP.updateAllProductsByCaseId caseId Products.INVALID
+      QCP.updateAllProductsByCaseId caseId Products.OUTOFSTOCK
       QC.updateStatusAndUdfs caseId Case.CLOSED Nothing Nothing Nothing Nothing _remarks
     APPROVED -> do
       when
@@ -51,7 +51,8 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       let approvedCount = fromJust _approvedCount
       -- Create passes
       replicateM approvedCount (createPass pA)
-      QC.updateStatusAndUdfs caseId Case.CONFIRMED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
+      --TODO: should we need to update case product to CONFIRMED?
+      QC.updateStatusAndUdfs caseId Case.COMPLETED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
   QC.findById caseId
@@ -83,7 +84,7 @@ createPass c@(Case.Case {..}) = do
             _createdAt = currTime,
             _updatedAt = currTime,
             _type = Products.PASS,
-            _status = Products.CONFIRMED,
+            _status = Products.INSTOCK,
             _fromLocation = Just _fromLocationId,
             _toLocation = Just _toLocationId,
             _organizationId = orgId,
@@ -100,7 +101,7 @@ createPass c@(Case.Case {..}) = do
             _productId = ProductsId id,
             _quantity = 0,
             _price = 0.0,
-            _status = Products.CONFIRMED,
+            _status = CaseProduct.CONFIRMED,
             _info = Nothing,
             _personId = Nothing, -- TODO: this column should be removed?
             _createdAt = currTime,

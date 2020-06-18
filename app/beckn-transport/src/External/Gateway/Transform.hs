@@ -19,6 +19,7 @@ import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products
@@ -68,14 +69,14 @@ mkPrice prod =
       _tax = Nothing
     }
 
-mkServiceOffer :: Case -> [Products] -> Maybe Trip -> Maybe Organization -> L.Flow Service
-mkServiceOffer c prods trip orgInfo =
+mkServiceOffer :: Case -> [Products] -> [CaseProduct] -> Maybe Trip -> Maybe Organization -> L.Flow Service
+mkServiceOffer c prods cps trip orgInfo =
   let x =
         Service
           { _id = _getCaseId $ c ^. #_id,
             _catalog = Just $ mkCatalog prods,
             _matched_items = (_getProductsId . Product._id) <$> prods,
-            _selected_items = catMaybes $ (\x -> if x ^. #_status == Product.CONFIRMED then Just (_getProductsId $ x ^. #_id) else Nothing) <$> prods,
+            _selected_items = catMaybes $ (\x -> if x ^. #_status == CaseProduct.CONFIRMED then Just (_getProductsId $ x ^. #_productId) else Nothing) <$> cps,
             _fare_product = Nothing,
             _offers = [],
             _provider = mkProvider <$> orgInfo,

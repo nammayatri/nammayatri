@@ -3,6 +3,7 @@ module Types.API.Products where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Storage.Case
+import qualified Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Location
 import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle
@@ -12,7 +13,7 @@ import Data.Time
 import EulerHS.Prelude
 
 data ProdReq = ProdReq
-  { _status :: Maybe Product.ProductsStatus,
+  { _status :: Maybe CaseP.CaseProductStatus,
     _assignedTo :: Maybe Text,
     _vehicleId :: Maybe Text
   }

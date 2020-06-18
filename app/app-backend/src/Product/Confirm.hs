@@ -72,10 +72,11 @@ onConfirm regToken req = withFlowHandler $ do
         let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
         let uPrd =
               prd
-                { Products._status = Products.CONFIRMED,
-                  Products._info = encodeToText <$> uInfo
+                { Products._info = encodeToText <$> uInfo
                 }
-        QCP.updateStatus pid Products.CONFIRMED
+        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        QCP.updateStatus pid SCP.CONFIRMED
+        QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId
