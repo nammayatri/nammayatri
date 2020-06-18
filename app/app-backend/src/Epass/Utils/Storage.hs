@@ -1,11 +1,11 @@
 module Epass.Utils.Storage where
 
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import qualified Data.Time as DT
 import Data.Time.Clock
 import Data.Time.LocalTime
-import Epass.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -42,9 +42,3 @@ validateToken sr@SR.RegistrationToken {..} = do
   expired <- isExpired nominal _updatedAt
   when expired (L.throwException $ err400 {errBody = "TOKEN_EXPIRED"})
   return sr
-
-isExpired :: NominalDiffTime -> LocalTime -> L.Flow Bool
-isExpired nominal time = do
-  now <- getCurrentTimeUTC
-  let addedLocalTime = DT.addLocalTime nominal time
-  return $ now > addedLocalTime
