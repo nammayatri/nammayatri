@@ -8,13 +8,14 @@ import Beckn.Types.Storage.Products (ProductsStatus (..))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Generics.Labels
+import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -25,9 +26,9 @@ data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL CaseProductStatus
+instance B.HasSqlEqualityCheck Postgres CaseProductStatus
 
-instance FromBackendRow MySQL CaseProductStatus where
+instance FromBackendRow Postgres CaseProductStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData CaseProductStatus where
@@ -41,7 +42,7 @@ data CaseProductT f = CaseProduct
     _productId :: B.C f ProductsId,
     _personId :: B.C f (Maybe PersonId),
     _quantity :: B.C f Int,
-    _price :: B.C f Double,
+    _price :: B.C f Scientific,
     _status :: B.C f CaseProductStatus,
     _info :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,

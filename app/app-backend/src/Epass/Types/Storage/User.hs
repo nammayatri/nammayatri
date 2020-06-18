@@ -14,7 +14,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import qualified Epass.Utils.Defaults as Defaults
 import EulerHS.Prelude
@@ -27,7 +27,7 @@ data Status = ACTIVE | INACTIVE
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema Status
@@ -48,9 +48,9 @@ data Role
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL Role
+instance B.HasSqlEqualityCheck Postgres Role
 
-instance FromBackendRow MySQL Role where
+instance FromBackendRow Postgres Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema Role

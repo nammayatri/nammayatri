@@ -11,13 +11,15 @@ where
 
 import Beckn.Types.App
 import Beckn.Utils.TH
+import Beckn.Utils.TH
 import Data.Swagger
 import Database.Beam.Backend.SQL
   ( FromBackendRow,
     HasSqlValueSyntax,
   )
-import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
-import Database.Beam.MySQL.FromField
+import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax (PgValueSyntax)
+import Database.PostgreSQL.Simple.FromField
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -162,9 +164,9 @@ deriveIdentifierInstances ''DocumentId
 
 instance FromField [DocumentId]
 
-instance FromBackendRow MySQL [DocumentId]
+instance FromBackendRow Postgres [DocumentId]
 
-instance HasSqlValueSyntax MysqlValueSyntax [DocumentId]
+instance HasSqlValueSyntax PgValueSyntax [DocumentId]
 
 newtype EntityTagId = EntityTagId
   { _getEntityTagId :: Text

@@ -1,31 +1,31 @@
 version: "3"
 services:
   app-db:
-    image: "mysql:8.0.18"
+    image: "postgres:12.3"
     container_name: "atlas-app"
     ports:
-      - "3306:3306"
+      - "5433:5432"
     volumes:
       - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/app-backend-seed.sql:Z
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=atlas_app
-      - MYSQL_USER=atlas
-      - MYSQL_PASSWORD=atlas
-    command: mysqld --default-authentication-plugin=mysql_native_password --skip-mysqlx
+      - POSTGRES_DB=atlas_app
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   transporter-db:
-    image: "mysql:8.0.18"
+    image: "postgres:12.3"
     container_name: "atlas-transporter"
     ports:
-      - "3307:3306"
+      - "5434:5432"
     volumes:
       - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/transporter-backend-seed.sql:Z
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=atlas_transporter
-      - MYSQL_USER=atlas
-      - MYSQL_PASSWORD=atlas
-    command: mysqld --default-authentication-plugin=mysql_native_password --skip-mysqlx
+      - POSTGRES_DB=atlas_transporter
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   transporter-redis:
     image: "redis:5"
     ports:

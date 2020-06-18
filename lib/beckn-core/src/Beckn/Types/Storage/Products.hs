@@ -7,13 +7,14 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -30,7 +31,7 @@ data ProductsType = RIDE | PASS
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL ProductsType where
+instance FromBackendRow Postgres ProductsType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductsStatus = INSTOCK | OUTOFSTOCK
@@ -39,9 +40,9 @@ data ProductsStatus = INSTOCK | OUTOFSTOCK
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck MySQL ProductsStatus
+instance B.HasSqlEqualityCheck Postgres ProductsStatus
 
-instance FromBackendRow MySQL ProductsStatus where
+instance FromBackendRow Postgres ProductsStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance FromHttpApiData ProductsStatus where
@@ -71,7 +72,7 @@ data ProductsT f = Products
     _startTime :: B.C f LocalTime,
     _endTime :: B.C f (Maybe LocalTime),
     _validTill :: B.C f LocalTime,
-    _price :: B.C f Double,
+    _price :: B.C f Scientific,
     _rating :: B.C f (Maybe Text),
     _review :: B.C f (Maybe Text),
     _udf1 :: B.C f (Maybe Text),

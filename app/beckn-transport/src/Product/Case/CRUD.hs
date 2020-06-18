@@ -22,6 +22,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import qualified Data.Accessor as Lens
 import Data.Aeson
+import Data.Scientific
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
@@ -124,7 +125,7 @@ createProduct cs price orgId status = do
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
-          _price = fromMaybe 0 price,
+          _price = fromFloatDigits $ fromMaybe 0 price,
           _rating = Nothing,
           _review = Nothing,
           _udf1 = Case._udf1 cs,

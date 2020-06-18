@@ -3,7 +3,7 @@
 module Storage.DB.Config where
 
 import Data.Text as T
-import qualified Database.Beam.MySQL as BM
+import Database.Beam.Postgres (Pg)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -12,17 +12,17 @@ import System.Environment
 import Types.Config (Config (..))
 import qualified Prelude as P (show)
 
-instance Config T.MySQLConfig where
+dbSchema :: Text
+dbSchema = "atlas_app"
+
+instance Config T.PostgresConfig where
   theConfig =
-    T.MySQLConfig
+    T.PostgresConfig
       { connectHost = "127.0.0.1",
-        connectPort = 3306,
+        connectPort = 5433,
         connectUser = "atlas",
         connectPassword = "atlas",
-        connectDatabase = "atlas_app",
-        connectOptions = [T.CharsetName "utf8"],
-        connectPath = "",
-        connectSSL = Nothing
+        connectDatabase = "atlas_app"
       }
 
 poolConfig :: T.PoolConfig
@@ -33,13 +33,13 @@ poolConfig =
       resourcesPerStripe = 50
     }
 
-loadMysqlConfig :: IO (Maybe T.MySQLConfig)
-loadMysqlConfig = do
-  mhost <- lookupEnv "MYSQL_HOST"
-  mport <- lookupEnv "MYSQL_PORT"
-  muser <- lookupEnv "MYSQL_USER"
-  mpass <- lookupEnv "MYSQL_PASSWORD"
-  mdb <- lookupEnv "MYSQL_DB"
+loadPgConfig :: IO (Maybe T.PostgresConfig)
+loadPgConfig = do
+  mhost <- lookupEnv "DB_HOST"
+  mport <- lookupEnv "DB_PORT"
+  muser <- lookupEnv "DB_USER"
+  mpass <- lookupEnv "DB_PASSWORD"
+  mdb <- lookupEnv "DB_NAME"
   pure $ do
     host <- mhost
     port <- mport
@@ -48,25 +48,22 @@ loadMysqlConfig = do
     db <- mdb
     p <- readMaybe port
     Just $
-      T.MySQLConfig
+      T.PostgresConfig
         { connectHost = host,
           connectPort = p,
           connectUser = user,
           connectPassword = pass,
-          connectDatabase = db,
-          connectOptions = [T.CharsetName "utf8"],
-          connectPath = "",
-          connectSSL = Nothing
+          connectDatabase = db
         }
 
-getMysqlDBConfig :: T.MySQLConfig -> L.Flow (T.DBConfig BM.MySQLM)
-getMysqlDBConfig defMysqlConfig = do
-  mConfig <- L.runIO loadMysqlConfig
+getPgDBConfig :: T.PostgresConfig -> L.Flow (T.DBConfig Pg)
+getPgDBConfig defPostgresConfig = do
+  mConfig <- L.runIO loadPgConfig
   case mConfig of
     Nothing -> do
-      L.runIO $ putStrLn @String "Could not load mysql config from env. Using defaults."
-      pure $ T.mkMySQLPoolConfig (T.pack "appDb") defMysqlConfig poolConfig
-    Just config -> pure $ T.mkMySQLPoolConfig (T.pack "appDb") config poolConfig
+      L.runIO $ putStrLn @String "Could not load postgres config from env. Using defaults."
+      pure $ T.mkPostgresPoolConfig (T.pack "transporterDb") defPostgresConfig poolConfig
+    Just config -> pure $ T.mkPostgresPoolConfig (T.pack "transporterDb") config poolConfig
 
 -- helper
 dbHandle :: (T.DBConfig beM -> L.Flow (Either T.DBError a)) -> T.DBConfig beM -> L.Flow a
@@ -77,5 +74,5 @@ connMySQLorFail = dbHandle L.initSqlDBConnection
 getConn = dbHandle L.getSqlDBConnection
 getOrInitConn = dbHandle L.getOrInitSqlConn
 
-prepareDBConnections :: Config T.MySQLConfig => L.Flow (T.SqlConn BM.MySQLM)
-prepareDBConnections = getMysqlDBConfig theConfig >>= connMySQLorFail
+prepareDBConnections :: Config T.PostgresConfig => L.Flow (T.SqlConn Pg)
+prepareDBConnections = getPgDBConfig theConfig >>= connMySQLorFail
