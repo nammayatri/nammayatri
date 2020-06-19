@@ -52,8 +52,8 @@ track regToken req = withFlowHandler $ do
               Right _ -> return $ Ack "Successful" "Tracking initiated"
   return $ AckResponse context ack
 
-track_cb :: RegToken -> OnTrackTripReq -> FlowHandler OnTrackTripRes
-track_cb regToken req = withFlowHandler $ do
+track_cb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
+track_cb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message

@@ -103,7 +103,6 @@ type SearchAPIs =
     -- on_search
     :<|> "on_search"
     :> "services"
-    :> AuthHeader
     :> ReqBody '[JSON] Search.OnSearchReq
     :> Post '[JSON] Search.OnSearchRes
 
@@ -120,7 +119,6 @@ type ConfirmAPIs =
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
       :> "services"
-      :> AuthHeader
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
@@ -174,7 +172,6 @@ type TrackTripAPIs =
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
     :> "trip"
-    :> AuthHeader
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 

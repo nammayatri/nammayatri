@@ -54,8 +54,8 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack
 
-onConfirm :: RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
-onConfirm regToken req = withFlowHandler $ do
+onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
   let selectedItems = req ^. #message ^. #_selected_items
