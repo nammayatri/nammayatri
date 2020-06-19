@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Epass.Types.Common where
@@ -39,7 +38,7 @@ data PassApplicationType
   = SELF
   | SPONSOR
   | BULKSPONSOR
-  deriving (Eq, Generic, FromJSON, ToSchema)
+  deriving (Eq, Generic, FromJSON, ToJSON, ToSchema)
 
 instance Default PassApplicationType where
   def = SELF
@@ -47,7 +46,7 @@ instance Default PassApplicationType where
 data TravellerIDType
   = MOBILE
   | AADHAAR
-  deriving (Eq, Generic, FromJSON, ToSchema)
+  deriving (Eq, Generic, FromJSON, ToJSON, ToSchema)
 
 instance Default TravellerIDType where
   def = MOBILE
@@ -62,14 +61,19 @@ data PassIDType
   | CUSTOMERID
   | PASSAPPLICATIONID
   | ORGANIZATIONID
-  deriving (Generic, FromJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 instance ToParamSchema PassIDType
 
 instance FromHttpApiData PassIDType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData PassIDType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data PassType
   = INDIVIDUAL
@@ -87,7 +91,12 @@ instance FromBackendRow Postgres PassType where
 instance FromHttpApiData PassType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData PassType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 -- data LocationType
 --   = POINT
@@ -106,7 +115,7 @@ instance FromHttpApiData PassType where
 -- instance FromHttpApiData LocationType where
 --   parseUrlPiece = parseHeader . DT.encodeUtf8
 --   parseQueryParam = parseUrlPiece
---   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+--   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data Location = Location
   { _type :: LocationType,
@@ -155,7 +164,12 @@ instance FromBackendRow Postgres QuotaType where
 instance FromHttpApiData QuotaType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData QuotaType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data EntityType
   = LOCATION
@@ -173,7 +187,12 @@ instance FromBackendRow Postgres EntityType where
 instance FromHttpApiData EntityType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData EntityType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data Ack = Ack
   { _action :: Text,
@@ -207,6 +226,11 @@ instance FromHttpApiData DocumentEntity where
   parseQueryParam = parseBoundedTextData
   parseHeader = parseBoundedTextData . DT.decodeUtf8
 
+instance ToHttpApiData DocumentEntity where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 data DocumentByType
   = VERIFIER
   | CREATOR
@@ -225,6 +249,11 @@ instance FromHttpApiData DocumentByType where
   parseQueryParam = parseBoundedTextData
   parseHeader = parseBoundedTextData . DT.decodeUtf8
 
+instance ToHttpApiData DocumentByType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 data LocateBy
   = LSTATE
   | LCITY
@@ -237,3 +266,8 @@ instance FromHttpApiData LocateBy where
   parseUrlPiece = parseBoundedTextData
   parseQueryParam = parseBoundedTextData
   parseHeader = parseBoundedTextData . DT.decodeUtf8
+
+instance ToHttpApiData LocateBy where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode

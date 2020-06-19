@@ -48,7 +48,7 @@ instance FromBackendRow Postgres ProductsStatus where
 instance FromHttpApiData ProductsStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 type ProductsIndustry = Case.Industry
 

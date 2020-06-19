@@ -12,13 +12,9 @@ import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
-import Data.Aeson
-import qualified Data.Vault.Lazy as V
 import qualified Data.Vault.Lazy as V
 import qualified Epass.App.Routes as Epass
 import EulerHS.Prelude
-import EulerHS.Prelude
-import Network.Wai.Parse
 import Network.Wai.Parse
 import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
@@ -59,19 +55,18 @@ appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
 
 appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
-appServer' key = do
-  ( pure "App is UP"
-      :<|> registrationFlow
-      :<|> searchFlow
-      :<|> confirmFlow
-      :<|> caseFlow
-      :<|> infoFlow
-      :<|> trackTripFlow
-      :<|> caseProductFlow
-      :<|> cancelFlow
-      :<|> cronFlow
-      :<|> Epass.epassServer' key
-    )
+appServer' key =
+  pure "App is UP"
+    :<|> registrationFlow
+    :<|> searchFlow
+    :<|> confirmFlow
+    :<|> caseFlow
+    :<|> infoFlow
+    :<|> trackTripFlow
+    :<|> caseProductFlow
+    :<|> cancelFlow
+    :<|> cronFlow
+    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =
