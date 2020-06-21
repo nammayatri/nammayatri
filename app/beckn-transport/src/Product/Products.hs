@@ -41,17 +41,17 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
   vehIdRes <- case _vehicleId of
     Just k ->
-      whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
+      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         PQ.updateVeh (ProductsId productId) _vehicleId
     Nothing -> return ()
   dvrIdRes <- case _assignedTo of
     Just k ->
-      whenM (return $ (user ^. #_role) == SP.ADMIN) $
+      when (user ^. #_role == SP.ADMIN) $
         PQ.updateDvr (ProductsId productId) _assignedTo
     Nothing -> return ()
   tripRes <- case _status of
     Just c ->
-      whenM (return $ (user ^. #_role) == SP.ADMIN || (user ^. #_role) == SP.DRIVER) $
+      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (ProductsId productId) c
     Nothing -> return ()
 

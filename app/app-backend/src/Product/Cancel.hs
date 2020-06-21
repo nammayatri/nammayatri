@@ -106,7 +106,8 @@ onCancel req = withFlowHandler $ do
               status == CaseProduct.COMPLETED || status == CaseProduct.OUTOFSTOCK || status == CaseProduct.CANCELLED || status == CaseProduct.INVALID
           )
           arrCPCase
-  if length arrTerminalCP == length arrCPCase
-    then Case.updateStatus caseId Case.CLOSED
-    else return ()
+  when
+    (length arrTerminalCP == length arrCPCase)
+    (Case.updateStatus caseId Case.CLOSED)
+
   mkAckResponse txnId "cancel"
