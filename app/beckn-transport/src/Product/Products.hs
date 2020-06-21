@@ -129,7 +129,7 @@ listRides regToken vehicleIdM = withFlowHandler $ do
       case vehicleM of
         Just vehicleId -> do
           vehicle <- VQ.findVehicleById (VehicleId vehicleId)
-          if SP._organizationId person /= Nothing && (SP._organizationId person == (V._organizationId <$> vehicle))
+          if isJust (SP._organizationId person) && (SP._organizationId person == (V._organizationId <$> vehicle))
             then return False
             else return True
         Nothing -> return False

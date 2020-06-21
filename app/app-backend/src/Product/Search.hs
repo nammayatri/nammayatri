@@ -106,8 +106,7 @@ search_cb req = withFlowHandler $ do
     extendCaseExpiry Case.Case {..} = do
       now <- getCurrentTimeUTC
       confirmExpiry <-
-        pure . fromMaybe 1800 . join
-          . (readMaybe <$>)
+        pure . fromMaybe 1800 . (readMaybe =<<)
           =<< L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
       let newValidTill = (fromInteger confirmExpiry) `addLocalTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
