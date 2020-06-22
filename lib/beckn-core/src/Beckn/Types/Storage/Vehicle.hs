@@ -23,6 +23,8 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck Postgres Category
+
 instance FromBackendRow Postgres Category where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
@@ -34,11 +36,13 @@ instance FromHttpApiData Category where
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
 --------
-data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS
+data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS | HATCKBACK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres Variant
 
 instance FromBackendRow Postgres Variant where
   fromBackendRow = read . T.unpack <$> fromBackendRow

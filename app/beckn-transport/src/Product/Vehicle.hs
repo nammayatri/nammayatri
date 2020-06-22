@@ -16,6 +16,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
+import qualified Utils.Defaults as Default
 
 createVehicle :: RegToken -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle regToken req = withFlowHandler $ do
@@ -24,10 +25,13 @@ createVehicle regToken req = withFlowHandler $ do
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
-listVehicles :: RegToken -> Maybe Integer -> Maybe Integer -> FlowHandler ListVehicleRes
-listVehicles regToken limitM offsetM = withFlowHandler $ do
+listVehicles :: RegToken -> Maybe SV.Variant -> Maybe SV.Category -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
+listVehicles regToken variantM categoryM limitM offsetM = withFlowHandler $ do
   orgId <- validate regToken
-  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds limitM offsetM [orgId])
+  ListVehicleRes <$> (QV.findAllByVariantCatOrgId variantM categoryM limit offset orgId)
+  where
+    limit = (toInteger $ fromMaybe Default.limit limitM)
+    offset = (toInteger $ fromMaybe Default.offset offsetM)
 
 updateVehicle :: Text -> RegToken -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle vehicleId regToken req = withFlowHandler $ do

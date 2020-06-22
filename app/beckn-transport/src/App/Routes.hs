@@ -15,6 +15,7 @@ import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.CaseProduct
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.Products
+import Beckn.Types.Storage.Vehicle
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -126,8 +127,10 @@ type VehicleAPIs =
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
              :> AuthHeader
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
+             :> QueryParam "variant" Variant
+             :> QueryParam "category" Category
+             :> QueryParam "limit" Int
+             :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
            :<|> Capture "vehicleId" Text
              :> AuthHeader
