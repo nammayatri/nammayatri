@@ -15,7 +15,7 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
+create :: RegToken -> CreateReq -> FlowHandler CreateRes
 create regToken CreateReq {..} = withFlowHandler $ do
   RegistrationToken {..} <- verifyToken regToken
   id <- generateGUID
@@ -40,7 +40,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
           }
 
 list ::
-  Maybe RegistrationTokenText ->
+  RegToken ->
   [TagId] ->
   Maybe Text ->
   Maybe Text ->
@@ -56,7 +56,7 @@ list regToken tagIds entityTypeM entityIdM = withFlowHandler $ do
           else return []
   return $ ListRes res
 
-tagEntity :: Maybe RegistrationTokenText -> TagEntityReq -> FlowHandler TagEntityRes
+tagEntity :: RegToken -> TagEntityReq -> FlowHandler TagEntityRes
 tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
   L.logInfo "tagEntity" "In here"
   RegistrationToken {..} <- verifyToken regToken
@@ -86,7 +86,7 @@ tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
           }
 
 listTypes ::
-  Maybe RegistrationTokenText ->
+  RegToken ->
   FlowHandler ListVal
 listTypes regToken = withFlowHandler $ do
   verifyToken regToken
@@ -94,7 +94,7 @@ listTypes regToken = withFlowHandler $ do
     >>= return . ListVal
 
 listTags ::
-  Maybe RegistrationTokenText ->
+  RegToken ->
   Text ->
   FlowHandler ListVal
 listTags regToken tagType = withFlowHandler $ do
@@ -103,7 +103,7 @@ listTags regToken tagType = withFlowHandler $ do
     >>= return . ListVal
 
 listByTag ::
-  Maybe RegistrationTokenText ->
+  RegToken ->
   Text ->
   Text ->
   FlowHandler ListRes

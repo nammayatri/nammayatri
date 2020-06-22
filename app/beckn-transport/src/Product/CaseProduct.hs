@@ -28,9 +28,9 @@ import System.Environment
 import Types.API.CaseProduct
 import qualified Utils.Defaults as Default
 
-list :: Maybe Text -> [CaseP.CaseProductStatus] -> Maybe Int -> Maybe Int -> FlowHandler CaseProductList
+list :: RegToken -> [CaseP.CaseProductStatus] -> Maybe Int -> Maybe Int -> FlowHandler CaseProductList
 list regToken status limitM offsetM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  SR.RegistrationToken {..} <- QR.verifyToken regToken
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do

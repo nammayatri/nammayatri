@@ -25,7 +25,7 @@ import qualified Storage.Queries.Person as Person
 import Utils.Common
 
 list ::
-  Maybe Text ->
+  RegToken ->
   Maybe Int ->
   Maybe Int ->
   Maybe LocateBy ->
@@ -170,7 +170,7 @@ wardLevelUsers limitM offsetM r wards =
     >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
     >>= return . ListRes
 
-get :: Maybe Text -> PersonId -> FlowHandler GetRes
+get :: RegToken -> PersonId -> FlowHandler GetRes
 get regToken userId = withFlowHandler $ do
   verifyToken regToken
   user <-
@@ -179,7 +179,7 @@ get regToken userId = withFlowHandler $ do
   locInfo <- mapM getLocationInfo (user ^. #_locationId)
   return $ mkUInfo user locInfo
 
-listRoles :: Maybe RegistrationTokenText -> FlowHandler [Person.Role]
+listRoles :: RegToken -> FlowHandler [Person.Role]
 listRoles regToken = withFlowHandler $ do
   verifyToken regToken
   pure $ enumFrom minBound

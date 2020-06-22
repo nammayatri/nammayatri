@@ -27,7 +27,7 @@ import Types.ProductInfo as ProductInfo
 import Utils.Common (verifyToken)
 import Utils.Routes
 
-getProductInfo :: Maybe RegToken -> Text -> FlowHandler GetProductInfoRes
+getProductInfo :: RegToken -> Text -> FlowHandler GetProductInfoRes
 getProductInfo regToken prodId = withFlowHandler $ do
   reg <- verifyToken regToken
   caseProduct <- QCP.findByProductId (ProductsId prodId)
@@ -52,7 +52,7 @@ getProductInfo regToken prodId = withFlowHandler $ do
       L.logInfo "get Product info" "No info found in products table"
         >> L.throwException (err400 {errBody = "NO_DETAILS_FOUND"})
 
-getLocation :: Maybe RegToken -> Text -> FlowHandler GetLocationRes
+getLocation :: RegToken -> Text -> FlowHandler GetLocationRes
 getLocation regToken caseId = withFlowHandler $ do
   verifyToken regToken
   baseUrl <- External.getBaseUrl

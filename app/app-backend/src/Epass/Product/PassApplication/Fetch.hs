@@ -39,7 +39,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Products as QProd
 
 listPassApplication ::
-  Maybe Text ->
+  RegToken ->
   Maybe Int ->
   Maybe Int ->
   [Int] ->
@@ -168,7 +168,7 @@ getCaseAppInfo Case.Case {..} = do
         ..
       }
 
-getPassApplicationById :: Maybe Text -> CaseId -> FlowHandler API.CaseInfo
+getPassApplicationById :: RegToken -> CaseId -> FlowHandler API.CaseInfo
 getPassApplicationById regToken caseId = withFlowHandler $
   do
     verifyToken regToken

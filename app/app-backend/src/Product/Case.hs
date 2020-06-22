@@ -17,7 +17,7 @@ import Types.API.Case as API
 import Utils.Common (verifyToken)
 
 status ::
-  Maybe RegToken ->
+  RegToken ->
   CaseId ->
   FlowHandler StatusRes
 status regToken caseId = withFlowHandler $ do
@@ -34,7 +34,7 @@ status regToken caseId = withFlowHandler $ do
   return $ StatusRes case_ products fromLocation toLocation
 
 list ::
-  Maybe RegToken ->
+  RegToken ->
   Case.CaseType ->
   [Case.CaseStatus] ->
   Maybe Integer ->

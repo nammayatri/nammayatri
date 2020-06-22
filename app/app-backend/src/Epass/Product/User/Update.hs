@@ -26,7 +26,7 @@ import Servant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegToken
 
-update :: Maybe Text -> PersonId -> UpdateReq -> FlowHandler UpdateRes
+update :: RegToken -> PersonId -> UpdateReq -> FlowHandler UpdateRes
 update regToken userId req@UpdateReq {..} = withFlowHandler $ do
   verifyToken regToken
   person <-
@@ -54,7 +54,7 @@ update regToken userId req@UpdateReq {..} = withFlowHandler $ do
     >>= fromMaybeM500 "Couldnot find user"
     >>= return . UpdateRes
 
-delete :: Maybe RegistrationTokenText -> PersonId -> FlowHandler Ack
+delete :: RegToken -> PersonId -> FlowHandler Ack
 delete regToken userId = withFlowHandler $ do
   verifyToken regToken
   Person.deleteById userId

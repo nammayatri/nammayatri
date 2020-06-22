@@ -19,7 +19,7 @@ import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
 
-cancel :: Maybe RegToken -> CancelReq -> FlowHandler CancelRes
+cancel :: RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
   verifyToken regToken
   let entityType = req ^. #message ^. #entityType

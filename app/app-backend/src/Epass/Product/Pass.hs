@@ -40,7 +40,7 @@ import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as QProd
 
-getPassById :: Maybe Text -> Text -> FlowHandler PassRes
+getPassById :: RegToken -> Text -> FlowHandler PassRes
 getPassById regToken passId =
   withFlowHandler $ do
     reg <- verifyToken regToken
@@ -49,7 +49,7 @@ getPassById regToken passId =
     product <- QProd.findById (ProductsId passId)
     PassRes <$> getPassInfo case' product caseProduct
 
-updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
+updatePass :: RegToken -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   RegistrationToken.RegistrationToken {..} <- verifyToken regToken
   pass <- QProd.findById (ProductsId passId)
@@ -89,7 +89,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   PassRes <$> getPassInfo case' pass caseProduct
 
 listPass ::
-  Maybe Text ->
+  RegToken ->
   PassIDType ->
   Text ->
   Maybe Int ->

@@ -45,9 +45,9 @@ import qualified Types.API.CaseProduct as CPR
 import Types.API.Registration
 import qualified Utils.Defaults as Default
 
-list :: Maybe Text -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
+list :: RegToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
 list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  SR.RegistrationToken {..} <- QR.verifyToken regToken
   person <- QP.findPersonById (PersonId _EntityId)
   now <- getCurrentTimeUTC
   case (person ^. #_organizationId) of
@@ -86,9 +86,9 @@ list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
 -- Update Case
 -- Transporter Accepts a Ride with Quote
 -- TODO fromLocation toLocation getCreatedTimeFromInput
-update :: Maybe Text -> Text -> UpdateCaseReq -> FlowHandler Case
+update :: RegToken -> Text -> UpdateCaseReq -> FlowHandler Case
 update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+  SR.RegistrationToken {..} <- QR.verifyToken regToken
   person <- QP.findPersonById (PersonId _EntityId)
   c <- Case.findById $ CaseId caseId
   case (SP._organizationId person) of

@@ -21,13 +21,13 @@ import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.RegistrationToken as RegToken
 
-create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
-create mRegToken CreateReq {..} = withFlowHandler $ do
-  regToken <- verifyToken mRegToken
+create :: RegToken -> CreateReq -> FlowHandler CreateRes
+create regToken CreateReq {..} = withFlowHandler $ do
+  token <- verifyToken regToken
   id <- generateGUID
-  case (RegToken._entityType regToken) of
+  case (RegToken._entityType token) of
     RegToken.USER -> do
-      let (userId) = RegToken._EntityId regToken
+      let (userId) = RegToken._EntityId token
       user <- (User.findById $ UserId userId)
       let (OrganizationId orgId) = User._OrganizationId user
       quota <- quotaRec id orgId
@@ -51,9 +51,9 @@ create mRegToken CreateReq {..} = withFlowHandler $ do
             ..
           }
 
-update :: Maybe RegistrationTokenText -> QuotaId -> UpdateReq -> FlowHandler UpdateRes
-update mRegToken id UpdateReq {..} = withFlowHandler $ do
-  verifyToken mRegToken
+update :: RegToken -> QuotaId -> UpdateReq -> FlowHandler UpdateRes
+update regToken id UpdateReq {..} = withFlowHandler $ do
+  verifyToken regToken
   eres <- DB.update id _maxAllowed _startTime _endTime
   case eres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
@@ -65,24 +65,24 @@ update mRegToken id UpdateReq {..} = withFlowHandler $ do
           Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
 list ::
-  Maybe RegistrationTokenText ->
+  RegToken ->
   Maybe Limit ->
   Maybe Offset ->
   EntityType ->
   Text ->
   FlowHandler ListRes
-list mRegToken mlimit moffset entityType entityId = withFlowHandler $
+list regToken mlimit moffset entityType entityId = withFlowHandler $
   do
-    verifyToken mRegToken
+    verifyToken regToken
     DB.findAllWithLimitOffset mlimit moffset entityType entityId
     >>= \case
       Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
       Right v -> return $ ListRes v
 
-get :: Maybe Text -> QuotaId -> FlowHandler GetRes
-get mRegToken quotaId = withFlowHandler $
+get :: RegToken -> QuotaId -> FlowHandler GetRes
+get regToken quotaId = withFlowHandler $
   do
-    verifyToken mRegToken
+    verifyToken regToken
     DB.findById quotaId
     >>= \case
       Right (Just user) -> return user

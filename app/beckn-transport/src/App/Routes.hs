@@ -85,28 +85,28 @@ registrationFlow =
 -- Following is person flow
 type PersonAPIs =
   "person"
-    :> ( Header "authorization" Text
+    :> ( AuthHeader
            :> ReqBody '[JSON] CreatePersonReq
            :> Post '[JSON] UpdatePersonRes
            :<|> "list"
-             :> Header "authorization" Text
+             :> AuthHeader
              :> QueryParams "roles" SP.Role
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes
            :<|> Capture "personId" Text
-             :> Header "authorization" Text
+             :> AuthHeader
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
-           :<|> Header "authorization" Text
+           :<|> AuthHeader
              :> QueryParam "personId" Text
              :> QueryParam "mobileNumber" Text
              :> QueryParam "email" Text
              :> QueryParam "identifier" Text
              :> Get '[JSON] PersonRes
            :<|> Capture "personId" Text
-             :> Header "authorization" Text
+             :> AuthHeader
              :> Delete '[JSON] DeletePersonRes
        )
 
@@ -121,22 +121,22 @@ personFlow =
 -- Following is vehicle flow
 type VehicleAPIs =
   "vehicle"
-    :> ( Header "authorization" Text
+    :> ( AuthHeader
            :> ReqBody '[JSON] CreateVehicleReq
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
-             :> Header "authorization" Text
+             :> AuthHeader
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListVehicleRes
            :<|> Capture "vehicleId" Text
-             :> Header "authorization" Text
+             :> AuthHeader
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
            :<|> Capture "vehicleId" Text
-             :> Header "authorization" Text
+             :> AuthHeader
              :> Delete '[JSON] DeleteVehicleRes
-           :<|> Header "authorization" Text
+           :<|> AuthHeader
              :> QueryParam "registrationNo" Text
              :> QueryParam "vehicleId" Text
              :> Get '[JSON] CreateVehicleRes
@@ -153,17 +153,17 @@ vehicleFlow =
 -- Following is organization creation
 type OrganizationAPIs =
   "transporter"
-    :> ( Header "authorization" Text
+    :> ( AuthHeader
            :> Get '[JSON] TransporterRec
-           :<|> Header "authorization" Text
+           :<|> AuthHeader
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
            :<|> "gateway"
-           :> Header "authorization" Text
+           :> AuthHeader
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] GatewayRes
            :<|> Capture "orgId" Text
-           :> Header "authorization" Text
+           :> AuthHeader
            :> ReqBody '[JSON] UpdateTransporterReq
            :> Post '[JSON] TransporterRec
        )
@@ -179,14 +179,14 @@ organizationFlow =
 -------- Case Flow----------
 type CaseAPIs =
   "case"
-    :> ( Header "authorization" Text
+    :> ( AuthHeader
            :> QueryParams "status" CaseStatus
            :> MandatoryQueryParam "type" CaseType
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> QueryParam "ignoreOffered" Bool
            :> Get '[JSON] CaseListRes
-           :<|> Header "authorization" Text
+           :<|> AuthHeader
            :> Capture "caseId" Text
            :> ReqBody '[JSON] UpdateCaseReq
            :> Post '[JSON] Case
@@ -199,7 +199,7 @@ caseFlow =
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
   "caseProduct"
-    :> ( Header "authorization" Text
+    :> ( AuthHeader
            :> QueryParams "status" CaseProductStatus
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
@@ -212,14 +212,14 @@ caseProductFlow =
 -------- Product Flow----------
 type ProductAPIs =
   "product"
-    :> ( Header "authorization" Text
+    :> ( AuthHeader
            :> QueryParam "vehicleId" Text
            :> Get '[JSON] ProdListRes
-           :<|> Header "authorization" Text
+           :<|> AuthHeader
              :> Capture "productId" Text
              :> ReqBody '[JSON] ProdReq
              :> Post '[JSON] ProdInfoRes
-           :<|> Header "authorization" Text
+           :<|> AuthHeader
              :> Capture "productId" Text
              :> "cases"
              :> QueryParam "type" CaseType
@@ -237,7 +237,7 @@ type LocationAPIs =
     :> ( Capture "caseId" Text
            :> Get '[JSON] GetLocationRes
            :<|> Capture "caseId" Text
-             :> Header "authorization" Text
+             :> AuthHeader
              :> ReqBody '[JSON] UpdateLocationReq
              :> Post '[JSON] UpdateLocationRes
        )

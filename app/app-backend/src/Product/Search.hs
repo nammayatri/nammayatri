@@ -45,7 +45,7 @@ import Utils.Common
     verifyToken,
   )
 
-search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
+search :: RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
   token <- verifyToken regToken
   person <-
@@ -72,8 +72,8 @@ search regToken req = withFlowHandler $ do
         $ L.throwException
         $ err400 {errBody = "Invalid start time"}
 
-search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
-search_cb regToken req = withFlowHandler $ do
+search_cb :: OnSearchReq -> FlowHandler OnSearchRes
+search_cb req = withFlowHandler $ do
   -- TODO: Verify api key here
   let service = req ^. #message
       mprovider = service ^. #_provider

@@ -146,8 +146,6 @@ newtype AllocatedQuotaId = AllocatedQuotaId
 
 deriveIdentifierInstances ''AllocatedQuotaId
 
-type RegistrationTokenText = Text
-
 newtype TagId = TagId
   { _getTagId :: Text
   }
