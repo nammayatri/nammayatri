@@ -106,8 +106,8 @@ instance ToJSON FCMShowNotification where
 data FCMData = FCMData
   { _fcmNotificationType :: FCMNotificationType,
     _fcmShowNotification :: FCMShowNotification,
-    _fcmEntityIds :: Text,
-    _fcmEntityType :: FCMEntityType
+    _fcmEntityType :: FCMEntityType,
+    _fcmEntityIds :: Text
   }
   deriving (Eq, Show)
 

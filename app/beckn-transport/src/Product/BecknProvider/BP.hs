@@ -2,8 +2,6 @@
 
 module Product.BecknProvider.BP where
 
-import qualified Beckn.External.FCM.Flow as FCM
-import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -50,6 +48,7 @@ import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
+import qualified Utils.Notifications as Notify
 
 -- 1) Create Parent Case with Customer Request Details
 -- 2) Notify all transporter using FCM
@@ -75,7 +74,7 @@ search req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       (_getOrganizationId . Org._id <$> transporters)
-  notifyTransportersOnSearch c admins
+  Notify.notifyTransportersOnSearch c admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -95,7 +94,7 @@ cancel req = withFlowHandler $ do
     [] -> pure ()
     cp : _ -> do
       c <- Case.findById $ CaseProduct._caseId cp
-      notifyTransportersOnCancel c productId admins
+      Notify.notifyTransportersOnCancel c productId admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
@@ -207,7 +206,7 @@ confirm req = withFlowHandler $ do
   notifyGateway case_ prodId trackerCase
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [Product._organizationId product]
-  notifyTransportersOnConfirm case_ admins
+  Notify.notifyTransportersOnConfirm case_ admins
   mkAckResponse uuid "confirm"
 
 -- TODO : Add notifying transporter admin with FCM
@@ -461,60 +460,3 @@ mkCancelTripObj prodId = do
         fare = Just $ GT.mkPrice prod,
         route = Nothing
       }
-
--- | Send FCM "search" notification to provider admins
-notifyTransportersOnSearch :: Case -> [Person] -> L.Flow ()
-notifyTransportersOnSearch c =
-  traverse_ (FCM.notifyPerson title body notificationData)
-  where
-    notificationData =
-      FCM.FCMData
-        { _fcmNotificationType = FCM.SEARCH_REQUEST,
-          _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = FCM.Organization
-        }
-    title = FCM.FCMNotificationTitle $ T.pack "New ride request!"
-    body =
-      FCM.FCMNotificationBody $ T.pack $
-        "You have a new ride request for "
-          <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
-          <> " Check the app to accept or decline and see more details."
-
--- | Send FCM "confirm" notification to provider admins
-notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
-notifyTransportersOnConfirm c =
-  traverse_ (FCM.notifyPerson title body notificationData)
-  where
-    notificationData =
-      FCM.FCMData
-        { _fcmNotificationType = FCM.CONFIRM_REQUEST,
-          _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = FCM.Organization
-        }
-    title = FCM.FCMNotificationTitle $ T.pack "Customer has confimed the ride!"
-    body =
-      FCM.FCMNotificationBody $ T.pack $
-        "The ride for "
-          <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
-          <> " is confirmed. Check the app to assign driver details."
-
--- | Send FCM "cancel" notification to provider admins
-notifyTransportersOnCancel :: Case -> T.Text -> [Person] -> L.Flow ()
-notifyTransportersOnCancel c productId =
-  traverse_ (FCM.notifyPerson title body notificationData)
-  where
-    notificationData =
-      FCM.FCMData
-        { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
-          _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show productId,
-          _fcmEntityType = FCM.Product
-        }
-    title = FCM.FCMNotificationTitle $ T.pack "Ride cancelled!"
-    body =
-      FCM.FCMNotificationBody $ T.pack $
-        " Cancelled the tide scheduled for "
-          <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
-          <> ". Check the app for more details."

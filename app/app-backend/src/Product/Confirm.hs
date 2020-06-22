@@ -2,8 +2,6 @@
 
 module Product.Confirm where
 
-import qualified Beckn.External.FCM.Flow as FCM
-import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Confirm
 import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
@@ -19,8 +17,6 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Time
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -34,6 +30,7 @@ import qualified Types.API.Confirm as API
 import Types.App
 import qualified Types.ProductInfo as Products
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 import Utils.Routes
 
 confirm :: RegToken -> API.ConfirmReq -> FlowHandler AckResponse
@@ -83,32 +80,7 @@ onConfirm req = withFlowHandler $ do
         QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId
         let personId = Case._requestor case_
-        notifyOnConfirmCb personId case_
+        Notify.notifyOnConfirmCb personId case_ tracker
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
-
-notifyOnConfirmCb :: Maybe Text -> Case.Case -> L.Flow ()
-notifyOnConfirmCb personId c =
-  if isJust personId
-    then do
-      person <- Person.findById $ PersonId (fromJust personId)
-      case person of
-        Just p -> do
-          let notificationData =
-                FCM.FCMData
-                  { _fcmNotificationType = FCM.CONFIRM_CALLBACK,
-                    _fcmShowNotification = FCM.SHOW,
-                    _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-                    _fcmEntityType = FCM.Case
-                  }
-              title = FCM.FCMNotificationTitle $ T.pack "Your ride is now confirmed!"
-              body =
-                FCM.FCMNotificationBody $ T.pack $
-                  "Your booking is confirmed for "
-                    <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
-                    <> "."
-          FCM.notifyPerson title body notificationData p
-          pure ()
-        _ -> pure ()
-    else pure ()

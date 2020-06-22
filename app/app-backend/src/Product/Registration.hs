@@ -2,8 +2,6 @@
 
 module Product.Registration where
 
-import qualified Beckn.External.FCM.Flow as FCM
-import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
 import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
@@ -15,7 +13,6 @@ import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Map as Map
 import qualified Data.Text as T
-import Data.Time.LocalTime
 import qualified Epass.External.MyValuesFirst.Flow as Sms
 import qualified Epass.External.MyValuesFirst.Types as Sms
 import qualified EulerHS.Language as L
@@ -26,6 +23,7 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import System.Environment
 import Types.API.Registration
 import Types.App
+import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -54,18 +52,7 @@ initiateFlow req = do
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
-      notificationData =
-        FCM.FCMData
-          { _fcmNotificationType = FCM.REGISTRATION_APPROVED,
-            _fcmShowNotification = FCM.SHOW,
-            _fcmEntityIds = show regToken,
-            _fcmEntityType = FCM.Organization
-          }
-      title = FCM.FCMNotificationTitle $ T.pack "Registration Completed!"
-      body =
-        FCM.FCMNotificationBody $
-          T.pack "You can now book rides for travel or apply for a travel pass for yourself, family, or for work."
-  FCM.notifyPerson title body notificationData person
+  Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
