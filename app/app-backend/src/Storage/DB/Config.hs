@@ -69,10 +69,10 @@ getPgDBConfig defPostgresConfig = do
 dbHandle :: (T.DBConfig beM -> L.Flow (Either T.DBError a)) -> T.DBConfig beM -> L.Flow a
 dbHandle f cfg = f cfg >>= either (error . show) pure
 
-connMySQLorFail, getConn, getOrInitConn :: T.DBConfig beM -> L.Flow (T.SqlConn beM)
-connMySQLorFail = dbHandle L.initSqlDBConnection
+connPostgresOrFail, getConn, getOrInitConn :: T.DBConfig beM -> L.Flow (T.SqlConn beM)
+connPostgresOrFail = dbHandle L.initSqlDBConnection
 getConn = dbHandle L.getSqlDBConnection
 getOrInitConn = dbHandle L.getOrInitSqlConn
 
 prepareDBConnections :: Config T.PostgresConfig => L.Flow (T.SqlConn Pg)
-prepareDBConnections = getPgDBConfig theConfig >>= connMySQLorFail
+prepareDBConnections = getPgDBConfig theConfig >>= connPostgresOrFail
