@@ -10,7 +10,7 @@ import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Utils.Common (showTime)
+import Beckn.Utils.Common (showTimeIst)
 import qualified Data.Text as T
 import Data.Time
 import Data.Time.LocalTime
@@ -33,9 +33,9 @@ notifyTransportersOnSearch c =
     body =
       FCMNotificationBody $
         unwords
-          [ "You have a new ride request for ",
-            showTime $ Case._startTime c,
-            ". Check the app to accept or decline and see more details."
+          [ "You have a new ride request for",
+            (showTimeIst $ Case._startTime c) <> ".",
+            "Check the app to accept or decline and see more details."
           ]
 
 -- | Send FCM "confirm" notification to provider admins
@@ -51,7 +51,7 @@ notifyTransportersOnConfirm c =
       FCMNotificationBody $
         unwords
           [ "The ride for",
-            showTime $ Case._startTime c,
+            showTimeIst $ Case._startTime c,
             "is confirmed. Check the app to assign driver details."
           ]
 
@@ -67,9 +67,9 @@ notifyTransportersOnCancel c productId =
     body =
       FCMNotificationBody $
         unwords
-          [ "Cancelled the ride scheduled for",
-            showTime $ Case._startTime c,
-            ". Check the app for more details."
+          [ "The ride scheduled for",
+            (showTimeIst $ Case._startTime c) <> ",",
+            "has been cancelled. Check the app for more details."
           ]
 
 notifyOnRegistration :: RegistrationToken -> Person -> L.Flow ()
@@ -94,8 +94,8 @@ notifyTransporterOnExpiration c =
     body =
       FCMNotificationBody $
         unwords
-          [ "The ride request for ",
-            showTime $ Case._startTime c,
+          [ "The ride request for",
+            (showTimeIst $ Case._startTime c) <> ",",
             "has expired as the customer failed to confirm.",
             "You can view more details in the app."
           ]

@@ -16,7 +16,7 @@ import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Person as Person hiding (full_name)
 import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Utils.Common (showTime)
+import Beckn.Utils.Common (showTimeIst)
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import Data.Time
@@ -59,9 +59,9 @@ notifyOnProductCancelCb personId c productId =
               body =
                 FCMNotificationBody $
                   unwords
-                    [ " Cancelled the ride scheduled for ",
-                      showTime $ Case._startTime c,
-                      ". Check the app for more details."
+                    [ "Your ride scheduled for",
+                      (showTimeIst $ Case._startTime c) <> ",",
+                      "has been cancelled. Check the app for more details."
                     ]
           notifyPerson title body notificationData p
         _ -> pure ()
@@ -86,13 +86,14 @@ notifyOnConfirmCb personId c tracker =
               title = FCMNotificationTitle $ T.pack "Your ride is now confirmed!"
               body =
                 FCMNotificationBody $
-                  unwords
-                    [ "Your booking for",
-                      vehicle_category,
-                      "is confirmed for",
-                      showTime $ Case._startTime c,
-                      "."
-                    ]
+                  ( unwords
+                      [ "Your booking for",
+                        vehicle_category,
+                        "is confirmed for",
+                        showTimeIst $ Case._startTime c
+                      ]
+                  )
+                    <> "."
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
@@ -114,8 +115,8 @@ notifyOnExpiration caseObj = do
               body =
                 FCMNotificationBody $
                   unwords
-                    [ "Your ride for",
-                      showTime startTime,
+                    [ "Your ride request for",
+                      (showTimeIst startTime) <> ",",
                       "has expired as there were no replies.",
                       "You can place a new request to get started again!"
                     ]
@@ -161,14 +162,12 @@ notifyOnTrackCb personId tracker c =
                 FCMNotificationBody $
                   unwords
                     [ "Your ride with",
-                      driver_name,
-                      ",",
+                      driver_name <> ",",
                       model,
-                      "(",
-                      reg_number,
-                      ") is scheduled for",
-                      showTime $ Case._startTime c,
-                      ". You can see more details in the app."
+                      "(" <> reg_number <> "),",
+                      "is scheduled for",
+                      (showTimeIst $ Case._startTime c) <> ".",
+                      "You can see more details in the app."
                     ]
           notifyPerson title body notificationData p
         _ -> pure ()

@@ -151,6 +151,9 @@ throwJsonError501H = throwJsonErrorH ... err501
 throwJsonError400H = throwJsonErrorH ... err400
 throwJsonError401H = throwJsonErrorH ... err401
 
--- | Format time and return it as text
-showTime :: FormatTime t => t -> T.Text
-showTime = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p"
+-- | Format time in IST and return it as text
+-- Converts and Formats in the format
+-- TODO: make a generic function and then pass format
+-- and timezone as arguments. Currently adds +5:30
+showTimeIst :: LocalTime -> Text
+showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addLocalTime (60 * 330)
