@@ -16,9 +16,11 @@ import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Person as Person hiding (full_name)
 import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
+import Beckn.Utils.Common (showTime)
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import Data.Time
+import Data.Time.Format (formatTime)
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -55,10 +57,12 @@ notifyOnProductCancelCb personId c productId =
                   show (_getProductsId productId)
               title = FCMNotificationTitle $ T.pack "Ride cancelled!"
               body =
-                FCMNotificationBody $ T.pack $
-                  " Cancelled the ride scheduled for "
-                    <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
-                    <> ". Check the app for more details."
+                FCMNotificationBody $
+                  unwords
+                    [ " Cancelled the ride scheduled for ",
+                      showTime $ Case._startTime c,
+                      ". Check the app for more details."
+                    ]
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
@@ -76,16 +80,17 @@ notifyOnConfirmCb personId c tracker =
               vehicle_category = case tracker of
                 Nothing -> "unknown"
                 Just t ->
-                  fromMaybe "unknown" $ t ^. #trip ^. #vehicle . _Just . #category
+                  fromMaybe "unknown" $ Case._udf1 c
               title = FCMNotificationTitle $ T.pack "Your ride is now confirmed!"
               body =
                 FCMNotificationBody $
-                  "Your booking for " <> vehicle_category
-                    <> T.pack
-                      ( " is confirmed for "
-                          <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
-                          <> "."
-                      )
+                  unwords
+                    [ "Your booking for",
+                      vehicle_category,
+                      "is confirmed for",
+                      showTime $ Case._startTime c,
+                      "."
+                    ]
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
@@ -105,11 +110,13 @@ notifyOnExpiration caseObj = do
                   show (_getCaseId caseId)
               title = FCMNotificationTitle $ T.pack "Ride expired!"
               body =
-                FCMNotificationBody $ T.pack $
-                  "Your ride for "
-                    <> formatTime defaultTimeLocale "%T, %F" startTime
-                    <> " has expired as there were no replies."
-                    <> " You can place a new request to get started again!"
+                FCMNotificationBody $
+                  unwords
+                    [ "Your ride for",
+                      showTime startTime,
+                      "has expired as there were no replies.",
+                      "You can place a new request to get started again!"
+                    ]
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
@@ -123,8 +130,10 @@ notifyOnRegistration regToken person =
       title = FCMNotificationTitle $ T.pack "Registration Completed!"
       body =
         FCMNotificationBody $
-          T.pack "You can now book rides for travel or apply "
-            <> "for a travel pass for yourself, family, or for work."
+          unwords
+            [ "You can now book rides for travel or apply",
+              "for a travel pass for yourself, family, or for work."
+            ]
    in notifyPerson title body notificationData person
 
 notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> L.Flow ()
@@ -142,18 +151,23 @@ notifyOnTrackCb personId tracker c =
               reg_number =
                 trip ^. #vehicle . _Just . #registration . _Just . #number
               model =
-                fromMaybe reg_number $ trip ^. #vehicle . _Just . #model
+                fromMaybe "unknown model" $ trip ^. #vehicle . _Just . #model
               driver_name =
-                trip ^. #driver . #persona . _Just . #descriptor . #full_name
+                trip ^. #driver . #persona . _Just . #descriptor . #first_name
               title = FCMNotificationTitle $ T.pack "Ride details updated!"
               body =
                 FCMNotificationBody $
-                  "Your ride with " <> driver_name <> ", " <> model
-                    <> T.pack
-                      ( " is scheduled for "
-                          <> formatTime defaultTimeLocale "%T, %F" (Case._startTime c)
-                          <> ".  You can see more details in the app."
-                      )
+                  unwords
+                    [ "Your ride with",
+                      driver_name,
+                      ",",
+                      model,
+                      "(",
+                      reg_number,
+                      ") is scheduled for",
+                      showTime $ Case._startTime c,
+                      ". You can see more details in the app."
+                    ]
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
@@ -168,13 +182,19 @@ notifyOnSearchCb personId caseId products = do
               show (_getCaseId caseId)
           title = FCMNotificationTitle $ T.pack "New ride options available!"
           body =
-            FCMNotificationBody $ T.pack $
+            FCMNotificationBody $
               if length products == 1
                 then
-                  "You have a new reply for your ride request!"
-                    <> " Head to the beckn app for details."
+                  unwords
+                    [ "You have a new reply for your ride request!",
+                      "Head to the beckn app for details."
+                    ]
                 else
-                  "You have " <> show (length products) <> "new ride offers!"
-                    <> " Check your options in the beckn app."
+                  unwords
+                    [ "You have",
+                      show (length products),
+                      "new ride offers!",
+                      "Check your options in the beckn app."
+                    ]
       notifyPerson title body notificationData p
     _ -> pure ()

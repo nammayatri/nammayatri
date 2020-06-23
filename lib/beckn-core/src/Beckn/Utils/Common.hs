@@ -150,3 +150,7 @@ throwJsonError500H = throwJsonErrorH ... err500
 throwJsonError501H = throwJsonErrorH ... err501
 throwJsonError400H = throwJsonErrorH ... err400
 throwJsonError401H = throwJsonErrorH ... err401
+
+-- | Format time and return it as text
+showTime :: FormatTime t => t -> T.Text
+showTime = T.pack . formatTime defaultTimeLocale "%T, %F"
