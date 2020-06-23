@@ -55,7 +55,6 @@ dependencies:
 - base >= 4.7 && < 5
 - base64-bytestring
 - beam-core
-- beam-mysql
 - beam-postgres
 - bytestring
 - containers

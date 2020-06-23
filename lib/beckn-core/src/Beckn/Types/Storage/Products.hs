@@ -58,7 +58,7 @@ type ProductsIndustry = Case.Industry
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsIndustry where
 --   sqlValueSyntax = autoSqlValueSyntax
 
--- instance FromBackendRow MySQL ProductsIndustry where
+-- instance FromBackendRow Postgres ProductsIndustry where
 --   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductsT f = Products
