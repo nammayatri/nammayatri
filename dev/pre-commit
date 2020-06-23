@@ -17,8 +17,18 @@ for file in $HS_FILES; do
 done
 
 if [ -n "$ORMOLU_FAIL" ]; then
-  echo "Code style issues found in the above file(s). Fix them with:"
-  echo "  ormolu -m inplace ${BAD_HS_FILES}"
+  ORMOLU_CMD="ormolu -m inplace ${BAD_HS_FILES}"
+
+  echo "Code style issues found in:"
+  echo "${BAD_HS_FILES}"
+
+  if [ -n "$BECKN_DISABLE_AUTOFORMAT" ]; then
+    echo "Fix them with:"
+    echo " ${ORMOLU_CMD}"
+  else
+    echo "Running Ormolu, please check and git add the changes"
+    ${ORMOLU_CMD}
+  fi
 fi
 
 if [ -n "$ORMOLU_FAIL" ]; then
