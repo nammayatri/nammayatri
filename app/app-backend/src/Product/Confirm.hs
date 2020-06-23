@@ -78,9 +78,6 @@ onConfirm req = withFlowHandler $ do
         QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
-        case_ <- QCase.findById caseId
-        let personId = Case._requestor case_
-        Notify.notifyOnConfirmCb personId case_ tracker
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack

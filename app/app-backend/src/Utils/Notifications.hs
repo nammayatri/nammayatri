@@ -67,6 +67,8 @@ notifyOnProductCancelCb personId c productId =
         _ -> pure ()
     else pure ()
 
+-- | Notofocation on confirmation callback
+-- unused, left as a sample, can be removed later
 notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> L.Flow ()
 notifyOnConfirmCb personId c tracker =
   if isJust personId

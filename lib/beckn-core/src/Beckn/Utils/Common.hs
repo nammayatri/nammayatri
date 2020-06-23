@@ -153,4 +153,4 @@ throwJsonError401H = throwJsonErrorH ... err401
 
 -- | Format time and return it as text
 showTime :: FormatTime t => t -> T.Text
-showTime = T.pack . formatTime defaultTimeLocale "%T, %F"
+showTime = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p"
