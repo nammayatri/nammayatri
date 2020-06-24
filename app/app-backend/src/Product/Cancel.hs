@@ -30,7 +30,7 @@ cancel regToken req = withFlowHandler $ do
 cancelProduct :: CancelReq -> L.Flow CancelRes
 cancelProduct req = do
   let productId = req ^. #message ^. #entityId
-  cp <- ProductInstance.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple caseproducts exists for one product
+  cp <- ProductInstance.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple productinstances exists for one product
   case isProductInstanceCancellable cp of
     True -> sendCancelReq productId
     False -> errResp (show (cp ^. #_status))
@@ -95,7 +95,7 @@ onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
-  cpProducts <- ProductInstance.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
+  cpProducts <- ProductInstance.findByProductId productId -- TODO: Handle usecase where multiple productinstances exists for one product
   ProductInstance.updateStatus productId ProductInstance.CANCELLED
   let caseId = cpProducts ^. #_caseId
   arrCPCase <- ProductInstance.findAllByCaseId caseId
