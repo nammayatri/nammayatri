@@ -3,10 +3,10 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Database.Beam as B
@@ -19,7 +19,7 @@ data AppDb f = AppDb
     _location :: f (B.TableEntity Location.LocationT),
     _person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
-    _productInstance :: f (B.TableEntity CaseProduct.CaseProductT),
+    _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     _products :: f (B.TableEntity Products.ProductsT),
     _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
   }
@@ -33,7 +33,7 @@ appDb =
         _location = setSchema <> Location.fieldEMod,
         _person = setSchema <> Person.fieldEMod,
         _case = setSchema <> Case.fieldEMod,
-        _productInstance = setSchema <> CaseProduct.fieldEMod,
+        _productInstance = setSchema <> ProductInstance.fieldEMod,
         _products = setSchema <> Products.fieldEMod,
         _registrationToken = setSchema <> RegistrationToken.fieldEMod
       }

@@ -1,42 +1,42 @@
-module Types.API.CaseProduct where
+module Types.API.ProductInstance where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.CaseProduct
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Loc
+import Beckn.Types.Storage.ProductInstance
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
 import Data.Default
 import Data.Swagger
 import Data.Time
 import EulerHS.Prelude
 
-data CaseProdReq = CaseProdReq
-  { _status :: [CaseProduct.CaseProductStatus],
+data ProdInstReq = ProdInstReq
+  { _status :: [ProductInstance.ProductInstanceStatus],
     _limit :: Integer,
     _offset :: Integer
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON CaseProdReq where
+instance FromJSON ProdInstReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON CaseProdReq where
+instance ToJSON ProdInstReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data CaseProductRes = CaseProductRes
+data ProductInstanceRes = ProductInstanceRes
   { _case :: Case.Case,
     _product :: Product.Products,
-    _productInstance :: CaseProduct,
+    _productInstance :: ProductInstance,
     _fromLocation :: Maybe Loc.Location,
     _toLocation :: Maybe Loc.Location
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON CaseProductRes where
+instance FromJSON ProductInstanceRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON CaseProductRes where
+instance ToJSON ProductInstanceRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-type CaseProductList = [CaseProductRes]
+type ProductInstanceList = [ProductInstanceRes]

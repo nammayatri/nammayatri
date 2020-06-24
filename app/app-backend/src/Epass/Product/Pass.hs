@@ -1,8 +1,8 @@
 module Epass.Product.Pass where
 
 import qualified Beckn.Types.Storage.Case as SC
-import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as SCP
 import qualified Beckn.Types.Storage.Products as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
@@ -36,8 +36,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
 import Servant
 import qualified Storage.Queries.Case as QC
-import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as QCP
 import qualified Storage.Queries.Products as QProd
 
 getPassById :: RegToken -> Text -> FlowHandler PassRes
@@ -109,7 +109,7 @@ listPass regToken passIdType passV limitM offsetM passType =
         productInstances <- traverse (QCP.findAllByCaseId . SC._id) (concat cases)
         ListPassRes <$> traverse buildListRes (concat productInstances)
       _ -> do
-        productInstances <- maybe (return []) getCaseProducts listBy
+        productInstances <- maybe (return []) getProductInstances listBy
         ListPassRes <$> traverse buildListRes productInstances
   where
     getListBy =
@@ -123,18 +123,18 @@ listPass regToken passIdType passV limitM offsetM passType =
               >>= fromMaybeM400 "PERSON_NOT_FOUND"
           return $ Just $ QCP.ByCustomerId (Person._id person)
         ORGANIZATIONID -> L.throwException err500
-    getCaseProducts listBy =
+    getProductInstances listBy =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
-        (Just l, Just o) -> QCP.listAllCaseProductWithOffset l o listBy []
-        _ -> QCP.listAllCaseProduct listBy []
+        (Just l, Just o) -> QCP.listAllProductInstanceWithOffset l o listBy []
+        _ -> QCP.listAllProductInstance listBy []
 
-buildListRes :: SCP.CaseProduct -> L.Flow PassInfo
+buildListRes :: SCP.ProductInstance -> L.Flow PassInfo
 buildListRes productInstance = do
   case' <- QC.findById (SCP._caseId productInstance)
   product <- QProd.findById (SCP._productId productInstance)
   getPassInfo case' product productInstance
 
-getPassInfo :: SC.Case -> SP.Products -> SCP.CaseProduct -> L.Flow PassInfo
+getPassInfo :: SC.Case -> SP.Products -> SCP.ProductInstance -> L.Flow PassInfo
 getPassInfo case' prod productInstance = do
   person <- sequence $ Person.findById <$> (SCP._personId productInstance)
   org <- Organization.findOrganizationById (OrganizationId $ SP._organizationId prod)

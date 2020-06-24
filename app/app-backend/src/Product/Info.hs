@@ -6,7 +6,7 @@ import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Mobility.Trip as Trip
-import qualified Beckn.Types.Storage.CaseProduct as SCP
+import qualified Beckn.Types.Storage.ProductInstance as SCP
 import qualified Beckn.Types.Storage.Products as SProducts
 import Beckn.Utils.Common (decodeFromText, withFlowHandler)
 import Data.Aeson
@@ -18,7 +18,7 @@ import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as External
 import Servant
 import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.CaseProduct as QCP
+import qualified Storage.Queries.ProductInstance as QCP
 import qualified Storage.Queries.Products as QProducts
 import Types.API.Location
 import Types.API.Product
@@ -56,7 +56,7 @@ getLocation :: RegToken -> Text -> FlowHandler GetLocationRes
 getLocation regToken caseId = withFlowHandler $ do
   verifyToken regToken
   baseUrl <- External.getBaseUrl
-  productInstances <- QCP.listAllCaseProduct (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
+  productInstances <- QCP.listAllProductInstance (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
   when (null productInstances) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
   products <- QProducts.findAllByIds (SCP._productId <$> productInstances)
   product <-

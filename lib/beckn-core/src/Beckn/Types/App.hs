@@ -70,6 +70,13 @@ newtype VehicleId = VehicleId
 
 deriveIdentifierInstances ''VehicleId
 
+newtype ProductInstanceId = ProductInstanceId
+  { _getProductInstanceId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''ProductInstanceId
+
 type Limit = Int
 
 type Offset = Int
