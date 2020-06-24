@@ -28,7 +28,7 @@ data ListById
   | ByCustomerId PersonId
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseProductT)
-dbTable = DB._caseProduct DB.appDb
+dbTable = DB._productInstance DB.appDb
 
 create :: Storage.CaseProduct -> L.Flow ()
 create Storage.CaseProduct {..} =
@@ -85,11 +85,11 @@ updateStatus id status = do
 updateAllCaseProductsByCaseId :: CaseId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
 updateAllCaseProductsByCaseId caseId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
-  caseProducts <- findAllByCaseId caseId
+  productInstances <- findAllByCaseId caseId
   DB.update
     dbTable
     (setClause status currTime)
-    (predicate (Storage._id <$> caseProducts))
+    (predicate (Storage._id <$> productInstances))
   where
     predicate ids Storage.CaseProduct {..} = _id `B.in_` (B.val_ <$> ids)
     setClause status currTime Storage.CaseProduct {..} =
@@ -101,8 +101,8 @@ updateAllCaseProductsByCaseId caseId status = do
 updateAllProductsByCaseId :: CaseId -> Products.ProductsStatus -> L.Flow (T.DBResult ())
 updateAllProductsByCaseId caseId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
-  caseProducts <- findAllByCaseId caseId
-  let productIds = Storage._productId <$> caseProducts
+  productInstances <- findAllByCaseId caseId
+  let productIds = Storage._productId <$> productInstances
   DB.update
     table
     (setClause status currTime)

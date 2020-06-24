@@ -58,13 +58,13 @@ cancelCase req = do
     True -> do
       let context = req ^. #context
       let txnId = context ^. #transaction_id
-      caseProducts <- CaseProduct.findAllByCaseId (CaseId caseId)
-      if null caseProducts
+      productInstances <- CaseProduct.findAllByCaseId (CaseId caseId)
+      if null productInstances
         then do
           Case.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
-          let cancelCPs = filter isCaseProductCancellable caseProducts
+          let cancelCPs = filter isCaseProductCancellable productInstances
           baseUrl <- Gateway.getBaseUrl
           eres <- traverse (callCancelApi context baseUrl) cancelCPs
           case sequence eres of

@@ -30,8 +30,8 @@ import Utils.Routes
 getProductInfo :: RegToken -> Text -> FlowHandler GetProductInfoRes
 getProductInfo regToken prodId = withFlowHandler $ do
   reg <- verifyToken regToken
-  caseProduct <- QCP.findByProductId (ProductsId prodId)
-  case' <- QCase.findById (SCP._caseId caseProduct)
+  productInstance <- QCP.findByProductId (ProductsId prodId)
+  case' <- QCase.findById (SCP._caseId productInstance)
   product <- QProducts.findById (ProductsId prodId)
   case decodeFromText =<< SProducts._info product of
     Just (info :: ProductInfo) -> do
@@ -45,7 +45,7 @@ getProductInfo regToken prodId = withFlowHandler $ do
                 driver = Trip.driver trip,
                 travellers = Trip.travellers trip,
                 fare = Trip.fare trip,
-                caseId = _getCaseId (SCP._caseId caseProduct),
+                caseId = _getCaseId (SCP._caseId productInstance),
                 product = product
               }
     Nothing ->
@@ -56,9 +56,9 @@ getLocation :: RegToken -> Text -> FlowHandler GetLocationRes
 getLocation regToken caseId = withFlowHandler $ do
   verifyToken regToken
   baseUrl <- External.getBaseUrl
-  caseProducts <- QCP.listAllCaseProduct (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
-  when (null caseProducts) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
-  products <- QProducts.findAllByIds (SCP._productId <$> caseProducts)
+  productInstances <- QCP.listAllCaseProduct (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
+  when (null productInstances) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
+  products <- QProducts.findAllByIds (SCP._productId <$> productInstances)
   product <-
     if null products
       then L.throwException $ err400 {errBody = "NO_CONFIRMED_PROUCTS"}

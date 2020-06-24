@@ -48,7 +48,7 @@ instance ToJSON CaseProduct where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data ListRes = ListRes
-  { _caseProducts :: [CaseProduct]
+  { _productInstances :: [CaseProduct]
   }
   deriving (Show, Generic, ToSchema)
 

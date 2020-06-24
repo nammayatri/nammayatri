@@ -47,7 +47,7 @@ list regToken CaseProdReq {..} = withFlowHandler $ do
           CaseProductRes
             { _case = cs,
               _product = prod,
-              _caseProduct = caseProd,
+              _productInstance = caseProd,
               _fromLocation = find (\x -> (Case._fromLocationId cs == _getLocationId (Loc._id x))) locList,
               _toLocation = find (\x -> (Case._toLocationId cs == _getLocationId (Loc._id x))) locList
             }

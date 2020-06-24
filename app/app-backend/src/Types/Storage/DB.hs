@@ -19,7 +19,7 @@ data AppDb f = AppDb
     _location :: f (B.TableEntity Location.LocationT),
     _person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
-    _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
+    _productInstance :: f (B.TableEntity CaseProduct.CaseProductT),
     _products :: f (B.TableEntity Products.ProductsT),
     _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
   }
@@ -33,7 +33,7 @@ appDb =
         _location = setSchema <> Location.fieldEMod,
         _person = setSchema <> Person.fieldEMod,
         _case = setSchema <> Case.fieldEMod,
-        _caseProduct = setSchema <> CaseProduct.fieldEMod,
+        _productInstance = setSchema <> CaseProduct.fieldEMod,
         _products = setSchema <> Products.fieldEMod,
         _registrationToken = setSchema <> RegistrationToken.fieldEMod
       }

@@ -27,7 +27,7 @@ instance ToJSON CaseProdReq where
 data CaseProductRes = CaseProductRes
   { _case :: Case.Case,
     _product :: Product.Products,
-    _caseProduct :: CaseProduct,
+    _productInstance :: CaseProduct,
     _fromLocation :: Maybe Loc.Location,
     _toLocation :: Maybe Loc.Location
   }

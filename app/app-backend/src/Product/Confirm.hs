@@ -42,7 +42,7 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   when ((case_ ^. #_validTill) < lt)
     $ L.throwException
     $ err400 {errBody = "Case has expired"}
-  caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
+  productInstance <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   let service = Service caseId Nothing [] [productId] Nothing [] Nothing Nothing [] Nothing
@@ -74,9 +74,9 @@ onConfirm req = withFlowHandler $ do
               prd
                 { Products._info = encodeToText <$> uInfo
                 }
-        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        productInstance <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
         QCP.updateStatus pid SCP.CONFIRMED
-        QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
+        QCase.updateStatus (SCP._caseId productInstance) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId

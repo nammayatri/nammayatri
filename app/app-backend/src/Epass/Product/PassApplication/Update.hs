@@ -94,7 +94,7 @@ createPass c@(Case.Case {..}) = do
             _assignedTo = Nothing,
             ..
           }
-      caseProduct =
+      productInstance =
         CaseProduct.CaseProduct
           { _id = CaseProductId cpId,
             _caseId = _id,
@@ -108,7 +108,7 @@ createPass c@(Case.Case {..}) = do
             _updatedAt = currTime
           }
   QProd.create product
-  QCP.create caseProduct
+  QCP.create productInstance
   return product
 
 allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()

@@ -67,7 +67,7 @@ appServer' key = do
       :<|> caseFlow
       :<|> infoFlow
       :<|> trackTripFlow
-      :<|> caseProductFlow
+      :<|> productInstanceFlow
       :<|> cancelFlow
       :<|> cronFlow
       :<|> Epass.epassServer' key
@@ -182,13 +182,13 @@ trackTripFlow =
 
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
-  "caseProduct"
+  "productInstance"
     :> ( AuthHeader
            :> ReqBody '[JSON] CaseProduct.CaseProdReq
            :> Post '[JSON] CaseProduct.CaseProductList
        )
 
-caseProductFlow =
+productInstanceFlow =
   CaseProduct.list
 
 -------- Cancel Flow----------
