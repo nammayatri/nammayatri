@@ -31,7 +31,7 @@ import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
 import Utils.Common (verifyToken)
 
-track :: Maybe Text -> TrackTripReq -> FlowHandler TrackTripRes
+track :: RegToken -> TrackTripReq -> FlowHandler TrackTripRes
 track regToken req = withFlowHandler $ do
   verifyToken regToken
   let context = req ^. #context
@@ -52,17 +52,17 @@ track regToken req = withFlowHandler $ do
               Right _ -> return $ Ack "Successful" "Tracking initiated"
   return $ AckResponse context ack
 
-track_cb :: Maybe Text -> OnTrackTripReq -> FlowHandler OnTrackTripRes
-track_cb apiKey req = withFlowHandler $ do
+track_cb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
+track_cb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message
       caseId = CaseId $ req ^. #context ^. #transaction_id
   case_ <- Case.findById caseId
-  cp <- CaseProduct.findAllByCaseId caseId
+  cp <- CaseProduct.listAllCaseProduct (CaseProduct.ByApplicationId caseId) [CaseProduct.CONFIRMED]
   let pids = map CaseProduct._productId cp
-  products <- Products.findAllByIds pids
-  let confirmedProducts = filter (\prd -> Products.CONFIRMED == Products._status prd) products
+  confirmedProducts <- Products.findAllByIds pids
+
   res <-
     case length confirmedProducts of
       0 -> return $ Right ()

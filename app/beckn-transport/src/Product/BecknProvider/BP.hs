@@ -86,8 +86,7 @@ cancel req = withFlowHandler $ do
   let productId = req ^. #message ^. #id
   cprList <- CaseProduct.findAllByProdId (ProductsId productId)
   Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
-  CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) Product.CANCELLED
-  Product.updateStatus (ProductsId productId) Product.CANCELLED
+  CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) CaseProduct.CANCELLED
   notifyCancelToGateway productId
   mkAckResponse uuid "cancel"
 
@@ -187,8 +186,7 @@ confirm req = withFlowHandler $ do
   product <- Product.findById (ProductsId prodId)
   let caseId = _getCaseId $ case_ ^. #_id
   Case.updateStatus (CaseId caseId) SC.INPROGRESS
-  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) Product.CONFIRMED
-  Product.updateStatus (ProductsId prodId) Product.CONFIRMED
+  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
@@ -215,7 +213,7 @@ mkTrackerCaseProduct cpId caseId prodId currTime =
       _personId = Nothing,
       _quantity = 1,
       _price = 0,
-      _status = Product.INSTOCK,
+      _status = CaseProduct.INSTOCK,
       _info = Nothing,
       _createdAt = currTime,
       _updatedAt = currTime
@@ -258,13 +256,13 @@ notifyGateway c prodId trackerCase = do
   cps <- CaseProduct.findAllByCaseId (c ^. #_id)
   L.logInfo "notifyGateway" $ show cps
   prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
-  onConfirmPayload <- mkOnConfirmPayload c prods trackerCase
+  onConfirmPayload <- mkOnConfirmPayload c prods cps trackerCase
   L.logInfo "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
   Gateway.onConfirm onConfirmPayload
   return ()
 
-mkOnConfirmPayload :: Case -> [Products] -> Case -> L.Flow OnConfirmReq
-mkOnConfirmPayload c prods trackerCase = do
+mkOnConfirmPayload :: Case -> [Products] -> [CaseProduct] -> Case -> L.Flow OnConfirmReq
+mkOnConfirmPayload c prods cps trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -277,7 +275,7 @@ mkOnConfirmPayload c prods trackerCase = do
             dummy = ""
           }
   trip <- mkTrip trackerCase
-  service <- GT.mkServiceOffer c prods (Just trip) Nothing
+  service <- GT.mkServiceOffer c prods cps (Just trip) Nothing
   return
     OnConfirmReq
       { context,
@@ -293,19 +291,19 @@ serviceStatus req = withFlowHandler $ do
   prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
   --TODO : use forkFlow to notify gateway
   trackerCase <- Case.findByParentCaseIdAndType (CaseId caseId) SC.TRACKER
-  notifyServiceStatusToGateway c prods trackerCase
+  notifyServiceStatusToGateway c prods cps trackerCase
   uuid <- L.generateGUID
   mkAckResponse uuid "track"
 
-notifyServiceStatusToGateway :: Case -> [Products] -> Maybe Case -> L.Flow ()
-notifyServiceStatusToGateway c prods trackerCase = do
-  onServiceStatusPayload <- mkOnServiceStatusPayload c prods trackerCase
+notifyServiceStatusToGateway :: Case -> [Products] -> [CaseProduct] -> Maybe Case -> L.Flow ()
+notifyServiceStatusToGateway c prods cps trackerCase = do
+  onServiceStatusPayload <- mkOnServiceStatusPayload c prods cps trackerCase
   L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   Gateway.onStatus onServiceStatusPayload
   return ()
 
-mkOnServiceStatusPayload :: Case -> [Products] -> Maybe Case -> L.Flow OnStatusReq
-mkOnServiceStatusPayload c prods trackerCase = do
+mkOnServiceStatusPayload :: Case -> [Products] -> [CaseProduct] -> Maybe Case -> L.Flow OnStatusReq
+mkOnServiceStatusPayload c prods cps trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -318,7 +316,7 @@ mkOnServiceStatusPayload c prods trackerCase = do
             dummy = ""
           }
   trip <- mapM mkTrip trackerCase
-  service <- GT.mkServiceOffer c prods trip Nothing
+  service <- GT.mkServiceOffer c prods cps trip Nothing
   return
     OnStatusReq
       { context,
@@ -330,11 +328,14 @@ trackTrip req = withFlowHandler $ do
   L.logInfo "track trip API Flow" $ show req
   let tripId = req ^. #message ^. #id
   case_ <- Case.findById (CaseId tripId)
-  parentCase <- Case.findById $ fetchMaybeValue $ case_ ^. #_parentCaseId
-  --TODO : use forkFlow to notify gateway
-  notifyTripUrlToGateway case_ parentCase
-  uuid <- L.generateGUID
-  mkAckResponse uuid "track"
+  case case_ ^. #_parentCaseId of
+    Just parentCaseId -> do
+      parentCase <- Case.findById parentCaseId
+      --TODO : use forkFlow to notify gateway
+      notifyTripUrlToGateway case_ parentCase
+      uuid <- L.generateGUID
+      mkAckResponse uuid "track"
+    Nothing -> L.throwException $ err400 {errBody = "Case does not have an associated parent case"}
 
 notifyTripUrlToGateway :: Case -> Case -> L.Flow ()
 notifyTripUrlToGateway case_ parentCase = do

@@ -34,7 +34,7 @@ import qualified Types.ProductInfo as Products
 import Utils.Common (verifyToken)
 import Utils.Routes
 
-confirm :: Maybe RegToken -> API.ConfirmReq -> FlowHandler AckResponse
+confirm :: RegToken -> API.ConfirmReq -> FlowHandler AckResponse
 confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   verifyToken regToken
   lt <- getCurrentTimeUTC
@@ -54,8 +54,8 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack
 
-onConfirm :: Maybe RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
-onConfirm regToken req = withFlowHandler $ do
+onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
   let selectedItems = req ^. #message ^. #_selected_items
@@ -72,10 +72,11 @@ onConfirm regToken req = withFlowHandler $ do
         let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
         let uPrd =
               prd
-                { Products._status = Products.CONFIRMED,
-                  Products._info = encodeToText <$> uInfo
+                { Products._info = encodeToText <$> uInfo
                 }
-        QCP.updateStatus pid Products.CONFIRMED
+        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        QCP.updateStatus pid SCP.CONFIRMED
+        QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
         case_ <- QCase.findById caseId

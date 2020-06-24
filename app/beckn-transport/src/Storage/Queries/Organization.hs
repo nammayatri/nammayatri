@@ -26,17 +26,14 @@ create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
-verifyAuth :: Maybe Text -> L.Flow Storage.Organization
-verifyAuth auth = do
-  L.logInfo "verifying auth" $ show auth
-  let apiKey = base64Decode auth
-  -- did atob of auth by removing basic in front and after atob, `:` in the end
-  L.logInfo "verifying apikey" $ show apiKey
-  DB.findOne dbTable (predicate apiKey)
+verifyToken :: RegToken -> L.Flow Storage.Organization
+verifyToken regToken = do
+  L.logInfo "verifying token" $ show regToken
+  DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "UNAUTHENTICATED_USER"
   where
-    predicate apiKey Storage.Organization {..} = (_apiKey ==. B.val_ apiKey)
+    predicate regToken Storage.Organization {..} = (_apiKey ==. B.val_ (Just regToken))
 
 findOrganizationById :: OrganizationId -> L.Flow Storage.Organization
 findOrganizationById id = do

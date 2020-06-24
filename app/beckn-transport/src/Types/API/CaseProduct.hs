@@ -10,21 +10,6 @@ import Data.Swagger
 import Data.Time
 import EulerHS.Prelude
 
-data CaseProdReq = CaseProdReq
-  { _status :: [CaseProductStatus], --TODO: Need to rename this field to status
-    _limit :: Int,
-    _offset :: Int,
-    _fromTime :: Maybe LocalTime,
-    _toTime :: Maybe LocalTime
-  }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON CaseProdReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON CaseProdReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
 data CaseProductRes = CaseProductRes
   { _case :: Case.Case,
     _product :: Product.Products,

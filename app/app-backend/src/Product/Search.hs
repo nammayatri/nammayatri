@@ -23,6 +23,7 @@ import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Scientific
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time.LocalTime (addLocalTime)
@@ -44,7 +45,7 @@ import Utils.Common
     verifyToken,
   )
 
-search :: Maybe RegToken -> SearchReq -> FlowHandler SearchRes
+search :: RegToken -> SearchReq -> FlowHandler SearchRes
 search regToken req = withFlowHandler $ do
   token <- verifyToken regToken
   person <-
@@ -71,8 +72,8 @@ search regToken req = withFlowHandler $ do
         $ L.throwException
         $ err400 {errBody = "Invalid start time"}
 
-search_cb :: Maybe RegToken -> OnSearchReq -> FlowHandler OnSearchRes
-search_cb regToken req = withFlowHandler $ do
+search_cb :: OnSearchReq -> FlowHandler OnSearchRes
+search_cb req = withFlowHandler $ do
   -- TODO: Verify api key here
   let service = req ^. #message
       mprovider = service ^. #_provider
@@ -209,7 +210,7 @@ mkProduct case_ mprovider item = do
         _startTime = case_ ^. #_startTime,
         _endTime = Nothing, -- TODO: fix this
         _validTill = case_ ^. #_validTill,
-        _price = item ^. #_price ^. #_listed_value,
+        _price = fromFloatDigits $ item ^. (#_price . #_listed_value),
         _rating = Nothing,
         _review = Nothing,
         _udf1 = Nothing,
@@ -240,7 +241,7 @@ mkCaseProduct caseId personId product = do
         _personId = Just personId,
         _quantity = 1,
         _price = price,
-        _status = Products.INSTOCK,
+        _status = CaseProduct.INSTOCK,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now

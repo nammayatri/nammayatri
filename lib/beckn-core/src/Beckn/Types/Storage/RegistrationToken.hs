@@ -10,8 +10,8 @@ import Data.Swagger
 import qualified Data.Text as T
 import Data.Time
 import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Backend
+import Database.Beam.Postgres
 import EulerHS.Prelude
 
 data Medium
@@ -22,7 +22,7 @@ data Medium
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Medium where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Medium where
+instance FromBackendRow Postgres Medium where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RTEntityType
@@ -33,7 +33,7 @@ data RTEntityType
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RTEntityType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL RTEntityType where
+instance FromBackendRow Postgres RTEntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data LoginType
@@ -44,7 +44,7 @@ data LoginType
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be LoginType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL LoginType where
+instance FromBackendRow Postgres LoginType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RegistrationTokenT f = RegistrationToken

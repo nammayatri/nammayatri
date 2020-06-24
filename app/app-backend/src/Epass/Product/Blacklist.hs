@@ -2,7 +2,9 @@
 
 module Epass.Product.Blacklist where
 
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
+import Beckn.Utils.Common
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import Data.Default
@@ -15,24 +17,19 @@ import Epass.Types.App
 import Epass.Types.Common
 import Epass.Types.Storage.Blacklist as Storage
 import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.RegistrationToken as RegToken
 
-create :: Maybe RegistrationTokenText -> CreateReq -> FlowHandler CreateRes
-create mRegToken CreateReq {..} = withFlowHandler $ do
-  verifyToken mRegToken
+create :: RegToken -> CreateReq -> FlowHandler CreateRes
+create regToken CreateReq {..} = withFlowHandler $ do
+  token <- verifyToken regToken
   id <- generateGUID
-  regToken <-
-    fromMaybeM400 "INVALID_TOKEN" mRegToken
-      >>= RegToken.findByToken
-      >>= fromMaybeM400 "INVALID_TOKEN"
-  case (RegToken._entityType regToken) of
+  case (RegToken._entityType token) of
     RegToken.USER -> do
-      blacklist <- blacklistRec id $ RegToken._EntityId regToken
+      blacklist <- blacklistRec id $ RegToken._EntityId token
       DB.create blacklist
       eres <- DB.findById id
       case eres of
@@ -53,24 +50,24 @@ create mRegToken CreateReq {..} = withFlowHandler $ do
           }
 
 list ::
-  Maybe RegistrationTokenText ->
+  RegToken ->
   Maybe Limit ->
   Maybe Offset ->
   EntityType ->
   Text ->
   FlowHandler ListRes
-list mRegToken mlimit moffset entityType entityId = withFlowHandler $
+list regToken mlimit moffset entityType entityId = withFlowHandler $
   do
-    verifyToken mRegToken
+    verifyToken regToken
     DB.findAllWithLimitOffset mlimit moffset entityType entityId
     >>= \case
       Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
       Right v -> return $ ListRes v
 
-get :: Maybe Text -> BlacklistId -> FlowHandler GetRes
-get mRegToken blacklistId = withFlowHandler $
+get :: RegToken -> BlacklistId -> FlowHandler GetRes
+get regToken blacklistId = withFlowHandler $
   do
-    verifyToken mRegToken
+    verifyToken regToken
     DB.findById blacklistId
     >>= \case
       Right (Just user) -> return user
@@ -78,12 +75,12 @@ get mRegToken blacklistId = withFlowHandler $
       Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
 update ::
-  Maybe Text ->
+  RegToken ->
   BlacklistId ->
   UpdateReq ->
   FlowHandler UpdateRes
-update mRegToken blacklistId lb@UpdateReq {..} = withFlowHandler $ do
-  verifyToken mRegToken
+update regToken blacklistId lb@UpdateReq {..} = withFlowHandler $ do
+  verifyToken regToken
   eres <- DB.update blacklistId lb
   case eres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
@@ -94,9 +91,9 @@ update mRegToken blacklistId lb@UpdateReq {..} = withFlowHandler $ do
           Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
           Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
 
-delete :: Maybe Text -> BlacklistId -> FlowHandler Ack
-delete mRegToken blacklistId = withFlowHandler $ do
-  verifyToken mRegToken
+delete :: RegToken -> BlacklistId -> FlowHandler Ack
+delete regToken blacklistId = withFlowHandler $ do
+  verifyToken regToken
   mres <- DB.deleteById blacklistId
   case mres of
     Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}

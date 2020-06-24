@@ -97,13 +97,12 @@ registrationFlow =
 -------- Search Flow --------
 type SearchAPIs =
   "search" :> "services"
-    :> Header "token" RegToken
+    :> AuthHeader
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
     -- on_search
     :<|> "on_search"
     :> "services"
-    :> Header "token" RegToken
     :> ReqBody '[JSON] Search.OnSearchReq
     :> Post '[JSON] Search.OnSearchRes
 
@@ -115,12 +114,11 @@ searchFlow =
 -------- Confirm Flow --------
 type ConfirmAPIs =
   ( "confirm"
-      :> Header "token" RegToken
+      :> AuthHeader
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
       :> "services"
-      :> Header "token" RegToken
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
@@ -133,7 +131,7 @@ confirmFlow =
 ------- Case Flow -------
 type CaseAPIs =
   "case"
-    :> Header "token" RegToken
+    :> AuthHeader
     :> ( "list"
            :> MandatoryQueryParam "type" Case.CaseType
            :> QueryParams "status" Case.CaseStatus
@@ -151,7 +149,7 @@ caseFlow regToken =
 
 -------- Info Flow ------
 type InfoAPIs =
-  Header "token" RegToken
+  AuthHeader
     :> ( "product"
            :> Capture "id" Text
            :> Get '[JSON] GetProductInfoRes
@@ -169,12 +167,11 @@ infoFlow regToken =
 type TrackTripAPIs =
   "track"
     :> "trip"
-    :> Header "token" RegToken
+    :> AuthHeader
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
     :> "trip"
-    :> Header "token" RegToken
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -186,7 +183,7 @@ trackTripFlow =
 -------- CaseProduct Flow----------
 type CaseProductAPIs =
   "caseProduct"
-    :> ( Header "token" Text
+    :> ( AuthHeader
            :> ReqBody '[JSON] CaseProduct.CaseProdReq
            :> Post '[JSON] CaseProduct.CaseProductList
        )
@@ -198,7 +195,7 @@ caseProductFlow =
 type CancelAPIs =
   "cancel"
     :> "services"
-    :> Header "token" Text
+    :> AuthHeader
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     -- on cancel

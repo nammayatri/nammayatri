@@ -4,6 +4,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import Beckn.Utils.Common
 import Data.Aeson
 import Data.List
 import Data.Maybe
@@ -27,7 +28,6 @@ import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import Epass.Types.Storage.PassApplication
 import qualified Epass.Types.Storage.Tag as Document
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -39,7 +39,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Products as QProd
 
 listPassApplication ::
-  Maybe Text ->
+  RegToken ->
   Maybe Int ->
   Maybe Int ->
   [Int] ->
@@ -168,7 +168,7 @@ getCaseAppInfo Case.Case {..} = do
         ..
       }
 
-getPassApplicationById :: Maybe Text -> CaseId -> FlowHandler API.CaseInfo
+getPassApplicationById :: RegToken -> CaseId -> FlowHandler API.CaseInfo
 getPassApplicationById regToken caseId = withFlowHandler $
   do
     verifyToken regToken

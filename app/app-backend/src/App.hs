@@ -64,9 +64,9 @@ appExceptionResponse exception = do
   case anyException of
     Just ex ->
       responseLBS
-        (H.Status (errHTTPCode ex) (BS.pack $ errReasonPhrase ex))
-        ((H.hContentType, "application/json") : (errHeaders ex))
-        (errBody ex)
+        (H.Status (errHTTPCode ex) $ BS.pack $ errReasonPhrase ex)
+        ((H.hContentType, "application/json") : errHeaders ex)
+        $ errBody ex
     Nothing ->
       responseLBS
         H.internalServerError500

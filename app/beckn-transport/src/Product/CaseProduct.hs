@@ -5,7 +5,7 @@ module Product.CaseProduct where
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as Storage
+import qualified Beckn.Types.Storage.CaseProduct as CaseP
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.Products as Product
@@ -26,19 +26,22 @@ import qualified Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import Types.API.CaseProduct
+import qualified Utils.Defaults as Default
 
-list :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
-list regToken CaseProdReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth regToken
+list :: RegToken -> [CaseP.CaseProductStatus] -> Maybe Int -> Maybe Int -> FlowHandler CaseProductList
+list regToken status limitM offsetM = withFlowHandler $ do
+  SR.RegistrationToken {..} <- QR.verifyToken regToken
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
-      result <- DB.caseProductJoin _limit _offset Case.RIDEBOOK orgId _status
+      result <- DB.caseProductJoin limit offset Case.RIDEBOOK orgId status
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
       L.throwException $ err400 {errBody = "organisation id is missing"}
   where
+    limit = fromMaybe Default.limit limitM
+    offset = fromMaybe Default.offset offsetM
     buildResponse :: [Loc.Location] -> CaseProductRes -> CaseProductRes
     buildResponse locList res =
       CaseProductRes

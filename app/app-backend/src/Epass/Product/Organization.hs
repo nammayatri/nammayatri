@@ -3,7 +3,8 @@ module Epass.Product.Organization where
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Aeson
 import qualified Epass.Data.Accessor as Lens
 import qualified Epass.Storage.Queries.Blacklist as Blacklist
@@ -23,8 +24,6 @@ import qualified Epass.Types.Storage.EntityTag as EntityTag
 import qualified Epass.Types.Storage.Location as SL
 import Epass.Types.Storage.Organization
 import qualified Epass.Types.Storage.Tag as Tag
-import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -32,7 +31,7 @@ import Servant
 import qualified Storage.Queries.Person as QP
 
 createOrganization ::
-  Maybe Text -> API.CreateOrganizationReq -> FlowHandler API.OrganizationRes
+  RegToken -> API.CreateOrganizationReq -> FlowHandler API.OrganizationRes
 createOrganization regToken req =
   withFlowHandler $ do
     reg <- verifyToken regToken
@@ -64,7 +63,7 @@ createOrganization regToken req =
     QP.updatePersonOrgId uuid (PersonId $ SR._EntityId reg)
     return $ API.OrganizationRes org
 
-getOrganization :: Maybe Text -> Text -> FlowHandler API.GetOrganizationRes
+getOrganization :: RegToken -> Text -> FlowHandler API.GetOrganizationRes
 getOrganization regToken orgId =
   withFlowHandler $ do
     reg <- verifyToken regToken
@@ -84,7 +83,7 @@ getOrganization regToken orgId =
         )
 
 listOrganization ::
-  Maybe Text -> API.ListOrganizationReq -> FlowHandler API.ListOrganizationRes
+  RegToken -> API.ListOrganizationReq -> FlowHandler API.ListOrganizationRes
 listOrganization regToken API.ListOrganizationReq {..} = withFlowHandler $ do
   L.logInfo "list organization" "invoked"
   reg <- verifyToken regToken
@@ -134,7 +133,7 @@ getOrgInfo Organization {..} = do
       }
 
 updateOrganization ::
-  Maybe Text -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
+  RegToken -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
 updateOrganization regToken orgId API.UpdateOrganizationReq {..} = withFlowHandler $
   do
     reg <- verifyToken regToken

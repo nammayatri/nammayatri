@@ -17,29 +17,29 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
 
-createVehicle :: Maybe Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
-createVehicle token req = withFlowHandler $ do
-  orgId <- validate token
+createVehicle :: RegToken -> CreateVehicleReq -> FlowHandler CreateVehicleRes
+createVehicle regToken req = withFlowHandler $ do
+  orgId <- validate regToken
   vehicle <- transformFlow req >>= addOrgId orgId
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
-listVehicles :: Maybe Text -> ListVehicleReq -> FlowHandler ListVehicleRes
-listVehicles token req = withFlowHandler $ do
-  orgId <- validate token
-  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds (req ^. #_limit) (req ^. #_offset) [orgId])
+listVehicles :: RegToken -> Maybe Integer -> Maybe Integer -> FlowHandler ListVehicleRes
+listVehicles regToken limitM offsetM = withFlowHandler $ do
+  orgId <- validate regToken
+  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds limitM offsetM [orgId])
 
-updateVehicle :: Text -> Maybe Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
-updateVehicle vehicleId token req = withFlowHandler $ do
-  orgId <- validate token
+updateVehicle :: Text -> RegToken -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
+updateVehicle vehicleId regToken req = withFlowHandler $ do
+  orgId <- validate regToken
   vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
   updatedVehicle <- transformFlow2 req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
-deleteVehicle :: Text -> Maybe Text -> FlowHandler DeleteVehicleRes
-deleteVehicle vehicleId token = withFlowHandler $ do
-  orgId <- validate token
+deleteVehicle :: Text -> RegToken -> FlowHandler DeleteVehicleRes
+deleteVehicle vehicleId regToken = withFlowHandler $ do
+  orgId <- validate regToken
   vehicle <-
     QV.findVehicleById (VehicleId vehicleId)
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
@@ -49,9 +49,9 @@ deleteVehicle vehicleId token = withFlowHandler $ do
       return $ DeleteVehicleRes vehicleId
     else L.throwException $ err401 {errBody = "Unauthorized"}
 
-getVehicle :: Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
+getVehicle :: RegToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
 getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyAuth token
+  SR.RegistrationToken {..} <- QR.verifyToken token
   user <- QP.findPersonById (PersonId _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
@@ -70,15 +70,15 @@ getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
 verifyUser :: SP.Person -> L.Flow Text
 verifyUser user = do
   whenM (return $ not $ elem (user ^. #_role) [SP.ADMIN, SP.DRIVER]) $ L.throwException $ err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
-  let mOrgId = user ^. #_organizationId
-  whenM (return $ isNothing mOrgId) $ L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
-  return $ fromMaybe "NEVER_SHOULD_BE_HERE" mOrgId
+  case user ^. #_organizationId of
+    Just orgId -> return orgId
+    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
 
 addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
 
-validate :: Maybe Text -> L.Flow Text
-validate token = do
-  SR.RegistrationToken {..} <- QR.verifyAuth token
+validate :: RegToken -> L.Flow Text
+validate regToken = do
+  SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (PersonId _EntityId)
   verifyUser user

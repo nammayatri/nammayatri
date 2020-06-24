@@ -77,3 +77,5 @@ type Offset = Int
 type RegToken = Text
 
 type CronAuthKey = Text
+
+type AuthHeader = Header' '[Required, Strict] "token" RegToken

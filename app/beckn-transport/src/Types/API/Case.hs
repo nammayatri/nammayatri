@@ -6,21 +6,6 @@ import Data.Default
 import Data.Swagger
 import EulerHS.Prelude
 
-data CaseReq = CaseReq
-  { _type :: CaseType,
-    _limit :: Integer,
-    _offset :: Integer,
-    _status :: [CaseStatus],
-    _ignoreOffered :: Maybe Bool
-  }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON CaseReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON CaseReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
 data CaseRes = CaseRes
   { _case :: Case,
     _fromLocation :: Location,

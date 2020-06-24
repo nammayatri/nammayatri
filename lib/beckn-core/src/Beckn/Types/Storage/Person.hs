@@ -13,7 +13,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -24,7 +24,7 @@ data Status = ACTIVE | INACTIVE
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema Status
@@ -49,7 +49,7 @@ data Role
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Role where
+instance FromBackendRow Postgres Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Role
@@ -70,7 +70,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType wher
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 
-instance FromBackendRow MySQL IdentifierType where
+instance FromBackendRow Postgres IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema IdentifierType
@@ -82,7 +82,7 @@ data Gender = MALE | FEMALE | OTHER | UNKNOWN
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Gender where
+instance FromBackendRow Postgres Gender where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Gender

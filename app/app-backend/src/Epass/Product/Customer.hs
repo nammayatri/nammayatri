@@ -2,14 +2,13 @@ module Epass.Product.Customer where
 
 import Beckn.Types.Storage.Person
 import qualified Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
 import Epass.Types.API.Customer
 import Epass.Types.App
 import Epass.Types.Common
-import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (mask)
@@ -17,7 +16,7 @@ import Servant
 import qualified Storage.Queries.Person as QP
 
 getCustomerInfo ::
-  Maybe Text -> Text -> FlowHandler GetCustomerRes
+  RegToken -> Text -> FlowHandler GetCustomerRes
 getCustomerInfo regToken customerId = withFlowHandler $ do
   reg <- verifyToken regToken
   customer <-
