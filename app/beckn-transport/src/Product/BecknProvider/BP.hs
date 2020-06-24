@@ -88,8 +88,9 @@ cancel req = withFlowHandler $ do
   Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
   CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) CaseProduct.CANCELLED
   notifyCancelToGateway productId
+  product <- Product.findAllById [ProductsId productId]
   admins <-
-    Person.findAllByOrgIds [Person.ADMIN] [productId]
+    Person.findAllByOrgIds [Person.ADMIN] $ map Product._organizationId product
   case cprList of
     [] -> pure ()
     cp : _ -> do
