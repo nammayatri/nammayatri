@@ -2,8 +2,6 @@
 
 module Product.Confirm where
 
-import qualified Beckn.External.FCM.Flow as FCM
-import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Confirm
 import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
@@ -32,6 +30,7 @@ import qualified Types.API.Confirm as API
 import Types.App
 import qualified Types.ProductInfo as Products
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 import Utils.Routes
 
 confirm :: RegToken -> API.ConfirmReq -> FlowHandler AckResponse
@@ -79,32 +78,6 @@ onConfirm req = withFlowHandler $ do
         QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
-        case_ <- QCase.findById caseId
-        let personId = Case._requestor case_
-        notifyOnConfirmCb personId caseId
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
-
-notifyOnConfirmCb :: Maybe Text -> CaseId -> L.Flow ()
-notifyOnConfirmCb personId caseId =
-  if isJust personId
-    then do
-      person <- Person.findById $ PersonId (fromJust personId)
-      case person of
-        Just p -> do
-          let notificationData =
-                FCM.FCMData
-                  { _fcmNotificationType = FCM.CONFIRM_CALLBACK,
-                    _fcmShowNotification = FCM.SHOW,
-                    _fcmEntityIds = show $ _getCaseId caseId,
-                    _fcmEntityType = FCM.Case
-                  }
-              title = FCM.FCMNotificationTitle $ T.pack "New ride options available!"
-              body =
-                FCM.FCMNotificationBody $
-                  T.pack "You have a new reply for your ride request! Head to the beckn app for details."
-          FCM.notifyPerson title body notificationData p
-          pure ()
-        _ -> pure ()
-    else pure ()

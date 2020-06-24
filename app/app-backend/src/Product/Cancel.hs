@@ -18,6 +18,7 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 
 cancel :: RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
@@ -98,6 +99,11 @@ onCancel req = withFlowHandler $ do
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
   CaseProduct.updateStatus productId CaseProduct.CANCELLED
   let caseId = cpProducts ^. #_caseId
+  -- notify customer
+  case_ <- Case.findById caseId
+  let personId = Case._requestor case_
+  Notify.notifyOnProductCancelCb personId case_ productId
+  --
   arrCPCase <- CaseProduct.findAllByCaseId caseId
   let arrTerminalCP =
         filter
