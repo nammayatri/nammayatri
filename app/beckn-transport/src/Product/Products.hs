@@ -39,14 +39,7 @@ update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId req = withFlowHandler $ do
   SR.RegistrationToken {..} <- RQ.verifyToken regToken
   user <- PersQ.findPersonById (PersonId _EntityId)
-  cpList <- CPQ.findAllByProdId (ProductsId productId)
-  currStatus <- case cpList of
-    [] -> L.throwException $ err400 {errBody = "INVALID RIDE ID"}
-    _ -> return $ head (CaseP._status <$> cpList)
-  when (currStatus == CaseP.INPROGRESS || currStatus == CaseP.COMPLETED) $
-    case (req ^. #_assignedTo, req ^. #_vehicleId) of
-      (Nothing, Nothing) -> return ()
-      _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
+  isAllowed productId req
   vehIdRes <- case req ^. #_vehicleId of
     Just k ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
@@ -183,3 +176,16 @@ notifyCancelReq prodId status = do
       CaseP.CANCELLED -> BP.notifyCancelToGateway prodId
       _ -> return ()
     Nothing -> return ()
+
+-- Core Utility methods are below
+
+isAllowed :: Text -> ProdReq -> L.Flow ()
+isAllowed productId req = do
+  cpList <- CPQ.findAllByProdId (ProductsId productId)
+  currStatus <- case cpList of
+    [] -> L.throwException $ err400 {errBody = "INVALID RIDE ID"}
+    _ -> return $ head (CaseP._status <$> cpList)
+  when (currStatus == CaseP.INPROGRESS || currStatus == CaseP.COMPLETED) $
+    case (req ^. #_assignedTo, req ^. #_vehicleId) of
+      (Nothing, Nothing) -> return ()
+      _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
