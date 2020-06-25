@@ -2,8 +2,8 @@
 
 module Product.Registration where
 
-import qualified Beckn.External.MyValuesFirst.Flow as Sms
-import qualified Beckn.External.MyValuesFirst.Types as Sms
+import qualified Beckn.External.MyValueFirst.Flow as Sms
+import qualified Beckn.External.MyValueFirst.Types as Sms
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
@@ -131,6 +131,7 @@ sendOTP :: Text -> Text -> L.Flow ()
 sendOTP phoneNumber otpCode = do
   username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
   password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
+  otpHash <- L.runIO $ getEnv "AUTO_READ_OTP_HASH"
   res <-
     Sms.submitSms
       Sms.defaultBaseUrl
@@ -139,7 +140,8 @@ sendOTP phoneNumber otpCode = do
           Sms._password = T.pack password,
           Sms._from = "JUSPAY",
           Sms._to = phoneNumber,
-          Sms._text = "Your OTP is " <> otpCode
+          Sms._category = "bulk",
+          Sms._text = "Your OTP is " <> otpCode <> " " <> (T.pack otpHash)
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
 

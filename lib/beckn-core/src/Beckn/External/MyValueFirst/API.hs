@@ -1,6 +1,6 @@
-module Beckn.External.MyValuesFirst.API where
+module Beckn.External.MyValueFirst.API where
 
-import Beckn.External.MyValuesFirst.Types
+import Beckn.External.MyValueFirst.Types
 import Beckn.Types.App
   ( MandatoryQueryParam,
   )
@@ -18,10 +18,11 @@ type ServiceAPI =
     :> MandatoryQueryParam "from" Text
     :> MandatoryQueryParam "to" Text
     :> MandatoryQueryParam "text" Text
+    :> MandatoryQueryParam "category" Text
     :> Post '[PlainText] NoContent
 
 serviceAPI :: Proxy ServiceAPI
 serviceAPI = Proxy
 
 submitSms SubmitSms {..} =
-  void $ ET.client serviceAPI _username _password _from _to _text
+  void $ ET.client serviceAPI _username _password _from _to _text _category
