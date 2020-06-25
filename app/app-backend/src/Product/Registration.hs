@@ -2,24 +2,19 @@
 
 module Product.Registration where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (maskPerson, withFlowHandler)
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Map as Map
 import qualified Data.Text as T
-import Data.Time.LocalTime
 import qualified Epass.External.MyValuesFirst.Flow as Sms
 import qualified Epass.External.MyValuesFirst.Types as Sms
-import Epass.Utils.Common
-import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -28,6 +23,7 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import System.Environment
 import Types.API.Registration
 import Types.App
+import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -56,16 +52,7 @@ initiateFlow req = do
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
-      notificationData =
-        FCMData
-          { _fcmNotificationType = "REGISTRATION_APPROVED",
-            _fcmShowNotification = "true",
-            _fcmEntityIds = show regToken,
-            _fcmEntityType = "Organization"
-          }
-      title = "Registration Completed!"
-      body = "You can now book rides for travel or apply for a travel pass for yourself, family, or for work."
-  FCM.notifyPerson title body notificationData person
+  Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person

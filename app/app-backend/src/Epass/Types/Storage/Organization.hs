@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import Epass.Types.Common
 import EulerHS.Prelude
@@ -25,7 +25,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL Status where
+instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToParamSchema Status

@@ -1,13 +1,13 @@
 module Epass.Storage.Queries.CustomerDetail where
 
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Types.Common
+import Beckn.Utils.Extra
 import Data.Aeson (Value (Null))
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import Epass.Types.App
 import Epass.Types.Storage.CustomerDetail as Storage
 import qualified Epass.Types.Storage.DB as DB
-import Epass.Utils.Common (generateGUID)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T

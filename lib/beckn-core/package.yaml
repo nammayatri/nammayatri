@@ -55,7 +55,7 @@ dependencies:
 - aeson-casing
 - base >= 4.7 && < 5
 - beam-core
-- beam-mysql
+- beam-postgres
 - bytestring
 - containers
 - cryptonite
@@ -70,6 +70,7 @@ dependencies:
 - lens
 - pureMD5
 - random-strings
+- scientific
 - servant
 - servant-client
 - servant-multipart

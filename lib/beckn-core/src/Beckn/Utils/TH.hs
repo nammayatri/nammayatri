@@ -10,7 +10,8 @@ import Beckn.Types.Common
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Swagger
 import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
-import Database.Beam.MySQL (MySQL, MysqlValueSyntax)
+import Database.Beam.Postgres as Posgres
+import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck)
 import EulerHS.Prelude
 import qualified Language.Haskell.TH as TH
@@ -31,11 +32,11 @@ deriveIdentifierInstances name = do
 
     deriving newtype instance FromJSON $tyQ
 
-    deriving newtype instance HasSqlValueSyntax MysqlValueSyntax $tyQ
+    deriving newtype instance HasSqlValueSyntax PgValueSyntax $tyQ
 
-    deriving newtype instance FromBackendRow MySQL $tyQ
+    deriving newtype instance FromBackendRow Postgres $tyQ
 
-    deriving newtype instance HasSqlEqualityCheck MySQL $tyQ
+    deriving newtype instance HasSqlEqualityCheck Postgres $tyQ
 
     deriving newtype instance ToHttpApiData $tyQ
 

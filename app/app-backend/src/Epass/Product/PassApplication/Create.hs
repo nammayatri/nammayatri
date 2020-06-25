@@ -1,12 +1,14 @@
 module Epass.Product.PassApplication.Create where
 
 import qualified Beckn.Types.Common as BTC
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common
+import Beckn.Utils.Extra
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
@@ -22,9 +24,6 @@ import qualified Epass.Types.Common as Location (Location (..))
 import qualified Epass.Types.Storage.Customer as Customer
 import qualified Epass.Types.Storage.CustomerDetail as CD
 import Epass.Types.Storage.PassApplication
-import Epass.Utils.Common
-import Epass.Utils.Routes
-import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -35,7 +34,7 @@ import qualified Test.RandomStrings as RS
 import qualified Utils.Common as UC
 
 createPassApplication ::
-  Maybe Text -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
+  RegToken -> API.CreatePassApplicationReq -> FlowHandler API.PassApplicationRes'
 createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowHandler $ do
   token <- UC.verifyToken regToken
   caseInfo <-

@@ -2,8 +2,6 @@
 
 module Product.Confirm where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
 import Beckn.Types.API.Confirm
 import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
@@ -32,12 +30,17 @@ import qualified Types.API.Confirm as API
 import Types.App
 import qualified Types.ProductInfo as Products
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 import Utils.Routes
 
-confirm :: Maybe RegToken -> API.ConfirmReq -> FlowHandler AckResponse
+confirm :: RegToken -> API.ConfirmReq -> FlowHandler AckResponse
 confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   verifyToken regToken
   lt <- getCurrentTimeUTC
+  case_ <- QCase.findById $ CaseId caseId
+  when ((case_ ^. #_validTill) < lt)
+    $ L.throwException
+    $ err400 {errBody = "Case has expired"}
   caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
@@ -50,8 +53,8 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack
 
-onConfirm :: Maybe RegToken -> OnConfirmReq -> FlowHandler OnConfirmRes
-onConfirm regToken req = withFlowHandler $ do
+onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
   let selectedItems = req ^. #message ^. #_selected_items
@@ -68,36 +71,13 @@ onConfirm regToken req = withFlowHandler $ do
         let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
         let uPrd =
               prd
-                { Products._status = Products.CONFIRMED,
-                  Products._info = encodeToText <$> uInfo
+                { Products._info = encodeToText <$> uInfo
                 }
-        QCP.updateStatus pid Products.CONFIRMED
+        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        QCP.updateStatus pid SCP.CONFIRMED
+        QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
         QCase.updateStatus caseId Case.INPROGRESS
-        case_ <- QCase.findById caseId
-        let personId = Case._requestor case_
-        notifyOnConfirmCb personId caseId
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
-
-notifyOnConfirmCb :: Maybe Text -> CaseId -> L.Flow ()
-notifyOnConfirmCb personId caseId =
-  if isJust personId
-    then do
-      person <- Person.findById $ PersonId (fromJust personId)
-      case person of
-        Just p -> do
-          let notificationData =
-                FCMData
-                  { _fcmNotificationType = "CONFIRM_CALLBACK",
-                    _fcmShowNotification = "true",
-                    _fcmEntityIds = show $ _getCaseId caseId,
-                    _fcmEntityType = "Case"
-                  }
-              title = "New ride options available!"
-              body = T.pack "You have a new reply for your ride request! Head to the beckn app for details."
-          FCM.notifyPerson title body notificationData p
-          pure ()
-        _ -> pure ()
-    else pure ()

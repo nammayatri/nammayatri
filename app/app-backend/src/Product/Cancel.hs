@@ -18,8 +18,9 @@ import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 
-cancel :: Maybe RegToken -> CancelReq -> FlowHandler CancelRes
+cancel :: RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
   verifyToken regToken
   let entityType = req ^. #message ^. #entityType
@@ -78,9 +79,9 @@ cancelCase req = do
 isCaseProductCancellable :: CaseProduct.CaseProduct -> Bool
 isCaseProductCancellable cp =
   case cp ^. #_status of
-    Products.CONFIRMED -> True
-    Products.VALID -> True
-    Products.INSTOCK -> True
+    CaseProduct.CONFIRMED -> True
+    CaseProduct.VALID -> True
+    CaseProduct.INSTOCK -> True
     _ -> False
 
 isCaseCancellable :: Case.Case -> Bool
@@ -95,19 +96,24 @@ onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
-  Products.updateStatus productId Products.CANCELLED
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
-  CaseProduct.updateStatus productId Products.CANCELLED
+  CaseProduct.updateStatus productId CaseProduct.CANCELLED
   let caseId = cpProducts ^. #_caseId
+  -- notify customer
+  case_ <- Case.findById caseId
+  let personId = Case._requestor case_
+  Notify.notifyOnProductCancelCb personId case_ productId
+  --
   arrCPCase <- CaseProduct.findAllByCaseId caseId
   let arrTerminalCP =
         filter
           ( \cp -> do
               let status = cp ^. #_status
-              status == Products.COMPLETED || status == Products.OUTOFSTOCK || status == Products.CANCELLED || status == Products.INVALID
+              status == CaseProduct.COMPLETED || status == CaseProduct.OUTOFSTOCK || status == CaseProduct.CANCELLED || status == CaseProduct.INVALID
           )
           arrCPCase
-  if length arrTerminalCP == length arrCPCase
-    then Case.updateStatus caseId Case.CLOSED
-    else return ()
+  when
+    (length arrTerminalCP == length arrCPCase)
+    (Case.updateStatus caseId Case.CLOSED)
+
   mkAckResponse txnId "cancel"

@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
@@ -23,10 +23,10 @@ data LocationType = POINT | POLYGON | PINCODE | ADDRESS
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow MySQL LocationType where
+instance FromBackendRow Postgres LocationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-deriving instance B.HasSqlEqualityCheck MySQL LocationType
+deriving instance B.HasSqlEqualityCheck Postgres LocationType
 
 instance ToParamSchema LocationType
 

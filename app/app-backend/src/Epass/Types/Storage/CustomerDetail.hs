@@ -9,7 +9,7 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Epass.Types.App
 import EulerHS.Prelude
 import Servant.Swagger
@@ -22,7 +22,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType wher
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 
-instance FromBackendRow MySQL IdentifierType where
+instance FromBackendRow Postgres IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data CustomerDetailT f = CustomerDetail

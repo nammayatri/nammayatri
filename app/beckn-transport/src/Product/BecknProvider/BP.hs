@@ -2,8 +2,6 @@
 
 module Product.BecknProvider.BP where
 
-import Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -31,10 +29,9 @@ import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Accessor as Lens
 import Data.Aeson
-import Data.ByteString.Lazy.Char8
-import Data.Text as T
+import qualified Data.ByteString.Lazy.Char8 as BSL
+import qualified Data.Text as T
 import Data.Time
-import Data.Time.Clock
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -51,6 +48,7 @@ import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.Notification
+import qualified Utils.Notifications as Notify
 
 -- 1) Create Parent Case with Customer Request Details
 -- 2) Notify all transporter using FCM
@@ -61,7 +59,7 @@ search req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime $ currTime
+  validity <- getValidTime currTime (req ^. #message ^. #time)
   uuid1 <- L.generateGUID
   let fromLocation = mkFromLocation req uuid1 currTime $ req ^. #message ^. #origin
   uuid2 <- L.generateGUID
@@ -75,8 +73,8 @@ search req = withFlowHandler $ do
   admins <-
     Person.findAllByOrgIds
       [Person.ADMIN]
-      ((\o -> _getOrganizationId $ Org._id o) <$> transporters)
-  notifyTransportersOnSearch c admins
+      (_getOrganizationId . Org._id <$> transporters)
+  Notify.notifyTransportersOnSearch c admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -85,16 +83,31 @@ cancel req = withFlowHandler $ do
   uuid <- L.generateGUID
   let productId = req ^. #message ^. #id
   cprList <- CaseProduct.findAllByProdId (ProductsId productId)
+  -- TODO: Should we check if all case's products were cancelled
+  -- before cancelling a case?
   Case.updateStatusByIds (CaseProduct._caseId <$> cprList) SC.CLOSED
-  CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) Product.CANCELLED
-  Product.updateStatus (ProductsId productId) Product.CANCELLED
+  CaseProduct.updateStatusByIds (CaseProduct._id <$> cprList) CaseProduct.CANCELLED
   notifyCancelToGateway productId
+  product <- Product.findAllById [ProductsId productId]
+  admins <-
+    Person.findAllByOrgIds [Person.ADMIN] $ map Product._organizationId product
+  case cprList of
+    [] -> pure ()
+    cp : _ -> do
+      c <- Case.findById $ CaseProduct._caseId cp
+      Notify.notifyTransportersOnCancel c productId admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
--- Putting a static expiry of 2hrs
-getValidTime :: LocalTime -> L.Flow LocalTime
-getValidTime now = pure $ addLocalTime (60 * 30 * 2) $ now
+getValidTime :: LocalTime -> LocalTime -> L.Flow LocalTime
+getValidTime now startTime = do
+  caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
+  let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
+      minExpiry = 300 -- 5 minutes
+      timeToRide = startTime `diffLocalTime` now
+      defaultExpiry = (fromInteger caseExpiry) `addLocalTime` now
+      validTill = addLocalTime (minimum [(fromInteger caseExpiry), maximum [minExpiry, timeToRide]]) now
+  pure validTill
 
 mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
 mkFromLocation req uuid now loc =
@@ -181,8 +194,7 @@ confirm req = withFlowHandler $ do
   product <- Product.findById (ProductsId prodId)
   let caseId = _getCaseId $ case_ ^. #_id
   Case.updateStatus (CaseId caseId) SC.INPROGRESS
-  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) Product.CONFIRMED
-  Product.updateStatus (ProductsId prodId) Product.CONFIRMED
+  CaseProduct.updateStatus (CaseId caseId) (ProductsId prodId) CaseProduct.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
@@ -195,7 +207,7 @@ confirm req = withFlowHandler $ do
   notifyGateway case_ prodId trackerCase
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [Product._organizationId product]
-  notifyTransportersOnConfirm case_ admins
+  Notify.notifyTransportersOnConfirm case_ admins
   mkAckResponse uuid "confirm"
 
 -- TODO : Add notifying transporter admin with FCM
@@ -209,7 +221,7 @@ mkTrackerCaseProduct cpId caseId prodId currTime =
       _personId = Nothing,
       _quantity = 1,
       _price = 0,
-      _status = Product.INSTOCK,
+      _status = CaseProduct.INSTOCK,
       _info = Nothing,
       _createdAt = currTime,
       _updatedAt = currTime
@@ -252,13 +264,13 @@ notifyGateway c prodId trackerCase = do
   cps <- CaseProduct.findAllByCaseId (c ^. #_id)
   L.logInfo "notifyGateway" $ show cps
   prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
-  onConfirmPayload <- mkOnConfirmPayload c prods trackerCase
+  onConfirmPayload <- mkOnConfirmPayload c prods cps trackerCase
   L.logInfo "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
   Gateway.onConfirm onConfirmPayload
   return ()
 
-mkOnConfirmPayload :: Case -> [Products] -> Case -> L.Flow OnConfirmReq
-mkOnConfirmPayload c prods trackerCase = do
+mkOnConfirmPayload :: Case -> [Products] -> [CaseProduct] -> Case -> L.Flow OnConfirmReq
+mkOnConfirmPayload c prods cps trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -271,7 +283,7 @@ mkOnConfirmPayload c prods trackerCase = do
             dummy = ""
           }
   trip <- mkTrip trackerCase
-  service <- GT.mkServiceOffer c prods (Just trip) Nothing
+  service <- GT.mkServiceOffer c prods cps (Just trip) Nothing
   return
     OnConfirmReq
       { context,
@@ -287,19 +299,19 @@ serviceStatus req = withFlowHandler $ do
   prods <- Product.findAllById $ (\cp -> (cp ^. #_productId)) <$> cps
   --TODO : use forkFlow to notify gateway
   trackerCase <- Case.findByParentCaseIdAndType (CaseId caseId) SC.TRACKER
-  notifyServiceStatusToGateway c prods trackerCase
+  notifyServiceStatusToGateway c prods cps trackerCase
   uuid <- L.generateGUID
   mkAckResponse uuid "track"
 
-notifyServiceStatusToGateway :: Case -> [Products] -> Maybe Case -> L.Flow ()
-notifyServiceStatusToGateway c prods trackerCase = do
-  onServiceStatusPayload <- mkOnServiceStatusPayload c prods trackerCase
+notifyServiceStatusToGateway :: Case -> [Products] -> [CaseProduct] -> Maybe Case -> L.Flow ()
+notifyServiceStatusToGateway c prods cps trackerCase = do
+  onServiceStatusPayload <- mkOnServiceStatusPayload c prods cps trackerCase
   L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   Gateway.onStatus onServiceStatusPayload
   return ()
 
-mkOnServiceStatusPayload :: Case -> [Products] -> Maybe Case -> L.Flow OnStatusReq
-mkOnServiceStatusPayload c prods trackerCase = do
+mkOnServiceStatusPayload :: Case -> [Products] -> [CaseProduct] -> Maybe Case -> L.Flow OnStatusReq
+mkOnServiceStatusPayload c prods cps trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -312,7 +324,7 @@ mkOnServiceStatusPayload c prods trackerCase = do
             dummy = ""
           }
   trip <- mapM mkTrip trackerCase
-  service <- GT.mkServiceOffer c prods trip Nothing
+  service <- GT.mkServiceOffer c prods cps trip Nothing
   return
     OnStatusReq
       { context,
@@ -324,11 +336,14 @@ trackTrip req = withFlowHandler $ do
   L.logInfo "track trip API Flow" $ show req
   let tripId = req ^. #message ^. #id
   case_ <- Case.findById (CaseId tripId)
-  parentCase <- Case.findById $ fetchMaybeValue $ case_ ^. #_parentCaseId
-  --TODO : use forkFlow to notify gateway
-  notifyTripUrlToGateway case_ parentCase
-  uuid <- L.generateGUID
-  mkAckResponse uuid "track"
+  case case_ ^. #_parentCaseId of
+    Just parentCaseId -> do
+      parentCase <- Case.findById parentCaseId
+      --TODO : use forkFlow to notify gateway
+      notifyTripUrlToGateway case_ parentCase
+      uuid <- L.generateGUID
+      mkAckResponse uuid "track"
+    Nothing -> L.throwException $ err400 {errBody = "Case does not have an associated parent case"}
 
 notifyTripUrlToGateway :: Case -> Case -> L.Flow ()
 notifyTripUrlToGateway case_ parentCase = do
@@ -446,33 +461,3 @@ mkCancelTripObj prodId = do
         fare = Just $ GT.mkPrice prod,
         route = Nothing
       }
-
--- | Send FCM "search" notification to provider admins
-notifyTransportersOnSearch :: Case -> [Person] -> L.Flow ()
-notifyTransportersOnSearch c =
-  traverse_ (FCM.notifyPerson title body notificationData)
-  where
-    notificationData =
-      FCMData
-        { _fcmNotificationType = "SEARCH_REQUEST",
-          _fcmShowNotification = "true",
-          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = "Organization"
-        }
-    title = "You have a new ride request"
-    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)
-
--- | Send FCM "search" notification to provider admins
-notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
-notifyTransportersOnConfirm c =
-  traverse_ (FCM.notifyPerson title body notificationData)
-  where
-    notificationData =
-      FCMData
-        { _fcmNotificationType = "CONFIRM_REQUEST",
-          _fcmShowNotification = "true",
-          _fcmEntityIds = show $ _getCaseId $ c ^. #_id,
-          _fcmEntityType = "Organization"
-        }
-    title = "Customer has confimed a ride"
-    body = T.pack $ "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (SC._startTime c)

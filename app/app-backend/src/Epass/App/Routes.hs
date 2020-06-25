@@ -95,7 +95,7 @@ epassServer' key =
 ---- Pass Application Flow ------
 type PassApplicationAPIs =
   "pass_application"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( ReqBody '[JSON] CreatePassApplicationReq
            :> Post '[JSON] PassApplicationRes'
            :<|> "list"
@@ -132,7 +132,7 @@ passApplicationFlow registrationToken =
 --
 type OrganizationAPIs =
   "organization"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( ReqBody '[JSON] CreateOrganizationReq
            :> Post '[JSON] OrganizationRes
            :<|> "list"
@@ -154,7 +154,7 @@ organizationFlow registrationToken =
 ----- Customer Flow -------
 type CustomerAPIs =
   "customer"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> Capture "customerId" Text
     :> Get '[JSON] GetCustomerRes
 
@@ -168,7 +168,7 @@ customerFlow registrationToken =
 -- | The /pass/list?.. was getting overriden by /pass/:passId
 type PassAPIs =
   "pass"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( "list"
            :> MandatoryQueryParam "identifierType" PassIDType
            :> MandatoryQueryParam "identifier" Text
@@ -191,7 +191,7 @@ passFlow registrationToken =
 ------ Quota Flow ----------
 type QuotaAPIS =
   "quota"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( ReqBody '[JSON] Quota.CreateReq
            :> Post '[JSON] Quota.CreateRes
            :<|> Capture "quotaId" QuotaId
@@ -215,7 +215,7 @@ quotaFlow registrationToken =
 
 ------ User Flow ----------
 type UserAPIS =
-  "user" :> Header "registrationToken" RegistrationTokenText
+  "user" :> AuthHeader
     :> ( Capture "userId" PersonId
            :> ReqBody '[JSON] User.UpdateReq
            :> Post '[JSON] User.UpdateRes
@@ -243,7 +243,7 @@ userFlow registrationToken =
 
 ------ Location Blacklist ----------
 type BlacklistAPIS =
-  "blacklist" :> Header "registrationToken" RegistrationTokenText
+  "blacklist" :> AuthHeader
     :> ( ReqBody '[JSON] Blacklist.CreateReq
            :> Post '[JSON] Blacklist.CreateRes
            :<|> Capture "blacklist_id" BlacklistId
@@ -270,7 +270,7 @@ blacklistFlow registrationToken =
 ---- Document Api
 type DocumentAPIs =
   "document"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( Capture "entityType" DocumentEntity
            :> Capture "entityId" Text
            :> "upload"
@@ -289,7 +289,7 @@ documentFlow registrationToken =
 ---- Tag Api
 type TagAPIs =
   "tag"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( ReqBody '[JSON] Tag.CreateReq
            :> Post '[JSON] Tag.CreateRes
            :<|> "list"
@@ -321,7 +321,7 @@ tagFlow registrationToken =
 ---- Comment Api
 type CommentAPIs =
   "comment"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( ReqBody '[JSON] Comment.CreateReq
            :> Post '[JSON] Comment.CreateRes
            :<|> Capture "primaryEntityType" Text
@@ -338,7 +338,7 @@ commentFlow registrationToken =
 ----- Location API
 type LocationAPIs =
   "location"
-    :> Header "registrationToken" RegistrationTokenText
+    :> AuthHeader
     :> ( "list"
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int

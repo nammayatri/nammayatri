@@ -19,6 +19,7 @@ import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.Products
@@ -26,6 +27,7 @@ import Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Aeson
 import Data.Map
+import Data.Scientific
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -59,23 +61,23 @@ mkPrice :: Products -> Price
 mkPrice prod =
   Price
     { _currency = "INR", -- TODO : Fetch this from product
-      _estimated_value = prod ^. #_price,
-      _computed_value = prod ^. #_price,
-      _listed_value = prod ^. #_price,
-      _offered_value = prod ^. #_price,
+      _estimated_value = toRealFloat $ prod ^. #_price,
+      _computed_value = toRealFloat $ prod ^. #_price,
+      _listed_value = toRealFloat $ prod ^. #_price,
+      _offered_value = toRealFloat $ prod ^. #_price,
       _unit = "Rs", -- TODO : Fetch this from product
       _discount = 0.0,
       _tax = Nothing
     }
 
-mkServiceOffer :: Case -> [Products] -> Maybe Trip -> Maybe Organization -> L.Flow Service
-mkServiceOffer c prods trip orgInfo =
+mkServiceOffer :: Case -> [Products] -> [CaseProduct] -> Maybe Trip -> Maybe Organization -> L.Flow Service
+mkServiceOffer c prods cps trip orgInfo =
   let x =
         Service
           { _id = _getCaseId $ c ^. #_id,
             _catalog = Just $ mkCatalog prods,
             _matched_items = (_getProductsId . Product._id) <$> prods,
-            _selected_items = catMaybes $ (\x -> if x ^. #_status == Product.CONFIRMED then Just (_getProductsId $ x ^. #_id) else Nothing) <$> prods,
+            _selected_items = catMaybes $ (\x -> if x ^. #_status == CaseProduct.CONFIRMED then Just (_getProductsId $ x ^. #_productId) else Nothing) <$> cps,
             _fare_product = Nothing,
             _offers = [],
             _provider = mkProvider <$> orgInfo,

@@ -5,6 +5,7 @@ module Epass.Product.User.Update where
 
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.List as List
 import Data.Time
@@ -18,7 +19,6 @@ import Epass.Types.Common
 import qualified Epass.Types.Storage.Location as Location
 import qualified Epass.Types.Storage.Organization as Org
 import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -26,7 +26,7 @@ import Servant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegToken
 
-update :: Maybe Text -> PersonId -> UpdateReq -> FlowHandler UpdateRes
+update :: RegToken -> PersonId -> UpdateReq -> FlowHandler UpdateRes
 update regToken userId req@UpdateReq {..} = withFlowHandler $ do
   verifyToken regToken
   person <-
@@ -54,7 +54,7 @@ update regToken userId req@UpdateReq {..} = withFlowHandler $ do
     >>= fromMaybeM500 "Couldnot find user"
     >>= return . UpdateRes
 
-delete :: Maybe RegistrationTokenText -> PersonId -> FlowHandler Ack
+delete :: RegToken -> PersonId -> FlowHandler Ack
 delete regToken userId = withFlowHandler $ do
   verifyToken regToken
   Person.deleteById userId

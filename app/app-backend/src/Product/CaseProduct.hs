@@ -24,7 +24,7 @@ import System.Environment
 import Types.API.CaseProduct
 import Utils.Common (verifyToken)
 
-list :: Maybe Text -> CaseProdReq -> FlowHandler CaseProductList
+list :: RegToken -> CaseProdReq -> FlowHandler CaseProductList
 list regToken CaseProdReq {..} = withFlowHandler $ do
   SR.RegistrationToken {..} <- verifyToken regToken
   let personId = PersonId _EntityId

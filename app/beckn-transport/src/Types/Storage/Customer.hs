@@ -11,7 +11,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger

@@ -2,7 +2,6 @@
 
 module Epass.Storage.Queries.Tag where
 
-import qualified Beckn.Storage.Queries as DB
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import qualified Epass.Storage.Queries.EntityTag as EntityTag
@@ -14,6 +13,7 @@ import qualified Epass.Types.Storage.Tag as Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Storage.Queries as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.TagT)
 dbTable = DB._tag DB.becknDb

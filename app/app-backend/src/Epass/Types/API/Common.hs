@@ -15,7 +15,7 @@ import qualified Data.Swagger as SW
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Database.Beam.Backend.SQL
-import Database.Beam.MySQL
+import Database.Beam.Postgres
 import Database.Beam.Query (HasSqlEqualityCheck)
 import Epass.Types.Storage.Blacklist
 import Epass.Types.Storage.EntityTag

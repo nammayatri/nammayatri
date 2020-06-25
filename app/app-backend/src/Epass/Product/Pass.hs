@@ -5,6 +5,7 @@ import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.Products as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Epass.Data.Accessor as Accessor
@@ -30,8 +31,6 @@ import qualified Epass.Types.Storage.EntityDocument as EntityDocument
 import qualified Epass.Types.Storage.EntityTag as EntityTag
 import Epass.Types.Storage.Pass
 import qualified Epass.Types.Storage.PassApplication as PassApplication
-import Epass.Utils.Common
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
@@ -41,7 +40,7 @@ import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as QProd
 
-getPassById :: Maybe Text -> Text -> FlowHandler PassRes
+getPassById :: RegToken -> Text -> FlowHandler PassRes
 getPassById regToken passId =
   withFlowHandler $ do
     reg <- verifyToken regToken
@@ -50,7 +49,7 @@ getPassById regToken passId =
     product <- QProd.findById (ProductsId passId)
     PassRes <$> getPassInfo case' product caseProduct
 
-updatePass :: Maybe Text -> Text -> UpdatePassReq -> FlowHandler PassRes
+updatePass :: RegToken -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   RegistrationToken.RegistrationToken {..} <- verifyToken regToken
   pass <- QProd.findById (ProductsId passId)
@@ -90,7 +89,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   PassRes <$> getPassInfo case' pass caseProduct
 
 listPass ::
-  Maybe Text ->
+  RegToken ->
   PassIDType ->
   Text ->
   Maybe Int ->

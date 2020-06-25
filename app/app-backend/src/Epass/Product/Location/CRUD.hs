@@ -1,6 +1,7 @@
 module Epass.Product.Location.CRUD where
 
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.List as List
 import Data.Map.Strict
@@ -21,7 +22,6 @@ import qualified Epass.Types.Storage.EntityTag as ET
 import Epass.Types.Storage.Location as L
 import Epass.Types.Storage.PassApplication
 import Epass.Types.Storage.Tag as T
-import Epass.Utils.Routes
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -29,7 +29,7 @@ import Servant
 
 -- WIP
 listLocation ::
-  Maybe Text ->
+  RegToken ->
   Maybe Int ->
   Maybe Int ->
   LocateBy -> -- distinct
