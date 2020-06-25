@@ -1,6 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.MapSearch where
+module Beckn.Types.MapSearch
+  ( module Beckn.Types.MapSearch,
+    module Data.Geospatial,
+  )
+where
 
 import Data.Generics.Labels
 import Data.Geospatial
