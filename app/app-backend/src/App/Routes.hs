@@ -26,6 +26,7 @@ import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
 import qualified Product.Info as Info
+import qualified Product.Location as Location
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.TrackTrip as TrackTrip
@@ -52,6 +53,7 @@ type AppAPIs =
            :<|> CaseProductAPIs
            :<|> CancelAPIs
            :<|> CronAPIs
+           :<|> RouteAPI
            :<|> Epass.EPassAPIs
        )
 
@@ -70,6 +72,7 @@ appServer' key = do
       :<|> caseProductFlow
       :<|> cancelFlow
       :<|> cronFlow
+      :<|> routeApiFlow
       :<|> Epass.epassServer' key
     )
 
@@ -219,3 +222,12 @@ type CronAPIs =
 cronFlow :: FlowServer CronAPIs
 cronFlow =
   Cron.updateCases
+
+type RouteAPI =
+  "route"
+    :> AuthHeader
+    :> ReqBody '[JSON] Location.Request
+    :> Post '[JSON] Location.Response
+
+routeApiFlow :: FlowServer RouteAPI
+routeApiFlow = Location.getRoute

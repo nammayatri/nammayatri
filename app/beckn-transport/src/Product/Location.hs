@@ -15,7 +15,7 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis
-import Types.API.Location
+import Types.API.Location as Location
 
 updateLocation :: Text -> RegToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation caseId regToken req = withFlowHandler $ do
@@ -33,7 +33,7 @@ updateLocation caseId regToken req = withFlowHandler $ do
         case (fromLocation ^. #_lat, fromLocation ^. #_long) of
           (Just custLat, Just custLong) -> do
             -- Get route and eta
-            route <- getRoute driverLat driverLon custLat custLong
+            route <- getRoute' driverLat driverLon custLat custLong
             return $ createLocationInfo req route
           _ -> do
             L.logInfo "GetRoute" "Lat,Long for fromLocation not found"
@@ -88,8 +88,8 @@ createLocationInfo UpdateLocationReq {..} routeM =
       snapped_waypoints = MapSearch.snapped_waypoints =<< routeM
     }
 
-getRoute :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
-getRoute fromLat fromLon toLat toLon = do
+getRoute' :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
+getRoute' fromLat fromLon toLat toLon = do
   routeE <- MapSearch.getRoute $ getRouteRequest
   case routeE of
     Left err -> do
@@ -109,4 +109,22 @@ getRoute fromLat fromLon toLat toLon = do
           departureTime = Nothing,
           arrivalTime = Nothing,
           calcPoints = Just True
+        }
+
+getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
+getRoute regToken Location.Request {..} = withFlowHandler $ do
+  QR.verifyToken regToken
+  MapSearch.getRoute (getRouteRequest)
+    >>= either
+      (\err -> L.throwException $ err400 {errBody = show err})
+      return
+  where
+    mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long
+    getRouteRequest =
+      MapSearch.Request
+        { waypoints = mapToMapPoint <$> waypoints,
+          mode = mode <|> Just MapSearch.CAR,
+          departureTime = Nothing,
+          arrivalTime = Nothing,
+          calcPoints
         }

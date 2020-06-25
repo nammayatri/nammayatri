@@ -11,6 +11,7 @@ import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
+import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.CaseProduct
 import Beckn.Types.Storage.Person as SP
@@ -34,7 +35,7 @@ import Servant.Multipart
 import Types.API.Case
 import Types.API.CaseProduct
 import Types.API.Cron
-import Types.API.Location
+import Types.API.Location as Location
 import Types.API.Person
 import Types.API.Products
 import Types.API.Registration
@@ -59,6 +60,7 @@ type TransporterAPIs =
            :<|> VehicleAPIs
            :<|> LocationAPIs
            :<|> ProductAPIs
+           :<|> RouteAPI
        )
 
 ---- Registration Flow ------
@@ -268,6 +270,7 @@ transporterServer' key =
     :<|> vehicleFlow
     :<|> locationFlow
     :<|> productFlow
+    :<|> routeApiFlow
 
 type SearchAPIs =
   "search"
@@ -329,3 +332,12 @@ type TrackApis =
 
 trackApiFlow :: FlowServer TrackApis
 trackApiFlow = BP.trackTrip
+
+type RouteAPI =
+  "route"
+    :> AuthHeader
+    :> ReqBody '[JSON] Location.Request
+    :> Post '[JSON] Location.Response
+
+routeApiFlow :: FlowServer RouteAPI
+routeApiFlow = Location.getRoute
