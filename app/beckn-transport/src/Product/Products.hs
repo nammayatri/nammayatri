@@ -36,25 +36,32 @@ import Types.API.Products
 import Types.App
 
 update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
-update regToken productId ProdReq {..} = withFlowHandler $ do
+update regToken productId req = withFlowHandler $ do
   SR.RegistrationToken {..} <- RQ.verifyToken regToken
   user <- PersQ.findPersonById (PersonId _EntityId)
-  vehIdRes <- case _vehicleId of
+  cpList <- CPQ.findAllByProdId (ProductsId productId)
+  currStatus <- case cpList of
+    [] -> L.throwException $ err400 {errBody = "INVALID RIDE ID"}
+    _ -> return $ head (CaseP._status <$> cpList)
+  when (currStatus == CaseP.INPROGRESS || currStatus == CaseP.COMPLETED) $
+    case (req ^. #_assignedTo, req ^. #_vehicleId) of
+      (Nothing, Nothing) -> return ()
+      _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
+  vehIdRes <- case req ^. #_vehicleId of
     Just k ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        PQ.updateVeh (ProductsId productId) _vehicleId
+        PQ.updateVeh (ProductsId productId) (req ^. #_vehicleId)
     Nothing -> return ()
-  dvrIdRes <- case _assignedTo of
+  dvrIdRes <- case req ^. #_assignedTo of
     Just k ->
       when (user ^. #_role == SP.ADMIN) $
-        PQ.updateDvr (ProductsId productId) _assignedTo
+        PQ.updateDvr (ProductsId productId) (req ^. #_assignedTo)
     Nothing -> return ()
-  tripRes <- case _status of
+  tripRes <- case req ^. #_status of
     Just c ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (ProductsId productId) c
     Nothing -> return ()
-
   updatedProd <- PQ.findById (ProductsId productId)
   driverInfo <- case (updatedProd ^. #_assignedTo) of
     Just driverId -> PersQ.findPersonById (PersonId driverId)
@@ -66,7 +73,7 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) (Just vehicleInfo)
   notifyTripDataToGateway (ProductsId productId)
-  notifyCancelReq productId _status
+  notifyCancelReq productId (req ^. #_status)
   return $ updatedProd {Product._info = infoObj}
 
 notifyTripDataToGateway :: ProductsId -> L.Flow ()
