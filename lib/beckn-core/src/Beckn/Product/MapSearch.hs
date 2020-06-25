@@ -53,7 +53,7 @@ mapToRoute mode Grphr.Path {..} =
   MapSearch.Route
     { distance = _distance,
       duration = _time,
-      bbox = _bbox,
+      boundingBox = _bbox,
       snapped_waypoints = Just _snapped_waypoints,
       mode = mode,
       points = _points

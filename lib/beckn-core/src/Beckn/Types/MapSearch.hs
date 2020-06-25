@@ -23,7 +23,7 @@ data TravelMode = CAR | MOTORCYCLE | BICYCLE | FOOT
 data Route = Route
   { distance :: Float,
     duration :: Integer,
-    bbox :: Maybe BoundingBoxWithoutCRS,
+    boundingBox :: Maybe BoundingBoxWithoutCRS,
     snapped_waypoints :: Maybe GeospatialGeometry,
     mode :: TravelMode,
     points :: Maybe GeospatialGeometry
