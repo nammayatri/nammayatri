@@ -161,7 +161,8 @@ login tokenId req =
             updatedPerson =
               person
                 { SP._status = SP.ACTIVE,
-                  SP._deviceToken = maybe (person ^. #_deviceToken) Just (req ^. #_deviceToken)
+                  SP._deviceToken =
+                    (req ^. #_deviceToken) <|> (person ^. #_deviceToken)
                 }
         Person.updateMultiple personId updatedPerson
         Person.findById personId
