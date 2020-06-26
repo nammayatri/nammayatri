@@ -131,6 +131,8 @@ sendOTP :: Text -> Text -> L.Flow ()
 sendOTP phoneNumber otpCode = do
   username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
   password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
+  -- Note: AUTO_READ_OTP_HASH is generated from the frontend code base
+  -- This is used for the Android's SMS Retriever API for auto-reading OTP
   otpHash <- L.runIO $ getEnv "AUTO_READ_OTP_HASH"
   res <-
     SF.submitSms
@@ -138,10 +140,10 @@ sendOTP phoneNumber otpCode = do
       SMS.SubmitSms
         { SMS._username = T.pack username,
           SMS._password = T.pack password,
-          SMS._from = "JUSPAY",
+          SMS._from = SMS.JUSPAY,
           SMS._to = phoneNumber,
-          SMS._category = "bulk",
-          SMS._text = unwords ["[#] Your OTP is", otpCode, "\n\nHash:", (T.pack otpHash)]
+          SMS._category = SMS.BULK,
+          SMS._text = SF.constructOtpSms otpCode (T.pack otpHash)
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
 

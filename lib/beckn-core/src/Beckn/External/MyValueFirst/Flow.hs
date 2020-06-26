@@ -22,3 +22,7 @@ defaultBaseUrl =
       baseUrlPort = 443,
       baseUrlPath = ""
     }
+
+constructOtpSms :: Text -> Text -> Text
+constructOtpSms code hash =
+  "<#> Your OTP is: " <> code <> "\n" <> hash

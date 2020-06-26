@@ -8,12 +8,16 @@ data SubmitSms = SubmitSms
     -- | Password of that account.
     _password :: Text,
     -- | Author name assigned to SMS.
-    _from :: Text,
+    _from :: SmsSender,
     -- | Phone number.
     _to :: Text,
     -- | SMS contents.
     _text :: Text,
     -- | Set to bulk for DLT
-    _category :: Text
+    _category :: SmsCategory
   }
   deriving (Show)
+
+data SmsCategory = BULK deriving (Show, Eq)
+
+data SmsSender = JUSPAY deriving (Show, Eq)
