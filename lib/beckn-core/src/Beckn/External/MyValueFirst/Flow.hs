@@ -1,7 +1,7 @@
-module Epass.External.MyValuesFirst.Flow where
+module Beckn.External.MyValueFirst.Flow where
 
-import qualified Epass.External.MyValuesFirst.API as API
-import Epass.External.MyValuesFirst.Types
+import qualified Beckn.External.MyValueFirst.API as API
+import Beckn.External.MyValueFirst.Types
 import EulerHS.Language
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -18,7 +18,11 @@ defaultBaseUrl :: BaseUrl
 defaultBaseUrl =
   BaseUrl
     { baseUrlScheme = Https,
-      baseUrlHost = "www.myvaluefirst.com",
+      baseUrlHost = "http.myvfirst.com",
       baseUrlPort = 443,
       baseUrlPath = ""
     }
+
+constructOtpSms :: Text -> Text -> Text
+constructOtpSms code hash =
+  "<#> Your OTP is: " <> code <> "\n" <> hash
