@@ -2,8 +2,8 @@
 
 module Product.Registration where
 
-import qualified Beckn.External.MyValueFirst.Flow as Sms
-import qualified Beckn.External.MyValueFirst.Types as Sms
+import qualified Beckn.External.MyValueFirst.Flow as SF
+import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Types.App
 import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
@@ -134,15 +134,15 @@ sendOTP phoneNumber otpCode = do
   password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
   otpHash <- L.runIO $ getEnv "AUTO_READ_OTP_HASH"
   res <-
-    Sms.submitSms
-      Sms.defaultBaseUrl
-      Sms.SubmitSms
-        { Sms._username = T.pack username,
-          Sms._password = T.pack password,
-          Sms._from = "JUSPAY",
-          Sms._to = phoneNumber,
-          Sms._category = "bulk",
-          Sms._text = "Your OTP is " <> otpCode <> " " <> (T.pack otpHash)
+    SF.submitSms
+      SF.defaultBaseUrl
+      SMS.SubmitSms
+        { SMS._username = T.pack username,
+          SMS._password = T.pack password,
+          SMS._from = "JUSPAY",
+          SMS._to = phoneNumber,
+          SMS._category = "bulk",
+          SMS._text = unwords ["[#] Your OTP is", otpCode, "\n\nHash:", (T.pack otpHash)]
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
 
