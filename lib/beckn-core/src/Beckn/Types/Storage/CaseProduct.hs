@@ -48,7 +48,6 @@ data CaseProductT f = CaseProduct
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime
   }
-
   deriving (Generic, B.Beamable)
 
 type CaseProduct = CaseProductT Identity
@@ -89,23 +88,25 @@ fieldEMod =
           _updatedAt = "updated_at"
         }
 
-validateStateTransition :: CaseProductStatus -> CaseProductStatus -> Either Text ()
-validateStateTransition oldState newState = if t oldState newState
-  then Right ()
-  else
-    Left
-    $  "It is not allowed to change CaseProduct status from "
-    <> show oldState
-    <> " to "
-    <> show newState
+validateStatusTransition :: CaseProductStatus -> CaseProductStatus -> Either Text ()
+validateStatusTransition oldState newState = t oldState newState
   where
-    t VALID                CONFIRMED        = True
-    t VALID                _                = False
-    t CONFIRMED            INPROGRESS       = True
-    t CONFIRMED            _                = False
-    t INPROGRESS           COMPLETED        = True
-    t INPROGRESS           _                = False
-    t COMPLETED            _                = False
-    t INSTOCK              _                = False
-    t OUTOFSTOCK           _                = False
-    t INVALID              _                = False
+    forbidden =
+      Left $
+        "It is not allowed to change CaseProduct status from "
+          <> show oldState
+          <> " to "
+          <> show newState
+    allowed = Right ()
+    -- t VALID                CONFIRMED        = allowed
+    -- t VALID                _                = forbidden
+    -- t CONFIRMED            INPROGRESS       = allowed
+    -- t CONFIRMED            _                = forbidden
+    -- t INPROGRESS           COMPLETED        = allowed
+    -- t INPROGRESS           _                = forbidden
+    -- t COMPLETED            _                = forbidden
+    -- t INSTOCK              CONFIRMED        = allowed
+    -- t INSTOCK              _                = forbidden
+    -- t OUTOFSTOCK           _                = forbidden
+    -- t INVALID              _                = forbidden
+    t _ _ = allowed

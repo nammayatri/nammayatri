@@ -169,24 +169,25 @@ fieldEMod =
           _updatedAt = "updated_at"
         }
 
-validateStateTransition :: CaseStatus -> CaseStatus -> Either Text ()
-validateStateTransition oldState newState = if t oldState newState
-  then Right ()
-  else
-    Left
-    $  "It is not allowed to change Case status from "
-    <> show oldState
-    <> " to "
-    <> show newState
+validateStatusTransition :: CaseStatus -> CaseStatus -> Either Text ()
+validateStatusTransition oldState newState = t oldState newState
   where
-    t NEW                  CONFIRMED        = True
-    t NEW                  CLOSED           = True
-    t NEW                  _                = False
-    t CONFIRMED            INPROGRESS       = True
-    t CONFIRMED            CLOSED           = True
-    t CONFIRMED            _                = False
-    t INPROGRESS           COMPLETED        = True
-    t INPROGRESS           CLOSED           = True
-    t INPROGRESS           _                = False
-    t COMPLETED            _                = False
-    t CLOSED               _                = False
+    forbidden =
+      Left $
+        "It is not allowed to change Case status from "
+          <> show oldState
+          <> " to "
+          <> show newState
+    allowed = Right ()
+    -- t NEW                  CONFIRMED        = allowed
+    -- t NEW                  CLOSED           = allowed
+    -- t NEW                  _                = forbidden
+    -- t CONFIRMED            INPROGRESS       = allowed
+    -- t CONFIRMED            CLOSED           = allowed
+    -- t CONFIRMED            _                = forbidden
+    -- t INPROGRESS           COMPLETED        = allowed
+    -- t INPROGRESS           CLOSED           = allowed
+    -- t INPROGRESS           _                = forbidden
+    -- t COMPLETED            _                = forbidden
+    -- t CLOSED               _                = forbidden
+    t _ _ = allowed

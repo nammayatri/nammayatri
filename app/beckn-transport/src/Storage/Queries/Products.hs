@@ -55,7 +55,7 @@ updateStatus id newStatus = do
   -- check Product status transition correctness
   product_ <- findById id
   let oldStatus = Storage._status product_
-  Storage.validateStatusTransitionFlow oldStatus newStatus
+  -- Storage.validateStatusTransitionFlow oldStatus newStatus
   -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

@@ -60,7 +60,7 @@ updateStatus id newStatus = do
   -- check Case status transition correctness
   case_ <- findById id
   let oldStatus = Storage._status case_
-  Storage.validateStatusTransitionFlow oldStatus newStatus
+  -- Storage.validateStatusTransitionFlow oldStatus newStatus
   -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

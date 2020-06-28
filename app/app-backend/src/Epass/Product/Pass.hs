@@ -34,8 +34,10 @@ import qualified Epass.Types.Storage.PassApplication as PassApplication
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
+import qualified Models.CaseProduct as MCP
 import Servant
 import qualified Storage.Queries.Case as QC
+import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as QProd
@@ -61,7 +63,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
       when
         (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
         (L.throwException $ err400 {errBody = "Access denied"})
-      QCP.updateStatus (ProductsId passId) (fromJust _action)
+      MCP.updateStatus (ProductsId passId) (fromJust _action)
       return $ pass
     RegistrationToken.CUSTOMER -> do
       customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)

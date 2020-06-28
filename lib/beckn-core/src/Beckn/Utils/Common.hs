@@ -22,6 +22,7 @@ import Data.Time.Calendar (Day (..))
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified EulerHS.Types as ET
 import Network.HTTP.Types (hContentType)
 import Servant
 import System.Environment
@@ -34,6 +35,18 @@ getCurrTime = L.runIO $ do
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
+
+-- | Get rid of database error
+-- convert it into UnknownDomainError
+fromDBError :: ET.DBResult a -> FlowResult a
+fromDBError (Left err) = pure $ Left UnknownDomainError
+fromDBError (Right x) = pure $ Right x
+
+-- | Get rid of database error
+-- convert it into specified DomainError
+fromDBErrorTo :: DomainError -> ET.DBResult a -> FlowResult a
+fromDBErrorTo domainErr (Left err) = pure $ Left domainErr
+fromDBErrorTo _ (Right x) = pure $ Right x
 
 fromMaybeM :: ServerError -> Maybe a -> L.Flow a
 fromMaybeM err Nothing = L.throwException err

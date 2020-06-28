@@ -13,6 +13,8 @@ import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as MC
+import qualified Models.CaseProduct as MCP
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Products as Products
@@ -62,7 +64,7 @@ cancelCase req = do
       caseProducts <- CaseProduct.findAllByCaseId (CaseId caseId)
       if null caseProducts
         then do
-          Case.updateStatus (CaseId caseId) Case.CLOSED
+          MC.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
           let cancelCPs = filter isCaseProductCancellable caseProducts
@@ -97,7 +99,7 @@ onCancel req = withFlowHandler $ do
   let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
-  CaseProduct.updateStatus productId CaseProduct.CANCELLED
+  MCP.updateStatus productId CaseProduct.CANCELLED
   let caseId = cpProducts ^. #_caseId
   -- notify customer
   case_ <- Case.findById caseId
@@ -114,6 +116,6 @@ onCancel req = withFlowHandler $ do
           arrCPCase
   when
     (length arrTerminalCP == length arrCPCase)
-    (Case.updateStatus caseId Case.CLOSED)
+    (MC.updateStatus caseId Case.CLOSED)
 
   mkAckResponse txnId "cancel"

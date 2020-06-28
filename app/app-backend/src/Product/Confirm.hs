@@ -21,6 +21,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as MC
+import qualified Models.CaseProduct as MCP
 import Servant
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.CaseProduct as QCP
@@ -74,10 +76,10 @@ onConfirm req = withFlowHandler $ do
                 { Products._info = encodeToText <$> uInfo
                 }
         caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
-        QCP.updateStatus pid SCP.CONFIRMED
-        QCase.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
+        MCP.updateStatus pid SCP.CONFIRMED
+        MC.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
         Products.updateMultiple (_getProductsId pid) uPrd
-        QCase.updateStatus caseId Case.INPROGRESS
+        MC.updateStatus caseId Case.INPROGRESS
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack

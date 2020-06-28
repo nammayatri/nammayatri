@@ -102,14 +102,13 @@ updateValidTill id validTill = do
         ]
     predicate id Storage.Case {..} = _id ==. B.val_ id
 
-updateStatus :: CaseId -> Storage.CaseStatus -> L.Flow ()
+updateStatus :: CaseId -> Storage.CaseStatus -> L.Flow (T.DBResult ())
 updateStatus id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
     (predicate id)
-    >>= either DB.throwDBError pure
   where
     setClause status currTime Storage.Case {..} =
       mconcat
@@ -118,14 +117,13 @@ updateStatus id status = do
         ]
     predicate id Storage.Case {..} = _id ==. B.val_ id
 
-updateStatusAndUdfs :: CaseId -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow ()
+updateStatusAndUdfs :: CaseId -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow (T.DBResult ())
 updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status udf1 udf2 udf3 udf4 udf5 currTime)
     (predicate id)
-    >>= either DB.throwDBError pure
   where
     setClause status udf1 udf2 udf3 udf4 udf5 currTime Storage.Case {..} =
       mconcat

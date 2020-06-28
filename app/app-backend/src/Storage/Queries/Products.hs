@@ -51,14 +51,13 @@ findAllByIds pids =
 updateStatus ::
   ProductsId ->
   Storage.ProductsStatus ->
-  L.Flow ()
+  L.Flow (T.DBResult ())
 updateStatus id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
     (predicate id)
-    >>= either DB.throwDBError pure
   where
     predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause status currTime Storage.Products {..} =

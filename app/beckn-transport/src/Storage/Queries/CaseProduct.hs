@@ -78,9 +78,9 @@ updateStatus ::
 updateStatus caseId productId newStatus = do
   -- check CaseProducts statuses transition correctness
   caseProductList <- findAllByCaseAndProductId caseId productId
-  traverse_
-    (\cp -> Storage.validateStatusTransitionFlow (Storage._status cp) newStatus)
-    caseProductList
+  -- traverse_
+  --   (\cp -> Storage.validateStatusTransitionFlow (Storage._status cp) newStatus)
+  --   caseProductList
   -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -223,5 +223,6 @@ findAllByCaseAndProductId :: CaseId -> ProductsId -> L.Flow [Storage.CaseProduct
 findAllByCaseAndProductId caseId productId =
   DB.findAllOrErr dbTable (pred caseId productId)
   where
-    pred caseId productId Storage.CaseProduct {..} =     _caseId ==. B.val_ caseId
-                                                     &&. _productId ==. B.val_ productId
+    pred caseId productId Storage.CaseProduct {..} =
+      _caseId ==. B.val_ caseId
+        &&. _productId ==. B.val_ productId
