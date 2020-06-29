@@ -25,10 +25,10 @@ createVehicle regToken req = withFlowHandler $ do
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
-listVehicles :: RegToken -> Maybe SV.Variant -> Maybe SV.Category -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles regToken variantM categoryM limitM offsetM = withFlowHandler $ do
+listVehicles :: RegToken -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
+listVehicles regToken variantM categoryM energyTypeM limitM offsetM = withFlowHandler $ do
   orgId <- validate regToken
-  ListVehicleRes <$> (QV.findAllByVariantCatOrgId variantM categoryM limit offset orgId)
+  ListVehicleRes <$> (QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId)
   where
     limit = (toInteger $ fromMaybe Default.limit limitM)
     offset = (toInteger $ fromMaybe Default.offset offsetM)

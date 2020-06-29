@@ -61,6 +61,8 @@ data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EnergyType where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck Postgres EnergyType
+
 instance FromBackendRow Postgres EnergyType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 

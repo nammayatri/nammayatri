@@ -129,6 +129,7 @@ type VehicleAPIs =
              :> AuthHeader
              :> QueryParam "variant" Variant
              :> QueryParam "category" Category
+             :> QueryParam "energyType" EnergyType
              :> QueryParam "limit" Int
              :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
