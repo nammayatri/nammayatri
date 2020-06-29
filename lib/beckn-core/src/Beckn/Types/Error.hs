@@ -54,12 +54,11 @@ data OrganisationError
 data SystemError = SystemError ErrorMsg
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-data BecknError
-  = BecknError
-      { _errorCode :: ErrorCode,
-        _errorMessage :: ErrorMsg,
-        _action :: Action
-      }
+data BecknError = BecknError
+  { _errorCode :: ErrorCode,
+    _errorMessage :: ErrorMsg,
+    _action :: Action
+  }
   deriving (Generic)
 
 instance FromJSON BecknError where

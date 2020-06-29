@@ -25,7 +25,10 @@ updatePerson personId regToken req = withFlowHandler $ do
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
   where
-    verifyPerson personId entityId = whenM (return $ personId /= entityId) $ L.throwException $ err400 {errBody = "PERSON_ID_MISMATCH"}
+    verifyPerson personId entityId =
+      when (personId /= entityId)
+        $ L.throwException
+        $ err400 {errBody = "PERSON_ID_MISMATCH"}
 
 createPerson :: RegToken -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson regToken req = withFlowHandler $ do
@@ -60,10 +63,9 @@ getPerson regToken idM mobileM emailM identifierM = withFlowHandler $ do
   return $ PersonRes person
   where
     hasAccess user person =
-      whenM
-        ( return $
-            ((user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id))
-              || (user ^. #_organizationId) /= (person ^. #_organizationId)
+      when
+        ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
+            || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
@@ -82,7 +84,7 @@ deletePerson personId regToken = withFlowHandler $ do
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
 verifyAdmin user = do
-  whenM (return $ (user ^. #_role) /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
+  when (user ^. #_role /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
   case user ^. #_organizationId of
     Just orgId -> return orgId
     Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}

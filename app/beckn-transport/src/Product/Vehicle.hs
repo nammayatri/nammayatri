@@ -62,14 +62,16 @@ getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
   return $ CreateVehicleRes vehicle
   where
     hasAccess user vehicle =
-      whenM (return $ (user ^. #_organizationId) /= Just (vehicle ^. #_organizationId))
+      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId))
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
 
 -- Core Utility methods are below
 verifyUser :: SP.Person -> L.Flow Text
 verifyUser user = do
-  whenM (return $ not $ elem (user ^. #_role) [SP.ADMIN, SP.DRIVER]) $ L.throwException $ err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
+  unless (elem (user ^. #_role) [SP.ADMIN, SP.DRIVER])
+    $ L.throwException
+    $ err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
   case user ^. #_organizationId of
     Just orgId -> return orgId
     Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}

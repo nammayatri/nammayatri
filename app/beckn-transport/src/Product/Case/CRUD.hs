@@ -54,7 +54,7 @@ list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
       ignoreList <-
-        if (fromMaybe False ignoreOffered)
+        if (ignoreOffered == Just True)
           then do
             resList <- CPQ.caseProductJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)

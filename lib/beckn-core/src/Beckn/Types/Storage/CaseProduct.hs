@@ -34,7 +34,7 @@ instance FromBackendRow Postgres CaseProductStatus where
 instance FromHttpApiData CaseProductStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data CaseProductT f = CaseProduct
   { _id :: B.C f CaseProductId,

@@ -27,15 +27,18 @@ data CreateOrganizationReq = CreateOrganizationReq
 instance FromJSON CreateOrganizationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+instance ToJSON CreateOrganizationReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data OrganizationRes = OrganizationRes
   { organization :: Organization
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data GetOrganizationRes = GetOrganizationRes
   { organization :: OrgInfo
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data ListOrganizationReq = ListOrganizationReq
   { limit :: Maybe Int,
@@ -49,7 +52,7 @@ data ListOrganizationReq = ListOrganizationReq
     status :: [Status],
     verified :: Maybe Bool
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, ToJSON, ToSchema)
 
 instance FromJSON ListOrganizationReq where
   parseJSON (Object o) = do
@@ -79,7 +82,7 @@ instance FromJSON ListOrganizationReq where
 data ListOrganizationRes = ListOrganizationRes
   { _organizations :: [OrgInfo]
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, FromJSON, ToSchema)
 
 data OrgInfo = OrgInfo
   { _id :: OrganizationId,
@@ -97,7 +100,7 @@ data OrgInfo = OrgInfo
     _createdAt :: LocalTime,
     _updatedAt :: LocalTime
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, FromJSON, ToSchema)
 
 instance ToJSON ListOrganizationRes where
   toJSON = genericToJSON stripLensPrefixOptions
@@ -112,3 +115,6 @@ data UpdateOrganizationReq = UpdateOrganizationReq
 
 instance FromJSON UpdateOrganizationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON UpdateOrganizationReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions

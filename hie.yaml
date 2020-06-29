@@ -1,0 +1,28 @@
+cradle:
+  stack:
+    - path: "app/app-backend/src"
+      component: "app-backend:lib"
+
+    - path: "app/app-backend/server/Main.hs"
+      component: "app-backend:exe:app-backend-exe"
+
+    - path: "app/app-backend/server/Paths_app_backend.hs"
+      component: "app-backend:exe:app-backend-exe"
+
+    - path: "app/beckn-transport/src"
+      component: "beckn-transport:lib"
+
+    - path: "app/beckn-transport/server/Main.hs"
+      component: "beckn-transport:exe:beckn-transport-exe"
+
+    - path: "app/beckn-transport/server/Paths_beckn_transport.hs"
+      component: "beckn-transport:exe:beckn-transport-exe"
+
+    - path: "lib/beckn-core/src"
+      component: "beckn-core:lib"
+
+    - path: "test/src"
+      component: "beckn-test:lib"
+
+    - path: "test/app"
+      component: "beckn-test:test:beckn-integ-test"

@@ -30,8 +30,12 @@ createTransporter regToken req = withFlowHandler $ do
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
-      whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
-      whenM (return $ SP._organizationId person /= Nothing) $ L.throwException $ err400 {errBody = "user already registered an organization"}
+      unless (SP._verified person)
+        $ L.throwException
+        $ err400 {errBody = "user not verified"}
+      when (isJust $ SP._organizationId person)
+        $ L.throwException
+        $ err400 {errBody = "user already registered an organization"}
 
 createGateway :: RegToken -> TransporterReq -> FlowHandler GatewayRes
 createGateway regToken req = withFlowHandler $ do
@@ -50,7 +54,7 @@ updateTransporter orgId regToken req = withFlowHandler $ do
       validate person
       org <- QO.findOrganizationById $ OrganizationId orgId
       organization <-
-        if not (fromMaybe True (req ^. #enabled))
+        if req ^. #enabled /= Just False
           then transformFlow2 req org >>= addTime (Just now)
           else transformFlow2 req org
       QO.updateOrganizationRec organization
@@ -58,7 +62,7 @@ updateTransporter orgId regToken req = withFlowHandler $ do
     Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
   where
     validate person = do
-      whenM (return $ not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+      unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
@@ -72,4 +76,4 @@ getTransporter regToken = withFlowHandler $ do
     Nothing -> L.throwException $ err400 {errBody = "user not registered an organization"}
   where
     validate person =
-      when (not $ SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+      unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}

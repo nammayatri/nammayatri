@@ -68,10 +68,13 @@ data FCMNotificationType
   | SEARCH_REQUEST
   | SEARCH_CALLBACK
   | CONFIRM_REQUEST
+  | CANCELLED_CASE
+  | EXPIRED_CASE
+  | CANCELLED_PRODUCT
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types
-data FCMEntityType = Case | Organization
+data FCMEntityType = Case | Product | Organization
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Priority of a message to send to Android devices
@@ -103,8 +106,8 @@ instance ToJSON FCMShowNotification where
 data FCMData = FCMData
   { _fcmNotificationType :: FCMNotificationType,
     _fcmShowNotification :: FCMShowNotification,
-    _fcmEntityIds :: Text,
-    _fcmEntityType :: FCMEntityType
+    _fcmEntityType :: FCMEntityType,
+    _fcmEntityIds :: Text
   }
   deriving (Eq, Show)
 

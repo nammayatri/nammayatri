@@ -17,7 +17,7 @@ import EulerHS.Prelude
 data PassRes = PassRes
   { _pass :: PassInfo
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, FromJSON, ToSchema)
 
 data UpdatePassReq = UpdatePassReq
   { _action :: Maybe ProductInstanceStatus,
@@ -29,6 +29,9 @@ data UpdatePassReq = UpdatePassReq
 
 instance FromJSON UpdatePassReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON UpdatePassReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 data ListPassReq = ListPassReq
   { _identifierType :: PassIDType,
@@ -45,7 +48,7 @@ instance FromJSON ListPassReq where
 data ListPassRes = ListPassRes
   { passes :: [PassInfo]
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data PassInfo = PassInfo
   { _id :: Text,
@@ -72,6 +75,9 @@ data PassInfo = PassInfo
 
 instance ToJSON PassInfo where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON PassInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
 
 instance ToJSON PassRes where
   toJSON = genericToJSON stripLensPrefixOptions

@@ -18,6 +18,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 
 cancel :: RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
@@ -98,6 +99,11 @@ onCancel req = withFlowHandler $ do
   cpProducts <- ProductInstance.findByProductId productId -- TODO: Handle usecase where multiple productinstances exists for one product
   ProductInstance.updateStatus productId ProductInstance.CANCELLED
   let caseId = cpProducts ^. #_caseId
+  -- notify customer
+  case_ <- Case.findById caseId
+  let personId = Case._requestor case_
+  Notify.notifyOnProductCancelCb personId case_ productId
+  --
   arrCPCase <- ProductInstance.findAllByCaseId caseId
   let arrTerminalCP =
         filter
@@ -106,7 +112,8 @@ onCancel req = withFlowHandler $ do
               status == ProductInstance.COMPLETED || status == ProductInstance.OUTOFSTOCK || status == ProductInstance.CANCELLED || status == ProductInstance.INVALID
           )
           arrCPCase
-  if length arrTerminalCP == length arrCPCase
-    then Case.updateStatus caseId Case.CLOSED
-    else return ()
+  when
+    (length arrTerminalCP == length arrCPCase)
+    (Case.updateStatus caseId Case.CLOSED)
+
   mkAckResponse txnId "cancel"
