@@ -21,8 +21,8 @@ data TravelMode = CAR | MOTORCYCLE | BICYCLE | FOOT
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Route = Route
-  { distance :: Float,
-    duration :: Integer,
+  { distance :: Float, -- meters
+    duration :: Integer, -- milisecond
     boundingBox :: Maybe BoundingBoxWithoutCRS,
     snapped_waypoints :: Maybe GeospatialGeometry,
     mode :: TravelMode,
