@@ -100,8 +100,8 @@ notifyTransporterOnExpiration c =
             "You can view more details in the app."
           ]
 
-notifyTransportersOnCancelByBP :: Products -> [Person] -> L.Flow ()
-notifyTransportersOnCancelByBP p =
+notifyCancelReqByBP :: Products -> [Person] -> L.Flow ()
+notifyCancelReqByBP p =
   traverse_ (notifyPerson title body notificationData)
   where
     notificationData =

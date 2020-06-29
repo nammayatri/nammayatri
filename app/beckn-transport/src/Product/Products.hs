@@ -178,6 +178,6 @@ notifyCancelReq prod status = do
         admins <-
           PersQ.findAllByOrgIds [SP.ADMIN] [Product._organizationId prod]
         BP.notifyCancelToGateway (_getProductsId $ prod ^. #_id)
-        Notify.notifyTransportersOnCancelByBP prod admins
+        Notify.notifyCancelReqByBP prod admins
       _ -> return ()
     Nothing -> return ()
