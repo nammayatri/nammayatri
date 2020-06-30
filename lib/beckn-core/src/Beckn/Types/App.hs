@@ -82,4 +82,6 @@ type CronAuthKey = Text
 
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
 
-type FlowResult a = L.Flow (Either DomainError a)
+type FlowDomainResult a = L.Flow (Either DomainError a)
+
+type DomainResult a = Either DomainError a

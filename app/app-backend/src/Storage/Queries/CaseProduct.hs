@@ -50,6 +50,27 @@ findByProductId pId =
     predicate Storage.CaseProduct {..} =
       _productId ==. B.val_ pId
 
+findById' :: CaseProductId -> L.Flow (T.DBResult (Maybe Storage.CaseProduct))
+findById' caseProductId =
+  DB.findOne dbTable (predicate caseProductId)
+  where
+    predicate caseProductId Storage.CaseProduct {..} =
+      _id ==. (B.val_ caseProductId)
+
+findAllByCaseId' :: CaseId -> L.Flow (T.DBResult [Storage.CaseProduct])
+findAllByCaseId' caseId =
+  DB.findAll dbTable (predicate caseId)
+  where
+    predicate caseId Storage.CaseProduct {..} =
+      _caseId ==. B.val_ caseId
+
+findByProductId' :: ProductsId -> L.Flow (T.DBResult (Maybe Storage.CaseProduct))
+findByProductId' pId =
+  DB.findOne dbTable predicate
+  where
+    predicate Storage.CaseProduct {..} =
+      _productId ==. B.val_ pId
+
 findByCaseAndProductId :: CaseId -> ProductsId -> L.Flow Storage.CaseProduct
 findByCaseAndProductId caseId pId =
   DB.findOneWithErr dbTable predicate

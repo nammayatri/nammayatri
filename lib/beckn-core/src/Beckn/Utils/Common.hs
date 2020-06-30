@@ -38,15 +38,28 @@ defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError
-fromDBError :: ET.DBResult a -> FlowResult a
-fromDBError (Left err) = pure $ Left UnknownDomainError
-fromDBError (Right x) = pure $ Right x
+fromDBError :: ET.DBResult a -> FlowDomainResult a
+fromDBError = fromDBErrorTo DatabaseError
 
 -- | Get rid of database error
 -- convert it into specified DomainError
-fromDBErrorTo :: DomainError -> ET.DBResult a -> FlowResult a
-fromDBErrorTo domainErr (Left err) = pure $ Left domainErr
-fromDBErrorTo _ (Right x) = pure $ Right x
+-- f converts DBError to DomainError
+fromDBErrorTo :: (ET.DBError -> DomainError) -> ET.DBResult a -> FlowDomainResult a
+fromDBErrorTo f dbres = pure $ either (Left . f) (Right) dbres
+
+-- | Get rid of database error and empty result
+-- convert it into UnknownDomainError
+fromDBErrorOrEmpty :: DomainError -> ET.DBResult (Maybe a) -> FlowDomainResult a
+fromDBErrorOrEmpty = fromDBErrorOrEmptyTo DatabaseError
+
+-- | Get rid of database error and empty result
+-- convert it into specified DomainError
+-- f converts DBError to DomainError
+fromDBErrorOrEmptyTo :: (ET.DBError -> DomainError) -> DomainError -> ET.DBResult (Maybe a) -> FlowDomainResult a
+fromDBErrorOrEmptyTo f domainErrOnEmpty result = pure $
+  case result of
+    Left err -> Left $ f err
+    Right maybeRes -> maybe (Left domainErrOnEmpty) (Right) maybeRes
 
 fromMaybeM :: ServerError -> Maybe a -> L.Flow a
 fromMaybeM err Nothing = L.throwException err

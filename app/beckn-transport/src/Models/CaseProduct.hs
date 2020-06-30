@@ -14,22 +14,12 @@ import qualified Storage.Queries.CaseProduct as Q
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
-updateStatus :: ProductsId -> CaseProductStatus -> FlowResult ()
-updateStatus id status = do
-  result <- Q.updateStatus id status
+updateStatus :: CaseId -> ProductsId -> CaseProductStatus -> FlowDomainResult ()
+updateStatus caseId productId newStatus = do
+  result <- Q.updateStatus caseId productId newStatus
   fromDBError result
 
-updateAllCaseProductsByCaseId :: CaseId -> CaseProductStatus -> FlowResult ()
-updateAllCaseProductsByCaseId caseId status = do
-  result <- Q.updateAllCaseProductsByCaseId caseId status
-  fromDBError result
-
-updateStatusByIds ::
-  [CaseProductId] ->
-  Storage.CaseProductStatus ->
-  L.Flow (T.DBResult ())
-
-updateStatusForProducts :: ProductsId -> CaseProductStatus -> FlowResult ()
-updateStatusForProducts productId status = do
-  result <- Q.updateStatusForProducts caseId status
+updateStatusByIds :: [CaseProductId] -> CaseProductStatus -> FlowDomainResult ()
+updateStatusByIds ids status = do
+  result <- Q.updateStatusByIds ids status
   fromDBError result

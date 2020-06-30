@@ -4,6 +4,7 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Case
 import Beckn.Utils.Common (fromDBError)
+import Data.Maybe
 import Data.Text
 import qualified EulerHS.Language as L
 import qualified Storage.Queries.Case as Q
@@ -15,17 +16,12 @@ import qualified Storage.Queries.Case as Q
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
-updateStatus :: CaseId -> CaseStatus -> FlowResult ()
+updateStatus :: CaseId -> CaseStatus -> FlowDomainResult ()
 updateStatus id status = do
   result <- Q.updateStatus id status
   fromDBError result
 
-updateStatusAndUdfs :: CaseId -> CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowResult ()
-updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
-  result <- Q.updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5
-  fromDBError result
-
-updateStatusByIds :: [CaseId] -> CaseStatus -> FlowResult ()
+updateStatusByIds :: [CaseId] -> CaseStatus -> FlowDomainResult ()
 updateStatusByIds ids status = do
-  result <- Q.updateStatusByIds id status udf1 udf2 udf3 udf4 udf5
+  result <- Q.updateStatusByIds ids status
   fromDBError result

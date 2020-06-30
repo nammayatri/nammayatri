@@ -52,6 +52,12 @@ findById caseId =
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
 
+findById' :: CaseId -> L.Flow (T.DBResult (Maybe Storage.Case))
+findById' caseId =
+  DB.findOne dbTable (predicate caseId)
+  where
+    predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+
 findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds caseIds =
   if null caseIds

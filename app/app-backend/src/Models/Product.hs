@@ -14,7 +14,7 @@ import qualified Storage.Queries.Products as Q
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
-updateStatus :: ProductsId -> ProductsStatus -> FlowResult ()
+updateStatus :: ProductsId -> ProductsStatus -> FlowDomainResult ()
 updateStatus id status = do
   result <- Q.updateStatus id status
   fromDBError result

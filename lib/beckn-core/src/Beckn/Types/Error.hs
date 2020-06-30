@@ -3,6 +3,7 @@
 module Beckn.Types.Error where
 
 import EulerHS.Prelude
+import EulerHS.Types (DBError)
 
 data Action = ACK | NACK deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
 
@@ -20,7 +21,10 @@ data DomainError
   | BlacklistErr BlacklistError
   | TagErr TagError
   | OrganisationErr OrganisationError
+  | CaseErr CaseError
+  | CaseProductErr CaseProductError
   | UnknownDomainError
+  | DatabaseError DBError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data EpassError
@@ -49,6 +53,16 @@ data TagError
 
 data OrganisationError
   = OrganisationNotFound
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+data CaseError
+  = CaseNotFound
+  | CaseStatusTransitionErr Text
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+data CaseProductError
+  = CaseProductNotFound
+  | CaseProductStatusTransitionErr Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data SystemError = SystemError ErrorMsg

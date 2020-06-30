@@ -24,7 +24,6 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Models.Case as CaseModel
 import qualified Models.Case as MC
 import Servant
 import qualified Storage.Queries.Case as QC
@@ -45,7 +44,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   case _status of
     REVOKED -> do
       QCP.updateAllProductsByCaseId caseId Products.OUTOFSTOCK
-      CaseModel.updateStatusAndUdfs
+      MC.updateStatusAndUdfs
         caseId
         Case.CLOSED
         Nothing
@@ -61,7 +60,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       -- Create passes
       replicateM approvedCount (createPass pA)
       --TODO: should we need to update case product to CONFIRMED?
-      CaseModel.updateStatusAndUdfs
+      MC.updateStatusAndUdfs
         caseId
         Case.COMPLETED
         Nothing
@@ -70,7 +69,6 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
         (show <$> _approvedCount)
         _remarks
     PENDING -> MC.updateStatus caseId Case.INPROGRESS
-    _ -> return ()
   PassApplicationRes' <$> QC.findById caseId
   where
     validApprovedCount count approvedCount =
