@@ -3,10 +3,10 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
@@ -32,7 +32,7 @@ data TransporterDb f = TransporterDb
     _person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
     _products :: f (B.TableEntity Product.ProductsT),
-    _caseProduct :: f (B.TableEntity CaseProduct.CaseProductT),
+    _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
   }
   deriving (Generic, B.Database be)
@@ -52,7 +52,7 @@ transporterDb =
         _person = setSchema <> Person.fieldEMod,
         _case = setSchema <> Case.fieldEMod,
         _products = setSchema <> Product.fieldEMod,
-        _caseProduct = setSchema <> CaseProduct.fieldEMod,
+        _productInstance = setSchema <> ProductInstance.fieldEMod,
         _registrationToken = setSchema <> RegistrationToken.fieldEMod
       }
   where

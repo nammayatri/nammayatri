@@ -12,10 +12,10 @@ import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as SP
+import Beckn.Types.Storage.ProductInstance as ProdInst
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -31,17 +31,17 @@ import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Servant
 import Storage.Queries.Case as Case
-import Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
+import Storage.Queries.ProductInstance as CPQ
 import Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
-import qualified Types.API.CaseProduct as CPR
+import qualified Types.API.ProductInstance as CPR
 import Types.API.Registration
 import qualified Utils.Defaults as Default
 
@@ -56,7 +56,7 @@ list regToken status csType limitM offsetM ignoreOffered = withFlowHandler $ do
       ignoreList <-
         if (ignoreOffered == Just True)
           then do
-            resList <- CPQ.caseProductJoinWithoutLimits csType orgId []
+            resList <- CPQ.productInstanceJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
             return csIgnoreList
           else return []
@@ -95,12 +95,12 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
         p <- createProduct c _quote orgId Product.INSTOCK
-        cp <- createCaseProduct c p
+        cp <- createProductInstance c p
         notifyGateway c p orgId
         return c
       "DECLINED" -> do
         p <- createProduct c _quote orgId Product.OUTOFSTOCK
-        cp <- createCaseProduct c p
+        cp <- createProductInstance c p
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
@@ -142,23 +142,23 @@ createProduct cs price orgId status = do
           _assignedTo = Nothing
         }
 
-createCaseProduct :: Case -> Products -> L.Flow CaseProduct
-createCaseProduct cs prod = do
+createProductInstance :: Case -> Products -> L.Flow ProductInstance
+createProductInstance cs prod = do
   cpId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
-  let caseProd = getCaseProd cpId cs prod currTime
-  CPQ.create caseProd
-  return $ caseProd
+  let productInst = getProdInst cpId cs prod currTime
+  CPQ.create productInst
+  return $ productInst
   where
-    getCaseProd cpId cs prod currTime =
-      CaseProduct
-        { _id = CaseProductId cpId,
+    getProdInst cpId cs prod currTime =
+      ProductInstance
+        { _id = ProductInstanceId cpId,
           _caseId = Case._id cs,
           _productId = Product._id prod,
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status = CaseP.INSTOCK,
+          _status = ProdInst.INSTOCK,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime
@@ -175,7 +175,7 @@ notifyGateway c p orgId = do
   Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [Products] -> [CaseProduct] -> Organization -> L.Flow OnSearchReq
+mkOnSearchPayload :: Case -> [Products] -> [ProductInstance] -> Organization -> L.Flow OnSearchReq
 mkOnSearchPayload c prods cps orgInfo = do
   currTime <- getCurrentTimeUTC
   let context =
