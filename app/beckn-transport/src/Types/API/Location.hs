@@ -38,8 +38,8 @@ data LocationInfo = LocationInfo
     country :: Maybe Text,
     pincode :: Maybe Text,
     address :: Maybe Text,
-    duration :: Maybe Integer, -- seconds
-    distance :: Maybe Float,
+    durationInS :: Maybe Integer, -- seconds
+    distanceInM :: Maybe Float, -- meters
     bbox :: Maybe BoundingBoxWithoutCRS,
     waypoints :: Maybe GeospatialGeometry,
     snapped_waypoints :: Maybe GeospatialGeometry

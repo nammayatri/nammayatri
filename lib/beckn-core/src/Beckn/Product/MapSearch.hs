@@ -52,8 +52,8 @@ mapToVehicle MapSearch.FOOT = Grphr.FOOT
 mapToRoute :: MapSearch.TravelMode -> Grphr.Path -> MapSearch.Route
 mapToRoute mode Grphr.Path {..} =
   MapSearch.Route
-    { distance = _distance,
-      duration = _time,
+    { distanceInM = _distance,
+      durationInMS = _time,
       boundingBox = _bbox,
       snapped_waypoints = Just _snapped_waypoints,
       mode = mode,
@@ -77,8 +77,8 @@ distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2) =
    in -- Float precision for distance is sufficient as we are working with `meter` units
       realToFrac $ 2 * r * atan2 (sqrt h) (sqrt (1 - h))
 
-velocityInMps :: Float -> Integer -> Float
-velocityInMps distance duration =
+speedInMPS :: Float -> Integer -> Float
+speedInMPS distance duration =
   if duration <= 0
     then 0 -- Realistically this is not possible, so just returning zero
     else distance / fromIntegral duration

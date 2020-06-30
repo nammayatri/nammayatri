@@ -35,8 +35,8 @@ data CachedLocationInfo = CachedLocationInfo
     country :: Maybe Text,
     pincode :: Maybe Text,
     address :: Maybe Text,
-    duration :: Maybe Integer,
-    distance :: Maybe Float,
+    durationInS :: Maybe Integer,
+    distanceInM :: Maybe Float,
     bbox :: Maybe BoundingBoxWithoutCRS,
     waypoints :: Maybe GeospatialGeometry,
     snapped_waypoints :: Maybe GeospatialGeometry
@@ -81,11 +81,11 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
   let lat' = fromJust lat
       long' = fromJust long
       waypointList = appendToWaypointList (now, (lat', long')) $ currLocInfo ^. #traversed_waypoints
-      duration' = (MapSearch.duration <$> routeM) <|> (currLocInfo ^. #duration)
-      distance' = (MapSearch.distance <$> routeM) <|> (currLocInfo ^. #distance)
+      durationInS' = (getDurationInSeconds <$> routeM) <|> (currLocInfo ^. #durationInS)
+      distanceInM' = (MapSearch.distanceInM <$> routeM) <|> (currLocInfo ^. #distanceInM)
       destLat = currLocInfo ^. #destLat
       destLong = currLocInfo ^. #destLong
-      updatedDuration = updateDuration destLat destLong duration' waypointList
+      updatedDuration = updateDuration destLat destLong durationInS' waypointList
   return $
     CachedLocationInfo
       { locationType = locationType <|> (currLocInfo ^. #locationType),
@@ -101,16 +101,17 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
         country = country <|> (currLocInfo ^. #country),
         pincode = pincode <|> (currLocInfo ^. #pincode),
         address = address <|> (currLocInfo ^. #address),
-        duration = updatedDuration,
-        distance = distance',
+        durationInS = updatedDuration,
+        distanceInM = distanceInM',
         bbox = (MapSearch.boundingBox =<< routeM) <|> (currLocInfo ^. #bbox),
         waypoints = (MapSearch.points =<< routeM) <|> (currLocInfo ^. #waypoints),
         snapped_waypoints = (MapSearch.snapped_waypoints =<< routeM) <|> (currLocInfo ^. #snapped_waypoints)
       }
   where
+    getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
     updateDuration toLatM toLongM durationM waypointList =
       case (durationM, toLatM, toLongM) of
-        (Just duration, Just destLat, Just destLong) -> Just $ calculateRemainingDuration waypointList (destLat, destLong) duration
+        (Just durationInS, Just destLat, Just destLong) -> Just $ calculateRemainingDuration waypointList (destLat, destLong) durationInS
         _ -> durationM
 
 appendToWaypointList :: (LocalTime, (Double, Double)) -> [(LocalTime, (Double, Double))] -> [(LocalTime, (Double, Double))]
@@ -139,9 +140,9 @@ calculateRemainingDuration traversedWaypoints (destLat, destLong) initalDuration
      in if avgSpeed == 0 then 0 else round $ distanceToDestination / avgSpeed
   where
     calcSpeed ((t1, (lat1, lon1)), (t2, (lat2, lon2))) =
-      let duration = abs $ round $ nominalDiffTimeToSeconds $ diffLocalTime t2 t1
-          distance = MapSearch.distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2)
-       in MapSearch.velocityInMps distance duration
+      let durationInS = abs $ round $ nominalDiffTimeToSeconds $ diffLocalTime t2 t1
+          distanceInM = MapSearch.distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2)
+       in MapSearch.speedInMPS distanceInM durationInS
 
 createLocationInfo :: UpdateLocationReq -> Maybe (Double, Double) -> Maybe MapSearch.Route -> L.Flow CachedLocationInfo
 createLocationInfo UpdateLocationReq {..} destinationM routeM = do
@@ -164,14 +165,14 @@ createLocationInfo UpdateLocationReq {..} destinationM routeM = do
         country,
         pincode,
         address,
-        duration = getDurationInSeconds <$> routeM,
-        distance = MapSearch.distance <$> routeM,
+        durationInS = getDurationInSeconds <$> routeM,
+        distanceInM = MapSearch.distanceInM <$> routeM,
         bbox = MapSearch.boundingBox =<< routeM,
         waypoints = MapSearch.points =<< routeM,
         snapped_waypoints = MapSearch.snapped_waypoints =<< routeM
       }
   where
-    getDurationInSeconds route = div (MapSearch.duration route) 1000 -- convert miliseconds to seconds
+    getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
 
 getRoute' :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
