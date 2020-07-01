@@ -23,11 +23,11 @@ create Storage.Comment {..} =
     >>= either DB.throwDBError pure
 
 findById :: CommentId -> L.Flow (Maybe Storage.Comment)
-findById id = do
+findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Comment {..} = (_id ==. B.val_ id)
+    predicate Storage.Comment {..} = _id ==. B.val_ id
 
 findAllByCommentedOnEntity :: Text -> Text -> L.Flow [Storage.Comment]
 findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId =

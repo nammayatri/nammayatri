@@ -28,7 +28,7 @@ mask :: Maybe Text -> Maybe Text
 mask txtM =
   let prefixLen txt = length txt - 4
       last4 txt = T.reverse $ T.take 4 $ T.reverse txt
-   in (\t -> (T.replicate (prefixLen t) "X") <> last4 t) <$> txtM
+   in (\t -> T.replicate (prefixLen t) "X" <> last4 t) <$> txtM
 
 sanitizeDetails :: Person -> Person
 sanitizeDetails person =

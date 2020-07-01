@@ -39,42 +39,42 @@ instance FromJSON CreatePassApplicationReq where
 instance ToJSON CreatePassApplicationReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data PassApplicationRes' = PassApplicationRes'
+newtype PassApplicationRes' = PassApplicationRes'
   { passApplication :: Case.Case
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data PassApplicationRes = PassApplicationRes
+newtype PassApplicationRes = PassApplicationRes
   { passApplication :: PassApplication
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data GetPassApplication = GetPassApplication
+newtype GetPassApplication = GetPassApplication
   { passApplication :: PassAppInfo
   }
   deriving (Generic, ToJSON, ToSchema)
 
 ------ List Pass Application ------
-data ListPassApplicationRes = ListPassApplicationRes
+newtype ListPassApplicationRes = ListPassApplicationRes
   { _passApplications :: [CaseInfo] --TODO: embed all pass appinfo entities (docs, tags, comments)
   }
   deriving (Generic, ToSchema)
 
 data PassAppInfo = PassAppInfo
   { _id :: PassApplicationId,
-    _Customer :: (Maybe SC.Customer),
+    _Customer :: Maybe SC.Customer,
     _Tags :: [ST.Tag],
     _Documents :: [SD.Document],
     _Comments :: [SCM.Comment],
-    _Organization :: (Maybe SO.Organization),
+    _Organization :: Maybe SO.Organization,
     _isBlacklistedOrganization :: Bool,
     _isBlacklistedLocation :: Bool,
-    _TenantOrganizationId :: (Maybe TenantOrganizationId),
+    _TenantOrganizationId :: Maybe TenantOrganizationId,
     _status :: Status,
     _fromDate :: LocalTime,
     _toDate :: LocalTime,
     _passType :: PassType,
-    _purpose :: (Maybe Text),
+    _purpose :: Maybe Text,
     _fromLocation :: Maybe Location,
     _toLocation :: Location,
     _CreatedBy :: CustomerId,
@@ -102,19 +102,19 @@ instance FromJSON PassAppInfo where
 
 data CaseInfo = CaseInfo
   { _id :: CaseId,
-    _Customer :: (Maybe SP.Person),
+    _Customer :: Maybe SP.Person,
     _Tags :: [ST.Tag],
     _Documents :: [SD.Document],
     _Comments :: [SCM.Comment],
-    _Organization :: (Maybe SO.Organization),
+    _Organization :: Maybe SO.Organization,
     _isBlacklistedOrganization :: Bool,
     _isBlacklistedLocation :: Bool,
-    _TenantOrganizationId :: (Maybe TenantOrganizationId),
+    _TenantOrganizationId :: Maybe TenantOrganizationId,
     _status :: Case.CaseStatus,
     _fromDate :: LocalTime,
     _toDate :: Maybe LocalTime,
     _passType :: Maybe Text, -- PassType,
-    _purpose :: (Maybe Text),
+    _purpose :: Maybe Text,
     _fromLocation :: Maybe Loc.Location,
     _toLocation :: Maybe Loc.Location,
     _CreatedBy :: Maybe Text, -- CustomerId,

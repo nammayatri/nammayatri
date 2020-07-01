@@ -35,8 +35,6 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Organization as SO
 import qualified Epass.Types.Storage.Pass as SP
-import qualified Epass.Types.Storage.Pass as SP
-import qualified Epass.Types.Storage.PassApplication as PA
 import qualified Epass.Types.Storage.PassApplication as PA
 import EulerHS.Prelude
 import Network.Wai.Parse
@@ -158,8 +156,7 @@ type CustomerAPIs =
     :> Capture "customerId" Text
     :> Get '[JSON] GetCustomerRes
 
-customerFlow registrationToken =
-  Customer.getCustomerInfo registrationToken
+customerFlow = Customer.getCustomerInfo
 
 ---------------------------
 ------ Pass Flow ---------
@@ -348,5 +345,4 @@ type LocationAPIs =
            :> Get '[JSON] ListLocationRes
        )
 
-locationFlow registrationToken =
-  Location.listLocation registrationToken
+locationFlow = Location.listLocation

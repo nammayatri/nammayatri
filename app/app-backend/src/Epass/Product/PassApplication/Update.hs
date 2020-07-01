@@ -50,13 +50,12 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
         (L.throwException $ err400 {errBody = "Approved count cannot be empty"})
       let approvedCount = fromJust _approvedCount
       -- Create passes
-      replicateM approvedCount (createPass pA)
+      replicateM_ approvedCount (createPass pA)
       --TODO: should we need to update case product to CONFIRMED?
       QC.updateStatusAndUdfs caseId Case.COMPLETED Nothing Nothing Nothing (show <$> _approvedCount) _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
     _ -> return ()
-  QC.findById caseId
-    >>= return . PassApplicationRes'
+  PassApplicationRes' <$> QC.findById caseId
   where
     validApprovedCount count approvedCount =
       if approvedCount > count then count else approvedCount
@@ -73,7 +72,7 @@ verifyIfStatusUpdatable currStatus newStatus =
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
 
 createPass :: Case.Case -> L.Flow Products.Products
-createPass c@(Case.Case {..}) = do
+createPass c@Case.Case {..} = do
   id <- generateGUID
   cpId <- generateGUID
   currTime <- getCurrentTimeUTC
