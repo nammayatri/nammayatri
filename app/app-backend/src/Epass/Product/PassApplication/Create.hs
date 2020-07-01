@@ -146,24 +146,24 @@ getLocation API.CreatePassApplicationReq {..} = do
   let fromLocation =
         Loc.Location
           { _id = toId,
-            _locationType = fromMaybe Loc.PINCODE (Location._type <$> _fromLocation),
-            _lat = join (Location._lat <$> _fromLocation),
-            _long = join (Location._long <$> _fromLocation),
-            _ward = join (Location._ward <$> _fromLocation),
-            _district = join (Location._district <$> _fromLocation),
-            _city = join (Location._city <$> _fromLocation),
-            _state = join (Location._state <$> _fromLocation),
-            _country = join (Location._country <$> _fromLocation),
-            _pincode = show <$> (join (Location._pincode <$> _fromLocation)),
-            _address = join (Location._address <$> _fromLocation),
-            _bound = Nothing, -- join (Location._bound <$> _fromLocation)
+            _locationType = maybe Loc.PINCODE Location._type _fromLocation,
+            _lat = Location._lat =<< _fromLocation,
+            _long = Location._long =<< _fromLocation,
+            _ward = Location._ward =<< _fromLocation,
+            _district = Location._district =<< _fromLocation,
+            _city = Location._city =<< _fromLocation,
+            _state = Location._state =<< _fromLocation,
+            _country = Location._country =<< _fromLocation,
+            _pincode = show <$> (Location._pincode =<< _fromLocation),
+            _address = Location._address =<< _fromLocation,
+            _bound = Nothing, -- Location._bound =<< _fromLocation
             _createdAt = currTime,
             _updatedAt = currTime
           }
   let toLocation =
         Loc.Location
           { _id = fromId,
-            _locationType = Loc.PINCODE, -- (Location._type  _toLocation)
+            _locationType = Loc.PINCODE, -- (Location._type _toLocation)
             _lat = Location._lat _toLocation,
             _long = Location._long _toLocation,
             _ward = Location._ward _toLocation,
@@ -173,7 +173,7 @@ getLocation API.CreatePassApplicationReq {..} = do
             _country = Location._country _toLocation,
             _pincode = show <$> (Location._pincode _toLocation),
             _address = Location._address _toLocation,
-            _bound = Nothing, -- join (Location._bound  _toLocation)
+            _bound = Nothing, -- (Location._bound _toLocation)
             _createdAt = currTime,
             _updatedAt = currTime
           }
@@ -186,7 +186,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   QL.create fromLoc
   QL.create toLoc
   customer <- QP.findById (PersonId $ SR._EntityId token)
-  let customerOrgId = join (SP._organizationId <$> customer)
+  let customerOrgId = SP._organizationId =<< customer
   currTime <- getCurrentTimeUTC
   count <- getCount _type _count
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16

@@ -33,7 +33,7 @@ instance ToParamSchema LocationType
 instance FromHttpApiData LocationType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data LocationT f = Location
   { _id :: B.C f LocationId,

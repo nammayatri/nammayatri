@@ -2,8 +2,8 @@
 
 module Product.Registration where
 
-import qualified Beckn.External.MyValuesFirst.Flow as Sms
-import qualified Beckn.External.MyValuesFirst.Types as Sms
+import qualified Beckn.External.MyValueFirst.Flow as SF
+import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
@@ -131,15 +131,19 @@ sendOTP :: Text -> Text -> L.Flow ()
 sendOTP phoneNumber otpCode = do
   username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
   password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
+  -- Note: AUTO_READ_OTP_HASH is generated from the frontend code base
+  -- This is used for the Android's SMS Retriever API for auto-reading OTP
+  otpHash <- L.runIO $ getEnv "AUTO_READ_OTP_HASH"
   res <-
-    Sms.submitSms
-      Sms.defaultBaseUrl
-      Sms.SubmitSms
-        { Sms._username = T.pack username,
-          Sms._password = T.pack password,
-          Sms._from = "JUSPAY",
-          Sms._to = phoneNumber,
-          Sms._text = "Your OTP is " <> otpCode
+    SF.submitSms
+      SF.defaultBaseUrl
+      SMS.SubmitSms
+        { SMS._username = T.pack username,
+          SMS._password = T.pack password,
+          SMS._from = SMS.JUSPAY,
+          SMS._to = phoneNumber,
+          SMS._category = SMS.BULK,
+          SMS._text = SF.constructOtpSms otpCode (T.pack otpHash)
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
 
@@ -158,7 +162,8 @@ login tokenId req =
       then do
         person <- checkPersonExists _EntityId
         QR.updateVerified tokenId True
-        QP.update (SP._id person) SP.ACTIVE True (maybe (person ^. #_deviceToken) Just (req ^. #_deviceToken))
+        let deviceToken = (req ^. #_deviceToken) <|> (person ^. #_deviceToken)
+        QP.update (SP._id person) SP.ACTIVE True deviceToken
         updatedPerson <- QP.findPersonById (SP._id person)
         return $ LoginRes _token (Just $ maskPerson updatedPerson)
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}

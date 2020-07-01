@@ -5,9 +5,9 @@ module Product.Products where
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseP
 import Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.ProductInstance as ProdInst
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
@@ -23,15 +23,15 @@ import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Servant
 import qualified Storage.Queries.Case as CQ
-import qualified Storage.Queries.CaseProduct as CPQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Person as PersQ
+import qualified Storage.Queries.ProductInstance as CPQ
 import qualified Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as RQ
 import qualified Storage.Queries.Vehicle as VQ
 import System.Environment
 import Types.API.Case
-import Types.API.CaseProduct
+import Types.API.ProductInstance
 import Types.API.Products
 import Types.App
 import qualified Utils.Notifications as Notify
@@ -55,7 +55,6 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (ProductsId productId) c
     Nothing -> return ()
-
   updatedProd <- PQ.findById (ProductsId productId)
   driverInfo <- case (updatedProd ^. #_assignedTo) of
     Just driverId -> PersQ.findPersonById (PersonId driverId)
@@ -73,7 +72,7 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
 notifyTripDataToGateway :: ProductsId -> L.Flow ()
 notifyTripDataToGateway productId = do
   cps <- CPQ.findAllByProdId productId
-  cases <- CQ.findAllByIds (CaseP._caseId <$> cps)
+  cases <- CQ.findAllByIds (ProdInst._caseId <$> cps)
   let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.TRACKER) cases
   let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDEBOOK) cases
   case (trackerCase, parentCase) of
@@ -92,24 +91,24 @@ updateInfo productId driverInfo vehicleInfo = do
           vehicleInfo = encodeToText vehiInfo
         }
 
-updateTrip :: ProductsId -> CaseP.CaseProductStatus -> L.Flow ()
+updateTrip :: ProductsId -> ProdInst.ProductInstanceStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
-  trackerCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.TRACKER)
-  parentCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.RIDEBOOK)
+  trackerCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) (Case.TRACKER)
+  parentCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) (Case.RIDEBOOK)
   case k of
-    CaseP.CANCELLED -> do
-      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+    ProdInst.CANCELLED -> do
+      CPQ.updateStatusByIds (ProdInst._id <$> cpList) k
       CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
       return ()
-    CaseP.INPROGRESS -> do
-      -- update tracker case and caseproduct of both cases to INPROGRESS
-      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+    ProdInst.INPROGRESS -> do
+      -- update tracker case and prodinstuct of both cases to INPROGRESS
+      CPQ.updateStatusByIds (ProdInst._id <$> cpList) k
       CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
       return ()
-    CaseP.COMPLETED -> do
-      -- update both cases and caseproducts to COMPLETED
-      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
+    ProdInst.COMPLETED -> do
+      -- update both cases and prodinstucts to COMPLETED
+      CPQ.updateStatusByIds (ProdInst._id <$> cpList) k
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
       return ()
@@ -130,7 +129,7 @@ listRides regToken vehicleIdM = withFlowHandler $ do
       case vehicleM of
         Just vehicleId -> do
           vehicle <- VQ.findVehicleById (VehicleId vehicleId)
-          if SP._organizationId person /= Nothing && (SP._organizationId person == (V._organizationId <$> vehicle))
+          if isJust (SP._organizationId person) && (SP._organizationId person == (V._organizationId <$> vehicle))
             then return False
             else return True
         Nothing -> return False
@@ -152,8 +151,8 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
   SR.RegistrationToken {..} <- RQ.verifyToken regToken
   cpList <- CPQ.findAllByProdId (ProductsId productId)
   caseList <- case csType of
-    Just type_ -> CQ.findAllByIdType (CaseP._caseId <$> cpList) type_
-    Nothing -> CQ.findAllByIds (CaseP._caseId <$> cpList)
+    Just type_ -> CQ.findAllByIdType (ProdInst._caseId <$> cpList) type_
+    Nothing -> CQ.findAllByIds (ProdInst._caseId <$> cpList)
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
   where
@@ -170,11 +169,11 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
               _toLocation = to
             }
 
-notifyCancelReq :: Product.Products -> Maybe CaseP.CaseProductStatus -> L.Flow ()
+notifyCancelReq :: Product.Products -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
 notifyCancelReq prod status = do
   case status of
     Just k -> case k of
-      CaseP.CANCELLED -> do
+      ProdInst.CANCELLED -> do
         admins <-
           PersQ.findAllByOrgIds [SP.ADMIN] [Product._organizationId prod]
         BP.notifyCancelToGateway (_getProductsId $ prod ^. #_id)

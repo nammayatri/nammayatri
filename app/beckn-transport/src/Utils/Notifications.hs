@@ -6,8 +6,8 @@ import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
 import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Person as Person
+import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common (showTimeIst)
@@ -17,8 +17,8 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 
 -- | Send FCM "search" notification to provider admins

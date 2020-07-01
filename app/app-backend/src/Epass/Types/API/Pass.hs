@@ -1,7 +1,7 @@
 module Epass.Types.API.Pass where
 
-import Beckn.Types.Storage.CaseProduct
 import qualified Beckn.Types.Storage.Person as SP
+import Beckn.Types.Storage.ProductInstance
 import Data.Swagger
 import Data.Time.LocalTime
 import Epass.Types.App
@@ -17,10 +17,10 @@ import EulerHS.Prelude
 data PassRes = PassRes
   { _pass :: PassInfo
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, FromJSON, ToSchema)
 
 data UpdatePassReq = UpdatePassReq
-  { _action :: Maybe CaseProductStatus,
+  { _action :: Maybe ProductInstanceStatus,
     _CustomerId :: Maybe CustomerId,
     _fromLocation :: Maybe Text,
     _toLocation :: Maybe Text
@@ -29,6 +29,9 @@ data UpdatePassReq = UpdatePassReq
 
 instance FromJSON UpdatePassReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON UpdatePassReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 data ListPassReq = ListPassReq
   { _identifierType :: PassIDType,
@@ -45,13 +48,13 @@ instance FromJSON ListPassReq where
 data ListPassRes = ListPassRes
   { passes :: [PassInfo]
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data PassInfo = PassInfo
   { _id :: Text,
     _ShortId :: Text,
     _TenantOrganizationId :: (Maybe TenantOrganizationId),
-    _status :: CaseProductStatus,
+    _status :: ProductInstanceStatus,
     _fromDate :: LocalTime,
     _toDate :: LocalTime,
     _passType :: PassType,
@@ -72,6 +75,9 @@ data PassInfo = PassInfo
 
 instance ToJSON PassInfo where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON PassInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
 
 instance ToJSON PassRes where
   toJSON = genericToJSON stripLensPrefixOptions

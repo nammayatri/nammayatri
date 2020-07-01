@@ -36,15 +36,18 @@ data CreatePassApplicationReq = CreatePassApplicationReq
 instance FromJSON CreatePassApplicationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+instance ToJSON CreatePassApplicationReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data PassApplicationRes' = PassApplicationRes'
   { passApplication :: Case.Case
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data PassApplicationRes = PassApplicationRes
   { passApplication :: PassApplication
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data GetPassApplication = GetPassApplication
   { passApplication :: PassAppInfo
@@ -85,11 +88,17 @@ data PassAppInfo = PassAppInfo
   }
   deriving (Generic, ToSchema)
 
+instance FromJSON ListPassApplicationRes where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
 instance ToJSON ListPassApplicationRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
 instance ToJSON PassAppInfo where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON PassAppInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
 
 data CaseInfo = CaseInfo
   { _id :: CaseId,
@@ -122,6 +131,9 @@ data CaseInfo = CaseInfo
 instance ToJSON CaseInfo where
   toJSON = genericToJSON stripLensPrefixOptions
 
+instance FromJSON CaseInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
 data UpdatePassApplicationReq = UpdatePassApplicationReq
   { _status :: Status,
     _approvedCount :: Maybe Int,
@@ -131,3 +143,6 @@ data UpdatePassApplicationReq = UpdatePassApplicationReq
 
 instance FromJSON UpdatePassApplicationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON UpdatePassApplicationReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions

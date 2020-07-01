@@ -33,9 +33,9 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Case as QC
-import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.ProductInstance as QCP
 import qualified Storage.Queries.Products as QProd
 
 listPassApplication ::
