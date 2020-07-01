@@ -2,8 +2,8 @@
 
 module Product.Registration where
 
-import qualified Beckn.External.FCM.Flow as FCM
-import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.MyValueFirst.Flow as SF
+import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Types.App
 import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
@@ -15,9 +15,6 @@ import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Map as Map
 import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified Epass.External.MyValuesFirst.Flow as Sms
-import qualified Epass.External.MyValuesFirst.Types as Sms
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -26,6 +23,7 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import System.Environment
 import Types.API.Registration
 import Types.App
+import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
@@ -54,18 +52,7 @@ initiateFlow req = do
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
-      notificationData =
-        FCM.FCMData
-          { _fcmNotificationType = FCM.REGISTRATION_APPROVED,
-            _fcmShowNotification = FCM.SHOW,
-            _fcmEntityIds = show regToken,
-            _fcmEntityType = FCM.Organization
-          }
-      title = FCM.FCMNotificationTitle $ T.pack "Registration Completed!"
-      body =
-        FCM.FCMNotificationBody $
-          T.pack "You can now book rides for travel or apply for a travel pass for yourself, family, or for work."
-  FCM.notifyPerson title body notificationData person
+  Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
@@ -145,15 +132,19 @@ sendOTP :: Text -> Text -> L.Flow ()
 sendOTP phoneNumber otpCode = do
   username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
   password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
+  -- Note: AUTO_READ_OTP_HASH is generated from the frontend code base
+  -- This is used for the Android's SMS Retriever API for auto-reading OTP
+  otpHash <- L.runIO $ getEnv "AUTO_READ_OTP_HASH"
   res <-
-    Sms.submitSms
-      Sms.defaultBaseUrl
-      Sms.SubmitSms
-        { Sms._username = T.pack username,
-          Sms._password = T.pack password,
-          Sms._from = "JUSPAY",
-          Sms._to = phoneNumber,
-          Sms._text = "Your OTP is " <> otpCode
+    SF.submitSms
+      SF.defaultBaseUrl
+      SMS.SubmitSms
+        { SMS._username = T.pack username,
+          SMS._password = T.pack password,
+          SMS._from = SMS.JUSPAY,
+          SMS._to = phoneNumber,
+          SMS._category = SMS.BULK,
+          SMS._text = SF.constructOtpSms otpCode (T.pack otpHash)
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
 
@@ -174,7 +165,8 @@ login tokenId req =
             updatedPerson =
               person
                 { SP._status = SP.ACTIVE,
-                  SP._deviceToken = maybe (person ^. #_deviceToken) Just (req ^. #_deviceToken)
+                  SP._deviceToken =
+                    (req ^. #_deviceToken) <|> (person ^. #_deviceToken)
                 }
         Person.updateMultiple personId updatedPerson
         Person.findById personId

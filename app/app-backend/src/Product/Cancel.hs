@@ -7,17 +7,18 @@ import Beckn.Types.App
 import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import Utils.Common (verifyToken)
+import qualified Utils.Notifications as Notify
 
 cancel :: RegToken -> CancelReq -> FlowHandler CancelRes
 cancel regToken req = withFlowHandler $ do
@@ -30,8 +31,8 @@ cancel regToken req = withFlowHandler $ do
 cancelProduct :: CancelReq -> L.Flow CancelRes
 cancelProduct req = do
   let productId = req ^. #message ^. #entityId
-  cp <- CaseProduct.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple caseproducts exists for one product
-  case isCaseProductCancellable cp of
+  cp <- ProductInstance.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  case isProductInstanceCancellable cp of
     True -> sendCancelReq productId
     False -> errResp (show (cp ^. #_status))
   where
@@ -58,13 +59,13 @@ cancelCase req = do
     True -> do
       let context = req ^. #context
       let txnId = context ^. #transaction_id
-      caseProducts <- CaseProduct.findAllByCaseId (CaseId caseId)
-      if null caseProducts
+      productInstances <- ProductInstance.findAllByCaseId (CaseId caseId)
+      if null productInstances
         then do
           Case.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
-          let cancelCPs = filter isCaseProductCancellable caseProducts
+          let cancelCPs = filter isProductInstanceCancellable productInstances
           baseUrl <- Gateway.getBaseUrl
           eres <- traverse (callCancelApi context baseUrl) cancelCPs
           case sequence eres of
@@ -75,12 +76,12 @@ cancelCase req = do
       let productId = _getProductsId $ cp ^. #_productId
       Gateway.cancel baseUrl (API.CancelReq context (IdObject productId))
 
-isCaseProductCancellable :: CaseProduct.CaseProduct -> Bool
-isCaseProductCancellable cp =
+isProductInstanceCancellable :: ProductInstance.ProductInstance -> Bool
+isProductInstanceCancellable cp =
   case cp ^. #_status of
-    CaseProduct.CONFIRMED -> True
-    CaseProduct.VALID -> True
-    CaseProduct.INSTOCK -> True
+    ProductInstance.CONFIRMED -> True
+    ProductInstance.VALID -> True
+    ProductInstance.INSTOCK -> True
     _ -> False
 
 isCaseCancellable :: Case.Case -> Bool
@@ -95,18 +96,24 @@ onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
-  cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
-  CaseProduct.updateStatus productId CaseProduct.CANCELLED
+  cpProducts <- ProductInstance.findByProductId productId -- TODO: Handle usecase where multiple productinstances exists for one product
+  ProductInstance.updateStatus productId ProductInstance.CANCELLED
   let caseId = cpProducts ^. #_caseId
-  arrCPCase <- CaseProduct.findAllByCaseId caseId
+  -- notify customer
+  case_ <- Case.findById caseId
+  let personId = Case._requestor case_
+  Notify.notifyOnProductCancelCb personId case_ productId
+  --
+  arrCPCase <- ProductInstance.findAllByCaseId caseId
   let arrTerminalCP =
         filter
           ( \cp -> do
               let status = cp ^. #_status
-              status == CaseProduct.COMPLETED || status == CaseProduct.OUTOFSTOCK || status == CaseProduct.CANCELLED || status == CaseProduct.INVALID
+              status == ProductInstance.COMPLETED || status == ProductInstance.OUTOFSTOCK || status == ProductInstance.CANCELLED || status == ProductInstance.INVALID
           )
           arrCPCase
-  if length arrTerminalCP == length arrCPCase
-    then Case.updateStatus caseId Case.CLOSED
-    else return ()
+  when
+    (length arrTerminalCP == length arrCPCase)
+    (Case.updateStatus caseId Case.CLOSED)
+
   mkAckResponse txnId "cancel"

@@ -13,3 +13,6 @@ data GetCustomerRes = GetCustomerRes
 
 instance ToJSON GetCustomerRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON GetCustomerRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions

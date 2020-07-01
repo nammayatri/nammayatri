@@ -48,7 +48,7 @@ instance FromBackendRow Postgres ProductsStatus where
 instance FromHttpApiData ProductsStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 type ProductsIndustry = Case.Industry
 
@@ -58,7 +58,7 @@ type ProductsIndustry = Case.Industry
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsIndustry where
 --   sqlValueSyntax = autoSqlValueSyntax
 
--- instance FromBackendRow MySQL ProductsIndustry where
+-- instance FromBackendRow Postgres ProductsIndustry where
 --   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductsT f = Products

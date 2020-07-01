@@ -112,6 +112,11 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: MY_VALUE_FIRST_PASSWORD
+        - name: AUTO_READ_OTP_HASH
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: APP_BACKEND_OTP_HASH
         #------ Gateway configs ------#
         - name: GATEWAY_HOST
           value: beckn-transport-$DEPLOY_VARIANT.atlas
