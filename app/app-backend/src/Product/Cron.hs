@@ -7,6 +7,7 @@ import Beckn.Utils.Common (authenticate, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as MC
+import qualified Models.CaseProduct as MCP
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Types.API.Cron as API
@@ -21,7 +22,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
     ( \caseObj -> do
         let cId = Case._id caseObj
         MC.updateStatus cId Case.CLOSED
-        CaseProduct.updateAllCaseProductsByCaseId cId CaseProduct.EXPIRED
+        MCP.updateAllCaseProductsByCaseId cId CaseProduct.EXPIRED
         Notify.notifyOnExpiration caseObj
     )
     cases

@@ -41,10 +41,11 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   allowOnlyUser token
   pA <- QC.findById caseId
   -- verifyIfStatusUpdatable (PassApplication._status pA) _status
+  -- TODO It seems we do not need to check statuses transitions here
   case _status of
     REVOKED -> do
       QCP.updateAllProductsByCaseId caseId Products.OUTOFSTOCK
-      MC.updateStatusAndUdfs
+      QC.updateStatusAndUdfs
         caseId
         Case.CLOSED
         Nothing
@@ -60,7 +61,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
       -- Create passes
       replicateM approvedCount (createPass pA)
       --TODO: should we need to update case product to CONFIRMED?
-      MC.updateStatusAndUdfs
+      QC.updateStatusAndUdfs
         caseId
         Case.COMPLETED
         Nothing
@@ -68,7 +69,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
         Nothing
         (show <$> _approvedCount)
         _remarks
-    PENDING -> MC.updateStatus caseId Case.INPROGRESS
+    PENDING -> QC.updateStatus caseId Case.INPROGRESS
   PassApplicationRes' <$> QC.findById caseId
   where
     validApprovedCount count approvedCount =

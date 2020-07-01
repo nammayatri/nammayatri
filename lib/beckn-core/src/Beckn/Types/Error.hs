@@ -22,7 +22,8 @@ data DomainError
   | TagErr TagError
   | OrganisationErr OrganisationError
   | CaseErr CaseError
-  | CaseProductErr CaseProductError
+  | ProductInstanceErr ProductInstanceError
+  | ProductErr ProductError
   | UnknownDomainError
   | DatabaseError DBError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
@@ -60,9 +61,14 @@ data CaseError
   | CaseStatusTransitionErr Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-data CaseProductError
-  = CaseProductNotFound
-  | CaseProductStatusTransitionErr Text
+data ProductInstanceError
+  = ProductInstanceNotFound
+  | ProductInstanceStatusTransitionErr Text
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+data ProductError
+  = ProductNotFound
+  | ProductStatusTransitionErr Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data SystemError = SystemError ErrorMsg

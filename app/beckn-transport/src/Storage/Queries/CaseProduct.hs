@@ -55,6 +55,34 @@ findByCaseId id =
   where
     pred id Storage.CaseProduct {..} = _caseId ==. B.val_ id
 
+findById' :: CaseProductId -> L.Flow (T.DBResult (Maybe Storage.CaseProduct))
+findById' caseProductId =
+  DB.findOne dbTable (predicate caseProductId)
+  where
+    predicate caseProductId Storage.CaseProduct {..} =
+      _id ==. (B.val_ caseProductId)
+
+findAllByCaseId' :: CaseId -> L.Flow (T.DBResult [Storage.CaseProduct])
+findAllByCaseId' caseId =
+  DB.findAll dbTable (predicate caseId)
+  where
+    predicate caseId Storage.CaseProduct {..} =
+      _caseId ==. B.val_ caseId
+
+findByProductId' :: ProductsId -> L.Flow (T.DBResult (Maybe Storage.CaseProduct))
+findByProductId' pId =
+  DB.findOne dbTable predicate
+  where
+    predicate Storage.CaseProduct {..} =
+      _productId ==. B.val_ pId
+
+findAllCaseProducts' :: [CaseProductId] -> L.Flow (T.DBResult [Storage.CaseProduct])
+findAllCaseProducts' ids =
+  DB.findAll dbTable (predicate ids)
+  where
+    predicate ids Storage.CaseProduct {..} =
+      B.in_ _id (B.val_ <$> ids)
+
 updateStatusForProducts :: ProductsId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
 updateStatusForProducts productId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
@@ -76,11 +104,6 @@ updateStatus ::
   Storage.CaseProductStatus ->
   L.Flow (T.DBResult ())
 updateStatus caseId productId newStatus = do
-  -- check CaseProducts statuses transition correctness
-  caseProductList <- findAllByCaseAndProductId caseId productId
-  -- traverse_
-  --   (\cp -> Storage.validateStatusTransitionFlow (Storage._status cp) newStatus)
-  --   caseProductList
   -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -121,6 +144,11 @@ updateStatusByIds ids status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+
+updateAllCaseProductsByCaseId :: CaseId -> Storage.CaseProductStatus -> L.Flow (T.DBResult ())
+updateAllCaseProductsByCaseId caseId status = do
+  caseProducts <- findAllByCaseId caseId
+  updateStatusByIds (Storage._id <$> caseProducts) status
 
 findAllByProdId :: ProductsId -> L.Flow [Storage.CaseProduct]
 findAllByProdId id =

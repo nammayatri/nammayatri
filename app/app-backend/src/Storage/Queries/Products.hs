@@ -34,6 +34,12 @@ findAllByTypeOrgId orgId status =
           &&. _organizationId ==. (B.val_ orgId)
       )
 
+findById' :: ProductsId -> L.Flow (T.DBResult (Maybe Storage.Products))
+findById' pid =
+  DB.findOne dbTable (predicate pid)
+  where
+    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
+
 findById :: ProductsId -> L.Flow Storage.Products
 findById pid =
   DB.findOneWithErr dbTable (predicate pid)
@@ -66,13 +72,12 @@ updateStatus id status = do
           _status <-. B.val_ status
         ]
 
-updateMultiple :: Text -> Storage.Products -> L.Flow ()
+updateMultiple :: ProductsId -> Storage.Products -> L.Flow (T.DBResult ())
 updateMultiple id prd@Storage.Products {..} = do
   currTime <- getCurrentTimeUTC
   DB.update dbTable (setClause currTime prd) (predicate id)
-    >>= either DB.throwDBError pure
   where
-    predicate id Storage.Products {..} = _id ==. B.val_ (ProductsId id)
+    predicate id Storage.Products {..} = _id ==. B.val_ id
     setClause now prd Storage.Products {..} =
       mconcat
         [ _updatedAt <-. B.val_ now,

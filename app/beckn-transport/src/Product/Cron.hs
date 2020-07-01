@@ -11,6 +11,8 @@ import qualified Beckn.Types.Storage.Products as P
 import Beckn.Utils.Common (authenticate, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as MC
+import qualified Models.CaseProduct as MCP
 import qualified Storage.Queries.Case as CQ
 import qualified Storage.Queries.CaseProduct as CPQ
 import qualified Storage.Queries.Person as PSQ
@@ -22,11 +24,21 @@ expire :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireCaseRes
 expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
   cases <- CQ.findAllExpiredByStatus [C.NEW] C.RIDEBOOK from to
-  caseProducts <- CPQ.findAllByCaseIds (C._id <$> cases)
-  products <- PQ.findAllById (CP._productId <$> caseProducts)
-  CQ.updateStatusByIds (C._id <$> cases) C.CLOSED
-  CPQ.updateStatusByIds (CP._id <$> caseProducts) CP.EXPIRED
-  notifyTransporters cases caseProducts products
+  {-   caseProducts <- CPQ.findAllByCaseIds (C._id <$> cases)
+    products <- PQ.findAllById (CP._productId <$> caseProducts)
+    CQ.updateStatusByIds (C._id <$> cases) C.CLOSED
+    CPQ.updateStatusByIds (CP._id <$> caseProducts) CP.EXPIRED
+    notifyTransporters cases caseProducts products -}
+  traverse_
+    ( \caseObj -> do
+        let cId = C._id caseObj
+        caseProducts <- CPQ.findAllByCaseIds (C._id <$> cases)
+        products <- PQ.findAllById (CP._productId <$> caseProducts)
+        MC.updateStatus cId C.CLOSED
+        MCP.updateAllCaseProductsByCaseId cId CP.EXPIRED
+        notifyTransporters cases caseProducts products
+    )
+    cases
   pure $ ExpireCaseRes $ length cases
 
 notifyTransporters :: [C.Case] -> [CP.CaseProduct] -> [P.Products] -> L.Flow ()

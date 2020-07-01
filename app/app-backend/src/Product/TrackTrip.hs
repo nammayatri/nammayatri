@@ -14,6 +14,7 @@ import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Product as MP
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Person as Person
@@ -73,5 +74,5 @@ updateTracker product tracker = do
   let uInfo = (\info -> info {ProductInfo._tracker = Just tracker}) <$> minfo
   let updatedPrd =
         product {Products._info = Just $ encodeToText uInfo}
-  Products.updateMultiple (_getProductsId $ product ^. #_id) updatedPrd
+  MP.updateMultiple (product ^. #_id) updatedPrd
   return $ Right ()

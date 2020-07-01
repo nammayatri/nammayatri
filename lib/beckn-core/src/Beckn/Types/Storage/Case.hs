@@ -170,24 +170,26 @@ fieldEMod =
         }
 
 validateStatusTransition :: CaseStatus -> CaseStatus -> Either Text ()
-validateStatusTransition oldState newState = t oldState newState
+validateStatusTransition oldState newState =
+  if oldState == newState
+    then allowed
+    else t oldState newState
   where
     forbidden =
-      Left $
+      Left $ T.pack $
         "It is not allowed to change Case status from "
           <> show oldState
           <> " to "
           <> show newState
     allowed = Right ()
-    -- t NEW                  CONFIRMED        = allowed
-    -- t NEW                  CLOSED           = allowed
-    -- t NEW                  _                = forbidden
-    -- t CONFIRMED            INPROGRESS       = allowed
-    -- t CONFIRMED            CLOSED           = allowed
-    -- t CONFIRMED            _                = forbidden
-    -- t INPROGRESS           COMPLETED        = allowed
-    -- t INPROGRESS           CLOSED           = allowed
-    -- t INPROGRESS           _                = forbidden
-    -- t COMPLETED            _                = forbidden
-    -- t CLOSED               _                = forbidden
-    t _ _ = allowed
+    t NEW CONFIRMED = allowed
+    t NEW CLOSED = allowed
+    t NEW _ = forbidden
+    t CONFIRMED INPROGRESS = allowed
+    t CONFIRMED CLOSED = allowed
+    t CONFIRMED _ = forbidden
+    t INPROGRESS COMPLETED = allowed
+    t INPROGRESS CLOSED = allowed
+    t INPROGRESS _ = forbidden
+    t COMPLETED _ = forbidden
+    t CLOSED _ = forbidden

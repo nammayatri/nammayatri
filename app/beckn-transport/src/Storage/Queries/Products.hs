@@ -47,15 +47,17 @@ findById pid =
   where
     predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
 
+findById' :: ProductsId -> L.Flow (T.DBResult (Maybe Storage.Products))
+findById' pid =
+  DB.findOne dbTable (predicate pid)
+  where
+    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
+
 updateStatus ::
   ProductsId ->
   Storage.ProductsStatus ->
   L.Flow (T.DBResult ())
 updateStatus id newStatus = do
-  -- check Product status transition correctness
-  product_ <- findById id
-  let oldStatus = Storage._status product_
-  -- Storage.validateStatusTransitionFlow oldStatus newStatus
   -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -138,7 +140,7 @@ findAllByOrgId orgId =
       ( _organizationId ==. (B.val_ orgId)
       )
 
-updateStatusByIds ::
+{- updateStatusByIds ::
   [ProductsId] ->
   Storage.ProductsStatus ->
   L.Flow (T.DBResult ())
@@ -155,3 +157,4 @@ updateStatusByIds ids status = do
         [ _updatedAt <-. B.val_ currTime,
           _status <-. B.val_ status
         ]
+ -}

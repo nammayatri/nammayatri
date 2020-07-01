@@ -20,6 +20,9 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as MC
+import qualified Models.Case as MP
+import qualified Models.CaseProduct as MCP
 import Product.BecknProvider.BP as BP
 import Servant
 import qualified Storage.Queries.Case as CQ
@@ -98,19 +101,19 @@ updateTrip productId k = do
   parentCase_ <- CQ.findByIdType (CaseP._caseId <$> cpList) (Case.RIDEBOOK)
   case k of
     CaseP.CANCELLED -> do
-      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      MCP.updateStatusByIds (CaseP._id <$> cpList) k
+      MC.updateStatus (Case._id trackerCase_) Case.CLOSED
       return ()
     CaseP.INPROGRESS -> do
       -- update tracker case and caseproduct of both cases to INPROGRESS
-      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
+      MCP.updateStatusByIds (CaseP._id <$> cpList) k
+      MC.updateStatus (Case._id trackerCase_) Case.INPROGRESS
       return ()
     CaseP.COMPLETED -> do
       -- update both cases and caseproducts to COMPLETED
-      CPQ.updateStatusByIds (CaseP._id <$> cpList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
-      CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
+      MCP.updateStatusByIds (CaseP._id <$> cpList) k
+      MC.updateStatus (Case._id trackerCase_) Case.COMPLETED
+      MC.updateStatus (Case._id parentCase_) Case.COMPLETED
       return ()
     _ -> return ()
 

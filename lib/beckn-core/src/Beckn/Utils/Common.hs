@@ -70,6 +70,10 @@ fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
+mkNAckResponse :: Text -> Text -> Text -> L.Flow AckResponse
+mkNAckResponse txnId action message =
+  mkAckResponse' txnId action $ "Error: " <> message
+
 mkAckResponse :: Text -> Text -> L.Flow AckResponse
 mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 

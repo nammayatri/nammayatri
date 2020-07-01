@@ -140,24 +140,19 @@ fieldEMod =
         }
 
 validateStatusTransition :: ProductsStatus -> ProductsStatus -> Either Text ()
-validateStatusTransition oldState newState = t oldState newState
+validateStatusTransition oldState newState =
+  if oldState == newState
+    then allowed
+    else t oldState newState
   where
     forbidden =
-      Left $
+      Left $ T.pack $
         "It is not allowed to change Product status from "
           <> show oldState
           <> " to "
           <> show newState
     allowed = Right ()
-    -- t VALID                CONFIRMED        = allowed
-    -- t VALID                _                = forbidden
-    -- t CONFIRMED            INPROGRESS       = allowed
-    -- t CONFIRMED            _                = forbidden
-    -- t INPROGRESS           COMPLETED        = allowed
-    -- t INPROGRESS           _                = forbidden
-    -- t COMPLETED            _                = forbidden
-    -- t INSTOCK              CONFIRMED        = allowed
-    -- t INSTOCK              _                = forbidden
-    -- t OUTOFSTOCK           _                = forbidden
-    -- t INVALID              _                = forbidden
-    t _ _ = allowed
+    t INSTOCK OUTOFSTOCK = allowed
+    t INSTOCK _ = forbidden
+    t OUTOFSTOCK INSTOCK = allowed
+    t OUTOFSTOCK _ = forbidden

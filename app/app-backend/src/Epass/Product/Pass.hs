@@ -35,6 +35,7 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
 import qualified Models.CaseProduct as MCP
+import qualified Models.Product as MP
 import Servant
 import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.CaseProduct as QCP
@@ -42,19 +43,19 @@ import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Products as QProd
 
-getPassById :: RegToken -> Text -> FlowHandler PassRes
+getPassById :: RegToken -> ProductsId -> FlowHandler PassRes
 getPassById regToken passId =
   withFlowHandler $ do
     reg <- verifyToken regToken
-    caseProduct <- QCP.findByProductId (ProductsId passId)
+    caseProduct <- QCP.findByProductId passId
     case' <- QC.findById (SCP._caseId caseProduct)
-    product <- QProd.findById (ProductsId passId)
+    product <- QProd.findById passId
     PassRes <$> getPassInfo case' product caseProduct
 
-updatePass :: RegToken -> Text -> UpdatePassReq -> FlowHandler PassRes
+updatePass :: RegToken -> ProductsId -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
   RegistrationToken.RegistrationToken {..} <- verifyToken regToken
-  pass <- QProd.findById (ProductsId passId)
+  pass <- QProd.findById passId
   pass' <- case _entityType of
     RegistrationToken.USER -> do
       when
@@ -63,7 +64,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
       when
         (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
         (L.throwException $ err400 {errBody = "Access denied"})
-      MCP.updateStatus (ProductsId passId) (fromJust _action)
+      MCP.updateStatus passId (fromJust _action)
       return $ pass
     RegistrationToken.CUSTOMER -> do
       customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
@@ -85,9 +86,9 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
             (isJust _action || isJust _toLocation)
             (L.throwException $ err400 {errBody = "Access denied"})
           return $ pass {SP._fromLocation = _fromLocation}
-  caseProduct <- QCP.findByProductId (ProductsId passId)
+  caseProduct <- QCP.findByProductId passId
   case' <- QC.findById (SCP._caseId caseProduct)
-  QProd.updateMultiple passId pass'
+  MP.updateMultiple passId pass'
   PassRes <$> getPassInfo case' pass caseProduct
 
 listPass ::

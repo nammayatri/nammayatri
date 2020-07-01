@@ -36,6 +36,12 @@ findById caseId =
   where
     predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
 
+findById' :: CaseId -> L.Flow (T.DBResult (Maybe Storage.Case))
+findById' caseId =
+  DB.findOne dbTable (predicate caseId)
+  where
+    predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+
 findByParentCaseIdAndType :: CaseId -> Storage.CaseType -> L.Flow (Maybe Storage.Case)
 findByParentCaseIdAndType pCaseId cType =
   DB.findOne dbTable (predicate pCaseId cType)
@@ -57,10 +63,6 @@ updateStatus ::
   Storage.CaseStatus ->
   L.Flow (T.DBResult ())
 updateStatus id newStatus = do
-  -- check Case status transition correctness
-  case_ <- findById id
-  let oldStatus = Storage._status case_
-  -- Storage.validateStatusTransitionFlow oldStatus newStatus
   -- update data
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

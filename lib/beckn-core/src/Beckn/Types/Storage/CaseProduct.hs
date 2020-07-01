@@ -4,7 +4,6 @@
 module Beckn.Types.Storage.CaseProduct where
 
 import Beckn.Types.App
-import Beckn.Types.Storage.Products (ProductsStatus (..))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Generics.Labels
@@ -20,6 +19,7 @@ import EulerHS.Prelude
 import Servant.API
 import Servant.Swagger
 
+-- TODO: INVALID status seems to be unused
 data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -89,24 +89,31 @@ fieldEMod =
         }
 
 validateStatusTransition :: CaseProductStatus -> CaseProductStatus -> Either Text ()
-validateStatusTransition oldState newState = t oldState newState
+validateStatusTransition oldState newState =
+  if oldState == newState
+    then allowed
+    else t oldState newState
   where
     forbidden =
-      Left $
-        "It is not allowed to change CaseProduct status from "
+      Left $ T.pack $
+        "It is not allowed to change Product Instance status from "
           <> show oldState
           <> " to "
           <> show newState
     allowed = Right ()
-    -- t VALID                CONFIRMED        = allowed
-    -- t VALID                _                = forbidden
-    -- t CONFIRMED            INPROGRESS       = allowed
-    -- t CONFIRMED            _                = forbidden
-    -- t INPROGRESS           COMPLETED        = allowed
-    -- t INPROGRESS           _                = forbidden
-    -- t COMPLETED            _                = forbidden
-    -- t INSTOCK              CONFIRMED        = allowed
-    -- t INSTOCK              _                = forbidden
-    -- t OUTOFSTOCK           _                = forbidden
-    -- t INVALID              _                = forbidden
-    t _ _ = allowed
+    t VALID CONFIRMED = allowed
+    t VALID EXPIRED = allowed
+    t VALID _ = forbidden
+    t CONFIRMED INPROGRESS = allowed
+    t CONFIRMED CANCELLED = allowed
+    t CONFIRMED _ = forbidden
+    t INPROGRESS COMPLETED = allowed
+    t INPROGRESS CANCELLED = allowed
+    t INPROGRESS _ = forbidden
+    t COMPLETED _ = forbidden
+    t INSTOCK CONFIRMED = allowed
+    t CANCELLED _ = forbidden
+    t EXPIRED _ = forbidden
+    t INSTOCK _ = forbidden
+    t OUTOFSTOCK _ = forbidden
+    t INVALID _ = forbidden

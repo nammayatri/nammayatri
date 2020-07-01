@@ -9,7 +9,7 @@ import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
+import Beckn.Utils.Common (mkAckResponse, mkAckResponse', mkNAckResponse, withFlowHandler)
 import EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -99,23 +99,28 @@ onCancel req = withFlowHandler $ do
   let txnId = context ^. #transaction_id
   let productId = ProductsId (req ^. #message ^. #id)
   cpProducts <- CaseProduct.findByProductId productId -- TODO: Handle usecase where multiple caseproducts exists for one product
-  MCP.updateStatus productId CaseProduct.CANCELLED
-  let caseId = cpProducts ^. #_caseId
-  -- notify customer
-  case_ <- Case.findById caseId
-  let personId = Case._requestor case_
-  Notify.notifyOnProductCancelCb personId case_ productId
-  --
-  arrCPCase <- CaseProduct.findAllByCaseId caseId
-  let arrTerminalCP =
-        filter
-          ( \cp -> do
-              let status = cp ^. #_status
-              status == CaseProduct.COMPLETED || status == CaseProduct.OUTOFSTOCK || status == CaseProduct.CANCELLED || status == CaseProduct.INVALID
-          )
-          arrCPCase
-  when
-    (length arrTerminalCP == length arrCPCase)
-    (MC.updateStatus caseId Case.CLOSED)
-
-  mkAckResponse txnId "cancel"
+  res <- MCP.updateStatus productId CaseProduct.CANCELLED
+  case res of
+    Left err -> mkNAckResponse txnId "cancel" $ show err
+    Right _ -> do
+      let caseId = cpProducts ^. #_caseId
+      -- notify customer
+      case_ <- Case.findById caseId
+      let personId = Case._requestor case_
+      Notify.notifyOnProductCancelCb personId case_ productId
+      --
+      arrCPCase <- CaseProduct.findAllByCaseId caseId
+      let arrTerminalCP =
+            filter
+              ( \cp -> do
+                  let status = cp ^. #_status
+                  status == CaseProduct.COMPLETED || status == CaseProduct.OUTOFSTOCK || status == CaseProduct.CANCELLED || status == CaseProduct.INVALID
+              )
+              arrCPCase
+      if length arrTerminalCP == length arrCPCase
+        then do
+          res <- MC.updateStatus caseId Case.CLOSED
+          case res of
+            Left err -> mkNAckResponse txnId "cancel" $ show err
+            Right _ -> mkAckResponse txnId "cancel"
+        else mkAckResponse txnId "cancel"

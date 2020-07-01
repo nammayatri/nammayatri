@@ -3,8 +3,10 @@ module Models.Product where
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Products
-import Beckn.Utils.Common (fromDBError)
+import Beckn.Utils.Common
+import Control.Monad.Except
 import qualified EulerHS.Language as L
+import EulerHS.Prelude
 import qualified Storage.Queries.Products as Q
 
 -- The layer between Storage.Queries and our business logic
@@ -14,7 +16,24 @@ import qualified Storage.Queries.Products as Q
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
+-- | Validate and update Product status
 updateStatus :: ProductsId -> ProductsStatus -> FlowDomainResult ()
-updateStatus id status = do
-  result <- Q.updateStatus id status
-  fromDBError result
+updateStatus id status = runExceptT $ do
+  validateStatusChange status id
+  ExceptT $ do
+    result <- Q.updateStatus id status
+    fromDBError result
+
+-- | Find Product by id
+findById :: ProductsId -> FlowDomainResult Products
+findById id = do
+  result <- Q.findById' id
+  fromDBErrorOrEmpty (CaseErr CaseNotFound) result
+
+-- | Get Product and validate its status change
+validateStatusChange :: ProductsStatus -> ProductsId -> ExceptT DomainError L.Flow ()
+validateStatusChange newStatus productId = do
+  c <- ExceptT $ findById productId
+  liftEither $ case validateStatusTransition (_status c) newStatus of
+    Left msg -> Left $ ProductErr $ ProductStatusTransitionErr msg
+    _ -> Right ()

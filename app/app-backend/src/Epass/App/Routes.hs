@@ -176,9 +176,9 @@ type PassAPIs =
            :> QueryParam "offset" Int
            :> MandatoryQueryParam "type" PassType
            :> Get '[JSON] ListPassRes
-           :<|> Capture "passId" Text
+           :<|> Capture "passId" ProductsId
            :> Get '[JSON] PassRes
-           :<|> Capture "passId" Text
+           :<|> Capture "passId" ProductsId
            :> ReqBody '[JSON] UpdatePassReq
            :> Post '[JSON] PassRes
        )
