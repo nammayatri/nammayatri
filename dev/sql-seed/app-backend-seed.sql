@@ -66,10 +66,10 @@ CREATE TABLE atlas_app.case (
 ALTER TABLE atlas_app.case OWNER TO atlas;
 
 --
--- Name: case_product; Type: TABLE; Schema: atlas_app; Owner: atlas
+-- Name: product_instance; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
 
-CREATE TABLE atlas_app.case_product (
+CREATE TABLE atlas_app.product_instance (
     id character(36) NOT NULL,
     case_id character varying(255) NOT NULL,
     product_id character varying(255) NOT NULL,
@@ -83,7 +83,7 @@ CREATE TABLE atlas_app.case_product (
 );
 
 
-ALTER TABLE atlas_app.case_product OWNER TO atlas;
+ALTER TABLE atlas_app.product_instance OWNER TO atlas;
 
 --
 -- Name: comment; Type: TABLE; Schema: atlas_app; Owner: atlas
@@ -340,10 +340,10 @@ COPY atlas_app.case (id, name, description, short_id, industry, type, exchange_t
 
 
 --
--- Data for Name: case_product; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
+-- Data for Name: product_instance; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
 --
 
-COPY atlas_app.case_product (id, case_id, product_id, person_id, quantity, price, status, info, created_at, updated_at) FROM stdin;
+COPY atlas_app.product_instance (id, case_id, product_id, person_id, quantity, price, status, info, created_at, updated_at) FROM stdin;
 \.
 
 
@@ -438,10 +438,10 @@ ALTER TABLE ONLY atlas_app.case
 
 
 --
--- Name: case_product idx_16394_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas
+-- Name: product_instance idx_16394_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas
 --
 
-ALTER TABLE ONLY atlas_app.case_product
+ALTER TABLE ONLY atlas_app.product_instance
     ADD CONSTRAINT idx_16394_primary PRIMARY KEY (id);
 
 
@@ -550,14 +550,14 @@ CREATE UNIQUE INDEX idx_16386_short_id ON atlas_app.case USING btree (short_id);
 -- Name: idx_16394_case_id; Type: INDEX; Schema: atlas_app; Owner: atlas
 --
 
-CREATE INDEX idx_16394_case_id ON atlas_app.case_product USING btree (case_id);
+CREATE INDEX idx_16394_case_id ON atlas_app.product_instance USING btree (case_id);
 
 
 --
 -- Name: idx_16394_product_id; Type: INDEX; Schema: atlas_app; Owner: atlas
 --
 
-CREATE INDEX idx_16394_product_id ON atlas_app.case_product USING btree (product_id);
+CREATE INDEX idx_16394_product_id ON atlas_app.product_instance USING btree (product_id);
 
 
 --

@@ -18,21 +18,21 @@ import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
-import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
 import qualified Product.Info as Info
+import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.TrackTrip as TrackTrip
 import Servant
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
-import qualified Types.API.CaseProduct as CaseProduct
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.Cron as Cron
 import qualified Types.API.Location as Location
 import Types.API.Product
+import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import Types.App
 
@@ -45,7 +45,7 @@ type AppAPIs =
            :<|> CaseAPIs
            :<|> InfoAPIs
            :<|> TrackTripAPIs
-           :<|> CaseProductAPIs
+           :<|> ProductInstanceAPIs
            :<|> CancelAPIs
            :<|> CronAPIs
            :<|> Epass.EPassAPIs
@@ -63,7 +63,7 @@ appServer' key =
     :<|> caseFlow
     :<|> infoFlow
     :<|> trackTripFlow
-    :<|> caseProductFlow
+    :<|> productInstanceFlow
     :<|> cancelFlow
     :<|> cronFlow
     :<|> Epass.epassServer' key
@@ -175,16 +175,16 @@ trackTripFlow =
   TrackTrip.track
     :<|> TrackTrip.track_cb
 
--------- CaseProduct Flow----------
-type CaseProductAPIs =
-  "caseProduct"
+-------- ProductInstance Flow----------
+type ProductInstanceAPIs =
+  "productInstance"
     :> ( AuthHeader
-           :> ReqBody '[JSON] CaseProduct.CaseProdReq
-           :> Post '[JSON] CaseProduct.CaseProductList
+           :> ReqBody '[JSON] ProductInstance.ProdInstReq
+           :> Post '[JSON] ProductInstance.ProductInstanceList
        )
 
-caseProductFlow =
-  CaseProduct.list
+productInstanceFlow =
+  ProductInstance.list
 
 -------- Cancel Flow----------
 type CancelAPIs =
