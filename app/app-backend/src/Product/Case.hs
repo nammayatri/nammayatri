@@ -4,14 +4,14 @@ module Product.Case where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.Case as API
 import Utils.Common (verifyToken)
@@ -23,8 +23,8 @@ status ::
 status regToken caseId = withFlowHandler $ do
   verifyToken regToken
   case_ <- Case.findById caseId
-  cpr <- CaseProduct.findAllByCaseId (Case._id case_)
-  products <- Products.findAllByIds (CaseProduct._productId <$> cpr)
+  cpr <- ProductInstance.findAllByCaseId (Case._id case_)
+  products <- Products.findAllByIds (ProductInstance._productId <$> cpr)
   fromLocation <-
     fromMaybeM500 "Could not find from location"
       =<< Location.findLocationById (LocationId $ case_ ^. #_fromLocationId)
@@ -46,11 +46,11 @@ list regToken caseType statuses mlimit moffset = withFlowHandler $ do
     Person.findById (PersonId $ RegistrationToken._EntityId token)
       >>= fromMaybeM500 "Could not find user"
   Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
-    >>= traverse mapCaseProduct
+    >>= traverse mapProductInstance
     >>= return . ListRes
   where
-    mapCaseProduct case_@(Case.Case {..}) = do
-      prds <- CaseProduct.findAllProductsByCaseId (_id)
+    mapProductInstance case_@(Case.Case {..}) = do
+      prds <- ProductInstance.findAllProductsByCaseId (_id)
       fromLocation <- Location.findLocationById $ LocationId _fromLocationId
       toLocation <- Location.findLocationById $ LocationId _toLocationId
-      return $ API.CaseProduct case_ prds fromLocation toLocation
+      return $ API.ProductInstance case_ prds fromLocation toLocation
