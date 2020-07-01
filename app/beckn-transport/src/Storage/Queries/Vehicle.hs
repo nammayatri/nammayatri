@@ -107,3 +107,16 @@ findByAnyOf registrationNoM vehicleIdM =
       ( (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (VehicleId (fromMaybe "DONT_MATCH" vehicleIdM)))
           &&. (B.val_ (isNothing registrationNoM) ||. _registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
       )
+
+findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> Maybe Storage.EnergyType -> Integer -> Integer -> Text -> L.Flow [Storage.Vehicle]
+findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+    >>= either DB.throwDBError pure
+  where
+    orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
+    predicate Storage.Vehicle {..} =
+      ( _organizationId ==. B.val_ orgId
+          &&. (B.val_ (isNothing variantM) ||. _variant ==. B.val_ variantM)
+          &&. (B.val_ (isNothing categoryM) ||. _category ==. B.val_ categoryM)
+          &&. (B.val_ (isNothing energyTypeM) ||. _energyType ==. B.val_ energyTypeM)
+      )
