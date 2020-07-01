@@ -9,7 +9,7 @@ import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as SCP
+import qualified Beckn.Types.Storage.ProductInstance as SCP
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -22,12 +22,12 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
-import qualified Models.CaseProduct as MCP
+import qualified Models.ProductInstance as MCP
 import qualified Models.Product as MP
 import Servant
 import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as QCP
 import qualified Storage.Queries.Products as Products
 import qualified Types.API.Confirm as API
 import Types.App
@@ -44,7 +44,7 @@ confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
   when ((case_ ^. #_validTill) < lt)
     $ L.throwException
     $ err400 {errBody = "Case has expired"}
-  caseProduct <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
+  productInstance <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   let service = Service caseId Nothing [] [productId] Nothing [] Nothing Nothing [] Nothing
@@ -76,9 +76,9 @@ onConfirm req = withFlowHandler $ do
               prd
                 { Products._info = encodeToText <$> uInfo
                 }
-        caseProduct <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
+        productInstance <- QCP.findByProductId pid -- TODO: can have multiple cases linked, fix this
         MCP.updateStatus pid SCP.CONFIRMED
-        MC.updateStatus (SCP._caseId caseProduct) Case.INPROGRESS
+        MC.updateStatus (SCP._caseId productInstance) Case.INPROGRESS
         MP.updateMultiple pid uPrd
         MC.updateStatus caseId Case.INPROGRESS
         return $ Ack "on_confirm" "Ok"

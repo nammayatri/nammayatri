@@ -37,13 +37,6 @@ newtype ProductsId = ProductsId
 
 deriveIdentifierInstances ''ProductsId
 
-newtype CaseProductId = CaseProductId
-  { _getCaseProductId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''CaseProductId
-
 newtype PersonId = PersonId
   { _getPersonId :: Text
   }
@@ -71,6 +64,13 @@ newtype VehicleId = VehicleId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''VehicleId
+
+newtype ProductInstanceId = ProductInstanceId
+  { _getProductInstanceId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''ProductInstanceId
 
 type Limit = Int
 

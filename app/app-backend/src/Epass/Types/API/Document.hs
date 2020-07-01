@@ -6,10 +6,10 @@ import EulerHS.Prelude
 data DocumentRes = DocumentRes
   { docIds :: [Text]
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data ListDocumentRes = ListDocumentRes
   { docId :: Text,
     fileName :: Text
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, FromJSON, ToJSON)

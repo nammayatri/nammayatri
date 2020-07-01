@@ -87,29 +87,19 @@ dependencies:
 - random-strings
 - generic-lens
 
+library:
+  source-dirs:         src
+  dependencies:
+  - beckn-core
+
 executables:
   beckn-transport-exe:
     main:                Main.hs
-    source-dirs:         src
+    source-dirs:         server
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - beckn-transport
     - beckn-core
-
-tests:
-  beckn-transport-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - beckn-core
-    - hspec
-    - hspec-core
-    - hspec-wai
-    - http-client-tls
-    - servant-client

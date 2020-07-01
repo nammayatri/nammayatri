@@ -2,8 +2,8 @@ module Epass.Product.PassApplication.Update where
 
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as BTL
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
@@ -27,7 +27,7 @@ import qualified EulerHS.Types as T
 import qualified Models.Case as MC
 import Servant
 import qualified Storage.Queries.Case as QC
-import qualified Storage.Queries.CaseProduct as QCP
+import qualified Storage.Queries.ProductInstance as QCP
 import qualified Storage.Queries.Products as QProd
 import qualified Test.RandomStrings as RS
 
@@ -108,21 +108,21 @@ createPass c@(Case.Case {..}) = do
             _assignedTo = Nothing,
             ..
           }
-      caseProduct =
-        CaseProduct.CaseProduct
-          { _id = CaseProductId cpId,
+      productInstance =
+        ProductInstance.ProductInstance
+          { _id = ProductInstanceId cpId,
             _caseId = _id,
             _productId = ProductsId id,
             _quantity = 0,
             _price = 0.0,
-            _status = CaseProduct.CONFIRMED,
+            _status = ProductInstance.CONFIRMED,
             _info = Nothing,
             _personId = Nothing, -- TODO: this column should be removed?
             _createdAt = currTime,
             _updatedAt = currTime
           }
   QProd.create product
-  QCP.create caseProduct
+  QCP.create productInstance
   return product
 
 allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()

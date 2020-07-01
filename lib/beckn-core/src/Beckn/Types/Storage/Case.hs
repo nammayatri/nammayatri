@@ -21,6 +21,11 @@ import Servant.Swagger
 data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION | TRACKER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+instance ToHttpApiData CaseType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
   sqlValueSyntax = autoSqlValueSyntax
 
@@ -31,6 +36,11 @@ instance FromBackendRow Postgres CaseType where
 
 data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance ToHttpApiData CaseStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseStatus where
   sqlValueSyntax = autoSqlValueSyntax
@@ -79,12 +89,12 @@ instance FromBackendRow Postgres ProviderType where
 instance FromHttpApiData CaseStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 instance FromHttpApiData CaseType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data CaseT f = Case
   { _id :: B.C f CaseId,

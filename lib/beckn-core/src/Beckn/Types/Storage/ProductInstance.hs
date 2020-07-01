@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.CaseProduct where
+module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.App
 import Data.Aeson
@@ -20,65 +20,65 @@ import Servant.API
 import Servant.Swagger
 
 -- TODO: INVALID status seems to be unused
-data CaseProductStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
+data ProductInstanceStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseProductStatus where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck Postgres CaseProductStatus
+instance B.HasSqlEqualityCheck Postgres ProductInstanceStatus
 
-instance FromBackendRow Postgres CaseProductStatus where
+instance FromBackendRow Postgres ProductInstanceStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance FromHttpApiData CaseProductStatus where
+instance FromHttpApiData ProductInstanceStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
 
-data CaseProductT f = CaseProduct
-  { _id :: B.C f CaseProductId,
+data ProductInstanceT f = ProductInstance
+  { _id :: B.C f ProductInstanceId,
     _caseId :: B.C f CaseId,
     _productId :: B.C f ProductsId,
     _personId :: B.C f (Maybe PersonId),
     _quantity :: B.C f Int,
     _price :: B.C f Scientific,
-    _status :: B.C f CaseProductStatus,
+    _status :: B.C f ProductInstanceStatus,
     _info :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 
-type CaseProduct = CaseProductT Identity
+type ProductInstance = ProductInstanceT Identity
 
-type CaseProductPrimaryKey = B.PrimaryKey CaseProductT Identity
+type ProductInstancePrimaryKey = B.PrimaryKey ProductInstanceT Identity
 
-instance B.Table CaseProductT where
-  data PrimaryKey CaseProductT f = CaseProductPrimaryKey (B.C f CaseProductId)
+instance B.Table ProductInstanceT where
+  data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f ProductInstanceId)
     deriving (Generic, B.Beamable)
-  primaryKey = CaseProductPrimaryKey . _id
+  primaryKey = ProductInstancePrimaryKey . _id
 
-deriving instance Show CaseProduct
+deriving instance Show ProductInstance
 
-deriving instance Eq CaseProduct
+deriving instance Eq ProductInstance
 
-instance ToJSON CaseProduct where
+instance ToJSON ProductInstance where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-instance FromJSON CaseProduct where
+instance FromJSON ProductInstance where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToSchema CaseProduct
+instance ToSchema ProductInstance
 
 insertExpression products = insertExpressions [products]
 
 insertExpressions products = B.insertValues products
 
 fieldEMod ::
-  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseProductT)
+  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ProductInstanceT)
 fieldEMod =
-  B.setEntityName "case_product"
+  B.setEntityName "product_instance"
     <> B.modifyTableFields
       B.tableModification
         { _caseId = "case_id",
@@ -88,7 +88,7 @@ fieldEMod =
           _updatedAt = "updated_at"
         }
 
-validateStatusTransition :: CaseProductStatus -> CaseProductStatus -> Either Text ()
+validateStatusTransition :: ProductInstanceStatus -> ProductInstanceStatus -> Either Text ()
 validateStatusTransition oldState newState =
   if oldState == newState
     then allowed

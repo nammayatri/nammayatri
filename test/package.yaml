@@ -1,9 +1,9 @@
-name:                beckn-core
+name:                beckn-test
 version:             0.1.0.0
 github:              "juspay/beckn"
 license:             BSD3
-author:              "Aravind Gopal Mallapureddy"
-maintainer:          "aravind.mallapureddy@juspay.in"
+author:              "Juspay"
+maintainer:          "juspay.in"
 copyright:           "2020 Author name here"
 
 extra-source-files:
@@ -37,6 +37,7 @@ default-extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -50,52 +51,38 @@ default-extensions:
   - BlockArguments
 
 dependencies:
+- app-backend
+- beckn-transport
+- beckn-core
 - aeson
-- aeson-pretty
-- aeson-casing
 - base >= 4.7 && < 5
-- beam-core
-- beam-postgres
-- bytestring
-- containers
-- cryptonite
-- data-default
-- data-default-class
 - euler-hs
-- http-api-data
 - http-client
 - http-client-tls
-- http-types
-- jwt
-- lens
-- pureMD5
-- random-strings
-- scientific
 - servant
 - servant-client
-- servant-multipart
-- servant-purescript
 - servant-server
-- servant-subscriber
-- servant-swagger
-- swagger2
 - text
-- vault
-- wai
-- wai-extra
-- warp
 - time
-- template-haskell
-- generic-lens
-- base64-bytestring
-- utf8-string
-- geojson
+- uuid
+- vault
+- warp
 
 library:
-  source-dirs:
-  - src
-  ghc-options:
-  - -Wall
-  - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
+  source-dirs: src
+  dependencies:
+  - hspec
+  - hspec-core
+  - tasty
+  - tasty-hspec
+
+tests:
+  beckn-integ-test:
+    main:                Main.hs
+    source-dirs:         app
+    dependencies:
+    - hspec
+    - hspec-core
+    - tasty
+    - tasty-hspec
+    - beckn-test
