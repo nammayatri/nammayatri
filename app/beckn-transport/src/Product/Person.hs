@@ -70,16 +70,18 @@ getPerson regToken idM mobileM countryCodeM emailM identifierM identifierTypeM =
     -- passed and identifierType is null. Throw validation errors
     person <- case identifierTypeM of
       Nothing -> QP.findPersonById (PersonId $ fromJust idM)
-      Just SP.MOBILENUMBER ->
-        QP.findByMobileNumber
-          (fromJust countryCodeM)
-          (fromJust mobileM)
+      Just SP.MOBILENUMBER -> do
+        countryCode <- fromMaybeM400 "MOBILE_COUNTRY_CODE_REQUIRED" countryCodeM
+        mobile <- fromMaybeM400 "MOBILE_NUMBER_REQUIRED" mobileM
+        QP.findByMobileNumber countryCode mobile
           >>= fromMaybeM400 "PERSON_NOT_FOUND"
       Just SP.EMAIL ->
-        QP.findByEmail (fromJust emailM)
+        fromMaybeM400 "EMAIL_REQUIRED" emailM
+          >>= QP.findByEmail
           >>= fromMaybeM400 "PERSON_NOT_FOUND"
       Just SP.AADHAAR ->
-        QP.findByIdentifier (fromJust identifierM)
+        fromMaybeM400 "IDENTIFIER_REQUIRED" identifierM
+          >>= QP.findByIdentifier
           >>= fromMaybeM400 "PERSON_NOT_FOUND"
     hasAccess user person
     return $ PersonRes person
