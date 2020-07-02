@@ -28,7 +28,7 @@ findPersonById ::
 findPersonById id = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_DATA"
+    >>= fromMaybeM400 "PERSON_NOT_FOUND"
   where
     predicate Storage.Person {..} = (_id ==. B.val_ id)
 
