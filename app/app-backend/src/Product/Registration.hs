@@ -49,7 +49,7 @@ initiateFlow req = do
     Nothing -> do
       token <- makeSession req entityId Nothing
       RegistrationToken.create token
-      sendOTP mobileNumber (SR._authValueHash token)
+      sendOTP (countryCode <> mobileNumber) (SR._authValueHash token)
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -201,7 +201,9 @@ reInitiateLogin tokenId req =
     void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
-        sendOTP (req ^. #_mobileNumber) _authValueHash
+        let mobileNumber = req ^. #_mobileNumber
+            countryCode = req ^. #_mobileCountryCode
+        sendOTP (countryCode <> mobileNumber) _authValueHash
         RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}
