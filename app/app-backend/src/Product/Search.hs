@@ -13,8 +13,8 @@ import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Location as Core
 import qualified Beckn.Types.Core.Provider as Core
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.CaseProduct as CaseProduct
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
@@ -31,9 +31,9 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import Servant
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.App
@@ -95,7 +95,7 @@ search_cb req = withFlowHandler $ do
       let pids = (^. #_id) <$> products
       traverse_ Products.create products
       traverse_
-        (\product -> mkCaseProduct caseId personId product >>= CaseProduct.create)
+        (\product -> mkProductInstance caseId personId product >>= ProductInstance.create)
         products
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId caseId products
@@ -106,8 +106,7 @@ search_cb req = withFlowHandler $ do
     extendCaseExpiry Case.Case {..} = do
       now <- getCurrentTimeUTC
       confirmExpiry <-
-        pure . fromMaybe 1800 . join
-          . (readMaybe <$>)
+        pure . fromMaybe 1800 . (readMaybe =<<)
           =<< L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
       let newValidTill = (fromInteger confirmExpiry) `addLocalTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
@@ -226,21 +225,21 @@ mkProduct case_ mprovider item = do
         _updatedAt = now
       }
 
-mkCaseProduct :: CaseId -> PersonId -> Products.Products -> L.Flow CaseProduct.CaseProduct
-mkCaseProduct caseId personId product = do
+mkProductInstance :: CaseId -> PersonId -> Products.Products -> L.Flow ProductInstance.ProductInstance
+mkProductInstance caseId personId product = do
   let productId = product ^. #_id
       price = product ^. #_price
   now <- getCurrentTimeUTC
   id <- generateGUID
   return $
-    CaseProduct.CaseProduct
+    ProductInstance.ProductInstance
       { _id = id,
         _caseId = caseId,
         _productId = productId,
         _personId = Just personId,
         _quantity = 1,
         _price = price,
-        _status = CaseProduct.INSTOCK,
+        _status = ProductInstance.INSTOCK,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now

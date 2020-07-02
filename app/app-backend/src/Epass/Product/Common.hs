@@ -63,7 +63,7 @@ mkLocationInfo bLists eTags tags loc =
         C.LocationInfo
           { _location = loc,
             _blacklistInfo = lookup _id bMap,
-            _tagInfo = fromMaybe [] (mkTagInfo <$> (lookup _id eTagMap))
+            _tagInfo = maybe [] mkTagInfo (lookup _id eTagMap)
           }
    in mkLInfo loc
 
