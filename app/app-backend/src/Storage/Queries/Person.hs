@@ -58,15 +58,16 @@ findByIdentifier idType mb =
       _identifierType ==. B.val_ idType
         &&. _mobileNumber ==. B.val_ (Just mb)
 
-findByRoleAndIdentifier ::
-  Storage.Role -> Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
-findByRoleAndIdentifier role idType identifier =
+findByRoleAndMobileNumber ::
+  Storage.Role -> Storage.IdentifierType -> Text -> Text -> L.Flow (Maybe Storage.Person)
+findByRoleAndMobileNumber role idType countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
       _role ==. B.val_ role
-        &&. _mobileNumber ==. B.val_ (Just identifier)
+        &&. _mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. _mobileNumber ==. B.val_ (Just mobileNumber)
 
 updateMultiple :: PersonId -> Storage.Person -> L.Flow ()
 updateMultiple personId person = do

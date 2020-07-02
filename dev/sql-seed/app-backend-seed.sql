@@ -500,6 +500,14 @@ ALTER TABLE ONLY atlas_app.organization
 ALTER TABLE ONLY atlas_app.person
     ADD CONSTRAINT idx_16451_primary PRIMARY KEY (id);
 
+ALTER TABLE ONLY atlas_app.person
+  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number);
+
+ALTER TABLE ONLY atlas_app.person
+  ADD CONSTRAINT unique_identifier UNIQUE (identifier);
+
+ALTER TABLE ONLY atlas_app.person
+  ADD CONSTRAINT unique_email UNIQUE (email);
 
 --
 -- Name: product idx_16459_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas

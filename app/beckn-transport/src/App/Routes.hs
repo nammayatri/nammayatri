@@ -102,8 +102,10 @@ type PersonAPIs =
            :<|> AuthHeader
              :> QueryParam "personId" Text
              :> QueryParam "mobileNumber" Text
+             :> QueryParam "mobileCountryCode" Text
              :> QueryParam "email" Text
              :> QueryParam "identifier" Text
+             :> QueryParam "identifierType" SP.IdentifierType
              :> Get '[JSON] PersonRes
            :<|> Capture "personId" Text
              :> AuthHeader

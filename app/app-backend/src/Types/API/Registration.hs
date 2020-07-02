@@ -11,7 +11,8 @@ import Servant.Swagger
 data InitiateLoginReq = InitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
-    _identifier :: Text,
+    _mobileNumber :: Text,
+    _mobileCountryCode :: Text,
     _role :: Maybe Role,
     _deviceToken :: Maybe FCMRecipientToken
   }
@@ -26,7 +27,8 @@ instance ToJSON InitiateLoginReq where
 data ReInitiateLoginReq = ReInitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
-    _identifier :: Text,
+    _mobileNumber :: Text,
+    _mobileCountryCode :: Text,
     _deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic, ToSchema)
@@ -48,7 +50,8 @@ data LoginReq = LoginReq
   { _medium :: Medium,
     __type :: LoginType,
     _hash :: Text,
-    _identifier :: Text,
+    _mobileNumber :: Text,
+    _mobileCountryCode :: Text,
     _deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic, ToSchema)

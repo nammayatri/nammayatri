@@ -67,7 +67,7 @@ instance ToHttpApiData Role where
   toHeader = BSL.toStrict . encode
 
 -------------------------------------------------------------------------------------------
-data IdentifierType = MOBILENUMBER | AADHAAR
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType where
@@ -79,6 +79,16 @@ instance FromBackendRow Postgres IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance ToSchema IdentifierType
+
+instance FromHttpApiData IdentifierType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData IdentifierType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN

@@ -40,27 +40,49 @@ createPerson regToken req = withFlowHandler $ do
   where
     validateDriver req =
       when (req ^. #_role == Just SP.DRIVER) $
-        case req ^. #_mobileNumber of
-          Just mobileNumber ->
-            whenM (isJust <$> QP.findByMobileNumber mobileNumber) $ L.throwException $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
-          Nothing -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
+        case (req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
+          (Just mobileNumber, Just countryCode) ->
+            whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber)
+              $ L.throwException
+              $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
+          _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
 
 listPerson :: RegToken -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson regToken roles limitM offsetM = withFlowHandler $ do
   orgId <- validate regToken
   ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
 
-getPerson :: RegToken -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
-getPerson regToken idM mobileM emailM identifierM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (PersonId _EntityId)
-  person <- case (idM, mobileM, emailM, identifierM) of
-    (Nothing, Nothing, Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
-    _ ->
-      QP.findByAnyOf idM mobileM emailM identifierM
-        >>= fromMaybeM400 "PERSON NOT FOUND"
-  hasAccess user person
-  return $ PersonRes person
+getPerson ::
+  RegToken ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe SP.IdentifierType ->
+  FlowHandler PersonRes
+getPerson regToken idM mobileM countryCodeM emailM identifierM identifierTypeM =
+  withFlowHandler $ do
+    SR.RegistrationToken {..} <- QR.verifyToken regToken
+    user <- QP.findPersonById (PersonId _EntityId)
+    -- TODO: fix this to match based on identifierType
+    -- And maybe have a way to handle the case when ID is
+    -- passed and identifierType is null. Throw validation errors
+    person <- case identifierTypeM of
+      Nothing -> QP.findPersonById (PersonId $ fromJust idM)
+      Just SP.MOBILENUMBER ->
+        QP.findByMobileNumber
+          (fromJust countryCodeM)
+          (fromJust mobileM)
+          >>= fromMaybeM400 "PERSON_NOT_FOUND"
+      Just SP.EMAIL ->
+        QP.findByEmail (fromJust emailM)
+          >>= fromMaybeM400 "PERSON_NOT_FOUND"
+      Just SP.AADHAAR ->
+        QP.findByIdentifier (fromJust identifierM)
+          >>= fromMaybeM400 "PERSON_NOT_FOUND"
+    hasAccess user person
+    return $ PersonRes person
   where
     hasAccess user person =
       when
@@ -84,10 +106,13 @@ deletePerson personId regToken = withFlowHandler $ do
 -- Core Utility methods
 verifyAdmin :: SP.Person -> L.Flow Text
 verifyAdmin user = do
-  when (user ^. #_role /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
+  when (user ^. #_role /= SP.ADMIN) $ L.throwException $
+    err400 {errBody = "NEED_ADMIN_ACCESS"}
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
+    Nothing ->
+      L.throwException $
+        err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
 
 validate :: RegToken -> L.Flow Text
 validate regToken = do

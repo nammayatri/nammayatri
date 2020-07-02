@@ -27,15 +27,16 @@ import qualified Utils.Notifications as Notify
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
   withFlowHandler $ do
-    case (req ^. Lens.medium, req ^. Lens._type) of
+    case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> initiateFlow req
       _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
 
 initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
 initiateFlow req = do
-  let mobileNumber = req ^. Lens.identifier
+  let mobileNumber = req ^. #_mobileNumber
+      countryCode = req ^. #_mobileCountryCode
   person <-
-    QP.findByMobileNumber mobileNumber
+    QP.findByMobileNumber countryCode mobileNumber
       >>= maybe (createPerson req) pure
   let entityId = _getPersonId . SP._id $ person
   useFakeOtpM <- L.runIO $ lookupEnv "USE_FAKE_SMS"
@@ -56,7 +57,7 @@ initiateFlow req = do
 
 makePerson :: InitiateLoginReq -> L.Flow SP.Person
 makePerson req = do
-  let role = fromMaybe SP.USER (req ^. Lens.role)
+  let role = fromMaybe SP.USER (req ^. #_role)
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
   return $
@@ -70,9 +71,9 @@ makePerson req = do
         _gender = SP.UNKNOWN,
         _identifierType = SP.MOBILENUMBER,
         _email = Nothing,
-        _mobileNumber = Just $ req ^. #_identifier,
-        _mobileCountryCode = Nothing,
-        _identifier = Just $ req ^. #_identifier,
+        _mobileNumber = Just $ req ^. #_mobileNumber,
+        _mobileCountryCode = Just $ req ^. #_mobileCountryCode,
+        _identifier = Nothing,
         _rating = Nothing,
         _verified = False,
         _status = SP.INACTIVE,
@@ -106,8 +107,8 @@ makeSession req entityId entityType fakeOtp = do
       { _id = id,
         _token = token,
         _attempts = attempts,
-        _authMedium = (req ^. Lens.medium),
-        _authType = (req ^. Lens._type),
+        _authMedium = (req ^. #_medium),
+        _authType = (req ^. #__type),
         _authValueHash = otp,
         _verified = False,
         _authExpiry = authExpiry,
@@ -154,10 +155,10 @@ login tokenId req =
     when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
     checkForExpiry _authExpiry _updatedAt
     let isValid =
-          _authMedium == req ^. Lens.medium && _authType == req ^. Lens._type
+          _authMedium == req ^. #_medium && _authType == req ^. #__type
             && _authValueHash
               == req
-              ^. Lens.hash
+              ^. #_hash
     if isValid
       then do
         person <- checkPersonExists _EntityId
@@ -194,7 +195,7 @@ reInitiateLogin tokenId req =
     void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
-        sendOTP (req ^. Lens.identifier) _authValueHash
+        sendOTP (req ^. #_mobileNumber) _authValueHash
         QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}

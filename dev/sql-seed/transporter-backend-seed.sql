@@ -358,6 +358,14 @@ ALTER TABLE ONLY atlas_transporter.organization
 ALTER TABLE ONLY atlas_transporter.person
     ADD CONSTRAINT idx_16419_primary PRIMARY KEY (id);
 
+ALTER TABLE ONLY atlas_transporter.person
+  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number);
+
+ALTER TABLE ONLY atlas_transporter.person
+  ADD CONSTRAINT unique_identifier UNIQUE (identifier);
+
+ALTER TABLE ONLY atlas_transporter.person
+  ADD CONSTRAINT unique_email UNIQUE (email);
 
 --
 -- Name: product idx_16427_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
