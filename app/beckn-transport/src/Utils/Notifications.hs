@@ -111,7 +111,11 @@ notifyCancelReqByBP p =
           _fcmEntityIds = show $ _getProductsId $ p ^. #_id,
           _fcmEntityType = FCM.Organization
         }
-    title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride"
+    title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
     body =
-      FCM.FCMNotificationBody $ T.pack $
-        "Travel date: " <> formatTime defaultTimeLocale "%T, %F" (Products._startTime p)
+      FCMNotificationBody $
+        unwords
+          [ "The ride scheduled for",
+            (showTimeIst $ Products._startTime p) <> ",",
+            "has been cancelled. Check the app for more details."
+          ]
