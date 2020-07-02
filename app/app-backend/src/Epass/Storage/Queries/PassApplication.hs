@@ -29,11 +29,11 @@ create Storage.PassApplication {..} =
 
 findById ::
   PassApplicationId -> L.Flow (Maybe Storage.PassApplication)
-findById id = do
+findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.PassApplication {..} = (_id ==. B.val_ id)
+    predicate Storage.PassApplication {..} = _id ==. B.val_ id
 
 findAllWithLimitOffsetWhere ::
   [Int] ->
@@ -78,8 +78,8 @@ findAllWithLimitOffsetWhere
       orderByDesc
       >>= either DB.throwDBError pure
     where
-      limit = (toInteger $ fromMaybe 100 mlimit)
-      offset = (toInteger $ fromMaybe 0 moffset)
+      limit = toInteger $ fromMaybe 100 mlimit
+      offset = toInteger $ fromMaybe 0 moffset
       orderByDesc Storage.PassApplication {..} = B.desc_ _createdAt
       predicate
         fPins
@@ -102,22 +102,22 @@ findAllWithLimitOffsetWhere
             (B.val_ True)
             [ _passType `B.in_` (B.val_ <$> ptypes) ||. complementVal ptypes,
               _status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
-              _OrganizationId `B.in_` ((B.val_ . Just) <$> orgIds) ||. complementVal orgIds,
-              _toPincode `B.in_` ((B.val_ . Just) <$> toPins) ||. complementVal toPins,
-              _toCity `B.in_` ((B.val_ . Just) <$> toCities) ||. complementVal toCities,
-              _toState `B.in_` ((B.val_ . Just) <$> toStates) ||. complementVal toStates,
-              _toDistrict `B.in_` ((B.val_ . Just) <$> toDists) ||. complementVal toDists,
-              _toWard `B.in_` ((B.val_ . Just) <$> toWards) ||. complementVal toWards,
-              _fromPincode `B.in_` ((B.val_ . Just) <$> fPins) ||. complementVal fPins,
-              _fromCity `B.in_` ((B.val_ . Just) <$> fCities) ||. complementVal fCities,
-              _fromState `B.in_` ((B.val_ . Just) <$> fStates) ||. complementVal fStates,
-              _fromDistrict `B.in_` ((B.val_ . Just) <$> fDists) ||. complementVal fDists,
-              _fromWard `B.in_` ((B.val_ . Just) <$> fWards) ||. complementVal fWards,
-              maybe (B.val_ True) (\custId -> (_CreatedBy ==. B.val_ custId)) mCreatedById
+              _OrganizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds,
+              _toPincode `B.in_` (B.val_ . Just <$> toPins) ||. complementVal toPins,
+              _toCity `B.in_` (B.val_ . Just <$> toCities) ||. complementVal toCities,
+              _toState `B.in_` (B.val_ . Just <$> toStates) ||. complementVal toStates,
+              _toDistrict `B.in_` (B.val_ . Just <$> toDists) ||. complementVal toDists,
+              _toWard `B.in_` (B.val_ . Just <$> toWards) ||. complementVal toWards,
+              _fromPincode `B.in_` (B.val_ . Just <$> fPins) ||. complementVal fPins,
+              _fromCity `B.in_` (B.val_ . Just <$> fCities) ||. complementVal fCities,
+              _fromState `B.in_` (B.val_ . Just <$> fStates) ||. complementVal fStates,
+              _fromDistrict `B.in_` (B.val_ . Just <$> fDists) ||. complementVal fDists,
+              _fromWard `B.in_` (B.val_ . Just <$> fWards) ||. complementVal fWards,
+              maybe (B.val_ True) (\custId -> _CreatedBy ==. B.val_ custId) mCreatedById
             ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 update :: PassApplicationId -> Storage.Status -> Maybe Int -> Maybe Text -> L.Flow ()

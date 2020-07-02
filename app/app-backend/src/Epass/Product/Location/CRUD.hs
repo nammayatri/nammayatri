@@ -42,8 +42,8 @@ listLocation regToken offset limit distinctBy filterByT filterBy =
     -- :TODO move the nubBy function to beam (or check nub suits )
     locations <-
       List.nubBy (\l1 l2 -> getF l1 l2 distinctBy)
-        <$> (DB.findByStOrDistrict offset limit filterByT filterBy)
-    let locIds = (locationId <$> locations)
+        <$> DB.findByStOrDistrict offset limit filterByT filterBy
+    let locIds = locationId <$> locations
     -- Add Blacklist Information
     blacklist <- DB.findAllByEntityId LOCATION locIds
     -- Get All tags for the location
@@ -52,7 +52,7 @@ listLocation regToken offset limit distinctBy filterByT filterBy =
     return
       ListLocationRes
         { _locationInfo =
-            (mkLocationInfo blacklist locationTags tags) <$> locations
+            mkLocationInfo blacklist locationTags tags <$> locations
         }
   where
     locationId L.Location {..} = _id

@@ -25,7 +25,7 @@ instance FromJSON CreateReq where
 instance ToJSON CreateReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data CreateRes = CreateRes
+newtype CreateRes = CreateRes
   { _blacklist :: Blacklist
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -53,7 +53,7 @@ instance ToJSON UpdateReq where
 instance FromJSON UpdateReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data UpdateRes = UpdateRes
+newtype UpdateRes = UpdateRes
   { _blacklist :: Blacklist
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -64,7 +64,7 @@ instance ToJSON UpdateRes where
 instance FromJSON UpdateRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data ListRes = ListRes
+newtype ListRes = ListRes
   { _blacklists :: [Blacklist]
   }
   deriving (Show, Generic, Default, ToSchema)

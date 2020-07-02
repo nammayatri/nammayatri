@@ -50,9 +50,10 @@ update regToken userId req@UpdateReq {..} = withFlowHandler $ do
             Person._status = fromMaybe (person ^. #_status) _status
           }
   Person.updateMultiple userId updatedPerson
-  Person.findById userId
-    >>= fromMaybeM500 "Couldnot find user"
-    >>= return . UpdateRes
+  UpdateRes
+    <$> ( Person.findById userId
+          >>= fromMaybeM500 "Couldnot find user"
+        )
 
 delete :: RegToken -> PersonId -> FlowHandler Ack
 delete regToken userId = withFlowHandler $ do

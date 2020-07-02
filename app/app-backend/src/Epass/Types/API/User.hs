@@ -25,7 +25,7 @@ data UpdateReq = UpdateReq
 instance FromJSON UpdateReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data UpdateRes = UpdateRes
+newtype UpdateRes = UpdateRes
   { _user :: Person
   }
   deriving (Show, Generic, FromJSON, ToSchema)
@@ -33,7 +33,7 @@ data UpdateRes = UpdateRes
 instance ToJSON UpdateRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data ListRes = ListRes
+newtype ListRes = ListRes
   { _users :: [Person]
   }
   deriving (Show, Generic, FromJSON, ToSchema)

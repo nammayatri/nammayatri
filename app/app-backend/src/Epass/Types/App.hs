@@ -11,7 +11,6 @@ where
 
 import Beckn.Types.App
 import Beckn.Utils.TH
-import Beckn.Utils.TH
 import Data.Swagger
 import Database.Beam.Backend.SQL
   ( FromBackendRow,
