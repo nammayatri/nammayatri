@@ -181,11 +181,8 @@ notifyCancelReq prodId status = do
 
 isAllowed :: Text -> ProdReq -> L.Flow ()
 isAllowed productId req = do
-  cpList <- CPQ.findAllByProdId (ProductsId productId)
-  currStatus <- case cpList of
-    [] -> L.throwException $ err400 {errBody = "INVALID RIDE ID"}
-    _ -> return $ head (CaseP._status <$> cpList)
-  when (currStatus == CaseP.INPROGRESS || currStatus == CaseP.COMPLETED) $
+  piList <- CPQ.findAllByStatusIds [ProdInst.COMPLETED, ProdInst.INPROGRESS] [ProductsId productId]
+  unless (null piList) $
     case (req ^. #_assignedTo, req ^. #_vehicleId) of
       (Nothing, Nothing) -> return ()
       _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
