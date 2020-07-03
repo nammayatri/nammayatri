@@ -82,8 +82,8 @@ findByMobileNumber countryCode mobileNumber =
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-      (_mobileCountryCode ==. B.val_ (Just countryCode))
-        &&. (_mobileNumber ==. B.val_ (Just mobileNumber))
+      _mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. _mobileNumber ==. B.val_ (Just mobileNumber)
 
 findByIdentifier ::
   Text -> L.Flow (Maybe Storage.Person)

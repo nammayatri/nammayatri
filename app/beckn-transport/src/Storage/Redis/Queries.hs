@@ -8,7 +8,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Storage.Redis.Config
 
-runKV query = L.runKVDB "redis" query
+runKV = L.runKVDB "redis"
 
 -- KV
 setKeyRedis ::

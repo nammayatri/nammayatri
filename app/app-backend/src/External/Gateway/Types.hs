@@ -43,8 +43,7 @@ type LocationAPI =
 locationAPI :: Proxy LocationAPI
 locationAPI = Proxy
 
-location caseId =
-  client locationAPI caseId
+location = client locationAPI
 
 type TrackTripAPI =
   "track"

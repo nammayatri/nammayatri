@@ -42,8 +42,8 @@ track SR.RegistrationToken {..} req = withFlowHandler $ do
               Right _ -> return $ Ack "Successful" "Tracking initiated"
   return $ AckResponse context ack
 
-track_cb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
-track_cb req = withFlowHandler $ do
+trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
+trackCb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message

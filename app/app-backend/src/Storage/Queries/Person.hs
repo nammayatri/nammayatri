@@ -59,8 +59,8 @@ findByIdentifier idType mb =
         &&. _mobileNumber ==. B.val_ (Just mb)
 
 findByRoleAndMobileNumber ::
-  Storage.Role -> Storage.IdentifierType -> Text -> Text -> L.Flow (Maybe Storage.Person)
-findByRoleAndMobileNumber role idType countryCode mobileNumber =
+  Storage.Role -> Text -> Text -> L.Flow (Maybe Storage.Person)
+findByRoleAndMobileNumber role countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where

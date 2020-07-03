@@ -108,7 +108,7 @@ type SearchAPIs =
 searchFlow :: FlowServer SearchAPIs
 searchFlow =
   Search.search
-    :<|> Search.search_cb
+    :<|> Search.searchCb
 
 -------- Confirm Flow --------
 type ConfirmAPIs =
@@ -177,7 +177,7 @@ type TrackTripAPIs =
 trackTripFlow :: FlowServer TrackTripAPIs
 trackTripFlow =
   TrackTrip.track
-    :<|> TrackTrip.track_cb
+    :<|> TrackTrip.trackCb
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPIs =

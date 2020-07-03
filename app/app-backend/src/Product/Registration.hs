@@ -37,7 +37,7 @@ initiateFlow req = do
   let mobileNumber = req ^. #_mobileNumber
       countryCode = req ^. #_mobileCountryCode
   person <-
-    Person.findByRoleAndMobileNumber SP.USER SP.MOBILENUMBER countryCode mobileNumber
+    Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
       >>= maybe (createPerson req) pure
   let entityId = _getPersonId . SP._id $ person
   useFakeOtpM <- L.runIO $ lookupEnv "USE_FAKE_SMS"
@@ -106,8 +106,8 @@ makeSession req entityId fakeOtp = do
       { _id = id,
         _token = token,
         _attempts = attempts,
-        _authMedium = (req ^. #_medium),
-        _authType = (req ^. #__type),
+        _authMedium = req ^. #_medium,
+        _authType = req ^. #__type,
         _authValueHash = otp,
         _verified = False,
         _authExpiry = authExpiry,

@@ -13,7 +13,7 @@ import Utils.Common (verifyToken)
 getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
 getRoute regToken Location.Request {..} = withFlowHandler $ do
   verifyToken regToken
-  MapSearch.getRoute (getRouteRequest)
+  MapSearch.getRoute getRouteRequest
     >>= either
       (\err -> L.throwException $ err400 {errBody = show err})
       return

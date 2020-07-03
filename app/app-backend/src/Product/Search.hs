@@ -67,8 +67,8 @@ search token req = withFlowHandler $ do
         L.throwException $
           err400 {errBody = "Invalid start time"}
 
-search_cb :: OnSearchReq -> FlowHandler OnSearchRes
-search_cb req = withFlowHandler $ do
+searchCb :: OnSearchReq -> FlowHandler OnSearchRes
+searchCb req = withFlowHandler $ do
   -- TODO: Verify api key here
   let service = req ^. #message
       mprovider = service ^. #_provider
