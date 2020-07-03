@@ -34,6 +34,7 @@ import Types.API.Case
 import Types.API.ProductInstance
 import Types.API.Products
 import Types.App
+import qualified Utils.Notifications as Notify
 
 update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
 update regToken productId req = withFlowHandler $ do
@@ -66,7 +67,7 @@ update regToken productId req = withFlowHandler $ do
     Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) (Just vehicleInfo)
   notifyTripDataToGateway (ProductsId productId)
-  notifyCancelReq productId (req ^. #_status)
+  notifyCancelReq updatedProd _status
   return $ updatedProd {Product._info = infoObj}
 
 notifyTripDataToGateway :: ProductsId -> L.Flow ()
@@ -169,11 +170,15 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
               _toLocation = to
             }
 
-notifyCancelReq :: Text -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
-notifyCancelReq prodId status = do
+notifyCancelReq :: Product.Products -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
+notifyCancelReq prod status = do
   case status of
     Just k -> case k of
-      ProdInst.CANCELLED -> BP.notifyCancelToGateway prodId
+      ProdInst.CANCELLED -> do
+        admins <-
+          PersQ.findAllByOrgIds [SP.ADMIN] [Product._organizationId prod]
+        BP.notifyCancelToGateway (_getProductsId $ prod ^. #_id)
+        Notify.notifyCancelReqByBP prod admins
       _ -> return ()
     Nothing -> return ()
 
