@@ -135,7 +135,7 @@ calculateRemainingDuration traversedWaypoints (destLat, destLong) initalDuration
         speeds = calcSpeed <$> edges
         avgSpeed = (sum speeds) / (fromIntegral $ length speeds)
         latestWaypoint = last traversedWaypoints
-        (lat, long) = (fst $ snd latestWaypoint, snd $ snd latestWaypoint)
+        (lat, long) = snd latestWaypoint
         distanceToDestination = MapSearch.distanceBetweenInMeters (PointXY lat long) (PointXY destLat destLong)
      in if avgSpeed == 0 then 0 else round $ distanceToDestination / avgSpeed
   where

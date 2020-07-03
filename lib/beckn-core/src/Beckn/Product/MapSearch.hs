@@ -23,7 +23,7 @@ getRoute MapSearch.Request {..} = do
       res <- Grphr.search Grphr.defaultGrphrBaseUrl (grphrReq points vehicle)
       case res of
         Left err -> return $ Left $ toException err
-        Right (Grphr.Response {..}) -> do
+        Right (Grphr.Response {..}) ->
           return $ Right $
             MapSearch.Response
               { status = "OK",
