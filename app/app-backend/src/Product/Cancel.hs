@@ -9,6 +9,7 @@ import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Language as L
 import EulerHS.Prelude
@@ -17,12 +18,10 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
-import Utils.Common (verifyToken)
 import qualified Utils.Notifications as Notify
 
-cancel :: RegToken -> CancelReq -> FlowHandler CancelRes
-cancel regToken req = withFlowHandler $ do
-  verifyToken regToken
+cancel :: SR.RegistrationToken -> CancelReq -> FlowHandler CancelRes
+cancel SR.RegistrationToken {..} req = withFlowHandler $ do
   let entityType = req ^. #message ^. #entityType
   case entityType of
     Cancel.CASE -> cancelCase req

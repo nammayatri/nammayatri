@@ -4,8 +4,9 @@ module Product.Case where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
@@ -17,11 +18,10 @@ import Types.API.Case as API
 import Utils.Common (verifyToken)
 
 status ::
-  RegToken ->
+  SR.RegistrationToken ->
   CaseId ->
   FlowHandler StatusRes
-status regToken caseId = withFlowHandler $ do
-  verifyToken regToken
+status SR.RegistrationToken {..} caseId = withFlowHandler $ do
   case_ <- Case.findById caseId
   cpr <- ProductInstance.findAllByCaseId (Case._id case_)
   products <- Products.findAllByIds (ProductInstance._productId <$> cpr)
@@ -34,16 +34,15 @@ status regToken caseId = withFlowHandler $ do
   return $ StatusRes case_ products fromLocation toLocation
 
 list ::
-  RegToken ->
+  SR.RegistrationToken ->
   Case.CaseType ->
   [Case.CaseStatus] ->
   Maybe Integer ->
   Maybe Integer ->
   FlowHandler ListRes
-list regToken caseType statuses mlimit moffset = withFlowHandler $ do
-  token <- verifyToken regToken
+list token caseType statuses mlimit moffset = withFlowHandler $ do
   person <-
-    Person.findById (PersonId $ RegistrationToken._EntityId token)
+    Person.findById (PersonId $ SR._EntityId token)
       >>= fromMaybeM500 "Could not find user"
   Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
     >>= traverse mapProductInstance

@@ -22,11 +22,9 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.API.ProductInstance
-import Utils.Common (verifyToken)
 
-list :: RegToken -> ProdInstReq -> FlowHandler ProductInstanceList
-list regToken ProdInstReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- verifyToken regToken
+list :: SR.RegistrationToken -> ProdInstReq -> FlowHandler ProductInstanceList
+list SR.RegistrationToken {..} ProdInstReq {..} = withFlowHandler $ do
   let personId = PersonId _EntityId
   person <- Person.findById personId
   caseProdList <-

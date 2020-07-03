@@ -14,9 +14,10 @@ import qualified Beckn.Types.Core.Location as Core
 import qualified Beckn.Types.Core.Provider as Core
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
@@ -24,7 +25,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Scientific
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Time.LocalTime (addLocalTime)
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -38,17 +38,13 @@ import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.App
 import Types.ProductInfo
-import Utils.Common
-  ( generateShortId,
-    verifyToken,
-  )
+import Utils.Common (generateShortId)
 import qualified Utils.Notifications as Notify
 
-search :: RegToken -> SearchReq -> FlowHandler SearchRes
-search regToken req = withFlowHandler $ do
-  token <- verifyToken regToken
+search :: SR.RegistrationToken -> SearchReq -> FlowHandler SearchRes
+search token req = withFlowHandler $ do
   person <-
-    Person.findById (PersonId $ RegistrationToken._EntityId token)
+    Person.findById (PersonId $ SR._EntityId token)
       >>= fromMaybeM500 "Could not find user"
   validateDateTime req
   fromLocation <- mkLocation (req ^. #message ^. #origin)

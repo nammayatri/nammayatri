@@ -10,6 +10,7 @@ import Beckn.Types.Core.Person as Person
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -19,12 +20,10 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
-import Utils.Common (verifyToken)
 import qualified Utils.Notifications as Notify
 
-track :: RegToken -> TrackTripReq -> FlowHandler TrackTripRes
-track regToken req = withFlowHandler $ do
-  verifyToken regToken
+track :: SR.RegistrationToken -> TrackTripReq -> FlowHandler TrackTripRes
+track SR.RegistrationToken {..} req = withFlowHandler $ do
   let context = req ^. #context
       tripId = req ^. #message ^. #id
   prd <- Products.findById $ ProductsId tripId
