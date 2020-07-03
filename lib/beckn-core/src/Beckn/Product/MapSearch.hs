@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Beckn.Product.MapSearch where
 
 import qualified Beckn.External.Graphhopper.Flow as Grphr
@@ -10,24 +8,24 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 
-getRoute :: MapSearch.Request -> L.Flow (Either SomeException (MapSearch.Response))
-getRoute MapSearch.Request {..} = do
+getRoute :: MapSearch.Request -> L.Flow (Either SomeException MapSearch.Response)
+getRoute MapSearch.Request {..} =
   -- Currently integrated only with graphhopper
-  case all isLatLong waypoints of
-    False -> return $ Left $ toException $ err400 {errBody = "Not supporting waypoints other than LatLong."}
-    True -> do
+  if all isLatLong waypoints
+    then do
       let points = map (\(MapSearch.LatLong point) -> point) waypoints
           mode' = fromMaybe MapSearch.CAR mode
           vehicle = mapToVehicle mode'
       res <- Grphr.search Grphr.defaultGrphrBaseUrl (grphrReq points vehicle)
       case res of
         Left err -> return $ Left $ toException err
-        Right (Grphr.Response {..}) -> do
-          return $ Right $
+        Right Grphr.Response {..} ->
+          return . Right $
             MapSearch.Response
               { status = "OK",
-                routes = (mapToRoute mode') <$> _paths
+                routes = mapToRoute mode' <$> _paths
               }
+    else return . Left . toException $ err400 {errBody = "Not supporting waypoints other than LatLong."}
   where
     isLatLong :: MapSearch.MapPoint -> Bool
     isLatLong (MapSearch.LatLong _) = True

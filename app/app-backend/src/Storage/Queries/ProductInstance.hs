@@ -118,29 +118,29 @@ updateAllProductsByCaseId caseId status = do
     table = DB._products DB.appDb
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [Storage.ProductInstanceStatus] -> L.Flow [Storage.ProductInstance]
-listAllProductInstanceWithOffset limit offset id stats = do
+listAllProductInstanceWithOffset limit offset id stats =
   DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
     >>= either DB.throwDBError pure
   where
-    predicate (ByApplicationId i) [] Storage.ProductInstance {..} = (_caseId ==. B.val_ i)
-    predicate (ByApplicationId i) s Storage.ProductInstance {..} = (_caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
-    predicate (ByCustomerId i) [] Storage.ProductInstance {..} = (_personId ==. B.val_ (Just i))
-    predicate (ByCustomerId i) s Storage.ProductInstance {..} = (_personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
-    predicate (ById i) [] Storage.ProductInstance {..} = (_productId ==. B.val_ i)
-    predicate (ById i) s Storage.ProductInstance {..} = (_productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByApplicationId i) [] Storage.ProductInstance {..} = _caseId ==. B.val_ i
+    predicate (ByApplicationId i) s Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
+    predicate (ByCustomerId i) [] Storage.ProductInstance {..} = _personId ==. B.val_ (Just i)
+    predicate (ByCustomerId i) s Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s)
+    predicate (ById i) [] Storage.ProductInstance {..} = _productId ==. B.val_ i
+    predicate (ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
     orderBy Storage.ProductInstance {..} = B.desc_ _updatedAt
 
 listAllProductInstance :: ListById -> [Storage.ProductInstanceStatus] -> L.Flow [Storage.ProductInstance]
-listAllProductInstance id status = do
+listAllProductInstance id status =
   DB.findAll dbTable (predicate id status)
     >>= either DB.throwDBError pure
   where
-    predicate (ByApplicationId i) [] Storage.ProductInstance {..} = (_caseId ==. B.val_ i)
-    predicate (ByApplicationId i) s Storage.ProductInstance {..} = (_caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
-    predicate (ByCustomerId i) [] Storage.ProductInstance {..} = (_personId ==. B.val_ (Just i))
-    predicate (ByCustomerId i) s Storage.ProductInstance {..} = (_personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s))
-    predicate (ById i) [] Storage.ProductInstance {..} = (_productId ==. B.val_ i)
-    predicate (ById i) s Storage.ProductInstance {..} = (_productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s))
+    predicate (ByApplicationId i) [] Storage.ProductInstance {..} = _caseId ==. B.val_ i
+    predicate (ByApplicationId i) s Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
+    predicate (ByCustomerId i) [] Storage.ProductInstance {..} = _personId ==. B.val_ (Just i)
+    predicate (ByCustomerId i) s Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s)
+    predicate (ById i) [] Storage.ProductInstance {..} = _productId ==. B.val_ i
+    predicate (ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
 
 findAllProductsByCaseId :: CaseId -> L.Flow [Products.Products]
 findAllProductsByCaseId caseId =

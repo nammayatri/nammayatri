@@ -71,4 +71,4 @@ appExceptionResponse exception = do
       responseLBS
         H.internalServerError500
         [(H.hContentType, "application/json")]
-        (Aeson.encode $ internalServerErr)
+        (Aeson.encode internalServerErr)

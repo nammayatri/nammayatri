@@ -8,7 +8,7 @@ getCurrentTimeUTC :: L.Flow LocalTime
 getCurrentTimeUTC = L.runIO' "getCurrentTimeUTC" getCurrentTimeUTC'
 
 getCurrentTimeUTC' :: IO LocalTime
-getCurrentTimeUTC' = (zonedTimeToLocalTime . utcToZonedTime utc) <$> getCurrentTime
+getCurrentTimeUTC' = zonedTimeToLocalTime . utcToZonedTime utc <$> getCurrentTime
 
 addIfPresent :: [a] -> Maybe a -> [a]
 addIfPresent xs (Just x) = x : xs

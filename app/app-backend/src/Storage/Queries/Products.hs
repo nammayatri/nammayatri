@@ -30,15 +30,14 @@ findAllByTypeOrgId orgId status =
   where
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
     predicate orgId status Storage.Products {..} =
-      ( _status ==. (B.val_ status)
-          &&. _organizationId ==. (B.val_ orgId)
-      )
+      _status ==. B.val_ status
+        &&. _organizationId ==. B.val_ orgId
 
 findById :: ProductsId -> L.Flow Storage.Products
 findById pid =
   DB.findOneWithErr dbTable (predicate pid)
   where
-    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
+    predicate pid Storage.Products {..} = _id ==. B.val_ pid
 
 findAllByIds :: [ProductsId] -> L.Flow [Storage.Products]
 findAllByIds pids =
@@ -94,4 +93,4 @@ findAllByIdsAndStatus pids status =
   where
     predicate pids status Storage.Products {..} =
       _id `B.in_` (B.val_ <$> pids)
-        &&. _status ==. (B.val_ status)
+        &&. _status ==. B.val_ status

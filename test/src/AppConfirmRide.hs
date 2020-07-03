@@ -32,7 +32,7 @@ startServers = do
   return (appTid, tbeTid)
 
 withBecknServers :: IO () -> IO ()
-withBecknServers action = do
+withBecknServers action =
   bracket
     startServers
     (\(appTid, tbeTid) -> killThread appTid >> killThread tbeTid)
@@ -65,7 +65,7 @@ spec = do
   around (withFlowRuntime (Just loggerCfg))
     $ describe "Testing App Backend APIs"
     $ it "Testing API flow for App confirm ride"
-    $ \flowRt -> do
+    $ \flowRt ->
       hspec
         $ around_ withBecknServers
         $ it "API flow should succeed for Transporter -> Accepts & App consumer -> Confirms"

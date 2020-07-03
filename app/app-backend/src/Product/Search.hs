@@ -47,14 +47,14 @@ search token req = withFlowHandler $ do
     Person.findById (PersonId $ SR._EntityId token)
       >>= fromMaybeM500 "Could not find user"
   validateDateTime req
-  fromLocation <- mkLocation (req ^. #message ^. #origin)
-  toLocation <- mkLocation (req ^. #message ^. #destination)
+  fromLocation <- mkLocation $ req ^. #message . #origin
+  toLocation <- mkLocation $ req ^. #message . #destination
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
   gatewayUrl <- Gateway.getBaseUrl
-  eres <- Gateway.search gatewayUrl $ req & (#context . #transaction_id) .~ (_getCaseId $ case_ ^. #_id)
+  eres <- Gateway.search gatewayUrl $ req & #context . #transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
@@ -63,7 +63,7 @@ search token req = withFlowHandler $ do
   where
     validateDateTime req = do
       currTime <- getCurrentTimeUTC
-      when ((req ^. #message ^. #time) < currTime)
+      when (req ^. #message . #time < currTime)
         $ L.throwException
         $ err400 {errBody = "Invalid start time"}
 
@@ -73,7 +73,7 @@ search_cb req = withFlowHandler $ do
   let service = req ^. #message
       mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
-      caseId = CaseId $ req ^. #context ^. #transaction_id --CaseId $ service ^. #_id
+      caseId = CaseId $ req ^. #context . #transaction_id --CaseId $ service ^. #_id
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
@@ -91,7 +91,7 @@ search_cb req = withFlowHandler $ do
       let pids = (^. #_id) <$> products
       traverse_ Products.create products
       traverse_
-        (\product -> mkProductInstance caseId personId product >>= ProductInstance.create)
+        (mkProductInstance caseId personId >=> ProductInstance.create)
         products
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId caseId products
@@ -102,11 +102,10 @@ search_cb req = withFlowHandler $ do
     extendCaseExpiry Case.Case {..} = do
       now <- getCurrentTimeUTC
       confirmExpiry <-
-        pure . fromMaybe 1800 . (readMaybe =<<)
-          =<< L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
-      let newValidTill = (fromInteger confirmExpiry) `addLocalTime` now
+        fromMaybe 1800 . (readMaybe =<<)
+          <$> L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
+      let newValidTill = fromInteger confirmExpiry `addLocalTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
-      pure ()
 
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
 mkCase req userId from to = do
@@ -119,7 +118,7 @@ mkCase req userId from to = do
   shortId <- generateShortId
   let intent = req ^. #message
       context = req ^. #context
-  validTill <- getCaseExpiry (req ^. #message ^. #time)
+  validTill <- getCaseExpiry $ req ^. #message . #time
   return $
     Case.Case
       { _id = id,
@@ -130,7 +129,7 @@ mkCase req userId from to = do
         _type = Case.RIDEBOOK,
         _exchangeType = Case.FULFILLMENT,
         _status = Case.NEW,
-        _startTime = req ^. #message ^. #time,
+        _startTime = req ^. #message . #time,
         _endTime = Nothing,
         _validTill = validTill,
         _provider = Nothing,
@@ -157,8 +156,8 @@ mkCase req userId from to = do
       let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
           minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffLocalTime` now
-          defaultExpiry = (fromInteger caseExpiry) `addLocalTime` now
-          validTill = addLocalTime (minimum [(fromInteger caseExpiry), maximum [minExpiry, timeToRide]]) now
+          defaultExpiry = fromInteger caseExpiry `addLocalTime` now
+          validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
 mkLocation :: Core.Location -> L.Flow Location.Location
@@ -170,15 +169,15 @@ mkLocation loc = do
     Location.Location
       { _id = id,
         _locationType = Location.POINT,
-        _lat = (read . T.unpack . (^. #lat)) <$> mgps,
-        _long = (read . T.unpack . (^. #lon)) <$> mgps,
+        _lat = read . T.unpack . (^. #lat) <$> mgps,
+        _long = read . T.unpack . (^. #lon) <$> mgps,
         _ward = Nothing,
         _district = Nothing,
         _city = (^. #name) <$> loc ^. #_city,
         _state = Nothing,
         _country = (^. #name) <$> loc ^. #_country,
         _pincode = Nothing,
-        _address = (T.decodeUtf8 . BSL.toStrict . encode) <$> loc ^. #_address,
+        _address = T.decodeUtf8 . BSL.toStrict . encode <$> loc ^. #_address,
         _bound = Nothing,
         _createdAt = now,
         _updatedAt = now
@@ -204,7 +203,7 @@ mkProduct case_ mprovider item = do
         _startTime = case_ ^. #_startTime,
         _endTime = Nothing, -- TODO: fix this
         _validTill = case_ ^. #_validTill,
-        _price = fromFloatDigits $ item ^. (#_price . #_listed_value),
+        _price = fromFloatDigits $ item ^. #_price . #_listed_value,
         _rating = Nothing,
         _review = Nothing,
         _udf1 = Nothing,

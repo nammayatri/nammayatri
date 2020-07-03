@@ -45,8 +45,9 @@ updateLocation _ caseId req = withFlowHandler $ do
   return $ UpdateLocationRes "SUCCESS"
 
 getLocation :: Text -> FlowHandler GetLocationRes
-getLocation caseId = withFlowHandler $ do
-  GetLocationRes <$> (Redis.getKeyRedis caseId)
+getLocation caseId =
+  withFlowHandler $
+    GetLocationRes <$> Redis.getKeyRedis caseId
 
 updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> LocationInfo -> LocationInfo
 updateLocationInfo UpdateLocationReq {..} routeM currLocInfo =
@@ -90,14 +91,14 @@ createLocationInfo UpdateLocationReq {..} routeM =
 
 getRoute' :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
-  routeE <- MapSearch.getRoute $ getRouteRequest
+  routeE <- MapSearch.getRoute getRouteRequest
   case routeE of
     Left err -> do
       L.logInfo "GetRoute" (show err)
       return Nothing
     Right MapSearch.Response {..} ->
-      if length routes > 0
-        then return $ Just $ head routes
+      if null routes
+        then return . Just $ head routes
         else return Nothing
   where
     getRouteRequest = do
@@ -114,7 +115,7 @@ getRoute' fromLat fromLon toLat toLon = do
 getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
 getRoute regToken Location.Request {..} = withFlowHandler $ do
   QR.verifyToken regToken
-  MapSearch.getRoute (getRouteRequest)
+  MapSearch.getRoute getRouteRequest
     >>= either
       (\err -> L.throwException $ err400 {errBody = show err})
       return

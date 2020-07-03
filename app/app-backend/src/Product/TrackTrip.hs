@@ -25,18 +25,18 @@ import qualified Utils.Notifications as Notify
 track :: SR.RegistrationToken -> TrackTripReq -> FlowHandler TrackTripRes
 track SR.RegistrationToken {..} req = withFlowHandler $ do
   let context = req ^. #context
-      tripId = req ^. #message ^. #id
+      tripId = req ^. #message . #id
   prd <- Products.findById $ ProductsId tripId
   ack <-
     case decodeFromText =<< (prd ^. #_info) of
       Nothing -> return $ Ack "Error" "No product to track"
-      Just (info :: ProductInfo) -> do
+      Just (info :: ProductInfo) ->
         case ProductInfo._tracker info of
           Nothing -> return $ Ack "Error" "No product to track"
           Just tracker -> do
-            let gTripId = tracker ^. #trip ^. #id
+            let gTripId = tracker ^. #trip . #id
             gatewayUrl <- Gateway.getBaseUrl
-            eres <- Gateway.track gatewayUrl $ req & (#message . #id) .~ gTripId
+            eres <- Gateway.track gatewayUrl $ req & #message . #id .~ gTripId
             case eres of
               Left err -> return $ Ack "Error" (show err)
               Right _ -> return $ Ack "Successful" "Tracking initiated"
@@ -47,7 +47,7 @@ track_cb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message
-      caseId = CaseId $ req ^. #context ^. #transaction_id
+      caseId = CaseId $ req ^. #context . #transaction_id
   case_ <- Case.findById caseId
   cp <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
   let pids = map ProductInstance._productId cp

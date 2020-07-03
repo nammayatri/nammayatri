@@ -16,7 +16,7 @@ startServer :: IO ThreadId
 startServer = forkIO AppBE.runAppBackend
 
 withBecknServer :: IO () -> IO ()
-withBecknServer action = do
+withBecknServer action =
   bracket
     startServer
     killThread
@@ -46,7 +46,7 @@ spec = do
   around (withFlowRuntime (Just loggerCfg))
     $ describe "Testing App Backend APIs"
     $ it "Testing List case API"
-    $ \flowRt -> do
+    $ \flowRt ->
       hspec
         $ around_ withBecknServer
         $ it "List case API should return success"

@@ -30,6 +30,6 @@ transporterServer env key =
     f env r = do
       eResult <- liftIO $ runExceptT $ runReaderT r env
       case eResult of
-        Left err -> do
+        Left err ->
           print ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res

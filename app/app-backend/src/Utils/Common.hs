@@ -53,4 +53,4 @@ fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 generateShortId :: L.Flow Text
-generateShortId = T.pack <$> (L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
+generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)

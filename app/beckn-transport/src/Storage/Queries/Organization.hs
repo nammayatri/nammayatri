@@ -9,10 +9,8 @@ import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
-import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
@@ -33,15 +31,15 @@ verifyToken regToken = do
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "UNAUTHENTICATED_USER"
   where
-    predicate regToken Storage.Organization {..} = (_apiKey ==. B.val_ (Just regToken))
+    predicate regToken Storage.Organization {..} = _apiKey ==. B.val_ (Just regToken)
 
 findOrganizationById :: OrganizationId -> L.Flow Storage.Organization
-findOrganizationById id = do
+findOrganizationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_ORG_ID"
   where
-    predicate Storage.Organization {..} = (_id ==. B.val_ id)
+    predicate Storage.Organization {..} = _id ==. B.val_ id
 
 listOrganizations ::
   Maybe Int ->
@@ -53,8 +51,8 @@ listOrganizations mlimit moffset oType status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Organization {..} = B.desc_ _createdAt
     predicate oType status Storage.Organization {..} =
       foldl
@@ -65,7 +63,7 @@ listOrganizations mlimit moffset oType status =
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 update ::
@@ -87,7 +85,7 @@ update id status = do
         ]
 
 updateOrganizationRec :: Storage.Organization -> L.Flow ()
-updateOrganizationRec org = do
+updateOrganizationRec org =
   DB.update dbTable (setClause org) (predicate $ org ^. #_id)
     >>= either DB.throwDBError pure
   where

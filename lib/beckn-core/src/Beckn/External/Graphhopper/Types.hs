@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-
 module Beckn.External.Graphhopper.Types where
 
 import Data.Aeson
@@ -56,7 +54,7 @@ instance FromJSON Instruction where
 instance ToJSON Instruction where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Response = Response
+newtype Response = Response
   { _paths :: [Path]
   }
   deriving (Generic, Show)

@@ -47,7 +47,7 @@ instance FromJSON ProductInstance where
 instance ToJSON ProductInstance where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data ListRes = ListRes
+newtype ListRes = ListRes
   { _productInstances :: [ProductInstance]
   }
   deriving (Show, Generic, ToSchema)

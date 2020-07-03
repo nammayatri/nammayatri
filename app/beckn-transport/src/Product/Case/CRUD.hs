@@ -49,11 +49,11 @@ list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe I
 list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   now <- getCurrentTimeUTC
-  case (person ^. #_organizationId) of
+  case person ^. #_organizationId of
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
       ignoreList <-
-        if (ignoreOffered == Just True)
+        if ignoreOffered == Just True
           then do
             resList <- CPQ.productInstanceJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
@@ -67,14 +67,13 @@ list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = with
       return $ catMaybes $ joinByIds locList <$> caseList
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
   where
-    limit = (toInteger $ fromMaybe Default.limit limitM)
-    offset = (toInteger $ fromMaybe Default.offset offsetM)
+    limit = toInteger $ fromMaybe Default.limit limitM
+    offset = toInteger $ fromMaybe Default.offset offsetM
     joinByIds locList cs =
-      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+      find (\x -> Case._fromLocationId cs == _getLocationId (Location._id x)) locList
+        >>= buildResponse
       where
-        buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == _getLocationId (Location._id x)) locList
         prepare cs from to =
           CaseRes
             { _case = cs,
@@ -89,7 +88,7 @@ update :: SR.RegistrationToken -> Text -> UpdateCaseReq -> FlowHandler Case
 update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   c <- Case.findById $ CaseId caseId
-  case (SP._organizationId person) of
+  case SP._organizationId person of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
         p <- createProduct c _quote orgId Product.INSTOCK
@@ -109,7 +108,7 @@ createProduct cs price orgId status = do
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let product = getProduct prodId price cs currTime orgId shortId
   PQ.create product
-  return $ product
+  return product
   where
     getProduct prodId price cs currTime orgId shortId =
       Products
@@ -146,7 +145,7 @@ createProductInstance cs prod status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   let productInst = getProdInst cpId cs prod currTime
   CPQ.create productInst
-  return $ productInst
+  return productInst
   where
     getProdInst cpId cs prod currTime =
       ProductInstance
@@ -180,7 +179,7 @@ mkOnSearchPayload c prods cps orgInfo = do
         Context
           { domain = "MOBILITY",
             action = "SEARCH",
-            version = Just $ "0.1",
+            version = Just "0.1",
             transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             message_id = Nothing,
             timestamp = currTime,

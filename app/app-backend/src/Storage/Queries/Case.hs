@@ -41,7 +41,7 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset =
       foldl
         (&&.)
         (B.val_ True)
-        [ _type ==. (B.val_ caseType),
+        [ _type ==. B.val_ caseType,
           B.in_ _status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
           _requestor ==. B.val_ (Just $ _getPersonId personId)
         ]
@@ -50,7 +50,7 @@ findById :: CaseId -> L.Flow Storage.Case
 findById caseId =
   DB.findOneWithErr dbTable (predicate caseId)
   where
-    predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+    predicate caseId Storage.Case {..} = _id ==. B.val_ caseId
 
 findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds caseIds =
@@ -79,11 +79,11 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
       foldl
         (&&.)
         (B.val_ True)
-        ( [ (_status `B.in_` ((B.val_) <$> statuses)),
-            (_validTill B.<=. (B.val_ now))
+        ( [ _status `B.in_` (B.val_ <$> statuses),
+            _validTill B.<=. B.val_ now
           ]
-            <> (maybe [] (\from -> [_createdAt B.>=. (B.val_ from)]) maybeFrom)
-            <> (maybe [] (\to -> [_createdAt B.<=. (B.val_ to)]) maybeTo)
+            <> maybe [] (\from -> [_createdAt B.>=. B.val_ from]) maybeFrom
+            <> maybe [] (\to -> [_createdAt B.<=. B.val_ to]) maybeTo
         )
 
 updateValidTill :: CaseId -> LocalTime -> L.Flow ()
@@ -149,20 +149,20 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
     orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate fromLocationIds toLocationIds types statuses udf1s Storage.Case {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _fromLocationId `B.in_` ((B.val_) <$> fromLocationIds) ||. complementVal fromLocationIds,
-          _toLocationId `B.in_` ((B.val_) <$> toLocationIds) ||. complementVal toLocationIds,
-          _status `B.in_` ((B.val_) <$> statuses) ||. complementVal statuses,
-          _type `B.in_` ((B.val_) <$> types) ||. complementVal types,
-          _udf1 `B.in_` ((B.val_ . Just) <$> udf1s) ||. complementVal udf1s
+        [ _fromLocationId `B.in_` (B.val_ <$> fromLocationIds) ||. complementVal fromLocationIds,
+          _toLocationId `B.in_` (B.val_ <$> toLocationIds) ||. complementVal toLocationIds,
+          _status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
+          _type `B.in_` (B.val_ <$> types) ||. complementVal types,
+          _udf1 `B.in_` (B.val_ . Just <$> udf1s) ||. complementVal udf1s
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False

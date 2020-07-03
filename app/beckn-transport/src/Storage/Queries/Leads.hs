@@ -23,8 +23,8 @@ create Storage.Leads {..} =
 
 findLeadsById ::
   LeadsId -> L.Flow (Maybe Storage.Leads)
-findLeadsById id = do
+findLeadsById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Leads {..} = (_id ==. B.val_ id)
+    predicate Storage.Leads {..} = _id ==. B.val_ id

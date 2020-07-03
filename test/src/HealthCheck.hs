@@ -26,7 +26,7 @@ startServers = do
   return (appTid, tbeTid)
 
 withBecknServers :: IO () -> IO ()
-withBecknServers action = do
+withBecknServers action =
   bracket
     startServers
     (\(appTid, tbeTid) -> killThread appTid >> killThread tbeTid)
@@ -59,7 +59,7 @@ spec = do
   around (withFlowRuntime (Just loggerCfg))
     $ describe "Testing App Backend APIs"
     $ it "Testing health check API"
-    $ \flowRt -> do
+    $ \flowRt ->
       hspec
         $ around_ withBecknServers
         $ it "Health Check API should return success"

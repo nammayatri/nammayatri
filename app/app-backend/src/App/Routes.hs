@@ -58,20 +58,19 @@ appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
 
 appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
-appServer' key = do
-  ( pure "App is UP"
-      :<|> registrationFlow
-      :<|> searchFlow
-      :<|> confirmFlow
-      :<|> caseFlow
-      :<|> infoFlow
-      :<|> trackTripFlow
-      :<|> productInstanceFlow
-      :<|> cancelFlow
-      :<|> cronFlow
-      :<|> routeApiFlow
-      :<|> Epass.epassServer' key
-    )
+appServer' key =
+  pure "App is UP"
+    :<|> registrationFlow
+    :<|> searchFlow
+    :<|> confirmFlow
+    :<|> caseFlow
+    :<|> infoFlow
+    :<|> trackTripFlow
+    :<|> productInstanceFlow
+    :<|> cancelFlow
+    :<|> cronFlow
+    :<|> routeApiFlow
+    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =

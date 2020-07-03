@@ -99,7 +99,7 @@ data TransporterRes = TransporterRes
   }
   deriving (Generic, ToJSON, ToSchema)
 
-data TransporterRec = TransporterRec
+newtype TransporterRec = TransporterRec
   { organization :: SO.Organization
   }
   deriving (Generic, ToJSON, ToSchema)
@@ -120,8 +120,8 @@ instance Transform UpdateTransporterReq SO.Organization where
     return $
       org
         { SO._name = fromMaybe (org ^. #_name) (req ^. #name),
-          SO._description = maybe (org ^. #_description) Just (req ^. #description),
-          SO._headCount = maybe (org ^. #_headCount) Just (req ^. #headCount),
+          SO._description = (req ^. #description) <|> (org ^. #_description),
+          SO._headCount = (req ^. #headCount) <|> (org ^. #_headCount),
           SO._enabled = fromMaybe (org ^. #_enabled) (req ^. #enabled),
           SO._updatedAt = now
         }

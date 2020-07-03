@@ -70,10 +70,10 @@ transporterExceptionResponse exception = do
     Just ex ->
       responseLBS
         (H.Status (errHTTPCode ex) (BS.pack $ errReasonPhrase ex))
-        ((H.hContentType, "application/json") : (errHeaders ex))
+        ((H.hContentType, "application/json") : errHeaders ex)
         (errBody ex)
     Nothing ->
       responseLBS
         H.internalServerError500
         [(H.hContentType, "application/json")]
-        (Aeson.encode $ internalServerErr)
+        (Aeson.encode internalServerErr)

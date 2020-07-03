@@ -24,19 +24,19 @@ create Storage.TripReference {..} =
 
 findTripReferenceById ::
   TripReferenceId -> L.Flow (Maybe Storage.TripReference)
-findTripReferenceById id = do
+findTripReferenceById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.TripReference {..} = (_id ==. B.val_ id)
+    predicate Storage.TripReference {..} = _id ==. B.val_ id
 
 listTripReferences :: Maybe Int -> Maybe Int -> [Storage.Status] -> L.Flow [Storage.TripReference]
 listTripReferences mlimit moffset status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.TripReference {..} = B.desc_ _createdAt
     predicate status Storage.TripReference {..} =
       foldl
@@ -46,7 +46,7 @@ listTripReferences mlimit moffset status =
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 update ::

@@ -23,8 +23,8 @@ create Storage.Customer {..} =
 
 findCustomerById ::
   CustomerId -> L.Flow (Maybe Storage.Customer)
-findCustomerById id = do
+findCustomerById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Customer {..} = (_id ==. B.val_ id)
+    predicate Storage.Customer {..} = _id ==. B.val_ id

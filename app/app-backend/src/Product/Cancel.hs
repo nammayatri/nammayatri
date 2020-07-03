@@ -22,18 +22,18 @@ import qualified Utils.Notifications as Notify
 
 cancel :: SR.RegistrationToken -> CancelReq -> FlowHandler CancelRes
 cancel SR.RegistrationToken {..} req = withFlowHandler $ do
-  let entityType = req ^. #message ^. #entityType
+  let entityType = req ^. #message . #entityType
   case entityType of
     Cancel.CASE -> cancelCase req
     Cancel.PRODUCT -> cancelProduct req
 
 cancelProduct :: CancelReq -> L.Flow CancelRes
 cancelProduct req = do
-  let productId = req ^. #message ^. #entityId
+  let productId = req ^. #message . #entityId
   cp <- ProductInstance.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple productinstances exists for one product
-  case isProductInstanceCancellable cp of
-    True -> sendCancelReq productId
-    False -> errResp (show (cp ^. #_status))
+  if isProductInstanceCancellable cp
+    then sendCancelReq productId
+    else errResp (show (cp ^. #_status))
   where
     sendCancelReq productId = do
       let context = req ^. #context
@@ -44,18 +44,15 @@ cancelProduct req = do
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
     errResp pStatus = do
-      let txnId = req ^. #context ^. #transaction_id
+      let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
 cancelCase :: CancelReq -> L.Flow CancelRes
 cancelCase req = do
-  let caseId = req ^. #message ^. #entityId
+  let caseId = req ^. #message . #entityId
   case_ <- Case.findById (CaseId caseId)
-  case isCaseCancellable case_ of
-    False -> do
-      let txnId = req ^. #context ^. #transaction_id
-      mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> (show (case_ ^. #_status)) <> " status")
-    True -> do
+  if isCaseCancellable case_
+    then do
       let context = req ^. #context
       let txnId = context ^. #transaction_id
       productInstances <- ProductInstance.findAllByCaseId (CaseId caseId)
@@ -70,6 +67,9 @@ cancelCase req = do
           case sequence eres of
             Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
             Right _ -> mkAckResponse txnId "cancel"
+    else do
+      let txnId = req ^. #context . #transaction_id
+      mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
   where
     callCancelApi context baseUrl cp = do
       let productId = _getProductsId $ cp ^. #_productId
@@ -94,7 +94,7 @@ onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
-  let productId = ProductsId (req ^. #message ^. #id)
+  let productId = ProductsId $ req ^. #message . #id
   cpProducts <- ProductInstance.findByProductId productId -- TODO: Handle usecase where multiple productinstances exists for one product
   ProductInstance.updateStatus productId ProductInstance.CANCELLED
   let caseId = cpProducts ^. #_caseId

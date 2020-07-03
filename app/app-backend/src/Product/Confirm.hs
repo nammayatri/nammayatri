@@ -56,15 +56,15 @@ onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
-  let selectedItems = req ^. #message ^. #_selected_items
-      trip = req ^. #message ^. #_trip
-      caseId = CaseId $ req ^. #context ^. #transaction_id
+  let selectedItems = req ^. #message . #_selected_items
+      trip = req ^. #message . #_trip
+      caseId = CaseId $ req ^. #context . #transaction_id
   ack <-
     case length selectedItems of
       0 -> return $ Ack "on_confirm" "Ok"
       1 -> do
         let pid = ProductsId (head selectedItems)
-            tracker = (flip Track.Tracker Nothing) <$> trip
+            tracker = flip Track.Tracker Nothing <$> trip
         prd <- Products.findById pid
         let mprdInfo = decodeFromText =<< (prd ^. #_info)
         let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo

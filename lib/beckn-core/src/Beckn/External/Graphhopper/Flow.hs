@@ -28,9 +28,9 @@ search url GrphrSearch.Request {..} =
   L.callAPI url clientM
   where
     encodePoint :: PointXY -> Text
-    encodePoint point = (show $ _xyX point) <> "," <> (show $ _xyY point)
+    encodePoint point = show (_xyX point) <> "," <> show (_xyY point)
     points_encoded = False -- Hardcoded `points_encoded` field
-    weighting = (T.toLower . show) <$> _weighting
+    weighting = T.toLower . show <$> _weighting
     vehicle = T.toLower $ show _vehicle
     points = encodePoint <$> _points'
     clientM = ET.client grphrAPI points vehicle weighting _elevation points_encoded _calcPoints

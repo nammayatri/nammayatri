@@ -53,7 +53,7 @@ findOneWithErr dbTable predicate = do
   case res of
     Right (Just val) -> return val
     Right Nothing -> L.throwException err500 {errBody = "No rec found"}
-    Left err -> L.throwException err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
 
 findOne ::
   RunReadablePgTable table db =>
@@ -79,13 +79,13 @@ findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
     Right val -> return val
-    Left err -> L.throwException err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
 
 findAll ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.Flow (T.DBResult ([table Identity]))
+  L.Flow (T.DBResult [table Identity])
 findAll dbTable predicate = run $ findAll' dbTable predicate
 
 findAll' ::
@@ -102,29 +102,29 @@ createOne ::
   B.DatabaseEntity Postgres db (B.TableEntity table) -> -- dbTable
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.Flow (T.DBResult ())
-createOne dbTable insertExpression = bulkInsert dbTable insertExpression
+createOne = bulkInsert
 
 createOne' ::
   PgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
-createOne' dbTable insertExpression = bulkInsert' dbTable insertExpression
+createOne' = bulkInsert'
 
 bulkInsert ::
   RunPgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.Flow (T.DBResult ())
-bulkInsert dbTable insertExpressions = run $ bulkInsert' dbTable insertExpressions
+bulkInsert dbTable = run . bulkInsert' dbTable
 
 bulkInsert' ::
   PgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
-bulkInsert' dbTable insertExpressions =
-  L.insertRows $ B.insert dbTable $ insertExpressions
+bulkInsert' dbTable =
+  L.insertRows . B.insert dbTable
 
 findOrCreateOne ::
   RunReadablePgTable table db =>
@@ -154,7 +154,7 @@ findOrCreateOne' dbTable findPredicate insertExpression =
 findAllRows ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
-  L.Flow (T.DBResult ([table Identity]))
+  L.Flow (T.DBResult [table Identity])
 findAllRows dbTable = run $ findAllRows' dbTable
 
 findAllRows' ::
@@ -165,7 +165,7 @@ findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
 
 update ::
   RunReadablePgTable table db =>
-  (B.DatabaseEntity Postgres db (B.TableEntity table)) ->
+  B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.Flow (T.DBResult ())
@@ -173,7 +173,7 @@ update dbTable setClause predicate = run $ update' dbTable setClause predicate
 
 update' ::
   ReadablePgTable table db =>
-  (B.DatabaseEntity Postgres db (B.TableEntity table)) ->
+  B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
@@ -223,8 +223,8 @@ findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
 
 aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggregate_ aggregator $ B.filter_ predicate $ B.all_ dbTable
 
-findAllByJoin limit offset orderBy joinQuery =
-  run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ joinQuery
+findAllByJoin limit offset orderBy =
+  run . L.findRows . B.select . B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy
 
-findAllByJoinWithoutLimits orderBy joinQuery =
-  run $ L.findRows $ B.select $ B.orderBy_ orderBy $ joinQuery
+findAllByJoinWithoutLimits orderBy =
+  run . L.findRows . B.select . B.orderBy_ orderBy

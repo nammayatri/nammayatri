@@ -47,6 +47,6 @@ list SR.RegistrationToken {..} status limitM offsetM = withFlowHandler $ do
         { _case = res ^. #_case,
           _product = res ^. #_product,
           _productInstance = res ^. #_productInstance,
-          _fromLocation = find (\x -> (Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList,
-          _toLocation = find (\x -> (Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList
+          _fromLocation = find (\x -> Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList,
+          _toLocation = find (\x -> Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList
         }

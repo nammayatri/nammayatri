@@ -60,7 +60,7 @@ notifyOnProductCancelCb personId c productId =
                 FCMNotificationBody $
                   unwords
                     [ "Your ride scheduled for",
-                      (showTimeIst $ Case._startTime c) <> ",",
+                      showTimeIst (Case._startTime c) <> ",",
                       "has been cancelled. Check the app for more details."
                     ]
           notifyPerson title body notificationData p
@@ -86,13 +86,12 @@ notifyOnConfirmCb personId c tracker =
               title = FCMNotificationTitle $ T.pack "Your ride is now confirmed!"
               body =
                 FCMNotificationBody $
-                  ( unwords
-                      [ "Your booking for",
-                        vehicle_category,
-                        "is confirmed for",
-                        showTimeIst $ Case._startTime c
-                      ]
-                  )
+                  unwords
+                    [ "Your booking for",
+                      vehicle_category,
+                      "is confirmed for",
+                      showTimeIst $ Case._startTime c
+                    ]
                     <> "."
           notifyPerson title body notificationData p
         _ -> pure ()
@@ -116,7 +115,7 @@ notifyOnExpiration caseObj = do
                 FCMNotificationBody $
                   unwords
                     [ "Your ride request for",
-                      (showTimeIst startTime) <> ",",
+                      showTimeIst startTime <> ",",
                       "has expired as there were no replies.",
                       "You can place a new request to get started again!"
                     ]
@@ -166,7 +165,7 @@ notifyOnTrackCb personId tracker c =
                       model,
                       "(" <> reg_number <> "),",
                       "is scheduled for",
-                      (showTimeIst $ Case._startTime c) <> ".",
+                      showTimeIst (Case._startTime c) <> ".",
                       "You can see more details in the app."
                     ]
           notifyPerson title body notificationData p

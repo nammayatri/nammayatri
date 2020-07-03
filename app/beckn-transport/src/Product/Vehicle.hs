@@ -25,11 +25,11 @@ createVehicle orgId req = withFlowHandler $ do
   return $ CreateVehicleRes vehicle
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $ do
-  ListVehicleRes <$> (QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId)
+listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $
+  ListVehicleRes <$> QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
   where
-    limit = (toInteger $ fromMaybe Default.limit limitM)
-    offset = (toInteger $ fromMaybe Default.offset offsetM)
+    limit = toInteger $ fromMaybe Default.limit limitM
+    offset = toInteger $ fromMaybe Default.offset offsetM
 
 updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do

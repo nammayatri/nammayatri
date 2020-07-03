@@ -55,10 +55,10 @@ update SR.RegistrationToken {..} productId req = withFlowHandler $ do
         updateTrip (ProductsId productId) c
     Nothing -> return ()
   updatedProd <- PQ.findById (ProductsId productId)
-  driverInfo <- case (updatedProd ^. #_assignedTo) of
+  driverInfo <- case updatedProd ^. #_assignedTo of
     Just driverId -> PersQ.findPersonById (PersonId driverId)
     Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
-  vehicleInfo <- case (updatedProd ^. #_udf3) of
+  vehicleInfo <- case updatedProd ^. #_udf3 of
     Just vehicleId ->
       VQ.findVehicleById (VehicleId vehicleId)
         >>= fromMaybeM400 "VEHICLE NOT FOUND"
@@ -93,8 +93,8 @@ updateInfo productId driverInfo vehicleInfo = do
 updateTrip :: ProductsId -> ProdInst.ProductInstanceStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
-  trackerCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) (Case.TRACKER)
-  parentCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) (Case.RIDEBOOK)
+  trackerCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) Case.TRACKER
+  parentCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) Case.RIDEBOOK
   case k of
     ProdInst.CANCELLED -> do
       CPQ.updateStatusByIds (ProdInst._id <$> cpList) k
@@ -123,7 +123,7 @@ listRides SR.RegistrationToken {..} vehicleIdM = withFlowHandler $ do
   locList <- LQ.findAllByLocIds (catMaybes (Product._fromLocation <$> rideList)) (catMaybes (Product._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
-    validateOrg vehicleM person = do
+    validateOrg vehicleM person =
       case vehicleM of
         Just vehicleId -> do
           vehicle <- VQ.findVehicleById (VehicleId vehicleId)
@@ -132,11 +132,10 @@ listRides SR.RegistrationToken {..} vehicleIdM = withFlowHandler $ do
             else return True
         Nothing -> return False
     joinByIds locList ride =
-      case find (\x -> (Product._fromLocation ride == Just (_getLocationId (Location._id x)))) locList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+      find (\x -> Product._fromLocation ride == Just (_getLocationId (Location._id x))) locList
+        >>= buildResponse
       where
-        buildResponse k = (prepare ride k) <$> find (\x -> (Product._toLocation ride == Just (_getLocationId (Location._id x)))) locList
+        buildResponse k = prepare ride k <$> find (\x -> Product._toLocation ride == Just (_getLocationId (Location._id x))) locList
         prepare ride from to =
           ProdRes
             { _product = ride,
@@ -154,11 +153,10 @@ listCasesByProd SR.RegistrationToken {..} productId csType = withFlowHandler $ d
   return $ catMaybes $ joinByIds locList <$> caseList
   where
     joinByIds locList cs =
-      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+      find (\x -> Case._fromLocationId cs == _getLocationId (Location._id x)) locList
+        >>= buildResponse
       where
-        buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == _getLocationId (Location._id x)) locList
         prepare cs from to =
           CaseRes
             { _case = cs,
@@ -167,7 +165,7 @@ listCasesByProd SR.RegistrationToken {..} productId csType = withFlowHandler $ d
             }
 
 notifyCancelReq :: Product.Products -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
-notifyCancelReq prod status = do
+notifyCancelReq prod status =
   case status of
     Just k -> case k of
       ProdInst.CANCELLED -> do

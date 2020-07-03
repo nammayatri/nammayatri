@@ -37,8 +37,8 @@ defaultProvider lt =
 contact_ =
   Contact
     { email = Just "",
-      mobile = Just $ mobile_,
-      landline = Just $ landLine_,
+      mobile = Just mobile_,
+      landline = Just landLine_,
       ivr = []
     }
 

@@ -33,7 +33,7 @@ getProductInfo SR.RegistrationToken {..} prodId = withFlowHandler $ do
   case' <- QCase.findById (SCP._caseId productInstance)
   product <- QProducts.findById (ProductsId prodId)
   case decodeFromText =<< SProducts._info product of
-    Just (info :: ProductInfo) -> do
+    Just (info :: ProductInfo) ->
       case ProductInfo._tracker info of
         Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
         Just tracker -> do

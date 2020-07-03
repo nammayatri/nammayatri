@@ -25,10 +25,10 @@ create Storage.RegistrationToken {..} =
     >>= either DB.throwDBError pure
 
 findRegistrationToken :: Text -> L.Flow (Maybe Storage.RegistrationToken)
-findRegistrationToken id = do
+findRegistrationToken id =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
-    predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)
+    predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
 
 updateVerified :: Text -> Bool -> L.Flow ()
 updateVerified id verified = do
@@ -38,10 +38,9 @@ updateVerified id verified = do
   where
     setClause verified currTime Storage.RegistrationToken {..} =
       mconcat
-        ( [ _updatedAt <-. B.val_ currTime,
-            _verified <-. B.val_ verified
-          ]
-        )
+        [ _updatedAt <-. B.val_ currTime,
+          _verified <-. B.val_ verified
+        ]
     predicate id Storage.RegistrationToken {..} = _id ==. B.val_ id
 
 verifyToken :: RegToken -> L.Flow Storage.RegistrationToken
@@ -55,7 +54,7 @@ findRegistrationTokenByToken regToken =
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_TOKEN"
   where
-    predicate regToken Storage.RegistrationToken {..} = (_token ==. B.val_ regToken)
+    predicate regToken Storage.RegistrationToken {..} = _token ==. B.val_ regToken
 
 updateAttempts :: Int -> Text -> L.Flow Storage.RegistrationToken
 updateAttempts attemps id = do
@@ -64,7 +63,7 @@ updateAttempts attemps id = do
     >>= either DB.throwDBError pure
   findRegistrationToken id >>= maybe (L.throwException err500) pure
   where
-    predicate i Storage.RegistrationToken {..} = (_id ==. B.val_ i)
+    predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =
       mconcat [_attempts <-. B.val_ a, _updatedAt <-. B.val_ n]
 

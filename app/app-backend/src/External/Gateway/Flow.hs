@@ -18,7 +18,7 @@ search url req = do
   whenRight res $ \_ ->
     L.logInfo "Search" "Search successfully delivered"
   whenLeft res $ \err ->
-    L.logError "Search" ("error occurred while search: " <> (show err))
+    L.logError "Search" ("error occurred while search: " <> show err)
   return $ first show res
 
 confirm :: BaseUrl -> Confirm.ConfirmReq -> L.Flow (Either Text ())
@@ -27,7 +27,7 @@ confirm url req = do
   whenLeft res $ \err ->
     L.logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    L.logError "Confirm" ("error occurred while confirm: " <> (show err))
+    L.logError "Confirm" ("error occurred while confirm: " <> show err)
   return $ first show res
 
 location :: BaseUrl -> Text -> L.Flow (Either Text GetLocationRes)
@@ -36,7 +36,7 @@ location url req = do
   whenLeft res $ \err ->
     L.logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    L.logError "Location" ("error occurred while getting location: " <> (show err))
+    L.logError "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
 track :: BaseUrl -> Track.TrackTripReq -> L.Flow (Either Text ())

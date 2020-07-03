@@ -30,9 +30,8 @@ findAllByTypeOrgId orgId status =
   where
     orderByDesc Storage.Products {..} = B.desc_ _createdAt
     predicate orgId status Storage.Products {..} =
-      ( _organizationId ==. (B.val_ orgId)
-          &&. B.in_ _status (B.val_ <$> status)
-      )
+      _organizationId ==. B.val_ orgId
+        &&. B.in_ _status (B.val_ <$> status)
 
 findAllById :: [ProductsId] -> L.Flow [Storage.Products]
 findAllById ids =
@@ -45,7 +44,7 @@ findById :: ProductsId -> L.Flow Storage.Products
 findById pid =
   DB.findOneWithErr dbTable (predicate pid)
   where
-    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
+    predicate pid Storage.Products {..} = _id ==. B.val_ pid
 
 updateStatus ::
   ProductsId ->
@@ -66,7 +65,7 @@ updateStatus id status = do
         ]
 
 updateInfo :: ProductsId -> Maybe Text -> L.Flow ()
-updateInfo prodId info = do
+updateInfo prodId info =
   DB.update
     dbTable
     (setClause info)
@@ -115,14 +114,14 @@ findAllByAssignedTo id =
   DB.findAll dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Products {..} = (_assignedTo ==. (B.val_ (Just id)))
+    predicate id Storage.Products {..} = _assignedTo ==. B.val_ (Just id)
 
 findAllByVehicleId :: Maybe Text -> L.Flow [Storage.Products]
 findAllByVehicleId id =
   DB.findAll dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Products {..} = (_udf3 ==. (B.val_ id))
+    predicate id Storage.Products {..} = _udf3 ==. B.val_ id
 
 findAllByOrgId :: Text -> L.Flow [Storage.Products]
 findAllByOrgId orgId =
@@ -130,8 +129,7 @@ findAllByOrgId orgId =
     >>= either DB.throwDBError pure
   where
     predicate orgId Storage.Products {..} =
-      ( _organizationId ==. (B.val_ orgId)
-      )
+      _organizationId ==. B.val_ orgId
 
 updateStatusByIds ::
   [ProductsId] ->

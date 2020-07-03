@@ -6,7 +6,6 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Extra
@@ -83,7 +82,7 @@ updateOrCreateLocation req (Just id) = do
   return location
 
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
-transformToLocation req location = do
+transformToLocation req location =
   location
     { SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
       SL._lat = req ^. #_lat,
@@ -126,7 +125,7 @@ ifJustExtract a b = fromMaybe b a
 
 (^^.) f g = g f
 
-data UpdatePersonRes = UpdatePersonRes
+newtype UpdatePersonRes = UpdatePersonRes
   {user :: SP.Person}
   deriving (Generic, ToJSON, ToSchema)
 
@@ -226,14 +225,14 @@ createLocationRec req = do
         SL._updatedAt = now
       }
 
-data ListPersonRes = ListPersonRes
+newtype ListPersonRes = ListPersonRes
   {users :: [SP.Person]}
   deriving (Generic, ToJSON, ToSchema)
 
-data PersonRes = PersonRes
+newtype PersonRes = PersonRes
   {user :: SP.Person}
   deriving (Generic, ToJSON, ToSchema)
 
-data DeletePersonRes = DeletePersonRes
+newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, ToSchema)

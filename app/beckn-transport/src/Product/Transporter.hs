@@ -58,7 +58,7 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
       return $ TransporterRec organization
     Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
   where
-    validate person = do
+    validate person =
       unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}

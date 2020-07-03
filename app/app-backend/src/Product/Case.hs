@@ -44,12 +44,13 @@ list token caseType statuses mlimit moffset = withFlowHandler $ do
   person <-
     Person.findById (PersonId $ SR._EntityId token)
       >>= fromMaybeM500 "Could not find user"
-  Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
-    >>= traverse mapProductInstance
-    >>= return . ListRes
+  ListRes
+    <$> ( Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
+            >>= traverse mapProductInstance
+        )
   where
-    mapProductInstance case_@(Case.Case {..}) = do
-      prds <- ProductInstance.findAllProductsByCaseId (_id)
+    mapProductInstance case_@Case.Case {..} = do
+      prds <- ProductInstance.findAllProductsByCaseId _id
       fromLocation <- Location.findLocationById $ LocationId _fromLocationId
       toLocation <- Location.findLocationById $ LocationId _toLocationId
       return $ API.ProductInstance case_ prds fromLocation toLocation

@@ -7,7 +7,6 @@ import Beckn.Types.Core.Api
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Contact
-import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
@@ -22,7 +21,6 @@ import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Aeson
@@ -76,7 +74,7 @@ mkServiceOffer c prods cps trip orgInfo =
         Service
           { _id = _getCaseId $ c ^. #_id,
             _catalog = Just $ mkCatalog prods,
-            _matched_items = (_getProductsId . Product._id) <$> prods,
+            _matched_items = _getProductsId . Product._id <$> prods,
             _selected_items = catMaybes $ (\x -> if x ^. #_status == ProductInstance.CONFIRMED then Just (_getProductsId $ x ^. #_productId) else Nothing) <$> cps,
             _fare_product = Nothing,
             _offers = [],
