@@ -99,3 +99,23 @@ notifyTransporterOnExpiration c =
             "has expired as the customer failed to confirm.",
             "You can view more details in the app."
           ]
+
+notifyCancelReqByBP :: Products -> [Person] -> L.Flow ()
+notifyCancelReqByBP p =
+  traverse_ (notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCM.FCMData
+        { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityIds = show $ _getProductsId $ p ^. #_id,
+          _fcmEntityType = FCM.Organization
+        }
+    title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "The ride scheduled for",
+            (showTimeIst $ Products._startTime p) <> ",",
+            "has been cancelled. Check the app for more details."
+          ]

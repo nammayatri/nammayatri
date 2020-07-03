@@ -140,7 +140,8 @@ instance ToJSON Location where
 
 newtype Bound
   = Bound Value
-  deriving (Show, Eq, Generic, FromJSON, ToJSON)
+  deriving (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance ToSchema Bound where
   declareNamedSchema _ =

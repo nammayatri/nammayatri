@@ -7,20 +7,14 @@ import Data.Time
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.), in_)
 import qualified Database.Beam as B
-import qualified Database.Beam as B
 import qualified Epass.Types.API.Blacklist as API
 import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Blacklist as Storage
-import qualified Epass.Types.Storage.Blacklist as Storage
 import qualified Epass.Types.Storage.DB as DB
-import qualified Epass.Types.Storage.DB as DB
-import qualified EulerHS.Language as L
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import qualified EulerHS.Types as T
-import qualified Storage.Queries as DB
 import qualified Storage.Queries as DB
 
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.BlacklistT)
@@ -32,10 +26,10 @@ create Storage.Blacklist {..} =
     >>= either DB.throwDBError pure
 
 findById :: BlacklistId -> L.Flow (T.DBResult (Maybe Storage.Blacklist))
-findById id = do
+findById id =
   DB.findOne dbTable predicate
   where
-    predicate Storage.Blacklist {..} = (_id ==. B.val_ id)
+    predicate Storage.Blacklist {..} = _id ==. B.val_ id
 
 update ::
   BlacklistId ->
@@ -71,22 +65,20 @@ findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text -> L.Flow
 findAllWithLimitOffset mlimit moffset entityType entityId =
   DB.findAllWithLimitOffsetWhere dbTable (pred entityType entityId) limit offset orderByDesc
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Blacklist {..} = B.desc_ _createdAt
     pred entityType entityId Storage.Blacklist {..} =
-      ( _entityType ==. (B.val_ entityType)
-          &&. __EntityId ==. (B.val_ entityId)
-      )
+      _entityType ==. B.val_ entityType
+        &&. __EntityId ==. B.val_ entityId
 
 findAllByEntityId :: EntityType -> [Text] -> L.Flow [Storage.Blacklist]
 findAllByEntityId entityType entityIds =
   DB.findAllOrErr dbTable (pred entityType entityIds)
   where
     pred entityType entityIds Storage.Blacklist {..} =
-      ( _entityType ==. (B.val_ entityType)
-          &&. B.in_ __EntityId (B.val_ <$> entityIds)
-      )
+      _entityType ==. B.val_ entityType
+        &&. B.in_ __EntityId (B.val_ <$> entityIds)
 
 findByOrgId :: OrganizationId -> L.Flow (Maybe Storage.Blacklist)
 findByOrgId (OrganizationId eId) =

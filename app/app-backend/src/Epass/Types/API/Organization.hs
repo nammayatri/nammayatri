@@ -30,12 +30,12 @@ instance FromJSON CreateOrganizationReq where
 instance ToJSON CreateOrganizationReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data OrganizationRes = OrganizationRes
+newtype OrganizationRes = OrganizationRes
   { organization :: Organization
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data GetOrganizationRes = GetOrganizationRes
+newtype GetOrganizationRes = GetOrganizationRes
   { organization :: OrgInfo
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
@@ -79,14 +79,14 @@ instance FromJSON ListOrganizationReq where
         status
         verified
 
-data ListOrganizationRes = ListOrganizationRes
+newtype ListOrganizationRes = ListOrganizationRes
   { _organizations :: [OrgInfo]
   }
   deriving (Generic, FromJSON, ToSchema)
 
 data OrgInfo = OrgInfo
   { _id :: OrganizationId,
-    _gstin :: (Maybe Text),
+    _gstin :: Maybe Text,
     _status :: Status,
     _verified :: Bool,
     _Tags :: [ST.Tag],
@@ -96,7 +96,7 @@ data OrgInfo = OrgInfo
     _isBlacklistedLocation :: Bool,
     _status :: Status,
     _location :: Location,
-    _info :: (Maybe Text),
+    _info :: Maybe Text,
     _createdAt :: LocalTime,
     _updatedAt :: LocalTime
   }
@@ -108,7 +108,7 @@ instance ToJSON ListOrganizationRes where
 instance ToJSON OrgInfo where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data UpdateOrganizationReq = UpdateOrganizationReq
+newtype UpdateOrganizationReq = UpdateOrganizationReq
   { _status :: Status
   }
   deriving (Generic, ToSchema)

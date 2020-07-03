@@ -23,7 +23,7 @@ data Request = Request
   deriving (Show)
 
 data Path = Path
-  { _distance :: Float,
+  { _distance :: Float, -- meters
     _time :: Integer, -- miliseconds
     _bbox :: Maybe BoundingBoxWithoutCRS, -- bbox and points fields are empty incase calcPoints
     _points :: Maybe GeospatialGeometry, -- is set to False. Default - True

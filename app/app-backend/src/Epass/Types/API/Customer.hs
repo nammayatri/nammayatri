@@ -6,7 +6,7 @@ import Data.Swagger
 import EulerHS.Prelude
 import Servant.Swagger
 
-data GetCustomerRes = GetCustomerRes
+newtype GetCustomerRes = GetCustomerRes
   { _customer :: Person
   }
   deriving (Generic, ToSchema)

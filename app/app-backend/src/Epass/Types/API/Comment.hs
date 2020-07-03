@@ -19,7 +19,7 @@ instance FromJSON CreateReq where
 instance ToJSON CreateReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data CreateRes = CreateRes
+newtype CreateRes = CreateRes
   { _comment :: Comment
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -30,7 +30,7 @@ instance ToJSON CreateRes where
 instance FromJSON CreateRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data ListRes = ListRes
+newtype ListRes = ListRes
   { _comments :: [Comment]
   }
   deriving (Show, Generic, Default, ToSchema)

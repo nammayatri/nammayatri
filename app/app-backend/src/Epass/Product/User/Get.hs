@@ -37,8 +37,9 @@ list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
   user <-
     fromMaybeM500 "Could not find user"
       =<< Person.findById (PersonId $ SR._EntityId reg)
-  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER) $ do
-    L.throwException $ err400 {errBody = "UNAUTHORIZED_USER"}
+  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER)
+    $ L.throwException
+    $ err400 {errBody = "UNAUTHORIZED_USER"}
   getUsers limitM offsetM locateM roleM locate user
 
 getUsers ::
@@ -49,7 +50,7 @@ getUsers ::
   [Text] ->
   Person.Person ->
   L.Flow ListRes
-getUsers offsetM limitM locateM role locate user = do
+getUsers offsetM limitM locateM role locate user =
   case user ^. #_role of
     Person.ADMIN ->
       case locateM of
@@ -57,8 +58,7 @@ getUsers offsetM limitM locateM role locate user = do
         Just LDISTRICT -> districtLevelUsers limitM offsetM role locate
         Just LWARD -> wardLevelUsers limitM offsetM role locate
         _ ->
-          Person.findAllWithLimitOffsetByRole limitM offsetM role
-            >>= return . ListRes
+          ListRes <$> Person.findAllWithLimitOffsetByRole limitM offsetM role
     Person.CITYLEVEL -> do
       org <- getOrgOrFail (user ^. #_organizationId)
       allLocations <-
@@ -66,21 +66,21 @@ getUsers offsetM limitM locateM role locate user = do
       case locateM of
         Just LCITY ->
           if List.null locate || elem (org ^. #_city) locate
-            then cityLevelUsers limitM offsetM role [(org ^. #_city)]
+            then cityLevelUsers limitM offsetM role [org ^. #_city]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         Just LDISTRICT -> do
           let dists = mapMaybe Location._district allLocations
           let locateD =
                 if List.null locate
                   then dists
-                  else filter (flip elem dists) locate
+                  else filter (`elem` dists) locate
           districtLevelUsers limitM offsetM role locateD
         Just LWARD -> do
           let wards = mapMaybe Location._ward allLocations
           let locateW =
                 if List.null locate
                   then wards
-                  else filter (flip elem wards) locate
+                  else filter (`elem` wards) locate
           wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     Person.DISTRICTLEVEL -> do
@@ -98,7 +98,7 @@ getUsers offsetM limitM locateM role locate user = do
           let locateW =
                 if List.null locate
                   then wards
-                  else filter (flip elem wards) locate
+                  else filter (`elem` wards) locate
           wardLevelUsers limitM offsetM role locateW
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     Person.WARDLEVEL -> do
@@ -123,52 +123,55 @@ getOrgOrFail orgId = do
 
 cityLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 cityLevelUsers limitM offsetM r cities =
-  Org.listOrganizations
-    Nothing
-    Nothing
-    mempty
-    mempty
-    cities
-    mempty
-    mempty
-    empty
-    empty
-    Nothing
-    >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
-    >>= return . ListRes
+  ListRes
+    <$> ( Org.listOrganizations
+            Nothing
+            Nothing
+            mempty
+            mempty
+            cities
+            mempty
+            mempty
+            empty
+            empty
+            Nothing
+            >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
+        )
 
 districtLevelUsers ::
   Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 districtLevelUsers limitM offsetM r districts =
-  Org.listOrganizations
-    Nothing
-    Nothing
-    mempty
-    mempty
-    mempty
-    districts
-    mempty
-    empty
-    empty
-    Nothing
-    >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
-    >>= return . ListRes
+  ListRes
+    <$> ( Org.listOrganizations
+            Nothing
+            Nothing
+            mempty
+            mempty
+            mempty
+            districts
+            mempty
+            empty
+            empty
+            Nothing
+            >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
+        )
 
 wardLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
 wardLevelUsers limitM offsetM r wards =
-  Org.listOrganizations
-    Nothing
-    Nothing
-    mempty
-    mempty
-    mempty
-    mempty
-    wards
-    empty
-    empty
-    Nothing
-    >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
-    >>= return . ListRes
+  ListRes
+    <$> ( Org.listOrganizations
+            Nothing
+            Nothing
+            mempty
+            mempty
+            mempty
+            mempty
+            wards
+            empty
+            empty
+            Nothing
+            >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
+        )
 
 get :: RegToken -> PersonId -> FlowHandler GetRes
 get regToken userId = withFlowHandler $ do

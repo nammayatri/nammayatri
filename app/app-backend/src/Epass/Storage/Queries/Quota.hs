@@ -25,22 +25,21 @@ create Storage.Quota {..} =
     >>= either DB.throwDBError pure
 
 findById :: QuotaId -> L.Flow (T.DBResult (Maybe Storage.Quota))
-findById id = do
+findById id =
   DB.findOne dbTable predicate
   where
-    predicate Storage.Quota {..} = (_id ==. B.val_ id)
+    predicate Storage.Quota {..} = _id ==. B.val_ id
 
 findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text -> L.Flow (T.DBResult [Storage.Quota])
 findAllWithLimitOffset mlimit moffset entityType entityId =
   DB.findAllWithLimitOffsetWhere dbTable (pred entityType entityId) limit offset orderByDesc
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Quota {..} = B.desc_ _createdAt
     pred entityType entityId Storage.Quota {..} =
-      ( _entityType ==. (B.val_ entityType)
-          &&. _EntityId ==. (B.val_ entityId)
-      )
+      _entityType ==. B.val_ entityType
+        &&. _EntityId ==. B.val_ entityId
 
 update ::
   QuotaId ->

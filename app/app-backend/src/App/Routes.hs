@@ -21,6 +21,7 @@ import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
 import qualified Product.Info as Info
+import qualified Product.Location as Location
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
@@ -48,6 +49,7 @@ type AppAPIs =
            :<|> ProductInstanceAPIs
            :<|> CancelAPIs
            :<|> CronAPIs
+           :<|> RouteAPI
            :<|> Epass.EPassAPIs
        )
 
@@ -55,18 +57,20 @@ appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
 
 appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
-appServer' key =
-  pure "App is UP"
-    :<|> registrationFlow
-    :<|> searchFlow
-    :<|> confirmFlow
-    :<|> caseFlow
-    :<|> infoFlow
-    :<|> trackTripFlow
-    :<|> productInstanceFlow
-    :<|> cancelFlow
-    :<|> cronFlow
-    :<|> Epass.epassServer' key
+appServer' key = do
+  ( pure "App is UP"
+      :<|> registrationFlow
+      :<|> searchFlow
+      :<|> confirmFlow
+      :<|> caseFlow
+      :<|> infoFlow
+      :<|> trackTripFlow
+      :<|> productInstanceFlow
+      :<|> cancelFlow
+      :<|> cronFlow
+      :<|> routeApiFlow
+      :<|> Epass.epassServer' key
+    )
 
 ---- Registration Flow ------
 type RegistrationAPIs =
@@ -214,3 +218,12 @@ type CronAPIs =
 cronFlow :: FlowServer CronAPIs
 cronFlow =
   Cron.updateCases
+
+type RouteAPI =
+  "route"
+    :> AuthHeader
+    :> ReqBody '[JSON] Location.Request
+    :> Post '[JSON] Location.Response
+
+routeApiFlow :: FlowServer RouteAPI
+routeApiFlow = Location.getRoute

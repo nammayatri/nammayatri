@@ -22,8 +22,8 @@ create Storage.Document {..} =
     >>= either DB.throwDBError pure
 
 findById :: DocumentId -> L.Flow (Maybe Storage.Document)
-findById id = do
+findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Document {..} = (_id ==. B.val_ id)
+    predicate Storage.Document {..} = _id ==. B.val_ id

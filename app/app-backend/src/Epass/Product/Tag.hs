@@ -23,9 +23,10 @@ create regToken CreateReq {..} = withFlowHandler $ do
       createdById = _EntityId
   tag <- getTag id createdById createByEntityType
   Tag.create tag
-  Tag.findById id
-    >>= fromMaybeM500 "Couldn't create Tag"
-    >>= return . CreateRes
+  CreateRes
+    <$> ( Tag.findById id
+            >>= fromMaybeM500 "Couldn't create Tag"
+        )
   where
     getTag id createdById createByEntityType = do
       now <- getCurrentTimeUTC
@@ -68,9 +69,10 @@ tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
   --TODO add checks for entity
   entityTag <- getEntityTag id createdById createByEntityType
   EntityTag.create entityTag
-  EntityTag.findById id
-    >>= fromMaybeM500 "Couldn't create EntityTag"
-    >>= return . TagEntityRes
+  TagEntityRes
+    <$> ( EntityTag.findById id
+            >>= fromMaybeM500 "Couldn't create EntityTag"
+        )
   where
     getEntityTag id createdById createByEntityType = do
       now <- getCurrentTimeUTC
@@ -90,8 +92,7 @@ listTypes ::
   FlowHandler ListVal
 listTypes regToken = withFlowHandler $ do
   verifyToken regToken
-  Tag.findAllTagTypes
-    >>= return . ListVal
+  ListVal <$> Tag.findAllTagTypes
 
 listTags ::
   RegToken ->
@@ -99,8 +100,7 @@ listTags ::
   FlowHandler ListVal
 listTags regToken tagType = withFlowHandler $ do
   verifyToken regToken
-  Tag.findAllTagWhereType tagType
-    >>= return . ListVal
+  ListVal <$> Tag.findAllTagWhereType tagType
 
 listByTag ::
   RegToken ->
@@ -109,5 +109,4 @@ listByTag ::
   FlowHandler ListRes
 listByTag regToken tagType tag = withFlowHandler $ do
   verifyToken regToken
-  Tag.findAllByTag tagType tag
-    >>= return . ListRes
+  ListRes <$> Tag.findAllByTag tagType tag

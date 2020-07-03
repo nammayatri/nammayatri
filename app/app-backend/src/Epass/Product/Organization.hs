@@ -91,17 +91,17 @@ listOrganization regToken API.ListOrganizationReq {..} = withFlowHandler $ do
     $ L.throwException
     $ err400 {errBody = "UNAUTHORIZED"}
   organizations <- QO.listOrganizations limit offset locationType pincode city district ward state status verified
-  orgInfo <- (traverse getOrgInfo organizations)
+  orgInfo <- traverse getOrgInfo organizations
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
 
 getOrgInfo :: Organization -> L.Flow API.OrgInfo
 getOrgInfo Organization {..} = do
   entityDocs <- EntityDocument.findAllByOrgId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  docs <- catMaybes <$> traverse Document.findById (DocumentId <$> docIds)
   entityTags <- EntityTag.findAllByEntity "ORGANIZATION" $ _getOrganizationId _id
   let tagIds = EntityTag._TagId <$> entityTags
-  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  tags <- catMaybes <$> traverse Tag.findById (TagId <$> tagIds)
   comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
   isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
   let locType = fromMaybe BTL.PINCODE _locationType
@@ -119,8 +119,10 @@ getOrgInfo Organization {..} = do
             _address = Just _address,
             _bound = _bound
           }
-  locationM <- Location.findByLocation locType _district (Just _city) (Just _state) (Just _country) (_ward) (Just _pincode)
-  isBlacklistedLocation <- maybe (pure False) (\loc -> (isJust <$> Blacklist.findByLocationId (SL._id loc))) $ locationM
+  locationM <-
+    Location.findByLocation locType _district (Just _city) (Just _state) (Just _country) _ward (Just _pincode)
+  isBlacklistedLocation <-
+    maybe (pure False) (\loc -> isJust <$> Blacklist.findByLocationId (SL._id loc)) locationM
   pure
     API.OrgInfo
       { _Tags = tags,

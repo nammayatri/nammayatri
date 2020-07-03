@@ -25,10 +25,10 @@ create :: RegToken -> CreateReq -> FlowHandler CreateRes
 create regToken CreateReq {..} = withFlowHandler $ do
   token <- verifyToken regToken
   id <- generateGUID
-  case (RegToken._entityType token) of
+  case RegToken._entityType token of
     RegToken.USER -> do
-      let (userId) = RegToken._EntityId token
-      user <- (User.findById $ UserId userId)
+      let userId = RegToken._EntityId token
+      user <- User.findById $ UserId userId
       let (OrganizationId orgId) = User._OrganizationId user
       quota <- quotaRec id orgId
       DB.create quota
@@ -56,13 +56,13 @@ update regToken id UpdateReq {..} = withFlowHandler $ do
   verifyToken regToken
   eres <- DB.update id _maxAllowed _startTime _endTime
   case eres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
     Right _ ->
       DB.findById id
         >>= \case
           Right (Just v) -> return $ UpdateRes v
           Right Nothing -> L.throwException $ err400 {errBody = "Quota not found"}
-          Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+          Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
 
 list ::
   RegToken ->
@@ -76,7 +76,7 @@ list regToken mlimit moffset entityType entityId = withFlowHandler $
     verifyToken regToken
     DB.findAllWithLimitOffset mlimit moffset entityType entityId
     >>= \case
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+      Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
       Right v -> return $ ListRes v
 
 get :: RegToken -> QuotaId -> FlowHandler GetRes
@@ -87,4 +87,4 @@ get regToken quotaId = withFlowHandler $
     >>= \case
       Right (Just user) -> return user
       Right Nothing -> L.throwException $ err400 {errBody = "Quota not found"}
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+      Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}

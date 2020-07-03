@@ -34,27 +34,28 @@ import Types.API.Case
 import Types.API.ProductInstance
 import Types.API.Products
 import Types.App
+import qualified Utils.Notifications as Notify
 
 update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
-update regToken productId ProdReq {..} = withFlowHandler $ do
+update regToken productId req = withFlowHandler $ do
   SR.RegistrationToken {..} <- RQ.verifyToken regToken
   user <- PersQ.findPersonById (PersonId _EntityId)
-  vehIdRes <- case _vehicleId of
+  isAllowed productId req
+  vehIdRes <- case req ^. #_vehicleId of
     Just k ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        PQ.updateVeh (ProductsId productId) _vehicleId
+        PQ.updateVeh (ProductsId productId) (req ^. #_vehicleId)
     Nothing -> return ()
-  dvrIdRes <- case _assignedTo of
+  dvrIdRes <- case req ^. #_assignedTo of
     Just k ->
       when (user ^. #_role == SP.ADMIN) $
-        PQ.updateDvr (ProductsId productId) _assignedTo
+        PQ.updateDvr (ProductsId productId) (req ^. #_assignedTo)
     Nothing -> return ()
-  tripRes <- case _status of
+  tripRes <- case req ^. #_status of
     Just c ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (ProductsId productId) c
     Nothing -> return ()
-
   updatedProd <- PQ.findById (ProductsId productId)
   driverInfo <- case (updatedProd ^. #_assignedTo) of
     Just driverId -> PersQ.findPersonById (PersonId driverId)
@@ -66,7 +67,7 @@ update regToken productId ProdReq {..} = withFlowHandler $ do
     Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) (Just vehicleInfo)
   notifyTripDataToGateway (ProductsId productId)
-  notifyCancelReq productId _status
+  notifyCancelReq updatedProd (req ^. #_status)
   return $ updatedProd {Product._info = infoObj}
 
 notifyTripDataToGateway :: ProductsId -> L.Flow ()
@@ -169,10 +170,24 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
               _toLocation = to
             }
 
-notifyCancelReq :: Text -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
-notifyCancelReq prodId status = do
+notifyCancelReq :: Product.Products -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
+notifyCancelReq prod status = do
   case status of
     Just k -> case k of
-      ProdInst.CANCELLED -> BP.notifyCancelToGateway prodId
+      ProdInst.CANCELLED -> do
+        admins <-
+          PersQ.findAllByOrgIds [SP.ADMIN] [Product._organizationId prod]
+        BP.notifyCancelToGateway (_getProductsId $ prod ^. #_id)
+        Notify.notifyCancelReqByBP prod admins
       _ -> return ()
     Nothing -> return ()
+
+-- Core Utility methods are below
+
+isAllowed :: Text -> ProdReq -> L.Flow ()
+isAllowed productId req = do
+  piList <- CPQ.findAllByStatusIds [ProdInst.COMPLETED, ProdInst.INPROGRESS] [ProductsId productId]
+  unless (null piList) $
+    case (req ^. #_assignedTo, req ^. #_vehicleId) of
+      (Nothing, Nothing) -> return ()
+      _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}

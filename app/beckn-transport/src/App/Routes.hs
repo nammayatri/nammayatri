@@ -11,10 +11,12 @@ import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
+import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
+import Beckn.Types.Storage.Vehicle
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -33,7 +35,7 @@ import Servant
 import Servant.Multipart
 import Types.API.Case
 import Types.API.Cron
-import Types.API.Location
+import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
 import Types.API.Products
@@ -59,6 +61,7 @@ type TransporterAPIs =
            :<|> VehicleAPIs
            :<|> LocationAPIs
            :<|> ProductAPIs
+           :<|> RouteAPI
        )
 
 ---- Registration Flow ------
@@ -128,8 +131,11 @@ type VehicleAPIs =
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
              :> AuthHeader
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
+             :> QueryParam "variant" Variant
+             :> QueryParam "category" Category
+             :> QueryParam "energyType" EnergyType
+             :> QueryParam "limit" Int
+             :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
            :<|> Capture "vehicleId" Text
              :> AuthHeader
@@ -270,6 +276,7 @@ transporterServer' key =
     :<|> vehicleFlow
     :<|> locationFlow
     :<|> productFlow
+    :<|> routeApiFlow
 
 type SearchAPIs =
   "search"
@@ -331,3 +338,12 @@ type TrackApis =
 
 trackApiFlow :: FlowServer TrackApis
 trackApiFlow = BP.trackTrip
+
+type RouteAPI =
+  "route"
+    :> AuthHeader
+    :> ReqBody '[JSON] Location.Request
+    :> Post '[JSON] Location.Response
+
+routeApiFlow :: FlowServer RouteAPI
+routeApiFlow = Location.getRoute
