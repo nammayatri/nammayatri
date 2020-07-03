@@ -25,9 +25,9 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   return $ UpdatePersonRes updatedPerson
   where
     verifyPerson personId entityId =
-      when (personId /= entityId)
-        $ L.throwException
-        $ err400 {errBody = "PERSON_ID_MISMATCH"}
+      when (personId /= entityId) $
+        L.throwException $
+          err400 {errBody = "PERSON_ID_MISMATCH"}
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
@@ -64,8 +64,8 @@ getPerson SR.RegistrationToken {..} idM mobileM emailM identifierM = withFlowHan
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
+        $ L.throwException $
+          err401 {errBody = "Unauthorized"}
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do

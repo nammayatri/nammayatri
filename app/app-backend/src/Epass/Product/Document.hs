@@ -37,9 +37,9 @@ upload regToken enType enId multipartData = withFlowHandler $ do
     forM (files multipartData) $ \file ->
       uploadDocument file dir orgId
   traverse_ (createEntity enId enType) documents
-  return
-    $ DocumentRes
-    $ _getDocumentId . SD._id <$> documents
+  return $
+    DocumentRes $
+      _getDocumentId . SD._id <$> documents
 
 listDocuments ::
   RegToken -> DocumentByType -> Text -> FlowHandler [ListDocumentRes]

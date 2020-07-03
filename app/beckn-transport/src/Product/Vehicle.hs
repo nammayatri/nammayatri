@@ -25,8 +25,9 @@ createVehicle orgId req = withFlowHandler $ do
   return $ CreateVehicleRes vehicle
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $
-  ListVehicleRes <$> QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
+listVehicles orgId variantM categoryM energyTypeM limitM offsetM =
+  withFlowHandler $
+    ListVehicleRes <$> QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
@@ -61,9 +62,9 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
   return $ CreateVehicleRes vehicle
   where
     hasAccess user vehicle =
-      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId))
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
+      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
+        L.throwException $
+          err401 {errBody = "Unauthorized"}
 
 addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}

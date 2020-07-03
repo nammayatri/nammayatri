@@ -63,9 +63,9 @@ search token req = withFlowHandler $ do
   where
     validateDateTime req = do
       currTime <- getCurrentTimeUTC
-      when (req ^. #message . #time < currTime)
-        $ L.throwException
-        $ err400 {errBody = "Invalid start time"}
+      when (req ^. #message . #time < currTime) $
+        L.throwException $
+          err400 {errBody = "Invalid start time"}
 
 search_cb :: OnSearchReq -> FlowHandler OnSearchRes
 search_cb req = withFlowHandler $ do

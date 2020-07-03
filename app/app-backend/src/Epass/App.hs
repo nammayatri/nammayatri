@@ -32,9 +32,9 @@ import qualified System.Environment as SE
 runEpassBackendApp :: IO ()
 runEpassBackendApp = do
   port <- fromMaybe 8012 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runEpassBackendApp' port
-    $ setOnExceptionResponse becknExceptionResponse
-    $ setPort port defaultSettings
+  runEpassBackendApp' port $
+    setOnExceptionResponse becknExceptionResponse $
+      setPort port defaultSettings
 
 runEpassBackendApp' :: Int -> Settings -> IO ()
 runEpassBackendApp' port settings = do

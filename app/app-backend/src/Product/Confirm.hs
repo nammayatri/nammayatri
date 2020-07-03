@@ -37,9 +37,9 @@ confirm :: SR.RegistrationToken -> API.ConfirmReq -> FlowHandler AckResponse
 confirm SR.RegistrationToken {..} API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrentTimeUTC
   case_ <- QCase.findById $ CaseId caseId
-  when ((case_ ^. #_validTill) < lt)
-    $ L.throwException
-    $ err400 {errBody = "Case has expired"}
+  when ((case_ ^. #_validTill) < lt) $
+    L.throwException $
+      err400 {errBody = "Case has expired"}
   productInstance <- QCP.findByCaseAndProductId (CaseId caseId) (ProductsId productId)
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId

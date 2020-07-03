@@ -4,7 +4,7 @@ module Beckn.Types.Common where
 
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
-import Data.Generics.Labels()
+import Data.Generics.Labels ()
 import Data.Swagger
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
