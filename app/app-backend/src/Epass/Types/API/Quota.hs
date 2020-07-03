@@ -23,7 +23,7 @@ data CreateReq = CreateReq
 instance FromJSON CreateReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data CreateRes = CreateRes
+newtype CreateRes = CreateRes
   { _quota :: Quota
   }
   deriving (Show, Generic, FromJSON, Default, ToSchema)
@@ -44,7 +44,7 @@ data UpdateReq = UpdateReq
 instance FromJSON UpdateReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data UpdateRes = UpdateRes
+newtype UpdateRes = UpdateRes
   { _quota :: Quota
   }
   deriving (Show, Generic, FromJSON, Default, ToSchema)
@@ -52,7 +52,7 @@ data UpdateRes = UpdateRes
 instance ToJSON UpdateRes where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data ListRes = ListRes
+newtype ListRes = ListRes
   { _quotas :: [Quota]
   }
   deriving (Show, Generic, FromJSON, Default, ToSchema)

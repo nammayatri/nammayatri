@@ -23,6 +23,8 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck Postgres Category
+
 instance FromBackendRow Postgres Category where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
@@ -31,14 +33,16 @@ instance ToParamSchema Category
 instance FromHttpApiData Category where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 --------
-data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS
+data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS | HATCHBACK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres Variant
 
 instance FromBackendRow Postgres Variant where
   fromBackendRow = read . T.unpack <$> fromBackendRow
@@ -48,7 +52,7 @@ instance ToParamSchema Variant
 instance FromHttpApiData Variant where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 -----
 data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
@@ -56,6 +60,8 @@ data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EnergyType where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres EnergyType
 
 instance FromBackendRow Postgres EnergyType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
@@ -65,7 +71,7 @@ instance ToParamSchema EnergyType
 instance FromHttpApiData EnergyType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 ----
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
@@ -82,7 +88,7 @@ instance ToParamSchema RegistrationCategory
 instance FromHttpApiData RegistrationCategory where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data VehicleT f = Vehicle
   { _id :: B.C f VehicleId,

@@ -59,7 +59,12 @@ instance ToParamSchema Role
 instance FromHttpApiData Role where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData Role where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 -------------------------------------------------------------------------------------------
 data IdentifierType = MOBILENUMBER | AADHAAR
@@ -90,7 +95,7 @@ instance ToParamSchema Gender
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
-  parseHeader = bimap T.pack id . eitherDecode . BSL.fromStrict
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data PersonT f = Person
   { _id :: B.C f PersonId,

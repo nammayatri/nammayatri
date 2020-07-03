@@ -30,8 +30,10 @@ createTransporter regToken req = withFlowHandler $ do
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
-      unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
-      when (SP._organizationId person /= Nothing)
+      unless (SP._verified person)
+        $ L.throwException
+        $ err400 {errBody = "user not verified"}
+      when (isJust $ SP._organizationId person)
         $ L.throwException
         $ err400 {errBody = "user already registered an organization"}
 
@@ -52,7 +54,7 @@ updateTransporter orgId regToken req = withFlowHandler $ do
       validate person
       org <- QO.findOrganizationById $ OrganizationId orgId
       organization <-
-        if not (fromMaybe True (req ^. #enabled))
+        if req ^. #enabled /= Just False
           then transformFlow2 req org >>= addTime (Just now)
           else transformFlow2 req org
       QO.updateOrganizationRec organization

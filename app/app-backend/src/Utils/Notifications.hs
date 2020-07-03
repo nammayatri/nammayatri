@@ -12,8 +12,8 @@ import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as Vehicle
 import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.CaseProduct as CaseProduct
 import Beckn.Types.Storage.Person as Person hiding (full_name)
+import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common (showTimeIst)
@@ -25,8 +25,8 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.CaseProduct as CaseProduct
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 
 -- @boazjohn:

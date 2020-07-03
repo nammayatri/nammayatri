@@ -22,10 +22,10 @@ create Storage.EntityDocument {..} =
     >>= either DB.throwDBError pure
 
 findById :: EntityDocumentId -> L.Flow (T.DBResult (Maybe Storage.EntityDocument))
-findById id = do
+findById id =
   DB.findOne dbTable predicate
   where
-    predicate Storage.EntityDocument {..} = (_id ==. B.val_ id)
+    predicate Storage.EntityDocument {..} = _id ==. B.val_ id
 
 findAllIds :: Text -> DocumentByType -> L.Flow [Storage.EntityDocument]
 findAllIds entityId dt =

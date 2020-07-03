@@ -43,8 +43,8 @@ createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowH
       SPONSOR -> sponsorFlow token req
       BULKSPONSOR -> bulkSponsorFlow token req
   QC.create caseInfo
-  QC.findById (Case._id caseInfo)
-    >>= return . API.PassApplicationRes'
+  API.PassApplicationRes'
+    <$> QC.findById (Case._id caseInfo)
 
 bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
 bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
@@ -71,7 +71,7 @@ selfFlow token req@API.CreatePassApplicationReq {..} = do
       travellerID = fromJust _travellerID
       travellerIDType = mapIdType' <$> _travellerIDType
   when
-    (customerId /= (PersonId (RegistrationToken._EntityId token)))
+    (customerId /= PersonId (RegistrationToken._EntityId token))
     (L.throwException $ err400 {errBody = "CustomerId mismatch"})
   QP.update customerId Nothing _travellerName Nothing Nothing travellerIDType _travellerID
   getCaseInfo token req _CustomerId
@@ -146,24 +146,24 @@ getLocation API.CreatePassApplicationReq {..} = do
   let fromLocation =
         Loc.Location
           { _id = toId,
-            _locationType = fromMaybe Loc.PINCODE (Location._type <$> _fromLocation),
-            _lat = join (Location._lat <$> _fromLocation),
-            _long = join (Location._long <$> _fromLocation),
-            _ward = join (Location._ward <$> _fromLocation),
-            _district = join (Location._district <$> _fromLocation),
-            _city = join (Location._city <$> _fromLocation),
-            _state = join (Location._state <$> _fromLocation),
-            _country = join (Location._country <$> _fromLocation),
-            _pincode = show <$> (join (Location._pincode <$> _fromLocation)),
-            _address = join (Location._address <$> _fromLocation),
-            _bound = Nothing, -- join (Location._bound <$> _fromLocation)
+            _locationType = maybe Loc.PINCODE Location._type _fromLocation,
+            _lat = Location._lat =<< _fromLocation,
+            _long = Location._long =<< _fromLocation,
+            _ward = Location._ward =<< _fromLocation,
+            _district = Location._district =<< _fromLocation,
+            _city = Location._city =<< _fromLocation,
+            _state = Location._state =<< _fromLocation,
+            _country = Location._country =<< _fromLocation,
+            _pincode = show <$> (Location._pincode =<< _fromLocation),
+            _address = Location._address =<< _fromLocation,
+            _bound = Nothing, -- Location._bound =<< _fromLocation
             _createdAt = currTime,
             _updatedAt = currTime
           }
   let toLocation =
         Loc.Location
           { _id = fromId,
-            _locationType = Loc.PINCODE, -- (Location._type  _toLocation)
+            _locationType = Loc.PINCODE, -- (Location._type _toLocation)
             _lat = Location._lat _toLocation,
             _long = Location._long _toLocation,
             _ward = Location._ward _toLocation,
@@ -171,9 +171,9 @@ getLocation API.CreatePassApplicationReq {..} = do
             _city = Location._city _toLocation,
             _state = Location._state _toLocation,
             _country = Location._country _toLocation,
-            _pincode = show <$> (Location._pincode _toLocation),
+            _pincode = show <$> Location._pincode _toLocation,
             _address = Location._address _toLocation,
-            _bound = Nothing, -- join (Location._bound  _toLocation)
+            _bound = Nothing, -- (Location._bound _toLocation)
             _createdAt = currTime,
             _updatedAt = currTime
           }
@@ -186,7 +186,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   QL.create fromLoc
   QL.create toLoc
   customer <- QP.findById (PersonId $ SR._EntityId token)
-  let customerOrgId = join (SP._organizationId <$> customer)
+  let customerOrgId = SP._organizationId =<< customer
   currTime <- getCurrentTimeUTC
   count <- getCount _type _count
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -214,7 +214,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
         _toLocationId = toLocationId,
         _udf1 = Just $ show $ getPassType _type, -- passtype
         _udf2 = customerOrgId, -- customer org id
-        _udf3 = (show <$> _count), -- count
+        _udf3 = show <$> _count, -- count
         _udf4 = Nothing, -- approved count
         _udf5 = Nothing, -- remarks
         _info = Nothing,
@@ -225,7 +225,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
 createCustomer :: Text -> L.Flow Customer.Customer
 createCustomer name = do
   id <- generateGUID
-  Customer.create =<< (getCust id)
+  Customer.create =<< getCust id
   Customer.findCustomerById id
     >>= fromMaybeM500 "Unable to create customer"
   where

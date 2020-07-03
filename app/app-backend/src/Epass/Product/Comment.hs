@@ -19,9 +19,10 @@ create regToken CreateReq {..} = withFlowHandler $ do
   id <- generateGUID
   comment <- getComment id _entityType _EntityId
   Comment.create comment
-  Comment.findById id
-    >>= fromMaybeM500 "Unable to create Comment"
-    >>= return . CreateRes
+  CreateRes
+    <$> ( Comment.findById id
+            >>= fromMaybeM500 "Unable to create Comment"
+        )
   where
     getComment id entityType entityId = do
       now <- getCurrentTimeUTC
@@ -39,5 +40,5 @@ create regToken CreateReq {..} = withFlowHandler $ do
 list :: RegToken -> Text -> Text -> FlowHandler ListRes
 list regToken commentedOnEntityType commentedOnEntityId = withFlowHandler $ do
   RegistrationToken {..} <- verifyToken regToken
-  Comment.findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId
-    >>= return . ListRes
+  ListRes
+    <$> Comment.findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId

@@ -20,6 +20,9 @@ data InitiateLoginReq = InitiateLoginReq
 instance FromJSON InitiateLoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+instance ToJSON InitiateLoginReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data ReInitiateLoginReq = ReInitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
@@ -31,11 +34,14 @@ data ReInitiateLoginReq = ReInitiateLoginReq
 instance FromJSON ReInitiateLoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+instance ToJSON ReInitiateLoginReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data InitiateLoginRes = InitiateLoginRes
   { tokenId :: Text,
     attempts :: Int
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 ---------- Verify Login --------
 data LoginReq = LoginReq
@@ -50,8 +56,11 @@ data LoginReq = LoginReq
 instance FromJSON LoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+instance ToJSON LoginReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data LoginRes = LoginRes
   { registrationToken :: Text,
     user :: Person
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

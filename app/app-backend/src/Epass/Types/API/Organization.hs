@@ -27,15 +27,18 @@ data CreateOrganizationReq = CreateOrganizationReq
 instance FromJSON CreateOrganizationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data OrganizationRes = OrganizationRes
+instance ToJSON CreateOrganizationReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+newtype OrganizationRes = OrganizationRes
   { organization :: Organization
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data GetOrganizationRes = GetOrganizationRes
+newtype GetOrganizationRes = GetOrganizationRes
   { organization :: OrgInfo
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data ListOrganizationReq = ListOrganizationReq
   { limit :: Maybe Int,
@@ -49,7 +52,7 @@ data ListOrganizationReq = ListOrganizationReq
     status :: [Status],
     verified :: Maybe Bool
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, ToJSON, ToSchema)
 
 instance FromJSON ListOrganizationReq where
   parseJSON (Object o) = do
@@ -76,14 +79,14 @@ instance FromJSON ListOrganizationReq where
         status
         verified
 
-data ListOrganizationRes = ListOrganizationRes
+newtype ListOrganizationRes = ListOrganizationRes
   { _organizations :: [OrgInfo]
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, FromJSON, ToSchema)
 
 data OrgInfo = OrgInfo
   { _id :: OrganizationId,
-    _gstin :: (Maybe Text),
+    _gstin :: Maybe Text,
     _status :: Status,
     _verified :: Bool,
     _Tags :: [ST.Tag],
@@ -93,11 +96,11 @@ data OrgInfo = OrgInfo
     _isBlacklistedLocation :: Bool,
     _status :: Status,
     _location :: Location,
-    _info :: (Maybe Text),
+    _info :: Maybe Text,
     _createdAt :: LocalTime,
     _updatedAt :: LocalTime
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, FromJSON, ToSchema)
 
 instance ToJSON ListOrganizationRes where
   toJSON = genericToJSON stripLensPrefixOptions
@@ -105,10 +108,13 @@ instance ToJSON ListOrganizationRes where
 instance ToJSON OrgInfo where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data UpdateOrganizationReq = UpdateOrganizationReq
+newtype UpdateOrganizationReq = UpdateOrganizationReq
   { _status :: Status
   }
   deriving (Generic, ToSchema)
 
 instance FromJSON UpdateOrganizationReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON UpdateOrganizationReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions

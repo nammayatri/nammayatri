@@ -1,8 +1,8 @@
 module Epass.Product.Pass where
 
 import qualified Beckn.Types.Storage.Case as SC
-import qualified Beckn.Types.Storage.CaseProduct as SCP
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as SCP
 import qualified Beckn.Types.Storage.Products as SP
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
@@ -36,18 +36,18 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
 import Servant
 import qualified Storage.Queries.Case as QC
-import qualified Storage.Queries.CaseProduct as QCP
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as QCP
 import qualified Storage.Queries.Products as QProd
 
 getPassById :: RegToken -> Text -> FlowHandler PassRes
 getPassById regToken passId =
   withFlowHandler $ do
     reg <- verifyToken regToken
-    caseProduct <- QCP.findByProductId (ProductsId passId)
-    case' <- QC.findById (SCP._caseId caseProduct)
+    productInstance <- QCP.findByProductId (ProductsId passId)
+    case' <- QC.findById (SCP._caseId productInstance)
     product <- QProd.findById (ProductsId passId)
-    PassRes <$> getPassInfo case' product caseProduct
+    PassRes <$> getPassInfo case' product productInstance
 
 updatePass :: RegToken -> Text -> UpdatePassReq -> FlowHandler PassRes
 updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
@@ -62,7 +62,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
         (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
         (L.throwException $ err400 {errBody = "Access denied"})
       QCP.updateStatus (ProductsId passId) (fromJust _action)
-      return $ pass
+      return pass
     RegistrationToken.CUSTOMER -> do
       customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
       case Person._role customer of
@@ -83,10 +83,10 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
             (isJust _action || isJust _toLocation)
             (L.throwException $ err400 {errBody = "Access denied"})
           return $ pass {SP._fromLocation = _fromLocation}
-  caseProduct <- QCP.findByProductId (ProductsId passId)
-  case' <- QC.findById (SCP._caseId caseProduct)
+  productInstance <- QCP.findByProductId (ProductsId passId)
+  case' <- QC.findById (SCP._caseId productInstance)
   QProd.updateMultiple passId pass'
-  PassRes <$> getPassInfo case' pass caseProduct
+  PassRes <$> getPassInfo case' pass productInstance
 
 listPass ::
   RegToken ->
@@ -106,11 +106,11 @@ listPass regToken passIdType passV limitM offsetM passType =
         persons <- Person.findAllByOrgIds [] [passV]
         when (null persons) $ L.throwException err400 {errBody = "NO_PERSON_FOUND"}
         cases <- traverse (QC.findAllByPerson . _getPersonId . Person._id) persons
-        caseProducts <- traverse (QCP.findAllByCaseId . SC._id) (concat cases)
-        ListPassRes <$> traverse buildListRes (concat caseProducts)
+        productInstances <- traverse (QCP.findAllByCaseId . SC._id) (concat cases)
+        ListPassRes <$> traverse buildListRes (concat productInstances)
       _ -> do
-        caseProducts <- maybe (return []) getCaseProducts listBy
-        ListPassRes <$> traverse buildListRes caseProducts
+        productInstances <- maybe (return []) getProductInstances listBy
+        ListPassRes <$> traverse buildListRes productInstances
   where
     getListBy =
       case passIdType of
@@ -123,24 +123,24 @@ listPass regToken passIdType passV limitM offsetM passType =
               >>= fromMaybeM400 "PERSON_NOT_FOUND"
           return $ Just $ QCP.ByCustomerId (Person._id person)
         ORGANIZATIONID -> L.throwException err500
-    getCaseProducts listBy =
+    getProductInstances listBy =
       case (toEnum <$> limitM, toEnum <$> offsetM) of
-        (Just l, Just o) -> QCP.listAllCaseProductWithOffset l o listBy []
-        _ -> QCP.listAllCaseProduct listBy []
+        (Just l, Just o) -> QCP.listAllProductInstanceWithOffset l o listBy []
+        _ -> QCP.listAllProductInstance listBy []
 
-buildListRes :: SCP.CaseProduct -> L.Flow PassInfo
-buildListRes caseProduct = do
-  case' <- QC.findById (SCP._caseId caseProduct)
-  product <- QProd.findById (SCP._productId caseProduct)
-  getPassInfo case' product caseProduct
+buildListRes :: SCP.ProductInstance -> L.Flow PassInfo
+buildListRes productInstance = do
+  case' <- QC.findById (SCP._caseId productInstance)
+  product <- QProd.findById (SCP._productId productInstance)
+  getPassInfo case' product productInstance
 
-getPassInfo :: SC.Case -> SP.Products -> SCP.CaseProduct -> L.Flow PassInfo
-getPassInfo case' prod caseProduct = do
-  person <- sequence $ Person.findById <$> (SCP._personId caseProduct)
+getPassInfo :: SC.Case -> SP.Products -> SCP.ProductInstance -> L.Flow PassInfo
+getPassInfo case' prod productInstance = do
+  person <- sequence $ Person.findById <$> SCP._personId productInstance
   org <- Organization.findOrganizationById (OrganizationId $ SP._organizationId prod)
   entityDocs <- EntityDocument.findAllByPassApplicationId (PassApplicationId $ _getCaseId $ SC._id case')
   let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  docs <- catMaybes <$> traverse Document.findById (DocumentId <$> docIds)
   pure $
     PassInfo
       { _fromLocation = fromJust $ SP._fromLocation prod,
@@ -150,7 +150,7 @@ getPassInfo case' prod caseProduct = do
         _id = _getProductsId $ SP._id prod,
         _ShortId = SP._shortId prod,
         _TenantOrganizationId = Nothing,
-        _status = SCP._status caseProduct,
+        _status = SCP._status productInstance,
         _fromDate = SP._startTime prod,
         _toDate = SP._validTill prod,
         _passType = read $ T.unpack $ fromJust $ SC._udf1 case', -- BEWARE: udf1 is being used in case to store the pass type

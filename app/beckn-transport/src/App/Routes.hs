@@ -13,19 +13,20 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.CaseProduct
 import Beckn.Types.Storage.Person as SP
+import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
+import Beckn.Types.Storage.Vehicle
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
-import qualified Product.CaseProduct as CaseProduct
 import qualified Product.Cron as Cron
 import qualified Product.Location as Location
 import qualified Product.Person as Person
+import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
@@ -33,10 +34,10 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.Multipart
 import Types.API.Case
-import Types.API.CaseProduct
 import Types.API.Cron
 import Types.API.Location as Location
 import Types.API.Person
+import Types.API.ProductInstance
 import Types.API.Products
 import Types.API.Registration
 import Types.API.Registration
@@ -56,7 +57,7 @@ type TransporterAPIs =
            :<|> TrackApis
            :<|> CaseAPIs
            :<|> CronAPIs
-           :<|> CaseProductAPIs
+           :<|> ProductInstanceAPIs
            :<|> VehicleAPIs
            :<|> LocationAPIs
            :<|> ProductAPIs
@@ -128,8 +129,11 @@ type VehicleAPIs =
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
              :> AuthHeader
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
+             :> QueryParam "variant" Variant
+             :> QueryParam "category" Category
+             :> QueryParam "energyType" EnergyType
+             :> QueryParam "limit" Int
+             :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
            :<|> Capture "vehicleId" Text
              :> AuthHeader
@@ -198,18 +202,18 @@ caseFlow =
   Case.list
     :<|> Case.update
 
--------- CaseProduct Flow----------
-type CaseProductAPIs =
-  "caseProduct"
+-------- ProductInstance Flow----------
+type ProductInstanceAPIs =
+  "productInstance"
     :> ( AuthHeader
-           :> QueryParams "status" CaseProductStatus
+           :> QueryParams "status" ProductInstanceStatus
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
-           :> Get '[JSON] CaseProductList
+           :> Get '[JSON] ProductInstanceList
        )
 
-caseProductFlow =
-  CaseProduct.list
+productInstanceFlow =
+  ProductInstance.list
 
 -------- Product Flow----------
 type ProductAPIs =
@@ -266,7 +270,7 @@ transporterServer' key =
     :<|> trackApiFlow
     :<|> caseFlow
     :<|> cronFlow
-    :<|> caseProductFlow
+    :<|> productInstanceFlow
     :<|> vehicleFlow
     :<|> locationFlow
     :<|> productFlow

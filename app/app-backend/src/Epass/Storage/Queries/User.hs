@@ -23,24 +23,24 @@ create Storage.User {..} =
     >>= either DB.throwDBError pure
 
 findById :: UserId -> L.Flow Storage.User
-findById id = do
+findById id =
   DB.findOneWithErr dbTable predicate
   where
-    predicate Storage.User {..} = (_id ==. B.val_ id)
+    predicate Storage.User {..} = _id ==. B.val_ id
 
 findByMobileNumber :: Text -> L.Flow (Maybe Storage.User)
-findByMobileNumber mobileNumber = do
+findByMobileNumber mobileNumber =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
-    predicate Storage.User {..} = (_mobileNumber ==. B.val_ mobileNumber)
+    predicate Storage.User {..} = _mobileNumber ==. B.val_ mobileNumber
 
 findAllWithLimitOffset :: Maybe Int -> Maybe Int -> L.Flow [Storage.User]
 findAllWithLimitOffset mlimit moffset =
   DB.findAllWithLimitOffset dbTable limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.User {..} = B.desc_ _createdAt
 
 findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> L.Flow [Storage.User]
@@ -48,8 +48,8 @@ findAllWithLimitOffsetByRole mlimit moffset roles =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     predicate [] Storage.User {..} = B.val_ True
     predicate r Storage.User {..} =
       _role `B.in_` (B.val_ <$> r)
@@ -60,8 +60,8 @@ findAllWithLimitOffsetBy mlimit moffset r f =
   DB.findAllWithLimitOffsetWhere dbTable (predicate f r) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     predicate i [] Storage.User {..} =
       _OrganizationId `B.in_` (B.val_ <$> i)
     predicate i r Storage.User {..} =
