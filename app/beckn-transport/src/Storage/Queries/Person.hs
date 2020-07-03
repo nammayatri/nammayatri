@@ -25,52 +25,42 @@ create Storage.Person {..} =
 
 findPersonById ::
   PersonId -> L.Flow Storage.Person
-findPersonById id = do
+findPersonById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "PERSON_NOT_FOUND"
   where
-    predicate Storage.Person {..} = (_id ==. B.val_ id)
+    predicate Storage.Person {..} = _id ==. B.val_ id
 
-findPersonByIdAndRoleAndOrgId ::
-  PersonId ->
-  Storage.Role ->
-  Text ->
-  L.Flow (Maybe Storage.Person)
-findPersonByIdAndRoleAndOrgId id role orgId = do
+findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> L.Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId id role orgId =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-      ( _id ==. B.val_ id
-          &&. _role ==. B.val_ role
-          &&. _organizationId ==. B.val_ (Just orgId)
-      )
+      _id ==. B.val_ id
+        &&. _role ==. B.val_ role
+        &&. _organizationId ==. B.val_ (Just orgId)
 
-findAllWithLimitOffsetByOrgIds ::
-  Maybe Integer ->
-  Maybe Integer ->
-  [Storage.Role] ->
-  [Text] ->
-  L.Flow [Storage.Person]
-findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     predicate roles orgIds Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
         [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
-findAllByOrgIds roles orgIds = do
+findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
   where
     predicate roles orgIds Storage.Person {..} =
@@ -78,11 +68,11 @@ findAllByOrgIds roles orgIds = do
         (&&.)
         (B.val_ True)
         [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 findByMobileNumber ::
@@ -189,17 +179,16 @@ update id status verified deviceTokenM = do
   where
     setClause status verified currTime deviceToken Storage.Person {..} =
       mconcat
-        ( [ _status <-. B.val_ status,
-            _updatedAt <-. B.val_ currTime,
-            _verified <-. B.val_ verified,
-            _deviceToken <-. B.val_ deviceToken
-          ]
-        )
+        [ _status <-. B.val_ status,
+          _updatedAt <-. B.val_ currTime,
+          _verified <-. B.val_ verified,
+          _deviceToken <-. B.val_ deviceToken
+        ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
 deleteById :: PersonId -> L.Flow ()
-deleteById id = do
+deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Person {..} = (_id ==. B.val_ id)
+    predicate id Storage.Person {..} = _id ==. B.val_ id

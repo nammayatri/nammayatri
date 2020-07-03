@@ -1,8 +1,8 @@
 module Epass.Product.PassApplication.Fetch where
 
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Location as BTL
+import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
 import Data.Aeson

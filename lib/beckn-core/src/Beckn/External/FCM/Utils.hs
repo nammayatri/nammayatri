@@ -30,6 +30,6 @@ createFCMTokenRefreshThread = do
               JWT.JWTValid x ->
                 -- seconds before token expiration
                 if x > 300
-                  then (fromInteger x) - 300
+                  then fromInteger x - 300
                   else 10
               _ -> 10 -- just a caution, it should be valid by this moment

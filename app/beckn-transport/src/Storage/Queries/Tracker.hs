@@ -23,8 +23,8 @@ create Storage.Tracker {..} =
 
 findTrackerById ::
   TrackerId -> L.Flow (Maybe Storage.Tracker)
-findTrackerById id = do
+findTrackerById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Tracker {..} = (_id ==. B.val_ id)
+    predicate Storage.Tracker {..} = _id ==. B.val_ id

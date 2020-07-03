@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Cron where
 
 import Beckn.Types.App

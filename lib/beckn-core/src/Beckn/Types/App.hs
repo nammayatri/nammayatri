@@ -11,7 +11,7 @@ import qualified EulerHS.Runtime as R
 import Servant
 
 -- App Types
-data Env = Env
+newtype Env = Env
   { runTime :: R.FlowRuntime
   }
 

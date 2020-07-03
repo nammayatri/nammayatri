@@ -36,6 +36,7 @@ import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import Types.App
+import Utils.Common (TokenAuth)
 
 type AppAPIs =
   "v1"
@@ -57,20 +58,19 @@ appAPIs :: Proxy AppAPIs
 appAPIs = Proxy
 
 appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
-appServer' key = do
-  ( pure "App is UP"
-      :<|> registrationFlow
-      :<|> searchFlow
-      :<|> confirmFlow
-      :<|> caseFlow
-      :<|> infoFlow
-      :<|> trackTripFlow
-      :<|> productInstanceFlow
-      :<|> cancelFlow
-      :<|> cronFlow
-      :<|> routeApiFlow
-      :<|> Epass.epassServer' key
-    )
+appServer' key =
+  pure "App is UP"
+    :<|> registrationFlow
+    :<|> searchFlow
+    :<|> confirmFlow
+    :<|> caseFlow
+    :<|> infoFlow
+    :<|> trackTripFlow
+    :<|> productInstanceFlow
+    :<|> cancelFlow
+    :<|> cronFlow
+    :<|> routeApiFlow
+    :<|> Epass.epassServer' key
 
 ---- Registration Flow ------
 type RegistrationAPIs =
@@ -96,7 +96,7 @@ registrationFlow =
 -------- Search Flow --------
 type SearchAPIs =
   "search" :> "services"
-    :> AuthHeader
+    :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
     -- on_search
@@ -113,7 +113,7 @@ searchFlow =
 -------- Confirm Flow --------
 type ConfirmAPIs =
   ( "confirm"
-      :> AuthHeader
+      :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
@@ -130,7 +130,7 @@ confirmFlow =
 ------- Case Flow -------
 type CaseAPIs =
   "case"
-    :> AuthHeader
+    :> TokenAuth
     :> ( "list"
            :> MandatoryQueryParam "type" Case.CaseType
            :> QueryParams "status" Case.CaseStatus
@@ -148,7 +148,7 @@ caseFlow regToken =
 
 -------- Info Flow ------
 type InfoAPIs =
-  AuthHeader
+  TokenAuth
     :> ( "product"
            :> Capture "id" Text
            :> Get '[JSON] GetProductInfoRes
@@ -166,7 +166,7 @@ infoFlow regToken =
 type TrackTripAPIs =
   "track"
     :> "trip"
-    :> AuthHeader
+    :> TokenAuth
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
@@ -182,7 +182,7 @@ trackTripFlow =
 -------- ProductInstance Flow----------
 type ProductInstanceAPIs =
   "productInstance"
-    :> ( AuthHeader
+    :> ( TokenAuth
            :> ReqBody '[JSON] ProductInstance.ProdInstReq
            :> Post '[JSON] ProductInstance.ProductInstanceList
        )
@@ -194,7 +194,7 @@ productInstanceFlow =
 type CancelAPIs =
   "cancel"
     :> "services"
-    :> AuthHeader
+    :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     -- on cancel

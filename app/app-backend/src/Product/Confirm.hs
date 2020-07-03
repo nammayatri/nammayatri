@@ -11,6 +11,7 @@ import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as SCP
 import qualified Beckn.Types.Storage.Products as Products
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
@@ -29,13 +30,11 @@ import qualified Storage.Queries.Products as Products
 import qualified Types.API.Confirm as API
 import Types.App
 import qualified Types.ProductInfo as Products
-import Utils.Common (verifyToken)
 import qualified Utils.Notifications as Notify
 import Utils.Routes
 
-confirm :: RegToken -> API.ConfirmReq -> FlowHandler AckResponse
-confirm regToken API.ConfirmReq {..} = withFlowHandler $ do
-  verifyToken regToken
+confirm :: SR.RegistrationToken -> API.ConfirmReq -> FlowHandler AckResponse
+confirm SR.RegistrationToken {..} API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrentTimeUTC
   case_ <- QCase.findById $ CaseId caseId
   when ((case_ ^. #_validTill) < lt)
@@ -57,15 +56,15 @@ onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
-  let selectedItems = req ^. #message ^. #_selected_items
-      trip = req ^. #message ^. #_trip
-      caseId = CaseId $ req ^. #context ^. #transaction_id
+  let selectedItems = req ^. #message . #_selected_items
+      trip = req ^. #message . #_trip
+      caseId = CaseId $ req ^. #context . #transaction_id
   ack <-
     case length selectedItems of
       0 -> return $ Ack "on_confirm" "Ok"
       1 -> do
         let pid = ProductsId (head selectedItems)
-            tracker = (flip Track.Tracker Nothing) <$> trip
+            tracker = flip Track.Tracker Nothing <$> trip
         prd <- Products.findById pid
         let mprdInfo = decodeFromText =<< (prd ^. #_info)
         let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo

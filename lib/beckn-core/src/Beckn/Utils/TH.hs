@@ -8,7 +8,7 @@ module Beckn.Utils.TH where
 
 import Beckn.Types.Common
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Swagger
+import Data.Swagger (ToParamSchema, ToSchema)
 import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
 import Database.Beam.Postgres as Posgres
 import Database.Beam.Postgres.Syntax (PgValueSyntax)

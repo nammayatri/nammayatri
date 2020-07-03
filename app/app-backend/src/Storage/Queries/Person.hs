@@ -25,15 +25,15 @@ create Storage.Person {..} =
 
 findById ::
   PersonId -> L.Flow (Maybe Storage.Person)
-findById id = do
+findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Person {..} = (_id ==. B.val_ id)
+    predicate Storage.Person {..} = _id ==. B.val_ id
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
-findAllByOrgIds roles orgIds = do
+findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
   where
     predicate roles orgIds Storage.Person {..} =
@@ -41,11 +41,11 @@ findAllByOrgIds roles orgIds = do
         (&&.)
         (B.val_ True)
         [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 findByIdentifier ::
@@ -142,8 +142,8 @@ findAllWithLimitOffsetByRole mlimit moffset roles =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     predicate [] Storage.Person {..} = B.val_ True
     predicate r Storage.Person {..} =
       _role `B.in_` (B.val_ <$> r)
@@ -154,12 +154,12 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 10 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 10 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     predicate orgIds [] Storage.Person {..} =
-      _organizationId `B.in_` ((B.val_ . Just . _getOrganizationId) <$> orgIds)
+      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> orgIds)
     predicate orgIds roles Storage.Person {..} =
-      _organizationId `B.in_` ((B.val_ . Just . _getOrganizationId) <$> orgIds) &&. _role `B.in_` (B.val_ <$> roles)
+      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> orgIds) &&. _role `B.in_` (B.val_ <$> roles)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
 deleteById :: PersonId -> L.Flow ()

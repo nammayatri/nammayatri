@@ -136,14 +136,15 @@ getOrgInfo Organization {..} = do
 
 updateOrganization ::
   RegToken -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
-updateOrganization regToken orgId API.UpdateOrganizationReq {..} = withFlowHandler $
-  do
-    reg <- verifyToken regToken
-    when (SR._entityType reg == SR.CUSTOMER)
-      $ L.throwException
-      $ err400 {errBody = "UNAUTHORIZED"}
-    QO.update (OrganizationId orgId) _status
-    QO.findOrganizationById (OrganizationId orgId)
-    >>= \case
-      Just v -> return $ API.OrganizationRes v
-      Nothing -> L.throwException $ err400 {errBody = "Organization not found"}
+updateOrganization regToken orgId API.UpdateOrganizationReq {..} =
+  withFlowHandler $
+    do
+      reg <- verifyToken regToken
+      when (SR._entityType reg == SR.CUSTOMER)
+        $ L.throwException
+        $ err400 {errBody = "UNAUTHORIZED"}
+      QO.update (OrganizationId orgId) _status
+      QO.findOrganizationById (OrganizationId orgId)
+      >>= \case
+        Just v -> return $ API.OrganizationRes v
+        Nothing -> L.throwException $ err400 {errBody = "Organization not found"}

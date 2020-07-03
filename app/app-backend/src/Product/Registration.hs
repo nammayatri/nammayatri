@@ -27,7 +27,7 @@ import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
-  withFlowHandler $ do
+  withFlowHandler $
     case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> initiateFlow req
       _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
@@ -91,9 +91,7 @@ makePerson req = do
 makeSession ::
   InitiateLoginReq -> Text -> Maybe Text -> L.Flow SR.RegistrationToken
 makeSession req entityId fakeOtp = do
-  otp <- case fakeOtp of
-    Just otp -> return otp
-    Nothing -> generateOTPCode
+  otp <- maybe generateOTPCode return fakeOtp
   id <- L.generateGUID
   token <- L.generateGUID
   now <- getCurrentTimeUTC
@@ -170,9 +168,10 @@ login tokenId req =
                     (req ^. #_deviceToken) <|> (person ^. #_deviceToken)
                 }
         Person.updateMultiple personId updatedPerson
-        Person.findById personId
-          >>= fromMaybeM500 "Could not find user"
-          >>= return . LoginRes _token . maskPerson
+        LoginRes _token . maskPerson
+          <$> ( Person.findById personId
+                  >>= fromMaybeM500 "Could not find user"
+              )
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =

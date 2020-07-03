@@ -22,11 +22,9 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.API.ProductInstance
-import Utils.Common (verifyToken)
 
-list :: RegToken -> ProdInstReq -> FlowHandler ProductInstanceList
-list regToken ProdInstReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- verifyToken regToken
+list :: SR.RegistrationToken -> ProdInstReq -> FlowHandler ProductInstanceList
+list SR.RegistrationToken {..} ProdInstReq {..} = withFlowHandler $ do
   let personId = PersonId _EntityId
   person <- Person.findById personId
   caseProdList <-
@@ -38,16 +36,15 @@ list regToken ProdInstReq {..} = withFlowHandler $ do
   where
     joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> ProductInstance.ProductInstance -> Maybe ProductInstanceRes
     joinIds prodList caseList locList caseProd =
-      case find (\x -> (ProductInstance._caseId caseProd) == Case._id x) caseList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+      find (\x -> ProductInstance._caseId caseProd == Case._id x) caseList
+        >>= buildResponse
       where
-        buildResponse k = (prepare locList caseProd k) <$> find (\z -> (ProductInstance._productId caseProd) == Product._id z) prodList
+        buildResponse k = prepare locList caseProd k <$> find (\z -> ProductInstance._productId caseProd == Product._id z) prodList
         prepare locList caseProd cs prod =
           ProductInstanceRes
             { _case = cs,
               _product = prod,
               _productInstance = caseProd,
-              _fromLocation = find (\x -> (Case._fromLocationId cs == _getLocationId (Loc._id x))) locList,
-              _toLocation = find (\x -> (Case._toLocationId cs == _getLocationId (Loc._id x))) locList
+              _fromLocation = find (\x -> Case._fromLocationId cs == _getLocationId (Loc._id x)) locList,
+              _toLocation = find (\x -> Case._toLocationId cs == _getLocationId (Loc._id x)) locList
             }

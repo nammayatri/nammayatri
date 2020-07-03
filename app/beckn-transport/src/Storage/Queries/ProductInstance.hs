@@ -47,13 +47,13 @@ findAllByCaseId :: CaseId -> L.Flow [Storage.ProductInstance]
 findAllByCaseId id =
   DB.findAllOrErr dbTable (pred id)
   where
-    pred id Storage.ProductInstance {..} = _caseId ==. (B.val_ id)
+    pred id Storage.ProductInstance {..} = _caseId ==. B.val_ id
 
 findByCaseId :: CaseId -> L.Flow Storage.ProductInstance
 findByCaseId id =
   DB.findOneWithErr dbTable (pred id)
   where
-    pred id Storage.ProductInstance {..} = _caseId ==. (B.val_ id)
+    pred id Storage.ProductInstance {..} = _caseId ==. B.val_ id
 
 updateStatusForProducts :: ProductsId -> Storage.ProductInstanceStatus -> L.Flow (T.DBResult ())
 updateStatusForProducts productId status = do
@@ -63,7 +63,7 @@ updateStatusForProducts productId status = do
     (setClause status currTime)
     (predicate productId)
   where
-    predicate pId Storage.ProductInstance {..} = (_productId ==. B.val_ pId)
+    predicate pId Storage.ProductInstance {..} = _productId ==. B.val_ pId
     setClause status currTime Storage.ProductInstance {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
@@ -120,7 +120,7 @@ findAllByProdId :: ProductsId -> L.Flow [Storage.ProductInstance]
 findAllByProdId id =
   DB.findAllOrErr dbTable (pred id)
   where
-    pred id Storage.ProductInstance {..} = _productId ==. (B.val_ id)
+    pred id Storage.ProductInstance {..} = _productId ==. B.val_ id
 
 findAllByStatusIds :: [Storage.ProductInstanceStatus] -> [ProductsId] -> L.Flow [Storage.ProductInstance]
 findAllByStatusIds status ids =
@@ -129,12 +129,11 @@ findAllByStatusIds status ids =
   where
     orderByDesc Storage.ProductInstance {..} = B.desc_ _createdAt
     pred ids status Storage.ProductInstance {..} =
-      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
-          &&. B.in_ _productId (B.val_ <$> ids)
-      )
+      _status `B.in_` (B.val_ <$> status) ||. complementVal status
+        &&. B.in_ _productId (B.val_ <$> ids)
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 productInstanceJoin :: Int -> Int -> Case.CaseType -> Text -> [Storage.ProductInstanceStatus] -> L.Flow ProductInstanceList
@@ -148,18 +147,15 @@ productInstanceJoin _limit _offset csType orgId status = do
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
-    limit = (toInteger _limit)
-    offset = (toInteger _offset)
+    limit = toInteger _limit
+    offset = toInteger _offset
     orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ _createdAt
     pred1 csType Case.Case {..} =
-      ( _type ==. (B.val_ csType)
-      )
+      _type ==. B.val_ csType
     pred2 orgId Product.Products {..} =
-      ( _organizationId ==. (B.val_ orgId)
-      )
+      _organizationId ==. B.val_ orgId
     pred3 status Storage.ProductInstance {..} =
-      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
-      )
+      _status `B.in_` (B.val_ <$> status) ||. complementVal status
     mkJoinRes (cs, pr, cpr) =
       ProductInstanceRes
         { _case = cs,
@@ -171,8 +167,9 @@ productInstanceJoin _limit _offset csType orgId status = do
     joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
       i <- B.filter_ pred1 $ B.all_ tbl1
       j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $ B.join_ tbl3 $
-        \line ->
+      k <- B.filter_ pred3
+        $ B.join_ tbl3
+        $ \line ->
           CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
             B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)
@@ -188,14 +185,11 @@ productInstanceJoinWithoutLimits csType orgId status = do
   where
     orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ _createdAt
     csPred csType Case.Case {..} =
-      ( _type ==. (B.val_ csType)
-      )
+      _type ==. B.val_ csType
     prodPred orgId Product.Products {..} =
-      ( _organizationId ==. (B.val_ orgId)
-      )
+      _organizationId ==. B.val_ orgId
     cprPred status Storage.ProductInstance {..} =
-      ( _status `B.in_` ((B.val_) <$> status) ||. complementVal status
-      )
+      _status `B.in_` (B.val_ <$> status) ||. complementVal status
     mkJoinRes (cs, pr, cpr) =
       ProductInstanceRes
         { _case = cs,
@@ -207,8 +201,9 @@ productInstanceJoinWithoutLimits csType orgId status = do
     joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
       i <- B.filter_ pred1 $ B.all_ tbl1
       j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $ B.join_ tbl3 $
-        \line ->
+      k <- B.filter_ pred3
+        $ B.join_ tbl3
+        $ \line ->
           CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
             B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)

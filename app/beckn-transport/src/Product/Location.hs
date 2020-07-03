@@ -6,6 +6,7 @@ import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Data.Generics.Labels
 import qualified EulerHS.Language as L
@@ -17,10 +18,9 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis
 import Types.API.Location as Location
 
-updateLocation :: Text -> RegToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
-updateLocation caseId regToken req = withFlowHandler $ do
-  QR.verifyToken regToken -- TODO: Move this verification to redis
-    -- TODO: Add a driver and case check
+updateLocation :: SR.RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
+updateLocation _ caseId req = withFlowHandler $ do
+  -- TODO: Add a driver and case check
   driverLat <- maybe (L.throwException $ err400 {errBody = "Lat not specified"}) return $ req ^. #lat
   driverLon <- maybe (L.throwException $ err400 {errBody = "Long not specified"}) return $ req ^. #long
   cacheM <- Redis.getKeyRedis caseId
@@ -45,8 +45,9 @@ updateLocation caseId regToken req = withFlowHandler $ do
   return $ UpdateLocationRes "SUCCESS"
 
 getLocation :: Text -> FlowHandler GetLocationRes
-getLocation caseId = withFlowHandler $ do
-  GetLocationRes <$> (Redis.getKeyRedis caseId)
+getLocation caseId =
+  withFlowHandler $
+    GetLocationRes <$> Redis.getKeyRedis caseId
 
 updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> LocationInfo -> LocationInfo
 updateLocationInfo UpdateLocationReq {..} routeM currLocInfo =
@@ -90,14 +91,14 @@ createLocationInfo UpdateLocationReq {..} routeM =
 
 getRoute' :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
-  routeE <- MapSearch.getRoute $ getRouteRequest
+  routeE <- MapSearch.getRoute getRouteRequest
   case routeE of
     Left err -> do
       L.logInfo "GetRoute" (show err)
       return Nothing
     Right MapSearch.Response {..} ->
-      if length routes > 0
-        then return $ Just $ head routes
+      if null routes
+        then return . Just $ head routes
         else return Nothing
   where
     getRouteRequest = do
@@ -114,7 +115,7 @@ getRoute' fromLat fromLon toLat toLon = do
 getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
 getRoute regToken Location.Request {..} = withFlowHandler $ do
   QR.verifyToken regToken
-  MapSearch.getRoute (getRouteRequest)
+  MapSearch.getRoute getRouteRequest
     >>= either
       (\err -> L.throwException $ err400 {errBody = show err})
       return

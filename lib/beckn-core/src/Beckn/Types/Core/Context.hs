@@ -2,7 +2,6 @@
 
 module Beckn.Types.Core.Context where
 
-import Data.Generics.Labels
 import Data.Text
 import Data.Time.LocalTime
 import EulerHS.Prelude

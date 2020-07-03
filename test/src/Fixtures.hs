@@ -148,10 +148,9 @@ getCase :: CaseAPIClient
 getCase = CaseAPIClient {..}
   where
     caseAPIClient = client (Proxy :: Proxy AbeRoutes.CaseAPIs)
-    caseClient token = caseAPIClient token
     mkCaseClient regToken = CaseClient {..}
       where
-        getCaseListRes :<|> getCaseStatusRes = caseClient regToken
+        getCaseListRes :<|> getCaseStatusRes = caseAPIClient regToken
 
 buildCaseListRes :: ClientM AppCase.ListRes
 buildCaseListRes = do

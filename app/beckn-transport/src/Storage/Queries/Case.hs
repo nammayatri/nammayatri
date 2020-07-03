@@ -34,7 +34,7 @@ findById :: CaseId -> L.Flow Storage.Case
 findById caseId =
   DB.findOneWithErr dbTable (predicate caseId)
   where
-    predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+    predicate caseId Storage.Case {..} = _id ==. B.val_ caseId
 
 findByParentCaseIdAndType :: CaseId -> Storage.CaseType -> L.Flow (Maybe Storage.Case)
 findByParentCaseIdAndType pCaseId cType =
@@ -42,15 +42,14 @@ findByParentCaseIdAndType pCaseId cType =
     >>= either DB.throwDBError pure
   where
     predicate pCaseId cType Storage.Case {..} =
-      ( _parentCaseId ==. (B.val_ $ Just pCaseId)
-          &&. _type ==. B.val_ cType
-      )
+      _parentCaseId ==. B.val_ (Just pCaseId)
+        &&. _type ==. B.val_ cType
 
 findBySid :: Text -> L.Flow Storage.Case
 findBySid sid =
   DB.findOneWithErr dbTable (predicate sid)
   where
-    predicate sid Storage.Case {..} = _shortId ==. (B.val_ sid)
+    predicate sid Storage.Case {..} = _shortId ==. B.val_ sid
 
 updateStatus ::
   CaseId ->
@@ -93,18 +92,16 @@ findByIdType ids type_ =
   DB.findOneWithErr dbTable (predicate ids type_)
   where
     predicate ids type_ Storage.Case {..} =
-      ( _type ==. (B.val_ type_)
-          &&. B.in_ _id (B.val_ <$> ids)
-      )
+      _type ==. B.val_ type_
+        &&. B.in_ _id (B.val_ <$> ids)
 
 findAllByIdType :: [CaseId] -> Storage.CaseType -> L.Flow [Storage.Case]
 findAllByIdType ids type_ =
   DB.findAllOrErr dbTable (predicate ids type_)
   where
     predicate ids type_ Storage.Case {..} =
-      ( _type ==. (B.val_ type_)
-          &&. B.in_ _id (B.val_ <$> ids)
-      )
+      _type ==. B.val_ type_
+        &&. B.in_ _id (B.val_ <$> ids)
 
 findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> L.Flow [Storage.Case]
 findAllByTypeStatuses limit offset csType statuses ignoreIds now =
@@ -113,11 +110,10 @@ findAllByTypeStatuses limit offset csType statuses ignoreIds now =
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate csType statuses ignoreIds now Storage.Case {..} =
-      ( _type ==. (B.val_ csType)
-          &&. B.in_ _status (B.val_ <$> statuses)
-          &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
-          &&. _validTill B.>. (B.val_ now)
-      )
+      _type ==. B.val_ csType
+        &&. B.in_ _status (B.val_ <$> statuses)
+        &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
+        &&. _validTill B.>. B.val_ now
 
 findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
 findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
@@ -126,12 +122,11 @@ findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate csType statuses ignoreIds now fromTime Storage.Case {..} =
-      ( _type ==. (B.val_ csType)
-          &&. B.in_ _status (B.val_ <$> statuses)
-          &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
-          &&. _validTill B.>. (B.val_ now)
-          &&. _createdAt B.<. (B.val_ fromTime)
-      )
+      _type ==. B.val_ csType
+        &&. B.in_ _status (B.val_ <$> statuses)
+        &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
+        &&. _validTill B.>. B.val_ now
+        &&. _createdAt B.<. B.val_ fromTime
 
 findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> LocalTime -> LocalTime -> L.Flow [Storage.Case]
 findAllExpiredByStatus statuses csType from to = do
@@ -140,9 +135,8 @@ findAllExpiredByStatus statuses csType from to = do
     >>= either DB.throwDBError pure
   where
     predicate now from to Storage.Case {..} =
-      ( _type ==. (B.val_ csType)
-          &&. B.in_ _status (B.val_ <$> statuses)
-          &&. _validTill B.<=. (B.val_ now)
-          &&. _createdAt B.>=. (B.val_ from)
-          &&. _createdAt B.<=. (B.val_ to)
-      )
+      _type ==. B.val_ csType
+        &&. B.in_ _status (B.val_ <$> statuses)
+        &&. _validTill B.<=. B.val_ now
+        &&. _createdAt B.>=. B.val_ from
+        &&. _createdAt B.<=. B.val_ to

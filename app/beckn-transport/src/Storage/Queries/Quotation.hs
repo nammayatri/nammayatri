@@ -24,19 +24,19 @@ create Storage.Quotation {..} =
 
 findQuotationById ::
   QuotationId -> L.Flow (Maybe Storage.Quotation)
-findQuotationById id = do
+findQuotationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Quotation {..} = (_id ==. B.val_ id)
+    predicate Storage.Quotation {..} = _id ==. B.val_ id
 
 listQuotations :: Maybe Int -> Maybe Int -> [Storage.Status] -> L.Flow [Storage.Quotation]
 listQuotations mlimit moffset status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Quotation {..} = B.desc_ _createdAt
     predicate status Storage.Quotation {..} =
       foldl
@@ -46,7 +46,7 @@ listQuotations mlimit moffset status =
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 update ::

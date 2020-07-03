@@ -28,9 +28,8 @@ import System.Environment
 import Types.API.ProductInstance
 import qualified Utils.Defaults as Default
 
-list :: RegToken -> [ProdInst.ProductInstanceStatus] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list regToken status limitM offsetM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+list :: SR.RegistrationToken -> [ProdInst.ProductInstanceStatus] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list SR.RegistrationToken {..} status limitM offsetM = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do
@@ -48,6 +47,6 @@ list regToken status limitM offsetM = withFlowHandler $ do
         { _case = res ^. #_case,
           _product = res ^. #_product,
           _productInstance = res ^. #_productInstance,
-          _fromLocation = find (\x -> (Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList,
-          _toLocation = find (\x -> (Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x))) locList
+          _fromLocation = find (\x -> Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList,
+          _toLocation = find (\x -> Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList
         }

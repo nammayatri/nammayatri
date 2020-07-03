@@ -16,7 +16,6 @@ import Beckn.Utils.Extra (headMaybe)
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
-import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -36,9 +35,8 @@ import Types.API.Products
 import Types.App
 import qualified Utils.Notifications as Notify
 
-update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
-update regToken productId req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyToken regToken
+update :: SR.RegistrationToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
+update SR.RegistrationToken {..} productId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
   isAllowed productId req
   vehIdRes <- case req ^. #_vehicleId of
@@ -57,10 +55,10 @@ update regToken productId req = withFlowHandler $ do
         updateTrip (ProductsId productId) c
     Nothing -> return ()
   updatedProd <- PQ.findById (ProductsId productId)
-  driverInfo <- case (updatedProd ^. #_assignedTo) of
+  driverInfo <- case updatedProd ^. #_assignedTo of
     Just driverId -> PersQ.findPersonById (PersonId driverId)
     Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
-  vehicleInfo <- case (updatedProd ^. #_udf3) of
+  vehicleInfo <- case updatedProd ^. #_udf3 of
     Just vehicleId ->
       VQ.findVehicleById (VehicleId vehicleId)
         >>= fromMaybeM400 "VEHICLE NOT FOUND"
@@ -95,8 +93,8 @@ updateInfo productId driverInfo vehicleInfo = do
 updateTrip :: ProductsId -> ProdInst.ProductInstanceStatus -> L.Flow ()
 updateTrip productId k = do
   cpList <- CPQ.findAllByProdId productId
-  trackerCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) (Case.TRACKER)
-  parentCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) (Case.RIDEBOOK)
+  trackerCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) Case.TRACKER
+  parentCase_ <- CQ.findByIdType (ProdInst._caseId <$> cpList) Case.RIDEBOOK
   case k of
     ProdInst.CANCELLED -> do
       CPQ.updateStatusByIds (ProdInst._id <$> cpList) k
@@ -115,9 +113,8 @@ updateTrip productId k = do
       return ()
     _ -> return ()
 
-listRides :: RegToken -> Maybe Text -> FlowHandler ProdListRes
-listRides regToken vehicleIdM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyToken regToken
+listRides :: SR.RegistrationToken -> Maybe Text -> FlowHandler ProdListRes
+listRides SR.RegistrationToken {..} vehicleIdM = withFlowHandler $ do
   person <- PersQ.findPersonById (PersonId _EntityId)
   whenM (validateOrg vehicleIdM person) $ L.throwException $ err401 {errBody = "Unauthorized"}
   rideList <- case vehicleIdM of
@@ -126,7 +123,7 @@ listRides regToken vehicleIdM = withFlowHandler $ do
   locList <- LQ.findAllByLocIds (catMaybes (Product._fromLocation <$> rideList)) (catMaybes (Product._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
-    validateOrg vehicleM person = do
+    validateOrg vehicleM person =
       case vehicleM of
         Just vehicleId -> do
           vehicle <- VQ.findVehicleById (VehicleId vehicleId)
@@ -135,11 +132,10 @@ listRides regToken vehicleIdM = withFlowHandler $ do
             else return True
         Nothing -> return False
     joinByIds locList ride =
-      case find (\x -> (Product._fromLocation ride == Just (_getLocationId (Location._id x)))) locList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+      find (\x -> Product._fromLocation ride == Just (_getLocationId (Location._id x))) locList
+        >>= buildResponse
       where
-        buildResponse k = (prepare ride k) <$> find (\x -> (Product._toLocation ride == Just (_getLocationId (Location._id x)))) locList
+        buildResponse k = prepare ride k <$> find (\x -> Product._toLocation ride == Just (_getLocationId (Location._id x))) locList
         prepare ride from to =
           ProdRes
             { _product = ride,
@@ -147,9 +143,8 @@ listRides regToken vehicleIdM = withFlowHandler $ do
               _toLocation = to
             }
 
-listCasesByProd :: RegToken -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
-listCasesByProd regToken productId csType = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyToken regToken
+listCasesByProd :: SR.RegistrationToken -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
+listCasesByProd SR.RegistrationToken {..} productId csType = withFlowHandler $ do
   cpList <- CPQ.findAllByProdId (ProductsId productId)
   caseList <- case csType of
     Just type_ -> CQ.findAllByIdType (ProdInst._caseId <$> cpList) type_
@@ -158,11 +153,10 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
   return $ catMaybes $ joinByIds locList <$> caseList
   where
     joinByIds locList cs =
-      case find (\x -> (Case._fromLocationId cs == _getLocationId (Location._id x))) locList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+      find (\x -> Case._fromLocationId cs == _getLocationId (Location._id x)) locList
+        >>= buildResponse
       where
-        buildResponse k = (prepare cs k) <$> find (\x -> (Case._toLocationId cs == _getLocationId (Location._id x))) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == _getLocationId (Location._id x)) locList
         prepare cs from to =
           CaseRes
             { _case = cs,
@@ -171,7 +165,7 @@ listCasesByProd regToken productId csType = withFlowHandler $ do
             }
 
 notifyCancelReq :: Product.Products -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
-notifyCancelReq prod status = do
+notifyCancelReq prod status =
   case status of
     Just k -> case k of
       ProdInst.CANCELLED -> do

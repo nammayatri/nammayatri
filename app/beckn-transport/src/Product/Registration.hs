@@ -26,7 +26,7 @@ import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
-  withFlowHandler $ do
+  withFlowHandler $
     case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> initiateFlow req
       _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
@@ -90,9 +90,7 @@ makePerson req = do
 makeSession ::
   InitiateLoginReq -> Text -> SR.RTEntityType -> Maybe Text -> L.Flow SR.RegistrationToken
 makeSession req entityId entityType fakeOtp = do
-  otp <- case fakeOtp of
-    Just otp -> return otp
-    Nothing -> generateOTPCode
+  otp <- maybe generateOTPCode return fakeOtp
   id <- L.generateGUID
   token <- L.generateGUID
   now <- getCurrentTimeUTC
