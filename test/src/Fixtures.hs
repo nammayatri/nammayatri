@@ -121,7 +121,6 @@ searchServices ::
   Text ->
   Search.SearchReq ->
   ClientM Common.AckResponse
-
 onSearchServices ::
   Search.OnSearchReq ->
   ClientM Search.OnSearchRes
@@ -169,7 +168,6 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
-
 appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
 appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPIs)
 
@@ -181,7 +179,6 @@ buildAppConfirmReq cid pid =
     }
 
 listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> ClientM [TbeCase.CaseRes]
-
 acceptOrDeclineRide :: Text -> Text -> TbeCase.UpdateCaseReq -> ClientM Case.Case
 listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPIs)
 

@@ -5,7 +5,7 @@ module Epass.Storage.Queries.Blacklist where
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Data.Time.LocalTime
-import Database.Beam ((&&.), (<-.), (==.), in_)
+import Database.Beam (in_, (&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import qualified Epass.Types.API.Blacklist as API
 import Epass.Types.App

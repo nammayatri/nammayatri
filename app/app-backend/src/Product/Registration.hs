@@ -175,9 +175,9 @@ login tokenId req =
       else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
   where
     checkForExpiry authExpiry updatedAt =
-      whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt)
-        $ L.throwException
-        $ err400 {errBody = "AUTH_EXPIRED"}
+      whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
+        L.throwException $
+          err400 {errBody = "AUTH_EXPIRED"}
 
 getRegistrationTokenE :: Text -> L.Flow SR.RegistrationToken
 getRegistrationTokenE tokenId =

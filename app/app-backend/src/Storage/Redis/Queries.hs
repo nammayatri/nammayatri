@@ -28,9 +28,9 @@ setExRedis ::
   Int ->
   L.Flow ()
 setExRedis key value ttl =
-  void
-    $ runKV
-    $ L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
+  void $
+    runKV $
+      L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
 
 getKeyRedis ::
   forall a.
@@ -61,12 +61,12 @@ getKeyRedisWithError key = do
 
 setHashRedis :: ToJSON a => Text -> Text -> a -> L.Flow ()
 setHashRedis key field value =
-  void
-    $ runKV
-    $ L.hset
-      (DTE.encodeUtf8 key)
-      (DTE.encodeUtf8 field)
-      (BSL.toStrict $ A.encode value)
+  void $
+    runKV $
+      L.hset
+        (DTE.encodeUtf8 key)
+        (DTE.encodeUtf8 field)
+        (BSL.toStrict $ A.encode value)
 
 expireRedis :: Text -> Int -> L.Flow ()
 expireRedis key ttl = void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)

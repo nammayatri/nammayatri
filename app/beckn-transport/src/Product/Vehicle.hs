@@ -62,9 +62,9 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
   return $ CreateVehicleRes vehicle
   where
     hasAccess user vehicle =
-      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId))
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
+      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
+        L.throwException $
+          err401 {errBody = "Unauthorized"}
 
 addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
