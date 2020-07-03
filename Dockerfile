@@ -10,6 +10,15 @@ COPY ./.ssh/id_rsa /root/.ssh/id_rsa
 RUN chmod 400 /root/.ssh/id_rsa
 RUN ssh-keyscan -H "bitbucket.org" >> ~/.ssh/known_hosts
 
+# Make sure we haven't added any hlint warnings
+RUN hlint_count=$(hlint -g -j | tail -n 1 | cut -f 1 -d ' ') && \
+  echo "Found ${hlint_count} warnings" && \
+  test ${hlint_count} -le 45
+# And that we're ormolu-clean
+RUN ormolu_files=`for i in $(git ls-files | grep '\.hs$'); do ormolu -m check $i || echo $i; done` && \
+  echo "Unformatted files: ${ormolu_files}" && \
+  test -z ${ormolu_files}
+
 RUN stack build --system-ghc
 
 RUN mv "$(stack path --local-install-root --system-ghc)/bin" /opt/build/bin

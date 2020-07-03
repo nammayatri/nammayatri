@@ -7,6 +7,9 @@ RUN apt-get update \
   && apt-get download libgmp10
 RUN mv libgmp*.deb libgmp.deb
 
+# Dependencies for checks
+RUN stack install --resolver lts-16.3 hlint ormolu
+
 # Docker build should not use cached layer if any of these is modified
 COPY . /opt/build/
 
