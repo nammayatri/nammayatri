@@ -37,20 +37,21 @@ import Types.App
 import qualified Utils.Notifications as Notify
 
 update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
-update regToken productId ProdReq {..} = withFlowHandler $ do
+update regToken productId req = withFlowHandler $ do
   SR.RegistrationToken {..} <- RQ.verifyToken regToken
   user <- PersQ.findPersonById (PersonId _EntityId)
-  vehIdRes <- case _vehicleId of
+  isAllowed productId req
+  vehIdRes <- case req ^. #_vehicleId of
     Just k ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        PQ.updateVeh (ProductsId productId) _vehicleId
+        PQ.updateVeh (ProductsId productId) (req ^. #_vehicleId)
     Nothing -> return ()
-  dvrIdRes <- case _assignedTo of
+  dvrIdRes <- case req ^. #_assignedTo of
     Just k ->
       when (user ^. #_role == SP.ADMIN) $
-        PQ.updateDvr (ProductsId productId) _assignedTo
+        PQ.updateDvr (ProductsId productId) (req ^. #_assignedTo)
     Nothing -> return ()
-  tripRes <- case _status of
+  tripRes <- case req ^. #_status of
     Just c ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (ProductsId productId) c
@@ -180,3 +181,13 @@ notifyCancelReq prod status = do
         Notify.notifyCancelReqByBP prod admins
       _ -> return ()
     Nothing -> return ()
+
+-- Core Utility methods are below
+
+isAllowed :: Text -> ProdReq -> L.Flow ()
+isAllowed productId req = do
+  piList <- CPQ.findAllByStatusIds [ProdInst.COMPLETED, ProdInst.INPROGRESS] [ProductsId productId]
+  unless (null piList) $
+    case (req ^. #_assignedTo, req ^. #_vehicleId) of
+      (Nothing, Nothing) -> return ()
+      _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}

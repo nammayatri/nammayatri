@@ -62,7 +62,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
         (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
         (L.throwException $ err400 {errBody = "Access denied"})
       QCP.updateStatus (ProductsId passId) (fromJust _action)
-      return $ pass
+      return pass
     RegistrationToken.CUSTOMER -> do
       customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
       case Person._role customer of
@@ -136,11 +136,11 @@ buildListRes productInstance = do
 
 getPassInfo :: SC.Case -> SP.Products -> SCP.ProductInstance -> L.Flow PassInfo
 getPassInfo case' prod productInstance = do
-  person <- sequence $ Person.findById <$> (SCP._personId productInstance)
+  person <- sequence $ Person.findById <$> SCP._personId productInstance
   org <- Organization.findOrganizationById (OrganizationId $ SP._organizationId prod)
   entityDocs <- EntityDocument.findAllByPassApplicationId (PassApplicationId $ _getCaseId $ SC._id case')
   let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  docs <- catMaybes <$> traverse Document.findById (DocumentId <$> docIds)
   pure $
     PassInfo
       { _fromLocation = fromJust $ SP._fromLocation prod,

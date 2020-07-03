@@ -16,7 +16,7 @@ dbTable ::
 dbTable = DB._allocatedQuota DB.becknDb
 
 findAllocatedQuota :: Text -> L.Flow (T.DBResult (Maybe Storage.AllocatedQuota))
-findAllocatedQuota id = do
+findAllocatedQuota id =
   DB.findOne dbTable predicate
   where
-    predicate Storage.AllocatedQuota {..} = (_id ==. B.val_ id)
+    predicate Storage.AllocatedQuota {..} = _id ==. B.val_ id

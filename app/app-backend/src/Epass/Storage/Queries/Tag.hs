@@ -25,22 +25,21 @@ create Storage.Tag {..} =
 
 findById :: TagId -> L.Flow (Maybe Storage.Tag)
 findById id =
-  do
-    DB.findOne dbTable predicate
+  DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Tag {..} = (_id ==. B.val_ id)
+    predicate Storage.Tag {..} = _id ==. B.val_ id
 
 findAllById :: [TagId] -> L.Flow [Storage.Tag]
 findAllById ids =
   DB.findAllOrErr dbTable (predicate ids)
   where
-    predicate ids Storage.Tag {..} = (B.in_ _id (B.val_ <$> ids))
+    predicate ids Storage.Tag {..} = B.in_ _id (B.val_ <$> ids)
 
 findAllByEntity :: Text -> Text -> L.Flow [Storage.Tag]
 findAllByEntity entityType entityId = do
   etags <- EntityTag.findAllByEntity entityType entityId
-  let tagIds = TagId <$> EntityTag._TagId <$> etags
+  let tagIds = TagId . EntityTag._TagId <$> etags
   DB.findAll dbTable (predicate tagIds)
     >>= either DB.throwDBError pure
   where
@@ -48,7 +47,7 @@ findAllByEntity entityType entityId = do
       _id `B.in_` (B.val_ <$> tagIds)
 
 findAllTagTypes :: L.Flow [Text]
-findAllTagTypes = do
+findAllTagTypes =
   DB.aggregate dbTable aggregator predicate
     >>= either DB.throwDBError pure
   where
@@ -57,7 +56,7 @@ findAllTagTypes = do
       B.group_ _tagType
 
 findAllTagWhereType :: Text -> L.Flow [Text]
-findAllTagWhereType tagType = do
+findAllTagWhereType tagType =
   DB.aggregate dbTable aggregator (predicate tagType)
     >>= either DB.throwDBError pure
   where
@@ -67,7 +66,7 @@ findAllTagWhereType tagType = do
       B.group_ _tag
 
 findAllByTag :: Text -> Text -> L.Flow [Storage.Tag]
-findAllByTag tagType tag = do
+findAllByTag tagType tag =
   DB.findAll dbTable (predicate tagType tag)
     >>= either DB.throwDBError pure
   where

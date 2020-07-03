@@ -3,7 +3,7 @@ module Epass.Types.API.Document where
 import Epass.Types.Storage.Document
 import EulerHS.Prelude
 
-data DocumentRes = DocumentRes
+newtype DocumentRes = DocumentRes
   { docIds :: [Text]
   }
   deriving (Generic, FromJSON, ToJSON)

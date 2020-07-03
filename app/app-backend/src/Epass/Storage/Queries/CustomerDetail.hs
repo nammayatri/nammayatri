@@ -25,10 +25,10 @@ create Storage.CustomerDetail {..} =
 
 findById ::
   CustomerDetailId -> L.Flow (T.DBResult (Maybe Storage.CustomerDetail))
-findById id = do
+findById id =
   DB.findOne dbTable predicate
   where
-    predicate Storage.CustomerDetail {..} = (_id ==. B.val_ id)
+    predicate Storage.CustomerDetail {..} = _id ==. B.val_ id
 
 findByIdentifier ::
   Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.CustomerDetail)
@@ -42,11 +42,11 @@ findByIdentifier idType mb =
 
 findAllByCustomerId ::
   CustomerId -> L.Flow [Storage.CustomerDetail]
-findAllByCustomerId id = do
+findAllByCustomerId id =
   DB.findAll dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.CustomerDetail {..} = (_CustomerId ==. B.val_ id)
+    predicate Storage.CustomerDetail {..} = _CustomerId ==. B.val_ id
 
 findExact :: CustomerId -> Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.CustomerDetail)
 findExact customerId idType identifier =
@@ -74,8 +74,8 @@ createIfNotExists customerId idType identifier = do
     Just _ -> return ()
     Nothing -> do
       details <- findAllByCustomerId customerId
-      let isPrimary = if length details == 0 then True else False
-      create =<< (getDetails isPrimary)
+      let isPrimary = null details
+      create =<< getDetails isPrimary
   where
     getDetails isPrimary = do
       id <- generateGUID

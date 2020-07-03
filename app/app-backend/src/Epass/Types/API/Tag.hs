@@ -19,7 +19,7 @@ instance FromJSON CreateReq where
 instance ToJSON CreateReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data CreateRes = CreateRes
+newtype CreateRes = CreateRes
   { _tag :: Tag
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -30,7 +30,7 @@ instance ToJSON CreateRes where
 instance FromJSON CreateRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data ListRes = ListRes
+newtype ListRes = ListRes
   { _tags :: [Tag]
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -41,7 +41,7 @@ instance ToJSON ListRes where
 instance FromJSON ListRes where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data ListVal = ListVal
+newtype ListVal = ListVal
   { _val :: [Text]
   }
   deriving (Show, Generic, Default, ToSchema)
@@ -65,7 +65,7 @@ instance ToJSON TagEntityReq where
 instance FromJSON TagEntityReq where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-data TagEntityRes = TagEntityRes
+newtype TagEntityRes = TagEntityRes
   { _entityTag :: EntityTag
   }
   deriving (Show, Generic, Default, ToSchema)

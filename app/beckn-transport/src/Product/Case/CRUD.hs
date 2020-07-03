@@ -95,12 +95,12 @@ update regToken caseId UpdateCaseReq {..} = withFlowHandler $ do
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
         p <- createProduct c _quote orgId Product.INSTOCK
-        cp <- createProductInstance c p
+        cp <- createProductInstance c p ProdInst.INSTOCK
         notifyGateway c p orgId
         return c
       "DECLINED" -> do
         p <- createProduct c _quote orgId Product.OUTOFSTOCK
-        cp <- createProductInstance c p
+        cp <- createProductInstance c p ProdInst.OUTOFSTOCK
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
@@ -142,8 +142,8 @@ createProduct cs price orgId status = do
           _assignedTo = Nothing
         }
 
-createProductInstance :: Case -> Products -> L.Flow ProductInstance
-createProductInstance cs prod = do
+createProductInstance :: Case -> Products -> ProdInst.ProductInstanceStatus -> L.Flow ProductInstance
+createProductInstance cs prod status = do
   cpId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
   let productInst = getProdInst cpId cs prod currTime
@@ -158,7 +158,7 @@ createProductInstance cs prod = do
           _personId = Nothing,
           _quantity = 1,
           _price = Product._price prod,
-          _status = ProdInst.INSTOCK,
+          _status = status,
           _info = Nothing,
           _createdAt = Case._createdAt cs,
           _updatedAt = currTime

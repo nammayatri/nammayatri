@@ -11,7 +11,7 @@ import Epass.Types.Storage.Location
 import Epass.Types.Storage.Tag
 import EulerHS.Prelude
 
-data ListLocationRes = ListLocationRes
+newtype ListLocationRes = ListLocationRes
   { _locationInfo :: [C.LocationInfo]
   }
   deriving (Show, Generic)
