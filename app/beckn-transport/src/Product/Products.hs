@@ -16,7 +16,6 @@ import Beckn.Utils.Extra (headMaybe)
 import qualified Data.Accessor as Lens
 import Data.Aeson
 import qualified Data.Text as T
-import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -36,9 +35,8 @@ import Types.API.Products
 import Types.App
 import qualified Utils.Notifications as Notify
 
-update :: RegToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
-update regToken productId req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyToken regToken
+update :: SR.RegistrationToken -> Text -> ProdReq -> FlowHandler ProdInfoRes
+update SR.RegistrationToken {..} productId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
   isAllowed productId req
   vehIdRes <- case req ^. #_vehicleId of
@@ -115,9 +113,8 @@ updateTrip productId k = do
       return ()
     _ -> return ()
 
-listRides :: RegToken -> Maybe Text -> FlowHandler ProdListRes
-listRides regToken vehicleIdM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyToken regToken
+listRides :: SR.RegistrationToken -> Maybe Text -> FlowHandler ProdListRes
+listRides SR.RegistrationToken {..} vehicleIdM = withFlowHandler $ do
   person <- PersQ.findPersonById (PersonId _EntityId)
   whenM (validateOrg vehicleIdM person) $ L.throwException $ err401 {errBody = "Unauthorized"}
   rideList <- case vehicleIdM of
@@ -147,9 +144,8 @@ listRides regToken vehicleIdM = withFlowHandler $ do
               _toLocation = to
             }
 
-listCasesByProd :: RegToken -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
-listCasesByProd regToken productId csType = withFlowHandler $ do
-  SR.RegistrationToken {..} <- RQ.verifyToken regToken
+listCasesByProd :: SR.RegistrationToken -> Text -> Maybe Case.CaseType -> FlowHandler CaseListRes
+listCasesByProd SR.RegistrationToken {..} productId csType = withFlowHandler $ do
   cpList <- CPQ.findAllByProdId (ProductsId productId)
   caseList <- case csType of
     Just type_ -> CQ.findAllByIdType (ProdInst._caseId <$> cpList) type_

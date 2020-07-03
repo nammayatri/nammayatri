@@ -28,9 +28,8 @@ import System.Environment
 import Types.API.ProductInstance
 import qualified Utils.Defaults as Default
 
-list :: RegToken -> [ProdInst.ProductInstanceStatus] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list regToken status limitM offsetM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+list :: SR.RegistrationToken -> [ProdInst.ProductInstanceStatus] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list SR.RegistrationToken {..} status limitM offsetM = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
     Just orgId -> do

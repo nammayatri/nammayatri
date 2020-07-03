@@ -40,9 +40,9 @@ import Types.API.Person
 import Types.API.ProductInstance
 import Types.API.Products
 import Types.API.Registration
-import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
+import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransporterAPIs =
   "v1"
@@ -88,28 +88,28 @@ registrationFlow =
 -- Following is person flow
 type PersonAPIs =
   "person"
-    :> ( AuthHeader
+    :> ( AdminTokenAuth
            :> ReqBody '[JSON] CreatePersonReq
            :> Post '[JSON] UpdatePersonRes
            :<|> "list"
-             :> AuthHeader
+             :> AdminTokenAuth
              :> QueryParams "roles" SP.Role
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes
-           :<|> Capture "personId" Text
-             :> AuthHeader
+           :<|> TokenAuth
+             :> Capture "personId" Text
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
-           :<|> AuthHeader
+           :<|> TokenAuth
              :> QueryParam "personId" Text
              :> QueryParam "mobileNumber" Text
              :> QueryParam "email" Text
              :> QueryParam "identifier" Text
              :> Get '[JSON] PersonRes
-           :<|> Capture "personId" Text
-             :> AuthHeader
+           :<|> AdminTokenAuth
+             :> Capture "personId" Text
              :> Delete '[JSON] DeletePersonRes
        )
 
@@ -124,25 +124,25 @@ personFlow =
 -- Following is vehicle flow
 type VehicleAPIs =
   "vehicle"
-    :> ( AuthHeader
+    :> ( DriverTokenAuth
            :> ReqBody '[JSON] CreateVehicleReq
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
-             :> AuthHeader
+             :> DriverTokenAuth
              :> QueryParam "variant" Variant
              :> QueryParam "category" Category
              :> QueryParam "energyType" EnergyType
              :> QueryParam "limit" Int
              :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
-           :<|> Capture "vehicleId" Text
-             :> AuthHeader
+           :<|> DriverTokenAuth
+             :> Capture "vehicleId" Text
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
-           :<|> Capture "vehicleId" Text
-             :> AuthHeader
+           :<|> DriverTokenAuth
+             :> Capture "vehicleId" Text
              :> Delete '[JSON] DeleteVehicleRes
-           :<|> AuthHeader
+           :<|> TokenAuth
              :> QueryParam "registrationNo" Text
              :> QueryParam "vehicleId" Text
              :> Get '[JSON] CreateVehicleRes
@@ -159,17 +159,17 @@ vehicleFlow =
 -- Following is organization creation
 type OrganizationAPIs =
   "transporter"
-    :> ( AuthHeader
+    :> ( TokenAuth
            :> Get '[JSON] TransporterRec
-           :<|> AuthHeader
+           :<|> TokenAuth
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
            :<|> "gateway"
-           :> AuthHeader
+           :> OrgTokenAuth
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] GatewayRes
-           :<|> Capture "orgId" Text
-           :> AuthHeader
+           :<|> TokenAuth
+           :> Capture "orgId" Text
            :> ReqBody '[JSON] UpdateTransporterReq
            :> Post '[JSON] TransporterRec
        )
@@ -185,14 +185,14 @@ organizationFlow =
 -------- Case Flow----------
 type CaseAPIs =
   "case"
-    :> ( AuthHeader
+    :> ( TokenAuth
            :> QueryParams "status" CaseStatus
            :> MandatoryQueryParam "type" CaseType
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> QueryParam "ignoreOffered" Bool
            :> Get '[JSON] CaseListRes
-           :<|> AuthHeader
+           :<|> TokenAuth
            :> Capture "caseId" Text
            :> ReqBody '[JSON] UpdateCaseReq
            :> Post '[JSON] Case
@@ -205,7 +205,7 @@ caseFlow =
 -------- ProductInstance Flow----------
 type ProductInstanceAPIs =
   "productInstance"
-    :> ( AuthHeader
+    :> ( TokenAuth
            :> QueryParams "status" ProductInstanceStatus
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
@@ -218,14 +218,14 @@ productInstanceFlow =
 -------- Product Flow----------
 type ProductAPIs =
   "product"
-    :> ( AuthHeader
+    :> ( TokenAuth
            :> QueryParam "vehicleId" Text
            :> Get '[JSON] ProdListRes
-           :<|> AuthHeader
+           :<|> TokenAuth
              :> Capture "productId" Text
              :> ReqBody '[JSON] ProdReq
              :> Post '[JSON] ProdInfoRes
-           :<|> AuthHeader
+           :<|> TokenAuth
              :> Capture "productId" Text
              :> "cases"
              :> QueryParam "type" CaseType
@@ -242,8 +242,8 @@ type LocationAPIs =
   "location"
     :> ( Capture "caseId" Text
            :> Get '[JSON] GetLocationRes
-           :<|> Capture "caseId" Text
-             :> AuthHeader
+           :<|> TokenAuth
+             :> Capture "caseId" Text
              :> ReqBody '[JSON] UpdateLocationReq
              :> Post '[JSON] UpdateLocationRes
        )

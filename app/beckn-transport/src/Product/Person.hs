@@ -16,9 +16,8 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Person
 
-updatePerson :: Text -> RegToken -> UpdatePersonReq -> FlowHandler UpdatePersonRes
-updatePerson personId regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
+updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   verifyPerson personId _EntityId
   person <- QP.findPersonById (PersonId _EntityId)
   updatedPerson <- transformFlow2 req person
@@ -30,9 +29,8 @@ updatePerson personId regToken req = withFlowHandler $ do
         $ L.throwException
         $ err400 {errBody = "PERSON_ID_MISMATCH"}
 
-createPerson :: RegToken -> CreatePersonReq -> FlowHandler UpdatePersonRes
-createPerson regToken req = withFlowHandler $ do
-  orgId <- validate regToken
+createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
+createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> transformFlow req
   QP.create person
@@ -45,14 +43,13 @@ createPerson regToken req = withFlowHandler $ do
             whenM (isJust <$> QP.findByMobileNumber mobileNumber) $ L.throwException $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
           Nothing -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_MANDATORY"}
 
-listPerson :: RegToken -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson regToken roles limitM offsetM = withFlowHandler $ do
-  orgId <- validate regToken
-  ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
+listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
+listPerson orgId roles limitM offsetM =
+  withFlowHandler $
+    ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
 
-getPerson :: RegToken -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
-getPerson regToken idM mobileM emailM identifierM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+getPerson :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler PersonRes
+getPerson SR.RegistrationToken {..} idM mobileM emailM identifierM = withFlowHandler $ do
   user <- QP.findPersonById (PersonId _EntityId)
   person <- case (idM, mobileM, emailM, identifierM) of
     (Nothing, Nothing, Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
@@ -70,9 +67,8 @@ getPerson regToken idM mobileM emailM identifierM = withFlowHandler $ do
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
 
-deletePerson :: Text -> RegToken -> FlowHandler DeletePersonRes
-deletePerson personId regToken = withFlowHandler $ do
-  orgId <- validate regToken
+deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
+deletePerson orgId personId = withFlowHandler $ do
   person <- QP.findPersonById (PersonId personId)
   if person ^. #_organizationId == Just orgId
     then do
@@ -80,20 +76,6 @@ deletePerson personId regToken = withFlowHandler $ do
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
     else L.throwException $ err401 {errBody = "Unauthorized"}
-
--- Core Utility methods
-verifyAdmin :: SP.Person -> L.Flow Text
-verifyAdmin user = do
-  when (user ^. #_role /= SP.ADMIN) $ L.throwException $ err400 {errBody = "NEED_ADMIN_ACCESS"}
-  case user ^. #_organizationId of
-    Just orgId -> return orgId
-    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
-
-validate :: RegToken -> L.Flow Text
-validate regToken = do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (PersonId _EntityId)
-  verifyAdmin user
 
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}

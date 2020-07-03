@@ -18,9 +18,8 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Transporter
 import Types.App
 
-createTransporter :: RegToken -> TransporterReq -> FlowHandler TransporterRes
-createTransporter regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
+createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   validate person
   organization <- transformFlow req
@@ -37,16 +36,14 @@ createTransporter regToken req = withFlowHandler $ do
         $ L.throwException
         $ err400 {errBody = "user already registered an organization"}
 
-createGateway :: RegToken -> TransporterReq -> FlowHandler GatewayRes
-createGateway regToken req = withFlowHandler $ do
-  QO.verifyToken regToken
+createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes
+createGateway _ req = withFlowHandler $ do
   organization <- transformFlow req
   QO.create organization
   return $ TransporterRec organization
 
-updateTransporter :: Text -> RegToken -> UpdateTransporterReq -> FlowHandler TransporterRec
-updateTransporter orgId regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
+updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
   now <- getCurrentTimeUTC
   case maybePerson of
@@ -66,9 +63,8 @@ updateTransporter orgId regToken req = withFlowHandler $ do
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
-getTransporter :: RegToken -> FlowHandler TransporterRec
-getTransporter regToken = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
+getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   validate person
   case person ^. #_organizationId of

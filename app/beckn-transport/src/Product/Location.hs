@@ -6,6 +6,7 @@ import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Data.Generics.Labels
 import qualified EulerHS.Language as L
@@ -17,9 +18,8 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis
 import Types.API.Location as Location
 
-updateLocation :: Text -> RegToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
-updateLocation caseId regToken req = withFlowHandler $ do
-  QR.verifyToken regToken -- TODO: Move this verification to redis
+updateLocation :: SR.RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
+updateLocation _ caseId req = withFlowHandler $ do
   -- TODO: Add a driver and case check
   driverLat <- maybe (L.throwException $ err400 {errBody = "Lat not specified"}) return $ req ^. #lat
   driverLon <- maybe (L.throwException $ err400 {errBody = "Long not specified"}) return $ req ^. #long
