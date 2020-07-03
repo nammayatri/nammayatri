@@ -6,7 +6,6 @@ module Beckn.Types.MapSearch
   )
 where
 
-import Data.Generics.Labels
 import Data.Geospatial
 import Data.Time.LocalTime
 import EulerHS.Prelude

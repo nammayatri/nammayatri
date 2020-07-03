@@ -9,7 +9,6 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
 import Servant.API.ContentTypes
-import Servant.Client
 
 type ServiceAPI =
   "smpp"

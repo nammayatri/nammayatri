@@ -17,7 +17,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data ProdInfo = ProdInfo
   { driverInfo :: Text,

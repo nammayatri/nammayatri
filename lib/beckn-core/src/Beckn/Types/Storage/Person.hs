@@ -16,7 +16,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data Status = ACTIVE | INACTIVE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

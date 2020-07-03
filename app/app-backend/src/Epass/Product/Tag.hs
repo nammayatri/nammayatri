@@ -25,7 +25,7 @@ create regToken CreateReq {..} = withFlowHandler $ do
   Tag.create tag
   CreateRes
     <$> ( Tag.findById id
-          >>= fromMaybeM500 "Couldn't create Tag"
+            >>= fromMaybeM500 "Couldn't create Tag"
         )
   where
     getTag id createdById createByEntityType = do
@@ -71,7 +71,7 @@ tagEntity regToken TagEntityReq {..} = withFlowHandler $ do
   EntityTag.create entityTag
   TagEntityRes
     <$> ( EntityTag.findById id
-          >>= fromMaybeM500 "Couldn't create EntityTag"
+            >>= fromMaybeM500 "Couldn't create EntityTag"
         )
   where
     getEntityTag id createdById createByEntityType = do

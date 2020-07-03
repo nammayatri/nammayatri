@@ -15,7 +15,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data LocationType = POINT | POLYGON | PINCODE | ADDRESS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

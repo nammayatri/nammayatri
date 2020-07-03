@@ -58,7 +58,7 @@ findByStOrDistrict moffset mlimit filterByT filterBy =
       . B.orderBy_ orderByDesc
       . B.all_
       $ dbTable
-    )
+  )
     >>= either DB.throwDBError pure
   where
     predicate LDISTRICT filterBy Storage.Location {..} =

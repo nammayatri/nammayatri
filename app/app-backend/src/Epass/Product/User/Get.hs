@@ -37,8 +37,9 @@ list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
   user <-
     fromMaybeM500 "Could not find user"
       =<< Person.findById (PersonId $ SR._EntityId reg)
-  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER) $
-    L.throwException $ err400 {errBody = "UNAUTHORIZED_USER"}
+  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER)
+    $ L.throwException
+    $ err400 {errBody = "UNAUTHORIZED_USER"}
   getUsers limitM offsetM locateM roleM locate user
 
 getUsers ::
@@ -134,7 +135,7 @@ cityLevelUsers limitM offsetM r cities =
             empty
             empty
             Nothing
-          >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
+            >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
         )
 
 districtLevelUsers ::
@@ -152,7 +153,7 @@ districtLevelUsers limitM offsetM r districts =
             empty
             empty
             Nothing
-          >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
+            >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
         )
 
 wardLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
@@ -169,7 +170,7 @@ wardLevelUsers limitM offsetM r wards =
             empty
             empty
             Nothing
-          >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
+            >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
         )
 
 get :: RegToken -> PersonId -> FlowHandler GetRes
