@@ -1,16 +1,12 @@
 module Types.API.Location where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
-import Beckn.Types.Common
+import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as SL
-import Beckn.Utils.Extra
 import Data.Swagger
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.Swagger
 
-data UpdateLocationReq = UpdateLocationReq
+data LocationInfo = LocationInfo
   { locationType :: Maybe SL.LocationType,
     lat :: Maybe Double,
     long :: Maybe Double,
@@ -26,6 +22,21 @@ data UpdateLocationReq = UpdateLocationReq
   deriving (Generic, ToSchema, ToJSON, Show, FromJSON)
 
 data GetLocationRes = GetLocationRes
-  { location :: Maybe UpdateLocationReq
+  { location :: Maybe LocationInfo
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data LatLong = LatLong
+  { lat :: Double,
+    lon :: Double
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+data Request = Request
+  { waypoints :: [LatLong],
+    mode :: Maybe MapSearch.TravelMode,
+    calcPoints :: Maybe Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+type Response = MapSearch.Response

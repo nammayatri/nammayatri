@@ -52,7 +52,7 @@ update regToken userId req@UpdateReq {..} = withFlowHandler $ do
   Person.updateMultiple userId updatedPerson
   UpdateRes
     <$> ( Person.findById userId
-          >>= fromMaybeM500 "Couldnot find user"
+            >>= fromMaybeM500 "Couldnot find user"
         )
 
 delete :: RegToken -> PersonId -> FlowHandler Ack

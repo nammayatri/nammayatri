@@ -67,7 +67,7 @@ update regToken productId req = withFlowHandler $ do
     Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
   infoObj <- updateInfo (ProductsId productId) (Just driverInfo) (Just vehicleInfo)
   notifyTripDataToGateway (ProductsId productId)
-  notifyCancelReq updatedProd _status
+  notifyCancelReq updatedProd (req ^. #_status)
   return $ updatedProd {Product._info = infoObj}
 
 notifyTripDataToGateway :: ProductsId -> L.Flow ()

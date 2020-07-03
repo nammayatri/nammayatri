@@ -10,9 +10,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Extra
 import Data.Aeson as A
-import Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T

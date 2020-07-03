@@ -4,10 +4,9 @@
 module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.App
-import Beckn.Types.Storage.Products (ProductsStatus (..))
+import Beckn.Types.Storage.Products (ProductsStatus)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Generics.Labels
 import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
@@ -18,7 +17,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data ProductInstanceStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
