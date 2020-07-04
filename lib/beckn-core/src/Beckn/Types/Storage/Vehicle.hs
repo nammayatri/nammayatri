@@ -15,7 +15,6 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
