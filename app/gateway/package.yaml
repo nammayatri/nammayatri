@@ -58,9 +58,13 @@ library:
   ghc-options:
   - -Werror
   dependencies:
+  - aeson
   - beckn-core
+  - bytestring
+  - http-types
   - servant-server
   - vault
+  - wai
   - warp
 
 executables:
