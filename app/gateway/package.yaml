@@ -55,6 +55,8 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Werror
   dependencies:
   - beckn-core
   - servant-server
@@ -69,5 +71,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Werror
     dependencies:
     - beckn-gateway
