@@ -18,10 +18,10 @@ cradle:
     - path: "app/beckn-transport/server/Paths_beckn_transport.hs"
       component: "beckn-transport:exe:beckn-transport-exe"
 
-    - path: "beckn/beckn-gateway/src"
+    - path: "app/gateway/src"
       component: "beckn-gateway:lib"
 
-    - path: "beckn/beckn-gateway/server/Main.hs"
+    - path: "app/gateway/server/Main.hs"
       component: "beckn-gateway:exe:beckn-gateway-exe"
 
     - path: "lib/beckn-core/src"
