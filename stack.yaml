@@ -30,6 +30,7 @@ resolver: lts-14.27
 #   - wai
 packages:
 - lib/beckn-core
+- app/gateway
 - app/beckn-transport
 - app/app-backend
 - test
