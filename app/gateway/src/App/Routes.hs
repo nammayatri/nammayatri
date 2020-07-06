@@ -1,6 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-
 module App.Routes where
 
 import Beckn.Types.App (FlowServer)
