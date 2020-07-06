@@ -3,14 +3,11 @@
 module Beckn.Types.API.Search where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
-import Data.Generics.Labels
-import Data.Swagger
+import Data.Generics.Labels ()
 import EulerHS.Prelude
-import Servant.Swagger
 
 data SearchReq = SearchReq
   { context :: Context,
