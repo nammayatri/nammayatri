@@ -1,10 +1,12 @@
-FROM fpco/stack-build:lts-13.27
+FROM fpco/stack-build:lts-14.27
 RUN mkdir /opt/build
 WORKDIR /opt/build
 
 # GHC dynamically links its compilation targets to lib gmp
 RUN apt-get update \
-  && apt-get download libgmp10
+  && apt-get download libgmp10 \
+  && apt-get install -y \
+      openssh-client
 RUN mv libgmp*.deb libgmp.deb
 
 # Dependencies for checks
