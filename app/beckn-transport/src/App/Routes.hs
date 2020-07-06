@@ -1,9 +1,5 @@
 module App.Routes where
 
--- import           Beckn.Types.API.Search
--- import           Beckn.Types.API.Confirm
--- import           Beckn.Types.Common
-
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -44,28 +40,28 @@ import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
-type TransporterAPIs =
+type TransportAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> RegistrationAPIs
-           :<|> PersonAPIs
-           :<|> OrganizationAPIs --Transporter
-           :<|> SearchAPIs
-           :<|> ConfirmAPIs
-           :<|> CancelAPIs
-           :<|> StatusAPIs
-           :<|> TrackApis
-           :<|> CaseAPIs
-           :<|> CronAPIs
-           :<|> ProductInstanceAPIs
-           :<|> VehicleAPIs
-           :<|> LocationAPIs
-           :<|> ProductAPIs
+           :<|> RegistrationAPI
+           :<|> PersonAPI
+           :<|> OrganizationAPI --Transporter
+           :<|> SearchAPI
+           :<|> ConfirmAPI
+           :<|> CancelAPI
+           :<|> StatusAPI
+           :<|> TrackAPI
+           :<|> CaseAPI
+           :<|> CronAPI
+           :<|> ProductInstanceAPI
+           :<|> VehicleAPI
+           :<|> LocationAPI
+           :<|> ProductAPI
            :<|> RouteAPI
        )
 
 ---- Registration Flow ------
-type RegistrationAPIs =
+type RegistrationAPI =
   "token"
     :> ( ReqBody '[JSON] InitiateLoginReq
            :> Post '[JSON] InitiateLoginRes
@@ -79,14 +75,14 @@ type RegistrationAPIs =
              :> Post '[JSON] InitiateLoginRes
        )
 
-registrationFlow :: FlowServer RegistrationAPIs
+registrationFlow :: FlowServer RegistrationAPI
 registrationFlow =
   Registration.initiateLogin
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
 -- Following is person flow
-type PersonAPIs =
+type PersonAPI =
   "person"
     :> ( AdminTokenAuth
            :> ReqBody '[JSON] CreatePersonReq
@@ -115,7 +111,7 @@ type PersonAPIs =
              :> Delete '[JSON] DeletePersonRes
        )
 
-personFlow :: FlowServer PersonAPIs
+personFlow :: FlowServer PersonAPI
 personFlow =
   Person.createPerson
     :<|> Person.listPerson
@@ -124,7 +120,7 @@ personFlow =
     :<|> Person.deletePerson
 
 -- Following is vehicle flow
-type VehicleAPIs =
+type VehicleAPI =
   "vehicle"
     :> ( DriverTokenAuth
            :> ReqBody '[JSON] CreateVehicleReq
@@ -150,7 +146,7 @@ type VehicleAPIs =
              :> Get '[JSON] CreateVehicleRes
        )
 
-vehicleFlow :: FlowServer VehicleAPIs
+vehicleFlow :: FlowServer VehicleAPI
 vehicleFlow =
   Vehicle.createVehicle
     :<|> Vehicle.listVehicles
@@ -159,7 +155,7 @@ vehicleFlow =
     :<|> Vehicle.getVehicle
 
 -- Following is organization creation
-type OrganizationAPIs =
+type OrganizationAPI =
   "transporter"
     :> ( TokenAuth
            :> Get '[JSON] TransporterRec
@@ -176,7 +172,7 @@ type OrganizationAPIs =
            :> Post '[JSON] TransporterRec
        )
 
-organizationFlow :: FlowServer OrganizationAPIs
+organizationFlow :: FlowServer OrganizationAPI
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.createTransporter
@@ -185,7 +181,7 @@ organizationFlow =
 
 -----------------------------
 -------- Case Flow----------
-type CaseAPIs =
+type CaseAPI =
   "case"
     :> ( TokenAuth
            :> QueryParams "status" CaseStatus
@@ -205,7 +201,7 @@ caseFlow =
     :<|> Case.update
 
 -------- ProductInstance Flow----------
-type ProductInstanceAPIs =
+type ProductInstanceAPI =
   "productInstance"
     :> ( TokenAuth
            :> QueryParams "status" ProductInstanceStatus
@@ -218,7 +214,7 @@ productInstanceFlow =
   ProductInstance.list
 
 -------- Product Flow----------
-type ProductAPIs =
+type ProductAPI =
   "product"
     :> ( TokenAuth
            :> QueryParam "vehicleId" Text
@@ -240,7 +236,7 @@ productFlow =
     :<|> Product.listCasesByProd
 
 -- Location update and get for tracking is as follows
-type LocationAPIs =
+type LocationAPI =
   "location"
     :> ( Capture "caseId" Text
            :> Get '[JSON] GetLocationRes
@@ -256,11 +252,11 @@ locationFlow =
 
 -- location flow over
 
-transporterAPIs :: Proxy TransporterAPIs
-transporterAPIs = Proxy
+transporterAPI :: Proxy TransportAPI
+transporterAPI = Proxy
 
-transporterServer' :: V.Key (HashMap Text Text) -> FlowServer TransporterAPIs
-transporterServer' key =
+transporterServer :: V.Key (HashMap Text Text) -> FlowServer TransportAPI
+transporterServer key =
   pure "App is UP"
     :<|> registrationFlow
     :<|> personFlow
@@ -278,65 +274,65 @@ transporterServer' key =
     :<|> productFlow
     :<|> routeApiFlow
 
-type SearchAPIs =
+type SearchAPI =
   "search"
     :> "services"
     :> ( ReqBody '[JSON] SearchReq
            :> Post '[JSON] AckResponse
        )
 
-searchApiFlow :: FlowServer SearchAPIs
+searchApiFlow :: FlowServer SearchAPI
 searchApiFlow = BP.search
 
-type ConfirmAPIs =
+type ConfirmAPI =
   "confirm"
     :> "services"
     :> ( ReqBody '[JSON] ConfirmReq
            :> Post '[JSON] AckResponse
        )
 
-confirmApiFlow :: FlowServer ConfirmAPIs
+confirmApiFlow :: FlowServer ConfirmAPI
 confirmApiFlow = BP.confirm
 
-type CancelAPIs =
+type CancelAPI =
   "cancel"
     :> "services"
     :> ( ReqBody '[JSON] CancelReq
            :> Post '[JSON] AckResponse
        )
 
-cancelApiFlow :: FlowServer CancelAPIs
+cancelApiFlow :: FlowServer CancelAPI
 cancelApiFlow = BP.cancel
 
-type CronAPIs =
+type CronAPI =
   "cron"
     :> "expire_cases"
     :> Header "Authorization" CronAuthKey
     :> ReqBody '[JSON] ExpireCaseReq
     :> Post '[JSON] ExpireCaseRes
 
-cronFlow :: FlowServer CronAPIs
+cronFlow :: FlowServer CronAPI
 cronFlow =
   Cron.expire
 
-type StatusAPIs =
+type StatusAPI =
   "status"
     :> "services"
     :> ( ReqBody '[JSON] StatusReq
            :> Post '[JSON] AckResponse
        )
 
-statusApiFlow :: FlowServer StatusAPIs
+statusApiFlow :: FlowServer StatusAPI
 statusApiFlow = BP.serviceStatus
 
-type TrackApis =
+type TrackAPI =
   "track"
     :> "trip"
     :> ( ReqBody '[JSON] TrackTripReq
            :> Post '[JSON] TrackTripRes
        )
 
-trackApiFlow :: FlowServer TrackApis
+trackApiFlow :: FlowServer TrackAPI
 trackApiFlow = BP.trackTrip
 
 type RouteAPI =

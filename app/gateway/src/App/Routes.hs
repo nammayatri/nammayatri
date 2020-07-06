@@ -14,6 +14,6 @@ type GatewayAPI =
 gatewayAPI :: Proxy GatewayAPI
 gatewayAPI = Proxy
 
-gatewayHandler :: V.Key (HashMap Text Text) -> FlowServer GatewayAPI
-gatewayHandler key =
+gatewayServer :: V.Key (HashMap Text Text) -> FlowServer GatewayAPI
+gatewayServer key =
   pure "Gateway is UP"
