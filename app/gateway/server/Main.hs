@@ -1,6 +1,7 @@
 module Main where
 
+import App (runGateway)
 import EulerHS.Prelude
 
 main :: IO ()
-main = undefined
+main = runGateway

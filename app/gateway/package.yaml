@@ -55,6 +55,11 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+  - beckn-core
+  - servant-server
+  - vault
+  - warp
 
 executables:
   beckn-gateway-exe:
@@ -64,3 +69,5 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    dependencies:
+    - beckn-gateway
