@@ -22,13 +22,7 @@ gatewayServer key =
     :<|> searchFlow
 
 type SearchAPI =
-  "search" :> "services"
-    :> ReqBody '[JSON] Search.SearchReq
-    :> Post '[JSON] Search.SearchRes
-    :<|> "on_search"
-      :> "services"
-      :> ReqBody '[JSON] Search.OnSearchReq
-      :> Post '[JSON] Search.OnSearchRes
+  Search.SearchAPI :<|> Search.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

@@ -96,15 +96,8 @@ registrationFlow =
 
 -------- Search Flow --------
 type SearchAPI =
-  "search" :> "services"
-    :> TokenAuth
-    :> ReqBody '[JSON] Search.SearchReq
-    :> Post '[JSON] Search.SearchRes
-    -- on_search
-    :<|> "on_search"
-    :> "services"
-    :> ReqBody '[JSON] Search.OnSearchReq
-    :> Post '[JSON] Search.OnSearchRes
+  (TokenAuth :> Search.SearchAPI)
+    :<|> Search.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

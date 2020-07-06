@@ -285,13 +285,6 @@ transporterServer key =
     :<|> productFlow
     :<|> routeApiFlow
 
-type SearchAPI =
-  "search"
-    :> "services"
-    :> ( ReqBody '[JSON] SearchReq
-           :> Post '[JSON] AckResponse
-       )
-
 searchApiFlow :: FlowServer SearchAPI
 searchApiFlow = BP.search
 

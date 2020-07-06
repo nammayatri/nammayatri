@@ -8,6 +8,25 @@ import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
 import Data.Generics.Labels ()
 import EulerHS.Prelude
+import Servant (JSON, Post, ReqBody, (:>))
+
+type SearchAPI =
+  "search"
+    :> "services"
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
+
+searchAPI :: Proxy SearchAPI
+searchAPI = Proxy
+
+type OnSearchAPI =
+  "on_search"
+    :> "services"
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] OnSearchRes
+
+onSearchAPI :: Proxy OnSearchAPI
+onSearchAPI = Proxy
 
 data SearchReq = SearchReq
   { context :: Context,
