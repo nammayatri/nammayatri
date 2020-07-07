@@ -1,16 +1,17 @@
 module Beckn.Types.Core.Price where
 
+import Beckn.Types.Core.Amount
 import Data.Text
 import EulerHS.Prelude
 
 data Price = Price
   { _currency :: Text,
-    _estimated_value :: Double,
-    _computed_value :: Double,
-    _listed_value :: Double,
-    _offered_value :: Double,
+    _estimated_value :: Amount,
+    _computed_value :: Amount,
+    _listed_value :: Amount,
+    _offered_value :: Amount,
     _unit :: Text,
-    _discount :: Double,
+    _discount :: Amount,
     _tax :: Maybe Tax
   }
   deriving (Generic, Show)
@@ -22,7 +23,7 @@ instance ToJSON Price where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data Tax = Tax
-  { _computed :: Double,
+  { _computed :: Amount,
     _breakup :: [TaxBreakup]
   }
   deriving (Generic, Show)
@@ -35,7 +36,7 @@ instance ToJSON Tax where
 
 data TaxBreakup = TaxBreakup
   { _line_item :: Text,
-    _amount :: Double
+    _amount :: Amount
   }
   deriving (Generic, Show)
 

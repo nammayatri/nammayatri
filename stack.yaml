@@ -62,6 +62,7 @@ extra-deps:
   - servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
   - time-1.9.3@sha256:8f1b5448722a12a952248b356c9eb366e351226543d9086a2da71270522d5f45,5679
   - unix-2.7.2.2@sha256:9e93f93cc5a065248120136e83a0a6d1ce93d6eb5ef2a2543f9593e93e164d24,3496
+  - safe-money-aeson-0.1.1@sha256:d7383134649d5e63177731f3b5a0ff1992a1d4edf9d224178b264eb4fcdd6c14,1405
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

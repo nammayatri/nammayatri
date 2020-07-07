@@ -70,7 +70,6 @@ dependencies:
 - lens
 - pureMD5
 - random-strings
-- scientific
 - servant
 - servant-client
 - servant-multipart
@@ -90,6 +89,7 @@ dependencies:
 - base64-bytestring
 - utf8-string
 - geojson
+- safe-money
 
 library:
   source-dirs:
@@ -99,3 +99,15 @@ library:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
+
+tests:
+  beckn-core-tests:
+    main:              Main.hs
+    source-dirs:       
+      - test/app
+      - test/src
+      
+    dependencies:
+    - beckn-core
+    - tasty
+    - tasty-hunit

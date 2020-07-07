@@ -1,5 +1,6 @@
 module Types.API.Case where
 
+import Beckn.Types.Core.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
 import Data.Default
@@ -22,7 +23,7 @@ instance ToJSON CaseRes where
 type CaseListRes = [CaseRes]
 
 data UpdateCaseReq = UpdateCaseReq
-  { _quote :: Maybe Double,
+  { _quote :: Maybe Amount,
     _transporterChoice :: Text
   }
   deriving (Show, Generic, ToSchema)
