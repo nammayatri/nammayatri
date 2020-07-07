@@ -17,7 +17,7 @@ gatewayAPI :: Proxy GatewayAPI
 gatewayAPI = Proxy
 
 gatewayServer :: V.Key (HashMap Text Text) -> FlowServer GatewayAPI
-gatewayServer key =
+gatewayServer _key =
   pure "Gateway is UP"
     :<|> searchFlow
 
