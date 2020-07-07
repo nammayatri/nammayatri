@@ -8,6 +8,7 @@ import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Currency
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
@@ -25,7 +26,6 @@ import Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Aeson
 import Data.Map
-import Data.Scientific
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -59,10 +59,10 @@ mkPrice :: Products -> Price
 mkPrice prod =
   Price
     { _currency = "INR", -- TODO : Fetch this from product
-      _estimated_value = toRealFloat $ prod ^. #_price,
-      _computed_value = toRealFloat $ prod ^. #_price,
-      _listed_value = toRealFloat $ prod ^. #_price,
-      _offered_value = toRealFloat $ prod ^. #_price,
+      _estimated_value = prod ^. #_price,
+      _computed_value = prod ^. #_price,
+      _listed_value = prod ^. #_price,
+      _offered_value = prod ^. #_price,
       _unit = "Rs", -- TODO : Fetch this from product
       _discount = 0.0,
       _tax = Nothing

@@ -8,6 +8,7 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Currency
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Service
@@ -22,7 +23,6 @@ import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import qualified Data.Accessor as Lens
 import Data.Aeson
-import Data.Scientific
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
@@ -101,7 +101,7 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Double -> Text -> Product.ProductsStatus -> L.Flow Products
+createProduct :: Case -> Maybe Money -> Text -> Product.ProductsStatus -> L.Flow Products
 createProduct cs price orgId status = do
   prodId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
@@ -122,7 +122,7 @@ createProduct cs price orgId status = do
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
-          _price = fromFloatDigits $ fromMaybe 0 price,
+          _price = fromMaybe 0 price,
           _rating = Nothing,
           _review = Nothing,
           _udf1 = Case._udf1 cs,

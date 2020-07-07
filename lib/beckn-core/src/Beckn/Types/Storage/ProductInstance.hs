@@ -4,10 +4,10 @@
 module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.App
+import Beckn.Types.Core.Currency
 import Beckn.Types.Storage.Products (ProductsStatus)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -40,7 +40,7 @@ data ProductInstanceT f = ProductInstance
     _productId :: B.C f ProductsId,
     _personId :: B.C f (Maybe PersonId),
     _quantity :: B.C f Int,
-    _price :: B.C f Scientific,
+    _price :: B.C f Money,
     _status :: B.C f ProductInstanceStatus,
     _info :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,

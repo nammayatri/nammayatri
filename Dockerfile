@@ -21,6 +21,8 @@ RUN ormolu_files=`for i in $(git ls-files | grep '\.hs$'); do ormolu -m check $i
 
 RUN stack build --system-ghc
 
+RUN stack test beckn-core
+
 RUN mv "$(stack path --local-install-root --system-ghc)/bin" /opt/build/bin
 
 RUN rm -f /root/.ssh/id_rsa

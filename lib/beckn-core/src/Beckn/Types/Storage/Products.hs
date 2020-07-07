@@ -4,10 +4,10 @@
 module Beckn.Types.Storage.Products where
 
 import Beckn.Types.App
+import Beckn.Types.Core.Currency
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Scientific
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -71,7 +71,7 @@ data ProductsT f = Products
     _startTime :: B.C f LocalTime,
     _endTime :: B.C f (Maybe LocalTime),
     _validTill :: B.C f LocalTime,
-    _price :: B.C f Scientific,
+    _price :: B.C f Money,
     _rating :: B.C f (Maybe Text),
     _review :: B.C f (Maybe Text),
     _udf1 :: B.C f (Maybe Text),
