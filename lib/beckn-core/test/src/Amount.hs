@@ -1,6 +1,6 @@
-module Currency where
+module Amount where
 
-import Beckn.Types.Core.Currency
+import Beckn.Types.Core.Amount
 import Data.Aeson
 import Data.Ratio
 import EulerHS.Prelude
@@ -39,22 +39,22 @@ validateTooLongFraction =
 
 parseSuccess :: TestTree
 parseSuccess = testCase "Parse success" $ do
-  let result = fromJSON (String "1.25") :: Result Money
+  let result = fromJSON (String "1.25") :: Result Amount
   case result of
     Error err -> assertFailure "Parsing of \"1.25\" should succeed"
     Success _ -> pure ()
 
 parseError :: TestTree
 parseError = testCase "Parse error" $ do
-  let result = fromJSON (String "abc") :: Result Money
+  let result = fromJSON (String "abc") :: Result Amount
   case result of
-    Error err -> err @?= "Cannot parse abc as a currency value."
+    Error err -> err @?= "Cannot parse abc as a monetary amount."
     Success _ -> assertFailure "Parsing of abc as a number should fail."
 
-currencyTests :: TestTree
-currencyTests =
+amountTests :: TestTree
+amountTests =
   testGroup
-    "Currency tests"
+    "Amount tests"
     [ integerToString,
       largeIntegerToString,
       infiniteFractionToString,

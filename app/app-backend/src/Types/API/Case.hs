@@ -1,6 +1,6 @@
 module Types.API.Case where
 
-import Beckn.Types.Core.Currency
+import Beckn.Types.Core.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
 import Beckn.Types.Storage.Products
@@ -23,7 +23,7 @@ instance ToJSON StatusRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data UpdateCaseReq = UpdateCaseReq
-  { _quote :: Maybe Money,
+  { _quote :: Maybe Amount,
     _transporterChoice :: Text
   }
   deriving (Show, Generic, ToSchema)

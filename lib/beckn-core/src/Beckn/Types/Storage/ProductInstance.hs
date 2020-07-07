@@ -4,7 +4,7 @@
 module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.App
-import Beckn.Types.Core.Currency
+import Beckn.Types.Core.Amount
 import Beckn.Types.Storage.Products (ProductsStatus)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -40,7 +40,7 @@ data ProductInstanceT f = ProductInstance
     _productId :: B.C f ProductsId,
     _personId :: B.C f (Maybe PersonId),
     _quantity :: B.C f Int,
-    _price :: B.C f Money,
+    _price :: B.C f Amount,
     _status :: B.C f ProductInstanceStatus,
     _info :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,

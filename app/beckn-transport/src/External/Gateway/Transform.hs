@@ -3,12 +3,12 @@
 module External.Gateway.Transform where
 
 import Beckn.Types.App
+import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Currency
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price

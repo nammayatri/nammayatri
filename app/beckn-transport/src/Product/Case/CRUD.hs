@@ -5,10 +5,10 @@ module Product.Case.CRUD where
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common as BC
+import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Currency
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Service
@@ -101,7 +101,7 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Money -> Text -> Product.ProductsStatus -> L.Flow Products
+createProduct :: Case -> Maybe Amount -> Text -> Product.ProductsStatus -> L.Flow Products
 createProduct cs price orgId status = do
   prodId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC

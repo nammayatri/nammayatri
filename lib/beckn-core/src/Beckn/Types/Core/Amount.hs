@@ -4,8 +4,8 @@
 
 -- Functions rationalToString, validate
 -- are only exported for testing purposes.
-module Beckn.Types.Core.Currency
-  ( Money,
+module Beckn.Types.Core.Amount
+  ( Amount,
     rationalToString,
     validate,
   )
@@ -22,7 +22,7 @@ import Database.Beam.Postgres
 import EulerHS.Prelude
 import qualified Money as M
 
-newtype Money = Money Rational
+newtype Amount = Amount Rational
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (Num, Real, Fractional)
 
@@ -37,11 +37,9 @@ message =
   "Maximum allowed precision (total number of digits) is "
     <> show maxPrecision
 
--- Functions rationalToString and moneyToString should only be used
+-- Functions rationalToString and amountToString should only be used
 -- for serialization. They don't perform any proper rounding and simply
 -- stop generating digits when at the maximum precision.
--- For all other needs denseToDecimal and discreteToDecimal
--- from safe-money should be used.
 rationalToString :: Int -> Rational -> Maybe String
 rationalToString precision rational
   | length intPart > precision = Nothing
@@ -64,16 +62,16 @@ rationalToString precision rational
       where
         (digit, nextRemainder) = (10 * currentRemainder) `quotRem` denominator
 
-moneyToString :: Money -> Text
-moneyToString value =
+amountToString :: Amount -> Text
+amountToString value =
   maybe
     (error ("Cannot convert " <> show value <> " to a string. " <> message))
     T.pack
     (rationalToString maxPrecision (toRational value))
 
-moneyFromString :: Text -> Maybe Money
-moneyFromString moneyString =
-  Money . toRational <$> M.denseFromDecimal decimalConf moneyString
+amountFromString :: Text -> Maybe Amount
+amountFromString amountString =
+  Amount . toRational <$> M.denseFromDecimal decimalConf amountString
   where
     -- The exact value passed in DecimalConf.decimalConf_digits to
     -- denseFromDecimal does not matter, but it should be large enough to
@@ -84,44 +82,44 @@ moneyFromString moneyString =
         }
 
 validate :: Int -> Text -> Bool
-validate precision moneyString =
-  T.length moneyString <= maxPossibleLength
-    && countDigits moneyString <= precision
+validate precision amountString =
+  T.length amountString <= maxPossibleLength
+    && countDigits amountString <= precision
   where
     -- Combined length of "-" and "."
     maxNonDigitLength = 2
-    maxPossibleLength = T.length moneyString + maxNonDigitLength
+    maxPossibleLength = T.length amountString + maxNonDigitLength
     countDigits = T.length . T.filter isDigit
 
-instance ToJSON Money where
-  toJSON = toJSON . moneyToString
+instance ToJSON Amount where
+  toJSON = toJSON . amountToString
 
-instance FromJSON Money where
+instance FromJSON Amount where
   parseJSON value = do
-    moneyString <- parseJSON value
-    unless (validate maxPrecision moneyString) $ failText message
-    maybe (parseError moneyString) pure $ moneyFromString moneyString
+    amountString <- parseJSON value
+    unless (validate maxPrecision amountString) $ failText message
+    maybe (parseError amountString) pure $ amountFromString amountString
     where
-      parseError moneyString =
-        failText $ "Cannot parse " <> moneyString <> " as a currency value."
+      parseError amountString =
+        failText $ "Cannot parse " <> amountString <> " as a monetary amount."
       failText = fail . T.unpack
 
-instance ToSchema Money where
+instance ToSchema Amount where
   declareNamedSchema _ = do
     schema <- declareSchema (Proxy :: Proxy Text)
     return $
-      NamedSchema (Just "money") $
+      NamedSchema (Just "amount") $
         schema
           & description
-            ?~ "Monetary value in a string representation \
+            ?~ "Monetary amount in a string representation \
                \with an optional leading \"-\" for negative numbers. \
                \Integer and fractional parts are separated with a dot."
               <> message
               <> " String format is used to prevent loss of precision."
           & paramSchema . format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
 
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Money where
-  sqlValueSyntax = sqlValueSyntax . moneyToString
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Amount where
+  sqlValueSyntax = sqlValueSyntax . amountToString
 
-instance FromBackendRow Postgres Money where
-  fromBackendRow = Money <$> fromBackendRow
+instance FromBackendRow Postgres Amount where
+  fromBackendRow = Amount <$> fromBackendRow
