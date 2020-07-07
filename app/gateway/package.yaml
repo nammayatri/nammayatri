@@ -53,10 +53,16 @@ dependencies:
 - base >= 4.7 && < 5
 - euler-hs
 
+ghc-options:
+- -Werror
+- -Wall
+- -Wcompat
+- -Widentities
+
 library:
   source-dirs: src
   ghc-options:
-  - -Werror
+  - -Wincomplete-uni-patterns
   dependencies:
   - aeson
   - beckn-core
@@ -75,6 +81,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -Werror
+    - -Wincomplete-uni-patterns
     dependencies:
     - beckn-gateway
