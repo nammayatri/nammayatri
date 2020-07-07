@@ -22,6 +22,14 @@ import Database.Beam.Postgres
 import EulerHS.Prelude
 import qualified Money as M
 
+-- | A type for monetary amounts based on Rational.
+-- Compatible with safe-money library that has many
+-- helpful functions for working with monetary amounts.
+-- Uses "integer.fractional" format for serialization / deserialization.
+-- Maximum precision (total number of digits) is defined in this module.
+-- Note: serialization of numbers whose integer part has more digits than
+-- the maximum precision will fail with an error.
+-- Functions / and recip will fail with an error if the denominator is zero.
 newtype Amount = Amount Rational
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (Num, Real, Fractional)
@@ -40,6 +48,8 @@ message =
 -- Functions rationalToString and amountToString should only be used
 -- for serialization. They don't perform any proper rounding and simply
 -- stop generating digits when at the maximum precision.
+-- Note: rationalToString will return Nothing if the integer
+-- part of the number exceeds the precision (total number of digits).
 rationalToString :: Int -> Rational -> Maybe String
 rationalToString precision rational
   | length intPart > precision = Nothing
@@ -62,6 +72,8 @@ rationalToString precision rational
       where
         (digit, nextRemainder) = (10 * currentRemainder) `quotRem` denominator
 
+-- Note: amountToString will fail with an error if the integer
+-- part of the number exceeds the precision (total number of digits).
 amountToString :: Amount -> Text
 amountToString value =
   maybe
@@ -91,6 +103,8 @@ validate precision amountString =
     maxPossibleLength = T.length amountString + maxNonDigitLength
     countDigits = T.length . T.filter isDigit
 
+-- Note: toJSON will fail with an error if the integer
+-- part of the number exceeds the precision (total number of digits).
 instance ToJSON Amount where
   toJSON = toJSON . amountToString
 
