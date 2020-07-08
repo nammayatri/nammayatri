@@ -6,6 +6,7 @@ import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
 import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Context
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -14,6 +15,7 @@ import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import Servant.Client
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
@@ -72,7 +74,12 @@ cancelCase person req = do
       let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
   where
-    callCancelApi context baseUrl (pi :: productinstance.productinstance) = do
+    callCancelApi ::
+      Context ->
+      BaseUrl ->
+      ProductInstance.ProductInstance ->
+      Flow (Either Text ())
+    callCancelApi context baseUrl pi = do
       let prodInstId = _getProductInstanceId $ pi ^. #_id
       Gateway.cancel baseUrl (API.CancelReq context (IdObject prodInstId))
 
