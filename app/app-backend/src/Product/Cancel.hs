@@ -72,7 +72,7 @@ cancelCase person req = do
       let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
   where
-    callCancelApi context baseUrl pi = do
+    callCancelApi context baseUrl (pi :: productinstance.productinstance) = do
       let prodInstId = _getProductInstanceId $ pi ^. #_id
       Gateway.cancel baseUrl (API.CancelReq context (IdObject prodInstId))
 

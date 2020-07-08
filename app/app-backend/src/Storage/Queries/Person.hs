@@ -75,7 +75,7 @@ updateMultiple personId person = do
   DB.update dbTable (setClause now person) (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause now person Storage.Person {..} =
+    setClause now (person :: Storage.Person) Storage.Person {..} =
       mconcat
         [ _updatedAt <-. B.val_ now,
           _firstName <-. B.val_ (person ^. #_firstName),

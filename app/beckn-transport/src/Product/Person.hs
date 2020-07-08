@@ -36,7 +36,7 @@ createPerson orgId req = withFlowHandler $ do
   QP.create person
   return $ UpdatePersonRes person
   where
-    validateDriver req =
+    validateDriver (req :: CreatePersonReq) =
       when (req ^. #_role == Just SP.DRIVER) $
         case (req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
@@ -83,7 +83,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     hasAccess user person
     return $ PersonRes person
   where
-    hasAccess user person =
+    hasAccess (user :: SP.Person) (person :: SP.Person) =
       when
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
