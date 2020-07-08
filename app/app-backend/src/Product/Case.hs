@@ -6,7 +6,6 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
@@ -18,11 +17,11 @@ import Types.API.Case as API
 import Utils.Common (verifyToken)
 
 status ::
-  SR.RegistrationToken ->
+  Person.Person ->
   CaseId ->
   FlowHandler StatusRes
-status SR.RegistrationToken {..} caseId = withFlowHandler $ do
-  case_ <- Case.findById caseId
+status person caseId = withFlowHandler $ do
+  case_ <- Case.findIdByPerson person caseId
   cpr <- ProductInstance.findAllByCaseId (Case._id case_)
   products <- Products.findAllByIds (ProductInstance._productId <$> cpr)
   fromLocation <-
@@ -34,16 +33,13 @@ status SR.RegistrationToken {..} caseId = withFlowHandler $ do
   return $ StatusRes case_ products fromLocation toLocation
 
 list ::
-  SR.RegistrationToken ->
+  Person.Person ->
   Case.CaseType ->
   [Case.CaseStatus] ->
   Maybe Integer ->
   Maybe Integer ->
   FlowHandler ListRes
-list token caseType statuses mlimit moffset = withFlowHandler $ do
-  person <-
-    Person.findById (PersonId $ SR._EntityId token)
-      >>= fromMaybeM500 "Could not find user"
+list person caseType statuses mlimit moffset = withFlowHandler $ do
   ListRes
     <$> ( Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
             >>= traverse mapProductInstance

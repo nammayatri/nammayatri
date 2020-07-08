@@ -6,11 +6,10 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Person as Person
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -22,8 +21,8 @@ import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
 
-track :: SR.RegistrationToken -> TrackTripReq -> FlowHandler TrackTripRes
-track SR.RegistrationToken {..} req = withFlowHandler $ do
+track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
+track _ req = withFlowHandler $ do
   let context = req ^. #context
       tripId = req ^. #message . #id
   prd <- Products.findById $ ProductsId tripId

@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.ProductInstance where
 
 import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -23,12 +26,10 @@ import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.API.ProductInstance
 
-list :: SR.RegistrationToken -> ProdInstReq -> FlowHandler ProductInstanceList
-list SR.RegistrationToken {..} ProdInstReq {..} = withFlowHandler $ do
-  let personId = PersonId _EntityId
-  person <- Person.findById personId
+list :: Person.Person -> ProdInstReq -> FlowHandler ProductInstanceList
+list person ProdInstReq {..} = withFlowHandler $ do
   caseProdList <-
-    ProductInstance.listAllProductInstanceWithOffset _limit _offset (ProductInstance.ByCustomerId personId) _status
+    ProductInstance.listAllProductInstanceWithOffset _limit _offset (ProductInstance.ByCustomerId $ person ^. #_id) _status
   caseList <- Case.findAllByIds (ProductInstance._caseId <$> caseProdList)
   prodList <- Products.findAllByIds (ProductInstance._productId <$> caseProdList)
   locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))
