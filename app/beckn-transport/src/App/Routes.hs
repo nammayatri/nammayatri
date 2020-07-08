@@ -337,7 +337,7 @@ trackApiFlow = BP.trackTrip
 
 type RouteAPI =
   "route"
-    :> AuthHeader
+    :> TokenAuth
     :> ReqBody '[JSON] Location.Request
     :> Post '[JSON] Location.Response
 

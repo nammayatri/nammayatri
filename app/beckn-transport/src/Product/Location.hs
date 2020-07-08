@@ -112,9 +112,8 @@ getRoute' fromLat fromLon toLat toLon = do
           calcPoints = Just True
         }
 
-getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
-getRoute regToken Location.Request {..} = withFlowHandler $ do
-  QR.verifyToken regToken
+getRoute :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
+getRoute _ Location.Request {..} = withFlowHandler $ do
   MapSearch.getRoute getRouteRequest
     >>= either
       (\err -> L.throwException $ err400 {errBody = show err})
