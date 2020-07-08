@@ -3,6 +3,7 @@ module Product.Location where
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
 import qualified Beckn.Types.MapSearch as MapSearch
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -10,9 +11,8 @@ import Servant
 import qualified Types.API.Location as Location
 import Utils.Common (verifyToken)
 
-getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
-getRoute regToken Location.Request {..} = withFlowHandler $ do
-  verifyToken regToken
+getRoute :: Person.Person -> Location.Request -> FlowHandler Location.Response
+getRoute _person Location.Request {..} = withFlowHandler $ do
   MapSearch.getRoute getRouteRequest
     >>= either
       (\err -> L.throwException $ err400 {errBody = show err})
