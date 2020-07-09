@@ -85,7 +85,7 @@ searchCb req = withFlowHandler $ do
       productInstances <- traverse (mkProductInstance case_ mprovider personId) items
       traverse_ ProductInstance.create productInstances
       extendCaseExpiry case_
-      Notify.notifyOnSearchCb personId caseId productInstances
+      Notify.notifyOnSearchCb personId case_ productInstances
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
   where

@@ -110,15 +110,17 @@ onCancel req = withFlowHandler $ do
   let caseId = productInstance ^. #_caseId
   -- notify customer
   case_ <- Case.findById caseId
-  let personId = Case._requestor case_
-  Notify.notifyOnProductCancelCb personId case_ prodInstId
+  Notify.notifyOnProductCancelCb productInstance
   --
   arrPICase <- ProductInstance.findAllByCaseId caseId
   let arrTerminalPI =
         filter
           ( \pi -> do
               let status = pi ^. #_status
-              status == ProductInstance.COMPLETED || status == ProductInstance.OUTOFSTOCK || status == ProductInstance.CANCELLED || status == ProductInstance.INVALID
+              status == ProductInstance.COMPLETED
+                || status == ProductInstance.OUTOFSTOCK
+                || status == ProductInstance.CANCELLED
+                || status == ProductInstance.INVALID
           )
           arrPICase
   when
