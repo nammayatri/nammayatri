@@ -205,35 +205,46 @@ type ProductInstanceAPI =
   "productInstance"
     :> ( TokenAuth
            :> QueryParams "status" ProductInstanceStatus
+           :> QueryParams "type" CaseType
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> Get '[JSON] ProductInstanceList
+           :<|> "person"
+           :> TokenAuth
+           :> Capture "personId" Text
+           :> Get '[JSON] RideListRes
+           :<|> "vehicle"
+           :> TokenAuth
+           :> Capture "vehicleId" Text
+           :> Get '[JSON] RideListRes
+           :<|> TokenAuth
+           :> Capture "productInstanceId" Text
+           :> "cases"
+           :> QueryParam "type" CaseType
+           :> Get '[JSON] CaseListRes
+           :<|> TokenAuth
+           :> Capture "productInstanceId" Text
+           :> ReqBody '[JSON] ProdInstUpdateReq
+           :> Post '[JSON] ProdInstInfo
        )
 
 productInstanceFlow =
   ProductInstance.list
+    :<|> ProductInstance.listDriverRides
+    :<|> ProductInstance.listVehicleRides
+    :<|> ProductInstance.listCasesByProductInstance
+    :<|> ProductInstance.update
 
 -------- Product Flow----------
 type ProductAPI =
   "product"
-    :> ( TokenAuth
-           :> QueryParam "vehicleId" Text
-           :> Get '[JSON] ProdListRes
-           :<|> TokenAuth
-             :> Capture "productId" Text
-             :> ReqBody '[JSON] ProdReq
-             :> Post '[JSON] ProdInfoRes
-           :<|> TokenAuth
-             :> Capture "productId" Text
-             :> "cases"
-             :> QueryParam "type" CaseType
-             :> Get '[JSON] CaseListRes
+    :> ( AdminTokenAuth
+           :> ReqBody '[JSON] CreateProdReq
+           :> Post '[JSON] ProdRes
        )
 
 productFlow =
-  Product.listRides
-    :<|> Product.update
-    :<|> Product.listCasesByProd
+  Product.createProduct
 
 -- Location update and get for tracking is as follows
 type LocationAPI =

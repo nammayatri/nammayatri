@@ -25,22 +25,22 @@ cancel person req = withFlowHandler $ do
   let entityType = req ^. #message . #entityType
   case entityType of
     Cancel.CASE -> cancelCase person req
-    Cancel.PRODUCT -> cancelProduct person req
+    Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
-cancelProduct :: Person.Person -> CancelReq -> L.Flow CancelRes
-cancelProduct person req = do
-  let productId = req ^. #message . #entityId
-  cp <- ProductInstance.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple productinstances exists for one product
-  Case.findIdByPerson person (cp ^. #_caseId)
-  if isProductInstanceCancellable cp
-    then sendCancelReq productId
-    else errResp (show (cp ^. #_status))
+cancelProductInstance :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelProductInstance person req = do
+  let prodInstId = req ^. #message . #entityId
+  pi <- ProductInstance.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  Case.findIdByPerson person (pi ^. #_caseId)
+  if isProductInstanceCancellable pi
+    then sendCancelReq prodInstId
+    else errResp (show (pi ^. #_status))
   where
-    sendCancelReq productId = do
+    sendCancelReq prodInstId = do
       let context = req ^. #context
       let txnId = context ^. #transaction_id
       baseUrl <- Gateway.getBaseUrl
-      eres <- Gateway.cancel baseUrl (API.CancelReq context (IdObject productId))
+      eres <- Gateway.cancel baseUrl (API.CancelReq context (IdObject prodInstId))
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
@@ -62,9 +62,9 @@ cancelCase person req = do
           Case.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
-          let cancelCPs = filter isProductInstanceCancellable productInstances
+          let cancelPIs = filter isProductInstanceCancellable productInstances
           baseUrl <- Gateway.getBaseUrl
-          eres <- traverse (callCancelApi context baseUrl) cancelCPs
+          eres <- traverse (callCancelApi context baseUrl) cancelPIs
           case sequence eres of
             Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
             Right _ -> mkAckResponse txnId "cancel"
@@ -72,13 +72,13 @@ cancelCase person req = do
       let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
   where
-    callCancelApi context baseUrl cp = do
-      let productId = _getProductsId $ cp ^. #_productId
-      Gateway.cancel baseUrl (API.CancelReq context (IdObject productId))
+    callCancelApi context baseUrl pi = do
+      let prodInstId = _getProductInstanceId $ pi ^. #_id
+      Gateway.cancel baseUrl (API.CancelReq context (IdObject prodInstId))
 
 isProductInstanceCancellable :: ProductInstance.ProductInstance -> Bool
-isProductInstanceCancellable cp =
-  case cp ^. #_status of
+isProductInstanceCancellable pi =
+  case pi ^. #_status of
     ProductInstance.CONFIRMED -> True
     ProductInstance.VALID -> True
     ProductInstance.INSTOCK -> True
@@ -95,25 +95,25 @@ onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #transaction_id
-  let productId = ProductsId $ req ^. #message . #id
-  cpProducts <- ProductInstance.findByProductId productId -- TODO: Handle usecase where multiple productinstances exists for one product
-  ProductInstance.updateStatus productId ProductInstance.CANCELLED
-  let caseId = cpProducts ^. #_caseId
+  let prodInstId = ProductInstanceId $ req ^. #message . #id
+  -- TODO: Handle usecase where multiple productinstances exists for one product
+  productInstance <- ProductInstance.findById prodInstId
+  ProductInstance.updateStatus prodInstId ProductInstance.CANCELLED
+  let caseId = productInstance ^. #_caseId
   -- notify customer
   case_ <- Case.findById caseId
   let personId = Case._requestor case_
-  Notify.notifyOnProductCancelCb personId case_ productId
+  Notify.notifyOnProductCancelCb personId case_ prodInstId
   --
-  arrCPCase <- ProductInstance.findAllByCaseId caseId
-  let arrTerminalCP =
+  arrPICase <- ProductInstance.findAllByCaseId caseId
+  let arrTerminalPI =
         filter
-          ( \cp -> do
-              let status = cp ^. #_status
+          ( \pi -> do
+              let status = pi ^. #_status
               status == ProductInstance.COMPLETED || status == ProductInstance.OUTOFSTOCK || status == ProductInstance.CANCELLED || status == ProductInstance.INVALID
           )
-          arrCPCase
+          arrPICase
   when
-    (length arrTerminalCP == length arrCPCase)
+    (length arrTerminalPI == length arrPICase)
     (Case.updateStatus caseId Case.CLOSED)
-
   mkAckResponse txnId "cancel"

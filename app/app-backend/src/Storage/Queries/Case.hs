@@ -56,6 +56,14 @@ findById caseId =
   where
     predicate caseId Storage.Case {..} = _id ==. B.val_ caseId
 
+findByIdAndType :: CaseId -> Storage.CaseType -> L.Flow Storage.Case
+findByIdAndType caseId caseType =
+  DB.findOneWithErr dbTable (predicate caseId caseType)
+  where
+    predicate caseId caseType Storage.Case {..} =
+      (_id ==. B.val_ caseId)
+        &&. (_type ==. B.val_ caseType)
+
 findIdByPerson :: Person.Person -> CaseId -> L.Flow Storage.Case
 findIdByPerson person caseId = do
   let personId = _getPersonId $ person ^. #_id

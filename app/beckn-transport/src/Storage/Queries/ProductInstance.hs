@@ -71,19 +71,18 @@ updateStatusForProducts productId status = do
         ]
 
 updateStatus ::
-  CaseId ->
-  ProductsId ->
+  ProductInstanceId ->
   Storage.ProductInstanceStatus ->
   L.Flow (T.DBResult ())
-updateStatus caseId productId status = do
+updateStatus prodInstId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause status currTime)
-    (predicate caseId productId)
+    (predicate prodInstId)
   where
-    predicate cId pId Storage.ProductInstance {..} =
-      (_caseId ==. B.val_ cId) &&. (_productId ==. B.val_ pId)
+    predicate pId Storage.ProductInstance {..} =
+      _id ==. B.val_ pId
     setClause status currTime Storage.ProductInstance {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
@@ -116,46 +115,65 @@ updateStatusByIds ids status = do
           _status <-. B.val_ status
         ]
 
+updateCaseId ::
+  ProductInstanceId ->
+  CaseId ->
+  L.Flow (T.DBResult ())
+updateCaseId prodInstId caseId = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause caseId currTime)
+    (predicate prodInstId)
+  where
+    predicate id Storage.ProductInstance {..} = _id ==. B.val_ id
+    setClause caseId currTime Storage.ProductInstance {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _caseId <-. B.val_ caseId
+        ]
+
 findAllByProdId :: ProductsId -> L.Flow [Storage.ProductInstance]
 findAllByProdId id =
   DB.findAllOrErr dbTable (pred id)
   where
     pred id Storage.ProductInstance {..} = _productId ==. B.val_ id
 
-findAllByStatusIds :: [Storage.ProductInstanceStatus] -> [ProductsId] -> L.Flow [Storage.ProductInstance]
-findAllByStatusIds status ids =
-  DB.findAll dbTable (pred ids status)
+findAllByStatusParentId :: [Storage.ProductInstanceStatus] -> Maybe ProductInstanceId -> L.Flow [Storage.ProductInstance]
+findAllByStatusParentId status id =
+  DB.findAll dbTable (pred id status)
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.ProductInstance {..} = B.desc_ _createdAt
-    pred ids status Storage.ProductInstance {..} =
-      _status `B.in_` (B.val_ <$> status) ||. complementVal status
-        &&. B.in_ _productId (B.val_ <$> ids)
+    pred id status Storage.ProductInstance {..} =
+      _status `B.in_` (B.val_ <$> status)
+        &&. B.val_ (isJust id)
+        &&. _parentId ==. B.val_ id
 
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-productInstanceJoin :: Int -> Int -> Case.CaseType -> Text -> [Storage.ProductInstanceStatus] -> L.Flow ProductInstanceList
-productInstanceJoin _limit _offset csType orgId status = do
+productInstanceJoin :: Int -> Int -> [Case.CaseType] -> Text -> [Storage.ProductInstanceStatus] -> L.Flow ProductInstanceList
+productInstanceJoin _limit _offset csTypes orgId status = do
   joinedValues <-
     DB.findAllByJoin
       limit
       offset
       orderByDesc
-      (joinQuery csTable prodTable dbTable (pred1 csType) (pred2 orgId) (pred3 status))
+      (joinQuery csTable prodTable dbTable (csPred csTypes) prodPred (piPred orgId status))
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
     limit = toInteger _limit
     offset = toInteger _offset
     orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ _createdAt
-    pred1 csType Case.Case {..} =
-      _type ==. B.val_ csType
-    pred2 orgId Product.Products {..} =
+    csPred csType Case.Case {..} =
+      _type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes
+    prodPred Product.Products {..} = B.val_ True
+    piPred orgId status Storage.ProductInstance {..} =
       _organizationId ==. B.val_ orgId
-    pred3 status Storage.ProductInstance {..} =
-      _status `B.in_` (B.val_ <$> status) ||. complementVal status
+        &&. _status `B.in_` (B.val_ <$> status) ||. complementVal status
     mkJoinRes (cs, pr, cpr) =
       ProductInstanceRes
         { _case = cs,
@@ -186,10 +204,10 @@ productInstanceJoinWithoutLimits csType orgId status = do
     orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ _createdAt
     csPred csType Case.Case {..} =
       _type ==. B.val_ csType
-    prodPred orgId Product.Products {..} =
-      _organizationId ==. B.val_ orgId
+    prodPred orgId Product.Products {..} = B.val_ True
     cprPred status Storage.ProductInstance {..} =
-      _status `B.in_` (B.val_ <$> status) ||. complementVal status
+      _organizationId ==. B.val_ orgId
+        &&. _status `B.in_` (B.val_ <$> status) ||. complementVal status
     mkJoinRes (cs, pr, cpr) =
       ProductInstanceRes
         { _case = cs,
@@ -207,3 +225,75 @@ productInstanceJoinWithoutLimits csType orgId status = do
             CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
               B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)
+
+findById :: ProductInstanceId -> L.Flow Storage.ProductInstance
+findById pid =
+  DB.findOneWithErr dbTable (predicate pid)
+  where
+    predicate pid Storage.ProductInstance {..} = _id ==. B.val_ pid
+
+updateDvr :: [ProductInstanceId] -> Maybe PersonId -> L.Flow ()
+updateDvr ids driverId = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause driverId currTime)
+    (predicate ids)
+    >>= either DB.throwDBError pure
+  where
+    predicate ids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> ids)
+    setClause driverId currTime Storage.ProductInstance {..} =
+      mconcat
+        [ _personId <-. B.val_ driverId,
+          _updatedAt <-. B.val_ currTime
+        ]
+
+updateVeh :: [ProductInstanceId] -> Maybe Text -> L.Flow ()
+updateVeh ids vehId = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause vehId currTime)
+    (predicate ids)
+    >>= either DB.throwDBError pure
+  where
+    predicate ids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> ids)
+    setClause vehId currTime Storage.ProductInstance {..} =
+      mconcat
+        [ _entityId <-. B.val_ vehId,
+          _updatedAt <-. B.val_ currTime
+        ]
+
+updateInfo :: ProductInstanceId -> Maybe Text -> L.Flow ()
+updateInfo prodInstId info =
+  DB.update
+    dbTable
+    (setClause info)
+    (predicate prodInstId)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.ProductInstance {..} = _id ==. B.val_ id
+    setClause info Storage.ProductInstance {..} =
+      mconcat
+        [_info <-. B.val_ info]
+
+findAllByVehicleId :: Maybe Text -> L.Flow [Storage.ProductInstance]
+findAllByVehicleId id =
+  DB.findAll dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.ProductInstance {..} = B.val_ (isJust id) &&. _entityId ==. B.val_ id
+
+findAllByPersonId :: PersonId -> L.Flow [Storage.ProductInstance]
+findAllByPersonId id =
+  DB.findAll dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.ProductInstance {..} = _personId ==. B.val_ (Just id)
+
+findAllByParentId :: Maybe ProductInstanceId -> L.Flow [Storage.ProductInstance]
+findAllByParentId id =
+  DB.findAll dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ id

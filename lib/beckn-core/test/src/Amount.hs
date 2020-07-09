@@ -9,32 +9,32 @@ import Test.Tasty.HUnit
 
 integerToString :: TestTree
 integerToString =
-  testCase "Integer to string" $ do
+  testCase "Integer to string" $
     rationalToString 5 (1 % 1) @?= Just "1"
 
 largeIntegerToString :: TestTree
 largeIntegerToString =
-  testCase "Large integer to string" $ do
+  testCase "Large integer to string" $
     rationalToString 5 (100000 % 1) @?= Nothing
 
 infiniteFractionToString :: TestTree
 infiniteFractionToString =
-  testCase "Infinite fraction to string" $ do
+  testCase "Infinite fraction to string" $
     rationalToString 5 (1000 % 3) @?= Just "333.33"
 
 validateNormalInput :: TestTree
 validateNormalInput =
-  testCase "Normal input" $ do
+  testCase "Normal input" $
     validate 5 "-123.45" @?= True
 
 validateTooLongInteger :: TestTree
 validateTooLongInteger =
-  testCase "Too long integer" $ do
+  testCase "Too long integer" $
     validate 5 "100000" @?= False
 
 validateTooLongFraction :: TestTree
 validateTooLongFraction =
-  testCase "Too long fraction" $ do
+  testCase "Too long fraction" $
     validate 5 "0.33333" @?= False
 
 parseSuccess :: TestTree

@@ -35,7 +35,7 @@ import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
-import Storage.Queries.ProductInstance as CPQ
+import Storage.Queries.ProductInstance as QPI
 import Storage.Queries.Products as PQ
 import qualified Storage.Queries.RegistrationToken as QR
 import System.Environment
@@ -55,7 +55,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = with
       ignoreList <-
         if ignoreOffered == Just True
           then do
-            resList <- CPQ.productInstanceJoinWithoutLimits csType orgId []
+            resList <- QPI.productInstanceJoinWithoutLimits csType orgId []
             let csIgnoreList = Case._id <$> (CPR._case <$> resList)
             return csIgnoreList
           else return []
@@ -88,92 +88,69 @@ update :: SR.RegistrationToken -> Text -> UpdateCaseReq -> FlowHandler Case
 update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   c <- Case.findById $ CaseId caseId
+  p <- PQ.findByName $ fromMaybe "DONT MATCH" (c ^. #_udf1)
   case SP._organizationId person of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
-        p <- createProduct c _quote orgId Product.INSTOCK
-        cp <- createProductInstance c p ProdInst.INSTOCK
-        notifyGateway c p orgId
+        pi <- createProductInstance c p _quote orgId ProdInst.INSTOCK
+        notifyGateway c pi orgId
         return c
       "DECLINED" -> do
-        p <- createProduct c _quote orgId Product.OUTOFSTOCK
-        cp <- createProductInstance c p ProdInst.OUTOFSTOCK
+        pi <- createProductInstance c p _quote orgId ProdInst.OUTOFSTOCK
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProduct :: Case -> Maybe Amount -> Text -> Product.ProductsStatus -> L.Flow Products
-createProduct cs price orgId status = do
-  prodId <- L.generateGUID
+createProductInstance :: Case -> Products -> Maybe Amount -> Text -> ProdInst.ProductInstanceStatus -> L.Flow ProductInstance
+createProductInstance cs prod price orgId status = do
+  piId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  let product = getProduct prodId price cs currTime orgId shortId
-  PQ.create product
-  return product
+  let productInst = getProdInst piId shortId cs prod price orgId currTime
+  QPI.create productInst
+  return productInst
   where
-    getProduct prodId price cs currTime orgId shortId =
-      Products
-        { _id = ProductsId prodId,
+    getProdInst piId shortId cs prod price orgId currTime =
+      ProductInstance
+        { _id = ProductInstanceId piId,
+          _caseId = Case._id cs,
+          _productId = Product._id prod,
+          _personId = Nothing,
           _shortId = T.pack shortId,
-          _name = Case._name cs,
-          _description = Case._description cs,
-          _industry = Case._industry cs,
-          _type = RIDE,
+          _entityType = ProdInst.VEHICLE,
+          _entityId = Nothing,
+          _quantity = 1,
+          _price = fromMaybe 0 price,
           _status = status,
           _startTime = Case._startTime cs,
           _endTime = Case._endTime cs,
           _validTill = Case._validTill cs,
-          _price = fromMaybe 0 price,
-          _rating = Nothing,
-          _review = Nothing,
+          _fromLocation = Just (Case._fromLocationId cs),
+          _toLocation = Just (Case._toLocationId cs),
+          _organizationId = orgId,
+          _parentId = Just $ ProductInstanceId piId,
           _udf1 = Case._udf1 cs,
           _udf2 = Case._udf2 cs,
           _udf3 = Case._udf3 cs,
           _udf4 = Case._udf4 cs,
           _udf5 = Case._udf5 cs,
           _info = Case._info cs,
-          _organizationId = orgId,
           _createdAt = currTime,
-          _updatedAt = currTime,
-          _fromLocation = Just (Case._fromLocationId cs),
-          _toLocation = Just (Case._toLocationId cs),
-          _assignedTo = Nothing
-        }
-
-createProductInstance :: Case -> Products -> ProdInst.ProductInstanceStatus -> L.Flow ProductInstance
-createProductInstance cs prod status = do
-  cpId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrentTimeUTC
-  let productInst = getProdInst cpId cs prod currTime
-  CPQ.create productInst
-  return productInst
-  where
-    getProdInst cpId cs prod currTime =
-      ProductInstance
-        { _id = ProductInstanceId cpId,
-          _caseId = Case._id cs,
-          _productId = Product._id prod,
-          _personId = Nothing,
-          _quantity = 1,
-          _price = Product._price prod,
-          _status = status,
-          _info = Nothing,
-          _createdAt = Case._createdAt cs,
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> Products -> Text -> L.Flow ()
-notifyGateway c p orgId = do
+notifyGateway :: Case -> ProductInstance -> Text -> L.Flow ()
+notifyGateway c pi orgId = do
   L.logInfo "notifyGateway" $ show c
-  cps <- CPQ.findAllByCaseId (c ^. #_id)
-  L.logInfo "notifyGateway" $ show p
+  allPis <- QPI.findAllByCaseId (c ^. #_id)
+  L.logInfo "notifyGateway" $ show pi
   orgInfo <- OQ.findOrganizationById (OrganizationId orgId)
-  onSearchPayload <- mkOnSearchPayload c [p] cps orgInfo
+  onSearchPayload <- mkOnSearchPayload c [pi] allPis orgInfo
   L.logInfo "notifyGateway Request" $ show onSearchPayload
   Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [Products] -> [ProductInstance] -> Organization -> L.Flow OnSearchReq
-mkOnSearchPayload c prods cps orgInfo = do
+mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> L.Flow OnSearchReq
+mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -185,7 +162,7 @@ mkOnSearchPayload c prods cps orgInfo = do
             timestamp = currTime,
             dummy = ""
           }
-  service <- GT.mkServiceOffer c prods cps Nothing (Just orgInfo)
+  service <- GT.mkServiceOffer c pis allPis Nothing (Just orgInfo)
   return
     OnSearchReq
       { context,

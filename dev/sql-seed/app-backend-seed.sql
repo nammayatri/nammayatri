@@ -74,10 +74,25 @@ CREATE TABLE atlas_app.product_instance (
     case_id character varying(255) NOT NULL,
     product_id character varying(255) NOT NULL,
     person_id character varying(255),
+    short_id character varying(36) NOT NULL,
+    entity_id character varying(255),
+    entity_type character varying(255) NOT NULL,
     quantity bigint NOT NULL,
     price numeric(30,10) NOT NULL,
     status character varying(255) NOT NULL,
+    start_time timestamp with time zone NOT NULL,
+    end_time timestamp with time zone,
+    valid_till timestamp with time zone NOT NULL,
+    from_location_id character varying(255),
+    to_location_id character varying(255),
+    organization_id character varying(255) NOT NULL,
+    parent_id character varying(255),
     info text,
+    udf1 character varying(255),
+    udf2 character varying(255),
+    udf3 character varying(255),
+    udf4 character varying(255),
+    udf5 character varying(255),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -260,17 +275,14 @@ ALTER TABLE atlas_app.person OWNER TO atlas;
 
 CREATE TABLE atlas_app.product (
     id character(36) NOT NULL,
-    short_id character(36),
-    name character varying(255),
+    name character varying(255) NOT NULL,
     description character varying(1024),
     industry character varying(1024) NOT NULL,
     type character varying(255) NOT NULL,
-    status character varying(255) NOT NULL,
-    start_time timestamp with time zone NOT NULL,
-    end_time timestamp with time zone,
-    valid_till timestamp with time zone NOT NULL,
-    price numeric(30,10) NOT NULL,
     rating character varying(255),
+    status character varying(255) NOT NULL,
+    short_id character(36) NOT NULL,
+    price numeric(30,10) NOT NULL,
     review character varying(255),
     udf1 character varying(255),
     udf2 character varying(255),
@@ -278,10 +290,6 @@ CREATE TABLE atlas_app.product (
     udf4 character varying(255),
     udf5 character varying(255),
     info text,
-    from_location_id character varying(255),
-    to_location_id character varying(255),
-    assigned_to character varying(36),
-    organization_id character varying(255) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -343,7 +351,7 @@ COPY atlas_app.case (id, name, description, short_id, industry, type, exchange_t
 -- Data for Name: product_instance; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
 --
 
-COPY atlas_app.product_instance (id, case_id, product_id, person_id, quantity, price, status, info, created_at, updated_at) FROM stdin;
+COPY atlas_app.product_instance (id, case_id, product_id, person_id, short_id, entity_id, entity_type, quantity, price, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) FROM stdin;
 \.
 
 
@@ -408,7 +416,7 @@ ec34eede-5a3e-4a41-89d4-7290a0d7a629	\N	\N	\N	\N	ADMIN	UNKNOWN	MOBILENUMBER	\N	+
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
 --
 
-COPY atlas_app.product (id, short_id, name, description, industry, type, status, start_time, end_time, valid_till, price, rating, review, udf1, udf2, udf3, udf4, udf5, info, from_location_id, to_location_id, assigned_to, organization_id, created_at, updated_at) FROM stdin;
+COPY atlas_app.product (id, name, description, industry, type, rating, status, short_id, price, review, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
 \.
 
 
@@ -569,6 +577,20 @@ CREATE INDEX idx_16394_product_id ON atlas_app.product_instance USING btree (pro
 
 
 --
+-- Name: idx_16394_entity_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_entity_id ON atlas_app.product_instance USING btree (entity_id);
+
+
+--
+-- Name: idx_16394_person_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_person_id ON atlas_app.product_instance USING btree (person_id);
+
+
+--
 -- Name: idx_16402_commented_on_entity_id; Type: INDEX; Schema: atlas_app; Owner: atlas
 --
 
@@ -664,13 +686,6 @@ CREATE INDEX idx_16442_pincode ON atlas_app.organization USING btree (pincode);
 --
 
 CREATE INDEX idx_16442_ward ON atlas_app.organization USING btree (ward);
-
-
---
--- Name: idx_16459_organization_id; Type: INDEX; Schema: atlas_app; Owner: atlas
---
-
-CREATE INDEX idx_16459_organization_id ON atlas_app.product USING btree (organization_id);
 
 
 --

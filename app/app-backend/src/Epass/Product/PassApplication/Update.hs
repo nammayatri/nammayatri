@@ -42,7 +42,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
   -- verifyIfStatusUpdatable (PassApplication._status pA) _status
   case _status of
     REVOKED -> do
-      QCP.updateAllProductsByCaseId caseId Products.OUTOFSTOCK
+      QCP.updateAllProductInstByCaseId caseId ProductInstance.OUTOFSTOCK
       QC.updateStatusAndUdfs caseId Case.CLOSED Nothing Nothing Nothing Nothing _remarks
     APPROVED -> do
       when
@@ -71,44 +71,40 @@ verifyIfStatusUpdatable currStatus newStatus =
     (APPROVED, REVOKED) -> return ()
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
 
-createPass :: Case.Case -> L.Flow Products.Products
+createPass :: Case.Case -> L.Flow ProductInstance.ProductInstance
 createPass c@Case.Case {..} = do
   id <- generateGUID
   cpId <- generateGUID
   currTime <- getCurrentTimeUTC
   let orgId = "" --TODO: this should be optional
-      product =
-        Products.Products
-          { _id = ProductsId id,
-            _createdAt = currTime,
-            _updatedAt = currTime,
-            _type = Products.PASS,
-            _status = Products.INSTOCK,
-            _fromLocation = Just _fromLocationId,
-            _toLocation = Just _toLocationId,
-            _organizationId = orgId,
-            _price = 0, -- TODO: this should be optional?
-            _rating = Nothing,
-            _review = Nothing,
-            _assignedTo = Nothing,
-            ..
-          }
       productInstance =
         ProductInstance.ProductInstance
-          { _id = ProductInstanceId cpId,
+          { _id = ProductInstanceId id,
+            _shortId = "",
             _caseId = _id,
-            _productId = ProductsId id,
-            _quantity = 0,
-            _price = 0.0,
+            _productId = ProductsId cpId, --TODO need to be fixed
+            _personId = Nothing,
+            _quantity = 1,
+            _entityType = ProductInstance.PASS,
             _status = ProductInstance.CONFIRMED,
+            _parentId = Nothing,
+            _entityId = Nothing,
+            _price = 0,
+            _udf1 = Nothing,
+            _udf2 = Nothing,
+            _udf3 = Nothing,
+            _udf4 = Nothing,
+            _udf5 = Nothing,
+            _fromLocation = Just _fromLocationId,
+            _toLocation = Just _toLocationId,
             _info = Nothing,
-            _personId = Nothing, -- TODO: this column should be removed?
+            _organizationId = orgId,
             _createdAt = currTime,
-            _updatedAt = currTime
+            _updatedAt = currTime,
+            ..
           }
-  QProd.create product
   QCP.create productInstance
-  return product
+  return productInstance
 
 allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()
 allowOnlyUser RegistrationToken.RegistrationToken {..} =

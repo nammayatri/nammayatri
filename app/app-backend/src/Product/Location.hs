@@ -11,11 +11,12 @@ import Servant
 import qualified Types.API.Location as Location
 
 getRoute :: Person.Person -> Location.Request -> FlowHandler Location.Response
-getRoute _person Location.Request {..} = withFlowHandler $ do
-  MapSearch.getRoute getRouteRequest
-    >>= either
-      (\err -> L.throwException $ err400 {errBody = show err})
-      return
+getRoute _person Location.Request {..} =
+  withFlowHandler $
+    MapSearch.getRoute getRouteRequest
+      >>= either
+        (\err -> L.throwException $ err400 {errBody = show err})
+        return
   where
     getRouteRequest = do
       let mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long

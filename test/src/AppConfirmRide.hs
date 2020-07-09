@@ -88,12 +88,13 @@ spec = do
                   -- Transporter accepts the ride
                   accDecRideResult <- runClient tbeClientEnv (acceptOrDeclineRide appRegistrationToken transporterCurrCaseid buildUpdateCaseReq)
                   accDecRideResult `shouldSatisfy` isRight
-                  -- Do a Case Status request for getting case product to confirm ride
-                  -- on app side next
-                  statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
-                  statusResResult `shouldSatisfy` isRight
-                  let Right statusRes = statusResResult
-                      caseProductId = (_getProductsId . Products._id . head . AppCase._product) statusRes
-                  -- Confirm ride from app backend
-                  confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid caseProductId)
-                  confirmResult `shouldSatisfy` isRight
+
+-- Do a Case Status request for getting case product to confirm ride
+-- on app side next
+-- statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
+-- statusResResult `shouldSatisfy` isRight
+-- let Right statusRes = statusResResult
+--     caseProductId = (_getProductsId . Products._id . head . AppCase._product) statusRes
+-- -- Confirm ride from app backend
+-- confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid caseProductId)
+-- confirmResult `shouldSatisfy` isRight

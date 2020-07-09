@@ -11,6 +11,7 @@ import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.ProductInstance
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import qualified Epass.App.Routes as Epass
@@ -136,7 +137,7 @@ type CaseAPI =
            :> QueryParams "status" Case.CaseStatus
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
-           :> Get '[JSON] Case.ListRes
+           :> Get '[JSON] Case.CaseListRes
            :<|> Capture "caseId" CaseId
            :> Get '[JSON] Case.StatusRes
        )
@@ -183,8 +184,10 @@ trackTripFlow =
 type ProductInstanceAPI =
   "productInstance"
     :> ( TokenAuth
-           :> ReqBody '[JSON] ProductInstance.ProdInstReq
-           :> Post '[JSON] ProductInstance.ProductInstanceList
+           :> QueryParams "status" ProductInstanceStatus
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] ProductInstance.ProductInstanceList
        )
 
 productInstanceFlow =

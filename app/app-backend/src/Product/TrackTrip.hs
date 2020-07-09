@@ -25,9 +25,9 @@ track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track _ req = withFlowHandler $ do
   let context = req ^. #context
       tripId = req ^. #message . #id
-  prd <- Products.findById $ ProductsId tripId
+  prdInst <- ProductInstance.findById $ ProductInstanceId tripId
   ack <-
-    case decodeFromText =<< (prd ^. #_info) of
+    case decodeFromText =<< (prdInst ^. #_info) of
       Nothing -> return $ Ack "Error" "No product to track"
       Just (info :: ProductInfo) ->
         case ProductInfo._tracker info of
@@ -48,28 +48,26 @@ trackCb req = withFlowHandler $ do
       tracking = req ^. #message
       caseId = CaseId $ req ^. #context . #transaction_id
   case_ <- Case.findById caseId
-  cp <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
-  let pids = map ProductInstance._productId cp
-  confirmedProducts <- Products.findAllByIds pids
-
+  pi <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
+  let confirmedProducts = pi
   res <-
     case length confirmedProducts of
       0 -> return $ Right ()
       1 -> do
-        let product = head confirmedProducts
+        let productInst = head confirmedProducts
             personId = Case._requestor case_
         Notify.notifyOnTrackCb personId tracking case_
-        updateTracker product tracking
+        updateTracker productInst tracking
       _ -> return $ Left "Multiple products confirmed, ambiguous selection"
   case res of
     Left err -> return $ AckResponse context (Ack "Error" err)
     Right _ -> return $ AckResponse context (Ack "Successful" "Ok")
 
-updateTracker :: Products.Products -> Tracker -> L.Flow (Either Text ())
-updateTracker product tracker = do
-  let minfo = decodeFromText =<< product ^. #_info
+updateTracker :: ProductInstance.ProductInstance -> Tracker -> L.Flow (Either Text ())
+updateTracker prodInst tracker = do
+  let minfo = decodeFromText =<< prodInst ^. #_info
   let uInfo = (\info -> info {ProductInfo._tracker = Just tracker}) <$> minfo
   let updatedPrd =
-        product {Products._info = Just $ encodeToText uInfo}
-  Products.updateMultiple (_getProductsId $ product ^. #_id) updatedPrd
+        prodInst {ProductInstance._info = Just $ encodeToText uInfo}
+  ProductInstance.updateMultiple (_getProductInstanceId $ prodInst ^. #_id) updatedPrd
   return $ Right ()

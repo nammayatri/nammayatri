@@ -72,7 +72,7 @@ searchCb req = withFlowHandler $ do
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
-      case_ <- Case.findById caseId
+      case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
       when
         (case_ ^. #_status == Case.CLOSED)
         (L.throwException $ err400 {errBody = "Case expired"})
@@ -83,13 +83,11 @@ searchCb req = withFlowHandler $ do
           (Case._requestor case_)
       let items = catalog ^. #_items
       products <- traverse (mkProduct case_ mprovider) items
-      let pids = (^. #_id) <$> products
       traverse_ Products.create products
-      traverse_
-        (mkProductInstance caseId personId >=> ProductInstance.create)
-        products
+      productInstances <- traverse (mkProductInstance case_ mprovider personId) items
+      traverse_ ProductInstance.create productInstances
       extendCaseExpiry case_
-      Notify.notifyOnSearchCb personId caseId products
+      Notify.notifyOnSearchCb personId caseId productInstances
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
   where
@@ -118,10 +116,10 @@ mkCase req userId from to = do
     Case.Case
       { _id = id,
         _name = Nothing,
-        _description = Just "Case to create a Ride",
+        _description = Just "Case to search for a Ride",
         _shortId = shortId,
         _industry = Case.MOBILITY,
-        _type = Case.RIDEBOOK,
+        _type = Case.RIDESEARCH,
         _exchangeType = Case.FULFILLMENT,
         _status = Case.NEW,
         _startTime = req ^. #message . #time,
@@ -190,17 +188,48 @@ mkProduct case_ mprovider item = do
     Products.Products
       { _id = ProductsId $ item ^. #_id,
         _shortId = "",
-        _name = Just $ item ^. #_name,
+        _name = item ^. #_name,
         _description = Just $ item ^. #_description,
         _industry = case_ ^. #_industry,
         _type = Products.RIDE,
         _status = Products.INSTOCK,
-        _startTime = case_ ^. #_startTime,
-        _endTime = Nothing, -- TODO: fix this
-        _validTill = case_ ^. #_validTill,
         _price = item ^. #_price . #_listed_value,
         _rating = Nothing,
         _review = Nothing,
+        _udf1 = Nothing,
+        _udf2 = Nothing,
+        _udf3 = Nothing,
+        _udf4 = Nothing,
+        _udf5 = Nothing,
+        _info = Nothing,
+        _createdAt = now,
+        _updatedAt = now
+      }
+
+mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> L.Flow ProductInstance.ProductInstance
+mkProductInstance case_ mprovider personId item = do
+  now <- getCurrentTimeUTC
+  let validTill = addLocalTime (60 * 30) now
+  let info = ProductInfo mprovider Nothing
+  -- There is loss of data in coversion Product -> Item -> Product
+  -- In api exchange between transporter and app-backend
+  -- TODO: fit public transport, where case.startTime != product.startTime, etc
+  return $
+    ProductInstance.ProductInstance
+      { _id = ProductInstanceId $ item ^. #_id,
+        _shortId = "",
+        _caseId = case_ ^. #_id,
+        _productId = ProductsId $ item ^. #_id, -- TODO needs to be fixed
+        _personId = Just personId,
+        _quantity = 1,
+        _entityType = ProductInstance.VEHICLE,
+        _status = ProductInstance.INSTOCK,
+        _startTime = case_ ^. #_startTime,
+        _endTime = case_ ^. #_endTime,
+        _validTill = case_ ^. #_validTill,
+        _parentId = Nothing,
+        _entityId = Nothing,
+        _price = item ^. #_price . #_listed_value,
         _udf1 = Nothing,
         _udf2 = Nothing,
         _udf3 = Nothing,
@@ -210,27 +239,6 @@ mkProduct case_ mprovider item = do
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
         _organizationId = "", -- TODO: fix this
-        _assignedTo = Nothing,
-        _createdAt = now,
-        _updatedAt = now
-      }
-
-mkProductInstance :: CaseId -> PersonId -> Products.Products -> L.Flow ProductInstance.ProductInstance
-mkProductInstance caseId personId product = do
-  let productId = product ^. #_id
-      price = product ^. #_price
-  now <- getCurrentTimeUTC
-  id <- generateGUID
-  return $
-    ProductInstance.ProductInstance
-      { _id = id,
-        _caseId = caseId,
-        _productId = productId,
-        _personId = Just personId,
-        _quantity = 1,
-        _price = price,
-        _status = ProductInstance.INSTOCK,
-        _info = Nothing,
         _createdAt = now,
         _updatedAt = now
       }

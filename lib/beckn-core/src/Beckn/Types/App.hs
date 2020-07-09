@@ -70,6 +70,13 @@ newtype ProductInstanceId = ProductInstanceId
 
 deriveIdentifierInstances ''ProductInstanceId
 
+newtype InventoryId = InventoryId
+  { _getInventoryId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''InventoryId
+
 type Limit = Int
 
 type Offset = Int

@@ -113,11 +113,12 @@ getRoute' fromLat fromLon toLat toLon = do
         }
 
 getRoute :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
-getRoute _ Location.Request {..} = withFlowHandler $ do
-  MapSearch.getRoute getRouteRequest
-    >>= either
-      (\err -> L.throwException $ err400 {errBody = show err})
-      return
+getRoute _ Location.Request {..} =
+  withFlowHandler $
+    MapSearch.getRoute getRouteRequest
+      >>= either
+        (\err -> L.throwException $ err400 {errBody = show err})
+        return
   where
     mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long
     getRouteRequest =

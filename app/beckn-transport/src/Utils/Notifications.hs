@@ -100,7 +100,7 @@ notifyTransporterOnExpiration c =
             "You can view more details in the app."
           ]
 
-notifyCancelReqByBP :: Products -> [Person] -> L.Flow ()
+notifyCancelReqByBP :: ProductInstance -> [Person] -> L.Flow ()
 notifyCancelReqByBP p =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -108,7 +108,7 @@ notifyCancelReqByBP p =
       FCM.FCMData
         { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
           _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getProductsId $ p ^. #_id,
+          _fcmEntityIds = show $ _getProductInstanceId $ p ^. #_id,
           _fcmEntityType = FCM.Organization
         }
     title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
@@ -116,6 +116,6 @@ notifyCancelReqByBP p =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            showTimeIst (Products._startTime p) <> ",",
+            showTimeIst (ProductInstance._startTime p) <> ",",
             "has been cancelled. Check the app for more details."
           ]

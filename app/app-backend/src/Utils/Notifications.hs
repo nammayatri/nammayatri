@@ -45,7 +45,7 @@ import qualified Storage.Queries.Products as Products
 -- If the case with product is being cancelled, you have to send notification
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
-notifyOnProductCancelCb :: Maybe Text -> Case -> ProductsId -> L.Flow ()
+notifyOnProductCancelCb :: Maybe Text -> Case -> ProductInstanceId -> L.Flow ()
 notifyOnProductCancelCb personId c productId =
   if isJust personId
     then do
@@ -54,7 +54,7 @@ notifyOnProductCancelCb personId c productId =
         Just p -> do
           let notificationData =
                 FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-                  show (_getProductsId productId)
+                  show (_getProductInstanceId productId)
               title = FCMNotificationTitle $ T.pack "Ride cancelled!"
               body =
                 FCMNotificationBody $
@@ -172,8 +172,8 @@ notifyOnTrackCb personId tracker c =
         _ -> pure ()
     else pure ()
 
-notifyOnSearchCb :: PersonId -> CaseId -> [Products] -> L.Flow ()
-notifyOnSearchCb personId caseId products = do
+notifyOnSearchCb :: PersonId -> CaseId -> [ProductInstance] -> L.Flow ()
+notifyOnSearchCb personId caseId productInstances = do
   person <- Person.findById personId
   case person of
     Just p -> do
@@ -183,7 +183,7 @@ notifyOnSearchCb personId caseId products = do
           title = FCMNotificationTitle $ T.pack "New ride options available!"
           body =
             FCMNotificationBody $
-              if length products == 1
+              if length productInstances == 1
                 then
                   unwords
                     [ "You have a new reply for your ride request!",
@@ -192,7 +192,7 @@ notifyOnSearchCb personId caseId products = do
                 else
                   unwords
                     [ "You have",
-                      show (length products),
+                      show (length productInstances),
                       "new ride offers!",
                       "Check your options in the beckn app."
                     ]

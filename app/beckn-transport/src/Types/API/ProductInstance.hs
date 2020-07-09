@@ -26,3 +26,39 @@ instance ToJSON ProductInstanceRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 type ProductInstanceList = [ProductInstanceRes]
+
+data ProdInstUpdateReq = ProdInstUpdateReq
+  { _status :: Maybe ProductInstanceStatus,
+    _personId :: Maybe Text,
+    _vehicleId :: Maybe Text
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON ProdInstUpdateReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ProdInstUpdateReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+type ProdInstInfo = ProductInstance
+
+data DriverVehicleInfo = DriverVehicleInfo
+  { driverInfo :: Text,
+    vehicleInfo :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+data RideRes = RideRes
+  { _product :: ProductInstance,
+    _fromLocation :: Loc.Location,
+    _toLocation :: Loc.Location
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON RideRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON RideRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+type RideListRes = [RideRes]

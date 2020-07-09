@@ -23,5 +23,5 @@ runGateway = do
             E._logFilePath = "/tmp/beckn-gateway.log",
             E._isAsync = True
           }
-  E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  E.withFlowRuntime (Just loggerCfg) $ \flowRt ->
     pure ()

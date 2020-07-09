@@ -1,16 +1,19 @@
 module Types.API.Case where
 
+import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
+import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
 import Data.Default
 import Data.Swagger
+import Data.Time.LocalTime
 import EulerHS.Prelude
 
 data StatusRes = StatusRes
   { _case :: Case,
-    _product :: [Products],
+    _productInstance :: [ProdInstRes],
     _fromLocation :: Location,
     _toLocation :: Location
   }
@@ -34,27 +37,54 @@ instance FromJSON UpdateCaseReq where
 instance ToJSON UpdateCaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data ProductInstance = ProductInstance
+data CaseRes = CaseRes
   { _case :: Case,
-    _products :: [Products],
+    _productInstance :: [ProdInstRes],
     _fromLocation :: Maybe Location,
     _toLocation :: Maybe Location
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON ProductInstance where
+instance FromJSON CaseRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON ProductInstance where
+instance ToJSON CaseRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-newtype ListRes = ListRes
-  { _productInstances :: [ProductInstance]
+type CaseListRes = [CaseRes]
+
+data ProdInstRes = ProdInstRes
+  { _id :: ProductInstanceId,
+    _caseId :: CaseId,
+    _productId :: ProductsId,
+    _personId :: Maybe PersonId,
+    _shortId :: Text,
+    _entityType :: EntityType,
+    _entityId :: Maybe Text,
+    _quantity :: Int,
+    _price :: Amount,
+    _status :: ProductInstanceStatus,
+    _startTime :: LocalTime,
+    _endTime :: Maybe LocalTime,
+    _validTill :: LocalTime,
+    _fromLocation :: Maybe Text,
+    _toLocation :: Maybe Text,
+    _organizationId :: Text,
+    _parentId :: Maybe ProductInstanceId,
+    _udf1 :: Maybe Text,
+    _udf2 :: Maybe Text,
+    _udf3 :: Maybe Text,
+    _udf4 :: Maybe Text,
+    _udf5 :: Maybe Text,
+    _info :: Maybe Text,
+    _createdAt :: LocalTime,
+    _updatedAt :: LocalTime,
+    _product :: Maybe Products
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON ListRes where
+instance FromJSON ProdInstRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON ListRes where
+instance ToJSON ProdInstRes where
   toJSON = genericToJSON stripAllLensPrefixOptions

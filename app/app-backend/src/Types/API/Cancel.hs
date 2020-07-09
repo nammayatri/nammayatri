@@ -5,7 +5,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Service
 import EulerHS.Prelude
 
-data Entity = CASE | PRODUCT
+data Entity = CASE | PRODUCT_INSTANCE
   deriving (Eq, Generic, Show, FromJSON, ToJSON)
 
 data Cancel = Cancel

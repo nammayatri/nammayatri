@@ -32,21 +32,21 @@ import EulerHS.Prelude
 import Servant
 import qualified Utils.Defaults as Defaults
 
-mkCatalog :: [Products] -> Catalog
-mkCatalog prods =
+mkCatalog :: [ProductInstance] -> Catalog
+mkCatalog prodInsts =
   Catalog
     { _category_tree = Category {_id = "", _subcategories = []},
-      _items = mkItem <$> prods
+      _items = mkItem <$> prodInsts
     }
 
-mkItem :: Products -> Item
-mkItem prod =
+mkItem :: ProductInstance -> Item
+mkItem prodInst =
   Item
-    { _id = _getProductsId $ prod ^. #_id,
-      _description = fromMaybe "" $ prod ^. #_description,
-      _name = fromMaybe "" $ prod ^. #_name,
+    { _id = _getProductInstanceId $ prodInst ^. #_id,
+      _description = "",
+      _name = "",
       _image = Nothing,
-      _price = mkPrice prod,
+      _price = mkPrice prodInst,
       _primary = False,
       _selected = False,
       _quantity = 1,
@@ -55,27 +55,34 @@ mkItem prod =
       _tags = []
     }
 
-mkPrice :: Products -> Price
-mkPrice prod =
+mkPrice :: ProductInstance -> Price
+mkPrice prodInst =
   Price
     { _currency = "INR", -- TODO : Fetch this from product
-      _estimated_value = prod ^. #_price,
-      _computed_value = prod ^. #_price,
-      _listed_value = prod ^. #_price,
-      _offered_value = prod ^. #_price,
+      _estimated_value = prodInst ^. #_price,
+      _computed_value = prodInst ^. #_price,
+      _listed_value = prodInst ^. #_price,
+      _offered_value = prodInst ^. #_price,
       _unit = "Rs", -- TODO : Fetch this from product
       _discount = 0.0,
       _tax = Nothing
     }
 
-mkServiceOffer :: Case -> [Products] -> [ProductInstance] -> Maybe Trip -> Maybe Organization -> L.Flow Service
-mkServiceOffer c prods cps trip orgInfo =
+mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Trip -> Maybe Organization -> L.Flow Service
+mkServiceOffer c pis allPis trip orgInfo =
   let x =
         Service
           { _id = _getCaseId $ c ^. #_id,
-            _catalog = Just $ mkCatalog prods,
-            _matched_items = _getProductsId . Product._id <$> prods,
-            _selected_items = catMaybes $ (\x -> if x ^. #_status == ProductInstance.CONFIRMED then Just (_getProductsId $ x ^. #_productId) else Nothing) <$> cps,
+            _catalog = Just $ mkCatalog pis,
+            _matched_items = _getProductInstanceId . ProductInstance._id <$> pis,
+            _selected_items =
+              catMaybes $
+                ( \x ->
+                    if x ^. #_status == ProductInstance.CONFIRMED
+                      then Just (_getProductInstanceId $ x ^. #_id)
+                      else Nothing
+                )
+                  <$> allPis,
             _fare_product = Nothing,
             _offers = [],
             _provider = mkProvider <$> orgInfo,

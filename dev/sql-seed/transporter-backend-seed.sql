@@ -74,10 +74,25 @@ CREATE TABLE atlas_transporter.product_instance (
     case_id character varying(255) NOT NULL,
     product_id character varying(255) NOT NULL,
     person_id character varying(255),
+    short_id character varying(36) NOT NULL,
+    entity_id character varying(255),
+    entity_type character varying(255) NOT NULL,
     quantity bigint NOT NULL,
     price numeric(30,10) NOT NULL,
     status character varying(255) NOT NULL,
+    start_time timestamp with time zone NOT NULL,
+    end_time timestamp with time zone,
+    valid_till timestamp with time zone NOT NULL,
+    from_location_id character varying(255),
+    to_location_id character varying(255),
+    organization_id character varying(255) NOT NULL,
+    parent_id character varying(255),
     info text,
+    udf1 character varying(255),
+    udf2 character varying(255),
+    udf3 character varying(255),
+    udf4 character varying(255),
+    udf5 character varying(255),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -175,17 +190,14 @@ ALTER TABLE atlas_transporter.person OWNER TO atlas;
 
 CREATE TABLE atlas_transporter.product (
     id character(36) NOT NULL,
-    name character varying(255),
-    short_id character varying(36) NOT NULL,
+    name character varying(255) NOT NULL,
     description character varying(1024),
     industry character varying(1024) NOT NULL,
     type character varying(255) NOT NULL,
-    status character varying(255) NOT NULL,
-    start_time timestamp with time zone NOT NULL,
-    end_time timestamp with time zone,
-    valid_till timestamp with time zone NOT NULL,
-    price numeric(30,10) NOT NULL,
     rating character varying(255),
+    status character varying(255) NOT NULL,
+    short_id character(36) NOT NULL,
+    price numeric(30,10) NOT NULL,
     review character varying(255),
     udf1 character varying(255),
     udf2 character varying(255),
@@ -193,12 +205,8 @@ CREATE TABLE atlas_transporter.product (
     udf4 character varying(255),
     udf5 character varying(255),
     info text,
-    from_location_id character varying(255),
-    to_location_id character varying(255),
-    organization_id character varying(255) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    assigned_to character(36)
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -253,6 +261,23 @@ CREATE TABLE atlas_transporter.vehicle (
 ALTER TABLE atlas_transporter.vehicle OWNER TO atlas;
 
 --
+-- Name: vehicle; Type: TABLE; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE TABLE atlas_transporter.inventory (
+    id character(36) NOT NULL,
+    organization_id character varying(255),
+    product_id character varying(1024),
+    status character varying(255) NOT NULL,
+    quantity character varying(255),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE atlas_transporter.inventory OWNER TO atlas;
+
+--
 -- Data for Name: case; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -264,7 +289,15 @@ COPY atlas_transporter.case (id, name, description, short_id, industry, type, ex
 -- Data for Name: product_instance; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-COPY atlas_transporter.product_instance (id, case_id, product_id, person_id, quantity, price, status, info, created_at, updated_at) FROM stdin;
+COPY atlas_transporter.product_instance (id, case_id, product_id, person_id, short_id, entity_id, entity_type, quantity, price, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: inventory; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
+--
+
+COPY atlas_transporter.inventory (id, organization_id, product_id, status, quantity, created_at, updated_at) FROM stdin;
 \.
 
 
@@ -298,7 +331,11 @@ ec34eede-5a3e-4a41-89d4-7290a0d7a629	\N	\N	\N	\N	ADMIN	UNKNOWN	MOBILENUMBER	\N	+
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-COPY atlas_transporter.product (id, name, short_id, description, industry, type, status, start_time, end_time, valid_till, price, rating, review, udf1, udf2, udf3, udf4, udf5, info, from_location_id, to_location_id, organization_id, created_at, updated_at, assigned_to) FROM stdin;
+COPY atlas_transporter.product (id, name, description, industry, type, rating, status, short_id, price, review, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
+998af371-e726-422e-8356-d24085a1d586	AUTO		MOBILITY	RIDE		INSTOCK	Dney75jyIwsKoR7a                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:49:38.726748+00	2020-07-08 16:49:38.726748+00
+5ad086dd-c5c1-49a6-b66d-245d13b70194	HATCHBACK		MOBILITY	RIDE		INSTOCK	EBL2GZPJAHvaxLRO                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:50:01.263198+00	2020-07-08 16:50:01.263198+00
+f726d2fa-2df1-42f0-a009-6795cfdc9b05	SUV		MOBILITY	RIDE		INSTOCK	SldbUk7Kplnz7B6X                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:50:05.31276+00	2020-07-08 16:50:05.31276+00
+ad044fd7-2b62-4f37-93da-e48fe0678de1	SEDAN		MOBILITY	RIDE		INSTOCK	UINnHxAgoQlqkRrD                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:50:09.231255+00	2020-07-08 16:50:09.231255+00
 \.
 
 
@@ -333,6 +370,14 @@ ALTER TABLE ONLY atlas_transporter.case
 
 ALTER TABLE ONLY atlas_transporter.product_instance
     ADD CONSTRAINT idx_16394_primary PRIMARY KEY (id);
+
+
+--
+-- Name: inventory idx_16443_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
+--
+
+ALTER TABLE ONLY atlas_transporter.inventory
+    ADD CONSTRAINT idx_16443_primary PRIMARY KEY (id);
 
 
 --
@@ -419,6 +464,34 @@ CREATE INDEX idx_16394_product_id ON atlas_transporter.product_instance USING bt
 
 
 --
+-- Name: idx_16394_entity_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_entity_id ON atlas_transporter.product_instance USING btree (entity_id);
+
+
+--
+-- Name: idx_16394_person_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_person_id ON atlas_transporter.product_instance USING btree (person_id);
+
+
+--
+-- Name: idx_16443_organization_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16443_organization_id ON atlas_transporter.inventory USING btree (organization_id);
+
+
+--
+-- Name: idx_16443_product_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16443_product_id ON atlas_transporter.inventory USING btree (product_id);
+
+
+--
 -- Name: idx_16402_city; Type: INDEX; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -430,20 +503,6 @@ CREATE INDEX idx_16402_city ON atlas_transporter.location USING btree (city);
 --
 
 CREATE INDEX idx_16402_state ON atlas_transporter.location USING btree (state);
-
-
---
--- Name: idx_16427_organization_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
---
-
-CREATE INDEX idx_16427_organization_id ON atlas_transporter.product USING btree (organization_id);
-
-
---
--- Name: idx_16427_short_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
---
-
-CREATE INDEX idx_16427_short_id ON atlas_transporter.product USING btree (short_id);
 
 
 --
