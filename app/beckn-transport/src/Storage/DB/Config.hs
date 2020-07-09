@@ -62,7 +62,7 @@ getPgDBConfig defPostgresConfig = do
   mConfig <- L.runIO loadPgConfig
   case mConfig of
     Nothing -> do
-      L.runIO $ putStrLn @String "Could not load postgres config from env. Using defaults."
+      L.logInfo "Config" "Could not load postgres config from env. Using defaults."
       pure $ T.mkPostgresPoolConfig (T.pack "transporterDb") defPostgresConfig poolConfig
     Just config -> pure $ T.mkPostgresPoolConfig (T.pack "transporterDb") config poolConfig
 
