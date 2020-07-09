@@ -160,7 +160,7 @@ mkCase req uuid now validity fromLocation toLocation = do
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = req ^. #context ^. #transaction_id,
+      _shortId = req ^. #context . #transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
@@ -188,8 +188,8 @@ mkCase req uuid now validity fromLocation toLocation = do
 confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
-  let prodInstId = (req ^. #message ^. #_selected_items) !! 0
-  let caseShortId = req ^. #context ^. #transaction_id -- change to message.transactionId
+  let prodInstId = head $ req ^. #message . #_selected_items
+  let caseShortId = req ^. #context . #transaction_id -- change to message.transactionId
   search_case <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
   orderCase <- mkOrderCase search_case
