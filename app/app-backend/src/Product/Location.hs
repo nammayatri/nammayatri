@@ -9,7 +9,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Types.API.Location as Location
-import Utils.Common (verifyToken)
 
 getRoute :: Person.Person -> Location.Request -> FlowHandler Location.Response
 getRoute _person Location.Request {..} = withFlowHandler $ do

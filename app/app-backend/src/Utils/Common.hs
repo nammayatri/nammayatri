@@ -25,13 +25,13 @@ data VerifyToken = VerifyToken
 
 instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = Person.Person
-  verifyToken = Utils.Common.verifyTokenWithPerson
+  verifyToken = Utils.Common.verifyPerson
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyTokenWithPerson :: RegToken -> L.Flow Person.Person
-verifyTokenWithPerson token = do
+verifyPerson :: RegToken -> L.Flow Person.Person
+verifyPerson token = do
   sr <- Utils.Common.verifyToken token
   Person.findById (PersonId $ SR._EntityId sr)
     >>= fromMaybeM500 "Could not find user"
