@@ -17,7 +17,6 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
@@ -40,11 +39,8 @@ import Types.ProductInfo
 import Utils.Common (generateShortId)
 import qualified Utils.Notifications as Notify
 
-search :: SR.RegistrationToken -> SearchReq -> FlowHandler SearchRes
-search token req = withFlowHandler $ do
-  person <-
-    Person.findById (PersonId $ SR._EntityId token)
-      >>= fromMaybeM500 "Could not find user"
+search :: Person.Person -> SearchReq -> FlowHandler SearchRes
+search person req = withFlowHandler $ do
   validateDateTime req
   fromLocation <- mkLocation $ req ^. #message . #origin
   toLocation <- mkLocation $ req ^. #message . #destination

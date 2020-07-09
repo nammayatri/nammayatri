@@ -104,6 +104,13 @@ packages:
       sha256: 0b54bf49636d2a8c06e28315710e4437e001e05b4523d6e3cb083ba2426a38b2
   original:
     hackage: unix-2.7.2.2@sha256:9e93f93cc5a065248120136e83a0a6d1ce93d6eb5ef2a2543f9593e93e164d24,3496
+- completed:
+    hackage: safe-money-aeson-0.1.1@sha256:d7383134649d5e63177731f3b5a0ff1992a1d4edf9d224178b264eb4fcdd6c14,1405
+    pantry-tree:
+      size: 374
+      sha256: c5d74f991f75d978c4a0bf080adfcd0c46baceaa2d1d062f3f1cfe91b696549c
+  original:
+    hackage: safe-money-aeson-0.1.1@sha256:d7383134649d5e63177731f3b5a0ff1992a1d4edf9d224178b264eb4fcdd6c14,1405
 snapshots:
 - completed:
     size: 524996

@@ -6,9 +6,9 @@ import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Mobility.Trip as Trip
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SCP
 import qualified Beckn.Types.Storage.Products as SProducts
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (decodeFromText, withFlowHandler)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -27,10 +27,10 @@ import Types.App
 import Types.ProductInfo as ProductInfo
 import Utils.Routes
 
-getProductInfo :: SR.RegistrationToken -> Text -> FlowHandler GetProductInfoRes
-getProductInfo SR.RegistrationToken {..} prodId = withFlowHandler $ do
+getProductInfo :: Person.Person -> Text -> FlowHandler GetProductInfoRes
+getProductInfo person prodId = withFlowHandler $ do
   productInstance <- QCP.findByProductId (ProductsId prodId)
-  case' <- QCase.findById (SCP._caseId productInstance)
+  case' <- QCase.findIdByPerson person (SCP._caseId productInstance)
   product <- QProducts.findById (ProductsId prodId)
   case decodeFromText =<< SProducts._info product of
     Just (info :: ProductInfo) ->
@@ -51,10 +51,10 @@ getProductInfo SR.RegistrationToken {..} prodId = withFlowHandler $ do
       L.logInfo "get Product info" "No info found in products table"
         >> L.throwException (err400 {errBody = "NO_DETAILS_FOUND"})
 
-getLocation :: SR.RegistrationToken -> Text -> FlowHandler GetLocationRes
-getLocation SR.RegistrationToken {..} caseId = withFlowHandler $ do
+getLocation :: Person.Person -> Text -> FlowHandler GetLocationRes
+getLocation person caseId = withFlowHandler $ do
   baseUrl <- External.getBaseUrl
-  productInstances <- QCP.listAllProductInstance (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
+  productInstances <- QCP.listAllProductInstanceByPerson person (QCP.ByApplicationId $ CaseId caseId) [SCP.CONFIRMED]
   when (null productInstances) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
   products <- QProducts.findAllByIds (SCP._productId <$> productInstances)
   product <-

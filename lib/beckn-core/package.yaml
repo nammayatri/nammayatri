@@ -103,10 +103,9 @@ library:
 tests:
   beckn-core-tests:
     main:              Main.hs
-    source-dirs:       
-      - test/app
-      - test/src
-      
+    source-dirs:
+    - test/app
+    - test/src
     dependencies:
     - beckn-core
     - tasty

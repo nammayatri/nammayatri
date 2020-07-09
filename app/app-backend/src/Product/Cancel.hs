@@ -7,9 +7,9 @@ import Beckn.Types.App
 import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Language as L
 import EulerHS.Prelude
@@ -20,17 +20,18 @@ import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import qualified Utils.Notifications as Notify
 
-cancel :: SR.RegistrationToken -> CancelReq -> FlowHandler CancelRes
-cancel SR.RegistrationToken {..} req = withFlowHandler $ do
+cancel :: Person.Person -> CancelReq -> FlowHandler CancelRes
+cancel person req = withFlowHandler $ do
   let entityType = req ^. #message . #entityType
   case entityType of
-    Cancel.CASE -> cancelCase req
-    Cancel.PRODUCT -> cancelProduct req
+    Cancel.CASE -> cancelCase person req
+    Cancel.PRODUCT -> cancelProduct person req
 
-cancelProduct :: CancelReq -> L.Flow CancelRes
-cancelProduct req = do
+cancelProduct :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelProduct person req = do
   let productId = req ^. #message . #entityId
   cp <- ProductInstance.findByProductId (ProductsId productId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  Case.findIdByPerson person (cp ^. #_caseId)
   if isProductInstanceCancellable cp
     then sendCancelReq productId
     else errResp (show (cp ^. #_status))
@@ -47,10 +48,10 @@ cancelProduct req = do
       let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
-cancelCase :: CancelReq -> L.Flow CancelRes
-cancelCase req = do
+cancelCase :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelCase person req = do
   let caseId = req ^. #message . #entityId
-  case_ <- Case.findById (CaseId caseId)
+  case_ <- Case.findIdByPerson person (CaseId caseId)
   if isCaseCancellable case_
     then do
       let context = req ^. #context

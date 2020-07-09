@@ -1,8 +1,11 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.Case where
 
 import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
@@ -12,6 +15,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
+import qualified Storage.Queries.Person as Person
 import Types.App
 import qualified Types.Storage.DB as DB
 
@@ -51,6 +55,14 @@ findById caseId =
   DB.findOneWithErr dbTable (predicate caseId)
   where
     predicate caseId Storage.Case {..} = _id ==. B.val_ caseId
+
+findIdByPerson :: Person.Person -> CaseId -> L.Flow Storage.Case
+findIdByPerson person caseId = do
+  let personId = _getPersonId $ person ^. #_id
+  DB.findOneWithErr dbTable (predicate personId caseId)
+  where
+    predicate personId caseId Storage.Case {..} =
+      _id ==. B.val_ caseId &&. _requestor ==. B.val_ (Just personId)
 
 findAllByIds :: [CaseId] -> L.Flow [Storage.Case]
 findAllByIds caseIds =
