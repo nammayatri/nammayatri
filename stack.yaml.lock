@@ -166,6 +166,13 @@ packages:
       sha256: b0bcc96d375ee11b1972a2e9e8e42039b3f420b0e1c46e9c70652470445a6505
   original:
     hackage: constraints-extras-0.3.0.2@sha256:bf6884be65958e9188ae3c9e5547abfd6d201df021bff8a4704c2c4fe1e1ae5b,1784
+- completed:
+    hackage: generic-lens-1.1.0.0@sha256:caaab13ae4f2a68e43671d25fb56746ba14bc9d5d787d594a66c7f56eba3fa66,6412
+    pantry-tree:
+      size: 4174
+      sha256: 33e1509b7d786d816a0974f08cfb6208a7d02c7d45937bec2c91586523b14440
+  original:
+    hackage: generic-lens-1.1.0.0
 snapshots:
 - completed:
     size: 496112
