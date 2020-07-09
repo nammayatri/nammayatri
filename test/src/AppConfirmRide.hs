@@ -8,7 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Products as Products
+import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Data.Text.Encoding as DT
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
@@ -89,12 +89,15 @@ spec = do
                   accDecRideResult <- runClient tbeClientEnv (acceptOrDeclineRide appRegistrationToken transporterCurrCaseid buildUpdateCaseReq)
                   accDecRideResult `shouldSatisfy` isRight
 
--- Do a Case Status request for getting case product to confirm ride
--- on app side next
--- statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
--- statusResResult `shouldSatisfy` isRight
--- let Right statusRes = statusResResult
---     caseProductId = (_getProductsId . Products._id . head . AppCase._product) statusRes
--- -- Confirm ride from app backend
--- confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid caseProductId)
--- confirmResult `shouldSatisfy` isRight
+                  -- Do a Case Status request for getting case product to confirm ride
+                  -- on app side next
+                  statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
+                  statusResResult `shouldSatisfy` isRight
+                  let Right statusRes = statusResResult
+                      productInstanceId = _getProductInstanceId . AppCase._id . head . productInstances $ statusRes
+                  -- Confirm ride from app backend
+                  confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
+                  confirmResult `shouldSatisfy` isRight
+  where
+    productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
+    productInstances = AppCase._productInstance
