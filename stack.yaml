@@ -29,11 +29,11 @@ resolver: lts-15.15
 #   - auto-update
 #   - wai
 packages:
-- lib/beckn-core
-- app/gateway
-- app/beckn-transport
-- app/app-backend
-- test
+  - lib/beckn-core
+  - app/gateway
+  - app/beckn-transport
+  - app/app-backend
+  - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
@@ -97,6 +97,6 @@ extra-deps:
 # Mac OS facing this issue
 # Missing (or bad) C libraries: SSL, Crypto
 extra-include-dirs:
-- /usr/local/opt/openssl/include
+  - /usr/local/opt/openssl/include
 extra-lib-dirs:
-- /usr/local/opt/openssl/lib
+  - /usr/local/opt/openssl/lib

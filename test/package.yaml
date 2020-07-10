@@ -1,13 +1,13 @@
-name:                beckn-test
-version:             0.1.0.0
-github:              "juspay/beckn"
-license:             AllRightsReserved
-author:              "Juspay"
-maintainer:          "Juspay"
-copyright:           "2020 Juspay Technologies Private Limited"
+name: beckn-test
+version: 0.1.0.0
+github: "juspay/beckn"
+license: AllRightsReserved
+author: "Juspay"
+maintainer: "Juspay"
+copyright: "2020 Juspay Technologies Private Limited"
 
 extra-source-files:
-- README.md
+  - README.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -16,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
+description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -51,38 +51,38 @@ default-extensions:
   - BlockArguments
 
 dependencies:
-- app-backend
-- beckn-transport
-- beckn-core
-- aeson
-- base >= 4.7 && < 5
-- euler-hs
-- http-client
-- http-client-tls
-- servant
-- servant-client
-- servant-server
-- text
-- time
-- uuid
-- vault
-- warp
+  - app-backend
+  - beckn-transport
+  - beckn-core
+  - aeson
+  - base >= 4.7 && < 5
+  - euler-hs
+  - http-client
+  - http-client-tls
+  - servant
+  - servant-client
+  - servant-server
+  - text
+  - time
+  - uuid
+  - vault
+  - warp
 
 library:
   source-dirs: src
   dependencies:
-  - hspec
-  - hspec-core
-  - tasty
-  - tasty-hspec
-
-tests:
-  beckn-integ-test:
-    main:                Main.hs
-    source-dirs:         app
-    dependencies:
     - hspec
     - hspec-core
     - tasty
     - tasty-hspec
-    - beckn-test
+
+tests:
+  beckn-integ-test:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - hspec
+      - hspec-core
+      - tasty
+      - tasty-hspec
+      - beckn-test
