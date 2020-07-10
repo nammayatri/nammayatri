@@ -8,16 +8,28 @@ import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Extra
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Generics.Labels
 import Data.Swagger
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Servant.API
 import Servant.Swagger
 import qualified Storage.Queries.Location as QL
+
+data EntityType = VEHICLE | PASS | TICKET
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromHttpApiData EntityType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data UpdatePersonReq = UpdatePersonReq
   { _firstName :: Maybe Text,
@@ -251,6 +263,18 @@ instance FromJSON LinkReq where
 instance ToJSON LinkReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+data LinkedEntity = LinkedEntity
+  { _entityType :: EntityType,
+    _entityValue :: Maybe Text
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON LinkedEntity where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON LinkedEntity where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 data PersonRes' = PersonRes'
   { _id :: PersonId,
     _firstName :: Maybe Text,
@@ -275,8 +299,7 @@ data PersonRes' = PersonRes'
     _description :: Maybe Text,
     _createdAt :: LocalTime,
     _updatedAt :: LocalTime,
-    _linkedEntityType :: SPI.EntityType,
-    _linkedEntity :: Maybe SV.Vehicle
+    _linkedEntity :: Maybe LinkedEntity
   }
   deriving (Show, Generic, ToSchema)
 
