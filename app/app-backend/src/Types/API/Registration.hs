@@ -43,7 +43,7 @@ data InitiateLoginRes = InitiateLoginRes
   { tokenId :: Text,
     attempts :: Int
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 ---------- Verify Login --------
 data LoginReq = LoginReq
@@ -66,4 +66,4 @@ data LoginRes = LoginRes
   { registrationToken :: Text,
     user :: Person
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
