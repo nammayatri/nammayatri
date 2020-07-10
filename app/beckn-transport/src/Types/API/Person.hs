@@ -8,9 +8,12 @@ import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.ProductInstance as SPI
+import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Extra
 import Data.Generics.Labels
 import Data.Swagger
+import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.Swagger
@@ -226,7 +229,7 @@ createLocationRec req = do
       }
 
 newtype ListPersonRes = ListPersonRes
-  {users :: [SP.Person]}
+  {users :: [PersonRes']}
   deriving (Generic, ToJSON, ToSchema)
 
 newtype PersonRes = PersonRes
@@ -236,3 +239,49 @@ newtype PersonRes = PersonRes
 newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, ToSchema)
+
+data LinkReq = LinkReq
+  { _vehicleId :: Text
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON LinkReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON LinkReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data PersonRes' = PersonRes'
+  { _id :: PersonId,
+    _firstName :: Maybe Text,
+    _middleName :: Maybe Text,
+    _lastName :: Maybe Text,
+    _fullName :: Maybe Text,
+    _role :: SP.Role,
+    _gender :: SP.Gender,
+    _identifierType :: SP.IdentifierType,
+    _email :: Maybe Text,
+    _mobileNumber :: Maybe Text,
+    _mobileCountryCode :: Maybe Text,
+    _identifier :: Maybe Text,
+    _rating :: Maybe Text,
+    _verified :: Bool,
+    _udf1 :: Maybe Text,
+    _udf2 :: Maybe Text,
+    _status :: SP.Status,
+    _organizationId :: Maybe Text,
+    _locationId :: Maybe Text,
+    _deviceToken :: Maybe FCM.FCMRecipientToken,
+    _description :: Maybe Text,
+    _createdAt :: LocalTime,
+    _updatedAt :: LocalTime,
+    _linkedEntityType :: SPI.EntityType,
+    _linkedEntity :: Maybe SV.Vehicle
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON PersonRes' where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON PersonRes' where
+  toJSON = genericToJSON stripAllLensPrefixOptions

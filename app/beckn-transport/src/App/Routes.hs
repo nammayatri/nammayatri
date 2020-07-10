@@ -109,6 +109,11 @@ type PersonAPI =
            :<|> AdminTokenAuth
              :> Capture "personId" Text
              :> Delete '[JSON] DeletePersonRes
+           :<|> AdminTokenAuth
+             :> Capture "personId" Text
+             :> "link"
+             :> ReqBody '[JSON] LinkReq
+             :> Post '[JSON] PersonRes
        )
 
 personFlow :: FlowServer PersonAPI
@@ -118,6 +123,7 @@ personFlow =
     :<|> Person.updatePerson
     :<|> Person.getPerson
     :<|> Person.deletePerson
+    :<|> Person.linkEntity
 
 -- Following is vehicle flow
 type VehicleAPI =

@@ -5,7 +5,9 @@ module Product.Person where
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
 import Data.Generics.Labels
 import Data.Maybe
@@ -14,6 +16,7 @@ import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Vehicle as QV
 import Types.API.Person
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -25,9 +28,9 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   return $ UpdatePersonRes updatedPerson
   where
     verifyPerson personId entityId =
-      when (personId /= entityId) $
-        L.throwException $
-          err400 {errBody = "PERSON_ID_MISMATCH"}
+      when (personId /= entityId)
+        $ L.throwException
+        $ err400 {errBody = "PERSON_ID_MISMATCH"}
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
@@ -41,15 +44,16 @@ createPerson orgId req = withFlowHandler $ do
       when (req ^. #_role == Just SP.DRIVER) $
         case (req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
-            whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
-              L.throwException $
-                err400 {errBody = "DRIVER_ALREADY_CREATED"}
+            whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber)
+              $ L.throwException
+              $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
           _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson orgId roles limitM offsetM =
-  withFlowHandler $
-    ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
+listPerson orgId roles limitM offsetM = withFlowHandler $ do
+  personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
+  vehicleList <- QV.findByIds (VehicleId <$> (catMaybes $ SP._udf1 <$> personList))
+  return $ ListPersonRes $ mkPersonRes vehicleList <$> personList
 
 getPerson ::
   SR.RegistrationToken ->
@@ -90,8 +94,8 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ L.throwException $
-          err401 {errBody = "Unauthorized"}
+        $ L.throwException
+        $ err401 {errBody = "Unauthorized"}
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do
@@ -103,5 +107,52 @@ deletePerson orgId personId = withFlowHandler $ do
       return $ DeletePersonRes personId
     else L.throwException $ err401 {errBody = "Unauthorized"}
 
+linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonRes
+linkEntity orgId personId req = withFlowHandler $ do
+  person <- QP.findPersonById (PersonId personId)
+  vehicle <-
+    QV.findVehicleById (VehicleId (req ^. #_vehicleId))
+      >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
+  when
+    (person ^. #_organizationId /= Just orgId)
+    (L.throwException $ err401 {errBody = "Unauthorized"})
+  QP.updateEntity (PersonId personId) (req ^. #_vehicleId)
+  return $ PersonRes $ person {SP._udf1 = Just (req ^. #_vehicleId)}
+
+-- Utility Functions
+
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}
+
+mkPersonRes :: [SV.Vehicle] -> SP.Person -> PersonRes'
+mkPersonRes vehicleList person =
+  PersonRes'
+    { _id = person ^. #_id,
+      _firstName = person ^. #_firstName,
+      _middleName = person ^. #_middleName,
+      _lastName = person ^. #_lastName,
+      _fullName = person ^. #_fullName,
+      _role = person ^. #_role,
+      _gender = person ^. #_gender,
+      _email = person ^. #_email,
+      _identifier = person ^. #_identifier,
+      _identifierType = person ^. #_identifierType,
+      _mobileNumber = person ^. #_mobileNumber,
+      _mobileCountryCode = person ^. #_mobileCountryCode,
+      _verified = person ^. #_verified,
+      _rating = person ^. #_rating,
+      _status = person ^. #_status,
+      _deviceToken = person ^. #_deviceToken,
+      _udf1 = person ^. #_udf1,
+      _udf2 = person ^. #_udf2,
+      _organizationId = person ^. #_organizationId,
+      _description = person ^. #_description,
+      _locationId = person ^. #_locationId,
+      _createdAt = person ^. #_createdAt,
+      _updatedAt = person ^. #_updatedAt,
+      _linkedEntityType = SPI.VEHICLE,
+      _linkedEntity =
+        find
+          (\x -> (person ^. #_udf1) == Just (_getVechicleId (SV._id x)))
+          vehicleList
+    }
