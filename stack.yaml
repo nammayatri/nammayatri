@@ -53,7 +53,7 @@ extra-deps:
   - git: https://github.com/juspay/beam-mysql
     commit: 5d17599e02f30c220b679439ee0c1025e3086250
   - git: https://github.com/juspay/beam
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
     subdirs:
       - beam-core
       - beam-migrate

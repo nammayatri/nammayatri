@@ -57,11 +57,11 @@ packages:
     pantry-tree:
       size: 2623
       sha256: 365f420adf34642df7ffac56f80a578da48b3bebfac140748f3e163f83b4e37c
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
   original:
     subdir: beam-core
     git: https://github.com/juspay/beam
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
 - completed:
     subdir: beam-migrate
     cabal-file:
@@ -73,11 +73,11 @@ packages:
     pantry-tree:
       size: 1825
       sha256: 3ef904145e6e05e2f1cf6558e40f109f2751f08d2f8ce446f4e43ab70675936b
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
   original:
     subdir: beam-migrate
     git: https://github.com/juspay/beam
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
 - completed:
     subdir: beam-sqlite
     cabal-file:
@@ -89,11 +89,11 @@ packages:
     pantry-tree:
       size: 859
       sha256: d28565e631ed326b35719b4f0b1825dbdda0daed39618bff3506b70f45b9d2e8
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
   original:
     subdir: beam-sqlite
     git: https://github.com/juspay/beam
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
 - completed:
     subdir: beam-postgres
     cabal-file:
@@ -104,12 +104,12 @@ packages:
     git: https://github.com/juspay/beam
     pantry-tree:
       size: 2507
-      sha256: 324e99224bacf35d65f138d68a21fdb6b5c2377b32517048ad9c4e43a75e0846
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+      sha256: 704819878bd1e02b745ca12ae53e061103dafaa00eba94bb41747447fadea7cd
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
   original:
     subdir: beam-postgres
     git: https://github.com/juspay/beam
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
 - completed:
     hackage: haskell-src-exts-1.21.1@sha256:11d18ec3f463185f81b7819376b532e3087f8192cffc629aac5c9eec88897b35,4541
     pantry-tree:
