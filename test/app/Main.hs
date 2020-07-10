@@ -6,7 +6,7 @@ import EulerHS.Prelude
 import Fixtures (startServers)
 import HealthCheck as HC
 import Test.Tasty
-import Test.Tasty.Hspec
+import Test.Tasty.Hspec hiding (after)
 
 main :: IO ()
 main = defaultMain =<< specs
@@ -21,4 +21,10 @@ specs = do
     withResource
       startServers
       (\(appTid, tbeTid) -> killThread appTid >> killThread tbeTid)
-      (\_ -> testGroup "tests" [hcSpec, clSpec, acrSpec])
+      ( \_ ->
+          testGroup
+            "tests"
+            [ testGroup "HealthCheck" [hcSpec],
+              after AllSucceed "HealthCheck" $ testGroup "Other" [clSpec, acrSpec]
+            ]
+      )
