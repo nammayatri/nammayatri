@@ -2,6 +2,7 @@
 
 module Epass.Storage.Queries.Quota where
 
+import Beckn.Types.Common
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Data.Time.LocalTime
@@ -19,18 +20,18 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.QuotaT)
 dbTable = DB._quota DB.becknDb
 
-create :: Storage.Quota -> L.Flow ()
+create :: Storage.Quota -> Flow ()
 create Storage.Quota {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Quota {..})
     >>= either DB.throwDBError pure
 
-findById :: QuotaId -> L.Flow (T.DBResult (Maybe Storage.Quota))
+findById :: QuotaId -> Flow (T.DBResult (Maybe Storage.Quota))
 findById id =
   DB.findOne dbTable predicate
   where
     predicate Storage.Quota {..} = _id ==. B.val_ id
 
-findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text -> L.Flow (T.DBResult [Storage.Quota])
+findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text -> Flow (T.DBResult [Storage.Quota])
 findAllWithLimitOffset mlimit moffset entityType entityId =
   DB.findAllWithLimitOffsetWhere dbTable (pred entityType entityId) limit offset orderByDesc
   where
@@ -46,7 +47,7 @@ update ::
   Maybe Int ->
   Maybe LocalTime ->
   Maybe LocalTime ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id maxAllowedM startTimeM endTimeM = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

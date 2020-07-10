@@ -1,5 +1,6 @@
 module Epass.Utils.Common where
 
+import Beckn.Types.Common
 import Beckn.Utils.Common
 import qualified Data.ByteString.Lazy as BSL
 import Data.Time
@@ -11,7 +12,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 
-sendAck :: L.Flow Ack
+sendAck :: Flow Ack
 sendAck =
   pure $
     Ack

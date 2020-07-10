@@ -91,7 +91,7 @@ update SR.RegistrationToken {..} prodInstId req = withFlowHandler $ do
   notifyCancelReq updatedProd (req ^. #_status)
   return $ updatedProd {ProdInst._info = infoObj}
 
-notifyTripDataToGateway :: ProductInstanceId -> L.Flow ()
+notifyTripDataToGateway :: ProductInstanceId -> Flow ()
 notifyTripDataToGateway prodInstId = do
   prodInst <- PIQ.findById prodInstId
   piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
@@ -102,7 +102,7 @@ notifyTripDataToGateway prodInstId = do
     (Just x, Just y) -> BP.notifyTripUrlToGateway x y
     _ -> return ()
 
-updateInfo :: ProductInstanceId -> Maybe SP.Person -> Maybe V.Vehicle -> L.Flow (Maybe Text)
+updateInfo :: ProductInstanceId -> Maybe SP.Person -> Maybe V.Vehicle -> Flow (Maybe Text)
 updateInfo prodInstId driverInfo vehicleInfo = do
   let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
   PIQ.updateInfo prodInstId info
@@ -114,7 +114,7 @@ updateInfo prodInstId driverInfo vehicleInfo = do
           vehicleInfo = encodeToText vehiInfo
         }
 
-updateTrip :: ProductInstanceId -> ProdInst.ProductInstanceStatus -> L.Flow ()
+updateTrip :: ProductInstanceId -> ProdInst.ProductInstanceStatus -> Flow ()
 updateTrip prodInstId k = do
   prodInst <- PIQ.findById prodInstId
   piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
@@ -138,7 +138,7 @@ updateTrip prodInstId k = do
       return ()
     _ -> return ()
 
-notifyCancelReq :: ProdInst.ProductInstance -> Maybe ProdInst.ProductInstanceStatus -> L.Flow ()
+notifyCancelReq :: ProdInst.ProductInstance -> Maybe ProdInst.ProductInstanceStatus -> Flow ()
 notifyCancelReq prodInst status =
   case status of
     Just k -> case k of
@@ -230,7 +230,7 @@ listCasesByProductInstance SR.RegistrationToken {..} prodInstId csType = withFlo
 
 -- Core Utility methods are below
 
-isAllowed :: ProdInst.ProductInstance -> ProdInstUpdateReq -> L.Flow ()
+isAllowed :: ProdInst.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed pi req = do
   piList <- PIQ.findAllByStatusParentId [ProdInst.COMPLETED, ProdInst.INPROGRESS] (pi ^. #_parentId)
   unless (null piList) $

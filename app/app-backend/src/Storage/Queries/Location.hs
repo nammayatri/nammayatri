@@ -1,6 +1,7 @@
 module Storage.Queries.Location where
 
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Location as Storage
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -12,20 +13,20 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT)
 dbTable = DB._location DB.appDb
 
-create :: Storage.Location -> L.Flow ()
+create :: Storage.Location -> Flow ()
 create Storage.Location {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
     >>= either DB.throwDBError pure
 
 findLocationById ::
-  LocationId -> L.Flow (Maybe Storage.Location)
+  LocationId -> Flow (Maybe Storage.Location)
 findLocationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
-findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] -> Maybe Int -> Maybe Int -> L.Flow [Storage.Location]
+findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Location]
 findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset =
   DB.findAllWithLimitOffsetWhere
     dbTable
@@ -53,7 +54,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findAllByIds :: [Text] -> L.Flow [Storage.Location]
+findAllByIds :: [Text] -> Flow [Storage.Location]
 findAllByIds locIds =
   DB.findAllOrErr dbTable (pred (LocationId <$> locIds))
   where

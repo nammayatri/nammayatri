@@ -2,6 +2,7 @@
 
 module Epass.Storage.Queries.Comment where
 
+import Beckn.Types.Common
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import Epass.Types.App
@@ -17,19 +18,19 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.CommentT)
 dbTable = DB._comment DB.becknDb
 
-create :: Storage.Comment -> L.Flow ()
+create :: Storage.Comment -> Flow ()
 create Storage.Comment {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Comment {..})
     >>= either DB.throwDBError pure
 
-findById :: CommentId -> L.Flow (Maybe Storage.Comment)
+findById :: CommentId -> Flow (Maybe Storage.Comment)
 findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Comment {..} = _id ==. B.val_ id
 
-findAllByCommentedOnEntity :: Text -> Text -> L.Flow [Storage.Comment]
+findAllByCommentedOnEntity :: Text -> Text -> Flow [Storage.Comment]
 findAllByCommentedOnEntity commentedOnEntityType commentedOnEntityId =
   DB.findAll dbTable (predicate commentedOnEntityType commentedOnEntityId)
     >>= either DB.throwDBError pure

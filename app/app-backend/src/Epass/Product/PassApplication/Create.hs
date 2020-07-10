@@ -46,7 +46,7 @@ createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowH
   API.PassApplicationRes'
     <$> QC.findById (Case._id caseInfo)
 
-bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
+bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Flow Case.Case
 bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _OrganizationId)
@@ -59,7 +59,7 @@ bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
     >>= fromMaybeM400 "Organization does not exists"
   getCaseInfo token req Nothing
 
-selfFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
+selfFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Flow Case.Case
 selfFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _CustomerId)
@@ -76,7 +76,7 @@ selfFlow token req@API.CreatePassApplicationReq {..} = do
   QP.update customerId Nothing _travellerName Nothing Nothing travellerIDType _travellerID
   getCaseInfo token req _CustomerId
 
-sponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
+sponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Flow Case.Case
 sponsorFlow token req@API.CreatePassApplicationReq {..} = do
   when
     (isNothing _travellerName || isNothing _travellerIDType || isNothing _travellerID)
@@ -126,7 +126,7 @@ getPassType SELF = INDIVIDUAL
 getPassType SPONSOR = INDIVIDUAL
 getPassType BULKSPONSOR = ORGANIZATION
 
-getCount :: PassApplicationType -> Maybe Int -> L.Flow Int
+getCount :: PassApplicationType -> Maybe Int -> Flow Int
 getCount SELF _ = return 1
 getCount SPONSOR _ = return 1
 getCount BULKSPONSOR (Just c) = return c
@@ -138,7 +138,7 @@ mapIdType AADHAAR = CD.AADHAAR
 mapIdType' MOBILE = SP.MOBILENUMBER
 mapIdType' AADHAAR = SP.AADHAAR
 
-getLocation :: API.CreatePassApplicationReq -> L.Flow (Loc.Location, Loc.Location)
+getLocation :: API.CreatePassApplicationReq -> Flow (Loc.Location, Loc.Location)
 getLocation API.CreatePassApplicationReq {..} = do
   toId <- BTC.generateGUID
   fromId <- BTC.generateGUID
@@ -179,7 +179,7 @@ getLocation API.CreatePassApplicationReq {..} = do
           }
   return (fromLocation, toLocation)
 
-getCaseInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe PersonId -> L.Flow Case.Case
+getCaseInfo :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> Maybe PersonId -> Flow Case.Case
 getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
   id <- BTC.generateGUID
   (fromLoc, toLoc) <- getLocation req
@@ -222,7 +222,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
         _updatedAt = currTime
       }
 
-createCustomer :: Text -> L.Flow Customer.Customer
+createCustomer :: Text -> Flow Customer.Customer
 createCustomer name = do
   id <- generateGUID
   Customer.create =<< getCust id

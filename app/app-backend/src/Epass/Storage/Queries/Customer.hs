@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.Customer where
 
+import Beckn.Types.Common
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
@@ -14,12 +15,12 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity C.CustomerT)
 dbTable = DB._customer DB.becknDb
 
-create :: C.Customer -> L.Flow ()
+create :: C.Customer -> Flow ()
 create C.Customer {..} =
   DB.createOne dbTable (C.insertExpression C.Customer {..})
     >>= either DB.throwDBError pure
 
-createIfNotExists :: C.Customer -> L.Flow ()
+createIfNotExists :: C.Customer -> Flow ()
 createIfNotExists cust@C.Customer {..} = do
   let cid = _id
   resp <- DB.findOne dbTable (\C.Customer {..} -> B.val_ cid ==. _id)
@@ -28,7 +29,7 @@ createIfNotExists cust@C.Customer {..} = do
     Right Nothing -> create cust
     Left err -> L.throwException err500
 
-existsByCustomerId :: CustomerId -> L.Flow Bool
+existsByCustomerId :: CustomerId -> Flow Bool
 existsByCustomerId customerId =
   DB.findOne dbTable predicate >>= \case
     Left err -> pure False
@@ -37,13 +38,13 @@ existsByCustomerId customerId =
   where
     predicate C.Customer {..} = _id ==. B.val_ customerId
 
-findCustomerById :: CustomerId -> L.Flow (Maybe C.Customer)
+findCustomerById :: CustomerId -> Flow (Maybe C.Customer)
 findCustomerById customerId =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate C.Customer {..} = _id ==. B.val_ customerId
 
-updateCustomerOrgId :: OrganizationId -> CustomerId -> L.Flow ()
+updateCustomerOrgId :: OrganizationId -> CustomerId -> Flow ()
 updateCustomerOrgId orgId customerId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause orgId now) (predicate customerId)
@@ -53,7 +54,7 @@ updateCustomerOrgId orgId customerId = do
       mconcat [_OrganizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i C.Customer {..} = _id ==. B.val_ i
 
-updateStatus :: Bool -> CustomerId -> L.Flow ()
+updateStatus :: Bool -> CustomerId -> Flow ()
 updateStatus s customerId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause s now) (predicate customerId)
@@ -63,7 +64,7 @@ updateStatus s customerId = do
       mconcat [_verified <-. B.val_ a, _updatedAt <-. B.val_ n]
     predicate i C.Customer {..} = _id ==. B.val_ i
 
-updateDetails :: CustomerId -> Maybe Text -> Maybe OrganizationId -> L.Flow ()
+updateDetails :: CustomerId -> Maybe Text -> Maybe OrganizationId -> Flow ()
 updateDetails customerId nameM orgIdM = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause nameM orgIdM now) (predicate customerId)
@@ -77,7 +78,7 @@ updateDetails customerId nameM orgIdM = do
         )
     predicate id C.Customer {..} = _id ==. B.val_ id
 
---updateDocument :: CustomerId -> [DocumentId] -> L.Flow ()
+--updateDocument :: CustomerId -> [DocumentId] -> Flow ()
 --updateDocument cust docs =
 --DB.update dbTable (setClause docs) (predicate cust)
 -- >>= either DB.throwDBError pure

@@ -1,5 +1,6 @@
 module Epass.Utils.Storage where
 
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
@@ -18,24 +19,24 @@ data AppException
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON, Exception)
 
 throwOnFailedWithLog ::
-  Show e => Either e a -> (Text -> AppException) -> Text -> L.Flow ()
+  Show e => Either e a -> (Text -> AppException) -> Text -> Flow ()
 throwOnFailedWithLog (Left err) mkException msg = do
   L.logError ("" :: Text) $ msg <> " " <> show err <> ""
   L.throwException $ mkException $ msg <> " " <> show err <> ""
 throwOnFailedWithLog _ _ _ = pure ()
 
-throwFailedWithLog :: (Text -> AppException) -> Text -> L.Flow ()
+throwFailedWithLog :: (Text -> AppException) -> Text -> Flow ()
 throwFailedWithLog mkException msg = do
   L.logError ("" :: Text) $ msg <> ""
   L.throwException $ mkException $ msg <> ""
 
-verifyToken :: Text -> L.Flow SR.RegistrationToken
+verifyToken :: Text -> Flow SR.RegistrationToken
 verifyToken token =
   QR.findByToken token
     >>= fromMaybeM400 "INVALID_TOKEN"
     >>= validateToken
 
-validateToken :: SR.RegistrationToken -> L.Flow SR.RegistrationToken
+validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ _tokenExpiry * 24 * 60 * 60
   expired <- isExpired nominal _updatedAt

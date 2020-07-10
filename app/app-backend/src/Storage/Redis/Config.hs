@@ -1,5 +1,6 @@
 module Storage.Redis.Config where
 
+import Beckn.Types.Common
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -49,7 +50,7 @@ loadRedisConfig = do
             connectTimeout = fromRational . toRational . read <$> mtimeout
           }
 
-prepareRedisConnections :: L.Flow ()
+prepareRedisConnections :: Flow ()
 prepareRedisConnections = do
   mConfig <- L.runIO loadRedisConfig
   let kvDBConfig' = fromMaybe kvDBConfig mConfig
@@ -71,13 +72,13 @@ throwOnFailedWithLog ::
   Either e a ->
   (Text -> AppException) ->
   Text ->
-  L.Flow ()
+  Flow ()
 throwOnFailedWithLog (Left err) mkException msg = do
   L.logError ("" :: Text) $ msg <> " " <> show err <> ""
   L.throwException $ mkException $ msg <> " " <> show err <> ""
 throwOnFailedWithLog _ _ _ = pure ()
 
-throwFailedWithLog :: (Text -> AppException) -> Text -> L.Flow ()
+throwFailedWithLog :: (Text -> AppException) -> Text -> Flow ()
 throwFailedWithLog mkException msg = do
   L.logError ("" :: Text) $ msg <> ""
   L.throwException $ mkException $ msg <> ""

@@ -4,6 +4,7 @@ module Product.Location where
 
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -89,7 +90,7 @@ createLocationInfo UpdateLocationReq {..} routeM =
       snapped_waypoints = MapSearch.snapped_waypoints =<< routeM
     }
 
-getRoute' :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
+getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
   routeE <- MapSearch.getRoute getRouteRequest
   case routeE of

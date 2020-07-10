@@ -4,6 +4,7 @@ module Utils.Common where
 
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -64,7 +65,7 @@ instance VerificationMethod DriverVerifyToken where
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin or driver role."
 
-verifyAdmin :: SP.Person -> L.Flow Text
+verifyAdmin :: SP.Person -> Flow Text
 verifyAdmin user = do
   when (user ^. #_role /= SP.ADMIN) $
     L.throwException $
@@ -73,7 +74,7 @@ verifyAdmin user = do
     Just orgId -> return orgId
     Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
 
-verifyDriver :: SP.Person -> L.Flow Text
+verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
   unless ((user ^. #_role) `elem` [SP.ADMIN, SP.DRIVER]) $
     L.throwException $
@@ -82,13 +83,13 @@ verifyDriver user = do
     Just orgId -> return orgId
     Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
 
-validateAdmin :: RegToken -> L.Flow Text
+validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (PersonId _EntityId)
   verifyAdmin user
 
-validateDriver :: RegToken -> L.Flow Text
+validateDriver :: RegToken -> Flow Text
 validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (PersonId _EntityId)

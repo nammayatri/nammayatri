@@ -28,7 +28,7 @@ createProduct orgId req = withFlowHandler $ do
   PQ.create product
   return product
 
-mkProduct :: CreateProdReq -> L.Flow Product.Products
+mkProduct :: CreateProdReq -> Flow Product.Products
 mkProduct req = do
   id <- L.generateGUID
   now <- getCurrentTimeUTC

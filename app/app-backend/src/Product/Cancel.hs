@@ -29,7 +29,7 @@ cancel person req = withFlowHandler $ do
     Cancel.CASE -> cancelCase person req
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
-cancelProductInstance :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
   pi <- ProductInstance.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
@@ -50,7 +50,7 @@ cancelProductInstance person req = do
       let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
-cancelCase :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelCase :: Person.Person -> CancelReq -> Flow CancelRes
 cancelCase person req = do
   let caseId = req ^. #message . #entityId
   case_ <- Case.findIdByPerson person (CaseId caseId)

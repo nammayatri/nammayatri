@@ -8,6 +8,7 @@ module Beckn.Utils.Servant.Auth
 where
 
 import Beckn.Types.App
+import Beckn.Types.Common
 import Control.Lens ((.=), (?=))
 import qualified Data.Swagger as DS
 import Data.Typeable (typeRep)
@@ -45,7 +46,7 @@ class VerificationMethod verify where
   type VerificationResult verify
 
   -- | Verification logic.
-  verifyToken :: RegToken -> L.Flow (VerificationResult verify)
+  verifyToken :: RegToken -> Flow (VerificationResult verify)
 
   -- | Description of this verification scheme as it appears in swagger.
   verificationDescription :: Text
