@@ -2,13 +2,14 @@ module Beckn.Product.MapSearch where
 
 import qualified Beckn.External.Graphhopper.Flow as Grphr
 import qualified Beckn.External.Graphhopper.Types as Grphr
+import Beckn.Types.Common
 import qualified Beckn.Types.MapSearch as MapSearch
 import Data.Geospatial
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 
-getRoute :: MapSearch.Request -> L.Flow (Either SomeException MapSearch.Response)
+getRoute :: MapSearch.Request -> Flow (Either SomeException MapSearch.Response)
 getRoute MapSearch.Request {..} =
   -- Currently integrated only with graphhopper
   if all isLatLong waypoints

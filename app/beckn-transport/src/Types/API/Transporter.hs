@@ -71,7 +71,7 @@ instance Transform2 TransporterReq SO.Organization where
           SO._updatedAt = now
         }
 
-transformToLocation :: TransporterReq -> L.Flow SL.Location
+transformToLocation :: TransporterReq -> Flow SL.Location
 transformToLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC

@@ -17,13 +17,13 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT)
 dbTable = DB._location DB.transporterDb
 
-create :: Storage.Location -> L.Flow ()
+create :: Storage.Location -> Flow ()
 create Storage.Location {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
     >>= either DB.throwDBError pure
 
 findLocationById ::
-  LocationId -> L.Flow Storage.Location
+  LocationId -> Flow Storage.Location
 findLocationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -31,7 +31,7 @@ findLocationById id =
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
-updateLocationRec :: LocationId -> Storage.Location -> L.Flow ()
+updateLocationRec :: LocationId -> Storage.Location -> Flow ()
 updateLocationRec locationId location = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause location now) (predicate locationId)
@@ -54,7 +54,7 @@ updateLocationRec locationId location = do
         ]
     predicate id Storage.Location {..} = _id ==. B.val_ id
 
-findAllByLocIds :: [Text] -> [Text] -> L.Flow [Storage.Location]
+findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
 findAllByLocIds fromIds toIds =
   DB.findAllOrErr dbTable (pred (LocationId <$> fromIds) (LocationId <$> toIds))
   where

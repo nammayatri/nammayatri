@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.PassApplication where
 
+import Beckn.Types.Common
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time.LocalTime
 import Database.Beam
@@ -22,13 +23,13 @@ dbTable ::
   B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.PassApplicationT)
 dbTable = DB._passApplication DB.becknDb
 
-create :: Storage.PassApplication -> L.Flow ()
+create :: Storage.PassApplication -> Flow ()
 create Storage.PassApplication {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.PassApplication {..})
     >>= either DB.throwDBError pure
 
 findById ::
-  PassApplicationId -> L.Flow (Maybe Storage.PassApplication)
+  PassApplicationId -> Flow (Maybe Storage.PassApplication)
 findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -52,7 +53,7 @@ findAllWithLimitOffsetWhere ::
   Maybe CustomerId ->
   Maybe Int ->
   Maybe Int ->
-  L.Flow [Storage.PassApplication]
+  Flow [Storage.PassApplication]
 findAllWithLimitOffsetWhere
   fPins
   fCities
@@ -120,7 +121,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-update :: PassApplicationId -> Storage.Status -> Maybe Int -> Maybe Text -> L.Flow ()
+update :: PassApplicationId -> Storage.Status -> Maybe Int -> Maybe Text -> Flow ()
 update id status approvedCountM remarksM = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

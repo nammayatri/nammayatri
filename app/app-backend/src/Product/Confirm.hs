@@ -5,7 +5,7 @@ module Product.Confirm where
 import Beckn.Types.API.Confirm
 import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..), generateGUID)
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Case as Case
@@ -89,7 +89,7 @@ onConfirm req = withFlowHandler $ do
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
 
-mkOrderCase :: Case.Case -> L.Flow Case.Case
+mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
   now <- getCurrentTimeUTC
   id <- generateGUID
@@ -108,7 +108,7 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: CaseId -> SPI.ProductInstance -> L.Flow SPI.ProductInstance
+mkOrderProductInstance :: CaseId -> SPI.ProductInstance -> Flow SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   now <- getCurrentTimeUTC
   id <- generateGUID

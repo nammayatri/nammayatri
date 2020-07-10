@@ -2,6 +2,7 @@
 
 module Storage.DB.Config where
 
+import Beckn.Types.Common
 import Data.Text as T
 import Database.Beam.Postgres (Pg)
 import qualified EulerHS.Language as L
@@ -56,7 +57,7 @@ loadPgConfig = do
           connectDatabase = db
         }
 
-getPgDBConfig :: T.PostgresConfig -> L.Flow (T.DBConfig Pg)
+getPgDBConfig :: T.PostgresConfig -> Flow (T.DBConfig Pg)
 getPgDBConfig defPostgresConfig = do
   mConfig <- L.runIO loadPgConfig
   case mConfig of
@@ -66,13 +67,13 @@ getPgDBConfig defPostgresConfig = do
     Just config -> pure $ T.mkPostgresPoolConfig (T.pack "transporterDb") config poolConfig
 
 -- helper
-dbHandle :: (T.DBConfig beM -> L.Flow (Either T.DBError a)) -> T.DBConfig beM -> L.Flow a
+dbHandle :: (T.DBConfig beM -> Flow (Either T.DBError a)) -> T.DBConfig beM -> Flow a
 dbHandle f cfg = f cfg >>= either (error . show) pure
 
-connPostgresOrFail, getConn, getOrInitConn :: T.DBConfig beM -> L.Flow (T.SqlConn beM)
+connPostgresOrFail, getConn, getOrInitConn :: T.DBConfig beM -> Flow (T.SqlConn beM)
 connPostgresOrFail = dbHandle L.initSqlDBConnection
 getConn = dbHandle L.getSqlDBConnection
 getOrInitConn = dbHandle L.getOrInitSqlConn
 
-prepareDBConnections :: Config T.PostgresConfig => L.Flow (T.SqlConn Pg)
+prepareDBConnections :: Config T.PostgresConfig => Flow (T.SqlConn Pg)
 prepareDBConnections = getPgDBConfig theConfig >>= connPostgresOrFail

@@ -99,7 +99,7 @@ cancel req = withFlowHandler $ do
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
-getValidTime :: LocalTime -> LocalTime -> L.Flow LocalTime
+getValidTime :: LocalTime -> LocalTime -> Flow LocalTime
 getValidTime now startTime = do
   caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
   let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
@@ -213,7 +213,7 @@ confirm req = withFlowHandler $ do
   Notify.notifyTransportersOnConfirm search_case admins
   mkAckResponse uuid "confirm"
 
-mkOrderCase :: SC.Case -> L.Flow SC.Case
+mkOrderCase :: SC.Case -> Flow SC.Case
 mkOrderCase SC.Case {..} = do
   now <- getCurrentTimeUTC
   id <- generateGUID
@@ -232,7 +232,7 @@ mkOrderCase SC.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: CaseId -> ProductInstance -> L.Flow ProductInstance.ProductInstance
+mkOrderProductInstance :: CaseId -> ProductInstance -> Flow ProductInstance.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   now <- getCurrentTimeUTC
   id <- generateGUID
@@ -268,7 +268,7 @@ mkOrderProductInstance caseId prodInst = do
 
 -- TODO : Add notifying transporter admin with FCM
 
-mkTrackerProductInstance :: Text -> CaseId -> ProductInstance -> LocalTime -> L.Flow ProductInstance.ProductInstance
+mkTrackerProductInstance :: Text -> CaseId -> ProductInstance -> LocalTime -> Flow ProductInstance.ProductInstance
 mkTrackerProductInstance piId caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
@@ -331,7 +331,7 @@ mkTrackerCase case_ uuid now shortId =
       _updatedAt = now
     }
 
-notifyGateway :: Case -> Text -> Case -> L.Flow ()
+notifyGateway :: Case -> Text -> Case -> Flow ()
 notifyGateway c prodInstId trackerCase = do
   L.logInfo "notifyGateway" $ show c
   pis <- ProductInstance.findAllByCaseId (c ^. #_id)
@@ -340,7 +340,7 @@ notifyGateway c prodInstId trackerCase = do
   Gateway.onConfirm onConfirmPayload
   return ()
 
-mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> L.Flow OnConfirmReq
+mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> Flow OnConfirmReq
 mkOnConfirmPayload c pis allPis trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
@@ -373,14 +373,14 @@ serviceStatus req = withFlowHandler $ do
   uuid <- L.generateGUID
   mkAckResponse uuid "track"
 
-notifyServiceStatusToGateway :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> L.Flow ()
+notifyServiceStatusToGateway :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> Flow ()
 notifyServiceStatusToGateway c pis allpis trackerCase = do
   onServiceStatusPayload <- mkOnServiceStatusPayload c pis allpis trackerCase
   L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   Gateway.onStatus onServiceStatusPayload
   return ()
 
-mkOnServiceStatusPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> L.Flow OnStatusReq
+mkOnServiceStatusPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> Flow OnStatusReq
 mkOnServiceStatusPayload c pis allPis trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
@@ -415,21 +415,21 @@ trackTrip req = withFlowHandler $ do
       mkAckResponse uuid "track"
     Nothing -> L.throwException $ err400 {errBody = "Case does not have an associated parent case"}
 
-notifyTripUrlToGateway :: Case -> Case -> L.Flow ()
+notifyTripUrlToGateway :: Case -> Case -> Flow ()
 notifyTripUrlToGateway case_ parentCase = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
   L.logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-notifyCancelToGateway :: Text -> L.Flow ()
+notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
   onCancelPayload <- mkCancelRidePayload prodInstId
   L.logInfo "notifyGateway Request" $ show onCancelPayload
   Gateway.onCancel onCancelPayload
   return ()
 
-mkOnTrackTripPayload :: Case -> Case -> L.Flow OnTrackTripReq
+mkOnTrackTripPayload :: Case -> Case -> Flow OnTrackTripReq
 mkOnTrackTripPayload case_ pCase = do
   currTime <- getCurrentTimeUTC
   let context =
@@ -453,7 +453,7 @@ mkOnTrackTripPayload case_ pCase = do
         message = tracker
       }
 
-mkTrip :: Case -> L.Flow Trip
+mkTrip :: Case -> Flow Trip
 mkTrip c = do
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (c ^. #_id)
       embed_url = GT.baseTrackingUrl <> "/" <> _getCaseId (c ^. #_id) <> "/embed"
@@ -479,17 +479,17 @@ mkTrip c = do
         route = Nothing
       }
 
-mkDriverInfo :: PersonId -> L.Flow Driver
+mkDriverInfo :: PersonId -> Flow Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
   return $ GT.mkDriverObj person
 
-mkVehicleInfo :: Text -> L.Flow (Maybe BVehicle.Vehicle)
+mkVehicleInfo :: Text -> Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (VehicleId vehicleId)
   return $ GT.mkVehicleObj <$> vehicle
 
-mkCancelRidePayload :: Text -> L.Flow OnCancelReq
+mkCancelRidePayload :: Text -> Flow OnCancelReq
 mkCancelRidePayload prodInstId = do
   currTime <- getCurrentTimeUTC
   let context =
@@ -509,7 +509,7 @@ mkCancelRidePayload prodInstId = do
         message = tripObj
       }
 
-mkCancelTripObj :: Text -> L.Flow Trip
+mkCancelTripObj :: Text -> Flow Trip
 mkCancelTripObj prodInstId = do
   productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
   driver <- mapM mkDriverInfo $ productInstance ^. #_personId

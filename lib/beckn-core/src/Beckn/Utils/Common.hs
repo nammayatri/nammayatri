@@ -24,7 +24,7 @@ import Network.HTTP.Types (hContentType)
 import Servant
 import System.Environment
 
-getCurrTime :: L.Flow LocalTime
+getCurrTime :: Flow LocalTime
 getCurrTime = L.runIO $ do
   utc' <- getCurrentTime
   timezone <- getTimeZone utc'
@@ -33,19 +33,19 @@ getCurrTime = L.runIO $ do
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 
-fromMaybeM :: ServerError -> Maybe a -> L.Flow a
+fromMaybeM :: ServerError -> Maybe a -> Flow a
 fromMaybeM err Nothing = L.throwException err
 fromMaybeM _ (Just a) = return a
 
-fromMaybeM400, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> L.Flow a
+fromMaybeM400, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> Flow a
 fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
-mkAckResponse :: Text -> Text -> L.Flow AckResponse
+mkAckResponse :: Text -> Text -> Flow AckResponse
 mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
-mkAckResponse' :: Text -> Text -> Text -> L.Flow AckResponse
+mkAckResponse' :: Text -> Text -> Text -> Flow AckResponse
 mkAckResponse' txnId action message = do
   currTime <- getCurrTime
   return
@@ -67,7 +67,7 @@ mkAckResponse' txnId action message = do
             }
       }
 
-withFlowHandler :: L.Flow a -> FlowHandler a
+withFlowHandler :: Flow a -> FlowHandler a
 withFlowHandler flow = do
   (Env flowRt) <- ask
   lift . ExceptT . try . I.runFlow flowRt $ flow
@@ -78,7 +78,7 @@ decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 encodeToText :: ToJSON a => a -> Text
 encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 
-authenticate :: Maybe CronAuthKey -> L.Flow ()
+authenticate :: Maybe CronAuthKey -> Flow ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
   let authHeader = T.stripPrefix "Basic " =<< maybeAuth
@@ -106,12 +106,12 @@ maskPerson person =
         else "..."
 
 -- | Prepare common applications options
-prepareAppOptions :: L.Flow ()
+prepareAppOptions :: Flow ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
 
-throwJsonError :: ServerError -> Text -> Text -> L.Flow a
+throwJsonError :: ServerError -> Text -> Text -> Flow a
 throwJsonError err tag errMsg = do
   L.logError tag errMsg
   L.throwException
@@ -133,7 +133,7 @@ getBecknError err msg =
       _action = NACK
     }
 
-throwJsonError500, throwJsonError501, throwJsonError400, throwJsonError401 :: Text -> Text -> L.Flow a
+throwJsonError500, throwJsonError501, throwJsonError400, throwJsonError401 :: Text -> Text -> Flow a
 throwJsonError500 = throwJsonError err500
 throwJsonError501 = throwJsonError err501
 throwJsonError400 = throwJsonError err400

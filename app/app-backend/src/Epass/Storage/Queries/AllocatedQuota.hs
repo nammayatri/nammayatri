@@ -2,6 +2,7 @@
 
 module Epass.Storage.Queries.AllocatedQuota where
 
+import Beckn.Types.Common
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import qualified Epass.Types.Storage.AllocatedQuota as Storage
@@ -15,7 +16,7 @@ dbTable ::
   B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.AllocatedQuotaT)
 dbTable = DB._allocatedQuota DB.becknDb
 
-findAllocatedQuota :: Text -> L.Flow (T.DBResult (Maybe Storage.AllocatedQuota))
+findAllocatedQuota :: Text -> Flow (T.DBResult (Maybe Storage.AllocatedQuota))
 findAllocatedQuota id =
   DB.findOne dbTable predicate
   where
