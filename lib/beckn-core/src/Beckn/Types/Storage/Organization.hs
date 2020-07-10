@@ -34,7 +34,7 @@ instance FromHttpApiData Status where
 
 --------------------------------------------------------------------------------------
 
-data OrganizationType = TRANSPORTER | PASS | SKU | GATEWAY
+data OrganizationType = TRANSPORTER | PASS | GATEWAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
