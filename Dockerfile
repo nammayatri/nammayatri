@@ -30,7 +30,7 @@ RUN rm -f /root/.ssh/id_rsa
 
 # Base image for stack build so compiled artifact from previous
 # stage should run
-FROM ubuntu:16.04 as app
+FROM ubuntu:18.04 as app
 RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
