@@ -9,7 +9,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 
-getRoute :: MapSearch.Request -> Flow (Either SomeException MapSearch.Response)
+getRoute :: MapSearch.Request -> FlowR r (Either SomeException MapSearch.Response)
 getRoute MapSearch.Request {..} =
   -- Currently integrated only with graphhopper
   if all isLatLong waypoints

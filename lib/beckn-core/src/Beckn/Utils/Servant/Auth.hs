@@ -9,11 +9,10 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Control.Lens ((.=), (?=))
+import Beckn.Utils.Common
+import Control.Lens ((?=))
 import qualified Data.Swagger as DS
 import Data.Typeable (typeRep)
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
@@ -78,7 +77,7 @@ instance
         -- If we don't use delayedFailFatal and just pass the exception,
         -- it will be JSON-formatted
 
-        liftIO . I.runFlow flowRt $ verifyToken @verify val
+        liftIO . runFlowR flowRt () $ verifyToken @verify val
       formatErr msg = delayedFailFatal err400 {errBody = msg}
 
   hoistServerWithContext _ ctxp hst serv =

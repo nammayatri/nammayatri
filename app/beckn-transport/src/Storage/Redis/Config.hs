@@ -54,7 +54,7 @@ prepareRedisConnections :: Flow ()
 prepareRedisConnections = do
   mConfig <- L.runIO loadRedisConfig
   let kvDBConfig' = fromMaybe kvDBConfig mConfig
-  kvConn <- L.getOrInitKVDBConn kvDBConfig'
+  kvConn <- lift $ L.getOrInitKVDBConn kvDBConfig'
   throwOnFailedWithLog
     kvConn
     KVDBConnectionFailedException

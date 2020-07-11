@@ -24,7 +24,7 @@ type GrphrAPI =
 grphrAPI :: Proxy GrphrAPI
 grphrAPI = Proxy
 
-search :: BaseUrl -> GrphrSearch.Request -> Flow (Either ClientError GrphrSearch.Response)
+search :: BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
   L.callAPI url clientM
   where

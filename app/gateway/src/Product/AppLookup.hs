@@ -3,15 +3,16 @@ module Product.AppLookup
   )
 where
 
+import Beckn.Types.Common (Flow)
 import qualified Beckn.Types.Core.Context as B
-import qualified EulerHS.Language as EL
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified System.Environment as SE
 
 -- TODO: All of it
-lookup :: B.Context -> EL.Flow (String, Int)
+lookup :: B.Context -> Flow (String, Int)
 lookup _ = do
-  EL.runIO $
+  L.runIO $
     (,)
       <$> (fromMaybe "localhost" <$> SE.lookupEnv "APP_HOST")
       <*> (fromMaybe 8013 . (>>= readMaybe) <$> SE.lookupEnv "APP_PORT")

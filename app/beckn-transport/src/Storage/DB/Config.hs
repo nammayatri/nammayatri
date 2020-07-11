@@ -66,8 +66,8 @@ getPgDBConfig defPostgresConfig = do
     Just config -> pure $ T.mkPostgresPoolConfig (T.pack "transporterDb") config poolConfig
 
 -- helper
-dbHandle :: (T.DBConfig beM -> Flow (Either T.DBError a)) -> T.DBConfig beM -> Flow a
-dbHandle f cfg = f cfg >>= either (error . show) pure
+dbHandle :: (T.DBConfig beM -> L.Flow (Either T.DBError a)) -> T.DBConfig beM -> Flow a
+dbHandle f cfg = lift (f cfg) >>= either (error . show) pure
 
 connPgOrFail, getConn, getOrInitConn :: T.DBConfig bem -> Flow (T.SqlConn bem)
 connPgOrFail = dbHandle L.initSqlDBConnection
