@@ -77,6 +77,17 @@ spec:
       timeout: 40s
     - match:
         - uri:
+            prefix: /gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-sandbox
+            port:
+              number: 8015
+      timeout: 40s
+    - match:
+        - uri:
             prefix: /dev/app/
       rewrite:
         uri: /
@@ -94,4 +105,15 @@ spec:
             host: beckn-transport-master
             port:
               number: 8014
+      timeout: 40s
+    - match:
+        - uri:
+            prefix: /dev/gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-master
+            port:
+              number: 8015
       timeout: 40s
