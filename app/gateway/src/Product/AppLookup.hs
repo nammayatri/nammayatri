@@ -1,18 +1,21 @@
 module Product.AppLookup
-  ( lookup,
+  ( insert,
+    lookup,
   )
 where
 
-import Beckn.Types.Common (Flow)
-import qualified Beckn.Types.Core.Context as B
+import App.Types
+import qualified Data.Cache as C
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified System.Environment as SE
+import System.Clock (TimeSpec (..))
 
--- TODO: All of it
-lookup :: B.Context -> Flow (String, Int)
-lookup _ = do
-  L.runIO $
-    (,)
-      <$> (fromMaybe "localhost" <$> SE.lookupEnv "APP_HOST")
-      <*> (fromMaybe 8013 . (>>= readMaybe) <$> SE.lookupEnv "APP_PORT")
+insert :: Text -> Text -> AppFlow ()
+insert messageId appUrl = do
+  AppEnv {..} <- ask
+  L.runIO $ C.insert' cache (Just $ TimeSpec 1800 0) messageId appUrl
+
+lookup :: Text -> AppFlow (Maybe Text)
+lookup messageId = do
+  AppEnv {..} <- ask
+  L.runIO $ C.lookup cache messageId

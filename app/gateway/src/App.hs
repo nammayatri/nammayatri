@@ -3,11 +3,13 @@ module App
   )
 where
 
-import App.Server (run)
+import App.Server
+import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Cache as C
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime as E
@@ -26,6 +28,8 @@ import System.Environment (lookupEnv)
 runGateway :: IO ()
 runGateway = do
   port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "PORT"
+  cache <- C.newCache Nothing
+  let appEnv = AppEnv cache
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
@@ -37,7 +41,7 @@ runGateway = do
           setPort port defaultSettings
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
-    runSettings settings $ run reqHeadersKey (App.EnvR flowRt ())
+    runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse exception = do

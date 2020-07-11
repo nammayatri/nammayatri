@@ -67,6 +67,8 @@ library:
     - aeson
     - beckn-core
     - bytestring
+    - cache
+    - clock
     - http-types
     - servant-client
     - servant-server
