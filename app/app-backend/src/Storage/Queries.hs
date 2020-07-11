@@ -184,7 +184,7 @@ delete ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  F L.FlowMethod (T.DBResult ())
+  Flow (T.DBResult ())
 delete dbTable predicate = run $ delete' dbTable predicate
 
 delete' ::

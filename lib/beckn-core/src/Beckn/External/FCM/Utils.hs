@@ -8,12 +8,12 @@ import EulerHS.Prelude
 import qualified System.Environment as SE
 
 -- | Create a loop that refreshes FCM token in background
-createFCMTokenRefreshThread :: Flow ()
+createFCMTokenRefreshThread :: FlowR r ()
 createFCMTokenRefreshThread = do
   fcmEnabled <- L.runIO $ SE.lookupEnv "FCM_JSON_PATH"
   case fcmEnabled of
     Nothing -> pure () --report error here if FCM is crucial
-    Just _ -> L.forkFlow forkDesc $ do
+    Just _ -> lift . L.forkFlow forkDesc $ do
       _ <- forever $ do
         token <- FCM.checkAndGetToken
         L.runIO $ delay token

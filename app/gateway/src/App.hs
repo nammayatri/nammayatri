@@ -37,7 +37,7 @@ runGateway = do
           setPort port defaultSettings
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
-    runSettings settings $ run reqHeadersKey (App.Env flowRt)
+    runSettings settings $ run reqHeadersKey (App.EnvR flowRt ())
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse exception = do
