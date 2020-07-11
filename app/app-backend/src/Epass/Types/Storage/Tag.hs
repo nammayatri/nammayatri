@@ -60,9 +60,7 @@ deriving instance Eq Tag
 
 instance ToSchema Tag
 
-insertExpression tag = insertExpressions [tag]
-
-insertExpressions tags = B.insertValues tags
+insertExpression tag = B.insertValues [tag]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity TagT)

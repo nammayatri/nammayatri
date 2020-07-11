@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.DB.Config where
 
 import Beckn.Types.Common

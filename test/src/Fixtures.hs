@@ -214,7 +214,7 @@ buildInitiateLoginReq =
       __type = SR.OTP,
       _mobileNumber = "90000900000",
       _mobileCountryCode = "+91",
-      _role = Just $ Person.USER,
+      _role = Just Person.USER,
       _deviceToken = Nothing
     }
 

@@ -65,9 +65,7 @@ instance FromJSON Inventory where
 
 instance ToSchema Inventory
 
-insertExpression invs = insertExpressions [invs]
-
-insertExpressions invs = B.insertValues invs
+insertExpression invs = B.insertValues [invs]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity InventoryT)
