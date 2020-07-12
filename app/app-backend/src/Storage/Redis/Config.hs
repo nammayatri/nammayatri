@@ -1,6 +1,6 @@
 module Storage.Redis.Config where
 
-import Beckn.Types.Common
+import App.Types
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

@@ -1,6 +1,6 @@
 module Storage.DB.Config where
 
-import Beckn.Types.Common
+import App.Types
 import Data.Text as T
 import Database.Beam.Postgres (Pg)
 import qualified EulerHS.Language as L

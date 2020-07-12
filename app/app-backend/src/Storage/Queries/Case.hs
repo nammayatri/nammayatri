@@ -2,8 +2,8 @@
 
 module Storage.Queries.Case where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common

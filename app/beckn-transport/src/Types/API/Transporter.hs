@@ -2,6 +2,7 @@
 
 module Types.API.Transporter where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC

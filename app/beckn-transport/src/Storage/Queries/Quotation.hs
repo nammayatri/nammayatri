@@ -1,6 +1,6 @@
 module Storage.Queries.Quotation where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time

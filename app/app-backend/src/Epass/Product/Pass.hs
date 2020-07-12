@@ -1,6 +1,6 @@
 module Epass.Product.Pass where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI

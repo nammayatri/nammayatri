@@ -2,6 +2,7 @@
 
 module Product.Confirm where
 
+import App.Types
 import Beckn.Types.API.Confirm
 import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App

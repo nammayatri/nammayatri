@@ -2,9 +2,10 @@
 
 module Product.Cancel where
 
+import App.Types
 import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
-import Beckn.Types.Common (Flow, IdObject (..))
+import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.Storage.Case as Case

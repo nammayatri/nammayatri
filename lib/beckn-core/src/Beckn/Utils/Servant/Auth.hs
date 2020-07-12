@@ -45,7 +45,7 @@ class VerificationMethod verify where
   type VerificationResult verify
 
   -- | Verification logic.
-  verifyToken :: RegToken -> Flow (VerificationResult verify)
+  verifyToken :: RegToken -> FlowR () (VerificationResult verify)
 
   -- | Description of this verification scheme as it appears in swagger.
   verificationDescription :: Text

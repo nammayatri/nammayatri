@@ -2,9 +2,9 @@
 
 module Utils.Common where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR

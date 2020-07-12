@@ -1,7 +1,6 @@
 module Types.API.Cron where
 
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Utils.Extra
 import Data.Swagger
 import Data.Time.LocalTime

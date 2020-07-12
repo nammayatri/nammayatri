@@ -2,8 +2,8 @@
 
 module External.Gateway.Transform where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Catalog

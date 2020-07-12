@@ -1,7 +1,6 @@
 module Types.API.Registration where
 
 import Beckn.External.FCM.Types
-import Beckn.Types.Common
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
 import Data.Swagger

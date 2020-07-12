@@ -2,6 +2,7 @@
 
 module Product.TrackTrip where
 
+import App.Types
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common

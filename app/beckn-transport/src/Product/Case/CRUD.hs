@@ -2,9 +2,9 @@
 
 module Product.Case.CRUD where
 
+import App.Types
 import Beckn.Types.API.Search
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import Beckn.Types.App as BC
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category

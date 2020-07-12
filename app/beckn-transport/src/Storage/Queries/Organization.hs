@@ -2,8 +2,8 @@
 
 module Storage.Queries.Organization where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra

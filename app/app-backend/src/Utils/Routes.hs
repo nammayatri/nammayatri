@@ -1,7 +1,7 @@
 module Utils.Routes where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context

@@ -73,7 +73,7 @@ mkAckResponse' txnId action message = do
             }
       }
 
-withFlowHandler :: Flow a -> FlowHandler a
+withFlowHandler :: FlowR () a -> FlowHandler a
 withFlowHandler flow = do
   (EnvR flowRt _) <- ask
   lift . ExceptT . try . runFlowR flowRt () $ flow
@@ -117,7 +117,7 @@ maskPerson person =
         else "..."
 
 -- | Prepare common applications options
-prepareAppOptions :: Flow ()
+prepareAppOptions :: FlowR () ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread

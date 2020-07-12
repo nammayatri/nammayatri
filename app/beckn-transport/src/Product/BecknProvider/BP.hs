@@ -2,6 +2,7 @@
 
 module Product.BecknProvider.BP where
 
+import App.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search

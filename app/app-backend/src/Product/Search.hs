@@ -2,6 +2,7 @@
 
 module Product.Search where
 
+import App.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common

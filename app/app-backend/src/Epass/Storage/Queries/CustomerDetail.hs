@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.CustomerDetail where
 
+import App.Types
 import Beckn.Types.Common
 import Beckn.Utils.Extra
 import Data.Aeson (Value (Null))

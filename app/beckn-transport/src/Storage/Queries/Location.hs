@@ -1,7 +1,7 @@
 module Storage.Queries.Location where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
