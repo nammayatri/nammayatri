@@ -30,8 +30,8 @@ parseOrgUrl =
 search :: Text -> SearchReq -> FlowHandlerR AppEnv SearchRes
 search token req = withFlowRHandler $ do
   let search' = ET.client searchAPI
+      messageId = req ^. #context . #transaction_id
   appUrl <- BA.lookupToken token >>= fromMaybeM400 "INVALID_TOKEN"
-  messageId <- fromMaybeM400 "INVALID_MESSAGE" $ req ^. #context . #message_id
   providerUrls <- BP.lookup $ req ^. #context
   resps <- forM providerUrls $ \providerUrl -> do
     baseUrl <- parseOrgUrl providerUrl
@@ -47,7 +47,7 @@ search token req = withFlowRHandler $ do
 searchCb :: Text -> OnSearchReq -> FlowHandlerR AppEnv OnSearchRes
 searchCb _token req = withFlowRHandler $ do
   let onSearch = ET.client onSearchAPI
-  messageId <- fromMaybeM400 "INVALID_MESSAGE" $ req ^. #context . #message_id
+      messageId = req ^. #context . #transaction_id
   mAppUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl mAppUrl
   eRes <- L.callAPI baseUrl $ onSearch req
