@@ -16,7 +16,7 @@ import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 
-data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION | TRACKER
+data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance ToHttpApiData CaseType where
@@ -153,9 +153,7 @@ instance FromJSON Case where
 
 instance ToSchema Case
 
-insertExpression cases = insertExpressions [cases]
-
-insertExpressions cases = B.insertValues cases
+insertExpression cases = B.insertValues [cases]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)

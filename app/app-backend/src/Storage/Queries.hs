@@ -1,5 +1,6 @@
 module Storage.Queries where
 
+import App.Types
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
@@ -36,7 +37,7 @@ run ::
     Config T.PostgresConfig
   ) =>
   L.SqlDB Pg a ->
-  L.Flow (T.DBResult a)
+  Flow (T.DBResult a)
 run query = do
   sqlConfig <- DB.getPgDBConfig theConfig
   connection <- DB.getOrInitConn sqlConfig
@@ -47,19 +48,19 @@ findOneWithErr ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.Flow (table Identity)
+  Flow (table Identity)
 findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
     Right Nothing -> L.throwException err500 {errBody = "No rec found"}
-    Left err -> L.throwException err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
 
 findOne ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.Flow (T.DBResult (Maybe (table Identity)))
+  Flow (T.DBResult (Maybe (table Identity)))
 findOne dbTable predicate = run $ findOne' dbTable predicate
 
 findOne' ::
@@ -74,18 +75,18 @@ findAllOrErr ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.Flow [table Identity]
+  Flow [table Identity]
 findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
     Right val -> return val
-    Left err -> L.throwException err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
 
 findAll ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.Flow (T.DBResult ([table Identity]))
+  Flow (T.DBResult [table Identity])
 findAll dbTable predicate = run $ findAll' dbTable predicate
 
 findAll' ::
@@ -101,21 +102,21 @@ createOne ::
   RunPgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) -> -- dbTable
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  L.Flow (T.DBResult ())
-createOne dbTable insertExpression = bulkInsert dbTable insertExpression
+  Flow (T.DBResult ())
+createOne = bulkInsert
 
 createOne' ::
   PgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
-createOne' dbTable insertExpression = bulkInsert' dbTable insertExpression
+createOne' = bulkInsert'
 
 bulkInsert ::
   RunPgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 bulkInsert dbTable insertExpressions = run $ bulkInsert' dbTable insertExpressions
 
 bulkInsert' ::
@@ -123,15 +124,15 @@ bulkInsert' ::
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
-bulkInsert' dbTable insertExpressions =
-  L.insertRows $ B.insert dbTable $ insertExpressions
+bulkInsert' dbTable =
+  L.insertRows . B.insert dbTable
 
 findOrCreateOne ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  L.Flow (T.DBResult (Maybe (table Identity)))
+  Flow (T.DBResult (Maybe (table Identity)))
 findOrCreateOne dbTable findPredicate insertExpression =
   run $ findOrCreateOne' dbTable findPredicate insertExpression
 
@@ -154,7 +155,7 @@ findOrCreateOne' dbTable findPredicate insertExpression =
 findAllRows ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
-  L.Flow (T.DBResult ([table Identity]))
+  Flow (T.DBResult [table Identity])
 findAllRows dbTable = run $ findAllRows' dbTable
 
 findAllRows' ::
@@ -165,15 +166,15 @@ findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
 
 update ::
   RunReadablePgTable table db =>
-  (B.DatabaseEntity Postgres db (B.TableEntity table)) ->
+  B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update dbTable setClause predicate = run $ update' dbTable setClause predicate
 
 update' ::
   ReadablePgTable table db =>
-  (B.DatabaseEntity Postgres db (B.TableEntity table)) ->
+  B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
@@ -183,7 +184,7 @@ delete ::
   RunReadablePgTable table db =>
   B.DatabaseEntity Postgres db (B.TableEntity table) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  F L.FlowMethod (T.DBResult ())
+  Flow (T.DBResult ())
 delete dbTable predicate = run $ delete' dbTable predicate
 
 delete' ::
@@ -193,7 +194,7 @@ delete' ::
   L.SqlDB Pg ()
 delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
 
-throwDBError :: T.DBError -> L.Flow a
+throwDBError :: T.DBError -> Flow a
 throwDBError err =
   L.logError "DB error: " (show err)
     >> L.throwException err500
@@ -206,7 +207,7 @@ findAllWithLimitOffset ::
   Integer ->
   Integer ->
   (table (B.QExpr Postgres Scope3) -> BI.QOrd Postgres Scope3 ordering) ->
-  L.Flow (T.DBResult [table Identity])
+  Flow (T.DBResult [table Identity])
 findAllWithLimitOffset dbTable limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
@@ -217,7 +218,7 @@ findAllWithLimitOffset dbTable limit offset orderBy =
 --   Integer ->
 --   Integer ->
 --   (table (B.QExpr Postgres Scope3) -> BI.QOrd Postgres Scope3 ordering) ->
---   L.Flow (T.DBResult [table Identity])
+--   Flow (T.DBResult [table Identity])
 findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.filter_ predicate $ B.all_ dbTable
 

@@ -2,10 +2,10 @@
 
 module Types.API.Vehicle where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
-import Beckn.Types.Common
 import Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Extra
 import Data.Generics.Labels
@@ -32,8 +32,8 @@ data CreateVehicleReq = CreateVehicleReq
 instance FromJSON CreateVehicleReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 CreateVehicleReq SV.Vehicle where
-  transformFlow req = do
+instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     return $
@@ -55,11 +55,11 @@ instance Transform2 CreateVehicleReq SV.Vehicle where
           SV._updatedAt = now
         }
 
-data CreateVehicleRes = CreateVehicleRes
+newtype CreateVehicleRes = CreateVehicleRes
   {vehicle :: SV.Vehicle}
   deriving (Generic, ToJSON, ToSchema)
 
-data ListVehicleRes = ListVehicleRes
+newtype ListVehicleRes = ListVehicleRes
   {vehicles :: [SV.Vehicle]}
   deriving (Generic, ToJSON, ToSchema)
 
@@ -79,26 +79,26 @@ data UpdateVehicleReq = UpdateVehicleReq
 instance FromJSON UpdateVehicleReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform UpdateVehicleReq SV.Vehicle where
-  transformFlow2 req vehicle = do
+instance ModifyTransform UpdateVehicleReq SV.Vehicle Flow where
+  modifyTransform req vehicle = do
     now <- getCurrentTimeUTC
     return $
       vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-          SV._capacity = maybe (vehicle ^. #_capacity) Just (req ^. #_capacity),
-          SV._category = maybe (vehicle ^. #_category) Just (req ^. #_category),
-          SV._make = maybe (vehicle ^. #_make) Just (req ^. #_make),
-          SV._model = maybe (vehicle ^. #_model) Just (req ^. #_model),
-          SV._size = maybe (vehicle ^. #_size) Just (req ^. #_size),
-          SV._variant = maybe (vehicle ^. #_variant) Just (req ^. #_variant),
-          SV._color = maybe (vehicle ^. #_color) Just (req ^. #_color),
-          SV._energyType = maybe (vehicle ^. #_energyType) Just (req ^. #_energyType),
-          SV._registrationCategory = maybe (vehicle ^. #_registrationCategory) Just (req ^. #_registrationCategory),
+          SV._capacity = (req ^. #_capacity) <|> (vehicle ^. #_capacity),
+          SV._category = (req ^. #_category) <|> (vehicle ^. #_category),
+          SV._make = (req ^. #_make) <|> (vehicle ^. #_make),
+          SV._model = (req ^. #_model) <|> (vehicle ^. #_model),
+          SV._size = (req ^. #_size) <|> (vehicle ^. #_size),
+          SV._variant = (req ^. #_variant) <|> (vehicle ^. #_variant),
+          SV._color = (req ^. #_color) <|> (vehicle ^. #_color),
+          SV._energyType = (req ^. #_energyType) <|> (vehicle ^. #_energyType),
+          SV._registrationCategory = (req ^. #_registrationCategory) <|> (vehicle ^. #_registrationCategory),
           SV._updatedAt = now
         }
 
 type UpdateVehicleRes = CreateVehicleRes
 
-data DeleteVehicleRes = DeleteVehicleRes
+newtype DeleteVehicleRes = DeleteVehicleRes
   {vehicleId :: Text}
   deriving (Generic, ToJSON, ToSchema)

@@ -3,6 +3,7 @@
 
 module Epass.Product.User.Get where
 
+import App.Types
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
@@ -37,9 +38,9 @@ list regToken offsetM limitM locateM locate roleM = withFlowHandler $ do
   user <-
     fromMaybeM500 "Could not find user"
       =<< Person.findById (PersonId $ SR._EntityId reg)
-  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER)
-    $ L.throwException
-    $ err400 {errBody = "UNAUTHORIZED_USER"}
+  when (user ^. #_role == Person.DRIVER || user ^. #_role == Person.USER) $
+    L.throwException $
+      err400 {errBody = "UNAUTHORIZED_USER"}
   getUsers limitM offsetM locateM roleM locate user
 
 getUsers ::
@@ -49,7 +50,7 @@ getUsers ::
   [Person.Role] ->
   [Text] ->
   Person.Person ->
-  L.Flow ListRes
+  Flow ListRes
 getUsers offsetM limitM locateM role locate user =
   case user ^. #_role of
     Person.ADMIN ->
@@ -112,7 +113,7 @@ getUsers offsetM limitM locateM role locate user =
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
 
-getOrgOrFail :: Maybe Text -> L.Flow Org.Organization
+getOrgOrFail :: Maybe Text -> Flow Org.Organization
 getOrgOrFail orgId = do
   orgM <-
     join
@@ -121,7 +122,7 @@ getOrgOrFail orgId = do
     Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOUND"}
     Just org -> return org
 
-cityLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
+cityLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> Flow ListRes
 cityLevelUsers limitM offsetM r cities =
   ListRes
     <$> ( Org.listOrganizations
@@ -139,7 +140,7 @@ cityLevelUsers limitM offsetM r cities =
         )
 
 districtLevelUsers ::
-  Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
+  Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> Flow ListRes
 districtLevelUsers limitM offsetM r districts =
   ListRes
     <$> ( Org.listOrganizations
@@ -156,7 +157,7 @@ districtLevelUsers limitM offsetM r districts =
             >>= Person.findAllWithLimitOffsetBy limitM offsetM r . map (^. #_id)
         )
 
-wardLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> L.Flow ListRes
+wardLevelUsers :: Maybe Int -> Maybe Int -> [Person.Role] -> [Text] -> Flow ListRes
 wardLevelUsers limitM offsetM r wards =
   ListRes
     <$> ( Org.listOrganizations

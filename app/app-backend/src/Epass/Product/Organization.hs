@@ -1,5 +1,6 @@
 module Epass.Product.Organization where
 
+import App.Types
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -71,9 +72,9 @@ getOrganization regToken orgId =
       customer <-
         QP.findById (PersonId $ SR._EntityId reg)
           >>= fromMaybeM400 "INVALID_DATA"
-      unless (Just orgId == SP._organizationId customer)
-        $ L.throwException
-        $ err400 {errBody = "INVALID_DATA"}
+      unless (Just orgId == SP._organizationId customer) $
+        L.throwException $
+          err400 {errBody = "INVALID_DATA"}
     QO.findOrganizationById (OrganizationId orgId)
       >>= maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
@@ -87,14 +88,14 @@ listOrganization ::
 listOrganization regToken API.ListOrganizationReq {..} = withFlowHandler $ do
   L.logInfo "list organization" "invoked"
   reg <- verifyToken regToken
-  when (SR._entityType reg == SR.CUSTOMER)
-    $ L.throwException
-    $ err400 {errBody = "UNAUTHORIZED"}
+  when (SR._entityType reg == SR.CUSTOMER) $
+    L.throwException $
+      err400 {errBody = "UNAUTHORIZED"}
   organizations <- QO.listOrganizations limit offset locationType pincode city district ward state status verified
   orgInfo <- traverse getOrgInfo organizations
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
 
-getOrgInfo :: Organization -> L.Flow API.OrgInfo
+getOrgInfo :: Organization -> Flow API.OrgInfo
 getOrgInfo Organization {..} = do
   entityDocs <- EntityDocument.findAllByOrgId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
@@ -136,14 +137,15 @@ getOrgInfo Organization {..} = do
 
 updateOrganization ::
   RegToken -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
-updateOrganization regToken orgId API.UpdateOrganizationReq {..} = withFlowHandler $
-  do
-    reg <- verifyToken regToken
-    when (SR._entityType reg == SR.CUSTOMER)
-      $ L.throwException
-      $ err400 {errBody = "UNAUTHORIZED"}
-    QO.update (OrganizationId orgId) _status
-    QO.findOrganizationById (OrganizationId orgId)
-    >>= \case
-      Just v -> return $ API.OrganizationRes v
-      Nothing -> L.throwException $ err400 {errBody = "Organization not found"}
+updateOrganization regToken orgId API.UpdateOrganizationReq {..} =
+  withFlowHandler $
+    do
+      reg <- verifyToken regToken
+      when (SR._entityType reg == SR.CUSTOMER) $
+        L.throwException $
+          err400 {errBody = "UNAUTHORIZED"}
+      QO.update (OrganizationId orgId) _status
+      QO.findOrganizationById (OrganizationId orgId)
+      >>= \case
+        Just v -> return $ API.OrganizationRes v
+        Nothing -> L.throwException $ err400 {errBody = "Organization not found"}

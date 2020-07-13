@@ -9,9 +9,8 @@ import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
 import EulerHS.Language (Flow)
 import EulerHS.Prelude
-import EulerHS.Prelude
-import qualified EulerHS.Types as ET
 import EulerHS.Types (client)
+import qualified EulerHS.Types as ET
 import Servant
 import Types.API.Location
 
@@ -24,17 +23,8 @@ confirmAPI = Proxy
 confirm req =
   void $ ET.client confirmAPI req
 
-type SearchAPI =
-  "search"
-    :> "services"
-    :> ReqBody '[JSON] Search.SearchReq
-    :> Post '[JSON] Search.SearchRes
-
-searchAPI :: Proxy SearchAPI
-searchAPI = Proxy
-
 search req =
-  void $ client searchAPI req
+  void $ client Search.searchAPI req
 
 type LocationAPI =
   "location"
@@ -44,8 +34,7 @@ type LocationAPI =
 locationAPI :: Proxy LocationAPI
 locationAPI = Proxy
 
-location caseId =
-  client locationAPI caseId
+location = client locationAPI
 
 type TrackTripAPI =
   "track"

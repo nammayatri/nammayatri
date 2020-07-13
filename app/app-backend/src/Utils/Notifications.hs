@@ -2,6 +2,7 @@
 
 module Utils.Notifications where
 
+import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Track
@@ -45,7 +46,7 @@ import qualified Storage.Queries.Products as Products
 -- If the case with product is being cancelled, you have to send notification
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
-notifyOnProductCancelCb :: Maybe Text -> Case -> ProductsId -> L.Flow ()
+notifyOnProductCancelCb :: Maybe Text -> Case -> ProductInstanceId -> Flow ()
 notifyOnProductCancelCb personId c productId =
   if isJust personId
     then do
@@ -54,13 +55,13 @@ notifyOnProductCancelCb personId c productId =
         Just p -> do
           let notificationData =
                 FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-                  show (_getProductsId productId)
+                  show (_getProductInstanceId productId)
               title = FCMNotificationTitle $ T.pack "Ride cancelled!"
               body =
                 FCMNotificationBody $
                   unwords
                     [ "Your ride scheduled for",
-                      (showTimeIst $ Case._startTime c) <> ",",
+                      showTimeIst (Case._startTime c) <> ",",
                       "has been cancelled. Check the app for more details."
                     ]
           notifyPerson title body notificationData p
@@ -69,7 +70,7 @@ notifyOnProductCancelCb personId c productId =
 
 -- | Notofocation on confirmation callback
 -- unused, left as a sample, can be removed later
-notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> L.Flow ()
+notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> Flow ()
 notifyOnConfirmCb personId c tracker =
   if isJust personId
     then do
@@ -86,19 +87,18 @@ notifyOnConfirmCb personId c tracker =
               title = FCMNotificationTitle $ T.pack "Your ride is now confirmed!"
               body =
                 FCMNotificationBody $
-                  ( unwords
-                      [ "Your booking for",
-                        vehicle_category,
-                        "is confirmed for",
-                        showTimeIst $ Case._startTime c
-                      ]
-                  )
+                  unwords
+                    [ "Your booking for",
+                      vehicle_category,
+                      "is confirmed for",
+                      showTimeIst $ Case._startTime c
+                    ]
                     <> "."
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
 
-notifyOnExpiration :: Case -> L.Flow ()
+notifyOnExpiration :: Case -> Flow ()
 notifyOnExpiration caseObj = do
   let caseId = Case._id caseObj
   let personId = Case._requestor caseObj
@@ -116,7 +116,7 @@ notifyOnExpiration caseObj = do
                 FCMNotificationBody $
                   unwords
                     [ "Your ride request for",
-                      (showTimeIst startTime) <> ",",
+                      showTimeIst startTime <> ",",
                       "has expired as there were no replies.",
                       "You can place a new request to get started again!"
                     ]
@@ -124,7 +124,7 @@ notifyOnExpiration caseObj = do
         _ -> pure ()
     else pure ()
 
-notifyOnRegistration :: RegistrationToken -> Person -> L.Flow ()
+notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
 notifyOnRegistration regToken person =
   let tokenId = RegToken._id regToken
       notificationData =
@@ -139,7 +139,7 @@ notifyOnRegistration regToken person =
             ]
    in notifyPerson title body notificationData person
 
-notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> L.Flow ()
+notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> Flow ()
 notifyOnTrackCb personId tracker c =
   if isJust personId
     then do
@@ -166,15 +166,15 @@ notifyOnTrackCb personId tracker c =
                       model,
                       "(" <> reg_number <> "),",
                       "is scheduled for",
-                      (showTimeIst $ Case._startTime c) <> ".",
+                      showTimeIst (Case._startTime c) <> ".",
                       "You can see more details in the app."
                     ]
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
 
-notifyOnSearchCb :: PersonId -> CaseId -> [Products] -> L.Flow ()
-notifyOnSearchCb personId caseId products = do
+notifyOnSearchCb :: PersonId -> CaseId -> [ProductInstance] -> Flow ()
+notifyOnSearchCb personId caseId productInstances = do
   person <- Person.findById personId
   case person of
     Just p -> do
@@ -184,7 +184,7 @@ notifyOnSearchCb personId caseId products = do
           title = FCMNotificationTitle $ T.pack "New ride options available!"
           body =
             FCMNotificationBody $
-              if length products == 1
+              if length productInstances == 1
                 then
                   unwords
                     [ "You have a new reply for your ride request!",
@@ -193,7 +193,7 @@ notifyOnSearchCb personId caseId products = do
                 else
                   unwords
                     [ "You have",
-                      show (length products),
+                      show (length productInstances),
                       "new ride offers!",
                       "Check your options in the beckn app."
                     ]

@@ -56,9 +56,7 @@ deriving instance ToJSON CustomerDetail
 
 deriving instance FromJSON CustomerDetail
 
-insertExpression customer = insertExpressions [customer]
-
-insertExpressions customers = B.insertValues customers
+insertExpression customer = B.insertValues [customer]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CustomerDetailT)

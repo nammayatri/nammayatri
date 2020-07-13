@@ -2,6 +2,7 @@
 
 module Types.API.Transporter where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
@@ -44,8 +45,8 @@ data TransporterReq = TransporterReq
 instance FromJSON TransporterReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 TransporterReq SO.Organization where
-  transformFlow req = do
+instance CreateTransform TransporterReq SO.Organization Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- transformToLocation req
@@ -71,7 +72,7 @@ instance Transform2 TransporterReq SO.Organization where
           SO._updatedAt = now
         }
 
-transformToLocation :: TransporterReq -> L.Flow SL.Location
+transformToLocation :: TransporterReq -> Flow SL.Location
 transformToLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
@@ -99,7 +100,7 @@ data TransporterRes = TransporterRes
   }
   deriving (Generic, ToJSON, ToSchema)
 
-data TransporterRec = TransporterRec
+newtype TransporterRec = TransporterRec
   { organization :: SO.Organization
   }
   deriving (Generic, ToJSON, ToSchema)
@@ -114,14 +115,14 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, ToSchema, Show, FromJSON)
 
-instance Transform UpdateTransporterReq SO.Organization where
-  transformFlow2 req org = do
+instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
+  modifyTransform req org = do
     now <- getCurrentTimeUTC
     return $
       org
         { SO._name = fromMaybe (org ^. #_name) (req ^. #name),
-          SO._description = maybe (org ^. #_description) Just (req ^. #description),
-          SO._headCount = maybe (org ^. #_headCount) Just (req ^. #headCount),
+          SO._description = (req ^. #description) <|> (org ^. #_description),
+          SO._headCount = (req ^. #headCount) <|> (org ^. #_headCount),
           SO._enabled = fromMaybe (org ^. #_enabled) (req ^. #enabled),
           SO._updatedAt = now
         }

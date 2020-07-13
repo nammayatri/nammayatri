@@ -5,6 +5,6 @@ import EulerHS.Prelude
 
 data ConfirmReq = ConfirmReq
   { caseId :: Text,
-    productId :: Text
+    productInstanceId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

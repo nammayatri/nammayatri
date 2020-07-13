@@ -1,5 +1,6 @@
 module Epass.Product.Document where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -37,9 +38,9 @@ upload regToken enType enId multipartData = withFlowHandler $ do
     forM (files multipartData) $ \file ->
       uploadDocument file dir orgId
   traverse_ (createEntity enId enType) documents
-  return
-    $ DocumentRes
-    $ _getDocumentId . SD._id <$> documents
+  return $
+    DocumentRes $
+      _getDocumentId . SD._id <$> documents
 
 listDocuments ::
   RegToken -> DocumentByType -> Text -> FlowHandler [ListDocumentRes]
@@ -55,7 +56,7 @@ listDocuments regToken dt en = withFlowHandler $ do
     )
       <$> docs
 
-createEntity :: Text -> DocumentEntity -> Document -> L.Flow EntityDocument
+createEntity :: Text -> DocumentEntity -> Document -> Flow EntityDocument
 createEntity custId enType Document {..} = do
   uuid <- generateGUID
   now <- getCurrentTimeUTC
@@ -76,7 +77,7 @@ createEntity custId enType Document {..} = do
         _info = Nothing
       }
 
-uploadDocument :: FileData Mem -> Text -> OrganizationId -> L.Flow Document
+uploadDocument :: FileData Mem -> Text -> OrganizationId -> Flow Document
 uploadDocument file dir orgId = do
   let contentB = fdPayload file
       content = BSL.toStrict contentB
@@ -103,7 +104,7 @@ uploadDocument file dir orgId = do
   L.logInfo "Uploaded Document with name: " (show fileName)
   return doc
 
-getOrgId :: Text -> DocumentEntity -> L.Flow OrganizationId
+getOrgId :: Text -> DocumentEntity -> Flow OrganizationId
 getOrgId ei eit =
   case eit of
     CUSTOMER -> do

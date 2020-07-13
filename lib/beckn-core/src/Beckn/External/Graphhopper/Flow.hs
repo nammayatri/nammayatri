@@ -2,6 +2,7 @@ module Beckn.External.Graphhopper.Flow where
 
 import qualified Beckn.External.Graphhopper.Types as GrphrSearch
 import Beckn.Types.App (MandatoryQueryParam)
+import Beckn.Types.Common
 import Data.Geospatial
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -23,14 +24,14 @@ type GrphrAPI =
 grphrAPI :: Proxy GrphrAPI
 grphrAPI = Proxy
 
-search :: BaseUrl -> GrphrSearch.Request -> L.Flow (Either ClientError GrphrSearch.Response)
+search :: BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
   L.callAPI url clientM
   where
     encodePoint :: PointXY -> Text
-    encodePoint point = (show $ _xyX point) <> "," <> (show $ _xyY point)
+    encodePoint point = show (_xyX point) <> "," <> show (_xyY point)
     points_encoded = False -- Hardcoded `points_encoded` field
-    weighting = (T.toLower . show) <$> _weighting
+    weighting = T.toLower . show <$> _weighting
     vehicle = T.toLower $ show _vehicle
     points = encodePoint <$> _points'
     clientM = ET.client grphrAPI points vehicle weighting _elevation points_encoded _calcPoints

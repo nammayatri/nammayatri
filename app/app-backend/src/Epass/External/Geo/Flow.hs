@@ -1,5 +1,6 @@
 module Epass.External.Geo.Flow where
 
+import App.Types
 import qualified Data.Text as T
 import qualified Epass.External.Geo.API as API
 import Epass.External.Geo.Types
@@ -11,7 +12,7 @@ import System.Environment
 defaultBaseUrl :: BaseUrl
 defaultBaseUrl = BaseUrl Https "maps.googleapis.com" 443 ""
 
-getLocation :: BaseUrl -> Text -> Text -> L.Flow (Maybe ReverseGeoResp)
+getLocation :: BaseUrl -> Text -> Text -> Flow (Maybe ReverseGeoResp)
 getLocation url lat long = do
   key <- L.runIO $ T.pack <$> getEnv "GEOLOCATION_TOKEN"
   res <- L.callAPI url $ API.getLocation lat long key

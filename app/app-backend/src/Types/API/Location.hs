@@ -21,7 +21,7 @@ data LocationInfo = LocationInfo
   }
   deriving (Generic, ToSchema, ToJSON, Show, FromJSON)
 
-data GetLocationRes = GetLocationRes
+newtype GetLocationRes = GetLocationRes
   { location :: Maybe LocationInfo
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)

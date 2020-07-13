@@ -1,5 +1,6 @@
 module Utils.Routes where
 
+import App.Types
 import Beckn.Types.App
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Contact
@@ -11,7 +12,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Types.App
 
-buildContext :: Text -> Text -> L.Flow Context
+buildContext :: Text -> Text -> Flow Context
 buildContext action tId = do
   now <- getCurrentTimeUTC
   return $
@@ -37,8 +38,8 @@ defaultProvider lt =
 contact_ =
   Contact
     { email = Just "",
-      mobile = Just $ mobile_,
-      landline = Just $ landLine_,
+      mobile = Just mobile_,
+      landline = Just landLine_,
       ivr = []
     }
 

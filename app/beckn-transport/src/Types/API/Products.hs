@@ -1,43 +1,32 @@
 module Types.API.Products where
 
 import Beckn.Types.App
-import Beckn.Types.Common
-import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Location
-import qualified Beckn.Types.Storage.ProductInstance as ProdInst
+import Beckn.Types.Core.Amount
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Types.Storage.Vehicle
 import Data.Default
 import Data.Swagger
 import Data.Time
 import EulerHS.Prelude
 
-data ProdReq = ProdReq
-  { _status :: Maybe ProdInst.ProductInstanceStatus,
-    _assignedTo :: Maybe Text,
-    _vehicleId :: Maybe Text
+data CreateProdReq = CreateProdReq
+  { _name :: Text,
+    _description :: Maybe Text,
+    _info :: Maybe Text,
+    _rating :: Maybe Text,
+    _review :: Maybe Text,
+    _udf1 :: Maybe Text,
+    _udf2 :: Maybe Text,
+    _udf3 :: Maybe Text,
+    _udf4 :: Maybe Text,
+    _udf5 :: Maybe Text,
+    _price :: Maybe Amount
   }
-  deriving (Show, Generic, ToSchema)
+  deriving (Generic, ToSchema)
 
-instance FromJSON ProdReq where
+instance FromJSON CreateProdReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON ProdReq where
+instance ToJSON CreateProdReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-type ProdInfoRes = Product.Products
-
-data ProdRes = ProdRes
-  { _product :: Product.Products,
-    _fromLocation :: Location,
-    _toLocation :: Location
-  }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON ProdRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON ProdRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
-type ProdListRes = [ProdRes]
+type ProdRes = Product.Products

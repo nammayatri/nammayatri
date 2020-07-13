@@ -15,7 +15,6 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -129,9 +128,7 @@ instance FromJSON Vehicle where
 
 instance ToSchema Vehicle
 
-insertExpression org = insertExpressions [org]
-
-insertExpressions orgs = B.insertValues orgs
+insertExpression org = B.insertValues [org]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)

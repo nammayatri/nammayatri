@@ -1,13 +1,13 @@
-name:                beckn-core
-version:             0.1.0.0
-github:              "juspay/beckn"
-license:             BSD3
-author:              "Aravind Gopal Mallapureddy"
-maintainer:          "aravind.mallapureddy@juspay.in"
-copyright:           "2020 Author name here"
+name: beckn-core
+version: 0.1.0.0
+github: "juspay/beckn"
+license: AllRightsReserved
+author: "Juspay"
+maintainer: "Juspay"
+copyright: "2020 Juspay Technologies Private Limited"
 
 extra-source-files:
-- README.md
+  - README.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -16,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
+description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -50,52 +50,63 @@ default-extensions:
   - BlockArguments
 
 dependencies:
-- aeson
-- aeson-pretty
-- aeson-casing
-- base >= 4.7 && < 5
-- beam-core
-- beam-postgres
-- bytestring
-- containers
-- cryptonite
-- data-default
-- data-default-class
-- euler-hs
-- http-api-data
-- http-client
-- http-client-tls
-- http-types
-- jwt
-- lens
-- pureMD5
-- random-strings
-- scientific
-- servant
-- servant-client
-- servant-multipart
-- servant-purescript
-- servant-server
-- servant-subscriber
-- servant-swagger
-- swagger2
-- text
-- vault
-- wai
-- wai-extra
-- warp
-- time
-- template-haskell
-- generic-lens
-- base64-bytestring
-- utf8-string
-- geojson
+  - aeson
+  - aeson-pretty
+  - aeson-casing
+  - base >= 4.7 && < 5
+  - beam-core
+  - beam-postgres
+  - bytestring
+  - containers
+  - cryptonite
+  - data-default
+  - data-default-class
+  - euler-hs
+  - http-api-data
+  - http-client
+  - http-client-tls
+  - http-types
+  - jwt
+  - lens
+  - pureMD5
+  - random-strings
+  - servant
+  - servant-client
+  - servant-multipart
+  - servant-purescript
+  - servant-server
+  - servant-subscriber
+  - servant-swagger
+  - swagger2
+  - text
+  - vault
+  - wai
+  - wai-extra
+  - warp
+  - time
+  - template-haskell
+  - generic-lens
+  - base64-bytestring
+  - utf8-string
+  - geojson
+  - safe-money
 
 library:
   source-dirs:
-  - src
+    - src
   ghc-options:
-  - -Wall
-  - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+
+tests:
+  beckn-core-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    dependencies:
+      - beckn-core
+      - tasty
+      - tasty-hunit

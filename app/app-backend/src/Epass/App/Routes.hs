@@ -55,27 +55,27 @@ epassMultipartOptions pTag =
       backendOptions = defaultBackendOptions pTag
     }
 
-type EPassAPIs =
+type EPassAPI =
   "epass"
     :> ( Get '[JSON] Text
-           :<|> PassApplicationAPIs
-           :<|> OrganizationAPIs
-           :<|> CustomerAPIs
-           :<|> PassAPIs
+           :<|> PassApplicationAPI
+           :<|> OrganizationAPI
+           :<|> CustomerAPI
+           :<|> PassAPI
            :<|> UserAPIS
            :<|> QuotaAPIS
            :<|> BlacklistAPIS
-           :<|> DocumentAPIs
-           :<|> TagAPIs
-           :<|> CommentAPIs
-           :<|> LocationAPIs
+           :<|> DocumentAPI
+           :<|> TagAPI
+           :<|> CommentAPI
+           :<|> LocationAPI
        )
 
-epassAPIs :: Proxy EPassAPIs
-epassAPIs = Proxy
+epassAPI :: Proxy EPassAPI
+epassAPI = Proxy
 
-epassServer' :: V.Key (HashMap Text Text) -> FlowServer EPassAPIs
-epassServer' key =
+epassServer :: V.Key (HashMap Text Text) -> FlowServer EPassAPI
+epassServer key =
   HealthCheck.healthCheckApp
     :<|> passApplicationFlow
     :<|> organizationFlow
@@ -91,7 +91,7 @@ epassServer' key =
 
 ---------------------------------
 ---- Pass Application Flow ------
-type PassApplicationAPIs =
+type PassApplicationAPI =
   "pass_application"
     :> AuthHeader
     :> ( ReqBody '[JSON] CreatePassApplicationReq
@@ -128,7 +128,7 @@ passApplicationFlow registrationToken =
 
 ----- Organization Flow -------
 --
-type OrganizationAPIs =
+type OrganizationAPI =
   "organization"
     :> AuthHeader
     :> ( ReqBody '[JSON] CreateOrganizationReq
@@ -150,7 +150,7 @@ organizationFlow registrationToken =
 
 ---------------------------------
 ----- Customer Flow -------
-type CustomerAPIs =
+type CustomerAPI =
   "customer"
     :> AuthHeader
     :> Capture "customerId" Text
@@ -163,7 +163,7 @@ customerFlow = Customer.getCustomerInfo
 
 -- | Please be cautious while changing the order of the routes
 -- | The /pass/list?.. was getting overriden by /pass/:passId
-type PassAPIs =
+type PassAPI =
   "pass"
     :> AuthHeader
     :> ( "list"
@@ -265,7 +265,7 @@ blacklistFlow registrationToken =
 
 --------
 ---- Document Api
-type DocumentAPIs =
+type DocumentAPI =
   "document"
     :> AuthHeader
     :> ( Capture "entityType" DocumentEntity
@@ -284,7 +284,7 @@ documentFlow registrationToken =
 
 --------
 ---- Tag Api
-type TagAPIs =
+type TagAPI =
   "tag"
     :> AuthHeader
     :> ( ReqBody '[JSON] Tag.CreateReq
@@ -316,7 +316,7 @@ tagFlow registrationToken =
 
 --------
 ---- Comment Api
-type CommentAPIs =
+type CommentAPI =
   "comment"
     :> AuthHeader
     :> ( ReqBody '[JSON] Comment.CreateReq
@@ -333,7 +333,7 @@ commentFlow registrationToken =
 
 --------------------------------------------
 ----- Location API
-type LocationAPIs =
+type LocationAPI =
   "location"
     :> AuthHeader
     :> ( "list"

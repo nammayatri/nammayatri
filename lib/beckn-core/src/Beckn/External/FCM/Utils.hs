@@ -1,18 +1,19 @@
 module Beckn.External.FCM.Utils where
 
 import qualified Beckn.External.FCM.Flow as FCM
+import Beckn.Types.Common
 import qualified Beckn.Utils.JWT as JWT
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified System.Environment as SE
 
 -- | Create a loop that refreshes FCM token in background
-createFCMTokenRefreshThread :: L.Flow ()
+createFCMTokenRefreshThread :: FlowR r ()
 createFCMTokenRefreshThread = do
   fcmEnabled <- L.runIO $ SE.lookupEnv "FCM_JSON_PATH"
   case fcmEnabled of
     Nothing -> pure () --report error here if FCM is crucial
-    Just _ -> L.forkFlow forkDesc $ do
+    Just _ -> lift . L.forkFlow forkDesc $ do
       _ <- forever $ do
         token <- FCM.checkAndGetToken
         L.runIO $ delay token
@@ -30,6 +31,6 @@ createFCMTokenRefreshThread = do
               JWT.JWTValid x ->
                 -- seconds before token expiration
                 if x > 300
-                  then (fromInteger x) - 300
+                  then fromInteger x - 300
                   else 10
               _ -> 10 -- just a caution, it should be valid by this moment

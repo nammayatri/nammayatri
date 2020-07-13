@@ -45,7 +45,7 @@ instance FromJSON Toll where
 instance ToJSON Toll where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Waterway = Waterway
+newtype Waterway = Waterway
   { _type :: Text --"SEA", "RIVER", "LAKE"
   }
   deriving (Generic, Show)
@@ -56,7 +56,7 @@ instance FromJSON Waterway where
 instance ToJSON Waterway where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Airway = Airway
+newtype Airway = Airway
   { _type :: Text --"CIVILIAN", "MILITARY"
   }
   deriving (Generic, Show)
@@ -67,7 +67,7 @@ instance FromJSON Airway where
 instance ToJSON Airway where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Railway = Railway
+newtype Railway = Railway
   { _type :: Text --"NARROW-GAUGE", "METER-GAUGE", "BROAD-GAUGE"
   }
   deriving (Generic, Show)

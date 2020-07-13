@@ -2,17 +2,15 @@
 
 module Storage.Queries.Organization where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
-import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
@@ -21,40 +19,40 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.transporterDb
 
-create :: Storage.Organization -> L.Flow ()
+create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
-verifyToken :: RegToken -> L.Flow Storage.Organization
+verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
   L.logInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "UNAUTHENTICATED_USER"
   where
-    predicate regToken Storage.Organization {..} = (_apiKey ==. B.val_ (Just regToken))
+    predicate regToken Storage.Organization {..} = _apiKey ==. B.val_ (Just regToken)
 
-findOrganizationById :: OrganizationId -> L.Flow Storage.Organization
-findOrganizationById id = do
+findOrganizationById :: OrganizationId -> Flow Storage.Organization
+findOrganizationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_ORG_ID"
   where
-    predicate Storage.Organization {..} = (_id ==. B.val_ id)
+    predicate Storage.Organization {..} = _id ==. B.val_ id
 
 listOrganizations ::
   Maybe Int ->
   Maybe Int ->
   [Storage.OrganizationType] ->
   [Storage.Status] ->
-  L.Flow [Storage.Organization]
+  Flow [Storage.Organization]
 listOrganizations mlimit moffset oType status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Organization {..} = B.desc_ _createdAt
     predicate oType status Storage.Organization {..} =
       foldl
@@ -65,13 +63,13 @@ listOrganizations mlimit moffset oType status =
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 update ::
   OrganizationId ->
   Storage.Status ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -86,8 +84,8 @@ update id status = do
           _status <-. B.val_ status
         ]
 
-updateOrganizationRec :: Storage.Organization -> L.Flow ()
-updateOrganizationRec org = do
+updateOrganizationRec :: Storage.Organization -> Flow ()
+updateOrganizationRec org =
   DB.update dbTable (setClause org) (predicate $ org ^. #_id)
     >>= either DB.throwDBError pure
   where

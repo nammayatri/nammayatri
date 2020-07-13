@@ -1,11 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Types.Notification where
 
-import Beckn.Types.Common
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken

@@ -1,8 +1,8 @@
 module Storage.Queries.Organization where
 
+import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as Storage
-import Beckn.Utils.Extra
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -17,31 +17,31 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.appDb
 
-create :: Storage.Organization -> L.Flow ()
+create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
 findOrganizationById ::
-  OrganizationId -> L.Flow (Maybe Storage.Organization)
-findOrganizationById id = do
+  OrganizationId -> Flow (Maybe Storage.Organization)
+findOrganizationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.Organization {..} = (_id ==. B.val_ id)
+    predicate Storage.Organization {..} = _id ==. B.val_ id
 
 listOrganizations ::
   Maybe Int ->
   Maybe Int ->
   [Storage.OrganizationType] ->
   [Storage.Status] ->
-  L.Flow [Storage.Organization]
+  Flow [Storage.Organization]
 listOrganizations mlimit moffset oType status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Organization {..} = B.desc_ _createdAt
     predicate oType status Storage.Organization {..} =
       foldl
@@ -52,13 +52,13 @@ listOrganizations mlimit moffset oType status =
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 update ::
   OrganizationId ->
   Storage.Status ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

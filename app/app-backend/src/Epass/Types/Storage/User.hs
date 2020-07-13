@@ -96,9 +96,9 @@ instance Default User where
         _OrganizationId = OrganizationId Defaults.orgId,
         _TenantOrganizationId = Nothing,
         _name = Defaults.user,
-        _username = Just $ Defaults.user,
+        _username = Just Defaults.user,
         _mobileNumber = "",
-        _email = Just $ Defaults.email,
+        _email = Just Defaults.email,
         _LocationId = Defaults.locId,
         _role = VIEWER,
         _verified = False,
@@ -120,9 +120,7 @@ instance ToJSON User where
 instance FromJSON User where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-insertExpression user = insertExpressions [user]
-
-insertExpressions users = B.insertValues users
+insertExpression user = B.insertValues [user]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity UserT)

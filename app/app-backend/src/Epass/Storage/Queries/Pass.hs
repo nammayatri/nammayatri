@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.Pass where
 
+import App.Types
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -20,18 +21,18 @@ data ListById
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.PassT)
 dbTable = DB._pass DB.becknDb
 
-create :: Storage.Pass -> L.Flow ()
+create :: Storage.Pass -> Flow ()
 create Storage.Pass {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Pass {..})
     >>= either DB.throwDBError pure
 
-findPassById :: Text -> L.Flow (Maybe Storage.Pass)
+findPassById :: Text -> Flow (Maybe Storage.Pass)
 findPassById id =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.Pass {..} = _ShortId ==. B.val_ id ||. _id ==. B.val_ (PassId id)
 
-revokeByPassApplicationId :: PassApplicationId -> L.Flow ()
+revokeByPassApplicationId :: PassApplicationId -> Flow ()
 revokeByPassApplicationId passApplicationId =
   DB.update dbTable setClause (predicate passApplicationId)
     >>= either DB.throwDBError pure
@@ -39,7 +40,7 @@ revokeByPassApplicationId passApplicationId =
     predicate i Storage.Pass {..} = _PassApplicationId ==. B.val_ i
     setClause Storage.Pass {..} = mconcat [_status <-. B.val_ Storage.REVOKED]
 
-updatePassStatus :: Storage.Status -> Text -> L.Flow ()
+updatePassStatus :: Storage.Status -> Text -> Flow ()
 updatePassStatus action id =
   DB.update dbTable (setClause action) (predicate id)
     >>= either DB.throwDBError pure
@@ -47,7 +48,7 @@ updatePassStatus action id =
     predicate i Storage.Pass {..} = _ShortId ==. B.val_ i
     setClause s Storage.Pass {..} = mconcat [_status <-. B.val_ s]
 
-listAllPassesWithOffset :: Integer -> Integer -> ListById -> [Storage.Status] -> L.Flow [Storage.Pass]
+listAllPassesWithOffset :: Integer -> Integer -> ListById -> [Storage.Status] -> Flow [Storage.Pass]
 listAllPassesWithOffset limit offset id stats =
   DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
     >>= either DB.throwDBError pure
@@ -62,7 +63,7 @@ listAllPassesWithOffset limit offset id stats =
     predicate (ById i) s Storage.Pass {..} = _id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
     orderBy Storage.Pass {..} = B.desc_ _updatedAt
 
-listAllPasses :: ListById -> [Storage.Status] -> L.Flow [Storage.Pass]
+listAllPasses :: ListById -> [Storage.Status] -> Flow [Storage.Pass]
 listAllPasses id status =
   DB.findAll dbTable (predicate id status)
     >>= either DB.throwDBError pure
@@ -76,7 +77,7 @@ listAllPasses id status =
     predicate (ById i) [] Storage.Pass {..} = _id ==. B.val_ i
     predicate (ById i) s Storage.Pass {..} = _id ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
 
-updateMultiple :: Text -> Storage.Pass -> L.Flow ()
+updateMultiple :: Text -> Storage.Pass -> Flow ()
 updateMultiple id pass@Storage.Pass {..} = do
   currTime <- getCurrentTimeUTC
   DB.update dbTable (setClause currTime pass) (predicate id)

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Types.API.Location where
 
 import Beckn.Types.MapSearch as MapSearch
@@ -22,7 +20,7 @@ data UpdateLocationReq = UpdateLocationReq
   }
   deriving (Generic, ToSchema, ToJSON, Show, FromJSON)
 
-data UpdateLocationRes = UpdateLocationRes
+newtype UpdateLocationRes = UpdateLocationRes
   { status :: Text
   }
   deriving (Generic, ToJSON, ToSchema)
@@ -46,7 +44,7 @@ data LocationInfo = LocationInfo
   }
   deriving (Generic, ToJSON, Show, FromJSON)
 
-data GetLocationRes = GetLocationRes
+newtype GetLocationRes = GetLocationRes
   { location :: Maybe LocationInfo
   }
   deriving (Generic, ToJSON, FromJSON)

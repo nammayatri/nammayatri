@@ -2,6 +2,7 @@
 
 module Utils.Notifications where
 
+import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
@@ -22,7 +23,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 
 -- | Send FCM "search" notification to provider admins
-notifyTransportersOnSearch :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnSearch :: Case -> [Person] -> Flow ()
 notifyTransportersOnSearch c =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -34,12 +35,12 @@ notifyTransportersOnSearch c =
       FCMNotificationBody $
         unwords
           [ "You have a new ride request for",
-            (showTimeIst $ Case._startTime c) <> ".",
+            showTimeIst (Case._startTime c) <> ".",
             "Check the app to accept or decline and see more details."
           ]
 
 -- | Send FCM "confirm" notification to provider admins
-notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnConfirm :: Case -> [Person] -> Flow ()
 notifyTransportersOnConfirm c =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -56,7 +57,7 @@ notifyTransportersOnConfirm c =
           ]
 
 -- | Send FCM "cancel" notification to provider admins
-notifyTransportersOnCancel :: Case -> T.Text -> [Person] -> L.Flow ()
+notifyTransportersOnCancel :: Case -> T.Text -> [Person] -> Flow ()
 notifyTransportersOnCancel c productId =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -68,11 +69,11 @@ notifyTransportersOnCancel c productId =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            (showTimeIst $ Case._startTime c) <> ",",
+            showTimeIst (Case._startTime c) <> ",",
             "has been cancelled. Check the app for more details."
           ]
 
-notifyOnRegistration :: RegistrationToken -> Person -> L.Flow ()
+notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
 notifyOnRegistration regToken =
   notifyPerson title body notificationData
   where
@@ -83,7 +84,7 @@ notifyOnRegistration regToken =
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
     body = FCMNotificationBody $ T.pack "You can now start accepting rides!"
 
-notifyTransporterOnExpiration :: Case -> [Person] -> L.Flow ()
+notifyTransporterOnExpiration :: Case -> [Person] -> Flow ()
 notifyTransporterOnExpiration c =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -95,12 +96,12 @@ notifyTransporterOnExpiration c =
       FCMNotificationBody $
         unwords
           [ "The ride request for",
-            (showTimeIst $ Case._startTime c) <> ",",
+            showTimeIst (Case._startTime c) <> ",",
             "has expired as the customer failed to confirm.",
             "You can view more details in the app."
           ]
 
-notifyCancelReqByBP :: Products -> [Person] -> L.Flow ()
+notifyCancelReqByBP :: ProductInstance -> [Person] -> Flow ()
 notifyCancelReqByBP p =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -108,7 +109,7 @@ notifyCancelReqByBP p =
       FCM.FCMData
         { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
           _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getProductsId $ p ^. #_id,
+          _fcmEntityIds = show $ _getProductInstanceId $ p ^. #_id,
           _fcmEntityType = FCM.Organization
         }
     title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
@@ -116,6 +117,6 @@ notifyCancelReqByBP p =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            (showTimeIst $ Products._startTime p) <> ",",
+            showTimeIst (ProductInstance._startTime p) <> ",",
             "has been cancelled. Check the app for more details."
           ]

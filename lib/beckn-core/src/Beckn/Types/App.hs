@@ -11,13 +11,20 @@ import qualified EulerHS.Runtime as R
 import Servant
 
 -- App Types
-data Env = Env
-  { runTime :: R.FlowRuntime
+data EnvR r = EnvR
+  { runTime :: R.FlowRuntime,
+    appEnv :: r
   }
 
-type FlowHandler = ReaderT Env (ExceptT ServerError IO)
+type Env = EnvR ()
 
-type FlowServer api = ServerT api (ReaderT Env (ExceptT ServerError IO))
+type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
+
+type FlowHandler = FlowHandlerR ()
+
+type FlowServerR r api = ServerT api (FlowHandlerR r)
+
+type FlowServer api = FlowServerR () api
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 
@@ -69,6 +76,13 @@ newtype ProductInstanceId = ProductInstanceId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''ProductInstanceId
+
+newtype InventoryId = InventoryId
+  { _getInventoryId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''InventoryId
 
 type Limit = Int
 

@@ -1,12 +1,10 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Cron where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import App.Types
+import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as C
 import qualified Beckn.Types.Storage.Person as PS
-import qualified Beckn.Types.Storage.ProductInstance as CP
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as P
 import Beckn.Utils.Common (authenticate, withFlowHandler)
 import qualified EulerHS.Language as L
@@ -21,23 +19,23 @@ import qualified Utils.Notifications as Notify
 expire :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireCaseRes
 expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
-  cases <- CQ.findAllExpiredByStatus [C.NEW] C.RIDEBOOK from to
+  cases <- CQ.findAllExpiredByStatus [C.NEW] C.RIDESEARCH from to
   productInstances <- CPQ.findAllByCaseIds (C._id <$> cases)
-  products <- PQ.findAllById (CP._productId <$> productInstances)
   CQ.updateStatusByIds (C._id <$> cases) C.CLOSED
-  CPQ.updateStatusByIds (CP._id <$> productInstances) CP.EXPIRED
-  notifyTransporters cases productInstances products
+  CPQ.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
+  notifyTransporters cases productInstances
   pure $ ExpireCaseRes $ length cases
 
-notifyTransporters :: [C.Case] -> [CP.ProductInstance] -> [P.Products] -> L.Flow ()
-notifyTransporters cases productInstances products =
+notifyTransporters :: [C.Case] -> [PI.ProductInstance] -> Flow ()
+notifyTransporters cases =
   traverse_
-    ( \cp -> do
-        let filteredProducts = filter (\x -> CP._productId cp == P._id x) products
-        admins <- PSQ.findAllByOrgIds [PS.ADMIN] $ P._organizationId <$> filteredProducts
-        let caseObj = filter (\x -> CP._caseId cp == C._id x) cases
-        case caseObj of
-          [] -> pure ()
-          x : _ -> Notify.notifyTransporterOnExpiration x admins
+    ( \cp ->
+        do
+          admins <-
+            PSQ.findAllByOrgIds [PS.ADMIN] $
+              PI._organizationId <$> [cp]
+          let caseObj = filter (\x -> PI._caseId cp == C._id x) cases
+          case caseObj of
+            [] -> pure ()
+            x : _ -> Notify.notifyTransporterOnExpiration x admins
     )
-    productInstances

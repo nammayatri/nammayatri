@@ -6,8 +6,8 @@ import EulerHS.Prelude
 
 data Customer = Customer
   { _type :: Text, --"SINGLE", "GROUP"
-    _single :: (Maybe Person),
-    _group :: (Maybe GroupCustomer)
+    _single :: Maybe Person,
+    _group :: Maybe GroupCustomer
   }
   deriving (Generic, Show)
 

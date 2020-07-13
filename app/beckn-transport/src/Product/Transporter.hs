@@ -18,35 +18,32 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Transporter
 import Types.App
 
-createTransporter :: RegToken -> TransporterReq -> FlowHandler TransporterRes
-createTransporter regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
+createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   validate person
-  organization <- transformFlow req
+  organization <- createTransform req
   QO.create organization
   QP.updateOrganizationIdAndMakeAdmin (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
   updatedPerson <- QP.findPersonById (PersonId _EntityId)
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
-      unless (SP._verified person)
-        $ L.throwException
-        $ err400 {errBody = "user not verified"}
-      when (isJust $ SP._organizationId person)
-        $ L.throwException
-        $ err400 {errBody = "user already registered an organization"}
+      unless (SP._verified person) $
+        L.throwException $
+          err400 {errBody = "user not verified"}
+      when (isJust $ SP._organizationId person) $
+        L.throwException $
+          err400 {errBody = "user already registered an organization"}
 
-createGateway :: RegToken -> TransporterReq -> FlowHandler GatewayRes
-createGateway regToken req = withFlowHandler $ do
-  QO.verifyToken regToken
-  organization <- transformFlow req
+createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes
+createGateway _ req = withFlowHandler $ do
+  organization <- createTransform req
   QO.create organization
   return $ TransporterRec organization
 
-updateTransporter :: Text -> RegToken -> UpdateTransporterReq -> FlowHandler TransporterRec
-updateTransporter orgId regToken req = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
+updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
   now <- getCurrentTimeUTC
   case maybePerson of
@@ -55,20 +52,19 @@ updateTransporter orgId regToken req = withFlowHandler $ do
       org <- QO.findOrganizationById $ OrganizationId orgId
       organization <-
         if req ^. #enabled /= Just False
-          then transformFlow2 req org >>= addTime (Just now)
-          else transformFlow2 req org
+          then modifyTransform req org >>= addTime (Just now)
+          else modifyTransform req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
     Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
   where
-    validate person = do
+    validate person =
       unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
-getTransporter :: RegToken -> FlowHandler TransporterRec
-getTransporter regToken = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
+getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   validate person
   case person ^. #_organizationId of

@@ -1,8 +1,8 @@
 module Storage.Queries.Person where
 
+import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
@@ -18,50 +18,49 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.transporterDb
 
-create :: Storage.Person -> L.Flow ()
+create :: Storage.Person -> Flow ()
 create Storage.Person {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Person {..})
     >>= either DB.throwDBError pure
 
 findPersonById ::
-  PersonId -> L.Flow Storage.Person
-findPersonById id = do
+  PersonId -> Flow Storage.Person
+findPersonById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_DATA"
+    >>= fromMaybeM400 "PERSON_NOT_FOUND"
   where
-    predicate Storage.Person {..} = (_id ==. B.val_ id)
+    predicate Storage.Person {..} = _id ==. B.val_ id
 
-findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> L.Flow (Maybe Storage.Person)
-findPersonByIdAndRoleAndOrgId id role orgId = do
+findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId id role orgId =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-      ( _id ==. B.val_ id
-          &&. _role ==. B.val_ role
-          &&. _organizationId ==. B.val_ (Just orgId)
-      )
+      _id ==. B.val_ id
+        &&. _role ==. B.val_ role
+        &&. _organizationId ==. B.val_ (Just orgId)
 
-findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
-findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     predicate roles orgIds Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
         [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
-findAllByOrgIds roles orgIds = do
+  [Storage.Role] -> [Text] -> Flow [Storage.Person]
+findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
   where
     predicate roles orgIds Storage.Person {..} =
@@ -69,23 +68,42 @@ findAllByOrgIds roles orgIds = do
         (&&.)
         (B.val_ True)
         [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` ((\x -> B.val_ $ Just x) <$> orgIds) ||. complementVal orgIds
+          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False
 
 findByMobileNumber ::
-  Text -> L.Flow (Maybe Storage.Person)
-findByMobileNumber identifier =
+  Text -> Text -> Flow (Maybe Storage.Person)
+findByMobileNumber countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Person {..} =
-      _mobileNumber ==. B.val_ (Just identifier)
+      _mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. _mobileNumber ==. B.val_ (Just mobileNumber)
 
-updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
+findByIdentifier ::
+  Text -> Flow (Maybe Storage.Person)
+findByIdentifier identifier =
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Person {..} =
+      _identifier ==. B.val_ (Just identifier)
+
+findByEmail ::
+  Text -> Flow (Maybe Storage.Person)
+findByEmail email =
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Person {..} =
+      _email ==. B.val_ (Just email)
+
+updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause orgId now) (predicate personId)
@@ -99,7 +117,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePersonRec :: PersonId -> Storage.Person -> L.Flow ()
+updatePersonRec :: PersonId -> Storage.Person -> Flow ()
 updatePersonRec personId person = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause person now) (predicate personId)
@@ -126,10 +144,13 @@ updatePersonRec personId person = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> L.Flow ()
+updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   now <- getCurrentTimeUTC
-  DB.update dbTable (setClause identifier identifierType mobileNumber verified now) (predicate personId)
+  DB.update
+    dbTable
+    (setClause identifier identifierType mobileNumber verified now)
+    (predicate personId)
     >>= either DB.throwDBError pure
   where
     setClause i it mn v n Storage.Person {..} =
@@ -147,7 +168,7 @@ update ::
   Storage.Status ->
   Bool ->
   Maybe FCM.FCMRecipientToken ->
-  L.Flow ()
+  Flow ()
 update id status verified deviceTokenM = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -158,29 +179,16 @@ update id status verified deviceTokenM = do
   where
     setClause status verified currTime deviceToken Storage.Person {..} =
       mconcat
-        ( [ _status <-. B.val_ status,
-            _updatedAt <-. B.val_ currTime,
-            _verified <-. B.val_ verified,
-            _deviceToken <-. B.val_ deviceToken
-          ]
-        )
+        [ _status <-. B.val_ status,
+          _updatedAt <-. B.val_ currTime,
+          _verified <-. B.val_ verified,
+          _deviceToken <-. B.val_ deviceToken
+        ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-findByAnyOf :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> L.Flow (Maybe Storage.Person)
-findByAnyOf idM mobileM emailM identifierM =
-  DB.findOne dbTable (predicate idM mobileM emailM identifierM)
-    >>= either DB.throwDBError pure
-  where
-    predicate idM mobileM emailM identifierM Storage.Person {..} =
-      ( (B.val_ (isNothing idM) ||. _id ==. B.val_ (PersonId (fromMaybe "DONT_MATCH" idM)))
-          &&. (B.val_ (isNothing identifierM) ||. _identifier ==. B.val_ identifierM)
-          &&. (B.val_ (isNothing mobileM) ||. _mobileNumber ==. B.val_ mobileM)
-          &&. (B.val_ (isNothing emailM) ||. _email ==. B.val_ emailM)
-      )
-
-deleteById :: PersonId -> L.Flow ()
-deleteById id = do
+deleteById :: PersonId -> Flow ()
+deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Person {..} = (_id ==. B.val_ id)
+    predicate id Storage.Person {..} = _id ==. B.val_ id

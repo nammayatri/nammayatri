@@ -1,10 +1,12 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.ProductInstance where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
@@ -22,32 +24,29 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.API.ProductInstance
-import Utils.Common (verifyToken)
 
-list :: RegToken -> ProdInstReq -> FlowHandler ProductInstanceList
-list regToken ProdInstReq {..} = withFlowHandler $ do
-  SR.RegistrationToken {..} <- verifyToken regToken
-  let personId = PersonId _EntityId
-  person <- Person.findById personId
-  caseProdList <-
-    ProductInstance.listAllProductInstanceWithOffset _limit _offset (ProductInstance.ByCustomerId personId) _status
-  caseList <- Case.findAllByIds (ProductInstance._caseId <$> caseProdList)
-  prodList <- Products.findAllByIds (ProductInstance._productId <$> caseProdList)
+list :: Person.Person -> [SPI.ProductInstanceStatus] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list person status mlimit moffset = withFlowHandler $ do
+  piList <-
+    ProductInstance.listAllProductInstanceWithOffset limit offset (ProductInstance.ByCustomerId $ person ^. #_id) status
+  caseList <- Case.findAllByIds (SPI._caseId <$> piList)
+  prodList <- Products.findAllByIds (SPI._productId <$> piList)
   locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))
-  return $ catMaybes $ joinIds prodList caseList locList <$> caseProdList
+  return $ catMaybes $ joinIds prodList caseList locList <$> piList
   where
-    joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> ProductInstance.ProductInstance -> Maybe ProductInstanceRes
-    joinIds prodList caseList locList caseProd =
-      case find (\x -> (ProductInstance._caseId caseProd) == Case._id x) caseList of
-        Just k -> buildResponse k
-        Nothing -> Nothing
+    limit = toInteger $ fromMaybe 50 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
+    joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> SPI.ProductInstance -> Maybe ProductInstanceRes
+    joinIds prodList caseList locList prodInst =
+      find (\x -> SPI._caseId prodInst == Case._id x) caseList
+        >>= buildResponse
       where
-        buildResponse k = (prepare locList caseProd k) <$> find (\z -> (ProductInstance._productId caseProd) == Product._id z) prodList
-        prepare locList caseProd cs prod =
+        buildResponse k = prepare locList prodInst k <$> find (\z -> SPI._productId prodInst == Product._id z) prodList
+        prepare locList prodInst cs prod =
           ProductInstanceRes
             { _case = cs,
               _product = prod,
-              _productInstance = caseProd,
-              _fromLocation = find (\x -> (Case._fromLocationId cs == _getLocationId (Loc._id x))) locList,
-              _toLocation = find (\x -> (Case._toLocationId cs == _getLocationId (Loc._id x))) locList
+              _productInstance = prodInst,
+              _fromLocation = find (\x -> Case._fromLocationId cs == _getLocationId (Loc._id x)) locList,
+              _toLocation = find (\x -> Case._toLocationId cs == _getLocationId (Loc._id x)) locList
             }

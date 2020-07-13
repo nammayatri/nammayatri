@@ -1,7 +1,6 @@
 module Types.API.Registration where
 
 import Beckn.External.FCM.Types
-import Beckn.Types.Common
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
 import Data.Swagger
@@ -11,7 +10,8 @@ import Servant.Swagger
 data InitiateLoginReq = InitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
-    _identifier :: Text,
+    _mobileNumber :: Text,
+    _mobileCountryCode :: Text,
     _role :: Maybe Role,
     _deviceToken :: Maybe FCMRecipientToken
   }
@@ -26,7 +26,8 @@ instance ToJSON InitiateLoginReq where
 data ReInitiateLoginReq = ReInitiateLoginReq
   { _medium :: Medium,
     __type :: LoginType,
-    _identifier :: Text,
+    _mobileNumber :: Text,
+    _mobileCountryCode :: Text,
     _deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic, ToSchema)
@@ -41,14 +42,15 @@ data InitiateLoginRes = InitiateLoginRes
   { tokenId :: Text,
     attempts :: Int
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 ---------- Verify Login --------
 data LoginReq = LoginReq
   { _medium :: Medium,
     __type :: LoginType,
     _hash :: Text,
-    _identifier :: Text,
+    _mobileNumber :: Text,
+    _mobileCountryCode :: Text,
     _deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic, ToSchema)
@@ -63,4 +65,4 @@ data LoginRes = LoginRes
   { registrationToken :: Text,
     user :: Person
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

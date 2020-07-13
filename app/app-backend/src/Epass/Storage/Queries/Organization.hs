@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.Organization where
 
+import App.Types
 import qualified Beckn.Types.Storage.Location as BTL
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
@@ -17,20 +18,20 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.becknDb
 
-create :: Storage.Organization -> L.Flow ()
+create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
 findOrganizationById ::
-  OrganizationId -> L.Flow (Maybe Storage.Organization)
+  OrganizationId -> Flow (Maybe Storage.Organization)
 findOrganizationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
-listOrganizations :: Maybe Int -> Maybe Int -> [BTL.LocationType] -> [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> [Storage.Status] -> Maybe Bool -> L.Flow [Storage.Organization]
+listOrganizations :: Maybe Int -> Maybe Int -> [BTL.LocationType] -> [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> [Storage.Status] -> Maybe Bool -> Flow [Storage.Organization]
 listOrganizations mlimit moffset locationTypes pincodes cities districts wards states statuses verifiedM =
   DB.findAllWithLimitOffsetWhere dbTable (predicate locationTypes pincodes cities districts wards states statuses verifiedM) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -59,7 +60,7 @@ complementVal l
 update ::
   OrganizationId ->
   Storage.Status ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

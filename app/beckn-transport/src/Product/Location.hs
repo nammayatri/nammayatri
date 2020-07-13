@@ -2,11 +2,13 @@
 
 module Product.Location where
 
+import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.MapSearch (BoundingBoxWithoutCRS, GeospatialGeometry, PointXY (..))
+import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Generics.Labels
@@ -43,9 +45,8 @@ data CachedLocationInfo = CachedLocationInfo
   }
   deriving (Generic, ToJSON, Show, FromJSON)
 
-updateLocation :: Text -> RegToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
-updateLocation caseId regToken req = withFlowHandler $ do
-  QR.verifyToken regToken -- TODO: Move this verification to redis
+updateLocation :: SR.RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
+updateLocation _ caseId req = withFlowHandler $ do
   -- TODO: Add a driver and case check
   driverLat <- maybe (L.throwException $ err400 {errBody = "Lat not specified"}) return $ req ^. #lat
   driverLon <- maybe (L.throwException $ err400 {errBody = "Long not specified"}) return $ req ^. #long
@@ -74,7 +75,7 @@ getLocation :: Text -> FlowHandler GetLocationRes
 getLocation caseId = withFlowHandler $ do
   (GetLocationRes . map fromCacheLocationInfo) <$> Redis.getKeyRedis caseId
 
-updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> CachedLocationInfo -> L.Flow CachedLocationInfo
+updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> CachedLocationInfo -> Flow CachedLocationInfo
 updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
   now <- getCurrentTimeUTC
   -- lat long will be present
@@ -144,7 +145,7 @@ calculateRemainingDuration traversedWaypoints (destLat, destLong) initalDuration
           distanceInM = MapSearch.distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2)
        in MapSearch.speedInMPS distanceInM durationInS
 
-createLocationInfo :: UpdateLocationReq -> Maybe (Double, Double) -> Maybe MapSearch.Route -> L.Flow CachedLocationInfo
+createLocationInfo :: UpdateLocationReq -> Maybe (Double, Double) -> Maybe MapSearch.Route -> Flow CachedLocationInfo
 createLocationInfo UpdateLocationReq {..} destinationM routeM = do
   now <- getCurrentTimeUTC
   -- lat long will be present
@@ -174,16 +175,16 @@ createLocationInfo UpdateLocationReq {..} destinationM routeM = do
   where
     getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
 
-getRoute' :: Double -> Double -> Double -> Double -> L.Flow (Maybe MapSearch.Route)
+getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
-  routeE <- MapSearch.getRoute $ getRouteRequest
+  routeE <- MapSearch.getRoute getRouteRequest
   case routeE of
     Left err -> do
       L.logInfo "GetRoute" (show err)
       return Nothing
     Right MapSearch.Response {..} ->
-      if length routes > 0
-        then return $ Just $ head routes
+      if null routes
+        then return . Just $ head routes
         else return Nothing
   where
     getRouteRequest = do
@@ -197,13 +198,13 @@ getRoute' fromLat fromLon toLat toLon = do
           calcPoints = Just True
         }
 
-getRoute :: RegToken -> Location.Request -> FlowHandler Location.Response
-getRoute regToken Location.Request {..} = withFlowHandler $ do
-  QR.verifyToken regToken
-  MapSearch.getRoute (getRouteRequest)
-    >>= either
-      (\err -> L.throwException $ err400 {errBody = show err})
-      return
+getRoute :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
+getRoute _ Location.Request {..} =
+  withFlowHandler $
+    MapSearch.getRoute getRouteRequest
+      >>= either
+        (\err -> L.throwException $ err400 {errBody = show err})
+        return
   where
     mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long
     getRouteRequest =

@@ -135,8 +135,8 @@ $(makeLenses ''FCMColor)
 $(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMColor)
 
 -- | Options for features provided by the FCM SDK for Android.
-data FCMAndroidOptions = FCMAndroidOptions
-  { _fcmdAnalyticsLabel :: !(Maybe Text)
+newtype FCMAndroidOptions = FCMAndroidOptions
+  { _fcmdAnalyticsLabel :: Maybe Text
   }
   deriving (Eq, Show)
 

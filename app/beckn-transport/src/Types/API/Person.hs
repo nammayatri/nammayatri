@@ -2,11 +2,11 @@
 
 module Types.API.Person where
 
+import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Extra
@@ -49,8 +49,8 @@ data UpdatePersonReq = UpdatePersonReq
 instance FromJSON UpdatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform UpdatePersonReq SP.Person where
-  transformFlow2 req person = do
+instance ModifyTransform UpdatePersonReq SP.Person Flow where
+  modifyTransform req person = do
     location <- updateOrCreateLocation req $ SP._locationId person
     return $
       person
@@ -72,7 +72,7 @@ instance Transform UpdatePersonReq SP.Person where
           SP._locationId = Just (_getLocationId $ SL._id location)
         }
 
-updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> L.Flow SL.Location
+updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> Flow SL.Location
 updateOrCreateLocation req Nothing = do
   location <- createLocation req
   QL.create location
@@ -83,7 +83,7 @@ updateOrCreateLocation req (Just id) = do
   return location
 
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
-transformToLocation req location = do
+transformToLocation req location =
   location
     { SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
       SL._lat = req ^. #_lat,
@@ -98,7 +98,7 @@ transformToLocation req location = do
       SL._bound = req ^. #_bound
     }
 
-createLocation :: UpdatePersonReq -> L.Flow SL.Location
+createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
@@ -126,7 +126,7 @@ ifJustExtract a b = fromMaybe b a
 
 (^^.) f g = g f
 
-data UpdatePersonRes = UpdatePersonRes
+newtype UpdatePersonRes = UpdatePersonRes
   {user :: SP.Person}
   deriving (Generic, ToJSON, ToSchema)
 
@@ -165,8 +165,8 @@ data CreatePersonReq = CreatePersonReq
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 CreatePersonReq SP.Person where
-  transformFlow req = do
+instance CreateTransform CreatePersonReq SP.Person Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- createLocationT req
@@ -198,13 +198,13 @@ instance Transform2 CreatePersonReq SP.Person where
           SP._updatedAt = now
         }
 
-createLocationT :: CreatePersonReq -> L.Flow SL.Location
+createLocationT :: CreatePersonReq -> Flow SL.Location
 createLocationT req = do
   location <- createLocationRec req
   QL.create location
   return location
 
-createLocationRec :: CreatePersonReq -> L.Flow SL.Location
+createLocationRec :: CreatePersonReq -> Flow SL.Location
 createLocationRec req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
@@ -226,14 +226,14 @@ createLocationRec req = do
         SL._updatedAt = now
       }
 
-data ListPersonRes = ListPersonRes
+newtype ListPersonRes = ListPersonRes
   {users :: [SP.Person]}
   deriving (Generic, ToJSON, ToSchema)
 
-data PersonRes = PersonRes
+newtype PersonRes = PersonRes
   {user :: SP.Person}
   deriving (Generic, ToJSON, ToSchema)
 
-data DeletePersonRes = DeletePersonRes
+newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, ToSchema)

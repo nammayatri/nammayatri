@@ -1,5 +1,6 @@
 module Storage.Redis.Config where
 
+import App.Types
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -37,24 +38,23 @@ loadRedisConfig = do
     maxConnections <- mmaxConnections
     maxIdleTime <- mmaxIdleTime
     p <- readMaybe port
-    Just $ T.mkKVDBConfig "redis" $
-      T.RedisConfig
-        { connectHost = host,
-          connectPort = p,
-          connectAuth = Nothing, -- FIXME: this should use auth
-          connectDatabase = read db,
-          connectMaxConnections = read maxConnections,
-          connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime,
-          connectTimeout = fromRational <$> toRational <$> read <$> mtimeout
-        }
+    Just $
+      T.mkKVDBConfig "redis" $
+        T.RedisConfig
+          { connectHost = host,
+            connectPort = p,
+            connectAuth = Nothing, -- FIXME: this should use auth
+            connectDatabase = read db,
+            connectMaxConnections = read maxConnections,
+            connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime,
+            connectTimeout = fromRational . toRational . read <$> mtimeout
+          }
 
-prepareRedisConnections :: L.Flow ()
+prepareRedisConnections :: Flow ()
 prepareRedisConnections = do
   mConfig <- L.runIO loadRedisConfig
-  let kvDBConfig' = case mConfig of
-        Nothing -> kvDBConfig
-        Just config -> config
-  kvConn <- L.getOrInitKVDBConn kvDBConfig'
+  let kvDBConfig' = fromMaybe kvDBConfig mConfig
+  kvConn <- lift $ L.getOrInitKVDBConn kvDBConfig'
   throwOnFailedWithLog
     kvConn
     KVDBConnectionFailedException
@@ -72,13 +72,13 @@ throwOnFailedWithLog ::
   Either e a ->
   (Text -> AppException) ->
   Text ->
-  L.Flow ()
+  Flow ()
 throwOnFailedWithLog (Left err) mkException msg = do
   L.logError ("" :: Text) $ msg <> " " <> show err <> ""
   L.throwException $ mkException $ msg <> " " <> show err <> ""
 throwOnFailedWithLog _ _ _ = pure ()
 
-throwFailedWithLog :: (Text -> AppException) -> Text -> L.Flow ()
+throwFailedWithLog :: (Text -> AppException) -> Text -> Flow ()
 throwFailedWithLog mkException msg = do
   L.logError ("" :: Text) $ msg <> ""
   L.throwException $ mkException $ msg <> ""

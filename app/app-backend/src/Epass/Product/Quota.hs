@@ -71,20 +71,22 @@ list ::
   EntityType ->
   Text ->
   FlowHandler ListRes
-list regToken mlimit moffset entityType entityId = withFlowHandler $
-  do
-    verifyToken regToken
-    DB.findAllWithLimitOffset mlimit moffset entityType entityId
-    >>= \case
-      Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
-      Right v -> return $ ListRes v
+list regToken mlimit moffset entityType entityId =
+  withFlowHandler $
+    do
+      verifyToken regToken
+      DB.findAllWithLimitOffset mlimit moffset entityType entityId
+      >>= \case
+        Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
+        Right v -> return $ ListRes v
 
 get :: RegToken -> QuotaId -> FlowHandler GetRes
-get regToken quotaId = withFlowHandler $
-  do
-    verifyToken regToken
-    DB.findById quotaId
-    >>= \case
-      Right (Just user) -> return user
-      Right Nothing -> L.throwException $ err400 {errBody = "Quota not found"}
-      Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
+get regToken quotaId =
+  withFlowHandler $
+    do
+      verifyToken regToken
+      DB.findById quotaId
+      >>= \case
+        Right (Just user) -> return user
+        Right Nothing -> L.throwException $ err400 {errBody = "Quota not found"}
+        Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}

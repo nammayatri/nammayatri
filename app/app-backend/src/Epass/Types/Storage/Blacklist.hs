@@ -66,9 +66,7 @@ instance FromJSON Blacklist where
 instance ToJSON Blacklist where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-insertExpression blacklist = insertExpressions [blacklist]
-
-insertExpressions blacklists = B.insertValues blacklists
+insertExpression blacklist = B.insertValues [blacklist]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BlacklistT)
