@@ -10,7 +10,7 @@ class Transform f g | f -> g, g -> f where
   transform :: f -> g -> g
 
   -- transformFlow :: f -> Flow g
-  transformFlow2 :: f -> g -> Flow g
+  transformFlow2 :: f -> g -> FlowR () g
 
 class Transform2 f g where
-  transformFlow :: f -> Flow g
+  transformFlow :: f -> FlowR () g

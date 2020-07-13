@@ -1,7 +1,7 @@
 module Product.Cron where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import App.Types
+import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as C
 import qualified Beckn.Types.Storage.Person as PS
 import qualified Beckn.Types.Storage.ProductInstance as PI

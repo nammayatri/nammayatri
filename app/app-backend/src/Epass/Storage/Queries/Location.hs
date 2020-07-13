@@ -2,7 +2,7 @@
 
 module Epass.Storage.Queries.Location where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Data.Text as T
 import Database.Beam ((&&.), (<-.), (==.))

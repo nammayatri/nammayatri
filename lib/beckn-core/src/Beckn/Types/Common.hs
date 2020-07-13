@@ -11,10 +11,8 @@ import EulerHS.Prelude
 
 type FlowR a = ReaderT a L.Flow
 
-type Flow = FlowR ()
-
 class GuidLike a where
-  generateGUID :: Flow a
+  generateGUID :: FlowR r a
 
 instance GuidLike Text where
   generateGUID = L.generateGUID

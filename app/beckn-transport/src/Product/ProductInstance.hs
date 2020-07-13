@@ -2,8 +2,8 @@
 
 module Product.ProductInstance where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import App.Types
+import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP

@@ -2,7 +2,7 @@
 
 module Storage.Queries.RegistrationToken where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra

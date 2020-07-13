@@ -2,6 +2,7 @@
 
 module Types.API.Person where
 
+import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.App

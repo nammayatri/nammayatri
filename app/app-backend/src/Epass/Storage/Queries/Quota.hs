@@ -2,7 +2,7 @@
 
 module Epass.Storage.Queries.Quota where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Data.Time.LocalTime

@@ -1,5 +1,6 @@
 module Epass.Product.PassApplication.Create where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Common as BTC
 import qualified Beckn.Types.Storage.Case as Case

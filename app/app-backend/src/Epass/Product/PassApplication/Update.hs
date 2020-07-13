@@ -1,5 +1,6 @@
 module Epass.Product.PassApplication.Update where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as BTL

@@ -2,7 +2,7 @@
 
 module Epass.Product.Common where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Data.Aeson

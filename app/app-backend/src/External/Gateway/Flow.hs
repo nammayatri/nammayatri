@@ -1,10 +1,10 @@
 module External.Gateway.Flow where
 
+import App.Types
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
 import qualified Beckn.Types.API.Track as Track
-import Beckn.Types.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API

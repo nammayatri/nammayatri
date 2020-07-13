@@ -1,6 +1,6 @@
 module Epass.Storage.Queries.Organization where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Beckn.Types.Storage.Location as BTL
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time

@@ -1,6 +1,6 @@
 module Storage.Queries.Leads where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))

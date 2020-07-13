@@ -2,7 +2,7 @@
 
 module Epass.Storage.Queries.User where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.))

@@ -1,5 +1,6 @@
 module Epass.Product.Document where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common

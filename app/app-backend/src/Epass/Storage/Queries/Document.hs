@@ -1,6 +1,6 @@
 module Epass.Storage.Queries.Document where
 
-import Beckn.Types.Common
+import App.Types
 import Data.Time
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.))

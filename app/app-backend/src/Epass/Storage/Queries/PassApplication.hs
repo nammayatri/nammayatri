@@ -1,6 +1,6 @@
 module Epass.Storage.Queries.PassApplication where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time.LocalTime
 import Database.Beam

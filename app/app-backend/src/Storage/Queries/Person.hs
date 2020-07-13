@@ -2,8 +2,8 @@
 
 module Storage.Queries.Person where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time

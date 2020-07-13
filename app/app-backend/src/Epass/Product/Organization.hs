@@ -1,6 +1,6 @@
 module Epass.Product.Organization where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR

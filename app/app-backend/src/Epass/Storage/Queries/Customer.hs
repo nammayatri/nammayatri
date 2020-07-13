@@ -1,6 +1,6 @@
 module Epass.Storage.Queries.Customer where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B

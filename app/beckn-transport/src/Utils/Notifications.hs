@@ -2,10 +2,10 @@
 
 module Utils.Notifications where
 
+import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance

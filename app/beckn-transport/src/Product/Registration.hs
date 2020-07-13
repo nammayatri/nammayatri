@@ -2,6 +2,7 @@
 
 module Product.Registration where
 
+import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Types.App

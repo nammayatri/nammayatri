@@ -2,11 +2,11 @@
 
 module Utils.Notifications where
 
+import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Track
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Core.Person (full_name)
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Mobility.Tracking

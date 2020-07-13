@@ -1,6 +1,6 @@
 module Epass.External.Geo.Flow where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Data.Text as T
 import qualified Epass.External.Geo.API as API
 import Epass.External.Geo.Types

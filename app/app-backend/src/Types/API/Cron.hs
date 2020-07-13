@@ -1,7 +1,6 @@
 module Types.API.Cron where
 
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Location as SL
 import Beckn.Utils.Extra
 import Data.Swagger

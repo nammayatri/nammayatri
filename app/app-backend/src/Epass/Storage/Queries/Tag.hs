@@ -2,7 +2,7 @@
 
 module Epass.Storage.Queries.Tag where
 
-import Beckn.Types.Common
+import App.Types
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import qualified Epass.Storage.Queries.EntityTag as EntityTag

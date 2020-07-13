@@ -1,6 +1,5 @@
 module Types.API.Product where
 
-import Beckn.Types.Common
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Traveller
 import Beckn.Types.Mobility.Trip

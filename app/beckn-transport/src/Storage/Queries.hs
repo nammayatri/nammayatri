@@ -1,6 +1,6 @@
 module Storage.Queries where
 
-import Beckn.Types.Common
+import App.Types
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
