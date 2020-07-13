@@ -12,6 +12,7 @@ import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.FareProduct
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Trip
+import Beckn.Utils.Common
 import Data.Generics.Labels
 import Data.Text
 import Data.Time
@@ -36,6 +37,21 @@ instance FromJSON Service where
 
 instance ToJSON Service where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance Example Service where
+  example =
+    Service
+      { _id = "123e4567-e89b-12d3-a456-426652340000",
+        _catalog = example,
+        _matched_items = ["cola", "soda"],
+        _selected_items = ["soda"],
+        _fare_product = example,
+        _offers = example,
+        _provider = example,
+        _trip = example,
+        _policies = example,
+        _billing_address = example
+      }
 
 data ServiceEdge = ServiceEdge
   { _endpoints :: Endpoint,

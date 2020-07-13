@@ -11,11 +11,12 @@ module Beckn.Types.Core.Amount
   )
 where
 
+import Beckn.Utils.Common
 import Control.Lens.Operators
 import Data.Char
 import Data.Proxy
 import qualified Data.Ratio as R
-import Data.Swagger
+import Data.Swagger hiding (Example)
 import qualified Data.Text as T
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -33,6 +34,9 @@ import qualified Money as M
 newtype Amount = Amount Rational
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (Num, Real, Fractional)
+
+instance Example Amount where
+  example = Amount 10
 
 maxPrecisionWord8 :: Word8
 maxPrecisionWord8 = 30

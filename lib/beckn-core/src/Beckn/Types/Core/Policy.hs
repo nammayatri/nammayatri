@@ -1,5 +1,8 @@
 module Beckn.Types.Core.Policy where
 
+import Beckn.Types.App
+import Beckn.Types.Common
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -18,6 +21,16 @@ instance FromJSON Policy where
 instance ToJSON Policy where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+instance Example Policy where
+  example =
+    Policy
+      { _id = idExample,
+        _type = "PAYMENT_POLICY",
+        _parent_policy_id = idExample,
+        _heading = "",
+        _terms = example
+      }
+
 data PolicyTerm = PolicyTerm
   { _id :: Text,
     _name :: Text,
@@ -30,3 +43,11 @@ instance FromJSON PolicyTerm where
 
 instance ToJSON PolicyTerm where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example PolicyTerm where
+  example =
+    PolicyTerm
+      { _id = idExample,
+        _name = "",
+        _description = ""
+      }

@@ -2,6 +2,7 @@ module Beckn.Types.Core.Scalar where
 
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Contact
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -16,3 +17,10 @@ instance FromJSON Scalar where
 
 instance ToJSON Scalar where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Scalar where
+  example =
+    Scalar
+      { _value = 12.345,
+        _unit = "meters"
+      }

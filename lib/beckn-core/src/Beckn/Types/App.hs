@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -17,6 +18,10 @@ data EnvR r = EnvR
   }
 
 type Env = EnvR ()
+
+-- | Sort of 'Env' constructor, as if we had plain 'Env' datatype instead of 'EnvR'.
+pattern Env :: R.FlowRuntime -> Env
+pattern Env flowRt = EnvR flowRt ()
 
 type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
 

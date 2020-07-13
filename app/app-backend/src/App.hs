@@ -31,9 +31,9 @@ import qualified System.Environment as SE
 runAppBackend :: IO ()
 runAppBackend = do
   port <- fromMaybe 8013 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runAppBackend' port $
-    setOnExceptionResponse appExceptionResponse $
-      setPort port defaultSettings
+  runAppBackend' port
+    $ setOnExceptionResponse appExceptionResponse
+    $ setPort port defaultSettings
 
 runAppBackend' :: Int -> Settings -> IO ()
 runAppBackend' port settings = do
@@ -55,7 +55,7 @@ runAppBackend' port settings = do
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ ->
             putStrLn @String ("Runtime created. Starting server at port " <> show port)
-        runSettings settings $ App.run reqHeadersKey (App.EnvR flowRt ())
+        runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
 
 appExceptionResponse :: SomeException -> Response
 appExceptionResponse exception = do

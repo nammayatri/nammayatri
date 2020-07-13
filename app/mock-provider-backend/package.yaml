@@ -1,4 +1,4 @@
-name: beckn-gateway
+name: mock-provider-backend
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -36,6 +36,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - NumDecimals
   - OverloadedStrings
   - PackageImports
   - PatternSynonyms
@@ -52,7 +53,26 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
+  - aeson
+  - beckn-core
+  - bytestring
   - euler-hs
+  - http-api-data
+  - http-client
+  - http-types
+  - lens
+  - mtl
+  - servant
+  - servant-client
+  - servant-server
+  - text
+  - wai
+  - wai-extra
+  - warp
+  - time
+  - template-haskell
+  - random-strings
+  - vault
 
 ghc-options:
   - -Werror
@@ -63,22 +83,13 @@ ghc-options:
 library:
   source-dirs: src
   ghc-options:
-    - -Wincomplete-uni-patterns
+  - -Wincomplete-uni-patterns
   dependencies:
-    - aeson
     - beckn-core
-    - bytestring
-    - cache
-    - clock
-    - http-types
-    - servant-client
-    - servant-server
-    - vault
-    - wai
-    - warp
+    - beckn-gateway
 
 executables:
-  beckn-gateway-exe:
+  mock-provider-backend-exe:
     main: Main.hs
     source-dirs: server
     ghc-options:
@@ -87,4 +98,6 @@ executables:
       - -with-rtsopts=-N
       - -Wincomplete-uni-patterns
     dependencies:
+      - mock-provider-backend
+      - beckn-core
       - beckn-gateway
