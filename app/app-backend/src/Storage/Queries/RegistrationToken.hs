@@ -24,10 +24,10 @@ create Storage.RegistrationToken {..} =
     >>= either DB.throwDBError pure
 
 findById :: Text -> L.Flow (Maybe Storage.RegistrationToken)
-findById id = do
+findById id =
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
-    predicate Storage.RegistrationToken {..} = (_id ==. B.val_ id)
+    predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
 
 findByToken :: Text -> L.Flow (Maybe Storage.RegistrationToken)
 findByToken token =
@@ -43,7 +43,7 @@ updateAttempts attemps id = do
     >>= either DB.throwDBError pure
   findById id >>= maybe (L.throwException err500) pure
   where
-    predicate i Storage.RegistrationToken {..} = (_id ==. B.val_ i)
+    predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =
       mconcat [_attempts <-. B.val_ a, _updatedAt <-. B.val_ n]
 

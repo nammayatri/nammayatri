@@ -32,9 +32,9 @@ import qualified System.Environment as SE
 runEpassBackendApp :: IO ()
 runEpassBackendApp = do
   port <- fromMaybe 8012 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runEpassBackendApp' port
-    $ setOnExceptionResponse becknExceptionResponse
-    $ setPort port defaultSettings
+  runEpassBackendApp' port $
+    setOnExceptionResponse becknExceptionResponse $
+      setPort port defaultSettings
 
 runEpassBackendApp' :: Int -> Settings -> IO ()
 runEpassBackendApp' port settings = do
@@ -62,10 +62,10 @@ becknExceptionResponse exception = do
     Just ex ->
       responseLBS
         (H.Status (errHTTPCode ex) (BS.pack $ errReasonPhrase ex))
-        ((H.hContentType, "application/json") : (errHeaders ex))
+        ((H.hContentType, "application/json") : errHeaders ex)
         (errBody ex)
     Nothing ->
       responseLBS
         H.internalServerError500
         [(H.hContentType, "application/json")]
-        (Aeson.encode $ internalServerErr)
+        (Aeson.encode internalServerErr)

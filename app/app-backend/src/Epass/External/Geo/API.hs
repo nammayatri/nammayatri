@@ -19,5 +19,4 @@ type GeoAPI =
 geoAPI :: Proxy GeoAPI
 geoAPI = Proxy
 
-getLocation lat lng key =
-  ET.client geoAPI (lat <> "," <> lng) key
+getLocation lat lng = ET.client geoAPI (lat <> "," <> lng)

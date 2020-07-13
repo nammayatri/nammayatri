@@ -71,9 +71,9 @@ getOrganization regToken orgId =
       customer <-
         QP.findById (PersonId $ SR._EntityId reg)
           >>= fromMaybeM400 "INVALID_DATA"
-      unless (Just orgId == SP._organizationId customer)
-        $ L.throwException
-        $ err400 {errBody = "INVALID_DATA"}
+      unless (Just orgId == SP._organizationId customer) $
+        L.throwException $
+          err400 {errBody = "INVALID_DATA"}
     QO.findOrganizationById (OrganizationId orgId)
       >>= maybe
         (L.throwException $ err400 {errBody = "INVALID_DATA"})
@@ -87,21 +87,21 @@ listOrganization ::
 listOrganization regToken API.ListOrganizationReq {..} = withFlowHandler $ do
   L.logInfo "list organization" "invoked"
   reg <- verifyToken regToken
-  when (SR._entityType reg == SR.CUSTOMER)
-    $ L.throwException
-    $ err400 {errBody = "UNAUTHORIZED"}
+  when (SR._entityType reg == SR.CUSTOMER) $
+    L.throwException $
+      err400 {errBody = "UNAUTHORIZED"}
   organizations <- QO.listOrganizations limit offset locationType pincode city district ward state status verified
-  orgInfo <- (traverse getOrgInfo organizations)
+  orgInfo <- traverse getOrgInfo organizations
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
 
 getOrgInfo :: Organization -> L.Flow API.OrgInfo
 getOrgInfo Organization {..} = do
   entityDocs <- EntityDocument.findAllByOrgId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
+  docs <- catMaybes <$> traverse Document.findById (DocumentId <$> docIds)
   entityTags <- EntityTag.findAllByEntity "ORGANIZATION" $ _getOrganizationId _id
   let tagIds = EntityTag._TagId <$> entityTags
-  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  tags <- catMaybes <$> traverse Tag.findById (TagId <$> tagIds)
   comments <- Comment.findAllByCommentedOnEntity "ORGANIZATION" $ _getOrganizationId _id
   isBlacklistedOrg <- isJust <$> Blacklist.findByOrgId _id
   let locType = fromMaybe BTL.PINCODE _locationType
@@ -119,8 +119,10 @@ getOrgInfo Organization {..} = do
             _address = Just _address,
             _bound = _bound
           }
-  locationM <- Location.findByLocation locType _district (Just _city) (Just _state) (Just _country) (_ward) (Just _pincode)
-  isBlacklistedLocation <- maybe (pure False) (\loc -> (isJust <$> Blacklist.findByLocationId (SL._id loc))) $ locationM
+  locationM <-
+    Location.findByLocation locType _district (Just _city) (Just _state) (Just _country) _ward (Just _pincode)
+  isBlacklistedLocation <-
+    maybe (pure False) (\loc -> isJust <$> Blacklist.findByLocationId (SL._id loc)) locationM
   pure
     API.OrgInfo
       { _Tags = tags,
@@ -134,14 +136,15 @@ getOrgInfo Organization {..} = do
 
 updateOrganization ::
   RegToken -> Text -> API.UpdateOrganizationReq -> FlowHandler API.OrganizationRes
-updateOrganization regToken orgId API.UpdateOrganizationReq {..} = withFlowHandler $
-  do
-    reg <- verifyToken regToken
-    when (SR._entityType reg == SR.CUSTOMER)
-      $ L.throwException
-      $ err400 {errBody = "UNAUTHORIZED"}
-    QO.update (OrganizationId orgId) _status
-    QO.findOrganizationById (OrganizationId orgId)
-    >>= \case
-      Just v -> return $ API.OrganizationRes v
-      Nothing -> L.throwException $ err400 {errBody = "Organization not found"}
+updateOrganization regToken orgId API.UpdateOrganizationReq {..} =
+  withFlowHandler $
+    do
+      reg <- verifyToken regToken
+      when (SR._entityType reg == SR.CUSTOMER) $
+        L.throwException $
+          err400 {errBody = "UNAUTHORIZED"}
+      QO.update (OrganizationId orgId) _status
+      QO.findOrganizationById (OrganizationId orgId)
+      >>= \case
+        Just v -> return $ API.OrganizationRes v
+        Nothing -> L.throwException $ err400 {errBody = "Organization not found"}

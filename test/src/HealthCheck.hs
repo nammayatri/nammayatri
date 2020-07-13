@@ -26,7 +26,7 @@ startServers = do
   return (appTid, tbeTid)
 
 withBecknServers :: IO () -> IO ()
-withBecknServers action = do
+withBecknServers action =
   bracket
     startServers
     (\(appTid, tbeTid) -> killThread appTid >> killThread tbeTid)
@@ -56,15 +56,15 @@ spec = do
             T._logFilePath = "/tmp/app-backend-healthcheck-test",
             T._isAsync = False
           }
-  around (withFlowRuntime (Just loggerCfg))
-    $ describe "Testing App Backend APIs"
-    $ it "Testing health check API"
-    $ \flowRt -> do
-      hspec
-        $ around_ withBecknServers
-        $ it "Health Check API should return success"
-        $ do
-          result <- runClient appClientEnv healthCheckBackendC
-          result `shouldBe` Right (DT.decodeUtf8 "App is UP")
-          result <- runClient tbeClientEnv healthCheckBackendC
-          result `shouldBe` Right (DT.decodeUtf8 "App is UP")
+  around (withFlowRuntime (Just loggerCfg)) $
+    describe "Testing App Backend APIs" $
+      it "Testing health check API" $
+        \flowRt ->
+          hspec $
+            around_ withBecknServers $
+              it "Health Check API should return success" $
+                do
+                  result <- runClient appClientEnv healthCheckBackendC
+                  result `shouldBe` Right (DT.decodeUtf8 "App is UP")
+                  result <- runClient tbeClientEnv healthCheckBackendC
+                  result `shouldBe` Right (DT.decodeUtf8 "App is UP")

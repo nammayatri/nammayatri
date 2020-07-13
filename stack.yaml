@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-14.27
+resolver: lts-15.15
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -30,6 +30,7 @@ resolver: lts-14.27
 #   - wai
 packages:
 - lib/beckn-core
+- app/gateway
 - app/beckn-transport
 - app/app-backend
 - test
@@ -46,21 +47,28 @@ packages:
 
 extra-deps:
   - git: https://github.com/juspay/hedis.git
-    commit: ce6de8f158e87414cf11bcba4e95d54a9c3185f3
+    commit: 4ea54f16c0057acc99a9f0e9b63ea51ea4bf420e
   - git: git@bitbucket.org:juspay/euler-hs.git
-    commit: a1347057def25cdf9db0c826f56d2135f8bb8be7
+    commit: 4d852dbd7fd17bbc0b683d6e79218051e68b66ea
+  - git: https://github.com/juspay/beam-mysql
+    commit: 5d17599e02f30c220b679439ee0c1025e3086250
+  - git: https://github.com/juspay/beam
+    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
     subdirs:
-      - lib/euler-hs
-  - git: https://github.com/juspay/beam-mysql2
-    commit: 3d03598b11be40929ee95984a83c3d9ed4be8536
-  - crc16-0.1.0@sha256:da3e4b82e437a054159ecc497372c997f784d77babcee641a5f657f6a0a8eb80,624
-  - directory-1.3.6.1@sha256:3dc9c69c8e09ec95a7a45c6d06abe0f0d2f604439c37e5f88e5a6c335b088d71,2810
-  - process-1.6.9.0@sha256:0cafe6e1313790863bd81cf40563baf5feea9ca2957e79a4d92bacfcc455604a,2468
+      - beam-core
+      - beam-migrate
+      - beam-sqlite
+      - beam-postgres
+  - haskell-src-exts-1.21.1@sha256:11d18ec3f463185f81b7819376b532e3087f8192cffc629aac5c9eec88897b35,4541
   - random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
-  - servant-purescript-0.10.0.0@sha256:0533143282b941d2416a08ee1fd3ff4b39383587f5e5fee71ccb4dd2a8a9369e,2289
-  - servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
-  - time-1.9.3@sha256:8f1b5448722a12a952248b356c9eb366e351226543d9086a2da71270522d5f45,5679
-  - unix-2.7.2.2@sha256:9e93f93cc5a065248120136e83a0a6d1ce93d6eb5ef2a2543f9593e93e164d24,3496
+  - servant-multipart-0.11.6@sha256:1863862e507dd6f672b4c9d2c6d87d4faec19686ced3d828d712ada07536cddb,2655
+  - sqlite-simple-0.4.18.0@sha256:3ceea56375c0a3590c814e411a4eb86943f8d31b93b110ca159c90689b6b39e5,3002
+  - direct-sqlite-2.3.26@sha256:04e835402f1508abca383182023e4e2b9b86297b8533afbd4e57d1a5652e0c23,3718
+  - dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657
+  - dependent-sum-0.7.1.0@sha256:5599aa89637db434431b1dd3fa7c34bc3d565ee44f0519bfbc877be1927c2531,2068
+  - constraints-extras-0.3.0.2@sha256:bf6884be65958e9188ae3c9e5547abfd6d201df021bff8a4704c2c4fe1e1ae5b,1784
+  - generic-lens-1.1.0.0 # random breakage without this
+
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

@@ -14,7 +14,7 @@ import Epass.Types.Storage.Pass
 import qualified Epass.Types.Storage.Tag as ST
 import EulerHS.Prelude
 
-data PassRes = PassRes
+newtype PassRes = PassRes
   { _pass :: PassInfo
   }
   deriving (Generic, FromJSON, ToSchema)
@@ -45,7 +45,7 @@ data ListPassReq = ListPassReq
 instance FromJSON ListPassReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-data ListPassRes = ListPassRes
+newtype ListPassRes = ListPassRes
   { passes :: [PassInfo]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
@@ -53,7 +53,7 @@ data ListPassRes = ListPassRes
 data PassInfo = PassInfo
   { _id :: Text,
     _ShortId :: Text,
-    _TenantOrganizationId :: (Maybe TenantOrganizationId),
+    _TenantOrganizationId :: Maybe TenantOrganizationId,
     _status :: ProductInstanceStatus,
     _fromDate :: LocalTime,
     _toDate :: LocalTime,
@@ -65,8 +65,8 @@ data PassInfo = PassInfo
     --_updatedAt :: LocalTime,
     _fromLocation :: Text, -- Location,
     _toLocation :: Text, -- Location,
-    _Organization :: (Maybe SO.Organization),
-    _Customer :: (Maybe SP.Person),
+    _Organization :: Maybe SO.Organization,
+    _Customer :: Maybe SP.Person,
     --_Comments :: [SCM.Comment],
     --_Tags :: [ST.Tag],
     _Documents :: [SD.Document]

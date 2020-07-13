@@ -15,13 +15,14 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres Category
 
 instance FromBackendRow Postgres Category where
   fromBackendRow = read . T.unpack <$> fromBackendRow
@@ -34,11 +35,13 @@ instance FromHttpApiData Category where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 --------
-data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS
+data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS | HATCHBACK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres Variant
 
 instance FromBackendRow Postgres Variant where
   fromBackendRow = read . T.unpack <$> fromBackendRow
@@ -56,6 +59,8 @@ data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EnergyType where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres EnergyType
 
 instance FromBackendRow Postgres EnergyType where
   fromBackendRow = read . T.unpack <$> fromBackendRow

@@ -163,7 +163,7 @@ refreshToken = do
 getExpiry :: Maybe NumericDate -> Integer -> Integer
 getExpiry Nothing expiresIn = expiresIn
 getExpiry (Just d) expiresIn =
-  expiresIn + (round $ nominalDiffTimeToSeconds (secondsSinceEpoch d))
+  expiresIn + round (nominalDiffTimeToSeconds $ secondsSinceEpoch d)
 
 -- | JWT token validation status
 data JWTValidity

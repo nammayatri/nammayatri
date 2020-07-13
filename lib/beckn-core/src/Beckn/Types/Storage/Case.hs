@@ -16,9 +16,8 @@ import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant
 import Servant.API
-import Servant.Swagger
 
-data CaseType = RIDEBOOK | PASSAPPLICATION | ORGREGISTRATION | TRACKER
+data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance ToHttpApiData CaseType where

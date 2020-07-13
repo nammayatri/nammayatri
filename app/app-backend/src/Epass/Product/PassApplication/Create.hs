@@ -1,7 +1,7 @@
 module Epass.Product.PassApplication.Create where
 
-import qualified Beckn.Types.Common as BTC
 import Beckn.Types.Common
+import qualified Beckn.Types.Common as BTC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
@@ -43,8 +43,8 @@ createPassApplication regToken req@API.CreatePassApplicationReq {..} = withFlowH
       SPONSOR -> sponsorFlow token req
       BULKSPONSOR -> bulkSponsorFlow token req
   QC.create caseInfo
-  QC.findById (Case._id caseInfo)
-    >>= return . API.PassApplicationRes'
+  API.PassApplicationRes'
+    <$> QC.findById (Case._id caseInfo)
 
 bulkSponsorFlow :: RegistrationToken.RegistrationToken -> API.CreatePassApplicationReq -> L.Flow Case.Case
 bulkSponsorFlow token req@API.CreatePassApplicationReq {..} = do
@@ -71,7 +71,7 @@ selfFlow token req@API.CreatePassApplicationReq {..} = do
       travellerID = fromJust _travellerID
       travellerIDType = mapIdType' <$> _travellerIDType
   when
-    (customerId /= (PersonId (RegistrationToken._EntityId token)))
+    (customerId /= PersonId (RegistrationToken._EntityId token))
     (L.throwException $ err400 {errBody = "CustomerId mismatch"})
   QP.update customerId Nothing _travellerName Nothing Nothing travellerIDType _travellerID
   getCaseInfo token req _CustomerId
@@ -171,7 +171,7 @@ getLocation API.CreatePassApplicationReq {..} = do
             _city = Location._city _toLocation,
             _state = Location._state _toLocation,
             _country = Location._country _toLocation,
-            _pincode = show <$> (Location._pincode _toLocation),
+            _pincode = show <$> Location._pincode _toLocation,
             _address = Location._address _toLocation,
             _bound = Nothing, -- (Location._bound _toLocation)
             _createdAt = currTime,
@@ -214,7 +214,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
         _toLocationId = toLocationId,
         _udf1 = Just $ show $ getPassType _type, -- passtype
         _udf2 = customerOrgId, -- customer org id
-        _udf3 = (show <$> _count), -- count
+        _udf3 = show <$> _count, -- count
         _udf4 = Nothing, -- approved count
         _udf5 = Nothing, -- remarks
         _info = Nothing,
@@ -225,7 +225,7 @@ getCaseInfo token req@API.CreatePassApplicationReq {..} mCustId = do
 createCustomer :: Text -> L.Flow Customer.Customer
 createCustomer name = do
   id <- generateGUID
-  Customer.create =<< (getCust id)
+  Customer.create =<< getCust id
   Customer.findCustomerById id
     >>= fromMaybeM500 "Unable to create customer"
   where

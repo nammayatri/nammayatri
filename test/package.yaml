@@ -1,10 +1,10 @@
 name:                beckn-test
 version:             0.1.0.0
 github:              "juspay/beckn"
-license:             BSD3
+license:             AllRightsReserved
 author:              "Juspay"
-maintainer:          "juspay.in"
-copyright:           "2020 Author name here"
+maintainer:          "Juspay"
+copyright:           "2020 Juspay Technologies Private Limited"
 
 extra-source-files:
 - README.md

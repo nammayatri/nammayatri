@@ -1,10 +1,10 @@
 name:                beckn-core
 version:             0.1.0.0
 github:              "juspay/beckn"
-license:             BSD3
-author:              "Aravind Gopal Mallapureddy"
-maintainer:          "aravind.mallapureddy@juspay.in"
-copyright:           "2020 Author name here"
+license:             AllRightsReserved
+author:              "Juspay"
+maintainer:          "Juspay"
+copyright:           "2020 Juspay Technologies Private Limited"
 
 extra-source-files:
 - README.md
@@ -70,7 +70,6 @@ dependencies:
 - lens
 - pureMD5
 - random-strings
-- scientific
 - servant
 - servant-client
 - servant-multipart
@@ -90,6 +89,7 @@ dependencies:
 - base64-bytestring
 - utf8-string
 - geojson
+- safe-money
 
 library:
   source-dirs:
@@ -99,3 +99,14 @@ library:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
+
+tests:
+  beckn-core-tests:
+    main:              Main.hs
+    source-dirs:
+    - test/app
+    - test/src
+    dependencies:
+    - beckn-core
+    - tasty
+    - tasty-hunit

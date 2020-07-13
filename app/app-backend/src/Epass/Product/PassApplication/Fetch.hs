@@ -1,8 +1,8 @@
 module Epass.Product.PassApplication.Fetch where
 
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Location as BTL
+import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
 import Data.Aeson
@@ -62,7 +62,7 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
     let entityId = scopeEntityAccess token
     fromLocationIds <- getLocationIds fPins fCities fStates fDists fWards
     toLocationIds <- getLocationIds toPins toCities toStates toDists toWards
-    cases <- QC.findAllWithLimitOffsetWhere (_getLocationId <$> fromLocationIds) (_getLocationId <$> toLocationIds) [Case.PASSAPPLICATION] statuses (passType) limitM offsetM
+    cases <- QC.findAllWithLimitOffsetWhere (_getLocationId <$> fromLocationIds) (_getLocationId <$> toLocationIds) [Case.PASSAPPLICATION] statuses passType limitM offsetM
     -- TODO: embed docs, comments, location and tags to the passapplication list response, once those are migrated
     caseApps <- traverse getCaseAppInfo cases
     return $ API.ListPassApplicationRes caseApps
@@ -74,17 +74,18 @@ getLocationIds pins cities states districts wards = do
 
 getPassAppInfo :: PassApplication -> L.Flow API.PassAppInfo
 getPassAppInfo PassApplication {..} = do
-  morg <- maybe (pure Nothing) (Organization.findOrganizationById) $ _OrganizationId
-  mcustomer <- maybe (pure Nothing) (Customer.findCustomerById) $ _CustomerId
+  morg <- maybe (pure Nothing) Organization.findOrganizationById _OrganizationId
+  mcustomer <- maybe (pure Nothing) Customer.findCustomerById _CustomerId
   let maybeCustId = Customer._id <$> mcustomer
   entityDocs <- EntityDocument.findAllByPassApplicationId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
-  entityTags <- maybe (pure []) (\id -> EntityTag.findAllByEntity "PASS_APPLICATION" $ _getOrganizationId id) _OrganizationId
+  docs <- catMaybes <$> traverse Document.findById (DocumentId <$> docIds)
+  entityTags <-
+    maybe (pure []) (EntityTag.findAllByEntity "PASS_APPLICATION" . _getOrganizationId) _OrganizationId
   let tagIds = EntityTag._TagId <$> entityTags
-  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  tags <- catMaybes <$> traverse Tag.findById (TagId <$> tagIds)
   comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ _getPassApplicationId _id
-  isBlacklistedOrg <- maybe (pure False) (\oid -> isJust <$> (Blacklist.findByOrgId oid)) _OrganizationId
+  isBlacklistedOrg <- maybe (pure False) (fmap isJust . Blacklist.findByOrgId) _OrganizationId
   let toLocation =
         Location
           { _type = fromMaybe BTL.PINCODE _toLocationType,
@@ -132,16 +133,17 @@ getPassAppInfo PassApplication {..} = do
 
 getCaseAppInfo :: Case.Case -> L.Flow API.CaseInfo
 getCaseAppInfo Case.Case {..} = do
-  morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) $ _udf2
-  mcustomer <- maybe (pure Nothing) (QP.findById . PersonId) $ _requestor
+  morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) _udf2
+  mcustomer <- maybe (pure Nothing) (QP.findById . PersonId) _requestor
   entityDocs <- EntityDocument.findAllByCaseId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs
-  docs <- catMaybes <$> (traverse (Document.findById) (DocumentId <$> docIds))
-  entityTags <- maybe (pure []) (\id -> EntityTag.findAllByEntity "PASS_APPLICATION" $ id) $ _udf2
+  docs <- catMaybes <$> traverse Document.findById (DocumentId <$> docIds)
+  entityTags <- maybe (pure []) (EntityTag.findAllByEntity "PASS_APPLICATION") _udf2
   let tagIds = EntityTag._TagId <$> entityTags
-  tags <- catMaybes <$> (traverse (Tag.findById) (TagId <$> tagIds))
+  tags <- catMaybes <$> traverse Tag.findById (TagId <$> tagIds)
   comments <- Comment.findAllByCommentedOnEntity "PASS_APPLICATION" $ _getCaseId _id
-  isBlacklistedOrg <- maybe (pure False) (\oid -> isJust <$> (Blacklist.findByOrgId (OrganizationId oid))) _udf2
+  isBlacklistedOrg <-
+    maybe (pure False) (fmap isJust . Blacklist.findByOrgId . OrganizationId) _udf2
   fromLocation <- QLoc.findLocationById $ LocationId _fromLocationId
   toLocation <- QLoc.findLocationById $ LocationId _toLocationId
   pure
@@ -173,8 +175,7 @@ getPassApplicationById regToken caseId = withFlowHandler $
   do
     verifyToken regToken
     case' :: Case.Case <- QC.findById caseId
-    caseApp <- getCaseAppInfo case'
-    return $ caseApp
+    getCaseAppInfo case'
 
 scopeEntityAccess :: RegistrationToken.RegistrationToken -> Maybe CustomerId
 scopeEntityAccess RegistrationToken.RegistrationToken {..} =

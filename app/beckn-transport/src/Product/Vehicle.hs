@@ -16,30 +16,31 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
+import qualified Utils.Defaults as Default
 
-createVehicle :: RegToken -> CreateVehicleReq -> FlowHandler CreateVehicleRes
-createVehicle regToken req = withFlowHandler $ do
-  orgId <- validate regToken
+createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
+createVehicle orgId req = withFlowHandler $ do
   vehicle <- transformFlow req >>= addOrgId orgId
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
-listVehicles :: RegToken -> Maybe Integer -> Maybe Integer -> FlowHandler ListVehicleRes
-listVehicles regToken limitM offsetM = withFlowHandler $ do
-  orgId <- validate regToken
-  ListVehicleRes <$> (QV.findAllWithLimitOffsetByOrgIds limitM offsetM [orgId])
+listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
+listVehicles orgId variantM categoryM energyTypeM limitM offsetM =
+  withFlowHandler $
+    ListVehicleRes <$> QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
+  where
+    limit = toInteger $ fromMaybe Default.limit limitM
+    offset = toInteger $ fromMaybe Default.offset offsetM
 
-updateVehicle :: Text -> RegToken -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
-updateVehicle vehicleId regToken req = withFlowHandler $ do
-  orgId <- validate regToken
+updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
+updateVehicle orgId vehicleId req = withFlowHandler $ do
   vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
   updatedVehicle <- transformFlow2 req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
-deleteVehicle :: Text -> RegToken -> FlowHandler DeleteVehicleRes
-deleteVehicle vehicleId regToken = withFlowHandler $ do
-  orgId <- validate regToken
+deleteVehicle :: Text -> Text -> FlowHandler DeleteVehicleRes
+deleteVehicle orgId vehicleId = withFlowHandler $ do
   vehicle <-
     QV.findVehicleById (VehicleId vehicleId)
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
@@ -49,9 +50,8 @@ deleteVehicle vehicleId regToken = withFlowHandler $ do
       return $ DeleteVehicleRes vehicleId
     else L.throwException $ err401 {errBody = "Unauthorized"}
 
-getVehicle :: RegToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
-getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
-  SR.RegistrationToken {..} <- QR.verifyToken token
+getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
+getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
   user <- QP.findPersonById (PersonId _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
@@ -61,26 +61,11 @@ getVehicle token registrationNoM vehicleIdM = withFlowHandler $ do
   hasAccess user vehicle
   return $ CreateVehicleRes vehicle
   where
+    hasAccess :: SP.Person -> SV.Vehicle -> L.Flow ()
     hasAccess user vehicle =
-      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId))
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
-
--- Core Utility methods are below
-verifyUser :: SP.Person -> L.Flow Text
-verifyUser user = do
-  unless (elem (user ^. #_role) [SP.ADMIN, SP.DRIVER])
-    $ L.throwException
-    $ err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
-  case user ^. #_organizationId of
-    Just orgId -> return orgId
-    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
+      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
+        L.throwException $
+          err401 {errBody = "Unauthorized"}
 
 addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
-
-validate :: RegToken -> L.Flow Text
-validate regToken = do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (PersonId _EntityId)
-  verifyUser user

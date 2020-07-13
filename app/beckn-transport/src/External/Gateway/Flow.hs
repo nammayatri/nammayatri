@@ -18,7 +18,7 @@ onSearch req = do
   url <- getBaseUrl
   res <- L.callAPI url $ API.onSearch req
   whenRight res $ \_ ->
-    L.logInfo "OnSearch" $ "OnSearch callback successfully delivered"
+    L.logInfo "OnSearch" "OnSearch callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending onSearch Callback: " (show err)
   return $ first show res
@@ -28,7 +28,7 @@ onTrackTrip req = do
   url <- getBaseUrl
   res <- L.callAPI url $ API.onTrackTrip req
   whenRight res $ \_ ->
-    L.logInfo "OnTrackTrip" $ "OnTrackTrip callback successfully delivered"
+    L.logInfo "OnTrackTrip" "OnTrackTrip callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending OnTrackTrip Callback: " (show err)
   return $ first show res
@@ -38,7 +38,7 @@ onConfirm req = do
   url <- getBaseUrl
   res <- L.callAPI url $ API.onConfirm req
   whenRight res $ \_ ->
-    L.logInfo "OnConfirm" $ "OnConfirm callback successfully delivered"
+    L.logInfo "OnConfirm" "OnConfirm callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending onConfirm Callback: " (show err)
   return $ first show res
@@ -48,7 +48,7 @@ onCancel req = do
   url <- getBaseUrl
   res <- L.callAPI url $ API.onCancel req
   whenRight res $ \_ ->
-    L.logInfo "OnCancel" $ "OnCancel callback successfully delivered"
+    L.logInfo "OnCancel" "OnCancel callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending onCancel Callback: " (show err)
   return $ first show res
@@ -58,7 +58,7 @@ onStatus req = do
   url <- getBaseUrl
   res <- L.callAPI url $ API.onStatus req
   whenRight res $ \_ ->
-    L.logInfo "OnStatus" $ "OnStatus callback successfully delivered"
+    L.logInfo "OnStatus" "OnStatus callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending onStatus Callback: " (show err)
   return $ first show res

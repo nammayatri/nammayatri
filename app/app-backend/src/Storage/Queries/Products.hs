@@ -23,28 +23,17 @@ create Storage.Products {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
     >>= either DB.throwDBError pure
 
-findAllByTypeOrgId :: Text -> Storage.ProductsStatus -> L.Flow [Storage.Products]
-findAllByTypeOrgId orgId status =
-  DB.findAll dbTable (predicate orgId status)
-    >>= either DB.throwDBError pure
+findById :: ProductsId -> L.Flow Storage.Products
+findById pid =
+  DB.findOneWithErr dbTable (predicate pid)
   where
-    orderByDesc Storage.Products {..} = B.desc_ _createdAt
-    predicate orgId status Storage.Products {..} =
-      ( _status ==. (B.val_ status)
-          &&. _organizationId ==. (B.val_ orgId)
-      )
+    predicate pid Storage.Products {..} = _id ==. B.val_ pid
 
 findById' :: ProductsId -> L.Flow (T.DBResult (Maybe Storage.Products))
 findById' pid =
   DB.findOne dbTable (predicate pid)
   where
-    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
-
-findById :: ProductsId -> L.Flow Storage.Products
-findById pid =
-  DB.findOneWithErr dbTable (predicate pid)
-  where
-    predicate pid Storage.Products {..} = _id ==. (B.val_ pid)
+    predicate pid Storage.Products {..} = _id ==. B.val_ pid
 
 findAllByIds :: [ProductsId] -> L.Flow [Storage.Products]
 findAllByIds pids =
@@ -53,49 +42,3 @@ findAllByIds pids =
   where
     predicate pids Storage.Products {..} =
       _id `B.in_` (B.val_ <$> pids)
-
-updateStatus ::
-  ProductsId ->
-  Storage.ProductsStatus ->
-  L.Flow (T.DBResult ())
-updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
-  DB.update
-    dbTable
-    (setClause status currTime)
-    (predicate id)
-  where
-    predicate id Storage.Products {..} = _id ==. B.val_ id
-    setClause status currTime Storage.Products {..} =
-      mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
-        ]
-
-updateMultiple :: ProductsId -> Storage.Products -> L.Flow (T.DBResult ())
-updateMultiple id prd@Storage.Products {..} = do
-  currTime <- getCurrentTimeUTC
-  DB.update dbTable (setClause currTime prd) (predicate id)
-  where
-    predicate id Storage.Products {..} = _id ==. B.val_ id
-    setClause now prd Storage.Products {..} =
-      mconcat
-        [ _updatedAt <-. B.val_ now,
-          _status <-. B.val_ (Storage._status prd),
-          --_personId <-. B.val_ (Storage._personId prd),
-          _fromLocation <-. B.val_ (Storage._fromLocation prd),
-          _toLocation <-. B.val_ (Storage._toLocation prd),
-          _info <-. B.val_ (Storage._info prd)
-        ]
-
-findAllByIdsAndStatus :: [ProductsId] -> Storage.ProductsStatus -> L.Flow [Storage.Products]
-findAllByIdsAndStatus pids status =
-  if null pids
-    then return []
-    else
-      DB.findAll dbTable (predicate pids status)
-        >>= either DB.throwDBError pure
-  where
-    predicate pids status Storage.Products {..} =
-      _id `B.in_` (B.val_ <$> pids)
-        &&. _status ==. (B.val_ status)

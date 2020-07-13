@@ -27,7 +27,7 @@ create :: RegToken -> CreateReq -> FlowHandler CreateRes
 create regToken CreateReq {..} = withFlowHandler $ do
   token <- verifyToken regToken
   id <- generateGUID
-  case (RegToken._entityType token) of
+  case RegToken._entityType token of
     RegToken.USER -> do
       blacklist <- blacklistRec id $ RegToken._EntityId token
       DB.create blacklist
@@ -56,23 +56,25 @@ list ::
   EntityType ->
   Text ->
   FlowHandler ListRes
-list regToken mlimit moffset entityType entityId = withFlowHandler $
-  do
-    verifyToken regToken
-    DB.findAllWithLimitOffset mlimit moffset entityType entityId
-    >>= \case
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
-      Right v -> return $ ListRes v
+list regToken mlimit moffset entityType entityId =
+  withFlowHandler $
+    do
+      verifyToken regToken
+      DB.findAllWithLimitOffset mlimit moffset entityType entityId
+      >>= \case
+        Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
+        Right v -> return $ ListRes v
 
 get :: RegToken -> BlacklistId -> FlowHandler GetRes
-get regToken blacklistId = withFlowHandler $
-  do
-    verifyToken regToken
-    DB.findById blacklistId
-    >>= \case
-      Right (Just user) -> return user
-      Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
-      Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+get regToken blacklistId =
+  withFlowHandler $
+    do
+      verifyToken regToken
+      DB.findById blacklistId
+      >>= \case
+        Right (Just user) -> return user
+        Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
+        Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
 
 update ::
   RegToken ->
@@ -83,18 +85,18 @@ update regToken blacklistId lb@UpdateReq {..} = withFlowHandler $ do
   verifyToken regToken
   eres <- DB.update blacklistId lb
   case eres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
     Right _ ->
       DB.findById blacklistId
         >>= \case
           Right (Just v) -> return $ UpdateRes v
           Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
-          Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+          Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
 
 delete :: RegToken -> BlacklistId -> FlowHandler Ack
 delete regToken blacklistId = withFlowHandler $ do
   verifyToken regToken
   mres <- DB.deleteById blacklistId
   case mres of
-    Left err -> L.throwException $ err500 {errBody = ("DBError: " <> show err)}
+    Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
     Right () -> sendAck

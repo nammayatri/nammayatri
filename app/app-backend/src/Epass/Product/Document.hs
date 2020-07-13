@@ -19,7 +19,6 @@ import Epass.Types.Common
 import qualified Epass.Types.Storage.Customer as SC
 import Epass.Types.Storage.Document as SD
 import Epass.Types.Storage.EntityDocument as SED
-import Epass.Types.Storage.EntityDocument
 import Epass.Types.Storage.PassApplication as SPA
 import qualified Epass.Types.Storage.User as SU
 import Epass.Utils.Storage
@@ -37,10 +36,10 @@ upload regToken enType enId multipartData = withFlowHandler $ do
   documents <-
     forM (files multipartData) $ \file ->
       uploadDocument file dir orgId
-  traverse (createEntity enId enType) documents
-  return
-    $ DocumentRes
-    $ _getDocumentId . SD._id <$> documents
+  traverse_ (createEntity enId enType) documents
+  return $
+    DocumentRes $
+      _getDocumentId . SD._id <$> documents
 
 listDocuments ::
   RegToken -> DocumentByType -> Text -> FlowHandler [ListDocumentRes]
@@ -86,7 +85,7 @@ uploadDocument file dir orgId = do
   uuid <- generateGUID
   L.runIO $
     BS.writeFile
-      (T.unpack $ dir <> (_getDocumentId uuid))
+      (T.unpack $ dir <> _getDocumentId uuid)
       content
   now <- getCurrentTimeUTC
   let doc =
@@ -105,7 +104,7 @@ uploadDocument file dir orgId = do
   return doc
 
 getOrgId :: Text -> DocumentEntity -> L.Flow OrganizationId
-getOrgId ei eit = do
+getOrgId ei eit =
   case eit of
     CUSTOMER -> do
       cust <-

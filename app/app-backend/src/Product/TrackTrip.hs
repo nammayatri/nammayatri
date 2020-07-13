@@ -6,73 +6,69 @@ import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Person as Person
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
-import qualified Models.Product as MP
+import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
-import Utils.Common (verifyToken)
 import qualified Utils.Notifications as Notify
 
-track :: RegToken -> TrackTripReq -> FlowHandler TrackTripRes
-track regToken req = withFlowHandler $ do
-  verifyToken regToken
+track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
+track _ req = withFlowHandler $ do
   let context = req ^. #context
-      tripId = req ^. #message ^. #id
-  prd <- Products.findById $ ProductsId tripId
+      tripId = req ^. #message . #id
+  prdInst <- ProductInstance.findById $ ProductInstanceId tripId
   ack <-
-    case decodeFromText =<< (prd ^. #_info) of
+    case decodeFromText =<< (prdInst ^. #_info) of
       Nothing -> return $ Ack "Error" "No product to track"
-      Just (info :: ProductInfo) -> do
+      Just (info :: ProductInfo) ->
         case ProductInfo._tracker info of
           Nothing -> return $ Ack "Error" "No product to track"
           Just tracker -> do
-            let gTripId = tracker ^. #trip ^. #id
+            let gTripId = tracker ^. #trip . #id
             gatewayUrl <- Gateway.getBaseUrl
-            eres <- Gateway.track gatewayUrl $ req & (#message . #id) .~ gTripId
+            eres <- Gateway.track gatewayUrl $ req & #message . #id .~ gTripId
             case eres of
               Left err -> return $ Ack "Error" (show err)
               Right _ -> return $ Ack "Successful" "Tracking initiated"
   return $ AckResponse context ack
 
-track_cb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
-track_cb req = withFlowHandler $ do
+trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
+trackCb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message
-      caseId = CaseId $ req ^. #context ^. #transaction_id
+      caseId = CaseId $ req ^. #context . #transaction_id
   case_ <- Case.findById caseId
-  cp <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
-  let pids = map ProductInstance._productId cp
-  confirmedProducts <- Products.findAllByIds pids
-
+  pi <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
+  let confirmedProducts = pi
   res <-
     case length confirmedProducts of
       0 -> return $ Right ()
       1 -> do
-        let product = head confirmedProducts
+        let productInst = head confirmedProducts
             personId = Case._requestor case_
         Notify.notifyOnTrackCb personId tracking case_
-        updateTracker product tracking
+        updateTracker productInst tracking
       _ -> return $ Left "Multiple products confirmed, ambiguous selection"
   case res of
     Left err -> return $ AckResponse context (Ack "Error" err)
     Right _ -> return $ AckResponse context (Ack "Successful" "Ok")
 
-updateTracker :: Products.Products -> Tracker -> L.Flow (Either Text ())
-updateTracker product tracker = do
-  let minfo = decodeFromText =<< product ^. #_info
+updateTracker :: ProductInstance.ProductInstance -> Tracker -> L.Flow (Either Text ())
+updateTracker prodInst tracker = do
+  let minfo = decodeFromText =<< prodInst ^. #_info
   let uInfo = (\info -> info {ProductInfo._tracker = Just tracker}) <$> minfo
   let updatedPrd =
-        product {Products._info = Just $ encodeToText uInfo}
-  MP.updateMultiple (product ^. #_id) updatedPrd
+        prodInst {ProductInstance._info = Just $ encodeToText uInfo}
+  MPI.updateMultiple (prodInst ^. #_id) updatedPrd
   return $ Right ()

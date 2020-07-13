@@ -10,9 +10,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Extra
 import Data.Aeson as A
-import Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -102,7 +100,7 @@ mkAckResponse' txnId action message = do
 withFlowHandler :: L.Flow a -> FlowHandler a
 withFlowHandler flow = do
   (Env flowRt) <- ask
-  lift $ ExceptT $ try $ I.runFlow flowRt $ flow
+  lift . ExceptT . try . I.runFlow flowRt $ flow
 
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
@@ -113,16 +111,15 @@ encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 authenticate :: Maybe CronAuthKey -> L.Flow ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let authHeader = (T.stripPrefix "Basic ") =<< maybeAuth
+  let authHeader = T.stripPrefix "Basic " =<< maybeAuth
       decodedAuthM =
         DT.decodeUtf8
           <$> ( (rightToMaybe . DBB.decode . DT.encodeUtf8)
                   =<< authHeader
               )
   case (decodedAuthM, keyM) of
-    (Just auth, Just key) -> do
-      when ((T.pack key) /= auth) throw401
-      return ()
+    (Just auth, Just key) ->
+      when (T.pack key /= auth) throw401
     _ -> throw401
   where
     throw401 =
@@ -131,7 +128,7 @@ authenticate maybeAuth = do
 
 maskPerson :: Person.Person -> Person.Person
 maskPerson person =
-  person {Person._deviceToken = (FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken) <$> (person ^. #_deviceToken)}
+  person {Person._deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> person ^. #_deviceToken}
   where
     trimToken token =
       if length token > 6

@@ -9,7 +9,6 @@ import Beckn.Types.Core.ScalarRange
 import Beckn.Types.Core.Tag
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
-import Data.Generics.Labels
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
@@ -55,7 +54,7 @@ data Dimension = Dimension
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data TravellerReqInfo = TravellerReqInfo
+newtype TravellerReqInfo = TravellerReqInfo
   { count :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)

@@ -17,9 +17,9 @@ import qualified Storage.Queries.ProductInstance as Q
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update ProductInstance status
-updateStatus :: ProductsId -> ProductInstanceStatus -> FlowDomainResult ()
+updateStatus :: ProductInstanceId -> ProductInstanceStatus -> FlowDomainResult ()
 updateStatus id status = runExceptT $ do
-  validateCPStatusChange status id
+  validatePIStatusChange status id
   ExceptT $ do
     result <- Q.updateStatus id status
     fromDBError result
@@ -27,9 +27,16 @@ updateStatus id status = runExceptT $ do
 -- | Bulk validate and update Case's ProductInstances statuses
 updateAllProductInstancesByCaseId :: CaseId -> ProductInstanceStatus -> FlowDomainResult ()
 updateAllProductInstancesByCaseId caseId status = runExceptT $ do
-  validateCPSStatusesChange status caseId
+  validatePIStatusesChange status caseId
   ExceptT $ do
-    result <- Q.updateAllByCaseId caseId status
+    result <- Q.updateAllProductInstByCaseId caseId status
+    fromDBError result
+
+updateMultiple :: ProductInstanceId -> ProductInstance -> FlowDomainResult ()
+updateMultiple id prdInst = runExceptT $ do
+  validatePIStatusChange (_status prdInst) id
+  ExceptT $ do
+    result <- Q.updateMultiple id prdInst
     fromDBError result
 
 -- | Find Product Instance by id
@@ -51,21 +58,21 @@ findByProductId pId = do
   fromDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
 
 -- | Get ProductInstance and validate its status change
-validateCPStatusChange :: ProductInstanceStatus -> ProductsId -> ExceptT DomainError L.Flow ()
-validateCPStatusChange newStatus caseId = do
-  cp <- ExceptT $ findByProductId caseId
+validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError L.Flow ()
+validatePIStatusChange newStatus productInstanceId = do
+  cp <- ExceptT $ findById productInstanceId
   liftEither $ validateStatusChange newStatus cp
 
 -- | Bulk validation of ProductInstance statuses change
-validateCPSStatusesChange :: ProductInstanceStatus -> CaseId -> ExceptT DomainError L.Flow ()
-validateCPSStatusesChange newStatus caseId = do
+validatePIStatusesChange :: ProductInstanceStatus -> CaseId -> ExceptT DomainError L.Flow ()
+validatePIStatusesChange newStatus caseId = do
   cps <- ExceptT $ findAllByCaseId caseId
-  validateCPSStatusesChange' newStatus cps
+  validatePIStatusesChange' newStatus cps
 
 -- | Bulk validation of ProductInstance statuses change
-validateCPSStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> ExceptT DomainError L.Flow ()
-validateCPSStatusesChange' newStatus cps = do
-  case sequence $ fmap (validateStatusChange newStatus) cps of
+validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> ExceptT DomainError L.Flow ()
+validatePIStatusesChange' newStatus productInstances = do
+  case mapM (validateStatusChange newStatus) productInstances of
     -- throwErrror, throwE is a shorthand for ExceptT . pure . Left
     Left err -> throwError err
     Right _ -> pure ()

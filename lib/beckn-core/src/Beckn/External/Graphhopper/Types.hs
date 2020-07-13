@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-
 module Beckn.External.Graphhopper.Types where
 
 import Data.Aeson
@@ -23,7 +21,7 @@ data Request = Request
   deriving (Show)
 
 data Path = Path
-  { _distance :: Float,
+  { _distance :: Float, -- meters
     _time :: Integer, -- miliseconds
     _bbox :: Maybe BoundingBoxWithoutCRS, -- bbox and points fields are empty incase calcPoints
     _points :: Maybe GeospatialGeometry, -- is set to False. Default - True
@@ -56,7 +54,7 @@ instance FromJSON Instruction where
 instance ToJSON Instruction where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Response = Response
+newtype Response = Response
   { _paths :: [Path]
   }
   deriving (Generic, Show)

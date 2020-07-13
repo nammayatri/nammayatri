@@ -24,12 +24,12 @@ create Storage.Location {..} =
 
 findLocationById ::
   LocationId -> L.Flow Storage.Location
-findLocationById id = do
+findLocationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_DATA"
   where
-    predicate Storage.Location {..} = (_id ==. B.val_ id)
+    predicate Storage.Location {..} = _id ==. B.val_ id
 
 updateLocationRec :: LocationId -> Storage.Location -> L.Flow ()
 updateLocationRec locationId location = do
@@ -59,6 +59,5 @@ findAllByLocIds fromIds toIds =
   DB.findAllOrErr dbTable (pred (LocationId <$> fromIds) (LocationId <$> toIds))
   where
     pred fromIds toIds Storage.Location {..} =
-      ( B.in_ _id (B.val_ <$> fromIds)
-          ||. B.in_ _id (B.val_ <$> toIds)
-      )
+      B.in_ _id (B.val_ <$> fromIds)
+        ||. B.in_ _id (B.val_ <$> toIds)

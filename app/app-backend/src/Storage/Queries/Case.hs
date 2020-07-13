@@ -1,8 +1,11 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.Case where
 
 import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Storage
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
@@ -12,6 +15,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
+import qualified Storage.Queries.Person as Person
 import Types.App
 import qualified Types.Storage.DB as DB
 
@@ -41,7 +45,7 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset =
       foldl
         (&&.)
         (B.val_ True)
-        [ _type ==. (B.val_ caseType),
+        [ _type ==. B.val_ caseType,
           B.in_ _status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
           _requestor ==. B.val_ (Just $ _getPersonId personId)
         ]
@@ -50,7 +54,23 @@ findById :: CaseId -> L.Flow Storage.Case
 findById caseId =
   DB.findOneWithErr dbTable (predicate caseId)
   where
-    predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+    predicate caseId Storage.Case {..} = _id ==. B.val_ caseId
+
+findByIdAndType :: CaseId -> Storage.CaseType -> L.Flow Storage.Case
+findByIdAndType caseId caseType =
+  DB.findOneWithErr dbTable (predicate caseId caseType)
+  where
+    predicate caseId caseType Storage.Case {..} =
+      (_id ==. B.val_ caseId)
+        &&. (_type ==. B.val_ caseType)
+
+findIdByPerson :: Person.Person -> CaseId -> L.Flow Storage.Case
+findIdByPerson person caseId = do
+  let personId = _getPersonId $ person ^. #_id
+  DB.findOneWithErr dbTable (predicate personId caseId)
+  where
+    predicate personId caseId Storage.Case {..} =
+      _id ==. B.val_ caseId &&. _requestor ==. B.val_ (Just personId)
 
 findById' :: CaseId -> L.Flow (T.DBResult (Maybe Storage.Case))
 findById' caseId =
@@ -85,11 +105,11 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
       foldl
         (&&.)
         (B.val_ True)
-        ( [ (_status `B.in_` ((B.val_) <$> statuses)),
-            (_validTill B.<=. (B.val_ now))
+        ( [ _status `B.in_` (B.val_ <$> statuses),
+            _validTill B.<=. B.val_ now
           ]
-            <> (maybe [] (\from -> [_createdAt B.>=. (B.val_ from)]) maybeFrom)
-            <> (maybe [] (\to -> [_createdAt B.<=. (B.val_ to)]) maybeTo)
+            <> maybe [] (\from -> [_createdAt B.>=. B.val_ from]) maybeFrom
+            <> maybe [] (\to -> [_createdAt B.<=. B.val_ to]) maybeTo
         )
 
 updateValidTill :: CaseId -> LocalTime -> L.Flow ()
@@ -153,20 +173,20 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
     orderByDesc
     >>= either DB.throwDBError pure
   where
-    limit = (toInteger $ fromMaybe 100 mlimit)
-    offset = (toInteger $ fromMaybe 0 moffset)
+    limit = toInteger $ fromMaybe 100 mlimit
+    offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate fromLocationIds toLocationIds types statuses udf1s Storage.Case {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _fromLocationId `B.in_` ((B.val_) <$> fromLocationIds) ||. complementVal fromLocationIds,
-          _toLocationId `B.in_` ((B.val_) <$> toLocationIds) ||. complementVal toLocationIds,
-          _status `B.in_` ((B.val_) <$> statuses) ||. complementVal statuses,
-          _type `B.in_` ((B.val_) <$> types) ||. complementVal types,
-          _udf1 `B.in_` ((B.val_ . Just) <$> udf1s) ||. complementVal udf1s
+        [ _fromLocationId `B.in_` (B.val_ <$> fromLocationIds) ||. complementVal fromLocationIds,
+          _toLocationId `B.in_` (B.val_ <$> toLocationIds) ||. complementVal toLocationIds,
+          _status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
+          _type `B.in_` (B.val_ <$> types) ||. complementVal types,
+          _udf1 `B.in_` (B.val_ . Just <$> udf1s) ||. complementVal udf1s
         ]
 
 complementVal l
-  | (null l) = B.val_ True
+  | null l = B.val_ True
   | otherwise = B.val_ False

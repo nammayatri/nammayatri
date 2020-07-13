@@ -16,7 +16,7 @@ startServer :: IO ThreadId
 startServer = forkIO AppBE.runAppBackend
 
 withBecknServer :: IO () -> IO ()
-withBecknServer action = do
+withBecknServer action =
   bracket
     startServer
     killThread
@@ -43,13 +43,13 @@ spec = do
             T._logFilePath = "/tmp/app-backend-caselist-test",
             T._isAsync = False
           }
-  around (withFlowRuntime (Just loggerCfg))
-    $ describe "Testing App Backend APIs"
-    $ it "Testing List case API"
-    $ \flowRt -> do
-      hspec
-        $ around_ withBecknServer
-        $ it "List case API should return success"
-        $ do
-          result <- runClient appClientEnv buildCaseListRes
-          result `shouldSatisfy` isRight
+  around (withFlowRuntime (Just loggerCfg)) $
+    describe "Testing App Backend APIs" $
+      it "Testing List case API" $
+        \flowRt ->
+          hspec $
+            around_ withBecknServer $
+              it "List case API should return success" $
+                do
+                  result <- runClient appClientEnv buildCaseListRes
+                  result `shouldSatisfy` isRight

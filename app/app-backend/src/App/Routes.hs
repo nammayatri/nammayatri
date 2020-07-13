@@ -11,6 +11,7 @@ import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.ProductInstance
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import qualified Epass.App.Routes as Epass
@@ -21,6 +22,7 @@ import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
 import qualified Product.Info as Info
+import qualified Product.Location as Location
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
@@ -35,27 +37,29 @@ import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import Types.App
+import Utils.Common (TokenAuth)
 
-type AppAPIs =
+type AppAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> RegistrationAPIs
-           :<|> SearchAPIs
-           :<|> ConfirmAPIs
-           :<|> CaseAPIs
-           :<|> InfoAPIs
-           :<|> TrackTripAPIs
-           :<|> ProductInstanceAPIs
-           :<|> CancelAPIs
-           :<|> CronAPIs
-           :<|> Epass.EPassAPIs
+           :<|> RegistrationAPI
+           :<|> SearchAPI
+           :<|> ConfirmAPI
+           :<|> CaseAPI
+           :<|> InfoAPI
+           :<|> TrackTripAPI
+           :<|> ProductInstanceAPI
+           :<|> CancelAPI
+           :<|> CronAPI
+           :<|> RouteAPI
+           :<|> Epass.EPassAPI
        )
 
-appAPIs :: Proxy AppAPIs
-appAPIs = Proxy
+appAPI :: Proxy AppAPI
+appAPI = Proxy
 
-appServer' :: V.Key (HashMap Text Text) -> FlowServer AppAPIs
-appServer' key =
+appServer :: V.Key (HashMap Text Text) -> FlowServer AppAPI
+appServer key =
   pure "App is UP"
     :<|> registrationFlow
     :<|> searchFlow
@@ -66,10 +70,11 @@ appServer' key =
     :<|> productInstanceFlow
     :<|> cancelFlow
     :<|> cronFlow
-    :<|> Epass.epassServer' key
+    :<|> routeApiFlow
+    :<|> Epass.epassServer key
 
 ---- Registration Flow ------
-type RegistrationAPIs =
+type RegistrationAPI =
   "token"
     :> ( ReqBody '[JSON] InitiateLoginReq
            :> Post '[JSON] InitiateLoginRes
@@ -83,33 +88,26 @@ type RegistrationAPIs =
              :> Post '[JSON] InitiateLoginRes
        )
 
-registrationFlow :: FlowServer RegistrationAPIs
+registrationFlow :: FlowServer RegistrationAPI
 registrationFlow =
   Registration.initiateLogin
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
 
 -------- Search Flow --------
-type SearchAPIs =
-  "search" :> "services"
-    :> AuthHeader
-    :> ReqBody '[JSON] Search.SearchReq
-    :> Post '[JSON] Search.SearchRes
-    -- on_search
-    :<|> "on_search"
-    :> "services"
-    :> ReqBody '[JSON] Search.OnSearchReq
-    :> Post '[JSON] Search.OnSearchRes
+type SearchAPI =
+  (TokenAuth :> Search.SearchAPI)
+    :<|> Search.OnSearchAPI
 
-searchFlow :: FlowServer SearchAPIs
+searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.search_cb
+    :<|> Search.searchCb
 
 -------- Confirm Flow --------
-type ConfirmAPIs =
+type ConfirmAPI =
   ( "confirm"
-      :> AuthHeader
+      :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
@@ -118,33 +116,33 @@ type ConfirmAPIs =
       :> Post '[JSON] Confirm.OnConfirmRes
   )
 
-confirmFlow :: FlowServer ConfirmAPIs
+confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
     :<|> Confirm.onConfirm
 
 ------- Case Flow -------
-type CaseAPIs =
+type CaseAPI =
   "case"
-    :> AuthHeader
+    :> TokenAuth
     :> ( "list"
            :> MandatoryQueryParam "type" Case.CaseType
            :> QueryParams "status" Case.CaseStatus
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
-           :> Get '[JSON] Case.ListRes
+           :> Get '[JSON] Case.CaseListRes
            :<|> Capture "caseId" CaseId
            :> Get '[JSON] Case.StatusRes
        )
 
-caseFlow :: FlowServer CaseAPIs
+caseFlow :: FlowServer CaseAPI
 caseFlow regToken =
   Case.list regToken
     :<|> Case.status regToken
 
 -------- Info Flow ------
-type InfoAPIs =
-  AuthHeader
+type InfoAPI =
+  TokenAuth
     :> ( "product"
            :> Capture "id" Text
            :> Get '[JSON] GetProductInfoRes
@@ -153,16 +151,16 @@ type InfoAPIs =
            :> Get '[JSON] Location.GetLocationRes
        )
 
-infoFlow :: FlowServer InfoAPIs
+infoFlow :: FlowServer InfoAPI
 infoFlow regToken =
   Info.getProductInfo regToken
     :<|> Info.getLocation regToken
 
 ------- Track trip Flow -------
-type TrackTripAPIs =
+type TrackTripAPI =
   "track"
     :> "trip"
-    :> AuthHeader
+    :> TokenAuth
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
@@ -170,27 +168,29 @@ type TrackTripAPIs =
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
-trackTripFlow :: FlowServer TrackTripAPIs
+trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
   TrackTrip.track
-    :<|> TrackTrip.track_cb
+    :<|> TrackTrip.trackCb
 
 -------- ProductInstance Flow----------
-type ProductInstanceAPIs =
+type ProductInstanceAPI =
   "productInstance"
-    :> ( AuthHeader
-           :> ReqBody '[JSON] ProductInstance.ProdInstReq
-           :> Post '[JSON] ProductInstance.ProductInstanceList
+    :> ( TokenAuth
+           :> QueryParams "status" ProductInstanceStatus
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] ProductInstance.ProductInstanceList
        )
 
 productInstanceFlow =
   ProductInstance.list
 
 -------- Cancel Flow----------
-type CancelAPIs =
+type CancelAPI =
   "cancel"
     :> "services"
-    :> AuthHeader
+    :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     -- on cancel
@@ -203,14 +203,23 @@ cancelFlow =
   Cancel.cancel
     :<|> Cancel.onCancel
 
--------- Cron APIs --------
-type CronAPIs =
+-------- Cron API --------
+type CronAPI =
   "cron"
     :> "expire_cases"
     :> Header "Authorization" CronAuthKey
     :> ReqBody '[JSON] Cron.ExpireCaseReq
     :> Post '[JSON] Cron.ExpireCaseRes
 
-cronFlow :: FlowServer CronAPIs
+cronFlow :: FlowServer CronAPI
 cronFlow =
   Cron.updateCases
+
+type RouteAPI =
+  "route"
+    :> TokenAuth
+    :> ReqBody '[JSON] Location.Request
+    :> Post '[JSON] Location.Response
+
+routeApiFlow :: FlowServer RouteAPI
+routeApiFlow = Location.getRoute

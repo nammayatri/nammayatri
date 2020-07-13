@@ -16,7 +16,7 @@ data Point = Point
   }
   deriving (Generic)
 
-data Bound = Bound [Point] deriving (Generic)
+newtype Bound = Bound [Point] deriving (Generic)
 
 data LocationT f = Location
   { _id :: B.C f Text,

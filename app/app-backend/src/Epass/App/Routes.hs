@@ -35,8 +35,6 @@ import Epass.Types.App
 import Epass.Types.Common
 import qualified Epass.Types.Storage.Organization as SO
 import qualified Epass.Types.Storage.Pass as SP
-import qualified Epass.Types.Storage.Pass as SP
-import qualified Epass.Types.Storage.PassApplication as PA
 import qualified Epass.Types.Storage.PassApplication as PA
 import EulerHS.Prelude
 import Network.Wai.Parse
@@ -57,27 +55,27 @@ epassMultipartOptions pTag =
       backendOptions = defaultBackendOptions pTag
     }
 
-type EPassAPIs =
+type EPassAPI =
   "epass"
     :> ( Get '[JSON] Text
-           :<|> PassApplicationAPIs
-           :<|> OrganizationAPIs
-           :<|> CustomerAPIs
-           :<|> PassAPIs
+           :<|> PassApplicationAPI
+           :<|> OrganizationAPI
+           :<|> CustomerAPI
+           :<|> PassAPI
            :<|> UserAPIS
            :<|> QuotaAPIS
            :<|> BlacklistAPIS
-           :<|> DocumentAPIs
-           :<|> TagAPIs
-           :<|> CommentAPIs
-           :<|> LocationAPIs
+           :<|> DocumentAPI
+           :<|> TagAPI
+           :<|> CommentAPI
+           :<|> LocationAPI
        )
 
-epassAPIs :: Proxy EPassAPIs
-epassAPIs = Proxy
+epassAPI :: Proxy EPassAPI
+epassAPI = Proxy
 
-epassServer' :: V.Key (HashMap Text Text) -> FlowServer EPassAPIs
-epassServer' key =
+epassServer :: V.Key (HashMap Text Text) -> FlowServer EPassAPI
+epassServer key =
   HealthCheck.healthCheckApp
     :<|> passApplicationFlow
     :<|> organizationFlow
@@ -93,7 +91,7 @@ epassServer' key =
 
 ---------------------------------
 ---- Pass Application Flow ------
-type PassApplicationAPIs =
+type PassApplicationAPI =
   "pass_application"
     :> AuthHeader
     :> ( ReqBody '[JSON] CreatePassApplicationReq
@@ -130,7 +128,7 @@ passApplicationFlow registrationToken =
 
 ----- Organization Flow -------
 --
-type OrganizationAPIs =
+type OrganizationAPI =
   "organization"
     :> AuthHeader
     :> ( ReqBody '[JSON] CreateOrganizationReq
@@ -152,21 +150,20 @@ organizationFlow registrationToken =
 
 ---------------------------------
 ----- Customer Flow -------
-type CustomerAPIs =
+type CustomerAPI =
   "customer"
     :> AuthHeader
     :> Capture "customerId" Text
     :> Get '[JSON] GetCustomerRes
 
-customerFlow registrationToken =
-  Customer.getCustomerInfo registrationToken
+customerFlow = Customer.getCustomerInfo
 
 ---------------------------
 ------ Pass Flow ---------
 
 -- | Please be cautious while changing the order of the routes
 -- | The /pass/list?.. was getting overriden by /pass/:passId
-type PassAPIs =
+type PassAPI =
   "pass"
     :> AuthHeader
     :> ( "list"
@@ -176,9 +173,9 @@ type PassAPIs =
            :> QueryParam "offset" Int
            :> MandatoryQueryParam "type" PassType
            :> Get '[JSON] ListPassRes
-           :<|> Capture "passId" ProductsId
+           :<|> Capture "passId" ProductInstanceId
            :> Get '[JSON] PassRes
-           :<|> Capture "passId" ProductsId
+           :<|> Capture "passId" ProductInstanceId
            :> ReqBody '[JSON] UpdatePassReq
            :> Post '[JSON] PassRes
        )
@@ -268,7 +265,7 @@ blacklistFlow registrationToken =
 
 --------
 ---- Document Api
-type DocumentAPIs =
+type DocumentAPI =
   "document"
     :> AuthHeader
     :> ( Capture "entityType" DocumentEntity
@@ -287,7 +284,7 @@ documentFlow registrationToken =
 
 --------
 ---- Tag Api
-type TagAPIs =
+type TagAPI =
   "tag"
     :> AuthHeader
     :> ( ReqBody '[JSON] Tag.CreateReq
@@ -319,7 +316,7 @@ tagFlow registrationToken =
 
 --------
 ---- Comment Api
-type CommentAPIs =
+type CommentAPI =
   "comment"
     :> AuthHeader
     :> ( ReqBody '[JSON] Comment.CreateReq
@@ -336,7 +333,7 @@ commentFlow registrationToken =
 
 --------------------------------------------
 ----- Location API
-type LocationAPIs =
+type LocationAPI =
   "location"
     :> AuthHeader
     :> ( "list"
@@ -348,5 +345,4 @@ type LocationAPIs =
            :> Get '[JSON] ListLocationRes
        )
 
-locationFlow registrationToken =
-  Location.listLocation registrationToken
+locationFlow = Location.listLocation

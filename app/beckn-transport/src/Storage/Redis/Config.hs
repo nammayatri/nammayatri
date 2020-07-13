@@ -37,23 +37,22 @@ loadRedisConfig = do
     maxConnections <- mmaxConnections
     maxIdleTime <- mmaxIdleTime
     p <- readMaybe port
-    Just $ T.mkKVDBConfig "redis" $
-      T.RedisConfig
-        { connectHost = host,
-          connectPort = p,
-          connectAuth = Nothing, -- FIXME: this should use auth
-          connectDatabase = read db,
-          connectMaxConnections = read maxConnections,
-          connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime,
-          connectTimeout = fromRational <$> toRational <$> read <$> mtimeout
-        }
+    Just $
+      T.mkKVDBConfig "redis" $
+        T.RedisConfig
+          { connectHost = host,
+            connectPort = p,
+            connectAuth = Nothing, -- FIXME: this should use auth
+            connectDatabase = read db,
+            connectMaxConnections = read maxConnections,
+            connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime,
+            connectTimeout = fromRational . toRational . read <$> mtimeout
+          }
 
 prepareRedisConnections :: L.Flow ()
 prepareRedisConnections = do
   mConfig <- L.runIO loadRedisConfig
-  let kvDBConfig' = case mConfig of
-        Nothing -> kvDBConfig
-        Just config -> config
+  let kvDBConfig' = fromMaybe kvDBConfig mConfig
   kvConn <- L.getOrInitKVDBConn kvDBConfig'
   throwOnFailedWithLog
     kvConn

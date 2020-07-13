@@ -33,9 +33,9 @@ import qualified System.Environment as SE
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
   port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runTransporterBackendApp' port
-    $ setOnExceptionResponse transporterExceptionResponse
-    $ setPort port defaultSettings
+  runTransporterBackendApp' port $
+    setOnExceptionResponse transporterExceptionResponse $
+      setPort port defaultSettings
 
 runTransporterBackendApp' :: Int -> Settings -> IO ()
 runTransporterBackendApp' port settings = do
@@ -70,10 +70,10 @@ transporterExceptionResponse exception = do
     Just ex ->
       responseLBS
         (H.Status (errHTTPCode ex) (BS.pack $ errReasonPhrase ex))
-        ((H.hContentType, "application/json") : (errHeaders ex))
+        ((H.hContentType, "application/json") : errHeaders ex)
         (errBody ex)
     Nothing ->
       responseLBS
         H.internalServerError500
         [(H.hContentType, "application/json")]
-        (Aeson.encode $ internalServerErr)
+        (Aeson.encode internalServerErr)

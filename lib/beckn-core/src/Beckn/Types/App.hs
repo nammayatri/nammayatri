@@ -13,7 +13,7 @@ import qualified EulerHS.Runtime as R
 import Servant
 
 -- App Types
-data Env = Env
+newtype Env = Env
   { runTime :: R.FlowRuntime
   }
 
@@ -71,6 +71,13 @@ newtype ProductInstanceId = ProductInstanceId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''ProductInstanceId
+
+newtype InventoryId = InventoryId
+  { _getInventoryId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''InventoryId
 
 type Limit = Int
 

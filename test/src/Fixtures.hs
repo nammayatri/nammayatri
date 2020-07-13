@@ -121,11 +121,10 @@ searchServices ::
   Text ->
   Search.SearchReq ->
   ClientM Common.AckResponse
-
 onSearchServices ::
   Search.OnSearchReq ->
   ClientM Search.OnSearchRes
-searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPIs)
+searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: Text -> IO Search.SearchReq
 buildSearchReq guid = searchReq "search" guid <$> getFutureTime
@@ -140,24 +139,23 @@ data CaseClient = CaseClient
       [Case.CaseStatus] ->
       Maybe Integer ->
       Maybe Integer ->
-      ClientM AppCase.ListRes,
+      ClientM AppCase.CaseListRes,
     getCaseStatusRes :: CaseId -> ClientM AppCase.StatusRes
   }
 
 getCase :: CaseAPIClient
 getCase = CaseAPIClient {..}
   where
-    caseAPIClient = client (Proxy :: Proxy AbeRoutes.CaseAPIs)
-    caseClient token = caseAPIClient token
+    caseAPIClient = client (Proxy :: Proxy AbeRoutes.CaseAPI)
     mkCaseClient regToken = CaseClient {..}
       where
-        getCaseListRes :<|> getCaseStatusRes = caseClient regToken
+        getCaseListRes :<|> getCaseStatusRes = caseAPIClient regToken
 
-buildCaseListRes :: ClientM AppCase.ListRes
+buildCaseListRes :: ClientM AppCase.CaseListRes
 buildCaseListRes = do
   let CaseAPIClient {..} = getCase
       CaseClient {..} = mkCaseClient appRegistrationToken
-  getCaseListRes Case.RIDEBOOK [Case.NEW] (Just 10) (Just 0)
+  getCaseListRes Case.RIDESEARCH [Case.NEW] (Just 10) (Just 0)
 
 buildCaseId :: Text -> CaseId
 buildCaseId = CaseId
@@ -170,24 +168,22 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
-
 appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
-appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPIs)
+appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 buildAppConfirmReq :: Text -> Text -> ConfirmAPI.ConfirmReq
 buildAppConfirmReq cid pid =
   ConfirmAPI.ConfirmReq
     { caseId = cid,
-      productId = pid
+      productInstanceId = pid
     }
 
 listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> ClientM [TbeCase.CaseRes]
-
 acceptOrDeclineRide :: Text -> Text -> TbeCase.UpdateCaseReq -> ClientM Case.Case
-listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPIs)
+listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
 buildListLeads :: ClientM [TbeCase.CaseRes]
-buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDEBOOK (Just 50) Nothing (Just True)
+buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing (Just True)
 
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =
