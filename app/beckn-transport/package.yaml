@@ -1,13 +1,13 @@
-name:                beckn-transport
-version:             0.1.0.0
-github:              "juspay/beckn"
-license:             AllRightsReserved
-author:              "Juspay"
-maintainer:          "Juspay"
-copyright:           "2020 Juspay Technologies Private Limited"
+name: beckn-transport
+version: 0.1.0.0
+github: "juspay/beckn"
+license: AllRightsReserved
+author: "Juspay"
+maintainer: "Juspay"
+copyright: "2020 Juspay Technologies Private Limited"
 
 extra-source-files:
-- README.md
+  - README.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -16,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
+description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -50,54 +50,54 @@ default-extensions:
   - BlockArguments
 
 dependencies:
-- aeson
-- aeson-pretty
-- base >= 4.7 && < 5
-- base64-bytestring
-- beam-core
-- beam-postgres
-- bytestring
-- containers
-- cryptonite
-- data-default
-- euler-hs
-- http-api-data
-- http-client
-- http-types
-- lens
-- pureMD5
-- purescript-bridge
-- servant
-- servant-client
-- servant-multipart
-- servant-purescript
-- servant-server
-- servant-subscriber
-- servant-swagger
-- swagger2
-- text
-- vault
-- wai
-- wai-extra
-- warp
-- time
-- template-haskell
-- random-strings
-- generic-lens
+  - aeson
+  - aeson-pretty
+  - base >= 4.7 && < 5
+  - base64-bytestring
+  - beam-core
+  - beam-postgres
+  - bytestring
+  - containers
+  - cryptonite
+  - data-default
+  - euler-hs
+  - http-api-data
+  - http-client
+  - http-types
+  - lens
+  - pureMD5
+  - purescript-bridge
+  - servant
+  - servant-client
+  - servant-multipart
+  - servant-purescript
+  - servant-server
+  - servant-subscriber
+  - servant-swagger
+  - swagger2
+  - text
+  - vault
+  - wai
+  - wai-extra
+  - warp
+  - time
+  - template-haskell
+  - random-strings
+  - generic-lens
 
 library:
-  source-dirs:         src
+  source-dirs: src
   dependencies:
-  - beckn-core
+    - beckn-core
 
 executables:
   beckn-transport-exe:
-    main:                Main.hs
-    source-dirs:         server
+    main: Main.hs
+    source-dirs: server
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - beckn-transport
-    - beckn-core
+      - beckn-transport
+      - beckn-core

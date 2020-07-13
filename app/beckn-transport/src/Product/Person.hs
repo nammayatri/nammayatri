@@ -2,6 +2,7 @@
 
 module Product.Person where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
@@ -39,7 +40,7 @@ createPerson orgId req = withFlowHandler $ do
   QP.create person
   return $ UpdatePersonRes person
   where
-    validateDriver :: CreatePersonReq -> L.Flow ()
+    validateDriver :: CreatePersonReq -> Flow ()
     validateDriver req =
       when (req ^. #_role == Just SP.DRIVER) $
         case (req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
@@ -88,7 +89,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     hasAccess user person
     return $ PersonRes person
   where
-    hasAccess :: SP.Person -> SP.Person -> L.Flow ()
+    hasAccess :: SP.Person -> SP.Person -> Flow ()
     hasAccess user person =
       when
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)

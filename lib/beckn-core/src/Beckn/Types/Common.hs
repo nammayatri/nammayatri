@@ -9,8 +9,10 @@ import Data.Swagger
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
+type FlowR a = ReaderT a L.Flow
+
 class GuidLike a where
-  generateGUID :: L.Flow a
+  generateGUID :: FlowR r a
 
 instance GuidLike Text where
   generateGUID = L.generateGUID

@@ -2,6 +2,7 @@
 
 module Epass.App where
 
+import Beckn.Utils.Common (runFlowR)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -48,12 +49,12 @@ runEpassBackendApp' port settings = do
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections
-    try (R.runFlow flowRt prepare) >>= \case
+    try (runFlowR flowRt () prepare) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
         putStrLn @String
           ("Runtime created. Starting server at port " <> show port)
-        runSettings settings $ App.run reqHeadersKey (App.Env flowRt)
+        runSettings settings $ App.run reqHeadersKey (App.EnvR flowRt ())
 
 becknExceptionResponse :: SomeException -> Response
 becknExceptionResponse exception = do

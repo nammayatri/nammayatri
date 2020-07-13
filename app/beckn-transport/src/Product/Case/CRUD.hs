@@ -2,9 +2,9 @@
 
 module Product.Case.CRUD where
 
+import App.Types
 import Beckn.Types.API.Search
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import Beckn.Types.App as BC
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
@@ -100,7 +100,7 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
         return c
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProductInstance :: Case -> Products -> Maybe Amount -> Text -> ProdInst.ProductInstanceStatus -> L.Flow ProductInstance
+createProductInstance :: Case -> Products -> Maybe Amount -> Text -> ProdInst.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do
   piId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
@@ -138,7 +138,7 @@ createProductInstance cs prod price orgId status = do
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> ProductInstance -> Text -> L.Flow ()
+notifyGateway :: Case -> ProductInstance -> Text -> Flow ()
 notifyGateway c pi orgId = do
   L.logInfo "notifyGateway" $ show c
   allPis <- QPI.findAllByCaseId (c ^. #_id)
@@ -149,7 +149,7 @@ notifyGateway c pi orgId = do
   Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> L.Flow OnSearchReq
+mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrentTimeUTC
   let context =

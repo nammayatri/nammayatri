@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.CustomerDetail where
 
+import App.Types
 import Beckn.Types.Common
 import Beckn.Utils.Extra
 import Data.Aeson (Value (Null))
@@ -18,20 +19,20 @@ dbTable ::
   B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.CustomerDetailT)
 dbTable = DB._CustomerDetail DB.becknDb
 
-create :: Storage.CustomerDetail -> L.Flow ()
+create :: Storage.CustomerDetail -> Flow ()
 create Storage.CustomerDetail {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.CustomerDetail {..})
     >>= either DB.throwDBError pure
 
 findById ::
-  CustomerDetailId -> L.Flow (T.DBResult (Maybe Storage.CustomerDetail))
+  CustomerDetailId -> Flow (T.DBResult (Maybe Storage.CustomerDetail))
 findById id =
   DB.findOne dbTable predicate
   where
     predicate Storage.CustomerDetail {..} = _id ==. B.val_ id
 
 findByIdentifier ::
-  Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.CustomerDetail)
+  Storage.IdentifierType -> Text -> Flow (Maybe Storage.CustomerDetail)
 findByIdentifier idType mb =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -41,14 +42,14 @@ findByIdentifier idType mb =
         &&. _uniqueIdentifier ==. B.val_ mb
 
 findAllByCustomerId ::
-  CustomerId -> L.Flow [Storage.CustomerDetail]
+  CustomerId -> Flow [Storage.CustomerDetail]
 findAllByCustomerId id =
   DB.findAll dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.CustomerDetail {..} = _CustomerId ==. B.val_ id
 
-findExact :: CustomerId -> Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.CustomerDetail)
+findExact :: CustomerId -> Storage.IdentifierType -> Text -> Flow (Maybe Storage.CustomerDetail)
 findExact customerId idType identifier =
   DB.findOne dbTable (predicate customerId idType identifier)
     >>= either DB.throwDBError pure
@@ -58,7 +59,7 @@ findExact customerId idType identifier =
         &&. _identifierType ==. B.val_ idType
         &&. _uniqueIdentifier ==. B.val_ identifier
 
-createIfNotExistsCustomerD :: Storage.CustomerDetail -> L.Flow ()
+createIfNotExistsCustomerD :: Storage.CustomerDetail -> Flow ()
 createIfNotExistsCustomerD cust = do
   let cid = _uniqueIdentifier cust
   resp <- DB.findOne dbTable (\CustomerDetail {..} -> B.val_ cid ==. _uniqueIdentifier)
@@ -67,7 +68,7 @@ createIfNotExistsCustomerD cust = do
     Right Nothing -> create cust
     Left err -> L.throwException err500
 
-createIfNotExists :: CustomerId -> Storage.IdentifierType -> Text -> L.Flow ()
+createIfNotExists :: CustomerId -> Storage.IdentifierType -> Text -> Flow ()
 createIfNotExists customerId idType identifier = do
   res <- findExact customerId idType identifier
   case res of

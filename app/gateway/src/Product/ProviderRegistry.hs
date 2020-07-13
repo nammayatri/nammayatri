@@ -3,15 +3,14 @@ module Product.ProviderRegistry
   )
 where
 
+import App.Types
 import qualified Beckn.Types.Core.Context as B
-import qualified EulerHS.Language as EL
+import qualified Beckn.Types.Storage.Organization as Org
 import EulerHS.Prelude
-import qualified System.Environment as SE
+import qualified Storage.Queries.Provider as Provider
 
--- TODO: All of it
-lookup :: B.Context -> EL.Flow (String, Int)
-lookup _ = do
-  EL.runIO $
-    (,)
-      <$> (fromMaybe "localhost" <$> SE.lookupEnv "PROVIDER_HOST")
-      <*> (fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PROVIDER_PORT")
+-- TODO: Filter by domain
+lookup :: B.Context -> AppFlow [Text]
+lookup _context = do
+  providers <- Provider.listProviders
+  return . catMaybes $ Org._callbackUrl <$> providers

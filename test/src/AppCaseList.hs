@@ -1,6 +1,6 @@
 module AppCaseList where
 
-import qualified "app-backend" App as AppBE
+import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
@@ -11,19 +11,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)
 import Servant.Client
 import Test.Hspec
-
-startServer :: IO ThreadId
-startServer = forkIO AppBE.runAppBackend
-
-withBecknServer :: IO () -> IO ()
-withBecknServer action =
-  bracket
-    startServer
-    killThread
-    (const $ threadDelay 100000 >> action)
-
-runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
-runClient clientEnv x = runClientM x clientEnv
+import qualified "app-backend" Types.API.Registration as Reg
 
 spec :: Spec
 spec = do
@@ -48,8 +36,13 @@ spec = do
       it "Testing List case API" $
         \flowRt ->
           hspec $
-            around_ withBecknServer $
-              it "List case API should return success" $
-                do
-                  result <- runClient appClientEnv buildCaseListRes
-                  result `shouldSatisfy` isRight
+            it "List case API should return success" $
+              do
+                initiateLoginRes <- runClient appClientEnv initiateLoginReq
+                initiateLoginRes `shouldSatisfy` isRight
+                let Right Reg.InitiateLoginRes {..} = initiateLoginRes
+                loginRes <- runClient appClientEnv (verifyLoginReq tokenId)
+                loginRes `shouldSatisfy` isRight
+                let Right Reg.LoginRes {..} = loginRes
+                result <- runClient appClientEnv (buildCaseListRes registrationToken)
+                result `shouldSatisfy` isRight

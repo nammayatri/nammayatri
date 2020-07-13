@@ -1,6 +1,6 @@
 module Storage.Queries.TripReference where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
@@ -17,20 +17,20 @@ import qualified Types.Storage.TripReference as Storage
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.TripReferenceT)
 dbTable = DB._tripReference DB.transporterDb
 
-create :: Storage.TripReference -> L.Flow ()
+create :: Storage.TripReference -> Flow ()
 create Storage.TripReference {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.TripReference {..})
     >>= either DB.throwDBError pure
 
 findTripReferenceById ::
-  TripReferenceId -> L.Flow (Maybe Storage.TripReference)
+  TripReferenceId -> Flow (Maybe Storage.TripReference)
 findTripReferenceById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.TripReference {..} = _id ==. B.val_ id
 
-listTripReferences :: Maybe Int -> Maybe Int -> [Storage.Status] -> L.Flow [Storage.TripReference]
+listTripReferences :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.TripReference]
 listTripReferences mlimit moffset status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -52,7 +52,7 @@ complementVal l
 update ::
   TripReferenceId ->
   Storage.Status ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

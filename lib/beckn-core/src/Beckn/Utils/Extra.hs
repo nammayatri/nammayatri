@@ -4,7 +4,7 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-getCurrentTimeUTC :: L.Flow LocalTime
+getCurrentTimeUTC :: L.MonadFlow m => m LocalTime
 getCurrentTimeUTC = L.runIO' "getCurrentTimeUTC" getCurrentTimeUTC'
 
 getCurrentTimeUTC' :: IO LocalTime
@@ -14,7 +14,7 @@ addIfPresent :: [a] -> Maybe a -> [a]
 addIfPresent xs (Just x) = x : xs
 addIfPresent xs _ = xs
 
-isExpired :: NominalDiffTime -> LocalTime -> L.Flow Bool
+isExpired :: L.MonadFlow m => NominalDiffTime -> LocalTime -> m Bool
 isExpired nominal time = do
   now <- getCurrentTimeUTC
   let addedLocalTime = addLocalTime nominal time

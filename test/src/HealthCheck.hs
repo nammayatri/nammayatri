@@ -1,7 +1,5 @@
 module HealthCheck where
 
-import qualified "app-backend" App as AppBE
-import qualified "beckn-transport" App as TransporterBE
 import Data.Text.Encoding as DT
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -18,22 +16,6 @@ type HealthCheckAPI = Get '[JSON] Text
 
 healthCheckBackendC :: ClientM Text
 healthCheckBackendC = client (Proxy :: Proxy HealthCheckAPI)
-
-startServers :: IO (ThreadId, ThreadId)
-startServers = do
-  appTid <- forkIO AppBE.runAppBackend
-  tbeTid <- forkIO TransporterBE.runTransporterBackendApp
-  return (appTid, tbeTid)
-
-withBecknServers :: IO () -> IO ()
-withBecknServers action =
-  bracket
-    startServers
-    (\(appTid, tbeTid) -> killThread appTid >> killThread tbeTid)
-    (const $ threadDelay 100000 >> action)
-
-runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
-runClient clientEnv x = runClientM x clientEnv
 
 spec :: Spec
 spec = do
@@ -61,10 +43,9 @@ spec = do
       it "Testing health check API" $
         \flowRt ->
           hspec $
-            around_ withBecknServers $
-              it "Health Check API should return success" $
-                do
-                  result <- runClient appClientEnv healthCheckBackendC
-                  result `shouldBe` Right (DT.decodeUtf8 "App is UP")
-                  result <- runClient tbeClientEnv healthCheckBackendC
-                  result `shouldBe` Right (DT.decodeUtf8 "App is UP")
+            it "Health Check API should return success" $
+              do
+                result <- runClient appClientEnv healthCheckBackendC
+                result `shouldBe` Right (DT.decodeUtf8 "App is UP")
+                result <- runClient tbeClientEnv healthCheckBackendC
+                result `shouldBe` Right (DT.decodeUtf8 "App is UP")

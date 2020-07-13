@@ -2,9 +2,10 @@
 
 module Product.TrackTrip where
 
+import App.Types
 import Beckn.Types.API.Track
 import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..), generateGUID)
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -63,7 +64,7 @@ trackCb req = withFlowHandler $ do
     Left err -> return $ AckResponse context (Ack "Error" err)
     Right _ -> return $ AckResponse context (Ack "Successful" "Ok")
 
-updateTracker :: ProductInstance.ProductInstance -> Tracker -> L.Flow (Either Text ())
+updateTracker :: ProductInstance.ProductInstance -> Tracker -> Flow (Either Text ())
 updateTracker prodInst tracker = do
   let minfo = decodeFromText =<< prodInst ^. #_info
   let uInfo = (\info -> info {ProductInfo._tracker = Just tracker}) <$> minfo

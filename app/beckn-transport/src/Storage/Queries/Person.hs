@@ -1,8 +1,8 @@
 module Storage.Queries.Person where
 
+import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
@@ -18,13 +18,13 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.transporterDb
 
-create :: Storage.Person -> L.Flow ()
+create :: Storage.Person -> Flow ()
 create Storage.Person {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Person {..})
     >>= either DB.throwDBError pure
 
 findPersonById ::
-  PersonId -> L.Flow Storage.Person
+  PersonId -> Flow Storage.Person
 findPersonById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -32,7 +32,7 @@ findPersonById id =
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
 
-findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> L.Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
 findPersonByIdAndRoleAndOrgId id role orgId =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -42,7 +42,7 @@ findPersonByIdAndRoleAndOrgId id role orgId =
         &&. _role ==. B.val_ role
         &&. _organizationId ==. B.val_ (Just orgId)
 
-findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -59,7 +59,7 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
         ]
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+  [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
   where
@@ -76,7 +76,7 @@ complementVal l
   | otherwise = B.val_ False
 
 findByMobileNumber ::
-  Text -> Text -> L.Flow (Maybe Storage.Person)
+  Text -> Text -> Flow (Maybe Storage.Person)
 findByMobileNumber countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -86,7 +86,7 @@ findByMobileNumber countryCode mobileNumber =
         &&. _mobileNumber ==. B.val_ (Just mobileNumber)
 
 findByIdentifier ::
-  Text -> L.Flow (Maybe Storage.Person)
+  Text -> Flow (Maybe Storage.Person)
 findByIdentifier identifier =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -95,7 +95,7 @@ findByIdentifier identifier =
       _identifier ==. B.val_ (Just identifier)
 
 findByEmail ::
-  Text -> L.Flow (Maybe Storage.Person)
+  Text -> Flow (Maybe Storage.Person)
 findByEmail email =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -103,7 +103,7 @@ findByEmail email =
     predicate Storage.Person {..} =
       _email ==. B.val_ (Just email)
 
-updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> L.Flow ()
+updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause orgId now) (predicate personId)
@@ -117,7 +117,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePersonRec :: PersonId -> Storage.Person -> L.Flow ()
+updatePersonRec :: PersonId -> Storage.Person -> Flow ()
 updatePersonRec personId person = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause person now) (predicate personId)
@@ -144,7 +144,7 @@ updatePersonRec personId person = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> L.Flow ()
+updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   now <- getCurrentTimeUTC
   DB.update
@@ -168,7 +168,7 @@ update ::
   Storage.Status ->
   Bool ->
   Maybe FCM.FCMRecipientToken ->
-  L.Flow ()
+  Flow ()
 update id status verified deviceTokenM = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -186,7 +186,7 @@ update id status verified deviceTokenM = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-deleteById :: PersonId -> L.Flow ()
+deleteById :: PersonId -> Flow ()
 deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure

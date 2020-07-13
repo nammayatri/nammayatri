@@ -66,9 +66,7 @@ deriving instance Eq Quota
 
 instance ToSchema Quota
 
-insertExpression quota = insertExpressions [quota]
-
-insertExpressions quotas = B.insertValues quotas
+insertExpression quota = B.insertValues [quota]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuotaT)

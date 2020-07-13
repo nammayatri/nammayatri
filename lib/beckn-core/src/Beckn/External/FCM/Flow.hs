@@ -18,6 +18,7 @@ module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
 import Beckn.Types.App (_getPersonId)
+import Beckn.Types.Common
 import Beckn.Types.Storage.Person as Person
 import qualified Beckn.Utils.JWT as JWT
 import Control.Lens
@@ -55,7 +56,7 @@ createAndroidConfig title body tag =
         & fcmdTag ?~ tag
 
 -- | Send FCM message to a person
-notifyPerson :: FCMNotificationTitle -> FCMNotificationBody -> FCMData -> Person -> L.Flow ()
+notifyPerson :: FCMNotificationTitle -> FCMNotificationBody -> FCMData -> Person -> FlowR r ()
 notifyPerson title body msgData person =
   let pid = _getPersonId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
@@ -85,8 +86,8 @@ defaultBaseUrl =
     }
 
 -- | Send FCM message to a registered device
-sendMessage :: FCMRequest -> T.Text -> L.Flow ()
-sendMessage fcmMsg toWhom = L.forkFlow desc $ do
+sendMessage :: FCMRequest -> T.Text -> FlowR r ()
+sendMessage fcmMsg toWhom = lift . L.forkFlow desc $ do
   authToken <- getTokenText
   case authToken of
     Right token -> do
@@ -104,7 +105,7 @@ sendMessage fcmMsg toWhom = L.forkFlow desc $ do
     fcm = T.pack "FCM"
 
 -- | try to get FCM text token
-getTokenText :: L.Flow (Either String Text)
+getTokenText :: L.MonadFlow m => m (Either String Text)
 getTokenText = do
   token <- getToken
   pure $ case token of
@@ -112,7 +113,7 @@ getTokenText = do
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
 -- | check FCM token and refresh if it is invalid
-checkAndGetToken :: L.Flow (Either String JWT.JWToken)
+checkAndGetToken :: L.MonadFlow m => m (Either String JWT.JWToken)
 checkAndGetToken = do
   token <- L.getOption FCMTokenKey
   case token of
@@ -141,7 +142,7 @@ checkAndGetToken = do
     fcm = T.pack "FCM"
 
 -- | Get token (do not refresh it if it is expired / invalid)
-getToken :: L.Flow (Either String JWT.JWToken)
+getToken :: L.MonadFlow m => m (Either String JWT.JWToken)
 getToken = do
   token <- L.getOption FCMTokenKey
   case token of
@@ -154,7 +155,7 @@ getToken = do
         JWT.JWTInvalid -> Left "Token is invalid"
 
 -- | Refresh token
-refreshToken :: L.Flow (Either String JWT.JWToken)
+refreshToken :: L.MonadFlow m => m (Either String JWT.JWToken)
 refreshToken = do
   L.logInfo fcm "Refreshing token"
   t <- L.runIO JWT.refreshToken

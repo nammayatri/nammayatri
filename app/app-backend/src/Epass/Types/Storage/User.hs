@@ -120,9 +120,7 @@ instance ToJSON User where
 instance FromJSON User where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
-insertExpression user = insertExpressions [user]
-
-insertExpressions users = B.insertValues users
+insertExpression user = B.insertValues [user]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity UserT)

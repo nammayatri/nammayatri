@@ -2,6 +2,7 @@
 
 module External.Gateway.Transform where
 
+import App.Types
 import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Api
@@ -68,7 +69,7 @@ mkPrice prodInst =
       _tax = Nothing
     }
 
-mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Trip -> Maybe Organization -> L.Flow Service
+mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Trip -> Maybe Organization -> Flow Service
 mkServiceOffer c pis allPis trip orgInfo =
   let x =
         Service

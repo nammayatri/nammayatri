@@ -56,9 +56,7 @@ instance FromJSON Customer where
 
 instance ToSchema Customer
 
-insertExpression customer = insertExpressions [customer]
-
-insertExpressions customers = B.insertValues customers
+insertExpression customer = B.insertValues [customer]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CustomerT)

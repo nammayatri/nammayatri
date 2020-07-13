@@ -2,6 +2,7 @@
 
 module Utils.Notifications where
 
+import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
@@ -22,7 +23,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 
 -- | Send FCM "search" notification to provider admins
-notifyTransportersOnSearch :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnSearch :: Case -> [Person] -> Flow ()
 notifyTransportersOnSearch c =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -39,7 +40,7 @@ notifyTransportersOnSearch c =
           ]
 
 -- | Send FCM "confirm" notification to provider admins
-notifyTransportersOnConfirm :: Case -> [Person] -> L.Flow ()
+notifyTransportersOnConfirm :: Case -> [Person] -> Flow ()
 notifyTransportersOnConfirm c =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -56,7 +57,7 @@ notifyTransportersOnConfirm c =
           ]
 
 -- | Send FCM "cancel" notification to provider admins
-notifyTransportersOnCancel :: Case -> T.Text -> [Person] -> L.Flow ()
+notifyTransportersOnCancel :: Case -> T.Text -> [Person] -> Flow ()
 notifyTransportersOnCancel c productId =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -72,7 +73,7 @@ notifyTransportersOnCancel c productId =
             "has been cancelled. Check the app for more details."
           ]
 
-notifyOnRegistration :: RegistrationToken -> Person -> L.Flow ()
+notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
 notifyOnRegistration regToken =
   notifyPerson title body notificationData
   where
@@ -83,7 +84,7 @@ notifyOnRegistration regToken =
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
     body = FCMNotificationBody $ T.pack "You can now start accepting rides!"
 
-notifyTransporterOnExpiration :: Case -> [Person] -> L.Flow ()
+notifyTransporterOnExpiration :: Case -> [Person] -> Flow ()
 notifyTransporterOnExpiration c =
   traverse_ (notifyPerson title body notificationData)
   where
@@ -100,7 +101,7 @@ notifyTransporterOnExpiration c =
             "You can view more details in the app."
           ]
 
-notifyCancelReqByBP :: ProductInstance -> [Person] -> L.Flow ()
+notifyCancelReqByBP :: ProductInstance -> [Person] -> Flow ()
 notifyCancelReqByBP p =
   traverse_ (notifyPerson title body notificationData)
   where

@@ -1,5 +1,6 @@
 module Storage.Queries.Organization where
 
+import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -16,13 +17,13 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT)
 dbTable = DB._organization DB.appDb
 
-create :: Storage.Organization -> L.Flow ()
+create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
 findOrganizationById ::
-  OrganizationId -> L.Flow (Maybe Storage.Organization)
+  OrganizationId -> Flow (Maybe Storage.Organization)
 findOrganizationById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -34,7 +35,7 @@ listOrganizations ::
   Maybe Int ->
   [Storage.OrganizationType] ->
   [Storage.Status] ->
-  L.Flow [Storage.Organization]
+  Flow [Storage.Organization]
 listOrganizations mlimit moffset oType status =
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -57,7 +58,7 @@ complementVal l
 update ::
   OrganizationId ->
   Storage.Status ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

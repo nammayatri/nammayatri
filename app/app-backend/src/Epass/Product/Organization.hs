@@ -1,5 +1,6 @@
 module Epass.Product.Organization where
 
+import App.Types
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -94,7 +95,7 @@ listOrganization regToken API.ListOrganizationReq {..} = withFlowHandler $ do
   orgInfo <- traverse getOrgInfo organizations
   pure $ API.ListOrganizationRes {_organizations = orgInfo}
 
-getOrgInfo :: Organization -> L.Flow API.OrgInfo
+getOrgInfo :: Organization -> Flow API.OrgInfo
 getOrgInfo Organization {..} = do
   entityDocs <- EntityDocument.findAllByOrgId _id
   let docIds = EntityDocument._DocumentId <$> entityDocs

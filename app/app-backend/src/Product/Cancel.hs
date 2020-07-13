@@ -2,6 +2,7 @@
 
 module Product.Cancel where
 
+import App.Types
 import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
 import Beckn.Types.Common (IdObject (..))
@@ -12,7 +13,7 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
-import EulerHS.Language as L
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import Servant.Client
@@ -29,7 +30,7 @@ cancel person req = withFlowHandler $ do
     Cancel.CASE -> cancelCase person req
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
-cancelProductInstance :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
   pi <- ProductInstance.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
@@ -50,7 +51,7 @@ cancelProductInstance person req = do
       let txnId = req ^. #context . #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
-cancelCase :: Person.Person -> CancelReq -> L.Flow CancelRes
+cancelCase :: Person.Person -> CancelReq -> Flow CancelRes
 cancelCase person req = do
   let caseId = req ^. #message . #entityId
   case_ <- Case.findIdByPerson person (CaseId caseId)

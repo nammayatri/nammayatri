@@ -1,5 +1,6 @@
 module Epass.Product.PassApplication.Update where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as BTL
@@ -60,7 +61,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
     validApprovedCount count approvedCount =
       if approvedCount > count then count else approvedCount
 
-verifyIfStatusUpdatable :: Status -> Status -> L.Flow ()
+verifyIfStatusUpdatable :: Status -> Status -> Flow ()
 verifyIfStatusUpdatable currStatus newStatus =
   case (currStatus, newStatus) of
     (PENDING, APPROVED) -> return ()
@@ -71,7 +72,7 @@ verifyIfStatusUpdatable currStatus newStatus =
     (APPROVED, REVOKED) -> return ()
     _ -> L.throwException $ err400 {errBody = "Invalid status update"}
 
-createPass :: Case.Case -> L.Flow ProductInstance.ProductInstance
+createPass :: Case.Case -> Flow ProductInstance.ProductInstance
 createPass c@Case.Case {..} = do
   id <- generateGUID
   cpId <- generateGUID
@@ -106,7 +107,7 @@ createPass c@Case.Case {..} = do
   QCP.create productInstance
   return productInstance
 
-allowOnlyUser :: RegistrationToken.RegistrationToken -> L.Flow ()
+allowOnlyUser :: RegistrationToken.RegistrationToken -> Flow ()
 allowOnlyUser RegistrationToken.RegistrationToken {..} =
   case _entityType of
     RegistrationToken.USER -> return ()

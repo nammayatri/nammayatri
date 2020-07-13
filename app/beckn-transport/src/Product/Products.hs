@@ -2,8 +2,8 @@
 
 module Product.Products where
 
-import Beckn.Types.App
-import Beckn.Types.Common as BC
+import App.Types
+import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -28,7 +28,7 @@ createProduct orgId req = withFlowHandler $ do
   PQ.create product
   return product
 
-mkProduct :: CreateProdReq -> L.Flow Product.Products
+mkProduct :: CreateProdReq -> Flow Product.Products
 mkProduct req = do
   id <- L.generateGUID
   now <- getCurrentTimeUTC

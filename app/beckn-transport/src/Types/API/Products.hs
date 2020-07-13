@@ -1,7 +1,6 @@
 module Types.API.Products where
 
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Core.Amount
 import qualified Beckn.Types.Storage.Products as Product
 import Data.Default

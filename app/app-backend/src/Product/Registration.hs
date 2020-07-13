@@ -2,6 +2,7 @@
 
 module Product.Registration where
 
+import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Types.App
@@ -32,7 +33,7 @@ initiateLogin req =
       (SR.SMS, SR.OTP) -> initiateFlow req
       _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
 
-initiateFlow :: InitiateLoginReq -> L.Flow InitiateLoginRes
+initiateFlow :: InitiateLoginReq -> Flow InitiateLoginRes
 initiateFlow req = do
   let mobileNumber = req ^. #_mobileNumber
       countryCode = req ^. #_mobileCountryCode
@@ -56,7 +57,7 @@ initiateFlow req = do
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
-makePerson :: InitiateLoginReq -> L.Flow SP.Person
+makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
   role <- fromMaybeM400 "CUSTOMER_ROLE required" (req ^. #_role)
   id <- BC.generateGUID
@@ -89,7 +90,7 @@ makePerson req = do
       }
 
 makeSession ::
-  InitiateLoginReq -> Text -> Maybe Text -> L.Flow SR.RegistrationToken
+  InitiateLoginReq -> Text -> Maybe Text -> Flow SR.RegistrationToken
 makeSession req entityId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   id <- L.generateGUID
@@ -119,7 +120,7 @@ makeSession req entityId fakeOtp = do
         _info = Nothing
       }
 
-generateOTPCode :: L.Flow Text
+generateOTPCode :: Flow Text
 generateOTPCode =
   L.runIO $ padLeft 4 '0' . show <$> Cryptonite.generateBetween 1 9999
   where
@@ -127,7 +128,7 @@ generateOTPCode =
       let prefix = replicate (max 0 $ n - length txt) c
        in T.pack prefix <> txt
 
-sendOTP :: Text -> Text -> L.Flow ()
+sendOTP :: Text -> Text -> Flow ()
 sendOTP phoneNumber otpCode = do
   username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
   password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
@@ -179,17 +180,17 @@ login tokenId req =
         L.throwException $
           err400 {errBody = "AUTH_EXPIRED"}
 
-getRegistrationTokenE :: Text -> L.Flow SR.RegistrationToken
+getRegistrationTokenE :: Text -> Flow SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM400 "INVALID_TOKEN"
 
-createPerson :: InitiateLoginReq -> L.Flow SP.Person
+createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
   person <- makePerson req
   Person.create person
   pure person
 
-checkPersonExists :: Text -> L.Flow SP.Person
+checkPersonExists :: Text -> Flow SP.Person
 checkPersonExists _EntityId =
   Person.findById (PersonId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
 

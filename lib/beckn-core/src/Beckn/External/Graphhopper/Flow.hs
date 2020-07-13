@@ -2,6 +2,7 @@ module Beckn.External.Graphhopper.Flow where
 
 import qualified Beckn.External.Graphhopper.Types as GrphrSearch
 import Beckn.Types.App (MandatoryQueryParam)
+import Beckn.Types.Common
 import Data.Geospatial
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -23,7 +24,7 @@ type GrphrAPI =
 grphrAPI :: Proxy GrphrAPI
 grphrAPI = Proxy
 
-search :: BaseUrl -> GrphrSearch.Request -> L.Flow (Either ClientError GrphrSearch.Response)
+search :: BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
   L.callAPI url clientM
   where

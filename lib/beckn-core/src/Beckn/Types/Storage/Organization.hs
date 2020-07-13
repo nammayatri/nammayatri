@@ -34,7 +34,7 @@ instance FromHttpApiData Status where
 
 --------------------------------------------------------------------------------------
 
-data OrganizationType = TRANSPORTER | PASS | SKU | GATEWAY
+data OrganizationType = TRANSPORTER | PASS | GATEWAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
@@ -92,9 +92,7 @@ instance FromJSON Organization where
 
 instance ToSchema Organization
 
-insertExpression org = insertExpressions [org]
-
-insertExpressions orgs = B.insertValues orgs
+insertExpression org = B.insertValues [org]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OrganizationT)
