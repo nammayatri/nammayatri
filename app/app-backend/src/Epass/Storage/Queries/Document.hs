@@ -1,5 +1,6 @@
 module Epass.Storage.Queries.Document where
 
+import App.Types
 import Data.Time
 import Data.Time.LocalTime
 import Database.Beam ((&&.), (<-.), (==.))
@@ -16,12 +17,12 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.DocumentT)
 dbTable = DB._document DB.becknDb
 
-create :: Storage.Document -> L.Flow ()
+create :: Storage.Document -> Flow ()
 create Storage.Document {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Document {..})
     >>= either DB.throwDBError pure
 
-findById :: DocumentId -> L.Flow (Maybe Storage.Document)
+findById :: DocumentId -> Flow (Maybe Storage.Document)
 findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure

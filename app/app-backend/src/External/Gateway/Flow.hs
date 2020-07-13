@@ -1,5 +1,6 @@
 module External.Gateway.Flow where
 
+import App.Types
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
@@ -12,7 +13,7 @@ import System.Environment
 import Types.API.Location
 
 search ::
-  BaseUrl -> SearchReq -> L.Flow (Either Text ())
+  BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
   res <- L.callAPI url $ API.search req
   whenRight res $ \_ ->
@@ -21,7 +22,7 @@ search url req = do
     L.logError "Search" ("error occurred while search: " <> show err)
   return $ first show res
 
-confirm :: BaseUrl -> Confirm.ConfirmReq -> L.Flow (Either Text ())
+confirm :: BaseUrl -> Confirm.ConfirmReq -> Flow (Either Text ())
 confirm url req = do
   res <- L.callAPI url $ API.confirm req
   whenLeft res $ \err ->
@@ -30,7 +31,7 @@ confirm url req = do
     L.logError "Confirm" ("error occurred while confirm: " <> show err)
   return $ first show res
 
-location :: BaseUrl -> Text -> L.Flow (Either Text GetLocationRes)
+location :: BaseUrl -> Text -> Flow (Either Text GetLocationRes)
 location url req = do
   res <- L.callAPI url $ API.location req
   whenLeft res $ \err ->
@@ -39,7 +40,7 @@ location url req = do
     L.logError "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
-track :: BaseUrl -> Track.TrackTripReq -> L.Flow (Either Text ())
+track :: BaseUrl -> Track.TrackTripReq -> Flow (Either Text ())
 track url req = do
   res <- L.callAPI url $ API.trackTrip req
   case res of
@@ -47,7 +48,7 @@ track url req = do
     Right _ -> L.logInfo "Track" "Track successfully delivered"
   return $ first show res
 
-cancel :: BaseUrl -> Cancel.CancelReq -> L.Flow (Either Text ())
+cancel :: BaseUrl -> Cancel.CancelReq -> Flow (Either Text ())
 cancel url req = do
   res <- L.callAPI url $ API.cancel req
   case res of
@@ -55,7 +56,7 @@ cancel url req = do
     Right _ -> L.logInfo "Cancel" "Cancel successfully delivered"
   return $ first show res
 
-getBaseUrl :: L.Flow BaseUrl
+getBaseUrl :: Flow BaseUrl
 getBaseUrl = do
   envUrl <- L.runIO loadGatewayUrl
   case envUrl of

@@ -1,5 +1,7 @@
 module Models.ProductInstance where
 
+
+import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.ProductInstance
@@ -68,19 +70,19 @@ findAllByIds ids = do
 --   fromDBError result
 
 -- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError L.Flow ()
+validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError Flow ()
 validatePIStatusChange newStatus productInstanceId = do
   cp <- ExceptT $ findById productInstanceId
   liftEither $ validateStatusChange newStatus cp
 
 -- | Bulk validation of ProductInstance statuses change
--- validatePIStatusesChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError L.Flow ()
+-- validatePIStatusesChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError Flow ()
 -- validatePIStatusesChange newStatus caseId = do
 --   cps <- ExceptT $ findAllByCaseId caseId
 --   validateCPSStatusesChange' newStatus cps
 
 -- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> ExceptT DomainError L.Flow ()
+validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> ExceptT DomainError Flow ()
 validatePIStatusesChange' newStatus cps = do
   case mapM (validateStatusChange newStatus) cps of
     -- throwErrror, throwE is a shorthand for ExceptT . pure . Left

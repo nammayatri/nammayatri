@@ -66,9 +66,7 @@ instance FromJSON Tracker where
 
 instance ToSchema Tracker
 
-insertExpression org = insertExpressions [org]
-
-insertExpressions orgs = B.insertValues orgs
+insertExpression org = B.insertValues [org]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity TrackerT)

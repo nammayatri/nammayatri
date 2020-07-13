@@ -109,9 +109,7 @@ instance ToJSON PassApplication where
 instance FromJSON PassApplication where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-insertExpression customer = insertExpressions [customer]
-
-insertExpressions customers = B.insertValues customers
+insertExpression customer = B.insertValues [customer]
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PassApplicationT)

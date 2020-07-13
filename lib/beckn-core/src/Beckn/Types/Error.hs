@@ -71,7 +71,7 @@ data ProductError
   | ProductStatusTransitionErr Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-data SystemError = SystemError ErrorMsg
+newtype SystemError = SystemError ErrorMsg
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data BecknError = BecknError

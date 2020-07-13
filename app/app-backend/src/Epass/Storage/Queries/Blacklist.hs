@@ -2,6 +2,7 @@
 
 module Epass.Storage.Queries.Blacklist where
 
+import App.Types
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Data.Time.LocalTime
@@ -20,12 +21,12 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.BlacklistT)
 dbTable = DB._Blacklist DB.becknDb
 
-create :: Storage.Blacklist -> L.Flow ()
+create :: Storage.Blacklist -> Flow ()
 create Storage.Blacklist {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Blacklist {..})
     >>= either DB.throwDBError pure
 
-findById :: BlacklistId -> L.Flow (T.DBResult (Maybe Storage.Blacklist))
+findById :: BlacklistId -> Flow (T.DBResult (Maybe Storage.Blacklist))
 findById id =
   DB.findOne dbTable predicate
   where
@@ -34,7 +35,7 @@ findById id =
 update ::
   BlacklistId ->
   API.UpdateReq ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 update id API.UpdateReq {..} = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -55,13 +56,13 @@ update id API.UpdateReq {..} = do
             <> maybe [] (return . (_endTime <-.) . B.val_) endTimeM
         )
 
-deleteById :: BlacklistId -> L.Flow (T.DBResult ())
+deleteById :: BlacklistId -> Flow (T.DBResult ())
 deleteById id =
   DB.delete dbTable (predicate id)
   where
     predicate carrierId Storage.Blacklist {..} = _id ==. B.val_ carrierId
 
-findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text -> L.Flow (T.DBResult [Storage.Blacklist])
+findAllWithLimitOffset :: Maybe Int -> Maybe Int -> EntityType -> Text -> Flow (T.DBResult [Storage.Blacklist])
 findAllWithLimitOffset mlimit moffset entityType entityId =
   DB.findAllWithLimitOffsetWhere dbTable (pred entityType entityId) limit offset orderByDesc
   where
@@ -72,7 +73,7 @@ findAllWithLimitOffset mlimit moffset entityType entityId =
       _entityType ==. B.val_ entityType
         &&. __EntityId ==. B.val_ entityId
 
-findAllByEntityId :: EntityType -> [Text] -> L.Flow [Storage.Blacklist]
+findAllByEntityId :: EntityType -> [Text] -> Flow [Storage.Blacklist]
 findAllByEntityId entityType entityIds =
   DB.findAllOrErr dbTable (pred entityType entityIds)
   where
@@ -80,7 +81,7 @@ findAllByEntityId entityType entityIds =
       _entityType ==. B.val_ entityType
         &&. B.in_ __EntityId (B.val_ <$> entityIds)
 
-findByOrgId :: OrganizationId -> L.Flow (Maybe Storage.Blacklist)
+findByOrgId :: OrganizationId -> Flow (Maybe Storage.Blacklist)
 findByOrgId (OrganizationId eId) =
   DB.findOne dbTable (pred eId)
     >>= either DB.throwDBError pure
@@ -89,7 +90,7 @@ findByOrgId (OrganizationId eId) =
       (__EntityId ==. B.val_ eId)
         &&. (_entityType ==. B.val_ ORG)
 
-findByLocationId :: Text -> L.Flow (Maybe Storage.Blacklist)
+findByLocationId :: Text -> Flow (Maybe Storage.Blacklist)
 findByLocationId eid =
   DB.findOne dbTable (pred eid)
     >>= either DB.throwDBError pure

@@ -2,6 +2,7 @@
 
 module Types.API.Person where
 
+import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
@@ -71,7 +72,7 @@ instance Transform UpdatePersonReq SP.Person where
           SP._locationId = Just (_getLocationId $ SL._id location)
         }
 
-updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> L.Flow SL.Location
+updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> Flow SL.Location
 updateOrCreateLocation req Nothing = do
   location <- createLocation req
   QL.create location
@@ -97,7 +98,7 @@ transformToLocation req location =
       SL._bound = req ^. #_bound
     }
 
-createLocation :: UpdatePersonReq -> L.Flow SL.Location
+createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
@@ -197,13 +198,13 @@ instance Transform2 CreatePersonReq SP.Person where
           SP._updatedAt = now
         }
 
-createLocationT :: CreatePersonReq -> L.Flow SL.Location
+createLocationT :: CreatePersonReq -> Flow SL.Location
 createLocationT req = do
   location <- createLocationRec req
   QL.create location
   return location
 
-createLocationRec :: CreatePersonReq -> L.Flow SL.Location
+createLocationRec :: CreatePersonReq -> Flow SL.Location
 createLocationRec req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC

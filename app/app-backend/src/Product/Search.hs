@@ -2,12 +2,10 @@
 
 module Product.Search where
 
+import App.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Common
-  ( AckResponse (..),
-    generateGUID,
-  )
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Location as Core
@@ -91,7 +89,7 @@ searchCb req = withFlowHandler $ do
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack
   where
-    extendCaseExpiry :: Case.Case -> L.Flow ()
+    extendCaseExpiry :: Case.Case -> Flow ()
     extendCaseExpiry Case.Case {..} = do
       now <- getCurrentTimeUTC
       confirmExpiry <-
@@ -100,7 +98,7 @@ searchCb req = withFlowHandler $ do
       let newValidTill = fromInteger confirmExpiry `addLocalTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
 
-mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> L.Flow Case.Case
+mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do
   now <- getCurrentTimeUTC
   id <- generateGUID
@@ -132,8 +130,8 @@ mkCase req userId from to = do
         _parentCaseId = Nothing,
         _fromLocationId = from ^. #_id ^. #_getLocationId,
         _toLocationId = to ^. #_id ^. #_getLocationId,
-        _udf1 = Just $ intent ^. #vehicle ^. #variant,
-        _udf2 = Just $ show $ intent ^. #payload ^. #travellers ^. #count,
+        _udf1 = Just $ intent ^. #vehicle . #variant,
+        _udf2 = Just $ show $ intent ^. #payload . #travellers . #count,
         _udf3 = Nothing,
         _udf4 = Just $ context ^. #transaction_id,
         _udf5 = Nothing,
@@ -142,7 +140,7 @@ mkCase req userId from to = do
         _updatedAt = now
       }
   where
-    getCaseExpiry :: LocalTime -> L.Flow LocalTime
+    getCaseExpiry :: LocalTime -> Flow LocalTime
     getCaseExpiry startTime = do
       now <- getCurrentTimeUTC
       caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
@@ -153,7 +151,7 @@ mkCase req userId from to = do
           validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkLocation :: Core.Location -> L.Flow Location.Location
+mkLocation :: Core.Location -> Flow Location.Location
 mkLocation loc = do
   now <- getCurrentTimeUTC
   id <- generateGUID
@@ -176,7 +174,7 @@ mkLocation loc = do
         _updatedAt = now
       }
 
-mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> L.Flow Products.Products
+mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> Flow Products.Products
 mkProduct case_ mprovider item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
@@ -206,7 +204,7 @@ mkProduct case_ mprovider item = do
         _updatedAt = now
       }
 
-mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> L.Flow ProductInstance.ProductInstance
+mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow ProductInstance.ProductInstance
 mkProductInstance case_ mprovider personId item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now

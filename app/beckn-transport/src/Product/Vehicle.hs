@@ -2,6 +2,7 @@
 
 module Product.Vehicle where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
@@ -61,11 +62,11 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
   hasAccess user vehicle
   return $ CreateVehicleRes vehicle
   where
-    hasAccess :: SP.Person -> SV.Vehicle -> L.Flow ()
+    hasAccess :: SP.Person -> SV.Vehicle -> Flow ()
     hasAccess user vehicle =
       when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
         L.throwException $
           err401 {errBody = "Unauthorized"}
 
-addOrgId :: Text -> SV.Vehicle -> L.Flow SV.Vehicle
+addOrgId :: Text -> SV.Vehicle -> Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}

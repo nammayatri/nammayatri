@@ -1,6 +1,6 @@
 module Storage.Queries.Customer where
 
-import Beckn.Types.Common
+import App.Types
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -16,13 +16,13 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT)
 dbTable = DB._customer DB.transporterDb
 
-create :: Storage.Customer -> L.Flow ()
+create :: Storage.Customer -> Flow ()
 create Storage.Customer {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Customer {..})
     >>= either DB.throwDBError pure
 
 findCustomerById ::
-  CustomerId -> L.Flow (Maybe Storage.Customer)
+  CustomerId -> Flow (Maybe Storage.Customer)
 findCustomerById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure

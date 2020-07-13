@@ -1,5 +1,6 @@
 module Epass.Product.PassApplication.Fetch where
 
+import App.Types
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as BTL
 import qualified Beckn.Types.Storage.Location as Location
@@ -67,12 +68,12 @@ listPassApplication regToken limitM offsetM fPins fCities fDists fWards fStates 
     caseApps <- traverse getCaseAppInfo cases
     return $ API.ListPassApplicationRes caseApps
 
-getLocationIds :: [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> L.Flow [LocationId]
+getLocationIds :: [Int] -> [Text] -> [Text] -> [Text] -> [Text] -> Flow [LocationId]
 getLocationIds pins cities states districts wards = do
   locs <- QLoc.findAllWithLimitOffsetWhere (show <$> pins) cities states districts wards Nothing Nothing
   return $ Location._id <$> locs
 
-getPassAppInfo :: PassApplication -> L.Flow API.PassAppInfo
+getPassAppInfo :: PassApplication -> Flow API.PassAppInfo
 getPassAppInfo PassApplication {..} = do
   morg <- maybe (pure Nothing) Organization.findOrganizationById _OrganizationId
   mcustomer <- maybe (pure Nothing) Customer.findCustomerById _CustomerId
@@ -131,7 +132,7 @@ getPassAppInfo PassApplication {..} = do
         ..
       }
 
-getCaseAppInfo :: Case.Case -> L.Flow API.CaseInfo
+getCaseAppInfo :: Case.Case -> Flow API.CaseInfo
 getCaseAppInfo Case.Case {..} = do
   morg <- maybe (pure Nothing) (Organization.findOrganizationById . OrganizationId) _udf2
   mcustomer <- maybe (pure Nothing) (QP.findById . PersonId) _requestor

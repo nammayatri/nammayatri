@@ -1,5 +1,6 @@
 module Models.Product where
 
+import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Products

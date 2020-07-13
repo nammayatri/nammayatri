@@ -16,16 +16,19 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import Data.Time.Calendar (Day (..))
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
+import qualified EulerHS.Runtime as R
 import Network.HTTP.Types (hContentType)
 import Servant
 import System.Environment
 
-getCurrTime :: L.Flow LocalTime
+runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
+runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
+
+getCurrTime :: L.MonadFlow m => m LocalTime
 getCurrTime = L.runIO $ do
   utc' <- getCurrentTime
   timezone <- getTimeZone utc'
@@ -36,46 +39,45 @@ defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError
-fromDBError :: ET.DBResult a -> FlowDomainResult a
+fromDBError :: L.MonadFlow m => ET.DBResult a -> m (Either DomainError a)
 fromDBError = fromDBErrorTo DatabaseError
 
 -- | Get rid of database error
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-fromDBErrorTo :: (ET.DBError -> DomainError) -> ET.DBResult a -> FlowDomainResult a
+fromDBErrorTo :: L.MonadFlow m => (ET.DBError -> DomainError) -> ET.DBResult a -> m (Either DomainError a)
 fromDBErrorTo f dbres = pure $ either (Left . f) (Right) dbres
 
 -- | Get rid of database error and empty result
 -- convert it into UnknownDomainError
-fromDBErrorOrEmpty :: DomainError -> ET.DBResult (Maybe a) -> FlowDomainResult a
+fromDBErrorOrEmpty :: L.MonadFlow m => DomainError -> ET.DBResult (Maybe a) -> m (Either DomainError a)
 fromDBErrorOrEmpty = fromDBErrorOrEmptyTo DatabaseError
 
 -- | Get rid of database error and empty result
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-fromDBErrorOrEmptyTo :: (ET.DBError -> DomainError) -> DomainError -> ET.DBResult (Maybe a) -> FlowDomainResult a
+fromDBErrorOrEmptyTo :: L.MonadFlow m => (ET.DBError -> DomainError) -> DomainError -> ET.DBResult (Maybe a) -> m (Either DomainError a)
 fromDBErrorOrEmptyTo f domainErrOnEmpty result = pure $
   case result of
     Left err -> Left $ f err
     Right maybeRes -> maybe (Left domainErrOnEmpty) (Right) maybeRes
 
-fromMaybeM :: ServerError -> Maybe a -> L.Flow a
+fromMaybeM :: L.MonadFlow m => ServerError -> Maybe a -> m a
 fromMaybeM err Nothing = L.throwException err
 fromMaybeM _ (Just a) = return a
 
-fromMaybeM400, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> L.Flow a
+fromMaybeM400,
+  fromMaybeM500,
+  fromMaybeM503 ::
+    L.MonadFlow m => BSL.ByteString -> Maybe a -> m a
 fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
-mkNAckResponse :: Text -> Text -> Text -> L.Flow AckResponse
-mkNAckResponse txnId action message =
-  mkAckResponse' txnId action $ "Error: " <> message
-
-mkAckResponse :: Text -> Text -> L.Flow AckResponse
+mkAckResponse :: L.MonadFlow m => Text -> Text -> m AckResponse
 mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
-mkAckResponse' :: Text -> Text -> Text -> L.Flow AckResponse
+mkAckResponse' :: L.MonadFlow m => Text -> Text -> Text -> m AckResponse
 mkAckResponse' txnId action message = do
   currTime <- getCurrTime
   return
@@ -97,10 +99,15 @@ mkAckResponse' txnId action message = do
             }
       }
 
-withFlowHandler :: L.Flow a -> FlowHandler a
+withFlowHandler :: FlowR () a -> FlowHandler a
 withFlowHandler flow = do
-  (Env flowRt) <- ask
-  lift . ExceptT . try . I.runFlow flowRt $ flow
+  (EnvR flowRt _) <- ask
+  lift . ExceptT . try . runFlowR flowRt () $ flow
+
+withFlowRHandler :: FlowR r a -> FlowHandlerR r a
+withFlowRHandler flow = do
+  (EnvR flowRt appEnv) <- ask
+  lift . ExceptT . try . runFlowR flowRt appEnv $ flow
 
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
@@ -108,7 +115,7 @@ decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 encodeToText :: ToJSON a => a -> Text
 encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 
-authenticate :: Maybe CronAuthKey -> L.Flow ()
+authenticate :: L.MonadFlow m => Maybe CronAuthKey -> m ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
   let authHeader = T.stripPrefix "Basic " =<< maybeAuth
@@ -136,12 +143,12 @@ maskPerson person =
         else "..."
 
 -- | Prepare common applications options
-prepareAppOptions :: L.Flow ()
+prepareAppOptions :: FlowR () ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
 
-throwJsonError :: ServerError -> Text -> Text -> L.Flow a
+throwJsonError :: L.MonadFlow m => ServerError -> Text -> Text -> m a
 throwJsonError err tag errMsg = do
   L.logError tag errMsg
   L.throwException
@@ -163,7 +170,11 @@ getBecknError err msg =
       _action = NACK
     }
 
-throwJsonError500, throwJsonError501, throwJsonError400, throwJsonError401 :: Text -> Text -> L.Flow a
+throwJsonError500,
+  throwJsonError501,
+  throwJsonError400,
+  throwJsonError401 ::
+    L.MonadFlow m => Text -> Text -> m a
 throwJsonError500 = throwJsonError err500
 throwJsonError501 = throwJsonError err501
 throwJsonError400 = throwJsonError err400

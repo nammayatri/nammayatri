@@ -1,5 +1,6 @@
 module Models.Product where
 
+import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Products
@@ -39,7 +40,7 @@ findById id = do
   fromDBErrorOrEmpty (CaseErr CaseNotFound) result
 
 -- -- | Get Product and validate its status change
--- validateStatusChange :: ProductsStatus -> ProductsId -> ExceptT DomainError L.Flow ()
+-- validateStatusChange :: ProductsStatus -> ProductsId -> ExceptT DomainError Flow ()
 -- validateStatusChange newStatus productId = do
 --   c <- ExceptT $ findById productId
 --   liftEither $ case validateStatusTransition (_status c) newStatus of

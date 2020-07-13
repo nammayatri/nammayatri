@@ -1,5 +1,6 @@
 module Models.Case where
 
+import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Case
@@ -47,7 +48,7 @@ findById caseId = do
   fromDBErrorOrEmpty (CaseErr CaseNotFound) result
 
 -- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> CaseId -> ExceptT DomainError L.Flow ()
+validateStatusChange :: CaseStatus -> CaseId -> ExceptT DomainError Flow ()
 validateStatusChange newStatus caseId = do
   c <- ExceptT $ findById caseId
   liftEither $ case validateStatusTransition (_status c) newStatus of

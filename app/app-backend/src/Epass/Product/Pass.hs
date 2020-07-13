@@ -1,5 +1,6 @@
 module Epass.Product.Pass where
 
+import App.Types
 import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
@@ -128,12 +129,12 @@ listPass regToken passIdType passV limitM offsetM passType =
         (Just l, Just o) -> QPI.listAllProductInstanceWithOffset l o listBy []
         _ -> QPI.listAllProductInstance listBy []
 
-buildListRes :: SPI.ProductInstance -> L.Flow PassInfo
+buildListRes :: SPI.ProductInstance -> Flow PassInfo
 buildListRes productInstance = do
   case' <- QC.findById (SPI._caseId productInstance)
   getPassInfo case' productInstance
 
-getPassInfo :: SC.Case -> SPI.ProductInstance -> L.Flow PassInfo
+getPassInfo :: SC.Case -> SPI.ProductInstance -> Flow PassInfo
 getPassInfo case' productInstance = do
   person <- sequence $ Person.findById <$> SPI._personId productInstance
   org <- Organization.findOrganizationById (OrganizationId $ SPI._organizationId productInstance)

@@ -2,6 +2,7 @@
 
 module Types.API.Transporter where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
@@ -71,7 +72,7 @@ instance Transform2 TransporterReq SO.Organization where
           SO._updatedAt = now
         }
 
-transformToLocation :: TransporterReq -> L.Flow SL.Location
+transformToLocation :: TransporterReq -> Flow SL.Location
 transformToLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC

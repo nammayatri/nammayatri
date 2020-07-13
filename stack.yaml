@@ -29,11 +29,11 @@ resolver: lts-15.15
 #   - auto-update
 #   - wai
 packages:
-- lib/beckn-core
-- app/gateway
-- app/beckn-transport
-- app/app-backend
-- test
+  - lib/beckn-core
+  - app/gateway
+  - app/beckn-transport
+  - app/app-backend
+  - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
@@ -53,7 +53,7 @@ extra-deps:
   - git: https://github.com/juspay/beam-mysql
     commit: 5d17599e02f30c220b679439ee0c1025e3086250
   - git: https://github.com/juspay/beam
-    commit: f6a35d5361e96c766ae977e9a07fa40c6622808e
+    commit: 47f62de4cbfafe13891846ef795609b6f8050729
     subdirs:
       - beam-core
       - beam-migrate
@@ -97,6 +97,6 @@ extra-deps:
 # Mac OS facing this issue
 # Missing (or bad) C libraries: SSL, Crypto
 extra-include-dirs:
-- /usr/local/opt/openssl/include
+  - /usr/local/opt/openssl/include
 extra-lib-dirs:
-- /usr/local/opt/openssl/lib
+  - /usr/local/opt/openssl/lib

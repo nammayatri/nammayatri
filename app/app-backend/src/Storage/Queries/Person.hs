@@ -2,6 +2,7 @@
 
 module Storage.Queries.Person where
 
+import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -18,13 +19,13 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.appDb
 
-create :: Storage.Person -> L.Flow ()
+create :: Storage.Person -> Flow ()
 create Storage.Person {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Person {..})
     >>= either DB.throwDBError pure
 
 findById ::
-  PersonId -> L.Flow (Maybe Storage.Person)
+  PersonId -> Flow (Maybe Storage.Person)
 findById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -32,7 +33,7 @@ findById id =
     predicate Storage.Person {..} = _id ==. B.val_ id
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Text] -> L.Flow [Storage.Person]
+  [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
   where
@@ -49,7 +50,7 @@ complementVal l
   | otherwise = B.val_ False
 
 findByIdentifier ::
-  Storage.IdentifierType -> Text -> L.Flow (Maybe Storage.Person)
+  Storage.IdentifierType -> Text -> Flow (Maybe Storage.Person)
 findByIdentifier idType mb =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -59,7 +60,7 @@ findByIdentifier idType mb =
         &&. _mobileNumber ==. B.val_ (Just mb)
 
 findByRoleAndMobileNumber ::
-  Storage.Role -> Text -> Text -> L.Flow (Maybe Storage.Person)
+  Storage.Role -> Text -> Text -> Flow (Maybe Storage.Person)
 findByRoleAndMobileNumber role countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
@@ -69,7 +70,7 @@ findByRoleAndMobileNumber role countryCode mobileNumber =
         &&. _mobileCountryCode ==. B.val_ (Just countryCode)
         &&. _mobileNumber ==. B.val_ (Just mobileNumber)
 
-updateMultiple :: PersonId -> Storage.Person -> L.Flow ()
+updateMultiple :: PersonId -> Storage.Person -> Flow ()
 updateMultiple personId person = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause now person) (predicate personId)
@@ -105,7 +106,7 @@ update ::
   Maybe Storage.Role ->
   Maybe Storage.IdentifierType ->
   Maybe Text ->
-  L.Flow ()
+  Flow ()
 update id statusM nameM emailM roleM identTypeM identM = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -127,7 +128,7 @@ update id statusM nameM emailM roleM identTypeM identM = do
         )
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePersonOrgId :: Text -> PersonId -> L.Flow ()
+updatePersonOrgId :: Text -> PersonId -> Flow ()
 updatePersonOrgId orgId personId = do
   now <- getCurrentTimeUTC
   DB.update dbTable (setClause orgId now) (predicate personId)
@@ -137,7 +138,7 @@ updatePersonOrgId orgId personId = do
       mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i Storage.Person {..} = _id ==. B.val_ i
 
-findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> Flow [Storage.Person]
 findAllWithLimitOffsetByRole mlimit moffset roles =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -149,7 +150,7 @@ findAllWithLimitOffsetByRole mlimit moffset roles =
       _role `B.in_` (B.val_ <$> r)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
-findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [OrganizationId] -> L.Flow [Storage.Person]
+findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [OrganizationId] -> Flow [Storage.Person]
 findAllWithLimitOffsetBy mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
@@ -162,7 +163,7 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds =
       _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> orgIds) &&. _role `B.in_` (B.val_ <$> roles)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
-deleteById :: PersonId -> L.Flow ()
+deleteById :: PersonId -> Flow ()
 deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure

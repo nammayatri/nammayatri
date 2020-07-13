@@ -2,6 +2,7 @@
 
 module Epass.Product.Common where
 
+import App.Types
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Data.Aeson
@@ -28,7 +29,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 
-getLocationInfo :: Text -> L.Flow C.LocationInfo
+getLocationInfo :: Text -> Flow C.LocationInfo
 getLocationInfo lid = do
   -- Find Location By Id
   location <- DB.findLocationWithErr lid

@@ -1,7 +1,7 @@
 module Storage.Queries.ProductInstance where
 
+import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as Storage
@@ -32,12 +32,12 @@ data ListById
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT)
 dbTable = DB._productInstance DB.appDb
 
-create :: Storage.ProductInstance -> L.Flow ()
+create :: Storage.ProductInstance -> Flow ()
 create Storage.ProductInstance {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.ProductInstance {..})
     >>= either DB.throwDBError pure
 
-findAllByCaseId :: CaseId -> L.Flow [Storage.ProductInstance]
+findAllByCaseId :: CaseId -> Flow [Storage.ProductInstance]
 findAllByCaseId caseId =
   DB.findAll dbTable (predicate caseId)
     >>= either DB.throwDBError pure
@@ -45,42 +45,42 @@ findAllByCaseId caseId =
     predicate caseId Storage.ProductInstance {..} =
       _caseId ==. B.val_ caseId
 
-findByProductId :: ProductsId -> L.Flow Storage.ProductInstance
+findByProductId :: ProductsId -> Flow Storage.ProductInstance
 findByProductId pId =
   DB.findOneWithErr dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       _productId ==. B.val_ pId
 
-findById' :: ProductInstanceId -> L.Flow (T.DBResult (Maybe Storage.ProductInstance))
+findById' :: ProductInstanceId -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findById' caseProductId =
   DB.findOne dbTable (predicate caseProductId)
   where
     predicate caseProductId Storage.ProductInstance {..} =
       _id ==. B.val_ caseProductId
 
-findAllByCaseId' :: CaseId -> L.Flow (T.DBResult [Storage.ProductInstance])
+findAllByCaseId' :: CaseId -> Flow (T.DBResult [Storage.ProductInstance])
 findAllByCaseId' caseId =
   DB.findAll dbTable (predicate caseId)
   where
     predicate caseId Storage.ProductInstance {..} =
       _caseId ==. B.val_ caseId
 
-findByProductId' :: ProductsId -> L.Flow (T.DBResult (Maybe Storage.ProductInstance))
+findByProductId' :: ProductsId -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findByProductId' pId =
   DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       _productId ==. B.val_ pId
 
-findByCaseAndProductId :: CaseId -> ProductsId -> L.Flow Storage.ProductInstance
+findByCaseAndProductId :: CaseId -> ProductsId -> Flow Storage.ProductInstance
 findByCaseAndProductId caseId pId =
   DB.findOneWithErr dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       _productId ==. B.val_ pId &&. _caseId ==. B.val_ caseId
 
-findAllByPerson :: PersonId -> L.Flow [Storage.ProductInstance]
+findAllByPerson :: PersonId -> Flow [Storage.ProductInstance]
 findAllByPerson perId =
   DB.findAll dbTable predicate
     >>= either DB.throwDBError pure
@@ -90,7 +90,7 @@ findAllByPerson perId =
 updateCaseId ::
   ProductInstanceId ->
   CaseId ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 updateCaseId id caseId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -108,7 +108,7 @@ updateCaseId id caseId = do
 updateStatus ::
   ProductInstanceId ->
   Storage.ProductInstanceStatus ->
-  L.Flow (T.DBResult ())
+  Flow (T.DBResult ())
 updateStatus id status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -123,8 +123,8 @@ updateStatus id status = do
           _status <-. B.val_ status
         ]
 
-updateAllByCaseId :: CaseId -> Storage.ProductInstanceStatus -> L.Flow (T.DBResult ())
-updateAllByCaseId caseId status = do
+updateAllProductInstancesByCaseId :: CaseId -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
+updateAllProductInstancesByCaseId caseId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   productInstances <- findAllByCaseId caseId
   DB.update
@@ -139,7 +139,7 @@ updateAllByCaseId caseId status = do
           _status <-. B.val_ status
         ]
 
-updateAllProductInstByCaseId :: CaseId -> Storage.ProductInstanceStatus -> L.Flow (T.DBResult ())
+updateAllProductInstByCaseId :: CaseId -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateAllProductInstByCaseId caseId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
@@ -154,7 +154,7 @@ updateAllProductInstByCaseId caseId status = do
         ]
     predicate caseId Storage.ProductInstance {..} = _caseId ==. B.val_ caseId
 
-listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [Storage.ProductInstanceStatus] -> L.Flow [Storage.ProductInstance]
+listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
 listAllProductInstanceWithOffset limit offset id stats =
   DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
     >>= either DB.throwDBError pure
@@ -167,7 +167,7 @@ listAllProductInstanceWithOffset limit offset id stats =
     predicate (ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
     orderBy Storage.ProductInstance {..} = B.desc_ _updatedAt
 
-listAllProductInstance :: ListById -> [Storage.ProductInstanceStatus] -> L.Flow [Storage.ProductInstance]
+listAllProductInstance :: ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
 listAllProductInstance id status =
   DB.findAll dbTable (predicate id status)
     >>= either DB.throwDBError pure
@@ -179,25 +179,25 @@ listAllProductInstance id status =
     predicate (ById i) [] Storage.ProductInstance {..} = _productId ==. B.val_ i
     predicate (ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
 
-listAllProductInstanceByPerson :: Person.Person -> ListById -> [Storage.ProductInstanceStatus] -> L.Flow [Storage.ProductInstance]
+listAllProductInstanceByPerson :: Person.Person -> ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
 listAllProductInstanceByPerson person id status =
   case id of
     ByApplicationId caseId ->
       Case.findIdByPerson person caseId >> listAllProductInstance id status
     _ -> listAllProductInstance id status
 
-findAllProductsByCaseId :: CaseId -> L.Flow [Products.Products]
+findAllProductsByCaseId :: CaseId -> Flow [Products.Products]
 findAllProductsByCaseId caseId =
   findAllByCaseId caseId
     >>= Products.findAllByIds . map Storage._productId
 
-findById :: ProductInstanceId -> L.Flow Storage.ProductInstance
+findById :: ProductInstanceId -> Flow Storage.ProductInstance
 findById pid =
   DB.findOneWithErr dbTable (predicate pid)
   where
     predicate pid Storage.ProductInstance {..} = _id ==. B.val_ pid
 
-updateMultiple :: ProductInstanceId -> Storage.ProductInstance -> L.Flow (T.DBResult ())
+updateMultiple :: ProductInstanceId -> Storage.ProductInstance -> Flow (T.DBResult ())
 updateMultiple id prdInst@Storage.ProductInstance {..} = do
   currTime <- getCurrentTimeUTC
   DB.update dbTable (setClause currTime prdInst) (predicate id)

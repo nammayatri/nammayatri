@@ -2,6 +2,7 @@
 
 module Utils.Notifications where
 
+import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.API.Track
@@ -45,7 +46,7 @@ import qualified Storage.Queries.Products as Products
 -- If the case with product is being cancelled, you have to send notification
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
-notifyOnProductCancelCb :: Maybe Text -> Case -> ProductInstanceId -> L.Flow ()
+notifyOnProductCancelCb :: Maybe Text -> Case -> ProductInstanceId -> Flow ()
 notifyOnProductCancelCb personId c productId =
   if isJust personId
     then do
@@ -69,7 +70,7 @@ notifyOnProductCancelCb personId c productId =
 
 -- | Notofocation on confirmation callback
 -- unused, left as a sample, can be removed later
-notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> L.Flow ()
+notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> Flow ()
 notifyOnConfirmCb personId c tracker =
   if isJust personId
     then do
@@ -97,7 +98,7 @@ notifyOnConfirmCb personId c tracker =
         _ -> pure ()
     else pure ()
 
-notifyOnExpiration :: Case -> L.Flow ()
+notifyOnExpiration :: Case -> Flow ()
 notifyOnExpiration caseObj = do
   let caseId = Case._id caseObj
   let personId = Case._requestor caseObj
@@ -123,7 +124,7 @@ notifyOnExpiration caseObj = do
         _ -> pure ()
     else pure ()
 
-notifyOnRegistration :: RegistrationToken -> Person -> L.Flow ()
+notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
 notifyOnRegistration regToken person =
   let tokenId = RegToken._id regToken
       notificationData =
@@ -138,7 +139,7 @@ notifyOnRegistration regToken person =
             ]
    in notifyPerson title body notificationData person
 
-notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> L.Flow ()
+notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> Flow ()
 notifyOnTrackCb personId tracker c =
   if isJust personId
     then do
@@ -172,7 +173,7 @@ notifyOnTrackCb personId tracker c =
         _ -> pure ()
     else pure ()
 
-notifyOnSearchCb :: PersonId -> CaseId -> [ProductInstance] -> L.Flow ()
+notifyOnSearchCb :: PersonId -> CaseId -> [ProductInstance] -> Flow ()
 notifyOnSearchCb personId caseId productInstances = do
   person <- Person.findById personId
   case person of
