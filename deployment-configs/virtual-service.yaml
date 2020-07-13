@@ -63,6 +63,8 @@ spec:
       route:
         - destination:
             host: beckn-app-backend-sandbox
+            port:
+              number: 8013
       timeout: 40s
     - match:
         - uri:
@@ -94,6 +96,8 @@ spec:
       route:
         - destination:
             host: beckn-app-backend-master
+            port:
+              number: 8013
       timeout: 40s
     - match:
         - uri:
