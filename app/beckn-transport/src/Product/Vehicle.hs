@@ -21,7 +21,7 @@ import qualified Utils.Defaults as Default
 
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandler $ do
-  vehicle <- transformFlow req >>= addOrgId orgId
+  vehicle <- createTransform req >>= addOrgId orgId
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
@@ -36,7 +36,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM =
 updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do
   vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
-  updatedVehicle <- transformFlow2 req vehicle
+  updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
