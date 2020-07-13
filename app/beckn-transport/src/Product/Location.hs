@@ -73,7 +73,7 @@ updateLocation _ caseId req = withFlowHandler $ do
 
 getLocation :: Text -> FlowHandler GetLocationRes
 getLocation caseId = withFlowHandler $ do
-  (GetLocationRes . map fromCacheLocationInfo) <$> Redis.getKeyRedis caseId
+  GetLocationRes . map fromCacheLocationInfo <$> Redis.getKeyRedis caseId
 
 updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> CachedLocationInfo -> Flow CachedLocationInfo
 updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
@@ -134,7 +134,7 @@ calculateRemainingDuration traversedWaypoints (destLat, destLong) initalDuration
   | otherwise =
     let edges = zip traversedWaypoints (drop 1 traversedWaypoints)
         speeds = calcSpeed <$> edges
-        avgSpeed = (sum speeds) / (fromIntegral $ length speeds)
+        avgSpeed = sum speeds / fromIntegral (length speeds)
         latestWaypoint = last traversedWaypoints
         (lat, long) = snd latestWaypoint
         distanceToDestination = MapSearch.distanceBetweenInMeters (PointXY lat long) (PointXY destLat destLong)

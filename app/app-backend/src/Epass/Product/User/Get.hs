@@ -76,13 +76,7 @@ getUsers offsetM limitM locateM role locate user =
                   then dists
                   else filter (`elem` dists) locate
           districtLevelUsers limitM offsetM role locateD
-        Just LWARD -> do
-          let wards = mapMaybe Location._ward allLocations
-          let locateW =
-                if List.null locate
-                  then wards
-                  else filter (`elem` wards) locate
-          wardLevelUsers limitM offsetM role locateW
+        Just LWARD -> wardLevel allLocations
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     Person.DISTRICTLEVEL -> do
       org <- getOrgOrFail (user ^. #_organizationId)
@@ -94,13 +88,7 @@ getUsers offsetM limitM locateM role locate user =
           if List.null locate || elem district locate
             then districtLevelUsers limitM offsetM role [district]
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
-        Just LWARD -> do
-          let wards = mapMaybe Location._ward allLocations
-          let locateW =
-                if List.null locate
-                  then wards
-                  else filter (`elem` wards) locate
-          wardLevelUsers limitM offsetM role locateW
+        Just LWARD -> wardLevel allLocations
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     Person.WARDLEVEL -> do
       org <- getOrgOrFail (user ^. #_organizationId)
@@ -112,6 +100,14 @@ getUsers offsetM limitM locateM role locate user =
             else L.throwException $ err400 {errBody = "UNAUTHORIZED"}
         _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
     _ -> L.throwException $ err400 {errBody = "UNAUTHORIZED"}
+  where
+    wardLevel allLocations = do
+      let wards = mapMaybe Location._ward allLocations
+      let locateW =
+            if List.null locate
+              then wards
+              else filter (`elem` wards) locate
+      wardLevelUsers limitM offsetM role locateW
 
 getOrgOrFail :: Maybe Text -> Flow Org.Organization
 getOrgOrFail orgId = do
