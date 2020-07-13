@@ -2,6 +2,7 @@
 
 module Types.API.Vehicle where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
@@ -31,8 +32,8 @@ data CreateVehicleReq = CreateVehicleReq
 instance FromJSON CreateVehicleReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 CreateVehicleReq SV.Vehicle where
-  transformFlow req = do
+instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     return $
@@ -78,8 +79,8 @@ data UpdateVehicleReq = UpdateVehicleReq
 instance FromJSON UpdateVehicleReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform UpdateVehicleReq SV.Vehicle where
-  transformFlow2 req vehicle = do
+instance ModifyTransform UpdateVehicleReq SV.Vehicle Flow where
+  modifyTransform req vehicle = do
     now <- getCurrentTimeUTC
     return $
       vehicle

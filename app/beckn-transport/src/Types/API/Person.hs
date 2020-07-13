@@ -49,8 +49,8 @@ data UpdatePersonReq = UpdatePersonReq
 instance FromJSON UpdatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform UpdatePersonReq SP.Person where
-  transformFlow2 req person = do
+instance ModifyTransform UpdatePersonReq SP.Person Flow where
+  modifyTransform req person = do
     location <- updateOrCreateLocation req $ SP._locationId person
     return $
       person
@@ -165,8 +165,8 @@ data CreatePersonReq = CreatePersonReq
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 CreatePersonReq SP.Person where
-  transformFlow req = do
+instance CreateTransform CreatePersonReq SP.Person Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- createLocationT req
