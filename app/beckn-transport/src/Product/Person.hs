@@ -125,7 +125,7 @@ linkEntity orgId personId req = withFlowHandler $ do
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}
 
-mkPersonRes :: Maybe EntityType -> SP.Person -> L.Flow PersonRes'
+mkPersonRes :: Maybe EntityType -> SP.Person -> Flow PersonRes'
 mkPersonRes entityType person = do
   entity <- case entityType of
     Just VEHICLE -> do

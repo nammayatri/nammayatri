@@ -193,7 +193,7 @@ deleteById id =
   where
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updateEntity :: PersonId -> Text -> L.Flow ()
+updateEntity :: PersonId -> Text -> Flow ()
 updateEntity personId entityId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update

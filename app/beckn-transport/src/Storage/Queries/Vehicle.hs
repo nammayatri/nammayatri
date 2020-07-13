@@ -117,7 +117,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId =
         &&. (B.val_ (isNothing categoryM) ||. _category ==. B.val_ categoryM)
         &&. (B.val_ (isNothing energyTypeM) ||. _energyType ==. B.val_ energyTypeM)
 
-findByIds :: [VehicleId] -> L.Flow [Storage.Vehicle]
+findByIds :: [VehicleId] -> Flow [Storage.Vehicle]
 findByIds ids =
   DB.findAllOrErr dbTable predicate
   where
