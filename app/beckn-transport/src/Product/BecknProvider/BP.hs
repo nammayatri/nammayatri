@@ -170,16 +170,16 @@ confirm req = withFlowHandler $ do
   let caseShortId = req ^. #context . #transaction_id -- change to message.transactionId
   search_case <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
-  orderCase <- mkOrderCase search_case
+  currTime <- getCurrentTimeUTC
+  orderCase <- mkOrderCase search_case currTime
   Case.create orderCase
-  orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
+  orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance currTime
   ProductInstance.create orderProductInstance
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
   ProductInstance.updateStatusByIds [productInstance ^. #_id, orderProductInstance ^. #_id] ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
-  currTime <- getCurrentTimeUTC
   let trackerCase = mkTrackerCase search_case uuid currTime $ T.pack shortId
   Case.create trackerCase
   uuid1 <- L.generateGUID
@@ -191,9 +191,8 @@ confirm req = withFlowHandler $ do
   Notify.notifyTransportersOnConfirm search_case admins
   mkAckResponse uuid "confirm"
 
-mkOrderCase :: SC.Case -> Flow SC.Case
+mkOrderCase :: SC.Case -> LocalTime -> Flow SC.Case
 mkOrderCase SC.Case {..} = do
-  now <- getCurrentTimeUTC
   id <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
@@ -210,9 +209,8 @@ mkOrderCase SC.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: CaseId -> ProductInstance -> Flow ProductInstance.ProductInstance
-mkOrderProductInstance caseId prodInst = do
-  now <- getCurrentTimeUTC
+mkOrderProductInstance :: CaseId -> ProductInstance -> LocalTime -> Flow ProductInstance.ProductInstance
+mkOrderProductInstance caseId prodInst now = do
   id <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
