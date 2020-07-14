@@ -232,8 +232,8 @@ findById pid =
   where
     predicate pid Storage.ProductInstance {..} = _id ==. B.val_ pid
 
-updateDvr :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
-updateDvr ids driverId = do
+updateDriver :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
+updateDriver ids driverId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
@@ -248,8 +248,8 @@ updateDvr ids driverId = do
           _updatedAt <-. B.val_ currTime
         ]
 
-updateVeh :: [ProductInstanceId] -> Maybe Text -> Flow ()
-updateVeh ids vehId = do
+updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
+updateVehicle ids vehId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable

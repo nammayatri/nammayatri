@@ -63,11 +63,11 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   searchPI <- PIQ.findByIdType (PI._id <$> piList) Case.RIDESEARCH
   isAllowed pi req
-  updateVeh user piList req
-  updateDvr user piList req
+  updateVehicleDetails user piList req
+  updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  notifyTripDataToGateway piId
+  notifyTripDetailsToGateway piId
   notifyCancelReq searchPI (req ^. #_status)
   updatedPi <- PIQ.findById piId
   return $ updatedPi
@@ -160,18 +160,18 @@ isAllowed pi req = do
       (Nothing, Nothing) -> return ()
       _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
 
-updateDvr :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-updateDvr user piList req = case req ^. #_personId of
+updateDriverDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+updateDriverDetails user piList req = case req ^. #_personId of
   Just k ->
     when (user ^. #_role == SP.ADMIN) $
-      PIQ.updateDvr (PI._id <$> piList) (PersonId <$> req ^. #_personId)
+      PIQ.updateDriver (PI._id <$> piList) (PersonId <$> req ^. #_personId)
   Nothing -> return ()
 
-updateVeh :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-updateVeh user piList req = case req ^. #_vehicleId of
+updateVehicleDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+updateVehicleDetails user piList req = case req ^. #_vehicleId of
   Just k ->
     when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-      PIQ.updateVeh (PI._id <$> piList) (req ^. #_vehicleId)
+      PIQ.updateVehicle (PI._id <$> piList) (req ^. #_vehicleId)
   Nothing -> return ()
 
 updateStatus :: SP.Person -> ProductInstanceId -> ProdInstUpdateReq -> Flow ()
@@ -184,8 +184,8 @@ updateStatus user piId req = do
     _ -> L.throwException $ err400 {errBody = "DRIVER_VEHICLE_UNASSIGNED"}
   return ()
 
-notifyTripDataToGateway :: ProductInstanceId -> Flow ()
-notifyTripDataToGateway piId = do
+notifyTripDetailsToGateway :: ProductInstanceId -> Flow ()
+notifyTripDetailsToGateway piId = do
   pi <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   cases <- CQ.findAllByIds (PI._caseId <$> piList)
@@ -220,22 +220,23 @@ updateTrip :: ProductInstanceId -> PI.ProductInstanceStatus -> Flow ()
 updateTrip piId k = do
   pi <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
-  -- TODO : Need to discuss one more time
-  --  trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
-  --  parentCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDESEARCH
-  --  orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
+  trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
+  orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
   case k of
     PI.CANCELLED -> do
       PIQ.updateStatusByIds (PI._id <$> piList) k
-      CQ.updateStatusByIds (PI._caseId <$> piList) Case.CLOSED
+      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      CQ.updateStatus (Case._id orderCase_) Case.CLOSED
       return ()
     PI.INPROGRESS -> do
       PIQ.updateStatusByIds (PI._id <$> piList) k
-      CQ.updateStatusByIds (PI._caseId <$> piList) Case.INPROGRESS
+      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
+      CQ.updateStatus (Case._id orderCase_) Case.INPROGRESS
       return ()
     PI.COMPLETED -> do
       PIQ.updateStatusByIds (PI._id <$> piList) k
-      CQ.updateStatusByIds (PI._caseId <$> piList) Case.COMPLETED
+      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
+      CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       return ()
     _ -> return ()
 
