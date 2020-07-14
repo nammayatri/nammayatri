@@ -5,6 +5,7 @@ module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.App
 import Beckn.Types.Core.Amount
+import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -33,6 +34,8 @@ instance FromHttpApiData ProductInstanceStatus where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
+type ProductInstanceType = Case.CaseType
+
 data EntityType = VEHICLE | PASS | TICKET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -52,6 +55,7 @@ data ProductInstanceT f = ProductInstance
     _entityId :: B.C f (Maybe Text),
     _quantity :: B.C f Int,
     _price :: B.C f Amount,
+    _type :: B.C f ProductInstanceType,
     _status :: B.C f ProductInstanceStatus,
     _startTime :: B.C f LocalTime,
     _endTime :: B.C f (Maybe LocalTime),

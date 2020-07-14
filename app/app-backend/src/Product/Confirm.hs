@@ -43,9 +43,9 @@ confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
 confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrentTimeUTC
   case_ <- QCase.findIdByPerson person $ CaseId caseId
-  when ((case_ ^. #_validTill) < lt) $
-    L.throwException $
-      err400 {errBody = "Case has expired"}
+  when ((case_ ^. #_validTill) < lt)
+    $ L.throwException
+    $ err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
   QCase.create orderCase_
   productInstance <- QPI.findById (ProductInstanceId productInstanceId)
@@ -125,6 +125,7 @@ mkOrderProductInstance caseId prodInst = do
         _shortId = shortId,
         _quantity = 1,
         _price = prodInst ^. #_price,
+        _type = Case.RIDEORDER,
         _organizationId = prodInst ^. #_organizationId,
         _fromLocation = prodInst ^. #_fromLocation,
         _toLocation = prodInst ^. #_toLocation,

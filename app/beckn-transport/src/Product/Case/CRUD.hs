@@ -119,6 +119,7 @@ createProductInstance cs prod price orgId status = do
           _entityType = ProdInst.VEHICLE,
           _entityId = Nothing,
           _quantity = 1,
+          _type = Case.RIDESEARCH,
           _price = fromMaybe 0 price,
           _status = status,
           _startTime = Case._startTime cs,

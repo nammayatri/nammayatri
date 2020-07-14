@@ -56,9 +56,9 @@ search person req = withFlowHandler $ do
   where
     validateDateTime req = do
       currTime <- getCurrentTimeUTC
-      when (req ^. #message . #time < currTime) $
-        L.throwException $
-          err400 {errBody = "Invalid start time"}
+      when (req ^. #message . #time < currTime)
+        $ L.throwException
+        $ err400 {errBody = "Invalid start time"}
 
 searchCb :: OnSearchReq -> FlowHandler OnSearchRes
 searchCb req = withFlowHandler $ do
@@ -228,6 +228,7 @@ mkProductInstance case_ mprovider personId item = do
         _parentId = Nothing,
         _entityId = Nothing,
         _price = item ^. #_price . #_listed_value,
+        _type = Case.RIDESEARCH,
         _udf1 = Nothing,
         _udf2 = Nothing,
         _udf3 = Nothing,
