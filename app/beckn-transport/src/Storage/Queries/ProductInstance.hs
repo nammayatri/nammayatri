@@ -185,11 +185,11 @@ productInstanceJoin _limit _offset csTypes orgId status = do
     joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
       i <- B.filter_ pred1 $ B.all_ tbl1
       j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $
-        B.join_ tbl3 $
-          \line ->
-            CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
-              B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
+      k <- B.filter_ pred3
+        $ B.join_ tbl3
+        $ \line ->
+          CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+            B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)
 
 productInstanceJoinWithoutLimits :: Case.CaseType -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
@@ -219,11 +219,11 @@ productInstanceJoinWithoutLimits csType orgId status = do
     joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
       i <- B.filter_ pred1 $ B.all_ tbl1
       j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $
-        B.join_ tbl3 $
-          \line ->
-            CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
-              B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
+      k <- B.filter_ pred3
+        $ B.join_ tbl3
+        $ \line ->
+          CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+            B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
       pure (i, j, k)
 
 findById :: ProductInstanceId -> Flow Storage.ProductInstance
@@ -297,3 +297,11 @@ findAllByParentId id =
     >>= either DB.throwDBError pure
   where
     predicate id Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ id
+
+findByIdType :: [ProductInstanceId] -> Case.CaseType -> Flow Storage.ProductInstance
+findByIdType ids csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      _id `B.in_` (B.val_ <$> ids)
+        &&. _type ==. B.val_ csType

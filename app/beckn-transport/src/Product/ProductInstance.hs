@@ -61,13 +61,14 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
   pi <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
+  searchPI <- PIQ.findByIdType (PI._id <$> piList) Case.RIDESEARCH
   isAllowed pi req
   updateVeh user piList req
   updateDvr user piList req
   updateStatus user piId req
   updateInfo piId
   notifyTripDataToGateway piId
-  notifyCancelReq pi (req ^. #_status)
+  notifyCancelReq searchPI (req ^. #_status)
   updatedPi <- PIQ.findById piId
   return $ updatedPi
 
@@ -219,23 +220,22 @@ updateTrip :: ProductInstanceId -> PI.ProductInstanceStatus -> Flow ()
 updateTrip piId k = do
   pi <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
-  trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
-  parentCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDESEARCH
+  -- TODO : Need to discuss one more time
+  --  trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
+  --  parentCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDESEARCH
+  --  orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
   case k of
     PI.CANCELLED -> do
       PIQ.updateStatusByIds (PI._id <$> piList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      CQ.updateStatusByIds (PI._caseId <$> piList) Case.CLOSED
       return ()
     PI.INPROGRESS -> do
-      -- update tracker case and prodinstuct of both cases to INPROGRESS
       PIQ.updateStatusByIds (PI._id <$> piList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
+      CQ.updateStatusByIds (PI._caseId <$> piList) Case.INPROGRESS
       return ()
     PI.COMPLETED -> do
-      -- update both cases and prodinstucts to COMPLETED
       PIQ.updateStatusByIds (PI._id <$> piList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
-      CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
+      CQ.updateStatusByIds (PI._caseId <$> piList) Case.COMPLETED
       return ()
     _ -> return ()
 
