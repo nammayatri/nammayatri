@@ -30,5 +30,5 @@ constructOtpSms code hash =
 -- TODO use appstore link
 constructInviteSms :: Text -> Text
 constructInviteSms orgName =
-  "<#> " <> orgName <> " transporter agency has listed you as a driver."
-    <> "Please use this link <appstore link> to install the app and manage rides assigned to you"
+  orgName <> " transporter agency has listed you as a driver."
+    <> "Please install the DRMS Transporter app to manage rides assigned to you"

@@ -42,10 +42,11 @@ createPerson orgId req = withFlowHandler $ do
   person <- addOrgId orgId <$> createTransform req
   QP.create person
   org <- OQ.findOrganizationById (OrganizationId orgId)
-  let mobileNumber = fromJust $ person ^. #_mobileNumber
-      countryCode = fromJust $ person ^. #_mobileCountryCode
-  sendInviteSms (countryCode <> mobileNumber) (org ^. #_name)
-  return $ UpdatePersonRes person
+  case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
+    (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
+      sendInviteSms (countryCode <> mobileNumber) (org ^. #_name)
+      return $ UpdatePersonRes person
+    _ -> return $ UpdatePersonRes person
   where
     validateDriver :: CreatePersonReq -> Flow ()
     validateDriver req =
