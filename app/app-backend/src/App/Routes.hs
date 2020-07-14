@@ -15,7 +15,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.ProductInstance
 import Data.Aeson
 import qualified Data.Vault.Lazy as V
-import qualified Epass.App.Routes as Epass
 import EulerHS.Prelude
 import Network.Wai.Parse
 import qualified Product.Cancel as Cancel
@@ -53,7 +52,6 @@ type AppAPI =
            :<|> CancelAPI
            :<|> CronAPI
            :<|> RouteAPI
-           :<|> Epass.EPassAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -72,7 +70,6 @@ appServer key =
     :<|> cancelFlow
     :<|> cronFlow
     :<|> routeApiFlow
-    :<|> Epass.epassServer key
 
 ---- Registration Flow ------
 type RegistrationAPI =
