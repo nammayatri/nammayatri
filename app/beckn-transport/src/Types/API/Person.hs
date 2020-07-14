@@ -242,7 +242,7 @@ createLocationRec req = do
       }
 
 newtype ListPersonRes = ListPersonRes
-  {users :: [PersonRes']}
+  {users :: [PersonEntityRes]}
   deriving (Generic, ToJSON, ToSchema)
 
 newtype PersonRes = PersonRes
@@ -276,7 +276,7 @@ instance FromJSON LinkedEntity where
 instance ToJSON LinkedEntity where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data PersonRes' = PersonRes'
+data PersonEntityRes = PersonEntityRes
   { _id :: PersonId,
     _firstName :: Maybe Text,
     _middleName :: Maybe Text,
@@ -304,8 +304,8 @@ data PersonRes' = PersonRes'
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON PersonRes' where
+instance FromJSON PersonEntityRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON PersonRes' where
+instance ToJSON PersonEntityRes where
   toJSON = genericToJSON stripAllLensPrefixOptions

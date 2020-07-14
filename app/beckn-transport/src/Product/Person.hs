@@ -125,15 +125,15 @@ linkEntity orgId personId req = withFlowHandler $ do
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}
 
-mkPersonRes :: Maybe EntityType -> SP.Person -> Flow PersonRes'
+mkPersonRes :: Maybe EntityType -> SP.Person -> Flow PersonEntityRes
 mkPersonRes entityType person = do
   entity <- case entityType of
     Just VEHICLE -> do
-      vehicle <- QV.findVehicleById $ fromMaybe (VehicleId "") (VehicleId <$> (person ^. #_udf1))
+      vehicle <- QV.findVehicleById $ VehicleId $ fromMaybe "" (person ^. #_udf1)
       return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)
     _ -> return Nothing
   return $
-    PersonRes'
+    PersonEntityRes
       { _id = person ^. #_id,
         _firstName = person ^. #_firstName,
         _middleName = person ^. #_middleName,
