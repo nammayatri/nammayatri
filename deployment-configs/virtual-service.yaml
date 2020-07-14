@@ -11,24 +11,6 @@ spec:
   http:
     - match:
         - uri:
-            prefix: /gateway/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: gateway-api
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /simulator/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: simulator-api
-      timeout: 40s
-    - match:
-        - uri:
             prefix: /map/otp/
       rewrite:
         uri: /
@@ -75,23 +57,14 @@ spec:
       timeout: 40s
     - match:
         - uri:
-            prefix: /epass/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-epass-api
-            port:
-              number: 8012
-      timeout: 40s
-    - match:
-        - uri:
             prefix: /app/
       rewrite:
         uri: /
       route:
         - destination:
             host: beckn-app-backend-sandbox
+            port:
+              number: 8013
       timeout: 40s
     - match:
         - uri:
@@ -106,12 +79,25 @@ spec:
       timeout: 40s
     - match:
         - uri:
+            prefix: /gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-sandbox
+            port:
+              number: 8015
+      timeout: 40s
+    - match:
+        - uri:
             prefix: /dev/app/
       rewrite:
         uri: /
       route:
         - destination:
             host: beckn-app-backend-master
+            port:
+              number: 8013
       timeout: 40s
     - match:
         - uri:
@@ -123,4 +109,15 @@ spec:
             host: beckn-transport-master
             port:
               number: 8014
+      timeout: 40s
+    - match:
+        - uri:
+            prefix: /dev/gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-master
+            port:
+              number: 8015
       timeout: 40s

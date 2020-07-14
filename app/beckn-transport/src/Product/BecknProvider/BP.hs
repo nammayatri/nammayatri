@@ -112,47 +112,24 @@ getValidTime now startTime = do
 
 mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
 mkFromLocation req uuid now loc =
-  case loc ^. #_type of
-    "gps" -> case loc ^. #_gps of
-      Just (val :: GPS) -> mkLocationRecord uuid now SL.POINT (Just $ read $ T.unpack $ val ^. #lat) (Just $ read $ T.unpack $ val ^. #lon) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-      _ -> undefined -- need to throw error
-    "address" -> case loc ^. #_address of
-      Just (val :: Address) -> mkLocationRecord uuid now SL.ADDRESS Nothing Nothing (Just $ val ^. #area) Nothing (Just $ val ^. #area) Nothing (Just $ val ^. #country) (Just $ val ^. #area_code) (Just $ (val ^. #door) <> (val ^. #building) <> (val ^. #street)) Nothing
-      _ -> undefined -- need to throw error
-    _ -> mkLocationRecord uuid now SL.POINT Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-
-mkLocationRecord ::
-  Text ->
-  LocalTime ->
-  SL.LocationType ->
-  Maybe Double ->
-  Maybe Double ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  SL.Location
-mkLocationRecord idr time typ lat lon ward dis city state country pincode address bound =
-  SL.Location
-    { _id = LocationId {_getLocationId = idr},
-      _locationType = typ,
-      _lat = lat,
-      _long = lon,
-      _ward = ward,
-      _district = dis,
-      _city = city,
-      _state = state,
-      _country = country,
-      _pincode = pincode,
-      _address = address,
-      _bound = bound,
-      _createdAt = time,
-      _updatedAt = time
-    }
+  let mgps = loc ^. #_gps
+      maddress = loc ^. #_address
+   in SL.Location
+        { _id = LocationId uuid,
+          _locationType = SL.POINT,
+          _lat = read . T.unpack . (^. #lat) <$> mgps,
+          _long = read . T.unpack . (^. #lon) <$> mgps,
+          _ward = (^. #street) <$> maddress,
+          _district = (^. #area) <$> maddress,
+          _city = (^. #city) <$> maddress,
+          _state = Nothing,
+          _country = (^. #country) <$> maddress,
+          _pincode = (^. #area_code) <$> maddress,
+          _address = encodeToText <$> maddress,
+          _bound = Nothing,
+          _createdAt = now,
+          _updatedAt = now
+        }
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do
