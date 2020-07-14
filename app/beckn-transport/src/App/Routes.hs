@@ -223,7 +223,7 @@ type ProductInstanceAPI =
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
            :<|> TokenAuth
-           :> Capture "productInstanceId" Text
+           :> Capture "productInstanceId" ProductInstanceId
            :> ReqBody '[JSON] ProdInstUpdateReq
            :> Post '[JSON] ProdInstInfo
        )

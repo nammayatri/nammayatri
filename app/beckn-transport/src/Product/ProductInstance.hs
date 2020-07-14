@@ -7,7 +7,7 @@ import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.ProductInstance as ProdInst
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
@@ -33,7 +33,7 @@ import Types.API.ProductInstance
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
-list :: SR.RegistrationToken -> [ProdInst.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $ do
   person <- PersQ.findPersonById (PersonId _EntityId)
   case SP._organizationId person of
@@ -56,99 +56,20 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
           _toLocation = find (\x -> Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList
         }
 
-update :: SR.RegistrationToken -> Text -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
-update SR.RegistrationToken {..} prodInstId req = withFlowHandler $ do
+update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
+update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
-  pi <- PIQ.findById (ProductInstanceId prodInstId)
+  pi <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   isAllowed pi req
-  vehIdRes <- case req ^. #_vehicleId of
-    Just k ->
-      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        PIQ.updateVeh (ProdInst._id <$> piList) (req ^. #_vehicleId)
-    Nothing -> return ()
-  dvrIdRes <- case req ^. #_personId of
-    Just k ->
-      when (user ^. #_role == SP.ADMIN) $
-        PIQ.updateDvr (ProdInst._id <$> piList) (PersonId <$> req ^. #_personId)
-    Nothing -> return ()
-  tripRes <- case req ^. #_status of
-    Just c ->
-      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        updateTrip (ProductInstanceId prodInstId) c
-    Nothing -> return ()
-  updatedProd <- PIQ.findById (ProductInstanceId prodInstId)
-  driverInfo <- case updatedProd ^. #_personId of
-    Just driverId -> PersQ.findPersonById driverId
-    Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
-  vehicleInfo <- case updatedProd ^. #_entityId of
-    Just vehicleId ->
-      VQ.findVehicleById (VehicleId vehicleId)
-        >>= fromMaybeM400 "VEHICLE NOT FOUND"
-    Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
-  infoObj <- updateInfo (ProductInstanceId prodInstId) (Just driverInfo) (Just vehicleInfo)
-  notifyTripDataToGateway (ProductInstanceId prodInstId)
-  notifyCancelReq updatedProd (req ^. #_status)
-  return $ updatedProd {ProdInst._info = infoObj}
-
-notifyTripDataToGateway :: ProductInstanceId -> Flow ()
-notifyTripDataToGateway prodInstId = do
-  prodInst <- PIQ.findById prodInstId
-  piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
-  cases <- CQ.findAllByIds (ProdInst._caseId <$> piList)
-  let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.LOCATIONTRACKER) cases
-  let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDESEARCH) cases
-  case (trackerCase, parentCase) of
-    (Just x, Just y) -> BP.notifyTripUrlToGateway x y
-    _ -> return ()
-
-updateInfo :: ProductInstanceId -> Maybe SP.Person -> Maybe V.Vehicle -> Flow (Maybe Text)
-updateInfo prodInstId driverInfo vehicleInfo = do
-  let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
-  PIQ.updateInfo prodInstId info
-  return info
-  where
-    mkInfoObj drivInfo vehiInfo =
-      DriverVehicleInfo
-        { driverInfo = encodeToText drivInfo,
-          vehicleInfo = encodeToText vehiInfo
-        }
-
-updateTrip :: ProductInstanceId -> ProdInst.ProductInstanceStatus -> Flow ()
-updateTrip prodInstId k = do
-  prodInst <- PIQ.findById prodInstId
-  piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
-  trackerCase_ <- CQ.findByIdType (ProdInst._caseId <$> piList) Case.LOCATIONTRACKER
-  parentCase_ <- CQ.findByIdType (ProdInst._caseId <$> piList) Case.RIDESEARCH
-  case k of
-    ProdInst.CANCELLED -> do
-      PIQ.updateStatusByIds (ProdInst._id <$> piList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
-      return ()
-    ProdInst.INPROGRESS -> do
-      -- update tracker case and prodinstuct of both cases to INPROGRESS
-      PIQ.updateStatusByIds (ProdInst._id <$> piList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
-      return ()
-    ProdInst.COMPLETED -> do
-      -- update both cases and prodinstucts to COMPLETED
-      PIQ.updateStatusByIds (ProdInst._id <$> piList) k
-      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
-      CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
-      return ()
-    _ -> return ()
-
-notifyCancelReq :: ProdInst.ProductInstance -> Maybe ProdInst.ProductInstanceStatus -> Flow ()
-notifyCancelReq prodInst status =
-  case status of
-    Just k -> case k of
-      ProdInst.CANCELLED -> do
-        admins <-
-          PersQ.findAllByOrgIds [SP.ADMIN] [ProdInst._organizationId prodInst]
-        BP.notifyCancelToGateway (_getProductInstanceId $ prodInst ^. #_id)
-        Notify.notifyCancelReqByBP prodInst admins
-      _ -> return ()
-    Nothing -> return ()
+  updateVeh user piList req
+  updateDvr user piList req
+  updateStatus user piId req
+  updateInfo piId
+  notifyTripDataToGateway piId
+  notifyCancelReq pi (req ^. #_status)
+  updatedPi <- PIQ.findById piId
+  return $ updatedPi
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
@@ -156,7 +77,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
   person <- PersQ.findPersonById (PersonId personId)
   hasAccess user person
   rideList <- PIQ.findAllByPersonId (SP._id person)
-  locList <- LQ.findAllByLocIds (catMaybes (ProdInst._fromLocation <$> rideList)) (catMaybes (ProdInst._toLocation <$> rideList))
+  locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
     hasAccess user person =
@@ -167,10 +88,10 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
     joinByIds locList ride =
-      find (\x -> ProdInst._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
+      find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
         >>= buildResponse
       where
-        buildResponse k = prepare ride k <$> find (\x -> ProdInst._toLocation ride == Just (_getLocationId (Loc._id x))) locList
+        buildResponse k = prepare ride k <$> find (\x -> PI._toLocation ride == Just (_getLocationId (Loc._id x))) locList
         prepare ride from to =
           RideRes
             { _product = ride,
@@ -184,7 +105,7 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
   vehicle <- VQ.findVehicleById (VehicleId vehicleId)
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
-  locList <- LQ.findAllByLocIds (catMaybes (ProdInst._fromLocation <$> rideList)) (catMaybes (ProdInst._toLocation <$> rideList))
+  locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
     hasAccess user vehicle =
@@ -195,10 +116,10 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
         $ L.throwException
         $ err401 {errBody = "Unauthorized"}
     joinByIds locList ride =
-      find (\x -> ProdInst._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
+      find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
         >>= buildResponse
       where
-        buildResponse k = prepare ride k <$> find (\x -> ProdInst._toLocation ride == Just (_getLocationId (Loc._id x))) locList
+        buildResponse k = prepare ride k <$> find (\x -> PI._toLocation ride == Just (_getLocationId (Loc._id x))) locList
         prepare ride from to =
           RideRes
             { _product = ride,
@@ -207,12 +128,12 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
             }
 
 listCasesByProductInstance :: SR.RegistrationToken -> Text -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
-listCasesByProductInstance SR.RegistrationToken {..} prodInstId csType = withFlowHandler $ do
-  pi <- PIQ.findById (ProductInstanceId prodInstId)
+listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandler $ do
+  pi <- PIQ.findById (ProductInstanceId piId)
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   caseList <- case csType of
-    Just type_ -> CQ.findAllByIdType (ProdInst._caseId <$> piList) type_
-    Nothing -> CQ.findAllByIds (ProdInst._caseId <$> piList)
+    Just type_ -> CQ.findAllByIdType (PI._caseId <$> piList) type_
+    Nothing -> CQ.findAllByIds (PI._caseId <$> piList)
   locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
   return $ catMaybes $ joinByIds locList <$> caseList
   where
@@ -230,10 +151,102 @@ listCasesByProductInstance SR.RegistrationToken {..} prodInstId csType = withFlo
 
 -- Core Utility methods are below
 
-isAllowed :: ProdInst.ProductInstance -> ProdInstUpdateReq -> Flow ()
+isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed pi req = do
-  piList <- PIQ.findAllByStatusParentId [ProdInst.COMPLETED, ProdInst.INPROGRESS] (pi ^. #_parentId)
+  piList <- PIQ.findAllByStatusParentId [PI.COMPLETED, PI.INPROGRESS] (pi ^. #_parentId)
   unless (null piList) $
     case (req ^. #_personId, req ^. #_vehicleId) of
       (Nothing, Nothing) -> return ()
       _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
+
+updateDvr :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+updateDvr user piList req = case req ^. #_personId of
+  Just k ->
+    when (user ^. #_role == SP.ADMIN) $
+      PIQ.updateDvr (PI._id <$> piList) (PersonId <$> req ^. #_personId)
+  Nothing -> return ()
+
+updateVeh :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+updateVeh user piList req = case req ^. #_vehicleId of
+  Just k ->
+    when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
+      PIQ.updateVeh (PI._id <$> piList) (req ^. #_vehicleId)
+  Nothing -> return ()
+
+updateStatus :: SP.Person -> ProductInstanceId -> ProdInstUpdateReq -> Flow ()
+updateStatus user piId req = do
+  pi <- PIQ.findById piId
+  updateRes <- case (req ^. #_status, pi ^. #_entityId, pi ^. #_personId) of
+    (Just c, Just x, Just y) ->
+      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
+        updateTrip (pi ^. #_id) c
+    _ -> L.throwException $ err400 {errBody = "DRIVER_VEHICLE_UNASSIGNED"}
+  return ()
+
+notifyTripDataToGateway :: ProductInstanceId -> Flow ()
+notifyTripDataToGateway piId = do
+  pi <- PIQ.findById piId
+  piList <- PIQ.findAllByParentId (pi ^. #_parentId)
+  cases <- CQ.findAllByIds (PI._caseId <$> piList)
+  let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.LOCATIONTRACKER) cases
+  let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDESEARCH) cases
+  case (trackerCase, parentCase) of
+    (Just x, Just y) -> BP.notifyTripUrlToGateway x y
+    _ -> return ()
+
+updateInfo :: ProductInstanceId -> Flow ()
+updateInfo piId = do
+  pi <- PIQ.findById piId
+  driverInfo <- case pi ^. #_personId of
+    Just driverId -> PersQ.findPersonById driverId
+    Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
+  vehicleInfo <- case pi ^. #_entityId of
+    Just vehicleId ->
+      VQ.findVehicleById (VehicleId vehicleId)
+        >>= fromMaybeM400 "VEHICLE NOT FOUND"
+    Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
+  let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
+  PIQ.updateInfo piId info
+  return ()
+  where
+    mkInfoObj drivInfo vehiInfo =
+      DriverVehicleInfo
+        { driverInfo = encodeToText drivInfo,
+          vehicleInfo = encodeToText vehiInfo
+        }
+
+updateTrip :: ProductInstanceId -> PI.ProductInstanceStatus -> Flow ()
+updateTrip piId k = do
+  pi <- PIQ.findById piId
+  piList <- PIQ.findAllByParentId (pi ^. #_parentId)
+  trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
+  parentCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDESEARCH
+  case k of
+    PI.CANCELLED -> do
+      PIQ.updateStatusByIds (PI._id <$> piList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      return ()
+    PI.INPROGRESS -> do
+      -- update tracker case and prodinstuct of both cases to INPROGRESS
+      PIQ.updateStatusByIds (PI._id <$> piList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
+      return ()
+    PI.COMPLETED -> do
+      -- update both cases and prodinstucts to COMPLETED
+      PIQ.updateStatusByIds (PI._id <$> piList) k
+      CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
+      CQ.updateStatus (Case._id parentCase_) Case.COMPLETED
+      return ()
+    _ -> return ()
+
+notifyCancelReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
+notifyCancelReq pi status =
+  case status of
+    Just k -> case k of
+      PI.CANCELLED -> do
+        admins <-
+          PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId pi]
+        BP.notifyCancelToGateway (_getProductInstanceId $ pi ^. #_id)
+        Notify.notifyCancelReqByBP pi admins
+      _ -> return ()
+    Nothing -> return ()
