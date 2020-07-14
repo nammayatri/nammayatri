@@ -4,7 +4,6 @@ import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
 import qualified Beckn.Utils.Extra as Utils
 import Beckn.Utils.Servant.Auth
 import qualified Data.ByteString.Lazy as BSL

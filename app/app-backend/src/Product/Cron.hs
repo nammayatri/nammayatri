@@ -6,7 +6,7 @@ import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (authenticate, withFlowHandler)
+import Beckn.Utils.Common (authenticate, checkDomainError, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as MC
@@ -29,8 +29,8 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
   traverse_
     ( \caseObj -> do
         let cId = Case._id caseObj
-        MC.updateStatus cId Case.CLOSED
-        MPI.updateAllProductInstancesByCaseId cId ProductInstance.EXPIRED
+        checkDomainError $ MC.updateStatus cId Case.CLOSED
+        checkDomainError $ MPI.updateAllProductInstancesByCaseId cId ProductInstance.EXPIRED
         Notify.notifyOnExpiration caseObj
     )
     cases

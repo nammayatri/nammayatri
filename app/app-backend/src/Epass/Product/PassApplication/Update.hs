@@ -25,7 +25,6 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Models.Case as MC
 import Servant
 import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.ProductInstance as QCP

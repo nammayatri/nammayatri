@@ -11,7 +11,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
+import Beckn.Utils.Common (checkDomainError, decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -71,5 +71,5 @@ updateTracker prodInst tracker = do
   let uInfo = (\info -> info {ProductInfo._tracker = Just tracker}) <$> minfo
   let updatedPrd =
         prodInst {ProductInstance._info = Just $ encodeToText uInfo}
-  MPI.updateMultiple (prodInst ^. #_id) updatedPrd
+  checkDomainError $ MPI.updateMultiple (prodInst ^. #_id) updatedPrd
   return $ Right ()

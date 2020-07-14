@@ -22,15 +22,18 @@ import qualified Storage.Queries.Case as Q
 -- | Validate and update Case status
 updateStatus :: CaseId -> CaseStatus -> FlowDomainResult ()
 updateStatus id status = runExceptT $ do
-  validateStatusChange status id
+  validateCaseStatuseChange status id
   ExceptT $ do
     result <- Q.updateStatus id status
     fromDBError result
 
-updateStatusByIds :: [CaseId] -> CaseStatus -> Flow ()
-updateStatusByIds ids status = do
-  traverse_ (\x -> updateStatus x status) ids
-  pure ()
+updateStatusByIds :: [CaseId] -> CaseStatus -> FlowDomainResult ()
+updateStatusByIds ids status = runExceptT $ do
+  cases <- ExceptT $ findAllByIds ids
+  validateCasesStatusesChange' status cases
+  ExceptT $ do
+    result <- Q.updateStatusByIds ids status
+    fromDBError result
 
 -- Queries wrappers
 findById :: CaseId -> FlowDomainResult Case
@@ -38,11 +41,35 @@ findById caseId = do
   result <- Q.findById' caseId
   fromDBErrorOrEmpty (CaseErr CaseNotFound) result
 
+-- | Find Product Instances
+findAllByIds :: [CaseId] -> FlowDomainResult [Case]
+findAllByIds ids = do
+  result <- Q.findAllByIds' ids
+  fromDBError result
+
 -- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> CaseId -> ExceptT DomainError Flow ()
-validateStatusChange newStatus caseId = do
-  c <- ExceptT $ findById caseId
-  liftEither $ case validateStatusTransition (_status c) newStatus of
-    Left msg -> do
-      Left $ CaseErr $ CaseStatusTransitionErr msg
+validateCaseStatuseChange :: CaseStatus -> CaseId -> ExceptT DomainError Flow ()
+validateCaseStatuseChange newStatus caseId = do
+  case_ <- ExceptT $ findById caseId
+  liftEither $ validateStatusChange newStatus case_
+
+-- | Bulk validation of Case statuses change
+validateCasesStatusesChange :: CaseStatus -> [CaseId] -> ExceptT DomainError Flow ()
+validateCasesStatusesChange newStatus caseIds = do
+  cps <- ExceptT $ findAllByIds caseIds
+  validateCasesStatusesChange' newStatus cps
+
+-- | Bulk validation of Case statuses change
+validateCasesStatusesChange' :: CaseStatus -> [Case] -> ExceptT DomainError Flow ()
+validateCasesStatusesChange' newStatus cases = do
+  case mapM (validateStatusChange newStatus) cases of
+    -- throwErrror, throwE is a shorthand for ExceptT . pure . Left
+    Left err -> throwError err
+    Right _ -> pure ()
+
+-- | Get Case and validate its status change
+validateStatusChange :: CaseStatus -> Case -> DomainResult ()
+validateStatusChange newStatus case_ = do
+  liftEither $ case validateStatusTransition (_status case_) newStatus of
+    Left msg -> Left $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> Right ()

@@ -36,7 +36,6 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
 import qualified Models.ProductInstance as MPI
-import qualified Models.Product as MP
 import Servant
 import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.Person as Person
@@ -63,7 +62,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
       when
         (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
         (L.throwException $ err400 {errBody = "Access denied"})
-      MPI.updateStatus passId (fromJust _action)
+      checkDomainError $ MPI.updateStatus passId (fromJust _action)
       return pass
     RegistrationToken.CUSTOMER -> do
       customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
@@ -86,7 +85,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
             (L.throwException $ err400 {errBody = "Access denied"})
           return $ pass {SPI._fromLocation = _fromLocation}
   case' <- QC.findById (SPI._caseId pass)
-  MPI.updateMultiple passId pass'
+  checkDomainError $ MPI.updateMultiple passId pass'
   PassRes <$> getPassInfo case' pass
 
 listPass ::

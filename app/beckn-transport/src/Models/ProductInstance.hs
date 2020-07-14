@@ -20,10 +20,13 @@ import qualified Storage.Queries.ProductInstance as Q
 
 -- | Validate and update ProductInstance status
 updateStatus :: ProductInstanceId -> ProductInstanceStatus -> FlowDomainResult ()
-updateStatus prodInstId newStatus = do
-  result <- Q.updateStatus prodInstId newStatus
-  fromDBError result
+updateStatus prodInstId newStatus = runExceptT $do
+  validatePIStatusChange newStatus prodInstId
+  ExceptT $ do
+    result <- Q.updateStatus prodInstId newStatus
+    fromDBError result
 
+-- | Validate and update ProductInstances statusses
 updateStatusByIds :: [ProductInstanceId] -> ProductInstanceStatus -> FlowDomainResult ()
 updateStatusByIds ids status = runExceptT $ do
   productInstances <- ExceptT $ findAllByIds ids
@@ -31,14 +34,6 @@ updateStatusByIds ids status = runExceptT $ do
   ExceptT $ do
     result <- Q.updateStatusByIds ids status
     fromDBError result
-
--- | Bulk validate and update Case's ProductInstances statuses
--- updateAllProductInstancesByCaseId :: CaseId -> ProductInstanceStatus -> FlowDomainResult ()
--- updateAllProductInstancesByCaseId caseId status = runExceptT $ do
---   validateCPSStatusesChange status caseId
---   ExceptT $ do
---     result <- Q.updateAllByCaseId caseId status
---     fromDBError result
 
 -- | Find Product Instance by id
 findById :: ProductInstanceId -> FlowDomainResult ProductInstance
@@ -58,28 +53,11 @@ findAllByIds ids = do
   result <- Q.findAllByIds' ids
   fromDBError result
 
--- | Find Product Instance by Product Id
--- findByProductId :: ProductsId -> FlowDomainResult ProductInstance
--- findByProductId pId = do
---   result <- Q.findByProductId' pId
---   fromDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
-
--- findAllProductInstances' :: [ProductInstanceId] -> FlowDomainResult [ProductInstance]
--- findAllProductInstances' ids = do
---   result <- Q.findAllProductInstances' ids
---   fromDBError result
-
 -- | Get ProductInstance and validate its status change
 validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError Flow ()
 validatePIStatusChange newStatus productInstanceId = do
   cp <- ExceptT $ findById productInstanceId
   liftEither $ validateStatusChange newStatus cp
-
--- | Bulk validation of ProductInstance statuses change
--- validatePIStatusesChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError Flow ()
--- validatePIStatusesChange newStatus caseId = do
---   cps <- ExceptT $ findAllByCaseId caseId
---   validateCPSStatusesChange' newStatus cps
 
 -- | Bulk validation of ProductInstance statuses change
 validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> ExceptT DomainError Flow ()
@@ -91,7 +69,7 @@ validatePIStatusesChange' newStatus cps = do
 
 -- | Validate status change and return appropriate DomainError
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> DomainResult ()
-validateStatusChange newStatus caseProduct =
-  case validateStatusTransition (_status caseProduct) newStatus of
-    Left msg -> Left $ ProductInstanceErr $ ProductInstanceStatusTransitionErr msg
+validateStatusChange newStatus productInstance =
+  case validateStatusTransition (_status productInstance) newStatus of
+    Left msg -> Left $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
     _ -> Right ()

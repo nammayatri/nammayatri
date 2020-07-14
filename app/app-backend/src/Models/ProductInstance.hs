@@ -82,5 +82,5 @@ validatePIStatusesChange' newStatus productInstances = do
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> DomainResult ()
 validateStatusChange newStatus caseProduct =
   case validateStatusTransition (_status caseProduct) newStatus of
-    Left msg -> Left $ ProductInstanceErr $ ProductInstanceStatusTransitionErr msg
+    Left msg -> Left $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
     _ -> Right ()

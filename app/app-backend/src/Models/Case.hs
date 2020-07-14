@@ -53,5 +53,5 @@ validateStatusChange newStatus caseId = do
   c <- ExceptT $ findById caseId
   liftEither $ case validateStatusTransition (_status c) newStatus of
     Left msg -> do
-      Left $ CaseErr $ CaseStatusTransitionErr msg
+      Left $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> Right ()

@@ -40,7 +40,14 @@ findById' :: CaseId -> Flow (T.DBResult (Maybe Storage.Case))
 findById' caseId =
   DB.findOne dbTable (predicate caseId)
   where
-    predicate caseId Storage.Case {..} = _id ==. (B.val_ caseId)
+    predicate caseId Storage.Case {..} = _id ==. B.val_ caseId
+
+findAllByIds' :: [CaseId] -> Flow (T.DBResult [Storage.Case])
+findAllByIds' ids =
+  DB.findAll dbTable (pred ids)
+  where
+    pred ids Storage.Case {..} =
+      B.in_ _id (B.val_ <$> ids)
 
 findByParentCaseIdAndType :: CaseId -> Storage.CaseType -> Flow (Maybe Storage.Case)
 findByParentCaseIdAndType pCaseId cType =

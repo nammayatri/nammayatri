@@ -19,8 +19,8 @@ import Data.Time
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified EulerHS.Types as ET
 import qualified EulerHS.Runtime as R
+import qualified EulerHS.Types as ET
 import Network.HTTP.Types (hContentType)
 import Servant
 import System.Environment
@@ -195,3 +195,43 @@ throwJsonError401H = throwJsonErrorH ... err401
 -- and timezone as arguments. Currently adds +5:30
 showTimeIst :: LocalTime -> Text
 showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addLocalTime (60 * 330)
+
+throwDomainError :: L.MonadFlow m => DomainError -> m a
+throwDomainError err =
+  case err of
+    UnknownDomainError msg ->
+      t err401 msg
+    DatabaseError (ET.DBError _ text) ->
+      -- TODO get more details from db error?
+      t err500 $ ErrorMsg text
+    -- Case errors
+    CaseErr suberr -> case suberr of
+      CaseNotFound ->
+        t err404 $ ErrorMsg "Case not found"
+      CaseStatusTransitionErr msg ->
+        t err405 msg
+    -- Product Instance errors
+    ProductInstanceErr suberr -> case suberr of
+      ProductInstanceNotFound ->
+        t err404 $ ErrorMsg "Product Instance not found"
+      ProductInstanceStatusTransitionErr msg ->
+        t err405 msg
+    -- Product errors
+    ProductErr suberr -> case suberr of
+      ProductNotFound ->
+        t err404 $ ErrorMsg "Product not found"
+      ProductNotUpdated ->
+        t err405 $ ErrorMsg "Product not updated"
+      ProductNotCreated ->
+        t err405 $ ErrorMsg "Product not created"
+    _ ->
+      t err500 $ ErrorMsg "Unknown error"
+  where
+    t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg
+
+checkDomainError :: L.MonadFlow m => m (Either DomainError a) -> m a
+checkDomainError result = do
+  r <- result
+  case r of
+    Left err -> throwDomainError err
+    Right res -> pure res

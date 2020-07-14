@@ -8,13 +8,14 @@ import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import Beckn.Types.Error
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
+import Beckn.Utils.Common (checkDomainError, decodeFromText, encodeToText, withFlowHandler)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -27,7 +28,6 @@ import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
-import qualified Models.Product as MP
 import Servant
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Location
@@ -51,7 +51,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
       err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
   QCase.create orderCase_
-  productInstance <- QPI.findById (ProductInstanceId productInstanceId)
+  productInstance <- checkDomainError $ MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   QPI.create orderProductInstance
   transactionId <- L.generateGUID
@@ -86,9 +86,9 @@ onConfirm req = withFlowHandler $ do
                 { SPI._info = encodeToText <$> uInfo
                 }
         productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-        MC.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
-        MPI.updateMultiple pid uPrd
-        MPI.updateStatus pid SPI.CONFIRMED
+        checkDomainError $ MC.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
+        checkDomainError $ MPI.updateMultiple pid uPrd
+        checkDomainError $ MPI.updateStatus pid SPI.CONFIRMED
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack
