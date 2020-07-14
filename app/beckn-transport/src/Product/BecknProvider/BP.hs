@@ -192,7 +192,7 @@ confirm req = withFlowHandler $ do
   mkAckResponse uuid "confirm"
 
 mkOrderCase :: SC.Case -> LocalTime -> Flow SC.Case
-mkOrderCase SC.Case {..} = do
+mkOrderCase SC.Case {..} now = do
   id <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
