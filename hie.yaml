@@ -24,6 +24,27 @@ cradle:
     - path: "app/gateway/server/Main.hs"
       component: "beckn-gateway:exe:beckn-gateway-exe"
 
+    - path: "app/gateway/server/Paths_beckn_gateway.hs"
+      component: "beckn-gateway:exe:beckn-gateway-exe"
+
+    - path: "app/mock-app-backend/src"
+      component: "mock-app-backend:lib"
+
+    - path: "app/mock-app-backend/server/Main.hs"
+      component: "mock-app-backend:exe:mock-app-backend-exe"
+
+    - path: "app/mock-app-backend/server/Paths_mock_app_backend.hs"
+      component: "mock-app-backend:exe:mock-app-backend-exe"
+
+    - path: "app/mock-provider-backend/src"
+      component: "mock-provider-backend:lib"
+
+    - path: "app/mock-provider-backend/server/Main.hs"
+      component: "mock-provider-backend:exe:mock-provider-backend-exe"
+
+    - path: "app/mock-provider-backend/server/Paths_mock_provider_backend.hs"
+      component: "mock-provider-backend:exe:mock-provider-backend-exe"
+
     - path: "lib/beckn-core/src"
       component: "beckn-core:lib"
 
@@ -32,9 +53,6 @@ cradle:
 
     - path: "lib/beckn-core/test/src"
       component: "beckn-core:test:beckn-core-tests"
-
-    - path: "app/mock-provider-backend"
-      component: "beckn-gateway:lib"
 
     - path: "test/src"
       component: "beckn-test:lib"
