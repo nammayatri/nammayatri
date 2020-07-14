@@ -43,8 +43,8 @@ instance Example Service where
     Service
       { _id = "123e4567-e89b-12d3-a456-426652340000",
         _catalog = example,
-        _matched_items = ["cola", "soda"],
-        _selected_items = ["soda"],
+        _matched_items = ["uuid-ride-offer-1", "uuid-ride-offer-2"],
+        _selected_items = ["uuid-ride-offer-1"],
         _fare_product = example,
         _offers = example,
         _provider = example,

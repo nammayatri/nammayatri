@@ -32,8 +32,8 @@ data Mobile = Mobile
 instance Example Mobile where
   example =
     Mobile
-      { country_code = Just "+9",
-        number = Just "19999999999"
+      { country_code = Just "+91",
+        number = Just "9845012345"
       }
 
 data LandLine = LandLine
@@ -47,8 +47,8 @@ data LandLine = LandLine
 instance Example LandLine where
   example =
     LandLine
-      { country_code = "+9",
-        std_code = "",
-        number = "123",
+      { country_code = "+91",
+        std_code = "80",
+        number = "23456789",
         extension = ""
       }

@@ -25,8 +25,8 @@ instance Example Vehicle where
     Vehicle
       { category = Just "CAR",
         capacity = Just 5,
-        make = Just "Logon",
-        model = Just "Renoult",
+        make = Just "Logan",
+        model = Just "Renault",
         size = Just "small",
         variant = "X10",
         color = Just "indigo",
@@ -44,5 +44,5 @@ instance Example Registration where
   example =
     Registration
       { category = "PERSONAL",
-        number = "AAA1AA1111"
+        number = "AA-12-BB-3456"
       }

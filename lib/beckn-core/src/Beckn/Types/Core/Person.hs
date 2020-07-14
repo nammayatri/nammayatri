@@ -29,7 +29,7 @@ instance Example Person where
         last_name = "",
         full_name = "John Smith",
         image = example,
-        dob = Just "45698745236",
+        dob = Just "28-11-1990",
         gender = "male",
         contact = example
       }

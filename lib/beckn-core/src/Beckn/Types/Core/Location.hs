@@ -67,6 +67,18 @@ data Address = Address
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+instance Example Address where
+  example =
+    Address
+      { door = "#817",
+        building = "Juspay Apartments",
+        street = "27th Main",
+        area = "8th Block Koramangala",
+        city = "Bangalore",
+        country = "India",
+        area_code = "560047"
+      }
+
 -- Can we add district and state in Address?
 data City = City
   { name :: Text,
