@@ -9,10 +9,9 @@ where
 
 import App.Types
 import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchReq, SearchRes, onSearchAPI, searchAPI)
-import Beckn.Types.App (FlowHandlerR)
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Ack
-import Beckn.Utils.Common (fromMaybeM400, withFlowRHandler)
+import Beckn.Utils.Common (fromMaybeM400, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -21,14 +20,14 @@ import qualified Product.ProviderRegistry as BP
 import Servant.Client (BaseUrl, parseBaseUrl)
 import qualified Storage.Queries.App as BA
 
-parseOrgUrl :: Text -> AppFlow BaseUrl
+parseOrgUrl :: Text -> Flow BaseUrl
 parseOrgUrl =
   fromMaybeM400 "INVALID_TOKEN"
     . parseBaseUrl
     . toString
 
-search :: Text -> SearchReq -> FlowHandlerR AppEnv SearchRes
-search token req = withFlowRHandler $ do
+search :: Text -> SearchReq -> FlowHandler SearchRes
+search token req = withFlowHandler $ do
   let search' = ET.client searchAPI
       messageId = req ^. #context . #transaction_id
   appUrl <- BA.lookupToken token >>= fromMaybeM400 "INVALID_TOKEN"
@@ -44,8 +43,8 @@ search token req = withFlowRHandler $ do
       return $ AckResponse (req ^. #context) (Ack "Successful" "Ok")
     else return $ AckResponse (req ^. #context) (Ack "Error" "No providers")
 
-searchCb :: Text -> OnSearchReq -> FlowHandlerR AppEnv OnSearchRes
-searchCb _token req = withFlowRHandler $ do
+searchCb :: Text -> OnSearchReq -> FlowHandler OnSearchRes
+searchCb _token req = withFlowHandler $ do
   let onSearch = ET.client onSearchAPI
       messageId = req ^. #context . #transaction_id
   mAppUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"

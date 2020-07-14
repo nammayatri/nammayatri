@@ -75,11 +75,8 @@ mkAckResponse' txnId action message = do
             }
       }
 
-withFlowHandler :: FlowR () a -> FlowHandler a
-withFlowHandler = withFlowRHandler
-
-withFlowRHandler :: FlowR r a -> FlowHandlerR r a
-withFlowRHandler flow = do
+withFlowHandler :: FlowR r a -> FlowHandlerR r a
+withFlowHandler flow = do
   (EnvR flowRt appEnv) <- ask
   lift . ExceptT . try . runFlowR flowRt appEnv $ flow
 
@@ -117,7 +114,7 @@ maskPerson person =
         else "..."
 
 -- | Prepare common applications options
-prepareAppOptions :: FlowR () ()
+prepareAppOptions :: FlowR r ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
@@ -154,10 +151,10 @@ throwJsonError501 = throwJsonError err501
 throwJsonError400 = throwJsonError err400
 throwJsonError401 = throwJsonError err401
 
-throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandler a
+throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandlerR r a
 throwJsonErrorH = withFlowHandler ... throwJsonError
 
-throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandler a
+throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandlerR r a
 throwJsonError500H = throwJsonErrorH ... err500
 throwJsonError501H = throwJsonErrorH ... err501
 throwJsonError400H = throwJsonErrorH ... err400

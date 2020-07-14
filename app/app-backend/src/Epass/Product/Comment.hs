@@ -1,5 +1,6 @@
 module Epass.Product.Comment where
 
+import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Utils.Common

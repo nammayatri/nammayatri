@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -12,24 +11,18 @@ import qualified EulerHS.Runtime as R
 import Servant
 
 -- App Types
+data CommonEnv = CommonEnv
+  {
+  }
+
 data EnvR r = EnvR
   { runTime :: R.FlowRuntime,
     appEnv :: r
   }
 
-type Env = EnvR ()
-
--- | Sort of 'Env' constructor, as if we had plain 'Env' datatype instead of 'EnvR'.
-pattern Env :: R.FlowRuntime -> Env
-pattern Env flowRt = EnvR flowRt ()
-
 type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
 
-type FlowHandler = FlowHandlerR ()
-
 type FlowServerR r api = ServerT api (FlowHandlerR r)
-
-type FlowServer api = FlowServerR () api
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 

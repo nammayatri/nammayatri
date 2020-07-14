@@ -1,5 +1,6 @@
 module Epass.Product.Tag where
 
+import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Utils.Common

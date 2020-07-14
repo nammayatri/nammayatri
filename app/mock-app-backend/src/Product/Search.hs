@@ -10,7 +10,6 @@ where
 import App.Types
 import App.Utils
 import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchRes, searchAPI)
-import Beckn.Types.App (FlowHandler)
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Ack
 import Beckn.Utils.Common (withFlowHandler)

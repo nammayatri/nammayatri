@@ -2,6 +2,7 @@
 
 module Product.Case where
 
+import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person

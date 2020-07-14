@@ -1,5 +1,6 @@
 module App.Routes where
 
+import App.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search

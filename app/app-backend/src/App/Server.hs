@@ -1,7 +1,7 @@
 module App.Server where
 
 import App.Routes (appAPI, appServer)
-import Beckn.Types.App (Env)
+import App.Types
 import qualified Beckn.Utils.Servant.Server as BU
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude

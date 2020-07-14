@@ -1,7 +1,7 @@
 module App.Routes where
 
+import App.Types
 import qualified Beckn.Types.API.Search as Search
-import Beckn.Types.App (FlowServer)
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Search as P

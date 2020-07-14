@@ -37,5 +37,5 @@ providers =
   ]
 
 -- FIXME: this should allow filtering by domain
-listProviders :: AppFlow [Org.Organization]
+listProviders :: Flow [Org.Organization]
 listProviders = return providers

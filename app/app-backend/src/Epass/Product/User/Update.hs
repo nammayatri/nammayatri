@@ -3,6 +3,7 @@
 
 module Epass.Product.User.Update where
 
+import App.Types
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common

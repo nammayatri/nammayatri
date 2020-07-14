@@ -1,5 +1,6 @@
 module Epass.Product.Quota where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common

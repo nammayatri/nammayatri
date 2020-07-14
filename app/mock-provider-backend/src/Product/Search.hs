@@ -18,7 +18,7 @@ import EulerHS.Prelude
 import Product.GatewayLookup
 
 search :: SearchReq -> FlowHandlerR r SearchRes
-search req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowRHandler $ do
+search req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   forkAsync "Search" $ do
     baseUrl <- lookupBaseUrl
     ans <- mkSearchAnswer

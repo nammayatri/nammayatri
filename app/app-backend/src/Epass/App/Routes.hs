@@ -1,5 +1,6 @@
 module Epass.App.Routes where
 
+import App.Types
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Data.Aeson

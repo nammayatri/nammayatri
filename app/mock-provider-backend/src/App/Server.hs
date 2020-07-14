@@ -4,7 +4,7 @@ module App.Server
 where
 
 import App.Handlers (mockProviderBackendServer)
-import Beckn.Types.App
+import App.Types
 import qualified Beckn.Utils.Servant.Server as BU
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude

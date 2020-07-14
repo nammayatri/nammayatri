@@ -9,7 +9,7 @@ import Data.Swagger
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-type FlowR a = ReaderT a L.Flow
+type FlowR r = ReaderT r L.Flow
 
 class GuidLike a where
   generateGUID :: FlowR r a

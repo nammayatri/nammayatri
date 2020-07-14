@@ -4,6 +4,7 @@ module App
 where
 
 import App.Server
+import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
@@ -26,6 +27,7 @@ import System.Environment (lookupEnv)
 runMockApp :: IO ()
 runMockApp = do
   port <- fromMaybe 8016 . (>>= readMaybe) <$> lookupEnv "MOCK_APP_PORT"
+  let appEnv = AppEnv App.CommonEnv
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
@@ -37,7 +39,7 @@ runMockApp = do
           setPort port defaultSettings
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
-    runSettings settings $ run reqHeadersKey (App.EnvR flowRt ())
+    runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 
 mockAppExceptionResponse :: SomeException -> Response
 mockAppExceptionResponse exception = do
