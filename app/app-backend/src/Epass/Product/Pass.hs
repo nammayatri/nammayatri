@@ -62,7 +62,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
       when
         (isJust _CustomerId || isJust _fromLocation || isJust _toLocation)
         (L.throwException $ err400 {errBody = "Access denied"})
-      checkDomainError $ MPI.updateStatus passId (fromJust _action)
+      MPI.updateStatus passId (fromJust _action)
       return pass
     RegistrationToken.CUSTOMER -> do
       customer <- fromMaybeM500 "Could not find Customer" =<< Person.findById (PersonId _EntityId)
@@ -85,7 +85,7 @@ updatePass regToken passId UpdatePassReq {..} = withFlowHandler $ do
             (L.throwException $ err400 {errBody = "Access denied"})
           return $ pass {SPI._fromLocation = _fromLocation}
   case' <- QC.findById (SPI._caseId pass)
-  checkDomainError $ MPI.updateMultiple passId pass'
+  MPI.updateMultiple passId pass'
   PassRes <$> getPassInfo case' pass
 
 listPass ::

@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
-import Control.Monad.Except
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Products as Q
@@ -18,7 +17,7 @@ import qualified Storage.Queries.Products as Q
 -- Convert it to DomainError with a proper description
 
 -- | Find Product by id
-findById :: ProductsId -> FlowDomainResult Products
+findById :: ProductsId -> Flow Products
 findById id = do
   result <- Q.findById' id
-  fromDBErrorOrEmpty (CaseErr CaseNotFound) result
+  checkDBErrorOrEmpty (CaseErr CaseNotFound) result

@@ -15,7 +15,7 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (checkDomainError, decodeFromText, encodeToText, withFlowHandler)
+import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -51,7 +51,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
       err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
   QCase.create orderCase_
-  productInstance <- checkDomainError $ MPI.findById (ProductInstanceId productInstanceId)
+  productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   QPI.create orderProductInstance
   transactionId <- L.generateGUID
@@ -86,9 +86,9 @@ onConfirm req = withFlowHandler $ do
                 { SPI._info = encodeToText <$> uInfo
                 }
         productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-        checkDomainError $ MC.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
-        checkDomainError $ MPI.updateMultiple pid uPrd
-        checkDomainError $ MPI.updateStatus pid SPI.CONFIRMED
+        MC.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
+        MPI.updateMultiple pid uPrd
+        MPI.updateStatus pid SPI.CONFIRMED
         return $ Ack "on_confirm" "Ok"
       _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
   return $ OnConfirmRes (req ^. #context) ack

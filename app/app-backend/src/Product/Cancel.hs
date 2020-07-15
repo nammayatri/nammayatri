@@ -12,7 +12,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (checkDomainError, mkAckResponse, mkAckResponse', withFlowHandler)
+import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -64,7 +64,7 @@ cancelCase person req = do
       productInstances <- ProductInstance.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
-          checkDomainError $ MC.updateStatus (CaseId caseId) Case.CLOSED
+          MC.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
           let cancelPIs = filter isProductInstanceCancellable productInstances
@@ -108,7 +108,7 @@ onCancel req = withFlowHandler $ do
   let prodInstId = ProductInstanceId $ req ^. #message . #id
   -- TODO: Handle usecase where multiple productinstances exists for one product
   productInstance <- ProductInstance.findById prodInstId
-  checkDomainError $ MPI.updateStatus prodInstId ProductInstance.CANCELLED
+  MPI.updateStatus prodInstId ProductInstance.CANCELLED
   let caseId = productInstance ^. #_caseId
   -- notify customer
   case_ <- Case.findById caseId
@@ -125,5 +125,5 @@ onCancel req = withFlowHandler $ do
           arrPICase
   when
     (length arrTerminalPI == length arrPICase)
-    (checkDomainError $ MC.updateStatus caseId Case.CLOSED)
+    (MC.updateStatus caseId Case.CLOSED)
   mkAckResponse txnId "cancel"

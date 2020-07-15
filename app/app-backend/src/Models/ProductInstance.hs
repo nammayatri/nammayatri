@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Common
-import Control.Monad.Except
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
@@ -18,69 +17,63 @@ import qualified Storage.Queries.ProductInstance as Q
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update ProductInstance status
-updateStatus :: ProductInstanceId -> ProductInstanceStatus -> FlowDomainResult ()
-updateStatus id status = runExceptT $ do
+updateStatus :: ProductInstanceId -> ProductInstanceStatus -> Flow ()
+updateStatus id status = do
   validatePIStatusChange status id
-  ExceptT $ do
-    result <- Q.updateStatus id status
-    fromDBError result
+  result <- Q.updateStatus id status
+  checkDBError result
 
 -- | Bulk validate and update Case's ProductInstances statuses
-updateAllProductInstancesByCaseId :: CaseId -> ProductInstanceStatus -> FlowDomainResult ()
-updateAllProductInstancesByCaseId caseId status = runExceptT $ do
+updateAllProductInstancesByCaseId :: CaseId -> ProductInstanceStatus -> Flow ()
+updateAllProductInstancesByCaseId caseId status = do
   validatePIStatusesChange status caseId
-  ExceptT $ do
-    result <- Q.updateAllProductInstByCaseId caseId status
-    fromDBError result
+  result <- Q.updateAllProductInstByCaseId caseId status
+  checkDBError result
 
-updateMultiple :: ProductInstanceId -> ProductInstance -> FlowDomainResult ()
-updateMultiple id prdInst = runExceptT $ do
+updateMultiple :: ProductInstanceId -> ProductInstance -> Flow ()
+updateMultiple id prdInst = do
   validatePIStatusChange (_status prdInst) id
-  ExceptT $ do
-    result <- Q.updateMultiple id prdInst
-    fromDBError result
+  result <- Q.updateMultiple id prdInst
+  checkDBError result
 
 -- | Find Product Instance by id
-findById :: ProductInstanceId -> FlowDomainResult ProductInstance
+findById :: ProductInstanceId -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
-  fromDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
+  checkDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: CaseId -> FlowDomainResult [ProductInstance]
+findAllByCaseId :: CaseId -> Flow [ProductInstance]
 findAllByCaseId caseId = do
   result <- Q.findAllByCaseId' caseId
-  fromDBError result
+  checkDBError result
 
 -- | Find Product Instance by Product Id
-findByProductId :: ProductsId -> FlowDomainResult ProductInstance
+findByProductId :: ProductsId -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId' pId
-  fromDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
+  checkDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
 
 -- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> ExceptT DomainError Flow ()
+validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> Flow ()
 validatePIStatusChange newStatus productInstanceId = do
-  cp <- ExceptT $ findById productInstanceId
-  liftEither $ validateStatusChange newStatus cp
+  cp <- findById productInstanceId
+  validateStatusChange newStatus cp
 
 -- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange :: ProductInstanceStatus -> CaseId -> ExceptT DomainError Flow ()
+validatePIStatusesChange :: ProductInstanceStatus -> CaseId -> Flow ()
 validatePIStatusesChange newStatus caseId = do
-  cps <- ExceptT $ findAllByCaseId caseId
+  cps <- findAllByCaseId caseId
   validatePIStatusesChange' newStatus cps
 
 -- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> ExceptT DomainError Flow ()
-validatePIStatusesChange' newStatus productInstances = do
-  case mapM (validateStatusChange newStatus) productInstances of
-    -- throwErrror, throwE is a shorthand for ExceptT . pure . Left
-    Left err -> throwError err
-    Right _ -> pure ()
+validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> Flow ()
+validatePIStatusesChange' newStatus =
+  mapM_ (validateStatusChange newStatus)
 
 -- | Validate status change and return appropriate DomainError
-validateStatusChange :: ProductInstanceStatus -> ProductInstance -> DomainResult ()
+validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus caseProduct =
   case validateStatusTransition (_status caseProduct) newStatus of
-    Left msg -> Left $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
-    _ -> Right ()
+    Left msg -> L.throwException $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
+    _ -> pure ()

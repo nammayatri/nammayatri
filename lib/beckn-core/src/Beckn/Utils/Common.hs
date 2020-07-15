@@ -18,7 +18,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import Network.HTTP.Types (hContentType)
@@ -39,28 +39,33 @@ defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError
-fromDBError :: L.MonadFlow m => ET.DBResult a -> m (Either DomainError a)
-fromDBError = fromDBErrorTo DatabaseError
+checkDBError :: L.MonadFlow m => ET.DBResult a -> m a
+checkDBError = checkDBError' DatabaseError
 
 -- | Get rid of database error
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-fromDBErrorTo :: L.MonadFlow m => (ET.DBError -> DomainError) -> ET.DBResult a -> m (Either DomainError a)
-fromDBErrorTo f dbres = pure $ either (Left . f) (Right) dbres
+checkDBError' :: L.MonadFlow m => (ET.DBError -> DomainError) -> ET.DBResult a -> m a
+checkDBError' f dbres =
+  case dbres of
+    Left err -> throwDomainError $ f err
+    Right res -> pure res
 
 -- | Get rid of database error and empty result
 -- convert it into UnknownDomainError
-fromDBErrorOrEmpty :: L.MonadFlow m => DomainError -> ET.DBResult (Maybe a) -> m (Either DomainError a)
-fromDBErrorOrEmpty = fromDBErrorOrEmptyTo DatabaseError
+checkDBErrorOrEmpty :: L.MonadFlow m => DomainError -> ET.DBResult (Maybe a) -> m a
+checkDBErrorOrEmpty = checkDBErrorOrEmpty' DatabaseError
 
 -- | Get rid of database error and empty result
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-fromDBErrorOrEmptyTo :: L.MonadFlow m => (ET.DBError -> DomainError) -> DomainError -> ET.DBResult (Maybe a) -> m (Either DomainError a)
-fromDBErrorOrEmptyTo f domainErrOnEmpty result = pure $
+checkDBErrorOrEmpty' :: L.MonadFlow m => (ET.DBError -> DomainError) -> DomainError -> ET.DBResult (Maybe a) -> m a
+checkDBErrorOrEmpty' f domainErrOnEmpty result =
   case result of
-    Left err -> Left $ f err
-    Right maybeRes -> maybe (Left domainErrOnEmpty) (Right) maybeRes
+    Left err -> throwDomainError $ f err
+    Right maybeRes -> case maybeRes of
+      Nothing -> throwDomainError domainErrOnEmpty
+      Just x -> pure x
 
 fromMaybeM :: L.MonadFlow m => ServerError -> Maybe a -> m a
 fromMaybeM err Nothing = L.throwException err
@@ -199,39 +204,22 @@ showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addLocal
 throwDomainError :: L.MonadFlow m => DomainError -> m a
 throwDomainError err =
   case err of
-    UnknownDomainError msg ->
-      t err401 msg
-    DatabaseError (ET.DBError _ text) ->
-      -- TODO get more details from db error?
-      t err500 $ ErrorMsg text
+    UnknownDomainError msg -> t err401 msg
+    -- TODO get more details from db error?
+    DatabaseError (ET.DBError _ text) -> t err500 $ show text
     -- Case errors
     CaseErr suberr -> case suberr of
-      CaseNotFound ->
-        t err404 $ ErrorMsg "Case not found"
-      CaseStatusTransitionErr msg ->
-        t err405 msg
+      CaseNotFound -> t err404 "Case not found"
+      CaseStatusTransitionErr msg -> t err405 msg
     -- Product Instance errors
     ProductInstanceErr suberr -> case suberr of
-      ProductInstanceNotFound ->
-        t err404 $ ErrorMsg "Product Instance not found"
-      ProductInstanceStatusTransitionErr msg ->
-        t err405 msg
+      ProductInstanceNotFound -> t err404 "Product Instance not found"
+      ProductInstanceStatusTransitionErr msg -> t err405 msg
     -- Product errors
     ProductErr suberr -> case suberr of
-      ProductNotFound ->
-        t err404 $ ErrorMsg "Product not found"
-      ProductNotUpdated ->
-        t err405 $ ErrorMsg "Product not updated"
-      ProductNotCreated ->
-        t err405 $ ErrorMsg "Product not created"
-    _ ->
-      t err500 $ ErrorMsg "Unknown error"
+      ProductNotFound -> t err404 "Product not found"
+      ProductNotUpdated -> t err405 "Product not updated"
+      ProductNotCreated -> t err405 "Product not created"
+    _ -> t err500 "Unknown error"
   where
     t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg
-
-checkDomainError :: L.MonadFlow m => m (Either DomainError a) -> m a
-checkDomainError result = do
-  r <- result
-  case r of
-    Left err -> throwDomainError err
-    Right res -> pure res

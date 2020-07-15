@@ -11,7 +11,7 @@ newtype ErrorCode = ErrorCode Int
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 newtype ErrorMsg = ErrorMsg Text
-  deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
+  deriving (Generic, Eq, Show, Read, FromJSON, ToJSON, IsString)
 
 data DomainError
   = AuthErr AuthError
@@ -35,7 +35,7 @@ data DomainError
   | UnknownDomainError ErrorMsg
   | DatabaseError DBError
   | SystemErr SystemError
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, Exception)
 
 data AuthError
   = UnAuthorized

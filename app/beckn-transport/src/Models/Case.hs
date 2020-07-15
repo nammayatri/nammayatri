@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Case
 import Beckn.Utils.Common
-import Control.Monad.Except
 import Data.Maybe
 import Data.Text
 import qualified EulerHS.Language as L
@@ -20,56 +19,51 @@ import qualified Storage.Queries.Case as Q
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update Case status
-updateStatus :: CaseId -> CaseStatus -> FlowDomainResult ()
-updateStatus id status = runExceptT $ do
+updateStatus :: CaseId -> CaseStatus -> Flow ()
+updateStatus id status = do
   validateCaseStatuseChange status id
-  ExceptT $ do
-    result <- Q.updateStatus id status
-    fromDBError result
+  result <- Q.updateStatus id status
+  checkDBError result
 
-updateStatusByIds :: [CaseId] -> CaseStatus -> FlowDomainResult ()
-updateStatusByIds ids status = runExceptT $ do
-  cases <- ExceptT $ findAllByIds ids
+updateStatusByIds :: [CaseId] -> CaseStatus -> Flow ()
+updateStatusByIds ids status = do
+  cases <- findAllByIds ids
   validateCasesStatusesChange' status cases
-  ExceptT $ do
-    result <- Q.updateStatusByIds ids status
-    fromDBError result
+  result <- Q.updateStatusByIds ids status
+  checkDBError result
 
 -- Queries wrappers
-findById :: CaseId -> FlowDomainResult Case
+findById :: CaseId -> Flow Case
 findById caseId = do
   result <- Q.findById' caseId
-  fromDBErrorOrEmpty (CaseErr CaseNotFound) result
+  checkDBErrorOrEmpty (CaseErr CaseNotFound) result
 
 -- | Find Product Instances
-findAllByIds :: [CaseId] -> FlowDomainResult [Case]
+findAllByIds :: [CaseId] -> Flow [Case]
 findAllByIds ids = do
   result <- Q.findAllByIds' ids
-  fromDBError result
+  checkDBError result
 
 -- | Get Case and validate its status change
-validateCaseStatuseChange :: CaseStatus -> CaseId -> ExceptT DomainError Flow ()
+validateCaseStatuseChange :: CaseStatus -> CaseId -> Flow ()
 validateCaseStatuseChange newStatus caseId = do
-  case_ <- ExceptT $ findById caseId
-  liftEither $ validateStatusChange newStatus case_
+  case_ <- findById caseId
+  validateStatusChange newStatus case_
 
 -- | Bulk validation of Case statuses change
-validateCasesStatusesChange :: CaseStatus -> [CaseId] -> ExceptT DomainError Flow ()
+validateCasesStatusesChange :: CaseStatus -> [CaseId] -> Flow ()
 validateCasesStatusesChange newStatus caseIds = do
-  cps <- ExceptT $ findAllByIds caseIds
+  cps <- findAllByIds caseIds
   validateCasesStatusesChange' newStatus cps
 
 -- | Bulk validation of Case statuses change
-validateCasesStatusesChange' :: CaseStatus -> [Case] -> ExceptT DomainError Flow ()
-validateCasesStatusesChange' newStatus cases = do
-  case mapM (validateStatusChange newStatus) cases of
-    -- throwErrror, throwE is a shorthand for ExceptT . pure . Left
-    Left err -> throwError err
-    Right _ -> pure ()
+validateCasesStatusesChange' :: CaseStatus -> [Case] -> Flow ()
+validateCasesStatusesChange' newStatus =
+  mapM_ (validateStatusChange newStatus)
 
 -- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> Case -> DomainResult ()
+validateStatusChange :: CaseStatus -> Case -> Flow ()
 validateStatusChange newStatus case_ = do
-  liftEither $ case validateStatusTransition (_status case_) newStatus of
-    Left msg -> Left $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
-    _ -> Right ()
+  case validateStatusTransition (_status case_) newStatus of
+    Left msg -> L.throwException $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
+    _ -> pure ()
