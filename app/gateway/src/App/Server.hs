@@ -12,4 +12,4 @@ import EulerHS.Prelude
 import Servant
 
 run :: V.Key (HashMap Text Text) -> EnvR AppEnv -> Application
-run key = BU.run gatewayAPI (gatewayServer key)
+run key = BU.run gatewayAPI (gatewayServer key) EmptyContext

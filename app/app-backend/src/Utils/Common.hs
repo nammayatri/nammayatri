@@ -24,9 +24,8 @@ type TokenAuth = TokenAuth' "token" VerifyToken
 
 data VerifyToken = VerifyToken
 
-instance VerificationMethod AppEnv VerifyToken where
+instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = Person.Person
-  verifyToken = Utils.Common.verifyPerson
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
@@ -36,6 +35,9 @@ verifyPerson token = do
   sr <- Utils.Common.verifyToken token
   Person.findById (PersonId $ SR._EntityId sr)
     >>= fromMaybeM500 "Could not find user"
+
+verifyPersonAction :: VerificationAction VerifyToken AppEnv
+verifyPersonAction = VerificationAction Utils.Common.verifyPerson
 
 verifyToken :: RegToken -> Flow SR.RegistrationToken
 verifyToken token =

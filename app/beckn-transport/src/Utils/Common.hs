@@ -24,33 +24,36 @@ type TokenAuth = TokenAuth' "token" VerifyToken
 
 data VerifyToken = VerifyToken
 
-instance VerificationMethod AppEnv VerifyToken where
+instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = SR.RegistrationToken
-  verifyToken = QR.verifyToken
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
+
+verifyTokenAction :: VerificationAction VerifyToken AppEnv
+verifyTokenAction = VerificationAction QR.verifyToken
 
 -- | Verifies org's token
 type OrgTokenAuth = TokenAuth' "token" OrgVerifyToken
 
 data OrgVerifyToken = OrgVerifyToken
 
-instance VerificationMethod AppEnv OrgVerifyToken where
+instance VerificationMethod OrgVerifyToken where
   type VerificationResult OrgVerifyToken = SO.Organization
-  verifyToken = QO.verifyToken
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
+
+verifyOrgAction :: VerificationAction OrgVerifyToken AppEnv
+verifyOrgAction = VerificationAction QO.verifyToken
 
 -- | Verifies admin's token.
 type AdminTokenAuth = TokenAuth' "token" AdminVerifyToken
 
 data AdminVerifyToken
 
-instance VerificationMethod AppEnv AdminVerifyToken where
+instance VerificationMethod AdminVerifyToken where
   type VerificationResult AdminVerifyToken = Text
-  verifyToken = validateAdmin
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin role."
 
@@ -59,9 +62,9 @@ type DriverTokenAuth = TokenAuth' "token" DriverVerifyToken
 
 data DriverVerifyToken
 
-instance VerificationMethod AppEnv DriverVerifyToken where
+instance VerificationMethod DriverVerifyToken where
   type VerificationResult DriverVerifyToken = Text
-  verifyToken = validateDriver
+  -- verifyToken = validateDriver
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin or driver role."
 
@@ -94,3 +97,9 @@ validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (PersonId _EntityId)
   verifyDriver user
+
+validateAdminAction :: VerificationAction AdminVerifyToken AppEnv
+validateAdminAction = VerificationAction validateAdmin
+
+validateDriverAction :: VerificationAction DriverVerifyToken AppEnv
+validateDriverAction = VerificationAction validateAdmin

@@ -32,22 +32,26 @@ import qualified Servant.Swagger.Internal as S
 data TokenAuth' (header :: Symbol) (verify :: Type)
 
 -- | How token verification is performed.
-class VerificationMethod r verify where
+class VerificationMethod verify where
   -- | Verification result, what is passed to the endpoint implementation.
   type VerificationResult verify
 
-  -- | Verification logic.
-  verifyToken :: RegToken -> FlowR r (VerificationResult verify)
-
   -- | Description of this verification scheme as it appears in swagger.
   verificationDescription :: Text
+
+-- | Implementation of verification.
+data VerificationAction verify r =
+  VerificationMethod verify => VerificationAction
+    { runVerifyMethod :: RegToken -> FlowR r (VerificationResult verify)
+    }
 
 -- | This server part implementation accepts token in @token@ header,
 -- verifies it and puts @'VerificationResult'@ to your endpoint.
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
-    VerificationMethod r verify,
+    HasContextEntry ctx (VerificationAction verify r),
+    VerificationMethod verify,
     KnownSymbol header
   ) =>
   HasServer (TokenAuth' header verify :> api) ctx
@@ -71,9 +75,10 @@ instance
         -- If we don't use delayedFailFatal and just pass the exception,
         -- it will be JSON-formatted
 
-        liftIO . runFlowR flowRt (appEnv env) $ verifyToken @r @verify val
+        liftIO . runFlowR flowRt (appEnv env) $ verifyMethod val
       formatErr msg = delayedFailFatal err400 {errBody = msg}
       env = getEnvEntry ctx
+      VerificationAction verifyMethod = getContextEntry ctx :: VerificationAction verify r
 
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv
@@ -97,7 +102,7 @@ instance
 
 instance
   ( S.HasSwagger api,
-    VerificationMethod r verify,
+    VerificationMethod verify,
     Typeable verify,
     KnownSymbol header
   ) =>
@@ -105,7 +110,7 @@ instance
   where
   toSwagger _ =
     S.toSwagger (Proxy @api)
-      & addSecurityRequirement methodName (verificationDescription @r @verify) headerName
+      & addSecurityRequirement methodName (verificationDescription @verify) headerName
       & S.addDefaultResponse400 headerName
       & addResponse401
     where
