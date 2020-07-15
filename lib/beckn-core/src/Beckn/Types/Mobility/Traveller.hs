@@ -9,10 +9,9 @@ import Data.Time
 import EulerHS.Prelude
 
 data Traveller = Traveller
-  { _descriptor :: Person,
-    _rating :: Rating,
-    _origin :: Stop,
-    _destination :: Stop
+  { _info :: Person,
+    _origin_stop_id :: Text,
+    _destination_stop_id :: Text
   }
   deriving (Generic, Show)
 
@@ -25,8 +24,7 @@ instance ToJSON Traveller where
 instance Example Traveller where
   example =
     Traveller
-      { _descriptor = example,
-        _rating = example,
-        _origin = example,
-        _destination = example
+      { _info = example,
+        _origin_stop_id = idExample,
+        _destination_stop_id = idExample
       }

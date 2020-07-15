@@ -20,9 +20,6 @@ data Trip = Trip
     vehicle :: Maybe Vehicle,
     driver :: TripDriver,
     travellers :: [Traveller],
-    tracking :: Tracking,
-    corridor_type :: Text, --"FIXED","ON-DEMAND"
-    state :: Text, -- schema not available in github, so making it Text
     fare :: Maybe Price,
     route :: Maybe Route
   }
@@ -35,9 +32,6 @@ instance Example Trip where
         vehicle = example,
         driver = example,
         travellers = example,
-        tracking = example,
-        corridor_type = "FIXED",
-        state = "???",
         fare = example,
         route = example
       }

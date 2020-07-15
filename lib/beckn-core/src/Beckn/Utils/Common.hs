@@ -60,19 +60,21 @@ mkAckResponse' txnId action message = do
     AckResponse
       { _context =
           Context
-            { domain = "MOBILITY",
-              action = action,
-              version = Nothing,
-              transaction_id = txnId,
-              message_id = Nothing,
-              timestamp = currTime,
-              dummy = ""
+            { _domain = "MOBILITY",
+              _action = action,
+              _version = Nothing,
+              _transaction_id = txnId,
+              _timestamp = currTime,
+              _session_id = Nothing,
+              _status = Nothing,
+              _token = Nothing
             },
         _message =
           Ack
             { _action = action,
               _message = message
-            }
+            },
+        _error = Nothing
       }
 
 withFlowHandler :: FlowR r a -> FlowHandlerR r a

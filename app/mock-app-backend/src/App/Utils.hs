@@ -5,6 +5,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
 import Beckn.Types.Core.ScalarRange
 import Beckn.Types.Mobility.Intent
+import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Types.Mobility.Vehicle
 import Data.Time
 import EulerHS.Prelude
@@ -53,46 +54,57 @@ intentVehicle =
 intentPayload :: Payload
 intentPayload =
   Payload
-    { travellers = TravellerReqInfo {count = 0},
-      luggage = Luggage {count = 2, weight_range = Nothing, dimensions = Nothing}
+    { _travellers = TravellerReqInfo {_count = 0},
+      _luggage = Luggage {_count = 2, _weight_range = Nothing, _dimensions = Nothing}
     }
 
 fareRange :: ScalarRange
-fareRange = ScalarRange {_min = 10, _max = 1000, _unit = "Rs"}
+fareRange = ScalarRange {_min = 10, _max = 1000}
 
 buildIntent :: LocalTime -> Intent
 buildIntent localTime =
   Intent
-    { domain = "FINAL-MILE-DELIVERY",
-      origin = location,
-      destination = location,
-      time = localTime,
-      stops = [],
-      vehicle = intentVehicle,
-      providers = [],
-      payload = intentPayload,
-      transfer_attrs = Nothing,
-      fare_range = fareRange,
-      tags = []
+    { _query_string = Nothing,
+      _provider_id = Nothing,
+      _category_id = Nothing,
+      _item_id = Nothing,
+      _origin = getStop localTime,
+      _destination = getStop localTime,
+      _stops = [],
+      _vehicle = intentVehicle,
+      _payload = intentPayload,
+      _transfer_attrs = Nothing,
+      _fare_range = fareRange,
+      _tags = []
+    }
+
+getStop :: LocalTime -> Stop.Stop
+getStop stopTime =
+  Stop.Stop
+    { _descriptor = Nothing,
+      _location = location,
+      _arrival_time = Stop.StopTime stopTime (Just stopTime),
+      _departure_time = Stop.StopTime stopTime (Just stopTime)
     }
 
 buildContext :: Text -> Text -> LocalTime -> Context
 buildContext act tid localTime =
   Context
-    { domain = "FINAL-MILE-DELIVERY",
-      action = act,
-      version = Nothing,
-      transaction_id = tid,
-      message_id = Nothing,
-      timestamp = localTime,
-      dummy = "dummy"
+    { _domain = "FINAL-MILE-DELIVERY",
+      _action = act,
+      _version = Just "0.8.0",
+      _transaction_id = tid,
+      _session_id = Nothing,
+      _timestamp = localTime,
+      _token = Nothing,
+      _status = Nothing
     }
 
 searchReq :: Text -> Text -> LocalTime -> Search.SearchReq
 searchReq act tid localTime =
   Search.SearchReq
     { context = buildContext act tid localTime,
-      message = buildIntent localTime
+      message = Search.SearchIntent $ buildIntent localTime
     }
 
 getFutureTime :: IO LocalTime

@@ -11,7 +11,7 @@ import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
 
 lookup :: FlowR r (String, Int)
-lookup = do
+lookup =
   EL.runIO $
     (,)
       <$> (fromMaybe "localhost" <$> SE.lookupEnv "GATEWAY_HOST")

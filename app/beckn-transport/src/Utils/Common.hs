@@ -64,6 +64,7 @@ data DriverVerifyToken
 
 instance VerificationMethod DriverVerifyToken where
   type VerificationResult DriverVerifyToken = Text
+
   -- verifyToken = validateDriver
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin or driver role."

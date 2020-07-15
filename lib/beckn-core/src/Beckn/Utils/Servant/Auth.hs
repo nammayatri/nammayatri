@@ -42,13 +42,13 @@ class VerificationMethod verify where
   verificationDescription :: Text
 
 -- | Implementation of verification.
-data VerificationAction verify r =
-  VerificationMethod verify => VerificationAction
-    { runVerifyMethod :: Text -> FlowR r (VerificationResult verify)
-      -- ^ Check given header value and extract the information which
-      -- identifies the current user.
-      -- This is allowed to fail with 'ServantError'.
-    }
+data VerificationAction verify r = VerificationMethod verify =>
+  VerificationAction
+  { -- | Check given header value and extract the information which
+    -- identifies the current user.
+    -- This is allowed to fail with 'ServantError'.
+    runVerifyMethod :: Text -> FlowR r (VerificationResult verify)
+  }
 
 -- | This server part implementation accepts token in @token@ header,
 -- verifies it and puts @'VerificationResult'@ to your endpoint.

@@ -1,6 +1,7 @@
 module Beckn.Types.Mobility.FareProduct where
 
 import Beckn.Types.App
+import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Policy
 import Beckn.Utils.Common
@@ -9,10 +10,8 @@ import EulerHS.Prelude
 
 data FareProduct = FareProduct
   { _id :: Text,
-    _fare_media :: Text,
-    _name :: Text,
-    _fare_policy :: Policy,
-    _applies_to_items :: [Item]
+    _descriptor :: Descriptor,
+    _policy_id :: Text
   }
   deriving (Generic, Show)
 
@@ -26,8 +25,6 @@ instance Example FareProduct where
   example =
     FareProduct
       { _id = idExample,
-        _fare_media = "",
-        _name = "Christmas discount",
-        _fare_policy = example,
-        _applies_to_items = example
+        _descriptor = example,
+        _policy_id = idExample
       }

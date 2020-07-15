@@ -4,12 +4,15 @@ module Product.Search where
 
 import App.Types
 import Beckn.Types.API.Search
-import Beckn.Types.App
+import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Location as Core
 import qualified Beckn.Types.Core.Provider as Core
+import Beckn.Types.Mobility.Intent
+import Beckn.Types.Mobility.Service as BM
+import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
@@ -40,33 +43,40 @@ import qualified Utils.Notifications as Notify
 search :: Person.Person -> SearchReq -> FlowHandler SearchRes
 search person req = withFlowHandler $ do
   validateDateTime req
-  fromLocation <- mkLocation $ req ^. #message . #origin
-  toLocation <- mkLocation $ req ^. #message . #destination
+  fromLocation <- mkLocation $ req ^. #message . #intent . #_origin
+  toLocation <- mkLocation $ req ^. #message . #intent . #_destination
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
   gatewayUrl <- Gateway.getBaseUrl
-  eres <- Gateway.search gatewayUrl $ req & #context . #transaction_id .~ _getCaseId (case_ ^. #_id)
+  eres <- Gateway.search gatewayUrl $ req & #context . #_transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
           Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
-  return $ AckResponse (req ^. #context) ack
+  return $ AckResponse (req ^. #context) ack Nothing
   where
     validateDateTime req = do
       currTime <- getCurrentTimeUTC
-      when (req ^. #message . #time < currTime) $
+      when ((req ^. #message . #intent . #_origin . #_departure_time . #_est) < currTime) $
         L.throwException $
           err400 {errBody = "Invalid start time"}
 
 searchCb :: OnSearchReq -> FlowHandler OnSearchRes
 searchCb req = withFlowHandler $ do
   -- TODO: Verify api key here
-  let service = req ^. #message
-      mprovider = service ^. #_provider
+  let (services :: [Service]) = req ^. #message . #services
+  traverse_ (searchCbService req) services
+  let ack = Ack "on_search" "OK"
+  return $ AckResponse (req ^. #context) ack Nothing
+
+searchCbService :: OnSearchReq -> BM.Service -> Flow OnSearchRes
+searchCbService req service = do
+  -- TODO: Verify api key here
+  let mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
-      caseId = CaseId $ req ^. #context . #transaction_id --CaseId $ service ^. #_id
+      caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
@@ -87,7 +97,7 @@ searchCb req = withFlowHandler $ do
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId caseId productInstances
   let ack = Ack "on_search" "OK"
-  return $ AckResponse (req ^. #context) ack
+  return $ AckResponse (req ^. #context) ack Nothing
   where
     extendCaseExpiry :: Case.Case -> Flow ()
     extendCaseExpiry Case.Case {..} = do
@@ -107,10 +117,10 @@ mkCase req userId from to = do
   -- If the insert fails, maybe retry automatically as there
   -- is a unique constraint on `shortId`
   shortId <- generateShortId
-  let intent = req ^. #message
+  let (intent :: Intent) = req ^. #message . #intent
       context = req ^. #context
-  validTill <- getCaseExpiry $ req ^. #message . #time
-  return $
+  validTill <- getCaseExpiry $ req ^. #message . #intent . #_origin . #_departure_time . #_est
+  return
     Case.Case
       { _id = id,
         _name = Nothing,
@@ -120,7 +130,7 @@ mkCase req userId from to = do
         _type = Case.RIDESEARCH,
         _exchangeType = Case.FULFILLMENT,
         _status = Case.NEW,
-        _startTime = req ^. #message . #time,
+        _startTime = req ^. #message . #intent . #_origin . #_departure_time . #_est,
         _endTime = Nothing,
         _validTill = validTill,
         _provider = Nothing,
@@ -128,12 +138,12 @@ mkCase req userId from to = do
         _requestor = Just userId,
         _requestorType = Just Case.CONSUMER,
         _parentCaseId = Nothing,
-        _fromLocationId = from ^. #_id ^. #_getLocationId,
-        _toLocationId = to ^. #_id ^. #_getLocationId,
-        _udf1 = Just $ intent ^. #vehicle . #variant,
-        _udf2 = Just $ show $ intent ^. #payload . #travellers . #count,
+        _fromLocationId = TA._getLocationId $ from ^. #_id,
+        _toLocationId = TA._getLocationId $ to ^. #_id,
+        _udf1 = Just $ intent ^. #_vehicle . #variant,
+        _udf2 = Just $ show $ intent ^. #_payload . #_travellers . #_count,
         _udf3 = Nothing,
-        _udf4 = Just $ context ^. #transaction_id,
+        _udf4 = Just $ context ^. #_transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,
@@ -151,12 +161,13 @@ mkCase req userId from to = do
           validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkLocation :: Core.Location -> Flow Location.Location
-mkLocation loc = do
+mkLocation :: BS.Stop -> Flow Location.Location
+mkLocation BS.Stop {..} = do
+  let loc = _location
   now <- getCurrentTimeUTC
   id <- generateGUID
   let mgps = loc ^. #_gps
-  return $
+  return
     Location.Location
       { _id = id,
         _locationType = Location.POINT,
@@ -178,16 +189,16 @@ mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> Flow Products.Prod
 mkProduct case_ mprovider item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
-  let info = ProductInfo mprovider Nothing
+  let info = ProductInfo mprovider -- Nothing
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
-  return $
+  return
     Products.Products
       { _id = ProductsId $ item ^. #_id,
         _shortId = "",
-        _name = item ^. #_name,
-        _description = Just $ item ^. #_description,
+        _name = fromMaybe "" $ item ^. #_descriptor . #_name,
+        _description = item ^. #_descriptor . #_short_desc,
         _industry = case_ ^. #_industry,
         _type = Products.RIDE,
         _status = Products.INSTOCK,
@@ -212,7 +223,7 @@ mkProductInstance case_ mprovider personId item = do
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
-  return $
+  return
     ProductInstance.ProductInstance
       { _id = ProductInstanceId $ item ^. #_id,
         _shortId = "",

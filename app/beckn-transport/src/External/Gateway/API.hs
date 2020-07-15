@@ -17,7 +17,6 @@ onSearch req =
 
 type TrackAPI =
   "on_track"
-    :> "trip"
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -29,7 +28,6 @@ onTrackTrip req =
 
 type ConfirmAPI =
   "on_confirm"
-    :> "services"
     :> ReqBody '[JSON] Confirm.OnConfirmReq
     :> Post '[JSON] Confirm.OnConfirmRes
 
@@ -41,7 +39,6 @@ onConfirm req =
 
 type CancelAPI =
   "on_cancel"
-    :> "services"
     :> ReqBody '[JSON] OnCancelReq
     :> Post '[JSON] OnCancelRes
 

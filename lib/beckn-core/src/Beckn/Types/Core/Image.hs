@@ -6,6 +6,7 @@ import EulerHS.Prelude
 
 data Image = Image
   { _type :: Text, --"url" , "data""
+    _label :: Maybe Text,
     _url :: Maybe Text,
     _data :: Maybe Text
   }

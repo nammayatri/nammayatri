@@ -1,19 +1,21 @@
-module Beckn.Types.Core.Catalog where
+module Beckn.Types.Mobility.Catalog where
 
 import Beckn.Types.Core.Brand
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Item
+import Beckn.Types.Mobility.FareProduct
 import Beckn.Utils.Common
 import Data.Text
 import Data.Time.LocalTime
 import EulerHS.Prelude
 
 data Catalog = Catalog
-  { _id :: Text,
+  { _id :: Maybe Text,
     _categories :: [Category],
     _brands :: [Brand],
-    _exp :: LocalTime,
-    _items :: [Item]
+    _exp :: Maybe LocalTime,
+    _items :: [Item],
+    _fare_products :: [FareProduct]
   }
   deriving (Generic, Show)
 
@@ -26,9 +28,10 @@ instance ToJSON Catalog where
 instance Example Catalog where
   example =
     Catalog
-      { _id = idExample,
+      { _id = Just idExample,
         _categories = example,
         _brands = example,
         _exp = example,
-        _items = example
+        _items = example,
+        _fare_products = example
       }

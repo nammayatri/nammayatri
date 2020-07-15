@@ -10,7 +10,7 @@ data Contact = Contact
   { email :: Maybe Text,
     mobile :: Maybe Mobile,
     landline :: Maybe LandLine,
-    ivr :: [Text]
+    ivr :: [Text] -- not in spec
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

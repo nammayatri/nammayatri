@@ -112,7 +112,6 @@ type ConfirmAPI =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
-      :> "services"
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
@@ -160,12 +159,10 @@ infoFlow regToken =
 ------- Track trip Flow -------
 type TrackTripAPI =
   "track"
-    :> "trip"
     :> TokenAuth
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
-    :> "trip"
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -190,13 +187,11 @@ productInstanceFlow =
 -------- Cancel Flow----------
 type CancelAPI =
   "cancel"
-    :> "services"
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     -- on cancel
     :<|> "on_cancel"
-    :> "services"
     :> ReqBody '[JSON] Cancel.OnCancelReq
     :> Post '[JSON] Cancel.OnCancelRes
 

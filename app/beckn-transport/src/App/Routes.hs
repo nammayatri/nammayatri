@@ -291,7 +291,6 @@ searchApiFlow = BP.search
 
 type ConfirmAPI =
   "confirm"
-    :> "services"
     :> ( ReqBody '[JSON] ConfirmReq
            :> Post '[JSON] AckResponse
        )
@@ -301,7 +300,6 @@ confirmApiFlow = BP.confirm
 
 type CancelAPI =
   "cancel"
-    :> "services"
     :> ( ReqBody '[JSON] CancelReq
            :> Post '[JSON] AckResponse
        )
@@ -332,7 +330,6 @@ statusApiFlow = BP.serviceStatus
 
 type TrackAPI =
   "track"
-    :> "trip"
     :> ( ReqBody '[JSON] TrackTripReq
            :> Post '[JSON] TrackTripRes
        )

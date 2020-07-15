@@ -22,7 +22,7 @@ import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
 
 gatewayLookup :: FlowR r (String, Int)
-gatewayLookup = do
+gatewayLookup =
   EL.runIO $
     (,)
       <$> (fromMaybe "localhost" <$> SE.lookupEnv "GATEWAY_HOST")
@@ -51,12 +51,13 @@ triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHand
   return
     AckResponse
       { _context = req ^. #context,
-        _message = Ack {_action = "search", _message = "OK"}
+        _message = Ack {_action = "search", _message = "OK"},
+        _error = Nothing
       }
 
 searchCb :: OnSearchReq -> FlowHandler OnSearchRes
 searchCb req = withFlowHandler $ do
   let ack = Ack {_action = "on_search", _message = "OK"}
-      resp = AckResponse (req ^. #context) ack
+      resp = AckResponse (req ^. #context) ack Nothing
   EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show req <> ", resp: " <> show resp
   return resp
