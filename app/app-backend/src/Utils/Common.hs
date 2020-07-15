@@ -20,7 +20,7 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
 
 -- | Performs simple token verification.
-type TokenAuth = TokenAuth' VerifyToken
+type TokenAuth = TokenAuth' "token" VerifyToken
 
 data VerifyToken = VerifyToken
 

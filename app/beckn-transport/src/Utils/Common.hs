@@ -20,7 +20,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Person
 
 -- | Performs simple token verification.
-type TokenAuth = TokenAuth' VerifyToken
+type TokenAuth = TokenAuth' "token" VerifyToken
 
 data VerifyToken = VerifyToken
 
@@ -32,7 +32,7 @@ instance VerificationMethod AppEnv VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 -- | Verifies org's token
-type OrgTokenAuth = TokenAuth' OrgVerifyToken
+type OrgTokenAuth = TokenAuth' "token" OrgVerifyToken
 
 data OrgVerifyToken = OrgVerifyToken
 
@@ -44,7 +44,7 @@ instance VerificationMethod AppEnv OrgVerifyToken where
     \If you don't have a token, use registration endpoints."
 
 -- | Verifies admin's token.
-type AdminTokenAuth = TokenAuth' AdminVerifyToken
+type AdminTokenAuth = TokenAuth' "token" AdminVerifyToken
 
 data AdminVerifyToken
 
@@ -55,7 +55,7 @@ instance VerificationMethod AppEnv AdminVerifyToken where
     "Checks whether token is registered and belongs to a person with admin role."
 
 -- | Verifies admin or driver's token.
-type DriverTokenAuth = TokenAuth' DriverVerifyToken
+type DriverTokenAuth = TokenAuth' "token" DriverVerifyToken
 
 data DriverVerifyToken
 

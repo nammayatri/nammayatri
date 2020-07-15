@@ -9,12 +9,13 @@ import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Server
 import Control.Lens ((?=))
+import Data.Kind (Type)
 import qualified Data.Swagger as DS
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
-import GHC.TypeLits (symbolVal)
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Network.Wai (Request (..))
 import Servant
 import Servant.Client
@@ -28,14 +29,7 @@ import qualified Servant.Swagger.Internal as S
 -- Type argument defines what verification logic is supposed to do.
 -- Normally you should define a type alias for this which fixes the
 -- verification method.
-data TokenAuth' verify
-
--- Name of header we expect in auth
-
-type TokenHeaderName = "token"
-
-tokenHeaderName :: IsString s => s
-tokenHeaderName = fromString $ symbolVal (Proxy @TokenHeaderName)
+data TokenAuth' (header :: Symbol) (verify :: Type)
 
 -- | How token verification is performed.
 class VerificationMethod r verify where
@@ -51,11 +45,15 @@ class VerificationMethod r verify where
 -- | This server part implementation accepts token in @token@ header,
 -- verifies it and puts @'VerificationResult'@ to your endpoint.
 instance
-  (HasServer api ctx, HasEnvEntry r ctx, VerificationMethod r verify) =>
-  HasServer (TokenAuth' verify :> api) ctx
+  ( HasServer api ctx,
+    HasEnvEntry r ctx,
+    VerificationMethod r verify,
+    KnownSymbol header
+  ) =>
+  HasServer (TokenAuth' header verify :> api) ctx
   where
   type
-    ServerT (TokenAuth' verify :> api) m =
+    ServerT (TokenAuth' header verify :> api) m =
       VerificationResult verify -> ServerT api m
 
   route _ ctx subserver =
@@ -64,14 +62,12 @@ instance
     where
       authCheck :: R.FlowRuntime -> Request -> DelayedIO (VerificationResult verify)
       authCheck flowRt req = do
-        let mHeader = snd <$> find ((== tokenHeaderName) . fst) (requestHeaders req)
-
-        valBs <- maybe (formatErr "Header 'token' is required") pure mHeader
-
+        let headerName = fromString $ symbolVal (Proxy @header)
+        let mHeader = snd <$> find ((== headerName) . fst) (requestHeaders req)
+        valBs <- maybe (formatErr $ "Header " <> show headerName <> " is required") pure mHeader
         val <-
           either (\_ -> formatErr "Invalid token header") pure $
             parseHeader @Text valBs
-
         -- If we don't use delayedFailFatal and just pass the exception,
         -- it will be JSON-formatted
 
@@ -84,34 +80,41 @@ instance
 
 -- | This client part implementation simply accepts token and passes it to
 -- the call.
-instance HasClient m api => HasClient m (TokenAuth' verify :> api) where
-  type Client m (TokenAuth' verify :> api) = RegToken -> Client m api
+instance
+  (HasClient m api, KnownSymbol header) =>
+  HasClient m (TokenAuth' header verify :> api)
+  where
+  type Client m (TokenAuth' header verify :> api) = RegToken -> Client m api
 
   clientWithRoute mp _ req =
     clientWithRoute
       mp
-      (Proxy @(Header TokenHeaderName Text :> api))
+      (Proxy @(Header header Text :> api))
       req
       . Just
 
   hoistClientMonad mp _ hst cli = hoistClientMonad mp (Proxy @api) hst . cli
 
 instance
-  (S.HasSwagger api, VerificationMethod r verify, Typeable verify) =>
-  S.HasSwagger (TokenAuth' verify :> api)
+  ( S.HasSwagger api,
+    VerificationMethod r verify,
+    Typeable verify,
+    KnownSymbol header
+  ) =>
+  S.HasSwagger (TokenAuth' header verify :> api)
   where
   toSwagger _ =
     S.toSwagger (Proxy @api)
-      & addSecurityRequirement methodName (verificationDescription @r @verify)
-      & S.addDefaultResponse400 tokenHeaderName
+      & addSecurityRequirement methodName (verificationDescription @r @verify) headerName
+      & S.addDefaultResponse400 headerName
       & addResponse401
     where
+      headerName = toText $ symbolVal (Proxy @header)
       methodName = show $ typeRep (Proxy @verify)
 
-addSecurityRequirement :: Text -> Text -> DS.Swagger -> DS.Swagger
-addSecurityRequirement methodName description = execState $ do
+addSecurityRequirement :: Text -> Text -> Text -> DS.Swagger -> DS.Swagger
+addSecurityRequirement methodName description headerName = execState $ do
   DS.securityDefinitions . at methodName ?= securityScheme
-
   DS.allOperations . DS.security .= one securityRequirement
   where
     securityScheme =
@@ -120,7 +123,7 @@ addSecurityRequirement methodName description = execState $ do
           _securitySchemeType =
             DS.SecuritySchemeApiKey
               DS.ApiKeyParams
-                { _apiKeyName = tokenHeaderName,
+                { _apiKeyName = headerName,
                   _apiKeyIn = DS.ApiKeyHeader
                 }
         }
@@ -131,7 +134,6 @@ addSecurityRequirement methodName description = execState $ do
 addResponse401 :: DS.Swagger -> DS.Swagger
 addResponse401 = execState $ do
   DS.responses . at response401Name ?= response401
-
   DS.allOperations . DS.responses . DS.responses . at 401
     ?= DS.Ref (DS.Reference response401Name)
   where
