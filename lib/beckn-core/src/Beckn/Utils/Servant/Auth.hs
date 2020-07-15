@@ -29,6 +29,8 @@ import qualified Servant.Swagger.Internal as S
 -- Type argument defines what verification logic is supposed to do.
 -- Normally you should define a type alias for this which fixes the
 -- verification method.
+--
+-- TODO: rename to 'HeaderAuth' once dependent PR is merged?
 data TokenAuth' (header :: Symbol) (verify :: Type)
 
 -- | How token verification is performed.
@@ -42,7 +44,10 @@ class VerificationMethod verify where
 -- | Implementation of verification.
 data VerificationAction verify r =
   VerificationMethod verify => VerificationAction
-    { runVerifyMethod :: RegToken -> FlowR r (VerificationResult verify)
+    { runVerifyMethod :: Text -> FlowR r (VerificationResult verify)
+      -- ^ Check given header value and extract the information which
+      -- identifies the current user.
+      -- This is allowed to fail with 'ServantError'.
     }
 
 -- | This server part implementation accepts token in @token@ header,

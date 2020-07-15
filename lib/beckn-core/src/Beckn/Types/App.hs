@@ -88,6 +88,9 @@ type Offset = Int
 
 type RegToken = Text
 
+type APIKey = Text
+
 type CronAuthKey = Text
 
+-- FIXME: remove this
 type AuthHeader = Header' '[Required, Strict] "token" RegToken

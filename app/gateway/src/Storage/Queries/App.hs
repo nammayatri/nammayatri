@@ -1,5 +1,5 @@
 module Storage.Queries.App
-  ( lookupToken,
+  ( lookupKey,
   )
 where
 
@@ -37,8 +37,7 @@ apps =
   ]
 
 -- FIXME: this should take a RegToken
-lookupToken :: Text -> Flow (Maybe Text)
-lookupToken token =
+lookupKey :: App.APIKey -> Flow (Maybe Org.Organization)
+lookupKey apiKey =
   return $
-    find (\o -> Org._apiKey o == Just token) apps
-      >>= Org._callbackUrl
+    find (\o -> Org._apiKey o == Just apiKey) apps

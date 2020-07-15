@@ -1,5 +1,6 @@
 module Storage.Queries.Provider
   ( listProviders,
+    lookupKey,
   )
 where
 
@@ -35,6 +36,12 @@ providers =
   [ mkProvider "test-provider1" "Test Provider 1" "test-provider-1-key" "http://localhost:8014/v1",
     mkProvider "test-provider2" "Test Provider 2" "test-provider-2-key" "http://localhost:8014/v1"
   ]
+
+-- FIXME: this should take a RegToken
+lookupKey :: App.APIKey -> Flow (Maybe Org.Organization)
+lookupKey apiKey =
+  return $
+    find (\o -> Org._apiKey o == Just apiKey) providers
 
 -- FIXME: this should allow filtering by domain
 listProviders :: Flow [Org.Organization]
