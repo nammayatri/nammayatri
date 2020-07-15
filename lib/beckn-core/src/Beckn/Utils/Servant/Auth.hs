@@ -1,15 +1,13 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Utils.Servant.Auth
-  ( TokenAuth',
-    VerificationMethod (..),
-  )
-where
+module Beckn.Utils.Servant.Auth where
 
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Common
+import Beckn.Utils.Servant.Server
 import Control.Lens ((?=))
 import qualified Data.Swagger as DS
 import Data.Typeable (typeRep)
@@ -40,12 +38,12 @@ tokenHeaderName :: IsString s => s
 tokenHeaderName = fromString $ symbolVal (Proxy @TokenHeaderName)
 
 -- | How token verification is performed.
-class VerificationMethod verify where
+class VerificationMethod r verify where
   -- | Verification result, what is passed to the endpoint implementation.
   type VerificationResult verify
 
   -- | Verification logic.
-  verifyToken :: RegToken -> FlowR () (VerificationResult verify)
+  verifyToken :: RegToken -> FlowR r (VerificationResult verify)
 
   -- | Description of this verification scheme as it appears in swagger.
   verificationDescription :: Text
@@ -53,7 +51,7 @@ class VerificationMethod verify where
 -- | This server part implementation accepts token in @token@ header,
 -- verifies it and puts @'VerificationResult'@ to your endpoint.
 instance
-  (HasServer api ctx, HasContextEntry ctx R.FlowRuntime, VerificationMethod verify) =>
+  (HasServer api ctx, HasEnvEntry r ctx, VerificationMethod r verify) =>
   HasServer (TokenAuth' verify :> api) ctx
   where
   type
@@ -62,7 +60,7 @@ instance
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
-      subserver `addAuthCheck` withRequest (authCheck (getContextEntry ctx))
+      subserver `addAuthCheck` withRequest (authCheck (runTime env))
     where
       authCheck :: R.FlowRuntime -> Request -> DelayedIO (VerificationResult verify)
       authCheck flowRt req = do
@@ -77,8 +75,9 @@ instance
         -- If we don't use delayedFailFatal and just pass the exception,
         -- it will be JSON-formatted
 
-        liftIO . runFlowR flowRt () $ verifyToken @verify val
+        liftIO . runFlowR flowRt (appEnv env) $ verifyToken @r @verify val
       formatErr msg = delayedFailFatal err400 {errBody = msg}
+      env = getEnvEntry ctx
 
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv
@@ -98,12 +97,12 @@ instance HasClient m api => HasClient m (TokenAuth' verify :> api) where
   hoistClientMonad mp _ hst cli = hoistClientMonad mp (Proxy @api) hst . cli
 
 instance
-  (S.HasSwagger api, VerificationMethod verify, Typeable verify) =>
+  (S.HasSwagger api, VerificationMethod r verify, Typeable verify) =>
   S.HasSwagger (TokenAuth' verify :> api)
   where
   toSwagger _ =
     S.toSwagger (Proxy @api)
-      & addSecurityRequirement methodName (verificationDescription @verify)
+      & addSecurityRequirement methodName (verificationDescription @r @verify)
       & S.addDefaultResponse400 tokenHeaderName
       & addResponse401
     where

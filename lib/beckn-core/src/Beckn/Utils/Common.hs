@@ -23,6 +23,7 @@ import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import Network.HTTP.Types (hContentType)
 import Servant
+import Servant.Client (BaseUrl, ClientError, ClientM)
 import System.Environment
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
@@ -104,13 +105,8 @@ mkAckResponse' txnId action message = do
             }
       }
 
-withFlowHandler :: FlowR () a -> FlowHandler a
+withFlowHandler :: FlowR r a -> FlowHandlerR r a
 withFlowHandler flow = do
-  (EnvR flowRt _) <- ask
-  lift . ExceptT . try . runFlowR flowRt () $ flow
-
-withFlowRHandler :: FlowR r a -> FlowHandlerR r a
-withFlowRHandler flow = do
   (EnvR flowRt appEnv) <- ask
   lift . ExceptT . try . runFlowR flowRt appEnv $ flow
 
@@ -148,7 +144,7 @@ maskPerson person =
         else "..."
 
 -- | Prepare common applications options
-prepareAppOptions :: FlowR () ()
+prepareAppOptions :: FlowR r ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
@@ -185,10 +181,10 @@ throwJsonError501 = throwJsonError err501
 throwJsonError400 = throwJsonError err400
 throwJsonError401 = throwJsonError err401
 
-throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandler a
+throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandlerR r a
 throwJsonErrorH = withFlowHandler ... throwJsonError
 
-throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandler a
+throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandlerR r a
 throwJsonError500H = throwJsonErrorH ... err500
 throwJsonError501H = throwJsonErrorH ... err501
 throwJsonError400H = throwJsonErrorH ... err400
@@ -223,3 +219,62 @@ throwDomainError err =
     _ -> t err500 "Unknown error"
   where
     t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg
+
+-- TODO: the @desc@ argument should become part of monadic context
+callClient ::
+  (ET.JSONEx a, L.MonadFlow m) =>
+  Text ->
+  BaseUrl ->
+  ET.EulerClient a ->
+  m a
+callClient desc baseUrl cli =
+  L.callAPI baseUrl cli >>= \case
+    Left err -> do
+      L.logError "cli" $ "Failure in " <> show desc <> " call to " <> show baseUrl <> ": " <> show err
+      L.throwException err
+    Right x -> pure x
+
+-- | A replacement for 'L.forkFlow' which works in 'FlowR'.
+-- It's main use case is to perform an action asynchronously without waiting for
+-- result.
+--
+-- It has several differences comparing to 'L.forkFlow':
+-- * Logs errors in case if the action failed;
+-- * Expects action to return '()' - this is good, because the opposite means
+--   you ignored something important, e.g. an exception returned explicitly;
+-- * Do not log the fact of thread creation (was it any useful?)
+--
+-- NOTE: this function is temporary, use of bare forking is bad and should be
+-- removed one day.
+forkAsync :: Text -> FlowR (EnvR r) () -> FlowR (EnvR r) ()
+forkAsync desc action =
+  void . ReaderT $ \env@(EnvR flowRt _) ->
+    L.runUntracedIO . forkIO $
+      I.runFlow flowRt (runReaderT action env)
+        `catchAny` \e -> I.runFlow flowRt (logErr e)
+  where
+    logErr e =
+      L.logWarning "Thread" $
+        "Thread " <> show desc <> " died with error: " <> show e
+
+class Example a where
+  -- | Sample value of a thing.
+  --
+  -- This can be used for mocking.
+  -- Also, it is especially useful for including examples into swagger,
+  -- because random generation can produce non-demostrative values
+  -- (e.g. empty lists) unless special care is taken.
+  example :: a
+
+instance Example a => Example (Maybe a) where
+  example = Just example
+
+instance Example a => Example [a] where
+  example = one example
+
+instance Example LocalTime where
+  example = LocalTime (ModifiedJulianDay 20202) midday
+
+-- until we start using newtypes everywhere
+idExample :: Text
+idExample = "123e4567-e89b-12d3-a456-426655440000"

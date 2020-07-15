@@ -21,7 +21,7 @@ updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler U
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   verifyPerson personId _EntityId
   person <- QP.findPersonById (PersonId _EntityId)
-  updatedPerson <- transformFlow2 req person
+  updatedPerson <- modifyTransform req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
   where
@@ -33,7 +33,7 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
   validateDriver req
-  person <- addOrgId orgId <$> transformFlow req
+  person <- addOrgId orgId <$> createTransform req
   QP.create person
   return $ UpdatePersonRes person
   where

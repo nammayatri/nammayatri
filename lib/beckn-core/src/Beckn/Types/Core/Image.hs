@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Image where
 
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -15,3 +16,11 @@ instance FromJSON Image where
 
 instance ToJSON Image where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Image where
+  example =
+    Image
+      { _type = "URL",
+        _url = Just "https://i.imgur.com/MjeqeUP.gif",
+        _data = Nothing
+      }

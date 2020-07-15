@@ -1,5 +1,6 @@
 module Epass.Product.Location.CRUD where
 
+import App.Types
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import Beckn.Utils.Common
 import Data.Aeson

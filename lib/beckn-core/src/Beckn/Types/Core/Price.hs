@@ -1,6 +1,7 @@
 module Beckn.Types.Core.Price where
 
 import Beckn.Types.Core.Amount
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -22,6 +23,19 @@ instance FromJSON Price where
 instance ToJSON Price where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+instance Example Price where
+  example =
+    Price
+      { _currency = "INR",
+        _estimated_value = example,
+        _computed_value = example,
+        _listed_value = example,
+        _offered_value = example,
+        _unit = "1",
+        _discount = example,
+        _tax = example
+      }
+
 data Tax = Tax
   { _computed :: Amount,
     _breakup :: [TaxBreakup]
@@ -34,6 +48,13 @@ instance FromJSON Tax where
 instance ToJSON Tax where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+instance Example Tax where
+  example =
+    Tax
+      { _computed = example,
+        _breakup = example
+      }
+
 data TaxBreakup = TaxBreakup
   { _line_item :: Text,
     _amount :: Amount
@@ -45,3 +66,10 @@ instance FromJSON TaxBreakup where
 
 instance ToJSON TaxBreakup where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example TaxBreakup where
+  example =
+    TaxBreakup
+      { _line_item = "",
+        _amount = example
+      }

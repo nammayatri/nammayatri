@@ -1,5 +1,6 @@
 module Epass.Product.Customer where
 
+import App.Types
 import Beckn.Types.Storage.Person
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common

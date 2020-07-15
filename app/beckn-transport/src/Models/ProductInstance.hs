@@ -64,5 +64,5 @@ validatePIStatusesChange' newStatus =
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus productInstance =
   case validateStatusTransition (_status productInstance) newStatus of
-    Left msg -> L.throwException $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwDomainError $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()

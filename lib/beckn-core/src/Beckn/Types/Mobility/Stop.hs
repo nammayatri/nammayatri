@@ -1,6 +1,7 @@
 module Beckn.Types.Mobility.Stop where
 
 import Beckn.Types.Core.Location
+import Beckn.Utils.Common
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
@@ -17,3 +18,11 @@ instance FromJSON Stop where
 
 instance ToJSON Stop where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance Example Stop where
+  example =
+    Stop
+      { _location = example,
+        _arrival_time = example,
+        _departure_time = example
+      }

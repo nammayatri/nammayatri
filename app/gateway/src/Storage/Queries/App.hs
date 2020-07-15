@@ -37,7 +37,7 @@ apps =
   ]
 
 -- FIXME: this should take a RegToken
-lookupToken :: Text -> AppFlow (Maybe Text)
+lookupToken :: Text -> Flow (Maybe Text)
 lookupToken token =
   return $
     find (\o -> Org._apiKey o == Just token) apps

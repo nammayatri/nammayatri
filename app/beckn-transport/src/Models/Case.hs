@@ -65,5 +65,5 @@ validateCasesStatusesChange' newStatus =
 validateStatusChange :: CaseStatus -> Case -> Flow ()
 validateStatusChange newStatus case_ = do
   case validateStatusTransition (_status case_) newStatus of
-    Left msg -> L.throwException $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()

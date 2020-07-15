@@ -1,5 +1,6 @@
 module Product.Info where
 
+import App.Types
 import qualified Beckn.Types.API.Track as Tracker
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..), generateGUID)

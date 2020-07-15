@@ -49,5 +49,5 @@ validateStatusChange :: CaseStatus -> CaseId -> Flow ()
 validateStatusChange newStatus caseId = do
   c <- findById caseId
   case validateStatusTransition (_status c) newStatus of
-    Left msg -> L.throwException $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()

@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Category where
 
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -14,3 +15,10 @@ instance FromJSON Category where
 
 instance ToJSON Category where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Category where
+  example =
+    Category
+      { _id = idExample,
+        _subcategories = []
+      }

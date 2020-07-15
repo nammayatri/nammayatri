@@ -1,8 +1,10 @@
 module Beckn.Types.Core.Item where
 
+import Beckn.Types.App
 import Beckn.Types.Core.Image
 import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Price
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -26,3 +28,19 @@ instance FromJSON Item where
 
 instance ToJSON Item where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Item where
+  example =
+    Item
+      { _id = idExample,
+        _name = "my item",
+        _description = "",
+        _image = example,
+        _price = example,
+        _primary = False,
+        _selected = False,
+        _quantity = 1,
+        _policy = example,
+        _category_id = idExample,
+        _tags = ["delivery"]
+      }

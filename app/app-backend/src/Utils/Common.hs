@@ -23,7 +23,7 @@ type TokenAuth = TokenAuth' VerifyToken
 
 data VerifyToken = VerifyToken
 
-instance VerificationMethod VerifyToken where
+instance VerificationMethod AppEnv VerifyToken where
   type VerificationResult VerifyToken = Person.Person
   verifyToken = Utils.Common.verifyPerson
   verificationDescription =

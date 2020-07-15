@@ -23,7 +23,7 @@ type TokenAuth = TokenAuth' VerifyToken
 
 data VerifyToken = VerifyToken
 
-instance VerificationMethod VerifyToken where
+instance VerificationMethod AppEnv VerifyToken where
   type VerificationResult VerifyToken = SR.RegistrationToken
   verifyToken = QR.verifyToken
   verificationDescription =
@@ -35,7 +35,7 @@ type OrgTokenAuth = TokenAuth' OrgVerifyToken
 
 data OrgVerifyToken = OrgVerifyToken
 
-instance VerificationMethod OrgVerifyToken where
+instance VerificationMethod AppEnv OrgVerifyToken where
   type VerificationResult OrgVerifyToken = SO.Organization
   verifyToken = QO.verifyToken
   verificationDescription =
@@ -47,7 +47,7 @@ type AdminTokenAuth = TokenAuth' AdminVerifyToken
 
 data AdminVerifyToken
 
-instance VerificationMethod AdminVerifyToken where
+instance VerificationMethod AppEnv AdminVerifyToken where
   type VerificationResult AdminVerifyToken = Text
   verifyToken = validateAdmin
   verificationDescription =
@@ -58,7 +58,7 @@ type DriverTokenAuth = TokenAuth' DriverVerifyToken
 
 data DriverVerifyToken
 
-instance VerificationMethod DriverVerifyToken where
+instance VerificationMethod AppEnv DriverVerifyToken where
   type VerificationResult DriverVerifyToken = Text
   verifyToken = validateDriver
   verificationDescription =

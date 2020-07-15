@@ -3,6 +3,7 @@ module Beckn.Types.Mobility.Traveller where
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Rating
 import Beckn.Types.Mobility.Stop
+import Beckn.Utils.Common
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
@@ -20,3 +21,12 @@ instance FromJSON Traveller where
 
 instance ToJSON Traveller where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance Example Traveller where
+  example =
+    Traveller
+      { _descriptor = example,
+        _rating = example,
+        _origin = example,
+        _destination = example
+      }

@@ -1,5 +1,6 @@
 module Epass.App.Server where
 
+import App.Types
 import qualified Beckn.Utils.Servant.Server as BU
 import qualified Data.Vault.Lazy as V
 import Epass.App.Routes (epassAPI, epassServer)
