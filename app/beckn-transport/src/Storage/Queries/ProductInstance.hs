@@ -154,6 +154,16 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
+joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+  i <- B.filter_ pred1 $ B.all_ tbl1
+  j <- B.filter_ pred2 $ B.all_ tbl2
+  k <- B.filter_ pred3 $
+    B.join_ tbl3 $
+      \line ->
+        CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+          B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
+  pure (i, j, k)
+
 productInstanceJoin :: Int -> Int -> [Case.CaseType] -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoin _limit _offset csTypes orgId status = do
   joinedValues <-
@@ -182,15 +192,6 @@ productInstanceJoin _limit _offset csTypes orgId status = do
           _fromLocation = Nothing,
           _toLocation = Nothing
         }
-    joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
-      i <- B.filter_ pred1 $ B.all_ tbl1
-      j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $
-        B.join_ tbl3 $
-          \line ->
-            CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
-              B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
-      pure (i, j, k)
 
 productInstanceJoinWithoutLimits :: Case.CaseType -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoinWithoutLimits csType orgId status = do
@@ -216,15 +217,6 @@ productInstanceJoinWithoutLimits csType orgId status = do
           _fromLocation = Nothing,
           _toLocation = Nothing
         }
-    joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
-      i <- B.filter_ pred1 $ B.all_ tbl1
-      j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $
-        B.join_ tbl3 $
-          \line ->
-            CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
-              B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
-      pure (i, j, k)
 
 findById :: ProductInstanceId -> Flow Storage.ProductInstance
 findById pid =
