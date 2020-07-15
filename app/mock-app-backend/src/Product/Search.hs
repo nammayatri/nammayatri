@@ -7,26 +7,28 @@ module Product.Search
   )
 where
 
+import qualified "beckn-gateway" App.Routes as GR
 import App.Types
 import App.Utils
-import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchRes, searchAPI)
-import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchRes)
+import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common
+import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
-import qualified EulerHS.Types as ET
 import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
 
-gatewayLookup :: Flow (String, Int)
+gatewayLookup :: FlowR r (String, Int)
 gatewayLookup = do
   EL.runIO $
     (,)
       <$> (fromMaybe "localhost" <$> SE.lookupEnv "GATEWAY_HOST")
       <*> (fromMaybe 8015 . (>>= readMaybe) <$> SE.lookupEnv "GATEWAY_PORT")
 
-gatewayBaseUrl :: Flow BaseUrl
+gatewayBaseUrl :: FlowR r BaseUrl
 gatewayBaseUrl = do
   (host, port) <- gatewayLookup
   return
@@ -34,20 +36,23 @@ gatewayBaseUrl = do
       { baseUrlScheme = Http,
         baseUrlHost = host,
         baseUrlPort = port,
-        baseUrlPath = "/v1"
+        baseUrlPath = ""
       }
 
-triggerSearch :: FlowHandler SearchRes
-triggerSearch = withFlowHandler $ do
-  let search = ET.client searchAPI
+triggerSearch :: FlowHandlerR r SearchRes
+triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   baseUrl <- gatewayBaseUrl
   transactionId <- EL.generateGUID
   req <- EL.runIO $ buildSearchReq transactionId
-  eRes <- EL.callAPI baseUrl $ search req
-  let ack = either (Ack "Error" . show) (^. #_message) eRes
-      resp = AckResponse (req ^. #context) ack
-  EL.logDebug @Text "mock_app_backend" $ "search: req: " <> show req <> ", resp: " <> show resp
-  return resp
+  eRes <-
+    callClient "search" baseUrl $
+      GR.cliSearch "test-app-1-key" req
+  EL.logDebug @Text "mock_app_backend" $ "context: " <> show (eRes ^. #_context) <> ", resp: " <> show (eRes ^. #_message)
+  return
+    AckResponse
+      { _context = req ^. #context,
+        _message = Ack {_action = "search", _message = "OK"}
+      }
 
 searchCb :: OnSearchReq -> FlowHandler OnSearchRes
 searchCb req = withFlowHandler $ do
