@@ -25,7 +25,7 @@ search req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler
     AckResponse {} <-
       callClient "search" baseUrl $
         GR.cliOnSearch
-          "<token>"
+          "test-provider-1-key"
           OnSearchReq
             { context = req ^. #context,
               message = ans

@@ -12,4 +12,4 @@ import "beckn-gateway" External.Provider.Routes
 import Servant
 
 run :: V.Key (HashMap Text Text) -> Env -> Application
-run key = BU.run providerAPI (mockProviderBackendServer key)
+run key = BU.run providerAPI (mockProviderBackendServer key) EmptyContext

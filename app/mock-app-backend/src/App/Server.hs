@@ -11,4 +11,4 @@ import EulerHS.Prelude
 import Servant
 
 run :: V.Key (HashMap Text Text) -> Env -> Application
-run key = BU.run mockAppBackendAPI (mockAppBackendServer key)
+run key = BU.run mockAppBackendAPI (mockAppBackendServer key) EmptyContext
