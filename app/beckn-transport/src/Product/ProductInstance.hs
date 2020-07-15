@@ -59,16 +59,15 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
-  pi <- PIQ.findById piId
+  pi <- PIQ.findById piId         -- order product instance id
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
-  searchPI <- PIQ.findByIdType (PI._id <$> piList) Case.RIDESEARCH
   isAllowed pi req
   updateVehicleDetails user piList req
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
   notifyTripDetailsToGateway piId
-  notifyCancelReq searchPI (req ^. #_status)
+  notifyCancelReq pi (req ^. #_status)
   updatedPi <- PIQ.findById piId
   return $ updatedPi
 
@@ -181,6 +180,7 @@ updateStatus user piId req = do
     (Just c, Just x, Just y) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (pi ^. #_id) c
+    (Nothing, Just x, Just y) -> return ()
     _ -> L.throwException $ err400 {errBody = "DRIVER_VEHICLE_UNASSIGNED"}
   return ()
 

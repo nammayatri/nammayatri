@@ -82,9 +82,9 @@ cancel :: CancelReq -> FlowHandler AckResponse
 cancel req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
-  let prodInstId = req ^. #message . #id -- transporter search productInstId
+  let prodInstId = req ^. #message . #id  -- order product instance id
   prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
-  piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
+  piList <- ProductInstance.findAllByParentId (prodInst ^. #_parentId)
   -- TODO: Should we check if all case's products were cancelled
   -- before cancelling a case?
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
@@ -191,27 +191,28 @@ confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
   let prodInstId = head $ req ^. #message . #_selected_items
   let caseShortId = req ^. #context . #transaction_id -- change to message.transactionId
-  search_case <- Case.findBySid caseShortId
+  searchCase <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
-  orderCase <- mkOrderCase search_case
+  orderCase <- mkOrderCase searchCase
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
-  ProductInstance.updateStatusByIds [productInstance ^. #_id, orderProductInstance ^. #_id] ProductInstance.CONFIRMED
+  ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  let trackerCase = mkTrackerCase search_case uuid currTime $ T.pack shortId
+  let trackerCase = mkTrackerCase searchCase uuid currTime $ T.pack shortId
   Case.create trackerCase
   uuid1 <- L.generateGUID
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
-  notifyGateway search_case prodInstId trackerCase
+  Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
+  notifyGateway searchCase prodInstId trackerCase
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
-  Notify.notifyTransportersOnConfirm search_case admins
+  Notify.notifyTransportersOnConfirm searchCase admins
   mkAckResponse uuid "confirm"
 
 mkOrderCase :: SC.Case -> Flow SC.Case
@@ -228,6 +229,9 @@ mkOrderCase SC.Case {..} = do
         _industry = SC.MOBILITY,
         _type = SC.RIDEORDER,
         _parentCaseId = Just _id,
+        _status = SC.CONFIRMED,
+        _fromLocationId = _fromLocationId,
+        _toLocationId = _toLocationId,
         _createdAt = now,
         _updatedAt = now,
         ..
@@ -257,7 +261,7 @@ mkOrderProductInstance caseId prodInst = do
         _endTime = prodInst ^. #_endTime,
         _validTill = prodInst ^. #_validTill,
         _parentId = Just (prodInst ^. #_id),
-        _status = ProductInstance.INSTOCK,
+        _status = ProductInstance.CONFIRMED,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now,
@@ -427,7 +431,7 @@ notifyTripUrlToGateway case_ parentCase = do
 
 notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
-  onCancelPayload <- mkCancelRidePayload prodInstId
+  onCancelPayload <- mkCancelRidePayload prodInstId -- order product instance id
   L.logInfo "notifyGateway Request" $ show onCancelPayload
   Gateway.onCancel onCancelPayload
   return ()
