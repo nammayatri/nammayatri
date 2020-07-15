@@ -6,8 +6,6 @@ import Beckn.Utils.Servant.Auth
 import EulerHS.Prelude
 
 -- | TODO: Perform some API key verification.
-type APIKeyAuth = TokenAuth' "X-API-TOKEN" VerifyAPIKey
-
 data VerifyAPIKey = VerifyAPIKey
 
 instance VerificationMethod VerifyAPIKey where

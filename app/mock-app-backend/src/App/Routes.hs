@@ -6,6 +6,7 @@ import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Search as P
 import Servant
+import Utils.Auth
 
 type MockAppBackendAPI =
   "v1"
@@ -27,7 +28,7 @@ type TriggerSearchAPI =
   "trigger"
     :> Get '[JSON] Search.SearchRes
 
-type OnSearchAPI = Search.OnSearchAPI
+type OnSearchAPI = Search.OnSearchAPI VerifyAPIKey
 
 onSearchFlow :: FlowServer OnSearchAPI
 onSearchFlow = P.searchCb

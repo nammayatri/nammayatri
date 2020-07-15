@@ -57,8 +57,8 @@ import qualified Utils.Notifications as Notify
 -- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
-search :: SearchReq -> FlowHandler AckResponse
-search req = withFlowHandler $ do
+search :: () -> SearchReq -> FlowHandler AckResponse
+search _unit req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC

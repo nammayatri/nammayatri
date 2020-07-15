@@ -24,7 +24,7 @@ confirm req =
   void $ ET.client confirmAPI req
 
 search req =
-  void $ client Search.searchAPI req
+  void $ client Search.searchAPI "mobility-app-key" req
 
 type LocationAPI =
   "location"

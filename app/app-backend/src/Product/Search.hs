@@ -63,8 +63,8 @@ search person req = withFlowHandler $ do
         L.throwException $
           err400 {errBody = "Invalid start time"}
 
-searchCb :: OnSearchReq -> FlowHandler OnSearchRes
-searchCb req = withFlowHandler $ do
+searchCb :: () -> OnSearchReq -> FlowHandler OnSearchRes
+searchCb _unit req = withFlowHandler $ do
   -- TODO: Verify api key here
   let (services :: [Service]) = req ^. #message . #services
   traverse_ (searchCbService req) services

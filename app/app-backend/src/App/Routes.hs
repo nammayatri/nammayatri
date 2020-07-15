@@ -37,6 +37,7 @@ import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import Types.App
+import Utils.Auth (VerifyAPIKey)
 import Utils.Common (TokenAuth)
 
 type AppAPI =
@@ -94,8 +95,11 @@ registrationFlow =
 
 -------- Search Flow --------
 type SearchAPI =
-  (TokenAuth :> Search.SearchAPI)
-    :<|> Search.OnSearchAPI
+  "search"
+    :> TokenAuth
+    :> ReqBody '[JSON] Search.SearchReq
+    :> Post '[JSON] AckResponse
+    :<|> Search.OnSearchAPI VerifyAPIKey
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

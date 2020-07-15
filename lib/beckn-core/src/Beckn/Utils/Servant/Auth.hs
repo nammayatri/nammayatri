@@ -33,6 +33,9 @@ import qualified Servant.Swagger.Internal as S
 -- TODO: rename to 'HeaderAuth' once dependent PR is merged?
 data TokenAuth' (header :: Symbol) (verify :: Type)
 
+-- | TODO: Perform some API key verification.
+type APIKeyAuth verify = TokenAuth' "X-API-Key" verify
+
 -- | How token verification is performed.
 class VerificationMethod verify where
   -- | Verification result, what is passed to the endpoint implementation.

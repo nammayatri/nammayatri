@@ -9,8 +9,6 @@ import qualified Storage.Queries.App as BA
 import qualified Storage.Queries.Provider as BP
 
 -- | TODO: Perform some API key verification.
-type APIKeyAuth = TokenAuth' "X-API-TOKEN" VerifyAPIKey
-
 data VerifyAPIKey = VerifyAPIKey
 
 instance VerificationMethod VerifyAPIKey where

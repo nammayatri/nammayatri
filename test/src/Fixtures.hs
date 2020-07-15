@@ -140,6 +140,7 @@ searchServices ::
   Search.SearchReq ->
   ClientM Common.AckResponse
 onSearchServices ::
+  Text ->
   Search.OnSearchReq ->
   ClientM Search.OnSearchRes
 searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)

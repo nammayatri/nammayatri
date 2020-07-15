@@ -34,7 +34,7 @@ search org req = withFlowHandler $ do
   providerUrls <- BP.lookup $ req ^. #context
   resps <- forM providerUrls $ \providerUrl -> do
     baseUrl <- parseOrgUrl providerUrl
-    eRes <- L.callAPI baseUrl $ search' req
+    eRes <- L.callAPI baseUrl $ search' "" req
     L.logDebug @Text "gateway" $ "search: req: " <> show req <> ", resp: " <> show eRes
     return $ isRight eRes
   if or resps
@@ -49,7 +49,7 @@ searchCb _org req = withFlowHandler $ do
       messageId = req ^. #context . #_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
-  eRes <- L.callAPI baseUrl $ onSearch req
+  eRes <- L.callAPI baseUrl $ onSearch "" req
   let ack = either (Ack "Error" . show) (^. #_message) eRes
       resp = AckResponse (req ^. #context) ack Nothing
   L.logDebug @Text "gateway" $ "search_cb: req: " <> show req <> ", resp: " <> show resp

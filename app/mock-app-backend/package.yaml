@@ -84,7 +84,6 @@ library:
   source-dirs: src
   dependencies:
     - beckn-core
-    - beckn-gateway
 
 executables:
   mock-app-backend-exe:

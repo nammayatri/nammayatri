@@ -13,7 +13,7 @@ import Servant.API.ContentTypes
 import Servant.Client
 
 onSearch req =
-  void $ ET.client Search.onSearchAPI req
+  void $ ET.client Search.onSearchAPI "mobility-provider-key" req
 
 type TrackAPI =
   "on_track"

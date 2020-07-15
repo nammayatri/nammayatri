@@ -7,10 +7,9 @@ module Product.Search
   )
 where
 
-import qualified "beckn-gateway" App.Routes as GR
 import App.Types
 import App.Utils
-import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchRes)
+import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchRes, searchAPI)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
@@ -18,6 +17,7 @@ import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
+import EulerHS.Types (client)
 import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
 
@@ -46,7 +46,7 @@ triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHand
   req <- EL.runIO $ buildSearchReq transactionId
   eRes <-
     callClient "search" baseUrl $
-      GR.cliSearch "test-app-1-key" req
+      client searchAPI "test-app-1-key" req
   EL.logDebug @Text "mock_app_backend" $ "context: " <> show (eRes ^. #_context) <> ", resp: " <> show (eRes ^. #_message)
   return
     AckResponse
@@ -55,8 +55,8 @@ triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHand
         _error = Nothing
       }
 
-searchCb :: OnSearchReq -> FlowHandler OnSearchRes
-searchCb req = withFlowHandler $ do
+searchCb :: () -> OnSearchReq -> FlowHandler OnSearchRes
+searchCb _unit req = withFlowHandler $ do
   let ack = Ack {_action = "on_search", _message = "OK"}
       resp = AckResponse (req ^. #context) ack Nothing
   EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show req <> ", resp: " <> show resp

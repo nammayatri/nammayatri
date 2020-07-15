@@ -86,7 +86,6 @@ library:
   - -Wincomplete-uni-patterns
   dependencies:
     - beckn-core
-    - beckn-gateway
 
 executables:
   mock-provider-backend-exe:
@@ -100,4 +99,3 @@ executables:
     dependencies:
       - mock-provider-backend
       - beckn-core
-      - beckn-gateway
