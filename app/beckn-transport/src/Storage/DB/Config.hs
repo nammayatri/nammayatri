@@ -7,10 +7,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types
 import qualified EulerHS.Types as T
-import Servant.Server
 import System.Environment
 import Types.Config (Config (..))
-import qualified Prelude as P (show)
 
 dbSchema :: Text
 dbSchema = "atlas_transporter"
