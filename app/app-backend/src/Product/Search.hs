@@ -59,9 +59,9 @@ search person req = withFlowHandler $ do
   where
     validateDateTime req = do
       currTime <- getCurrentTimeUTC
-      when ((req ^. #message . #intent . #_origin . #_departure_time . #_est) < currTime)
-        $ L.throwException
-        $ err400 {errBody = "Invalid start time"}
+      when ((req ^. #message . #intent . #_origin . #_departure_time . #_est) < currTime) $
+        L.throwException $
+          err400 {errBody = "Invalid start time"}
 
 searchCb :: () -> OnSearchReq -> FlowHandler OnSearchRes
 searchCb _unit req = withFlowHandler $ do
@@ -190,9 +190,9 @@ mkProduct case_ mprovider item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider -- Nothing
-      -- There is loss of data in coversion Product -> Item -> Product
-      -- In api exchange between transporter and app-backend
-      -- TODO: fit public transport, where case.startTime != product.startTime, etc
+  -- There is loss of data in coversion Product -> Item -> Product
+  -- In api exchange between transporter and app-backend
+  -- TODO: fit public transport, where case.startTime != product.startTime, etc
   return
     Products.Products
       { _id = ProductsId $ item ^. #_id,

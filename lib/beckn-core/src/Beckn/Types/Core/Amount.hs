@@ -125,16 +125,16 @@ instance FromJSON Amount where
 instance ToSchema Amount where
   declareNamedSchema _ = do
     schema <- declareSchema (Proxy :: Proxy Text)
-    return
-      $ NamedSchema (Just "amount")
-      $ schema
-        & description
-          ?~ "Monetary amount in a string representation \
-             \with an optional leading \"-\" for negative numbers. \
-             \Integer and fractional parts are separated with a dot."
-            <> message
-            <> " String format is used to prevent loss of precision."
-        & paramSchema . format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
+    return $
+      NamedSchema (Just "amount") $
+        schema
+          & description
+            ?~ "Monetary amount in a string representation \
+               \with an optional leading \"-\" for negative numbers. \
+               \Integer and fractional parts are separated with a dot."
+              <> message
+              <> " String format is used to prevent loss of precision."
+          & paramSchema . format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
 
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Amount where
   sqlValueSyntax = sqlValueSyntax . amountToString

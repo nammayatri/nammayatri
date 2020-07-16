@@ -10,7 +10,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.Auth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
-import Servant ((:>), JSON, Post, ReqBody)
+import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchAPI v =
   "search"

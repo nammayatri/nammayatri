@@ -35,9 +35,9 @@ import Types.App
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
   port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runTransporterBackendApp' port
-    $ setOnExceptionResponse transporterExceptionResponse
-    $ setPort port defaultSettings
+  runTransporterBackendApp' port $
+    setOnExceptionResponse transporterExceptionResponse $
+      setPort port defaultSettings
 
 runTransporterBackendApp' :: Int -> Settings -> IO ()
 runTransporterBackendApp' port settings = do

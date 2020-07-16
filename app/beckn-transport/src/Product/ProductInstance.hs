@@ -84,8 +84,8 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
+        $ L.throwException $
+          err401 {errBody = "Unauthorized"}
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
         >>= buildResponse
@@ -112,8 +112,8 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
         ( isNothing (SP._organizationId user)
             || (SP._organizationId user /= (V._organizationId <$> vehicle))
         )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
+        $ L.throwException $
+          err401 {errBody = "Unauthorized"}
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
         >>= buildResponse

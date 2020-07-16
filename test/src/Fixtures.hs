@@ -139,7 +139,6 @@ searchServices ::
   Text ->
   Search.SearchReq ->
   ClientM Common.AckResponse
-
 onSearchServices ::
   Text ->
   Search.OnSearchReq ->
@@ -188,7 +187,6 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
-
 appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
 appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
@@ -200,7 +198,6 @@ buildAppConfirmReq cid pid =
     }
 
 listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> ClientM [TbeCase.CaseRes]
-
 acceptOrDeclineRide :: Text -> Text -> TbeCase.UpdateCaseReq -> ClientM Case.Case
 listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
@@ -218,9 +215,7 @@ appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
 
 appInitiateLogin :: Reg.InitiateLoginReq -> ClientM Reg.InitiateLoginRes
-
 appVerifyLogin :: Text -> Reg.LoginReq -> ClientM Reg.LoginRes
-
 appReInitiateLogin :: Text -> Reg.ReInitiateLoginReq -> ClientM Reg.InitiateLoginRes
 appInitiateLogin :<|> appVerifyLogin :<|> appReInitiateLogin = client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
 

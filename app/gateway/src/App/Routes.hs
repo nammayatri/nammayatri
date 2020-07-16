@@ -35,8 +35,6 @@ searchFlow =
     :<|> P.searchCb
 
 cliHealthCheck :: EulerClient Text
-
 cliSearch :: Client EulerClient (Search.SearchAPI VerifyAPIKey)
-
 cliOnSearch :: Client EulerClient (Search.OnSearchAPI VerifyAPIKey)
 cliHealthCheck :<|> (cliSearch :<|> cliOnSearch) = client gatewayAPI
