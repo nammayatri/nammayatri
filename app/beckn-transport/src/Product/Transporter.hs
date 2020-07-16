@@ -2,6 +2,7 @@
 
 module Product.Transporter where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as SO

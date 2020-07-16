@@ -259,8 +259,8 @@ isWithin ::
   (Double, Double) ->
   Bool
 isWithin edges point =
-  let intersections = (doesIntersect point) <$> edges
-   in odd $ length $ filter ((==) True) intersections
+  let intersections = doesIntersect point <$> edges
+   in odd $ length $ filter (==) True intersections
 
 doesIntersect ::
   (Double, Double) ->

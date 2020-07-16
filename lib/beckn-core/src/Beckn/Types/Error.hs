@@ -13,18 +13,13 @@ newtype ErrorMsg = ErrorMsg Text
   deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
 
 data DomainError
-  = EpassErr EpassError
-  | QuotaErr QuotaError
+  = QuotaErr QuotaError
   | CommentErr CommentError
   | HealthCheckErr HealthCheckError
   | BlacklistErr BlacklistError
   | TagErr TagError
   | OrganisationErr OrganisationError
   | UnknownDomainError
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-data EpassError
-  = EpassNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data QuotaError

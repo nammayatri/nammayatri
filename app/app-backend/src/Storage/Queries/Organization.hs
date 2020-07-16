@@ -7,7 +7,6 @@ import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Epass.Types.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T

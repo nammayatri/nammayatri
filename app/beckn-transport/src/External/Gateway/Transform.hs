@@ -6,16 +6,19 @@ import App.Types
 import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Api
-import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
-import Beckn.Types.Mobility.Driver
-import Beckn.Types.Mobility.Service
+import qualified Beckn.Types.Core.Tracking as CoreTracking
+import Beckn.Types.Mobility.Catalog as Mobility
+import Beckn.Types.Mobility.Driver as Mobility
+import Beckn.Types.Mobility.Order as Mobility
+import Beckn.Types.Mobility.Service as Mobility
 import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
@@ -25,6 +28,7 @@ import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle as Vehicle
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Aeson
 import Data.Map
 import Data.Text as T
@@ -33,27 +37,46 @@ import EulerHS.Prelude
 import Servant
 import qualified Utils.Defaults as Defaults
 
-mkCatalog :: [ProductInstance] -> Catalog
-mkCatalog prodInsts =
-  Catalog
-    { _category_tree = Category {_id = "", _subcategories = []},
-      _items = mkItem <$> prodInsts
+mkCatalog :: [ProductInstance] -> Flow Mobility.Catalog
+mkCatalog prodInsts = do
+  catalogId <- L.generateGUID
+  return
+    Mobility.Catalog
+      { _id = Just catalogId,
+        _categories = [],
+        _brands = [],
+        _exp = Nothing,
+        _items = mkItem <$> prodInsts,
+        _fare_products = []
+      }
+
+mkDescriptor :: ProductInstance -> Descriptor
+mkDescriptor prodInst =
+  Descriptor
+    { _id = _getProductInstanceId $ prodInst ^. #_id,
+      _name = Nothing,
+      _code = Nothing,
+      _sym = Nothing,
+      _short_desc = Nothing,
+      _long_desc = Nothing,
+      _images = [],
+      _audio = Nothing,
+      _3d_render = Nothing
     }
 
 mkItem :: ProductInstance -> Item
 mkItem prodInst =
   Item
     { _id = _getProductInstanceId $ prodInst ^. #_id,
-      _description = "",
-      _name = "",
-      _image = Nothing,
+      _parent_item_id = Nothing,
+      _descriptor = mkDescriptor prodInst,
       _price = mkPrice prodInst,
-      _primary = False,
-      _selected = False,
-      _quantity = 1,
-      _policy = Nothing,
-      _category_id = "",
-      _tags = []
+      _promotional = False,
+      _category_id = Nothing,
+      _model_id = Nothing,
+      _brand_id = Nothing,
+      _tags = [],
+      _ttl = Nothing
     }
 
 mkPrice :: ProductInstance -> Price
@@ -64,50 +87,45 @@ mkPrice prodInst =
       _computed_value = prodInst ^. #_price,
       _listed_value = prodInst ^. #_price,
       _offered_value = prodInst ^. #_price,
-      _unit = "Rs", -- TODO : Fetch this from product
-      _discount = 0.0,
-      _tax = Nothing
+      _range = Nothing,
+      _breakup = []
     }
 
-mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Trip -> Maybe Organization -> Flow Service
-mkServiceOffer c pis allPis trip orgInfo =
-  let x =
-        Service
-          { _id = _getCaseId $ c ^. #_id,
-            _catalog = Just $ mkCatalog pis,
-            _matched_items = _getProductInstanceId . ProductInstance._id <$> pis,
-            _selected_items =
-              catMaybes $
-                ( \x ->
-                    if x ^. #_status == ProductInstance.CONFIRMED
-                      then Just (_getProductInstanceId $ x ^. #_id)
-                      else Nothing
-                )
-                  <$> allPis,
-            _fare_product = Nothing,
-            _offers = [],
-            _provider = mkProvider <$> orgInfo,
-            _trip = trip,
-            _policies = [],
-            _billing_address = Nothing
-          }
-   in return x
+mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Organization -> Flow Mobility.Service
+mkServiceOffer c pis allPis orgInfo = do
+  catalog <- mkCatalog pis
+  return
+    Mobility.Service
+      { _id = _getCaseId $ c ^. #_id,
+        _catalog = Just catalog,
+        _provider = mkProvider <$> orgInfo,
+        _policies = []
+      }
+
+mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
+mkOrder c pi trip = do
+  now <- getCurrentTimeUTC
+  return
+    Mobility.Order
+      { _id = _getProductInstanceId $ pi ^. #_id,
+        _state = Nothing,
+        _billing = Nothing,
+        _fulfillment = Nothing,
+        _created_at = now,
+        _updated_at = now,
+        _trip = trip,
+        _invoice = Nothing
+      }
 
 baseTrackingUrl :: Text
 baseTrackingUrl = "http://api.sandbox.beckn.juspay.in/transport/v1/location"
 
-mkTracking :: Text -> Text -> Text -> Tracking
-mkTracking method dataUrl embedUrl =
-  Tracking
-    { method = method,
-      pull = if method == "PULL" then Just $ mkPullTrackingData dataUrl embedUrl else Nothing
-    }
-
-mkPullTrackingData :: Text -> Text -> PullTrackingData
-mkPullTrackingData dataUrl embed =
-  PullTrackingData
-    { data_url = dataUrl,
-      embed_url = embed
+mkTracking :: Text -> Text -> CoreTracking.Tracking
+mkTracking method dataUrl =
+  CoreTracking.Tracking
+    { _url = if method == "PULL" then Just dataUrl else Nothing,
+      _required_params = Nothing,
+      _metadata = Nothing
     }
 
 mkDriverObj :: Person.Person -> Driver
