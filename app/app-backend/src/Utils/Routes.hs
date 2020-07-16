@@ -17,13 +17,14 @@ buildContext action tId = do
   now <- getCurrentTimeUTC
   return $
     Context
-      { domain = "MOBILITY",
-        action = action,
-        version = Nothing,
-        transaction_id = tId,
-        message_id = Nothing,
-        timestamp = now,
-        dummy = "DUMMY"
+      { _domain = "MOBILITY",
+        _action = action,
+        _version = Nothing,
+        _transaction_id = tId,
+        _session_id = Nothing,
+        _token = Nothing,
+        _timestamp = now,
+        _status = Nothing
       }
 
 defaultProvider lt =

@@ -4,12 +4,12 @@ module App where
 
 import qualified App.Server as App
 import App.Types
+import Beckn.Constants.APIErrorCode (internalServerErr)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (prepareAppOptions, runFlowR)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
-import Epass.Constants.APIErrorCode
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -42,7 +42,7 @@ runAppBackend' port settings = do
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,
-            T._logFilePath = "/tmp/epass-backend.log",
+            T._logFilePath = "/tmp/app-backend.log",
             T._isAsync = True
           }
   reqHeadersKey <- V.newKey

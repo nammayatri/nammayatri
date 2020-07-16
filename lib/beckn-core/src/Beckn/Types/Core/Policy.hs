@@ -2,15 +2,15 @@ module Beckn.Types.Core.Policy where
 
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
 data Policy = Policy
   { _id :: Text,
-    _type :: Text, -- "CONFIRMATION_POLICY", "PAYMENT_POLICY", "CANCELLATION_POLICY", "REFUND_POLICY"
-    _parent_policy_id :: Text,
-    _heading :: Text,
+    _descriptor :: Descriptor,
+    _parent_policy_id :: Maybe Text,
     _terms :: [PolicyTerm]
   }
   deriving (Generic, Show)
@@ -25,16 +25,15 @@ instance Example Policy where
   example =
     Policy
       { _id = idExample,
-        _type = "PAYMENT_POLICY",
-        _parent_policy_id = idExample,
-        _heading = "",
+        _descriptor = example,
+        _parent_policy_id = Just idExample,
         _terms = example
       }
 
 data PolicyTerm = PolicyTerm
   { _id :: Text,
-    _name :: Text,
-    _description :: Text
+    _parent_term_id :: Maybe Text,
+    _descriptor :: Descriptor
   }
   deriving (Generic, Show)
 
@@ -48,6 +47,6 @@ instance Example PolicyTerm where
   example =
     PolicyTerm
       { _id = idExample,
-        _name = "",
-        _description = ""
+        _parent_term_id = Just idExample,
+        _descriptor = example
       }

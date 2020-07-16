@@ -100,19 +100,21 @@ mkAckResponse' txnId action message = do
     AckResponse
       { _context =
           Context
-            { domain = "MOBILITY",
-              action = action,
-              version = Nothing,
-              transaction_id = txnId,
-              message_id = Nothing,
-              timestamp = currTime,
-              dummy = ""
+            { _domain = "MOBILITY",
+              _action = action,
+              _version = Nothing,
+              _transaction_id = txnId,
+              _timestamp = currTime,
+              _session_id = Nothing,
+              _status = Nothing,
+              _token = Nothing
             },
         _message =
           Ack
             { _action = action,
               _message = message
-            }
+            },
+        _error = Nothing
       }
 
 withFlowHandler :: FlowR r a -> FlowHandlerR r a
@@ -227,9 +229,6 @@ throwDomainError err =
       ProductNotUpdated -> t err405 "Product not updated"
       ProductNotCreated -> t err405 "Product not created"
     AuthErr UnAuthorized -> t err401 "Unauthorized"
-    BlacklistErr suberr -> case suberr of
-      BlacklistNotFound -> t err404 "Blacklist not found"
-      BlacklistNotCreated -> t err400 "Could not create Blacklist"
     _ -> t err500 "Unknown error"
   where
     t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg

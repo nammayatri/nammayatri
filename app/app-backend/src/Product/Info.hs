@@ -33,15 +33,15 @@ getProductInfo person prodInstId = withFlowHandler $ do
   productInstance <- QPI.findById (ProductInstanceId prodInstId)
   case' <- QCase.findIdByPerson person (SPI._caseId productInstance)
   case decodeFromText =<< SPI._info productInstance of
-    Just (info :: ProductInfo) ->
+    Just info ->
       case ProductInfo._tracker info of
         Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
         Just tracker -> do
-          let trip = Tracker.trip tracker
+          let trip = ProductInfo._trip tracker
           return $
             GetProductInfoRes
               { vehicle = Trip.vehicle trip,
-                driver = Trip.driver trip,
+                driver = Just $ Trip.driver trip,
                 travellers = Trip.travellers trip,
                 fare = Trip.fare trip,
                 caseId = _getCaseId (SPI._caseId productInstance),
@@ -59,12 +59,12 @@ getLocation person caseId = withFlowHandler $ do
   -- TODO: what if there are multiple CONFIRMED products possible?
   case decodeFromText =<< SPI._info (head productInstances) of
     Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
-    Just (info :: ProductInfo) -> do
+    Just info -> do
       let mtracker = ProductInfo._tracker info
       case mtracker of
         Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
         Just tracker -> do
-          resp <- External.location baseUrl (Trip.id $ Tracker.trip tracker)
+          resp <- External.location baseUrl (Trip.id $ ProductInfo._trip tracker)
           case resp of
             Left err -> L.throwException $ err500 {errBody = encode err}
             Right r -> return r

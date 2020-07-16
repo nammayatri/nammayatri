@@ -65,32 +65,9 @@ onStatus req = do
   return $ first show res
 
 getBaseUrl :: Flow BaseUrl
-getBaseUrl = do
-  envUrl <- L.runIO loadGatewayUrl
-  case envUrl of
-    Nothing -> do
-      L.logInfo "Gateway Url" "Using defaults"
-      return $
-        BaseUrl
-          { baseUrlScheme = Http,
-            baseUrlHost = "localhost",
-            baseUrlPort = 8013,
-            baseUrlPath = "/v1"
-          }
-    Just url -> return url
-
-loadGatewayUrl :: IO (Maybe BaseUrl)
-loadGatewayUrl = do
-  mhost <- lookupEnv "BECKN_GATEWAY_BASE_URL"
-  mport <- lookupEnv "BECKN_GATEWAY_PORT"
-  pure $ do
-    host <- mhost
-    port <- mport
-    p <- readMaybe port
-    Just $
-      BaseUrl
-        { baseUrlScheme = Http, -- TODO: make Https when required
-          baseUrlHost = host,
-          baseUrlPort = p,
-          baseUrlPath = "/v1"
-        }
+getBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "GATEWAY_HOST"
+  port <- fromMaybe 8013 . (>>= readMaybe) <$> lookupEnv "GATEWAY_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "GATEWAY_PATH"
+  return $
+    BaseUrl Http host port path

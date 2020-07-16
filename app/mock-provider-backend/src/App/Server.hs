@@ -3,13 +3,15 @@ module App.Server
   )
 where
 
-import App.Handlers (mockProviderBackendServer)
+import App.Handlers (mockProviderBackendServer, providerAPI)
 import App.Types
 import qualified Beckn.Utils.Servant.Server as BU
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
-import "beckn-gateway" External.Provider.Routes
 import Servant
+import Utils.Auth
 
 run :: V.Key (HashMap Text Text) -> Env -> Application
-run key = BU.run providerAPI (mockProviderBackendServer key)
+run key = BU.run providerAPI (mockProviderBackendServer key) context
+  where
+    context = verifyApiKey :. EmptyContext

@@ -9,8 +9,6 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Servant
 
-type ContextEntries r = '[EnvR r]
-
 class HasEnvEntry r (context :: [Type]) | context -> r where
   getEnvEntry :: Context context -> EnvR r
 
@@ -20,19 +18,17 @@ instance {-# OVERLAPPABLE #-} HasEnvEntry r xs => HasEnvEntry r (notIt ': xs) wh
 instance {-# OVERLAPPING #-} HasEnvEntry r (EnvR r ': xs) where
   getEnvEntry (x :. _) = x
 
-mkContext :: EnvR r -> Context (ContextEntries r)
-mkContext env = env :. EmptyContext
-
 run ::
-  forall a r.
-  HasServer a (ContextEntries r) =>
+  forall a r ctx.
+  HasServer a (EnvR r ': ctx) =>
   Proxy (a :: Type) ->
   FlowServerR r a ->
+  Context ctx ->
   EnvR r ->
   Application
-run apis server env =
-  serveWithContext apis (mkContext env) $
-    hoistServerWithContext apis (Proxy @(ContextEntries r)) f server
+run apis server ctx env =
+  serveWithContext apis (env :. ctx) $
+    hoistServerWithContext apis (Proxy @(EnvR r ': ctx)) f server
   where
     f :: ReaderT (EnvR r) (ExceptT ServerError IO) m -> Handler m
     f r = do

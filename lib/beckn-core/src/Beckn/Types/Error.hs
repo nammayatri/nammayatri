@@ -15,13 +15,11 @@ newtype ErrorMsg = ErrorMsg Text
 
 data DomainError
   = AuthErr AuthError
-  | EpassErr EpassError
   | QuotaErr QuotaError
   | CommentErr CommentError
   | CustomerErr CustomerError
   | DocumentErr DocumentError
   | HealthCheckErr HealthCheckError
-  | BlacklistErr BlacklistError
   | PersonErr PersonError
   | RouteErr RouteError
   | ProductInfoErr ProductInfoError
@@ -39,14 +37,6 @@ data DomainError
 
 data AuthError
   = UnAuthorized
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-data EpassError
-  = EpassNotFound
-  | StatusUpdateCannotBeEmpty
-  | IncorrectPassIdType
-  | CannotCreatePass
-  | CannotUpdatePass
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data QuotaError
@@ -92,11 +82,6 @@ data DocumentError
 
 data HealthCheckError
   = HealthCheckNotFound
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-data BlacklistError
-  = BlacklistNotFound
-  | BlacklistNotCreated
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 data TagError

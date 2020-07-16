@@ -37,6 +37,7 @@ default-extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -59,6 +60,7 @@ dependencies:
   - http-client
   - http-types
   - lens
+  - mtl
   - servant
   - servant-client
   - servant-server

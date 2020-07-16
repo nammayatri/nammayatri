@@ -39,6 +39,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
+import Utils.Auth (VerifyAPIKey)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -47,7 +48,7 @@ type TransportAPI =
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
-           :<|> SearchAPI
+           :<|> SearchAPI VerifyAPIKey
            :<|> ConfirmAPI
            :<|> CancelAPI
            :<|> StatusAPI
@@ -286,12 +287,11 @@ transporterServer key =
     :<|> productFlow
     :<|> routeApiFlow
 
-searchApiFlow :: FlowServer SearchAPI
+searchApiFlow :: FlowServer (SearchAPI VerifyAPIKey)
 searchApiFlow = BP.search
 
 type ConfirmAPI =
   "confirm"
-    :> "services"
     :> ( ReqBody '[JSON] ConfirmReq
            :> Post '[JSON] AckResponse
        )
@@ -301,7 +301,6 @@ confirmApiFlow = BP.confirm
 
 type CancelAPI =
   "cancel"
-    :> "services"
     :> ( ReqBody '[JSON] CancelReq
            :> Post '[JSON] AckResponse
        )
@@ -332,7 +331,6 @@ statusApiFlow = BP.serviceStatus
 
 type TrackAPI =
   "track"
-    :> "trip"
     :> ( ReqBody '[JSON] TrackTripReq
            :> Post '[JSON] TrackTripRes
        )

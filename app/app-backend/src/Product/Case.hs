@@ -23,9 +23,7 @@ status ::
   FlowHandler StatusRes
 status person caseId = withFlowHandler $ do
   case_ <- Case.findIdByPerson person caseId
-  piList <- ProductInstance.findAllByCaseId (Case._id case_)
-  products <- Products.findAllByIds (ProductInstance._productId <$> piList)
-  let prodInstRes = mkProdRes products <$> piList
+  prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM500 "Could not find from location"
       =<< Location.findLocationById (LocationId $ case_ ^. #_fromLocationId)
@@ -47,9 +45,7 @@ list person caseType statuses mlimit moffset =
       >>= traverse mapProductInstance
   where
     mapProductInstance case_@Case.Case {..} = do
-      piList <- ProductInstance.findAllByCaseId (Case._id case_)
-      products <- Products.findAllByIds (ProductInstance._productId <$> piList)
-      let prodInstRes = mkProdRes products <$> piList
+      prodInstRes <- getProdInstances case_
       fromLocation <- Location.findLocationById $ LocationId _fromLocationId
       toLocation <- Location.findLocationById $ LocationId _toLocationId
       return $ API.CaseRes case_ prodInstRes fromLocation toLocation
@@ -85,3 +81,9 @@ mkProdRes prodList prodInst =
       _updatedAt = prodInst ^. #_updatedAt,
       _product = find (\x -> x ^. #_id == prodInst ^. #_productId) prodList
     }
+
+getProdInstances :: Case.Case -> Flow [ProdInstRes]
+getProdInstances case_@Case.Case {..} = do
+  piList <- ProductInstance.findAllByCaseId (Case._id case_)
+  products <- Products.findAllByIds (ProductInstance._productId <$> piList)
+  return $ mkProdRes products <$> piList
