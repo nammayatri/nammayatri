@@ -14,7 +14,7 @@ data GetProductInfoRes = GetProductInfoRes
   { vehicle :: Maybe Vehicle,
     caseId :: Text,
     product :: ProductInstance,
-    driver :: TripDriver,
+    driver :: Maybe TripDriver,
     fare :: Maybe Price,
     travellers :: [Traveller]
   }

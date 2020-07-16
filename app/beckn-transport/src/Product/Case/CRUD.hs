@@ -154,17 +154,18 @@ mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
-          { domain = "MOBILITY",
-            action = "SEARCH",
-            version = Just "0.1",
-            transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            message_id = Nothing,
-            timestamp = currTime,
-            dummy = ""
+          { _domain = "MOBILITY",
+            _action = "SEARCH",
+            _version = Just "0.1",
+            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _session_id = Nothing,
+            _token = Nothing,
+            _timestamp = currTime,
+            _status = Nothing
           }
-  service <- GT.mkServiceOffer c pis allPis Nothing (Just orgInfo)
+  service <- GT.mkServiceOffer c pis allPis (Just orgInfo)
   return
     OnSearchReq
       { context,
-        message = service
+        message = OnSearchServices [service]
       }

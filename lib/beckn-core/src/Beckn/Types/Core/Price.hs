@@ -1,6 +1,8 @@
 module Beckn.Types.Core.Price where
 
 import Beckn.Types.Core.Amount
+import Beckn.Types.Core.ScalarRange
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -10,9 +12,8 @@ data Price = Price
     _computed_value :: Amount,
     _listed_value :: Amount,
     _offered_value :: Amount,
-    _unit :: Text,
-    _discount :: Amount,
-    _tax :: Maybe Tax
+    _range :: Maybe ScalarRange,
+    _breakup :: [Breakup]
   }
   deriving (Generic, Show)
 
@@ -22,26 +23,33 @@ instance FromJSON Price where
 instance ToJSON Price where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data Tax = Tax
-  { _computed :: Amount,
-    _breakup :: [TaxBreakup]
-  }
-  deriving (Generic, Show)
+instance Example Price where
+  example =
+    Price
+      { _currency = "INR",
+        _estimated_value = example,
+        _computed_value = example,
+        _listed_value = example,
+        _offered_value = example,
+        _range = example,
+        _breakup = example
+      }
 
-instance FromJSON Tax where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Tax where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
-data TaxBreakup = TaxBreakup
-  { _line_item :: Text,
+data Breakup = Breakup
+  { _title :: Text,
     _amount :: Amount
   }
   deriving (Generic, Show)
 
-instance FromJSON TaxBreakup where
+instance FromJSON Breakup where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON TaxBreakup where
+instance ToJSON Breakup where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Breakup where
+  example =
+    Breakup
+      { _title = "line item 1",
+        _amount = example
+      }

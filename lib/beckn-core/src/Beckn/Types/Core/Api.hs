@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Api where
 
+import Beckn.Utils.Common
 import Data.Text
 import Data.Time.LocalTime
 import EulerHS.Prelude
@@ -15,3 +16,10 @@ instance FromJSON Api where
 
 instance ToJSON Api where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Api where
+  example =
+    Api
+      { _url = "https://app.swaggerhub.com/apis/beckn/",
+        _exp = example
+      }
