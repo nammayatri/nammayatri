@@ -253,7 +253,7 @@ newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, ToSchema)
 
-data LinkReq = LinkReq
+newtype LinkReq = LinkReq
   { _vehicleId :: Text
   }
   deriving (Show, Generic, ToSchema)

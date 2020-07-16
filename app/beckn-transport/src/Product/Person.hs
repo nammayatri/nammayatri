@@ -29,9 +29,9 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   return $ UpdatePersonRes updatedPerson
   where
     verifyPerson personId entityId =
-      when (personId /= entityId)
-        $ L.throwException
-        $ err400 {errBody = "PERSON_ID_MISMATCH"}
+      when (personId /= entityId) $
+        L.throwException $
+          err400 {errBody = "PERSON_ID_MISMATCH"}
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
@@ -45,16 +45,16 @@ createPerson orgId req = withFlowHandler $ do
       when (req ^. #_role == Just SP.DRIVER) $
         case (req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
-            whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber)
-              $ L.throwException
-              $ err400 {errBody = "DRIVER_ALREADY_CREATED"}
+            whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
+              L.throwException $
+                err400 {errBody = "DRIVER_ALREADY_CREATED"}
           _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
 
 listPerson :: Text -> [SP.Role] -> Maybe EntityType -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles entityType limitM offsetM = withFlowHandler $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
   respList <- traverse (mkPersonRes entityType) personList
-  return $ ListPersonRes $ respList
+  return $ ListPersonRes respList
 
 getPerson ::
   SR.RegistrationToken ->
@@ -95,8 +95,8 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ L.throwException
-        $ err401 {errBody = "Unauthorized"}
+        $ L.throwException $
+          err401 {errBody = "Unauthorized"}
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do

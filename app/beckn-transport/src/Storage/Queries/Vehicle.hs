@@ -121,4 +121,4 @@ findByIds :: [VehicleId] -> Flow [Storage.Vehicle]
 findByIds ids =
   DB.findAllOrErr dbTable predicate
   where
-    predicate Storage.Vehicle {..} = (B.in_ _id (B.val_ <$> ids))
+    predicate Storage.Vehicle {..} = B.in_ _id (B.val_ <$> ids)
