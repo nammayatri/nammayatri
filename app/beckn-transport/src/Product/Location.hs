@@ -89,7 +89,7 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
   let lat' = fromJust lat
       long' = fromJust long
       waypointList = appendToWaypointList (now, Waypoint long' lat') $ currLocInfo ^. #traversed_waypoints
-      durationInS' = (getDurationInSeconds <$> routeM) <|> (currLocInfo ^. #durationInS)
+      durationInS' = (MapSearch.durationInS <$> routeM) <|> (currLocInfo ^. #durationInS)
       distanceInM' = (MapSearch.distanceInM <$> routeM) <|> (currLocInfo ^. #distanceInM)
       destLat = currLocInfo ^. #destLat
       destLon = currLocInfo ^. #destLon
@@ -118,7 +118,6 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
         edges = edges'
       }
   where
-    getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
     updateDuration toLatM toLongM durationM routeEdges waypointList =
       case (durationM, toLatM, toLongM) of
         (Just durationInS, Just destLat, Just destLon) -> Just $ calculateETA waypointList (Waypoint destLon destLat) routeEdges durationInS
@@ -180,15 +179,13 @@ createLocationInfo UpdateLocationReq {..} destinationM routeM = do
         country,
         pincode,
         address,
-        durationInS = getDurationInSeconds <$> routeM,
+        durationInS = MapSearch.durationInS <$> routeM,
         distanceInM = MapSearch.distanceInM <$> routeM,
         bbox = MapSearch.boundingBox =<< routeM,
         waypoints,
         snapped_waypoints = MapSearch.snapped_waypoints =<< routeM,
         edges = concat $ maybeToList (calculateEdges <$> waypoints)
       }
-  where
-    getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
 
 getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
@@ -260,7 +257,7 @@ isWithin ::
   Bool
 isWithin edges point =
   let intersections = doesIntersect point <$> edges
-   in odd $ length $ filter (==) True intersections
+   in odd $ length $ filter (True ==) intersections
 
 doesIntersect ::
   (Double, Double) ->
