@@ -79,6 +79,8 @@ ghc-options:
   - -Wall
   - -Wcompat
   - -Widentities
+  - -fhide-source-paths
+  - -Werror=unused-imports
 
 library:
   source-dirs: src
