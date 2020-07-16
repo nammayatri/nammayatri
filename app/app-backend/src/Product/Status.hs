@@ -41,12 +41,16 @@ status person StatusReq {..} = withFlowHandler $ do
 
 onStatus :: API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus req = withFlowHandler $ do
+  L.logInfo "------------------------------------------------------" "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
   let context = req ^. #context
       txnId = context ^. #_transaction_id
       prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
       state = req ^. #message . #order . #_state
       status = read (T.unpack state) :: PI.ProductInstanceStatus
+  L.logInfo "######## app backend #########" (show prodInstId)
+  L.logInfo "@@@@@@ app backend @@@@@@@@@@" (show state)
   productInstance <- QPI.findById prodInstId
   orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
   QPI.updateStatus (orderPi ^. #_id) status
+  L.logInfo "$$$$$$ app backend $$$$$$$$$" (show orderPi)
   mkAckResponse txnId "status"

@@ -56,6 +56,7 @@ type AppAPI =
            :<|> CancelAPI
            :<|> CronAPI
            :<|> RouteAPI
+           :<|> StatusAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -74,6 +75,7 @@ appServer key =
     :<|> cancelFlow
     :<|> cronFlow
     :<|> routeApiFlow
+    :<|> statusFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -180,6 +182,7 @@ type ProductInstanceAPI =
   "productInstance"
     :> ( TokenAuth
            :> QueryParams "status" ProductInstanceStatus
+           :> QueryParams "type" Case.CaseType
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> Get '[JSON] ProductInstance.ProductInstanceList

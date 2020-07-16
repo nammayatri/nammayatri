@@ -73,7 +73,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateStatus user piId req
   updateInfo piId
   notifyTripDetailsToGateway piId
-  --  notifyStatusUpdateReq searchPi (req ^. #_status)
+  notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
@@ -259,5 +259,6 @@ notifyStatusUpdateReq searchPi status =
         Notify.notifyCancelReqByBP searchPi admins
       _ -> do
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
+        L.logInfo "@@@@@@@@@@@@@@@@@@@@@" (show trackerPi)
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi
     Nothing -> return ()

@@ -133,17 +133,14 @@ updateAllProductInstByCaseId caseId status = do
         ]
     predicate caseId Storage.ProductInstance {..} = _caseId ==. B.val_ caseId
 
-listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
-listAllProductInstanceWithOffset limit offset id stats =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
+listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [Storage.ProductInstanceStatus] -> [Case.CaseType] -> Flow [Storage.ProductInstance]
+listAllProductInstanceWithOffset limit offset id stats csTypes =
+  DB.findAllWithLimitOffsetWhere dbTable (predicate id stats csTypes) limit offset orderBy
     >>= either DB.throwDBError pure
   where
-    predicate (ByApplicationId i) [] Storage.ProductInstance {..} = _caseId ==. B.val_ i
-    predicate (ByApplicationId i) s Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
-    predicate (ByCustomerId i) [] Storage.ProductInstance {..} = _personId ==. B.val_ (Just i)
-    predicate (ByCustomerId i) s Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s)
-    predicate (ById i) [] Storage.ProductInstance {..} = _productId ==. B.val_ i
-    predicate (ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
+    predicate (ByApplicationId i) s csTypes Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s) &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+    predicate (ByCustomerId i) s csTypes Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s) &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+    predicate (ById i) s csTypes Storage.ProductInstance {..} = _productId ==. B.val_ i &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s) &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
     orderBy Storage.ProductInstance {..} = B.desc_ _updatedAt
 
 listAllProductInstance :: ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
@@ -200,3 +197,7 @@ findByParentIdType mparentId csType =
     predicate Storage.ProductInstance {..} =
       B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
         &&. _type ==. B.val_ csType
+
+complementVal l
+  | null l = B.val_ True
+  | otherwise = B.val_ False
