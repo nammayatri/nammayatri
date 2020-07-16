@@ -175,9 +175,9 @@ confirm req = withFlowHandler $ do
   search_case <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
   currTime <- getCurrentTimeUTC
-  orderCase <- mkOrderCase search_case currTime
+  orderCase <- mkOrderCase search_case
   Case.create orderCase
-  orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance currTime
+  orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
   ProductInstance.updateStatusByIds [productInstance ^. #_id, orderProductInstance ^. #_id] ProductInstance.CONFIRMED
