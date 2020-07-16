@@ -12,6 +12,7 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location as BL
+import Beckn.Types.Core.Order
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tracking as Tracking
 import Beckn.Types.Mobility.Driver
@@ -347,24 +348,24 @@ mkOnConfirmPayload c pis allPis trackerCase = do
 serviceStatus :: StatusReq -> FlowHandler StatusRes
 serviceStatus req = withFlowHandler $ do
   L.logInfo "serviceStatus API Flow" $ show req
-  let caseId = req ^. #message . #id
-  c <- Case.findById (CaseId caseId)
-  pis <- ProductInstance.findAllByCaseId (c ^. #_id)
+  let caseSid = req ^. #message . #service . #id
+  c <- Case.findBySid caseSid
+  let piId = req ^. #message . #order . #id -- transporter search product instance id
+  trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  trackerCase <- Case.findByParentCaseIdAndType (CaseId caseId) SC.LOCATIONTRACKER
-  notifyServiceStatusToGateway c pis pis trackerCase
+  notifyServiceStatusToGateway c piId trackerPi
   uuid <- L.generateGUID
-  mkAckResponse uuid "track"
+  mkAckResponse uuid "status"
 
-notifyServiceStatusToGateway :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> Flow ()
-notifyServiceStatusToGateway c pis allpis trackerCase = do
-  onServiceStatusPayload <- mkOnServiceStatusPayload c pis allpis trackerCase
+notifyServiceStatusToGateway :: Case -> Text -> ProductInstance -> Flow ()
+notifyServiceStatusToGateway c piId trackerPi = do
+  onServiceStatusPayload <- mkOnServiceStatusPayload c piId trackerPi
   L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   Gateway.onStatus onServiceStatusPayload
   return ()
 
-mkOnServiceStatusPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> Flow OnStatusReq
-mkOnServiceStatusPayload c pis allPis trackerCase = do
+mkOnServiceStatusPayload :: Case -> Text -> ProductInstance -> Flow OnStatusReq
+mkOnServiceStatusPayload c piId trackerPi = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -377,13 +378,21 @@ mkOnServiceStatusPayload c pis allPis trackerCase = do
             _token = Nothing,
             _status = Nothing
           }
-  trip <- mapM mkTrip trackerCase
-  service <- GT.mkServiceOffer c pis allPis Nothing
-  return
-    OnStatusReq
-      { context,
-        message = service
-      }
+  order <- mkOrderRes piId (show $ trackerPi ^. #_status)
+  let onStatusMessage = OnStatusReqMessage order
+  return $ OnStatusReq context onStatusMessage
+  where
+    mkOrderRes prodInstId status = do
+      now <- getCurrentTimeUTC
+      return $
+        Order
+          { _id = prodInstId,
+            _state = T.pack status,
+            _billing = Nothing,
+            _fulfillment = Nothing,
+            _created_at = now,
+            _updated_at = now
+          }
 
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
 trackTrip req = withFlowHandler $ do

@@ -192,3 +192,11 @@ updateMultiple id prdInst@Storage.ProductInstance {..} = do
           _toLocation <-. B.val_ (Storage._toLocation prdInst),
           _info <-. B.val_ (Storage._info prdInst)
         ]
+
+findByParentIdType :: Maybe ProductInstanceId -> Case.CaseType -> Flow Storage.ProductInstance
+findByParentIdType mparentId csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
+        &&. _type ==. B.val_ csType

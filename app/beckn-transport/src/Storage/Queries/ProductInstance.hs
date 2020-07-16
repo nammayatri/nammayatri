@@ -297,3 +297,11 @@ findByIdType ids csType =
     predicate Storage.ProductInstance {..} =
       _id `B.in_` (B.val_ <$> ids)
         &&. _type ==. B.val_ csType
+
+findByParentIdType :: Maybe ProductInstanceId -> Case.CaseType -> Flow Storage.ProductInstance
+findByParentIdType mparentId csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
+        &&. _type ==. B.val_ csType

@@ -50,7 +50,6 @@ onCancel req =
 
 type StatusAPI =
   "on_status"
-    :> "services"
     :> ReqBody '[JSON] Status.OnStatusReq
     :> Post '[JSON] Status.OnStatusRes
 
