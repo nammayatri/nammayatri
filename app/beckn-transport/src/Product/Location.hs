@@ -5,7 +5,7 @@ module Product.Location where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
-import Beckn.Types.MapSearch (BoundingBoxWithoutCRS, GeospatialGeometry, PointXY (..))
+import Beckn.Types.MapSearch (BoundingBoxWithoutCRS, GeoLine (..), GeospatialGeometry (..), PointXY (..), fromLineString, retrieveXY)
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -23,13 +23,19 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis
 import Types.API.Location as Location
 
+data Waypoint = Waypoint {_lon :: Double, _lat :: Double} deriving (Show, Generic, ToJSON, FromJSON)
+
+type Edge = (Waypoint, Waypoint)
+
+type EdgeLength = Float
+
 data CachedLocationInfo = CachedLocationInfo
   { locationType :: Maybe Location.LocationType,
     lat :: Maybe Double,
     long :: Maybe Double,
-    traversed_waypoints :: [(LocalTime, (Double, Double))],
+    traversed_waypoints :: [(LocalTime, Waypoint)],
     destLat :: Maybe Double,
-    destLong :: Maybe Double,
+    destLon :: Maybe Double,
     ward :: Maybe Text,
     district :: Maybe Text,
     city :: Maybe Text,
@@ -41,7 +47,8 @@ data CachedLocationInfo = CachedLocationInfo
     distanceInM :: Maybe Float,
     bbox :: Maybe BoundingBoxWithoutCRS,
     waypoints :: Maybe GeospatialGeometry,
-    snapped_waypoints :: Maybe GeospatialGeometry
+    snapped_waypoints :: Maybe GeospatialGeometry,
+    edges :: [(EdgeLength, Edge)]
   }
   deriving (Generic, ToJSON, Show, FromJSON)
 
@@ -53,7 +60,7 @@ updateLocation _ caseId req = withFlowHandler $ do
   cacheM <- Redis.getKeyRedis caseId
   case cacheM of
     Nothing -> do
-      let locInfo = createLocationInfo req
+      -- TODO: run this in a thread
       case_ <- Case.findById $ CaseId caseId
       fromLocation <- Location.findLocationById (LocationId $ case_ ^. #_fromLocationId)
       loc <-
@@ -61,7 +68,7 @@ updateLocation _ caseId req = withFlowHandler $ do
           (Just custLat, Just custLong) -> do
             -- Get route and eta
             route <- getRoute' driverLat driverLon custLat custLong
-            createLocationInfo req (Just (custLat, custLong)) route
+            createLocationInfo req (Just $ Waypoint custLong custLat) route
           _ -> do
             L.logInfo "GetRoute" "Lat,Long for fromLocation not found"
             createLocationInfo req Nothing Nothing
@@ -81,12 +88,13 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
   -- lat long will be present
   let lat' = fromJust lat
       long' = fromJust long
-      waypointList = appendToWaypointList (now, (lat', long')) $ currLocInfo ^. #traversed_waypoints
+      waypointList = appendToWaypointList (now, Waypoint long' lat') $ currLocInfo ^. #traversed_waypoints
       durationInS' = (getDurationInSeconds <$> routeM) <|> (currLocInfo ^. #durationInS)
       distanceInM' = (MapSearch.distanceInM <$> routeM) <|> (currLocInfo ^. #distanceInM)
       destLat = currLocInfo ^. #destLat
-      destLong = currLocInfo ^. #destLong
-      updatedDuration = updateDuration destLat destLong durationInS' waypointList
+      destLon = currLocInfo ^. #destLon
+      edges' = currLocInfo ^. #edges
+      updatedDuration = updateDuration destLat destLon durationInS' edges' waypointList
   return $
     CachedLocationInfo
       { locationType = locationType <|> (currLocInfo ^. #locationType),
@@ -94,7 +102,7 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
         long = Just long',
         traversed_waypoints = waypointList,
         destLat,
-        destLong,
+        destLon,
         ward = ward <|> (currLocInfo ^. #ward),
         district = district <|> (currLocInfo ^. #district),
         city = city <|> (currLocInfo ^. #city),
@@ -106,16 +114,17 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
         distanceInM = distanceInM',
         bbox = (MapSearch.boundingBox =<< routeM) <|> (currLocInfo ^. #bbox),
         waypoints = (MapSearch.points =<< routeM) <|> (currLocInfo ^. #waypoints),
-        snapped_waypoints = (MapSearch.snapped_waypoints =<< routeM) <|> (currLocInfo ^. #snapped_waypoints)
+        snapped_waypoints = (MapSearch.snapped_waypoints =<< routeM) <|> (currLocInfo ^. #snapped_waypoints),
+        edges = edges'
       }
   where
     getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
-    updateDuration toLatM toLongM durationM waypointList =
+    updateDuration toLatM toLongM durationM routeEdges waypointList =
       case (durationM, toLatM, toLongM) of
-        (Just durationInS, Just destLat, Just destLong) -> Just $ calculateRemainingDuration waypointList (destLat, destLong) durationInS
+        (Just durationInS, Just destLat, Just destLon) -> Just $ calculateETA waypointList (Waypoint destLon destLat) routeEdges durationInS
         _ -> durationM
 
-appendToWaypointList :: (LocalTime, (Double, Double)) -> [(LocalTime, (Double, Double))] -> [(LocalTime, (Double, Double))]
+appendToWaypointList :: (LocalTime, Waypoint) -> [(LocalTime, Waypoint)] -> [(LocalTime, Waypoint)]
 appendToWaypointList newLoc list = do
   -- number of waypoints using which average speed is calculated
   let totalWaypointsToTrack = 3 -- minimum 2 required
@@ -127,8 +136,8 @@ appendToWaypointList newLoc list = do
           list' = drop dropLen list
        in list' <> [newLoc]
 
-calculateRemainingDuration :: [(LocalTime, (Double, Double))] -> (Double, Double) -> Integer -> Integer
-calculateRemainingDuration traversedWaypoints (destLat, destLong) initalDuration
+calculateETA :: [(LocalTime, Waypoint)] -> Waypoint -> [(EdgeLength, Edge)] -> Integer -> Integer
+calculateETA traversedWaypoints (Waypoint destLon destLat) routeEdges initalDuration
   -- initialDuration is in seconds
   | length traversedWaypoints < 2 = initalDuration
   | otherwise =
@@ -136,29 +145,34 @@ calculateRemainingDuration traversedWaypoints (destLat, destLong) initalDuration
         speeds = calcSpeed <$> edges
         avgSpeed = sum speeds / fromIntegral (length speeds)
         latestWaypoint = last traversedWaypoints
-        (lat, long) = snd latestWaypoint
-        distanceToDestination = MapSearch.distanceBetweenInMeters (PointXY lat long) (PointXY destLat destLong)
-     in if avgSpeed == 0 then 0 else round $ distanceToDestination / avgSpeed
+        (Waypoint long lat) = snd latestWaypoint
+        dist =
+          fromMaybe
+            -- Fallback to using straight line distance if there are no edge intersection
+            (MapSearch.distanceBetweenInMeters (PointXY long lat) (PointXY destLon destLat))
+            (distanceToDestination (Waypoint long lat) routeEdges)
+     in if avgSpeed == 0 then 0 else round $ dist / avgSpeed
   where
-    calcSpeed ((t1, (lat1, lon1)), (t2, (lat2, lon2))) =
+    calcSpeed ((t1, Waypoint lon1 lat1), (t2, Waypoint lon2 lat2)) =
       let durationInS = abs $ round $ nominalDiffTimeToSeconds $ diffLocalTime t2 t1
-          distanceInM = MapSearch.distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2)
+          distanceInM = MapSearch.distanceBetweenInMeters (PointXY lon1 lat1) (PointXY lon2 lat2)
        in MapSearch.speedInMPS distanceInM durationInS
 
-createLocationInfo :: UpdateLocationReq -> Maybe (Double, Double) -> Maybe MapSearch.Route -> Flow CachedLocationInfo
+createLocationInfo :: UpdateLocationReq -> Maybe Waypoint -> Maybe MapSearch.Route -> Flow CachedLocationInfo
 createLocationInfo UpdateLocationReq {..} destinationM routeM = do
   now <- getCurrentTimeUTC
   -- lat long will be present
   let lat' = fromJust lat
       long' = fromJust long
+      waypoints = MapSearch.points =<< routeM
   return $
     CachedLocationInfo
       { locationType,
         lat = Just lat',
         long = Just long',
-        traversed_waypoints = [(now, (lat', long'))],
-        destLat = fst <$> destinationM,
-        destLong = snd <$> destinationM,
+        traversed_waypoints = [(now, Waypoint long' lat')],
+        destLat = _lat <$> destinationM,
+        destLon = _lon <$> destinationM,
         ward,
         district,
         city,
@@ -169,8 +183,9 @@ createLocationInfo UpdateLocationReq {..} destinationM routeM = do
         durationInS = getDurationInSeconds <$> routeM,
         distanceInM = MapSearch.distanceInM <$> routeM,
         bbox = MapSearch.boundingBox =<< routeM,
-        waypoints = MapSearch.points =<< routeM,
-        snapped_waypoints = MapSearch.snapped_waypoints =<< routeM
+        waypoints,
+        snapped_waypoints = MapSearch.snapped_waypoints =<< routeM,
+        edges = concat $ maybeToList (calculateEdges <$> waypoints)
       }
   where
     getDurationInSeconds route = div (MapSearch.durationInMS route) 1000 -- convert miliseconds to seconds
@@ -182,10 +197,10 @@ getRoute' fromLat fromLon toLat toLon = do
     Left err -> do
       L.logInfo "GetRoute" (show err)
       return Nothing
-    Right MapSearch.Response {..} ->
+    Right MapSearch.Response {..} -> do
       if null routes
-        then return . Just $ head routes
-        else return Nothing
+        then return Nothing
+        else return . Just $ head routes
   where
     getRouteRequest = do
       let from = MapSearch.LatLong $ MapSearch.PointXY fromLat fromLon
@@ -218,3 +233,108 @@ getRoute _ Location.Request {..} =
 
 fromCacheLocationInfo :: CachedLocationInfo -> LocationInfo
 fromCacheLocationInfo CachedLocationInfo {..} = LocationInfo {..}
+
+calculateEdges :: GeospatialGeometry -> [(EdgeLength, Edge)]
+calculateEdges (Line geoLine) =
+  let points =
+        (\point -> Waypoint (_xyX point) (_xyY point)) . retrieveXY
+          <$> fromLineString (_unGeoLine geoLine)
+      edges = zip points (drop 1 points)
+      edgeLengths = calcDistance <$> edges
+   in zip edgeLengths edges
+  where
+    calcDistance :: Edge -> EdgeLength
+    calcDistance (p1, p2) =
+      let src = PointXY (_lon p1) (_lat p1)
+          dest = PointXY (_lon p2) (_lat p2)
+       in MapSearch.distanceBetweenInMeters src dest
+calculateEdges _ = []
+
+-- Traverse the edges and sum their length
+traverseEdges :: [(EdgeLength, Edge)] -> Float
+traverseEdges edges = sum $ fst <$> edges
+
+isWithin ::
+  [((Double, Double), (Double, Double))] ->
+  (Double, Double) ->
+  Bool
+isWithin edges point =
+  let intersections = (doesIntersect point) <$> edges
+   in odd $ length $ filter ((==) True) intersections
+
+doesIntersect ::
+  (Double, Double) ->
+  ((Double, Double), (Double, Double)) ->
+  Bool
+doesIntersect (x, y) ((xi, yi), (xj, yj)) =
+  let slope = (y - yi) / (yj - yi)
+      dx = xj - xi
+   in (y < yi) /= (y < yj) && (x < xi + dx * slope)
+
+createBBox ::
+  Double ->
+  ((Double, Double), (Double, Double)) ->
+  [((Double, Double), (Double, Double))]
+createBBox width ((x1, y1), (x2, y2)) =
+  let dx = x2 - x1
+      dy = y2 - y1
+      len = sqrt (dx * dx + dy * dy)
+      px = width * (- dy / len)
+      py = width * (dx / len)
+      p1 = (x1 + px, y1 + py)
+      p2 = (x2 + px, y2 + py)
+      p3 = (x2 - px, y2 - py)
+      p4 = (x1 - px, y1 - py)
+   in [ (p1, p2),
+        (p2, p3),
+        (p3, p4),
+        (p4, p1)
+      ]
+
+type Counter = Int
+
+type EdgeIndex = Int
+
+findClosestEdge :: Waypoint -> (Counter, Maybe EdgeIndex) -> (EdgeLength, Edge) -> (Counter, Maybe EdgeIndex)
+findClosestEdge (Waypoint currLon currLat) (ctr, edgeIdx) (_, edge) =
+  -- Gap on either side of an edge for creating bbox
+  let gap = 10 -- in meters
+      (Waypoint lon1 lat1) = fst edge
+      (Waypoint lon2 lat2) = snd edge
+      -- Project lat,lon to x,y on a plane
+      -- Only works for smaller area, so that area can be approximated as a plane
+      -- phi0 is required for maintaining aspect ratio of the projection
+      phi0 = (lon2 - lon1) / 2
+      (x1, y1) = latLonToXY (lat1, lon1) phi0
+      (x2, y2) = latLonToXY (lat2, lon2) phi0
+      bbox = createBBox gap ((x1, y1), (x2, y2))
+      currXY = latLonToXY (currLat, currLon) phi0
+   in if isWithin bbox currXY
+        then (ctr + 1, Just ctr)
+        else (ctr + 1, edgeIdx)
+
+distanceToDestination :: Waypoint -> [(EdgeLength, Edge)] -> Maybe Float
+distanceToDestination currPoint routeEdges =
+  -- Find the closest edge to the point
+  let (_, mIntersectingEdgeIdx) = foldl (findClosestEdge currPoint) (0, Nothing) routeEdges
+   in case mIntersectingEdgeIdx of
+        Nothing -> Nothing
+        Just edgeIdx ->
+          -- sum the distance of the edges not traversed yet
+          let remainingEdges = drop (edgeIdx + 1) routeEdges
+              dist = traverseEdges remainingEdges
+              -- distance from currPoint to end of the closest edge
+              endPointOfEdge = snd $ snd (routeEdges !! edgeIdx)
+              dist' = MapSearch.distanceBetweenInMeters (waypointToPointXY currPoint) (waypointToPointXY endPointOfEdge)
+           in Just (dist + dist')
+
+waypointToPointXY :: Waypoint -> PointXY
+waypointToPointXY (Waypoint lon lat) = PointXY lon lat
+
+latLonToXY :: (Double, Double) -> Double -> (Double, Double)
+latLonToXY (lat, long) refLon =
+  let r = 6371000 -- Radius of earth in meters
+      cos_phi0 = cos $ MapSearch.deg2Rad refLon
+      x = r * MapSearch.deg2Rad lat * cos_phi0
+      y = r * MapSearch.deg2Rad long
+   in (x, y)

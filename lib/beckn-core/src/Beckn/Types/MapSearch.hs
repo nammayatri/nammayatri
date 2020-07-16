@@ -3,10 +3,12 @@
 module Beckn.Types.MapSearch
   ( module Beckn.Types.MapSearch,
     module Data.Geospatial,
+    module Data.LineString,
   )
 where
 
 import Data.Geospatial
+import Data.LineString
 import Data.Time.LocalTime
 import EulerHS.Prelude
 
