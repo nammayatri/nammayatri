@@ -45,8 +45,8 @@ data TransporterReq = TransporterReq
 instance FromJSON TransporterReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 TransporterReq SO.Organization where
-  transformFlow req = do
+instance CreateTransform TransporterReq SO.Organization Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- transformToLocation req
@@ -115,8 +115,8 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, ToSchema, Show, FromJSON)
 
-instance Transform UpdateTransporterReq SO.Organization where
-  transformFlow2 req org = do
+instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
+  modifyTransform req org = do
     now <- getCurrentTimeUTC
     return $
       org

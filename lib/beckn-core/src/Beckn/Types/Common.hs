@@ -4,12 +4,13 @@ module Beckn.Types.Common where
 
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Data.Generics.Labels ()
 import Data.Swagger
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-type FlowR a = ReaderT a L.Flow
+type FlowR r = ReaderT r L.Flow
 
 class GuidLike a where
   generateGUID :: FlowR r a
@@ -26,7 +27,8 @@ data ErrorResponse = ErrorResponse
 
 data AckResponse = AckResponse
   { _context :: Context,
-    _message :: Ack
+    _message :: Ack,
+    _error :: Maybe Error
   }
   deriving (Show, Generic)
 

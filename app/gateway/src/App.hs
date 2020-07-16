@@ -6,6 +6,7 @@ where
 import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
+import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -29,7 +30,7 @@ runGateway :: IO ()
 runGateway = do
   port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "PORT"
   cache <- C.newCache Nothing
-  let appEnv = AppEnv cache
+  let appEnv = AppEnv CommonEnv cache
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,

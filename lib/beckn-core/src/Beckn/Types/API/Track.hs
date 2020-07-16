@@ -5,8 +5,8 @@ module Beckn.Types.API.Track where
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Service
-import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Data.Generics.Labels
 import Data.Swagger
@@ -15,22 +15,32 @@ import Servant.Swagger
 
 data TrackTripReq = TrackTripReq
   { context :: Context,
-    message :: IdObject
+    message :: TrackReqMessage
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type TrackTripRes = AckResponse
 
-data Tracker = Tracker
-  { trip :: Trip,
-    tracking :: Maybe Tracking
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
 data OnTrackTripReq = OnTrackTripReq
   { context :: Context,
-    message :: Tracker
+    message :: OnTrackReqMessage
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type OnTrackTripRes = AckResponse
+
+data TrackReqMessage = TrackReqMessage
+  { order :: TrackReqId,
+    tracking :: TrackReqId
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+newtype TrackReqId = TrackReqId
+  { id :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+newtype OnTrackReqMessage = OnTrackReqMessage
+  { tracking :: Maybe Tracking
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)

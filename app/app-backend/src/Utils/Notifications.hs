@@ -29,6 +29,7 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
+import Types.ProductInfo as ProductInfo
 
 -- @boazjohn:
 -- When customer searches case is created in the BA, and search request is
@@ -150,7 +151,7 @@ notifyOnTrackCb personId tracker c =
           let notificationData =
                 FCMData TRACKING_CALLBACK SHOW FCM.Case $
                   show caseId
-              trip = tracker ^. #trip
+              trip = tracker ^. #_trip
               reg_number =
                 trip ^. #vehicle . _Just . #registration . _Just . #number
               model =
