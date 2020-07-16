@@ -15,7 +15,7 @@ import Servant
 import Types.API.Location
 
 type ConfirmAPI =
-  "confirm" :> "services" :> ReqBody '[JSON] Confirm.ConfirmReq :> Post '[JSON] Confirm.ConfirmRes
+  "confirm" :> ReqBody '[JSON] Confirm.ConfirmReq :> Post '[JSON] Confirm.ConfirmRes
 
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
@@ -24,7 +24,7 @@ confirm req =
   void $ ET.client confirmAPI req
 
 search req =
-  void $ client Search.searchAPI req
+  void $ client Search.searchAPI "mobility-app-key" req
 
 type LocationAPI =
   "location"
@@ -38,7 +38,6 @@ location = client locationAPI
 
 type TrackTripAPI =
   "track"
-    :> "trip"
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
 
@@ -50,7 +49,6 @@ trackTrip req =
 
 type CancelAPI =
   "cancel"
-    :> "services"
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
 

@@ -57,34 +57,9 @@ cancel url req = do
   return $ first show res
 
 getBaseUrl :: Flow BaseUrl
-getBaseUrl = do
-  envUrl <- L.runIO loadGatewayUrl
-  case envUrl of
-    Nothing -> do
-      L.logInfo "Gateway Url" "Using defaults"
-      return $
-        BaseUrl
-          { baseUrlScheme = Http,
-            baseUrlHost = "localhost",
-            baseUrlPort = 8014,
-            baseUrlPath = "/v1"
-          }
-    Just url -> return url
-
-loadGatewayUrl :: IO (Maybe BaseUrl)
-loadGatewayUrl = do
-  mhost <- lookupEnv "GATEWAY_HOST"
-  mport <- lookupEnv "GATEWAY_PORT"
-  mpath <- lookupEnv "GATEWAY_PATH"
-  pure $ do
-    host <- mhost
-    port <- mport
-    path <- mpath
-    p <- readMaybe port
-    Just $
-      BaseUrl
-        { baseUrlScheme = Http, -- TODO: make Https when required
-          baseUrlHost = host,
-          baseUrlPort = p,
-          baseUrlPath = path
-        }
+getBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "GATEWAY_HOST"
+  port <- fromMaybe 8014 . (>>= readMaybe) <$> lookupEnv "GATEWAY_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "GATEWAY_PATH"
+  return $
+    BaseUrl Http host port path

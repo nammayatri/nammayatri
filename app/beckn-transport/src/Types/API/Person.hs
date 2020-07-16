@@ -52,7 +52,7 @@ instance FromJSON UpdatePersonReq where
 instance ModifyTransform UpdatePersonReq SP.Person Flow where
   modifyTransform req person = do
     location <- updateOrCreateLocation req $ SP._locationId person
-    return $
+    return
       person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
           SP._firstName = ifJust (req ^. #_firstName) (person ^. #_firstName),
@@ -102,7 +102,7 @@ createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
-  return $
+  return
     SL.Location
       { SL._id = id,
         SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
@@ -170,7 +170,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- createLocationT req
-    return $
+    return
       SP.Person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
           SP._id = id,
@@ -208,7 +208,7 @@ createLocationRec :: CreatePersonReq -> Flow SL.Location
 createLocationRec req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
-  return $
+  return
     SL.Location
       { SL._id = id,
         SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,

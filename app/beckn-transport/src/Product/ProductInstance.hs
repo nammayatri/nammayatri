@@ -59,7 +59,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
-  pi <- PIQ.findById piId         -- order product instance id
+  pi <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   isAllowed pi req
   updateVehicleDetails user piList req
@@ -68,8 +68,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateInfo piId
   notifyTripDetailsToGateway piId
   notifyCancelReq pi (req ^. #_status)
-  updatedPi <- PIQ.findById piId
-  return $ updatedPi
+  PIQ.findById piId
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do

@@ -2,6 +2,7 @@
 
 module Product.Transporter where
 
+import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as SO
@@ -29,12 +30,12 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
-      unless (SP._verified person) $
-        L.throwException $
-          err400 {errBody = "user not verified"}
-      when (isJust $ SP._organizationId person) $
-        L.throwException $
-          err400 {errBody = "user already registered an organization"}
+      unless (SP._verified person)
+        $ L.throwException
+        $ err400 {errBody = "user not verified"}
+      when (isJust $ SP._organizationId person)
+        $ L.throwException
+        $ err400 {errBody = "user already registered an organization"}
 
 createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes
 createGateway _ req = withFlowHandler $ do

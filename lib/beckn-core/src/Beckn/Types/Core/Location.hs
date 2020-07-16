@@ -3,6 +3,7 @@
 module Beckn.Types.Core.Location where
 
 import Beckn.Types.Core.Scalar
+import Beckn.Utils.Common
 import Data.Generics.Labels
 import Data.Text
 import EulerHS.Prelude
@@ -27,11 +28,33 @@ instance FromJSON Location where
 instance ToJSON Location where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+instance Example Location where
+  example =
+    Location
+      { _type = "gps",
+        _gps = example,
+        _address = Nothing,
+        _station_code = Nothing,
+        _area_code = Nothing,
+        _city = Nothing,
+        _country = Nothing,
+        _circle = Nothing,
+        _polygon = Nothing,
+        _3dspace = Nothing
+      }
+
 data GPS = GPS
   { lat :: Text,
     lon :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+instance Example GPS where
+  example =
+    GPS
+      { lat = "20.5937",
+        lon = "78.9629"
+      }
 
 data Address = Address
   { door :: Text,
@@ -43,6 +66,18 @@ data Address = Address
     area_code :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+instance Example Address where
+  example =
+    Address
+      { door = "#817",
+        building = "Juspay Apartments",
+        street = "27th Main",
+        area = "8th Block Koramangala",
+        city = "Bangalore",
+        country = "India",
+        area_code = "560047"
+      }
 
 -- Can we add district and state in Address?
 data City = City

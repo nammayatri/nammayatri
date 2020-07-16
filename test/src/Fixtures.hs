@@ -16,7 +16,7 @@ import Beckn.Types.Core.Provider
 import Beckn.Types.Core.Scalar
 import Beckn.Types.Core.ScalarRange
 import Beckn.Types.Mobility.Intent
-import Beckn.Types.Mobility.Stop
+import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Types.Mobility.Vehicle
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -77,46 +77,57 @@ intentVehicle =
 intentPayload :: Payload
 intentPayload =
   Payload
-    { travellers = TravellerReqInfo {count = 0},
-      luggage = Luggage {count = 2, weight_range = Nothing, dimensions = Nothing}
+    { _travellers = TravellerReqInfo {_count = 0},
+      _luggage = Luggage {_count = 2, _weight_range = Nothing, _dimensions = Nothing}
     }
 
 fareRange :: ScalarRange
-fareRange = ScalarRange {_min = 10, _max = 1000, _unit = "Rs"}
+fareRange = ScalarRange {_min = 10, _max = 1000}
+
+getStop :: LocalTime -> Stop.Stop
+getStop stopTime =
+  Stop.Stop
+    { _descriptor = Nothing,
+      _location = location,
+      _arrival_time = Stop.StopTime stopTime (Just stopTime),
+      _departure_time = Stop.StopTime stopTime (Just stopTime)
+    }
 
 buildIntent :: LocalTime -> Intent
 buildIntent localTime =
   Intent
-    { domain = "MOBILITY",
-      origin = location,
-      destination = location,
-      time = localTime,
-      stops = [],
-      vehicle = intentVehicle,
-      providers = [],
-      payload = intentPayload,
-      transfer_attrs = Nothing,
-      fare_range = fareRange,
-      tags = []
+    { _query_string = Nothing,
+      _provider_id = Nothing,
+      _category_id = Nothing,
+      _item_id = Nothing,
+      _origin = getStop localTime,
+      _destination = getStop localTime,
+      _stops = [],
+      _vehicle = intentVehicle,
+      _payload = intentPayload,
+      _transfer_attrs = Nothing,
+      _fare_range = fareRange,
+      _tags = []
     }
 
 buildContext :: Text -> Text -> LocalTime -> Context
 buildContext act tid localTime =
   Context
-    { domain = "MOBILITY",
-      action = act,
-      version = Nothing,
-      transaction_id = tid,
-      message_id = Nothing,
-      timestamp = localTime,
-      dummy = "dummy"
+    { _domain = "MOBILITY",
+      _action = act,
+      _version = Just "0.8.0",
+      _transaction_id = tid,
+      _session_id = Nothing,
+      _timestamp = localTime,
+      _token = Nothing,
+      _status = Nothing
     }
 
 searchReq :: Text -> Text -> LocalTime -> Search.SearchReq
 searchReq act tid localTime =
   Search.SearchReq
     { context = buildContext act tid localTime,
-      message = buildIntent localTime
+      message = Search.SearchIntent $ buildIntent localTime
     }
 
 getFutureTime :: IO LocalTime
@@ -128,7 +139,9 @@ searchServices ::
   Text ->
   Search.SearchReq ->
   ClientM Common.AckResponse
+
 onSearchServices ::
+  Text ->
   Search.OnSearchReq ->
   ClientM Search.OnSearchRes
 searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
@@ -175,6 +188,7 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
+
 appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
 appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
@@ -186,6 +200,7 @@ buildAppConfirmReq cid pid =
     }
 
 listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> ClientM [TbeCase.CaseRes]
+
 acceptOrDeclineRide :: Text -> Text -> TbeCase.UpdateCaseReq -> ClientM Case.Case
 listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
@@ -203,7 +218,9 @@ appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
 
 appInitiateLogin :: Reg.InitiateLoginReq -> ClientM Reg.InitiateLoginRes
+
 appVerifyLogin :: Text -> Reg.LoginReq -> ClientM Reg.LoginRes
+
 appReInitiateLogin :: Text -> Reg.ReInitiateLoginReq -> ClientM Reg.InitiateLoginRes
 appInitiateLogin :<|> appVerifyLogin :<|> appReInitiateLogin = client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
 

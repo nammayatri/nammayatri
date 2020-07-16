@@ -1,13 +1,17 @@
-module App.Types
-  ( AppEnv (..),
-    AppFlow,
-  )
-where
+module App.Types where
 
+import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Data.Cache as C
 import EulerHS.Prelude
 
-newtype AppEnv = AppEnv {cache :: C.Cache Text Text}
+data AppEnv = AppEnv
+  { commonEnv :: CommonEnv,
+    cache :: C.Cache Text Text
+  }
 
-type AppFlow = FlowR AppEnv
+type Flow = FlowR AppEnv
+
+type FlowHandler = FlowHandlerR AppEnv
+
+type FlowServer r api = FlowServerR AppEnv api

@@ -2,11 +2,14 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.Types.API.Search as Search
-import Beckn.Types.App (AuthHeader, FlowServerR)
+import Beckn.Types.App (FlowServerR)
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
+import EulerHS.Types (EulerClient, client)
 import qualified Product.Search as P
 import Servant
+import Servant.Client (Client)
+import Utils.Auth
 
 type GatewayAPI =
   "v1"
@@ -23,12 +26,17 @@ gatewayServer _key =
     :<|> searchFlow
 
 type SearchAPI =
-  AuthHeader
-    :> ( Search.SearchAPI
-           :<|> Search.OnSearchAPI
-       )
+  Search.SearchAPI VerifyAPIKey
+    :<|> Search.OnSearchAPI VerifyAPIKey
 
 searchFlow :: FlowServerR AppEnv SearchAPI
-searchFlow token =
-  P.search token
-    :<|> P.searchCb token
+searchFlow =
+  P.search
+    :<|> P.searchCb
+
+cliHealthCheck :: EulerClient Text
+
+cliSearch :: Client EulerClient (Search.SearchAPI VerifyAPIKey)
+
+cliOnSearch :: Client EulerClient (Search.OnSearchAPI VerifyAPIKey)
+cliHealthCheck :<|> (cliSearch :<|> cliOnSearch) = client gatewayAPI

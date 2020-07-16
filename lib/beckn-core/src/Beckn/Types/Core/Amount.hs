@@ -11,11 +11,12 @@ module Beckn.Types.Core.Amount
   )
 where
 
+import Beckn.Utils.Common
 import Control.Lens.Operators
 import Data.Char
 import Data.Proxy
 import qualified Data.Ratio as R
-import Data.Swagger
+import Data.Swagger hiding (Example)
 import qualified Data.Text as T
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -33,6 +34,9 @@ import qualified Money as M
 newtype Amount = Amount Rational
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (Num, Real, Fractional)
+
+instance Example Amount where
+  example = Amount 10
 
 maxPrecisionWord8 :: Word8
 maxPrecisionWord8 = 30
@@ -121,16 +125,16 @@ instance FromJSON Amount where
 instance ToSchema Amount where
   declareNamedSchema _ = do
     schema <- declareSchema (Proxy :: Proxy Text)
-    return $
-      NamedSchema (Just "amount") $
-        schema
-          & description
-            ?~ "Monetary amount in a string representation \
-               \with an optional leading \"-\" for negative numbers. \
-               \Integer and fractional parts are separated with a dot."
-              <> message
-              <> " String format is used to prevent loss of precision."
-          & paramSchema . format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
+    return
+      $ NamedSchema (Just "amount")
+      $ schema
+        & description
+          ?~ "Monetary amount in a string representation \
+             \with an optional leading \"-\" for negative numbers. \
+             \Integer and fractional parts are separated with a dot."
+            <> message
+            <> " String format is used to prevent loss of precision."
+        & paramSchema . format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
 
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Amount where
   sqlValueSyntax = sqlValueSyntax . amountToString

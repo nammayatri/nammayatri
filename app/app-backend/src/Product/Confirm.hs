@@ -8,6 +8,7 @@ import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Mobility.Order as BO
 import Beckn.Types.Mobility.Service
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
@@ -53,49 +54,56 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   QPI.create orderProductInstance
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
-  let service = Service caseId Nothing [] [productInstanceId] Nothing [] Nothing Nothing [] Nothing
   baseUrl <- Gateway.getBaseUrl
-  eres <- Gateway.confirm baseUrl (ConfirmReq context service)
+  order <- mkOrder productInstanceId
+  eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   let ack =
         case eres of
           Left err -> Ack "confirm" ("Err: " <> show err)
           Right _ -> Ack "confirm" "Ok"
-  return $ AckResponse context ack
+  return $ AckResponse context ack Nothing
+  where
+    mkOrder prodInstId = do
+      now <- getCurrentTimeUTC
+      return $
+        BO.Order
+          { _id = prodInstId,
+            _state = Nothing,
+            _billing = Nothing,
+            _created_at = now,
+            _updated_at = now,
+            _trip = Nothing,
+            _invoice = Nothing,
+            _fulfillment = Nothing
+          }
 
 onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
-  let selectedItems = req ^. #message . #_selected_items
-      trip = req ^. #message . #_trip
-      caseId = CaseId $ req ^. #context . #transaction_id
-  ack <-
-    case length selectedItems of
-      0 -> return $ Ack "on_confirm" "Ok"
-      1 -> do
-        let pid = ProductInstanceId (head selectedItems)
-            tracker = flip Track.Tracker Nothing <$> trip
-        prdInst <- QPI.findById pid
-        let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
-        let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
-        let uPrd =
-              prdInst
-                { SPI._info = encodeToText <$> uInfo
-                }
-        productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-        QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
-        QPI.updateMultiple (_getProductInstanceId pid) uPrd
-        QPI.updateStatus pid SPI.CONFIRMED
-        return $ Ack "on_confirm" "Ok"
-      _ -> L.throwException $ err400 {errBody = "Cannot select more than one product."}
-  return $ OnConfirmRes (req ^. #context) ack
+  let trip = req ^. #message . #order . #_trip
+      pid = ProductInstanceId $ req ^. #message . #order . #_id
+      tracker = flip Products.Tracker Nothing <$> trip
+  prdInst <- QPI.findById pid
+  -- TODO: update tracking prodInfo in .info
+  let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
+  let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
+  let uPrd =
+        prdInst
+          { SPI._info = encodeToText <$> uInfo
+          }
+  productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
+  QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
+  QPI.updateMultiple (_getProductInstanceId pid) uPrd
+  QPI.updateStatus pid SPI.CONFIRMED
+  return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
   now <- getCurrentTimeUTC
   id <- generateGUID
   shortId <- generateShortId
-  return $
+  return
     Case.Case
       { _id = id,
         _name = Nothing,
@@ -114,7 +122,7 @@ mkOrderProductInstance caseId prodInst = do
   now <- getCurrentTimeUTC
   id <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
-  return $
+  return
     SPI.ProductInstance
       { _id = ProductInstanceId id,
         _caseId = caseId,

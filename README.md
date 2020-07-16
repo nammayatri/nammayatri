@@ -11,7 +11,6 @@ More about beckn:
 ## This project contains three modules
 * `app-backend` - frontend facing APIs (BA), has more end-user specific implementations
 * `beckn-transport` - beckn provider (BP), implmenting mobility spec
-* `epass-backend` - e-pass for travelling, has consumer and approver flows
 
 ## Shared libraries
 * `beckn-core` - is the common library where the API types, unified data models will be there
