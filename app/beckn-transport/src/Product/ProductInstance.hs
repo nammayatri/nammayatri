@@ -65,7 +65,6 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
     Nothing ->
       L.throwException $
         err400 {errBody = "INVALID FLOW"}
-  L.logInfo "********" (show searchPi)
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   isAllowed pi req
   updateVehicleDetails user piList req
@@ -259,6 +258,5 @@ notifyStatusUpdateReq searchPi status =
         Notify.notifyCancelReqByBP searchPi admins
       _ -> do
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
-        L.logInfo "@@@@@@@@@@@@@@@@@@@@@" (show trackerPi)
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi
     Nothing -> return ()
