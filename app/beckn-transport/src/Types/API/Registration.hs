@@ -5,7 +5,6 @@ import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
 import Data.Swagger
 import EulerHS.Prelude
-import Servant.Swagger
 
 data InitiateLoginReq = InitiateLoginReq
   { _medium :: Medium,

@@ -6,13 +6,10 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Rating
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Route
-import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Traveller
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Text
-import Data.Time
 import EulerHS.Prelude
 
 data Trip = Trip

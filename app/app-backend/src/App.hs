@@ -10,7 +10,6 @@ import Beckn.Utils.Common (prepareAppOptions, runFlowR)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as T
@@ -19,13 +18,11 @@ import Network.Wai
 import Network.Wai.Handler.Warp
   ( Settings,
     defaultSettings,
-    run,
     runSettings,
     setOnExceptionResponse,
     setPort,
   )
 import Servant
-import Servant.Server
 import Storage.DB.Config
 import qualified System.Environment as SE
 

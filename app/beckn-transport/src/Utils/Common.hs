@@ -3,21 +3,17 @@
 module Utils.Common where
 
 import App.Types
-import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import Beckn.Utils.Servant.Auth
-import Data.Generics.Labels
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import Types.API.Person
 
 -- | Performs simple token verification.
 type TokenAuth = TokenAuth' "token" VerifyToken

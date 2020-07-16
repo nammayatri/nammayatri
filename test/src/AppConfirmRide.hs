@@ -1,23 +1,17 @@
 module AppConfirmRide where
 
-import "app-backend" App.Routes
-import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Data.Text.Encoding as DT
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
 import qualified EulerHS.Types as T
 import Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Servant hiding (Context)
 import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Case as AppCase
@@ -25,7 +19,6 @@ import qualified "beckn-transport" Types.API.Case as TbeCase
 
 spec :: Spec
 spec = do
-  reqHeadersKey <- runIO V.newKey
   appManager <- runIO $ Client.newManager tlsManagerSettings
   tbeManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl =
@@ -47,7 +40,7 @@ spec = do
   around (withFlowRuntime (Just loggerCfg)) $
     describe "Testing App Backend APIs" $
       it "Testing API flow for App confirm ride" $
-        \flowRt ->
+        \_flowRt ->
           hspec $
             it "API flow should succeed for Transporter -> Accepts & App consumer -> Confirms" $
               do

@@ -4,11 +4,8 @@ module External.Gateway.Transform where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Api
-import Beckn.Types.Core.Category
 import Beckn.Types.Core.Contact
-import Beckn.Types.Core.Context
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
@@ -19,22 +16,17 @@ import Beckn.Types.Mobility.Catalog as Mobility
 import Beckn.Types.Mobility.Driver as Mobility
 import Beckn.Types.Mobility.Order as Mobility
 import Beckn.Types.Mobility.Service as Mobility
-import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Extra (getCurrentTimeUTC)
-import Data.Aeson
-import Data.Map
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
 import qualified Utils.Defaults as Defaults
 
 mkCatalog :: [ProductInstance] -> Flow Mobility.Catalog

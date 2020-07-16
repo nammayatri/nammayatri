@@ -2,7 +2,6 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Types.App
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common

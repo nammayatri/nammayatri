@@ -1,7 +1,5 @@
 module Beckn.Types.Core.Scalar where
 
-import Beckn.Types.Core.Api
-import Beckn.Types.Core.Contact
 import Beckn.Types.Core.ScalarRange
 import Beckn.Utils.Common
 import Data.Text
