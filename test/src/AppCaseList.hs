@@ -1,21 +1,17 @@
 module AppCaseList where
 
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
 import qualified EulerHS.Types as T
 import Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Servant hiding (Context)
 import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Registration as Reg
 
 spec :: Spec
 spec = do
-  reqHeadersKey <- runIO V.newKey
   appManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl =
         BaseUrl
@@ -34,7 +30,7 @@ spec = do
   around (withFlowRuntime (Just loggerCfg)) $
     describe "Testing App Backend APIs" $
       it "Testing List case API" $
-        \flowRt ->
+        \_flowRt ->
           hspec $
             it "List case API should return success" $
               do
