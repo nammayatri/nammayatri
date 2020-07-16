@@ -3,6 +3,7 @@
 module Beckn.Types.Core.Intent where
 
 import Beckn.Types.Core.Tag
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -20,3 +21,13 @@ instance FromJSON Intent where
 
 instance ToJSON Intent where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Intent where
+  example =
+    Intent
+      { _query_string = Just "search",
+        _provider_id = Nothing,
+        _category_id = Nothing,
+        _item_id = Nothing,
+        _tags = example
+      }
