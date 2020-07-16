@@ -8,7 +8,6 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Item as Core
-import qualified Beckn.Types.Core.Location as Core
 import qualified Beckn.Types.Core.Provider as Core
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service as BM
@@ -18,7 +17,7 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
@@ -31,11 +30,9 @@ import qualified External.Gateway.Flow as Gateway
 import Servant
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import System.Environment
-import Types.App
 import Types.ProductInfo
 import Utils.Common (generateShortId)
 import qualified Utils.Notifications as Notify
