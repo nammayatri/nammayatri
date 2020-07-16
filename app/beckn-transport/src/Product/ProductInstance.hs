@@ -59,7 +59,13 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   user <- PersQ.findPersonById (PersonId _EntityId)
-  pi <- PIQ.findById piId
+  pi <- PIQ.findById piId -- order product instance
+  searchPi <- case pi ^. #_parentId of
+    Just id -> PIQ.findById id
+    Nothing ->
+      L.throwException $
+        err400 {errBody = "INVALID FLOW"}
+  L.logInfo "********" (show searchPi)
   piList <- PIQ.findAllByParentId (pi ^. #_parentId)
   isAllowed pi req
   updateVehicleDetails user piList req
@@ -67,7 +73,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateStatus user piId req
   updateInfo piId
   notifyTripDetailsToGateway piId
-  notifyCancelReq pi (req ^. #_status)
+  --  notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
@@ -223,7 +229,10 @@ updateTrip piId k = do
   orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
   case k of
     PI.CANCELLED -> do
-      PIQ.updateStatusByIds (PI._id <$> piList) k
+      trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
+      orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
+      PIQ.updateStatus (PI._id trackerPi) PI.COMPLETED
+      PIQ.updateStatus (PI._id orderPi) PI.CANCELLED
       CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
       CQ.updateStatus (Case._id orderCase_) Case.CLOSED
       return ()
@@ -239,14 +248,16 @@ updateTrip piId k = do
       return ()
     _ -> return ()
 
-notifyCancelReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
-notifyCancelReq pi status =
+notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
+notifyStatusUpdateReq searchPi status =
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
         admins <-
-          PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId pi]
-        BP.notifyCancelToGateway (_getProductInstanceId $ pi ^. #_id)
-        Notify.notifyCancelReqByBP pi admins
-      _ -> return ()
+          PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
+        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id)
+        Notify.notifyCancelReqByBP searchPi admins
+      _ -> do
+        trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
+        BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi
     Nothing -> return ()

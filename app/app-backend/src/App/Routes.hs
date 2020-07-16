@@ -235,5 +235,5 @@ type StatusAPI =
     :> Post '[JSON] Status.OnStatusRes
 
 statusFlow =
-  Cancel.status
-    :<|> Cancel.onStatus
+  Status.status
+    :<|> Status.onStatus

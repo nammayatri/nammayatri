@@ -91,7 +91,10 @@ cancel req = withFlowHandler $ do
   -- TODO: Should we check if all case's products were cancelled
   -- before cancelling a case?
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
-  ProductInstance.updateStatusByIds (ProductInstance._id <$> piList) ProductInstance.CANCELLED
+  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
+  ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
+  ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
   notifyCancelToGateway prodInstId
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
@@ -207,7 +210,7 @@ mkOrderCase SC.Case {..} = do
         _industry = SC.MOBILITY,
         _type = SC.RIDEORDER,
         _parentCaseId = Just _id,
-        _status = SC.CONFIRMED,
+        _status = SC.INPROGRESS,
         _fromLocationId = _fromLocationId,
         _toLocationId = _toLocationId,
         _createdAt = now,
@@ -348,31 +351,31 @@ mkOnConfirmPayload c pis allPis trackerCase = do
 serviceStatus :: StatusReq -> FlowHandler StatusRes
 serviceStatus req = withFlowHandler $ do
   L.logInfo "serviceStatus API Flow" $ show req
-  let caseSid = req ^. #message . #service . #id
-  c <- Case.findBySid caseSid
+  --  let caseSid = req ^. #message . #service . #id
+  --  c <- Case.findBySid caseSid
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  notifyServiceStatusToGateway c piId trackerPi
+  notifyServiceStatusToGateway piId trackerPi
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
 
-notifyServiceStatusToGateway :: Case -> Text -> ProductInstance -> Flow ()
-notifyServiceStatusToGateway c piId trackerPi = do
-  onServiceStatusPayload <- mkOnServiceStatusPayload c piId trackerPi
+notifyServiceStatusToGateway :: Text -> ProductInstance -> Flow ()
+notifyServiceStatusToGateway piId trackerPi = do
+  onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
   L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   Gateway.onStatus onServiceStatusPayload
   return ()
 
-mkOnServiceStatusPayload :: Case -> Text -> ProductInstance -> Flow OnStatusReq
-mkOnServiceStatusPayload c piId trackerPi = do
+mkOnServiceStatusPayload :: Text -> ProductInstance -> Flow OnStatusReq
+mkOnServiceStatusPayload piId trackerPi = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
           { _domain = "MOBILITY",
             _action = "on_status",
             _version = Just "0.1",
-            _transaction_id = c ^. #_shortId,
+            _transaction_id = "",
             _session_id = Nothing,
             _timestamp = currTime,
             _token = Nothing,
@@ -417,7 +420,7 @@ notifyTripUrlToGateway case_ parentCase = do
 
 notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
-  onCancelPayload <- mkCancelRidePayload prodInstId -- order product instance id
+  onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
   L.logInfo "notifyGateway Request" $ show onCancelPayload
   Gateway.onCancel onCancelPayload
   return ()

@@ -321,9 +321,8 @@ cronFlow =
 
 type StatusAPI =
   "status"
-    :> "services"
     :> ( ReqBody '[JSON] StatusReq
-           :> Post '[JSON] AckResponse
+           :> Post '[JSON] StatusRes
        )
 
 statusApiFlow :: FlowServer StatusAPI

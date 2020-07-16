@@ -24,14 +24,14 @@ import qualified Storage.Queries.Products as Products
 import Types.API.Status as Status
 import Utils.Routes
 
-status :: Person.Person -> Status.StatusReq -> FlowHandler StatusRes
-status person Status.StatusReq {..} = withFlowHandler $ do
+status :: Person.Person -> StatusReq -> FlowHandler StatusRes
+status person StatusReq {..} = withFlowHandler $ do
   pi <- QPI.findById (ProductInstanceId productInstanceId)
   case_ <- Case.findIdByPerson person (pi ^. #_caseId)
-  let caseId = _getCaseId $ (case_ ^. #_id)
+  let caseId = _getCaseId $ case_ ^. #_id
   context <- buildContext "status" caseId
   baseUrl <- Gateway.getBaseUrl
-  let statusMessage = API.StatusReqMessage productInstanceId caseId
+  let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   eres <- Gateway.status baseUrl $ API.StatusReq context statusMessage
   let ack =
         case eres of

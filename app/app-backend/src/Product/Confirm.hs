@@ -93,7 +93,7 @@ onConfirm req = withFlowHandler $ do
           { SPI._info = encodeToText <$> uInfo
           }
   productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-  QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
+  QCase.updateStatus (SPI._caseId productInstance) Case.COMPLETED
   QPI.updateMultiple (_getProductInstanceId pid) uPrd
   QPI.updateStatus pid SPI.CONFIRMED
   return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"

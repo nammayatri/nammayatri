@@ -6,7 +6,7 @@ import Beckn.Types.Mobility.Service
 import EulerHS.Prelude
 
 newtype StatusReq = StatusReq
-  { productInstanceId :: IdObject
+  { productInstanceId :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
