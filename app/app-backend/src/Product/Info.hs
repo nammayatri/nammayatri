@@ -18,10 +18,10 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as External
+import qualified Models.Case as QCase
+import qualified Models.Product as QProducts
 import Servant
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.ProductInstance as QPI
-import qualified Storage.Queries.Products as QProducts
 import Types.API.Location
 import Types.API.Product
 import Types.App

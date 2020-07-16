@@ -35,12 +35,12 @@ import qualified Epass.Types.Storage.PassApplication as PassApplication
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (pass)
+import qualified Models.Case as QC
+import qualified Models.Product as QProd
 import qualified Models.ProductInstance as MPI
 import Servant
-import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as QPI
-import qualified Storage.Queries.Products as QProd
 
 getPassById :: RegToken -> ProductInstanceId -> FlowHandler PassRes
 getPassById regToken passId =

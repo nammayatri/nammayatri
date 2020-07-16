@@ -25,10 +25,10 @@ import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import qualified Models.Case as QC
+import qualified Models.Product as QProd
 import Servant
-import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.ProductInstance as QCP
-import qualified Storage.Queries.Products as QProd
 import qualified Test.RandomStrings as RS
 
 updatePassApplication ::
@@ -63,7 +63,7 @@ updatePassApplication regToken caseId UpdatePassApplicationReq {..} = withFlowHa
         (show <$> _approvedCount)
         _remarks
     PENDING -> QC.updateStatus caseId Case.INPROGRESS
-    _ -> pure $ Right ()
+    _ -> pure ()
   PassApplicationRes' <$> QC.findById caseId
   where
     validApprovedCount count approvedCount =

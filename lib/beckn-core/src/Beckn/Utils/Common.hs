@@ -41,32 +41,42 @@ defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 -- | Get rid of database error
 -- convert it into UnknownDomainError
 checkDBError :: L.MonadFlow m => ET.DBResult a -> m a
-checkDBError = checkDBError' DatabaseError
+checkDBError dbres = checkDBError' dbres DatabaseError
 
 -- | Get rid of database error
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-checkDBError' :: L.MonadFlow m => (ET.DBError -> DomainError) -> ET.DBResult a -> m a
-checkDBError' f dbres =
+checkDBError' :: L.MonadFlow m => ET.DBResult a -> (ET.DBError -> DomainError) -> m a
+checkDBError' dbres f =
   case dbres of
     Left err -> throwDomainError $ f err
     Right res -> pure res
 
 -- | Get rid of database error and empty result
 -- convert it into UnknownDomainError
-checkDBErrorOrEmpty :: L.MonadFlow m => DomainError -> ET.DBResult (Maybe a) -> m a
-checkDBErrorOrEmpty = checkDBErrorOrEmpty' DatabaseError
+checkDBErrorOrEmpty :: L.MonadFlow m => ET.DBResult (Maybe a) -> DomainError -> m a
+checkDBErrorOrEmpty dbres = checkDBErrorOrEmpty' dbres DatabaseError
 
 -- | Get rid of database error and empty result
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-checkDBErrorOrEmpty' :: L.MonadFlow m => (ET.DBError -> DomainError) -> DomainError -> ET.DBResult (Maybe a) -> m a
-checkDBErrorOrEmpty' f domainErrOnEmpty result =
-  case result of
+checkDBErrorOrEmpty' :: L.MonadFlow m => ET.DBResult (Maybe a) -> (ET.DBError -> DomainError) -> DomainError -> m a
+checkDBErrorOrEmpty' dbres f domainErrOnEmpty =
+  case dbres of
     Left err -> throwDomainError $ f err
     Right maybeRes -> case maybeRes of
       Nothing -> throwDomainError domainErrOnEmpty
       Just x -> pure x
+
+-- | Throw DomainError if DBError occurs
+throwOnDBError :: L.MonadFlow m => ET.DBResult a -> DomainError -> m a
+throwOnDBError dbres domainError =
+  checkDBError' dbres $ const domainError
+
+-- Throw DomainErrors if DBError occurs or the result is empty
+throwOnDBErrorOrEmpty :: L.MonadFlow m => ET.DBResult (Maybe a) -> DomainError -> DomainError -> m a
+throwOnDBErrorOrEmpty dbres domainErrorOnDbError =
+  checkDBErrorOrEmpty' dbres (const domainErrorOnDbError)
 
 fromMaybeM :: L.MonadFlow m => ServerError -> Maybe a -> m a
 fromMaybeM err Nothing = L.throwException err
@@ -216,6 +226,10 @@ throwDomainError err =
       ProductNotFound -> t err404 "Product not found"
       ProductNotUpdated -> t err405 "Product not updated"
       ProductNotCreated -> t err405 "Product not created"
+    AuthErr UnAuthorized -> t err401 "Unauthorized"
+    BlacklistErr suberr -> case suberr of
+      BlacklistNotFound -> t err404 "Blacklist not found"
+      BlacklistNotCreated -> t err400 "Could not create Blacklist"
     _ -> t err500 "Unknown error"
   where
     t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg

@@ -15,11 +15,11 @@ import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as Case
+import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
 

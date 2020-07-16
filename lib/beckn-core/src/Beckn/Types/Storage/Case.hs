@@ -183,11 +183,12 @@ validateStatusTransition oldState newState =
     else t oldState newState
   where
     forbidden =
-      Left $ T.pack $
-        "It is not allowed to change Case status from "
-          <> show oldState
-          <> " to "
-          <> show newState
+      Left $
+        T.pack $
+          "It is not allowed to change Case status from "
+            <> show oldState
+            <> " to "
+            <> show newState
     allowed = Right ()
     t NEW CONFIRMED = allowed
     t NEW CLOSED = allowed

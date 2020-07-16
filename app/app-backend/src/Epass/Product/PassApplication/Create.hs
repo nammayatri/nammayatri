@@ -27,8 +27,8 @@ import qualified Epass.Types.Storage.CustomerDetail as CD
 import Epass.Types.Storage.PassApplication
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as QC
 import Servant
-import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QP
 import qualified Test.RandomStrings as RS

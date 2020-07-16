@@ -19,9 +19,9 @@ import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
 import Servant
-import qualified Storage.Queries.Case as CQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ

@@ -10,7 +10,7 @@ import Data.Aeson
 import Data.List
 import Data.Maybe
 import qualified Epass.Data.Accessor as Accessor
-import qualified Epass.Storage.Queries.Blacklist as Blacklist
+import qualified Epass.Models.Blacklist as Blacklist
 import qualified Epass.Storage.Queries.Comment as Comment
 import qualified Epass.Storage.Queries.Customer as Customer
 import qualified Epass.Storage.Queries.Document as Document
@@ -32,12 +32,12 @@ import qualified Epass.Types.Storage.Tag as Document
 import Epass.Utils.Storage
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as QC
+import qualified Models.Product as QProd
 import Servant
-import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QCP
-import qualified Storage.Queries.Products as QProd
 
 listPassApplication ::
   RegToken ->

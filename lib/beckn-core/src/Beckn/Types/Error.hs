@@ -110,6 +110,8 @@ data OrganisationError
 
 data CaseError
   = CaseNotFound
+  | CaseNotCreated
+  | CaseNotUpdated
   | CaseStatusTransitionErr ErrorMsg
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 

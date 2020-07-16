@@ -7,6 +7,7 @@ import Beckn.Types.Storage.Case
 import Beckn.Utils.Common
 import Data.Maybe
 import Data.Text
+import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Q
@@ -18,6 +19,38 @@ import qualified Storage.Queries.Case as Q
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
+-- | Create Case
+create :: Case -> Flow ()
+create c = do
+  -- TODO add some validation checks
+  -- and `throwDomainError CaseNotCreated` if needed
+  result <- Q.create c
+  checkDBError result
+
+-- | Find Case by id
+findById :: CaseId -> Flow Case
+findById caseId = do
+  result <- Q.findById caseId
+  checkDBErrorOrEmpty result $ CaseErr CaseNotFound
+
+-- | Find Cases by id list
+findAllByIds :: [CaseId] -> Flow [Case]
+findAllByIds ids = do
+  result <- Q.findAllByIds ids
+  checkDBError result
+
+-- | Find Case by parent case id and type
+findByParentCaseIdAndType :: CaseId -> CaseType -> Flow (Maybe Case)
+findByParentCaseIdAndType pCaseId cType = do
+  result <- Q.findByParentCaseIdAndType pCaseId cType
+  checkDBError result
+
+-- | Find Case by short id
+findBySid :: Text -> Flow Case
+findBySid sid = do
+  result <- Q.findBySid sid
+  checkDBErrorOrEmpty result $ CaseErr CaseNotFound
+
 -- | Validate and update Case status
 updateStatus :: CaseId -> CaseStatus -> Flow ()
 updateStatus id status = do
@@ -25,6 +58,7 @@ updateStatus id status = do
   result <- Q.updateStatus id status
   checkDBError result
 
+-- | Validate and update Cases statuses
 updateStatusByIds :: [CaseId] -> CaseStatus -> Flow ()
 updateStatusByIds ids status = do
   cases <- findAllByIds ids
@@ -32,16 +66,49 @@ updateStatusByIds ids status = do
   result <- Q.updateStatusByIds ids status
   checkDBError result
 
--- Queries wrappers
-findById :: CaseId -> Flow Case
-findById caseId = do
-  result <- Q.findById' caseId
-  checkDBErrorOrEmpty (CaseErr CaseNotFound) result
+-- | Find Case by id and type
+findByIdType :: [CaseId] -> CaseType -> Flow Case
+findByIdType ids type_ = do
+  result <- Q.findByIdType ids type_
+  checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
--- | Find Product Instances
-findAllByIds :: [CaseId] -> Flow [Case]
-findAllByIds ids = do
-  result <- Q.findAllByIds' ids
+-- | Find Cases by id and type
+findAllByIdType :: [CaseId] -> CaseType -> Flow [Case]
+findAllByIdType ids type_ = do
+  result <- Q.findAllByIdType ids type_
+  checkDBError result
+
+-- | Find Cases
+findAllByTypeStatuses ::
+  Integer ->
+  Integer ->
+  CaseType ->
+  [CaseStatus] ->
+  [CaseId] ->
+  LocalTime ->
+  Flow [Case]
+findAllByTypeStatuses limit offset csType statuses ignoreIds now = do
+  result <- Q.findAllByTypeStatuses limit offset csType statuses ignoreIds now
+  checkDBError result
+
+-- | Find Cases
+findAllByTypeStatusTime ::
+  Integer ->
+  Integer ->
+  CaseType ->
+  [CaseStatus] ->
+  [CaseId] ->
+  LocalTime ->
+  LocalTime ->
+  Flow [Case]
+findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime = do
+  result <- Q.findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime
+  checkDBError result
+
+-- | Find Cases by status and expirtaion date
+findAllExpiredByStatus :: [CaseStatus] -> CaseType -> LocalTime -> LocalTime -> Flow [Case]
+findAllExpiredByStatus statuses csType from to = do
+  result <- Q.findAllExpiredByStatus statuses csType from to
   checkDBError result
 
 -- | Get Case and validate its status change

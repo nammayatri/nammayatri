@@ -20,4 +20,4 @@ import qualified Storage.Queries.Products as Q
 findById :: ProductsId -> Flow Products
 findById id = do
   result <- Q.findById' id
-  checkDBErrorOrEmpty (CaseErr CaseNotFound) result
+  checkDBErrorOrEmpty result $ CaseErr CaseNotFound

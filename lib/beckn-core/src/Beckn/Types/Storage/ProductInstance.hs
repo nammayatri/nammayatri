@@ -127,11 +127,12 @@ validateStatusTransition oldState newState =
     else t oldState newState
   where
     forbidden =
-      Left $ T.pack $
-        "It is not allowed to change Product Instance status from "
-          <> show oldState
-          <> " to "
-          <> show newState
+      Left $
+        T.pack $
+          "It is not allowed to change Product Instance status from "
+            <> show oldState
+            <> " to "
+            <> show newState
     allowed = Right ()
     t VALID CONFIRMED = allowed
     t VALID EXPIRED = allowed

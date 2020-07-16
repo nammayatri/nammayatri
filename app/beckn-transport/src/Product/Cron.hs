@@ -9,9 +9,9 @@ import qualified Beckn.Types.Storage.Products as P
 import Beckn.Utils.Common (authenticate, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as CQ
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MCP
-import qualified Storage.Queries.Case as CQ
 import qualified Storage.Queries.Person as PSQ
 import qualified Storage.Queries.ProductInstance as CPQ
 import qualified Storage.Queries.Products as PQ

@@ -35,7 +35,7 @@ updateStatusByIds ids status = do
 findById :: ProductInstanceId -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
-  checkDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
+  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: CaseId -> Flow [ProductInstance]

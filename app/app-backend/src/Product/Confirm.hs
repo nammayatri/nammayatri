@@ -27,13 +27,13 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
+import qualified Models.Case as QCase
+import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
 import Servant
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as QPI
-import qualified Storage.Queries.Products as Products
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import Types.App

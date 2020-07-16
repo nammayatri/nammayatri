@@ -10,13 +10,13 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (authenticate, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as Case
 import qualified Models.Case as MC
+import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
-import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import System.Environment
 import qualified Types.API.Cron as API
 import Types.API.ProductInstance

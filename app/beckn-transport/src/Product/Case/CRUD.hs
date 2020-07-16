@@ -5,8 +5,8 @@ module Product.Case.CRUD where
 import App.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App
-import Beckn.Types.Common as BC
 import Beckn.Types.App as BC
+import Beckn.Types.Common as BC
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Category
@@ -31,8 +31,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
+import Models.Case as Case
 import Servant
-import Storage.Queries.Case as Case
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Organization as OQ

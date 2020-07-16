@@ -16,8 +16,18 @@ import qualified Storage.Queries.Products as Q
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
+create :: Products -> Flow ()
+create product = do
+  result <- Q.create product
+  checkDBError result
+
 -- | Find Product by id
 findById :: ProductsId -> Flow Products
 findById id = do
-  result <- Q.findById' id
-  checkDBErrorOrEmpty (CaseErr CaseNotFound) result
+  result <- Q.findById id
+  checkDBErrorOrEmpty result $ CaseErr CaseNotFound
+
+findAllByIds :: [ProductsId] -> Flow [Products]
+findAllByIds pids = do
+  result <- Q.findAllByIds pids
+  checkDBError result

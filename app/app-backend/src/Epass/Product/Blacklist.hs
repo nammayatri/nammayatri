@@ -4,6 +4,7 @@ module Epass.Product.Blacklist where
 
 import App.Types
 import Beckn.Types.Common
+import Beckn.Types.Error
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -12,7 +13,7 @@ import Data.Default
 import Data.Time
 import qualified Database.Beam.Schema.Tables as B
 import qualified Epass.Data.Accessor as Accessor
-import qualified Epass.Storage.Queries.Blacklist as DB
+import qualified Epass.Models.Blacklist as DB
 import Epass.Types.API.Blacklist
 import Epass.Types.App
 import Epass.Types.Common
@@ -34,9 +35,9 @@ create regToken CreateReq {..} = withFlowHandler $ do
       DB.create blacklist
       eres <- DB.findById id
       case eres of
-        Right (Just blacklistDb) -> return $ CreateRes blacklistDb
-        _ -> L.throwException $ err500 {errBody = "Could not create Blacklist"}
-    RegToken.CUSTOMER -> L.throwException $ err401 {errBody = "Unauthorized"}
+        Just blacklistDb -> return $ CreateRes blacklistDb
+        _ -> throwDomainError $ BlacklistErr BlacklistNotCreated
+    RegToken.CUSTOMER -> throwDomainError $ AuthErr UnAuthorized
   where
     blacklistRec id userId = do
       now <- getCurrentTimeUTC
@@ -57,14 +58,10 @@ list ::
   EntityType ->
   Text ->
   FlowHandler ListRes
-list regToken mlimit moffset entityType entityId =
-  withFlowHandler $
-    do
-      verifyToken regToken
-      DB.findAllWithLimitOffset mlimit moffset entityType entityId
-      >>= \case
-        Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
-        Right v -> return $ ListRes v
+list regToken mlimit moffset entityType entityId = withFlowHandler $ do
+  verifyToken regToken
+  v <- DB.findAllWithLimitOffset mlimit moffset entityType entityId
+  pure $ ListRes v
 
 get :: RegToken -> BlacklistId -> FlowHandler GetRes
 get regToken blacklistId =
@@ -73,9 +70,8 @@ get regToken blacklistId =
       verifyToken regToken
       DB.findById blacklistId
       >>= \case
-        Right (Just user) -> return user
-        Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
-        Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
+        Just user -> return user
+        _ -> throwDomainError $ BlacklistErr BlacklistNotFound
 
 update ::
   RegToken ->
@@ -85,19 +81,13 @@ update ::
 update regToken blacklistId lb@UpdateReq {..} = withFlowHandler $ do
   verifyToken regToken
   eres <- DB.update blacklistId lb
-  case eres of
-    Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
-    Right _ ->
-      DB.findById blacklistId
-        >>= \case
-          Right (Just v) -> return $ UpdateRes v
-          Right Nothing -> L.throwException $ err400 {errBody = "Blacklist not found"}
-          Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
+  DB.findById blacklistId
+    >>= \case
+      Just v -> return $ UpdateRes v
+      _ -> throwDomainError $ BlacklistErr BlacklistNotFound
 
 delete :: RegToken -> BlacklistId -> FlowHandler Ack
 delete regToken blacklistId = withFlowHandler $ do
   verifyToken regToken
   mres <- DB.deleteById blacklistId
-  case mres of
-    Left err -> L.throwException $ err500 {errBody = "DBError: " <> show err}
-    Right () -> sendAck
+  sendAck

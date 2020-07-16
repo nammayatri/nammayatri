@@ -25,12 +25,12 @@ import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as Case
+import qualified Models.Product as Products
 import Servant
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import System.Environment
 import Types.App
 import Types.ProductInfo

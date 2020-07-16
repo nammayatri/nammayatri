@@ -40,7 +40,7 @@ updateMultiple id prdInst = do
 findById :: ProductInstanceId -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
-  checkDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
+  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: CaseId -> Flow [ProductInstance]
@@ -52,7 +52,7 @@ findAllByCaseId caseId = do
 findByProductId :: ProductsId -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId' pId
-  checkDBErrorOrEmpty (ProductInstanceErr ProductInstanceNotFound) result
+  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Get ProductInstance and validate its status change
 validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> Flow ()

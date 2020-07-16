@@ -8,7 +8,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Aeson
 import qualified Epass.Data.Accessor as Lens
-import qualified Epass.Storage.Queries.Blacklist as Blacklist
+import qualified Epass.Models.Blacklist as Blacklist
 import qualified Epass.Storage.Queries.Comment as Comment
 import qualified Epass.Storage.Queries.Document as Document
 import qualified Epass.Storage.Queries.EntityDocument as EntityDocument

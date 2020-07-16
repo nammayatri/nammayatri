@@ -16,12 +16,12 @@ import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as Case
 import qualified Models.Case as MC
+import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
 import Servant.Client
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import qualified Utils.Notifications as Notify
 

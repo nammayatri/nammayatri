@@ -21,10 +21,9 @@ import qualified Storage.Queries as DB
 dbTable :: B.DatabaseEntity be DB.EpassDb (B.TableEntity Storage.BlacklistT)
 dbTable = DB._Blacklist DB.becknDb
 
-create :: Storage.Blacklist -> Flow ()
+create :: Storage.Blacklist -> Flow (T.DBResult ())
 create Storage.Blacklist {..} =
   DB.createOne dbTable (Storage.insertExpression Storage.Blacklist {..})
-    >>= either DB.throwDBError pure
 
 findById :: BlacklistId -> Flow (T.DBResult (Maybe Storage.Blacklist))
 findById id =
@@ -73,27 +72,25 @@ findAllWithLimitOffset mlimit moffset entityType entityId =
       _entityType ==. B.val_ entityType
         &&. __EntityId ==. B.val_ entityId
 
-findAllByEntityId :: EntityType -> [Text] -> Flow [Storage.Blacklist]
+findAllByEntityId :: EntityType -> [Text] -> Flow (T.DBResult [Storage.Blacklist])
 findAllByEntityId entityType entityIds =
-  DB.findAllOrErr dbTable (pred entityType entityIds)
+  DB.findAll dbTable (pred entityType entityIds)
   where
     pred entityType entityIds Storage.Blacklist {..} =
       _entityType ==. B.val_ entityType
         &&. B.in_ __EntityId (B.val_ <$> entityIds)
 
-findByOrgId :: OrganizationId -> Flow (Maybe Storage.Blacklist)
+findByOrgId :: OrganizationId -> Flow (T.DBResult (Maybe Storage.Blacklist))
 findByOrgId (OrganizationId eId) =
   DB.findOne dbTable (pred eId)
-    >>= either DB.throwDBError pure
   where
     pred eId Storage.Blacklist {..} =
       (__EntityId ==. B.val_ eId)
         &&. (_entityType ==. B.val_ ORG)
 
-findByLocationId :: Text -> Flow (Maybe Storage.Blacklist)
+findByLocationId :: Text -> Flow (T.DBResult (Maybe Storage.Blacklist))
 findByLocationId eid =
   DB.findOne dbTable (pred eid)
-    >>= either DB.throwDBError pure
   where
     pred eId Storage.Blacklist {..} =
       (__EntityId ==. B.val_ eId)

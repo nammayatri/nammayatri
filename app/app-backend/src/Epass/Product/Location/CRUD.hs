@@ -7,8 +7,8 @@ import Data.Aeson
 import qualified Data.List as List
 import Data.Map.Strict
 import qualified Epass.Data.Accessor as Accessor
+import qualified Epass.Models.Blacklist as DB
 import Epass.Product.Common
-import qualified Epass.Storage.Queries.Blacklist as DB
 import qualified Epass.Storage.Queries.EntityTag as ETag
 import qualified Epass.Storage.Queries.Location as DB
 import qualified Epass.Storage.Queries.PassApplication as DB

@@ -12,8 +12,8 @@ import Beckn.Utils.Common
 import Data.Generics.Labels
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
+import qualified Models.Case as Case
 import Servant
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis

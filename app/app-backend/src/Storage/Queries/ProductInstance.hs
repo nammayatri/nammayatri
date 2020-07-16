@@ -14,10 +14,9 @@ import qualified Database.Beam as B
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import qualified Models.Case as Case
+import qualified Models.Product as Products
 import qualified Storage.Queries as DB
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.Products as Products
-import qualified Storage.Queries.Products as QP
 import Types.App
 import qualified Types.Storage.DB as DB
 
