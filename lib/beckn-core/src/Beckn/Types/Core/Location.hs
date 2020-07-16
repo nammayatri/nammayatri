@@ -4,7 +4,6 @@ module Beckn.Types.Core.Location where
 
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Text
 import EulerHS.Prelude
 

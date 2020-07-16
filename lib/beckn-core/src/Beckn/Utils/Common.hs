@@ -23,7 +23,7 @@ import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as T
 import Network.HTTP.Types (hContentType)
 import Servant
-import Servant.Client (BaseUrl, ClientError, ClientM)
+import Servant.Client (BaseUrl)
 import System.Environment
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a

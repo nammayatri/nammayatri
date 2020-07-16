@@ -1,7 +1,5 @@
 module Beckn.Types.Core.Policy where
 
-import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Common
 import Data.Text

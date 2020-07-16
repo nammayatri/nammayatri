@@ -1,11 +1,8 @@
 module Beckn.Types.Mobility.Traveller where
 
 import Beckn.Types.Core.Person
-import Beckn.Types.Core.Rating
-import Beckn.Types.Mobility.Stop
 import Beckn.Utils.Common
 import Data.Text
-import Data.Time
 import EulerHS.Prelude
 
 data Traveller = Traveller

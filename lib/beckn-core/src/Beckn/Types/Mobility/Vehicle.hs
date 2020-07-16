@@ -3,7 +3,6 @@
 module Beckn.Types.Mobility.Vehicle where
 
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Text
 import EulerHS.Prelude
 
