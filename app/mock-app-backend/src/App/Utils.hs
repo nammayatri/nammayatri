@@ -1,14 +1,11 @@
 module App.Utils where
 
-import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
-import Beckn.Types.Core.ScalarRange
-import Beckn.Types.Mobility.Intent
-import qualified Beckn.Types.Mobility.Stop as Stop
-import Beckn.Types.Mobility.Vehicle
+import Beckn.Types.FMD.Intent
 import Data.Time
 import EulerHS.Prelude
+import "beckn-gateway" Types.API.Search
 
 address :: Address
 address =
@@ -37,54 +34,17 @@ location =
       _3dspace = Nothing
     }
 
-intentVehicle :: Vehicle
-intentVehicle =
-  Vehicle
-    { category = Just "CAR",
-      capacity = Nothing,
-      make = Nothing,
-      model = Nothing,
-      size = Nothing,
-      variant = "SUV",
-      color = Nothing,
-      energy_type = Nothing,
-      registration = Nothing
-    }
-
-intentPayload :: Payload
-intentPayload =
-  Payload
-    { _travellers = TravellerReqInfo {_count = 0},
-      _luggage = Luggage {_count = 2, _weight_range = Nothing, _dimensions = Nothing}
-    }
-
-fareRange :: ScalarRange
-fareRange = ScalarRange {_min = 10, _max = 1000}
-
-buildIntent :: LocalTime -> Intent
-buildIntent localTime =
+buildIntent :: Intent
+buildIntent =
   Intent
     { _query_string = Nothing,
       _provider_id = Nothing,
       _category_id = Nothing,
       _item_id = Nothing,
-      _origin = getStop localTime,
-      _destination = getStop localTime,
-      _stops = [],
-      _vehicle = intentVehicle,
-      _payload = intentPayload,
-      _transfer_attrs = Nothing,
-      _fare_range = fareRange,
+      _pickups = [location],
+      _drops = [location],
+      _packages = [],
       _tags = []
-    }
-
-getStop :: LocalTime -> Stop.Stop
-getStop stopTime =
-  Stop.Stop
-    { _descriptor = Nothing,
-      _location = location,
-      _arrival_time = Stop.StopTime stopTime (Just stopTime),
-      _departure_time = Stop.StopTime stopTime (Just stopTime)
     }
 
 buildContext :: Text -> Text -> LocalTime -> Context
@@ -100,11 +60,11 @@ buildContext act tid localTime =
       _status = Nothing
     }
 
-searchReq :: Text -> Text -> LocalTime -> Search.SearchReq
+searchReq :: Text -> Text -> LocalTime -> SearchReq
 searchReq act tid localTime =
-  Search.SearchReq
+  SearchReq
     { context = buildContext act tid localTime,
-      message = Search.SearchIntent $ buildIntent localTime
+      message = toJSON buildIntent
     }
 
 getFutureTime :: IO LocalTime
@@ -112,5 +72,5 @@ getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
   (zonedTimeToLocalTime . utcToZonedTime utc) . addUTCTime 7200 <$> getCurrentTime
 
-buildSearchReq :: Text -> IO Search.SearchReq
+buildSearchReq :: Text -> IO SearchReq
 buildSearchReq guid = searchReq "search" guid <$> getFutureTime

@@ -1,28 +1,34 @@
 module App.Handlers where
 
-import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
+import Beckn.Types.Common (AckResponse (..))
+import Beckn.Utils.Servant.Auth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Search as P
 import Servant
+import "beckn-gateway" Types.API.Search (SearchReq)
 import Utils.Auth
 
 type ProviderAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SearchAPI
+           :<|> ProviderSearchAPI
        )
 
 providerAPI :: Proxy ProviderAPI
 providerAPI = Proxy
 
-type SearchAPI = Search.SearchAPI VerifyAPIKey
+type ProviderSearchAPI =
+  "search"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
 
 mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServerR r ProviderAPI
 mockProviderBackendServer _key =
   pure "Mock provider backend is UP"
     :<|> searchFlow
 
-searchFlow :: FlowServerR r SearchAPI
+searchFlow :: FlowServerR r ProviderSearchAPI
 searchFlow = P.search
