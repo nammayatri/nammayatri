@@ -4,17 +4,10 @@
 module Types.Storage.Leads where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
 import qualified Database.Beam as B
-import Database.Beam.Backend.SQL
-import Database.Beam.Postgres
 import EulerHS.Prelude
-import Servant.API
-import Servant.Swagger
 import Types.App
 
 data LeadsT f = Leads

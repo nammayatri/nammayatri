@@ -3,7 +3,6 @@ module Types.API.Case where
 import Beckn.Types.Core.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
-import Data.Default
 import Data.Swagger
 import EulerHS.Prelude
 

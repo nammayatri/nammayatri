@@ -6,19 +6,15 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Products as Products
-import qualified Storage.Queries.Products as QP
-import Types.App
 import qualified Types.Storage.DB as DB
 
 -- TODO: Add this later if required

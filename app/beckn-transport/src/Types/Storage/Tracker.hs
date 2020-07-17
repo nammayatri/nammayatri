@@ -14,7 +14,6 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 import Types.App
 
 data Type = DRIVER | CUSTOMER | TRIP

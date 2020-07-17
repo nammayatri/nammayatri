@@ -1,9 +1,6 @@
 module Beckn.Types.Core.Item where
 
-import Beckn.Types.App
 import Beckn.Types.Core.Descriptor
-import Beckn.Types.Core.Image
-import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
 import Beckn.Utils.Common

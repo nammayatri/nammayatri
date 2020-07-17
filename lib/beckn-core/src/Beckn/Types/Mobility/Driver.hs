@@ -2,10 +2,8 @@
 
 module Beckn.Types.Mobility.Driver where
 
-import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Text
 import EulerHS.Prelude
 

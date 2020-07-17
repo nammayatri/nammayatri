@@ -9,21 +9,12 @@ import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Products as Product
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Text as T
-import Data.Time.LocalTime
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
 import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
-import System.Environment
 import Types.API.ProductInstance
 
 list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList

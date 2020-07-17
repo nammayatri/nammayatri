@@ -9,12 +9,10 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
 import qualified Utils.Defaults as Default

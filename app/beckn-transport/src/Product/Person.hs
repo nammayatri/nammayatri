@@ -8,7 +8,6 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Maybe
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

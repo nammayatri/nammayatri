@@ -1,6 +1,5 @@
 module Beckn.Types.Core.Offer where
 
-import Beckn.Types.App
 import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude

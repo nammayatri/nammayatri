@@ -3,7 +3,6 @@ module Beckn.Types.Mobility.Stop where
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Utils.Common
-import Data.Text
 import Data.Time
 import EulerHS.Prelude
 

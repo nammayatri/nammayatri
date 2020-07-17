@@ -3,8 +3,6 @@ module Beckn.Types.Mobility.Route where
 import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.Stop
 import Beckn.Utils.Common
-import Data.Text
-import Data.Time
 import EulerHS.Prelude
 
 newtype Route = Route

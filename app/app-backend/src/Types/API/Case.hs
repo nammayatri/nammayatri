@@ -6,7 +6,6 @@ import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
-import Data.Default
 import Data.Swagger
 import Data.Time.LocalTime
 import EulerHS.Prelude

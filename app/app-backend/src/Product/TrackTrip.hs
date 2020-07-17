@@ -11,15 +11,11 @@ import Beckn.Types.Core.Tracking
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
 

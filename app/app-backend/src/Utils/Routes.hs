@@ -1,16 +1,12 @@
 module Utils.Routes where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Core.Api
 import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Provider
 import Beckn.Utils.Extra (getCurrentTimeUTC)
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Types.App
 
 buildContext :: Text -> Text -> Flow Context
 buildContext action tId = do

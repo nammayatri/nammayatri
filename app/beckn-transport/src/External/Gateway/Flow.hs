@@ -6,11 +6,9 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
-import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
-import External.Gateway.Types
 import Servant.Client
 import System.Environment
 

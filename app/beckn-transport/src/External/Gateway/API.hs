@@ -7,10 +7,7 @@ import Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import External.Gateway.Types
 import Servant
-import Servant.API.ContentTypes
-import Servant.Client
 
 onSearch req =
   void $ ET.client Search.onSearchAPI "mobility-provider-key" req

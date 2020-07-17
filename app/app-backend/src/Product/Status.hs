@@ -7,20 +7,15 @@ import qualified Beckn.Types.API.Status as API
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Context
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
+import Beckn.Utils.Common (mkAckResponse, withFlowHandler)
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
-import Servant.Client
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as QPI
-import qualified Storage.Queries.Products as Products
 import Types.API.Status as Status
 import Utils.Routes
 
