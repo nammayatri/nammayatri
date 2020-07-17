@@ -4,15 +4,11 @@ module Types.API.Vehicle where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.App
 import Beckn.Types.Common as BC
 import Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Extra
-import Data.Generics.Labels
 import Data.Swagger
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant.Swagger
 
 -- Create Person request and response
 data CreateVehicleReq = CreateVehicleReq

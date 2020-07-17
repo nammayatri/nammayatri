@@ -6,19 +6,8 @@
 module Types.App where
 
 import Beckn.Utils.TH
-import Data.Swagger
-import Database.Beam.Backend.SQL
-  ( FromBackendRow,
-    HasSqlValueSyntax,
-  )
-import Database.Beam.Postgres
-import Database.Beam.Postgres.Syntax (PgValueSyntax)
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
 import Servant
-import Servant.Swagger
 
 newtype CustomerId = CustomerId
   { _getCustomerId :: Text

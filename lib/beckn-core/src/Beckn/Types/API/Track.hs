@@ -3,15 +3,9 @@
 module Beckn.Types.API.Track where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Tracking
-import Beckn.Types.Mobility.Service
-import Beckn.Types.Mobility.Trip
-import Data.Generics.Labels
-import Data.Swagger
 import EulerHS.Prelude
-import Servant.Swagger
 
 data TrackTripReq = TrackTripReq
   { context :: Context,

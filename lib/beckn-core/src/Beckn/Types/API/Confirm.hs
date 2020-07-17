@@ -5,11 +5,7 @@ module Beckn.Types.API.Confirm where
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
-import Beckn.Types.Mobility.Service
-import Data.Generics.Labels
-import Data.Swagger
 import EulerHS.Prelude
-import Servant.Swagger
 
 data ConfirmReq = ConfirmReq
   { context :: Context,

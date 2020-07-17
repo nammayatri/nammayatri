@@ -5,13 +5,8 @@ module Beckn.Types.Mobility.Service where
 import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Provider
 import Beckn.Types.Mobility.Catalog
-import Beckn.Types.Mobility.FareProduct
-import Beckn.Types.Mobility.Stop
-import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Text
-import Data.Time
 import EulerHS.Prelude
 
 data Service = Service

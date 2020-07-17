@@ -8,7 +8,6 @@ module Product.Search
 where
 
 import App.Types
-import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchReq, SearchRes, onSearchAPI, searchAPI)
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Storage.Organization as Org
@@ -19,6 +18,7 @@ import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Servant.Client (BaseUrl, parseBaseUrl)
+import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
 
 parseOrgUrl :: Text -> Flow BaseUrl
 parseOrgUrl =
@@ -26,7 +26,7 @@ parseOrgUrl =
     . parseBaseUrl
     . toString
 
-search :: Org.Organization -> SearchReq -> FlowHandler SearchRes
+search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
   let search' = ET.client searchAPI
       messageId = req ^. #context . #_transaction_id
@@ -43,7 +43,7 @@ search org req = withFlowHandler $ do
       return $ AckResponse (req ^. #context) (Ack "Successful" "Ok") Nothing
     else return $ AckResponse (req ^. #context) (Ack "Error" "No providers") Nothing
 
-searchCb :: Org.Organization -> OnSearchReq -> FlowHandler OnSearchRes
+searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
   let onSearch = ET.client onSearchAPI
       messageId = req ^. #context . #_transaction_id

@@ -8,7 +8,6 @@ import Data.Text (toLower)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
-import Servant.API.ContentTypes
 
 type ServiceAPI =
   "smpp"

@@ -2,7 +2,6 @@ module Types.API.Cancel where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Mobility.Service
 import EulerHS.Prelude
 
 data Entity = CASE | PRODUCT_INSTANCE

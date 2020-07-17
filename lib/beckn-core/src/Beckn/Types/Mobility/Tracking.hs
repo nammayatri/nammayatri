@@ -2,11 +2,8 @@
 
 module Beckn.Types.Mobility.Tracking where
 
-import Beckn.Types.Core.Location
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import Data.Text
-import Data.Time
 import EulerHS.Prelude
 
 data Tracking = Tracking

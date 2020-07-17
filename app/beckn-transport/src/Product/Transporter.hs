@@ -15,9 +15,7 @@ import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Transporter
-import Types.App
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
