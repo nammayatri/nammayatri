@@ -1,6 +1,6 @@
 module Types.API.Search
-  ( OnSearchReq,
-    SearchReq,
+  ( OnSearchReq (..),
+    SearchReq (..),
     OnSearchAPI,
     SearchAPI,
     onSearchAPI,
