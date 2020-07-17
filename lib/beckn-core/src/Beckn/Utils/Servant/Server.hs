@@ -1,28 +1,33 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Utils.Servant.Server where
 
-import Beckn.Types.App (EnvR, FlowServerR, runTime)
+import Beckn.Types.App (EnvR, FlowServerR)
 import Data.Kind (Type)
 import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
 import Servant
 
-type ContextEntries = '[R.FlowRuntime]
+class HasEnvEntry r (context :: [Type]) | context -> r where
+  getEnvEntry :: Context context -> EnvR r
 
-mkContext :: EnvR r -> Context ContextEntries
-mkContext env = runTime env :. EmptyContext
+instance {-# OVERLAPPABLE #-} HasEnvEntry r xs => HasEnvEntry r (notIt ': xs) where
+  getEnvEntry (_ :. xs) = getEnvEntry xs
+
+instance {-# OVERLAPPING #-} HasEnvEntry r (EnvR r ': xs) where
+  getEnvEntry (x :. _) = x
 
 run ::
-  forall a r.
-  HasServer a ContextEntries =>
+  forall a r ctx.
+  HasServer a (EnvR r ': ctx) =>
   Proxy (a :: Type) ->
   FlowServerR r a ->
+  Context ctx ->
   EnvR r ->
   Application
-run apis server env =
-  serveWithContext apis (mkContext env) $
-    hoistServerWithContext apis (Proxy @ContextEntries) f server
+run apis server ctx env =
+  serveWithContext apis (env :. ctx) $
+    hoistServerWithContext apis (Proxy @(EnvR r ': ctx)) f server
   where
     f :: ReaderT (EnvR r) (ExceptT ServerError IO) m -> Handler m
     f r = do

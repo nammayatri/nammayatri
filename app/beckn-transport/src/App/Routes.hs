@@ -1,5 +1,6 @@
 module App.Routes where
 
+import App.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -7,16 +8,12 @@ import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
-import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Vehicle
-import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
-import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron
@@ -28,7 +25,6 @@ import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
-import Servant.Multipart
 import Types.API.Case
 import Types.API.Cron
 import Types.API.Location as Location
@@ -38,6 +34,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
+import Utils.Auth (VerifyAPIKey)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -46,7 +43,7 @@ type TransportAPI =
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
-           :<|> SearchAPI
+           :<|> SearchAPI VerifyAPIKey
            :<|> ConfirmAPI
            :<|> CancelAPI
            :<|> StatusAPI
@@ -285,12 +282,11 @@ transporterServer key =
     :<|> productFlow
     :<|> routeApiFlow
 
-searchApiFlow :: FlowServer SearchAPI
+searchApiFlow :: FlowServer (SearchAPI VerifyAPIKey)
 searchApiFlow = BP.search
 
 type ConfirmAPI =
   "confirm"
-    :> "services"
     :> ( ReqBody '[JSON] ConfirmReq
            :> Post '[JSON] AckResponse
        )
@@ -300,7 +296,6 @@ confirmApiFlow = BP.confirm
 
 type CancelAPI =
   "cancel"
-    :> "services"
     :> ( ReqBody '[JSON] CancelReq
            :> Post '[JSON] AckResponse
        )
@@ -331,7 +326,6 @@ statusApiFlow = BP.serviceStatus
 
 type TrackAPI =
   "track"
-    :> "trip"
     :> ( ReqBody '[JSON] TrackTripReq
            :> Post '[JSON] TrackTripRes
        )

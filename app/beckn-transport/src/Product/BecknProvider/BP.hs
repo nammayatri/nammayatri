@@ -8,15 +8,11 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
-import Beckn.Types.App
+import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Location as BL
-import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Driver
-import Beckn.Types.Mobility.Intent
-import Beckn.Types.Mobility.Service
-import Beckn.Types.Mobility.Tracking
+import Beckn.Types.Mobility.Stop as BS
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case as SC
@@ -24,16 +20,10 @@ import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products as Product
-import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Data.Text as T
 import Data.Time
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
@@ -44,28 +34,26 @@ import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as ProductInstance
-import Storage.Queries.Products as Product
 import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
-import Types.Notification
 import qualified Utils.Notifications as Notify
 
 -- 1) Create Parent Case with Customer Request Details
 -- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
-search :: SearchReq -> FlowHandler AckResponse
-search req = withFlowHandler $ do
+search :: () -> SearchReq -> FlowHandler AckResponse
+search _unit req = withFlowHandler $ do
   --TODO: Need to add authenticator
-  let intent = req ^. #message
+  let intent = req ^. #message . #intent
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime currTime (req ^. #message . #time)
+  validity <- getValidTime currTime (intent ^. #_origin . #_departure_time . #_est)
   uuid1 <- L.generateGUID
-  let fromLocation = mkFromLocation req uuid1 currTime $ req ^. #message . #origin
+  let fromLocation = mkFromStop req uuid1 currTime $ intent ^. #_origin
   uuid2 <- L.generateGUID
-  let toLocation = mkFromLocation req uuid2 currTime $ req ^. #message . #destination
+  let toLocation = mkFromStop req uuid2 currTime $ intent ^. #_destination
   Loc.create fromLocation
   Loc.create toLocation
   let c = mkCase req uuid currTime validity fromLocation toLocation
@@ -83,7 +71,7 @@ cancel :: CancelReq -> FlowHandler AckResponse
 cancel req = withFlowHandler $ do
   --TODO: Need to add authenticator
   uuid <- L.generateGUID
-  let prodInstId = req ^. #message . #id -- transporter search productInstId
+  let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
   prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
   -- TODO: Should we check if all case's products were cancelled
@@ -111,63 +99,42 @@ getValidTime now startTime = do
       validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkFromLocation :: SearchReq -> Text -> LocalTime -> BL.Location -> SL.Location
-mkFromLocation req uuid now loc =
-  case loc ^. #_type of
-    "gps" -> case loc ^. #_gps of
-      Just (val :: GPS) -> mkLocationRecord uuid now SL.POINT (Just $ read $ T.unpack $ val ^. #lat) (Just $ read $ T.unpack $ val ^. #lon) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-      _ -> undefined -- need to throw error
-    "address" -> case loc ^. #_address of
-      Just (val :: Address) -> mkLocationRecord uuid now SL.ADDRESS Nothing Nothing (Just $ val ^. #area) Nothing (Just $ val ^. #area) Nothing (Just $ val ^. #country) (Just $ val ^. #area_code) (Just $ (val ^. #door) <> (val ^. #building) <> (val ^. #street)) Nothing
-      _ -> undefined -- need to throw error
-    _ -> mkLocationRecord uuid now SL.POINT Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-
-mkLocationRecord ::
-  Text ->
-  LocalTime ->
-  SL.LocationType ->
-  Maybe Double ->
-  Maybe Double ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  SL.Location
-mkLocationRecord idr time typ lat lon ward dis city state country pincode address bound =
-  SL.Location
-    { _id = LocationId {_getLocationId = idr},
-      _locationType = typ,
-      _lat = lat,
-      _long = lon,
-      _ward = ward,
-      _district = dis,
-      _city = city,
-      _state = state,
-      _country = country,
-      _pincode = pincode,
-      _address = address,
-      _bound = bound,
-      _createdAt = time,
-      _updatedAt = time
-    }
+mkFromStop :: SearchReq -> Text -> LocalTime -> BS.Stop -> SL.Location
+mkFromStop req uuid now stop =
+  let loc = stop ^. #_location
+      mgps = loc ^. #_gps
+      maddress = loc ^. #_address
+   in SL.Location
+        { _id = LocationId uuid,
+          _locationType = SL.POINT,
+          _lat = read . T.unpack . (^. #lat) <$> mgps,
+          _long = read . T.unpack . (^. #lon) <$> mgps,
+          _ward = (^. #street) <$> maddress,
+          _district = (^. #area) <$> maddress,
+          _city = (^. #city) <$> maddress,
+          _state = Nothing,
+          _country = (^. #country) <$> maddress,
+          _pincode = (^. #area_code) <$> maddress,
+          _address = encodeToText <$> maddress,
+          _bound = Nothing,
+          _createdAt = now,
+          _updatedAt = now
+        }
 
 mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do
-  let intent = req ^. #message
+  let intent = req ^. #message . #intent
+  let startTime = req ^. #message . #intent . #_origin . #_departure_time . #_est
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = req ^. #context . #transaction_id,
+      _shortId = req ^. #context . #_transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
       _status = NEW,
-      _startTime = intent ^. #time,
+      _startTime = startTime,
       _endTime = Nothing,
       _validTill = validity,
       _provider = Nothing,
@@ -175,10 +142,10 @@ mkCase req uuid now validity fromLocation toLocation = do
       _requestor = Nothing,
       _requestorType = Just CONSUMER,
       _parentCaseId = Nothing,
-      _fromLocationId = fromLocation ^. #_id ^. #_getLocationId,
-      _toLocationId = toLocation ^. #_id ^. #_getLocationId,
-      _udf1 = Just $ intent ^. #vehicle . #variant,
-      _udf2 = Just $ show $ intent ^. #payload . #travellers . #count,
+      _fromLocationId = TA._getLocationId $ fromLocation ^. #_id,
+      _toLocationId = TA._getLocationId $ toLocation ^. #_id,
+      _udf1 = Just $ intent ^. #_vehicle . #variant,
+      _udf2 = Just $ show $ intent ^. #_payload . #_travellers . #_count,
       _udf3 = Nothing,
       _udf4 = Nothing,
       _udf5 = Nothing,
@@ -190,8 +157,8 @@ mkCase req uuid now validity fromLocation toLocation = do
 confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
-  let prodInstId = ProductInstanceId $ head $ req ^. #message . #_selected_items
-  let caseShortId = req ^. #context . #transaction_id -- change to message.transactionId
+  let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
+  let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
   search_case <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById prodInstId
   orderCase <- mkOrderCase search_case
@@ -201,10 +168,8 @@ confirm req = withFlowHandler $ do
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
   ProductInstance.updateStatusByIds [productInstance ^. #_id, orderProductInstance ^. #_id] ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
-  shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  uuid <- L.generateGUID
-  currTime <- getCurrentTimeUTC
-  let trackerCase = mkTrackerCase search_case uuid currTime $ T.pack shortId
+  (currTime, uuid, shortId) <- getIdShortIdAndTime
+  let trackerCase = mkTrackerCase search_case uuid currTime shortId
   Case.create trackerCase
   uuid1 <- L.generateGUID
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
@@ -217,9 +182,7 @@ confirm req = withFlowHandler $ do
 
 mkOrderCase :: SC.Case -> Flow SC.Case
 mkOrderCase SC.Case {..} = do
-  now <- getCurrentTimeUTC
-  id <- generateGUID
-  shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
+  (now, id, shortId) <- getIdShortIdAndTime
   return $
     SC.Case
       { _id = id,
@@ -236,9 +199,7 @@ mkOrderCase SC.Case {..} = do
 
 mkOrderProductInstance :: CaseId -> ProductInstance -> Flow ProductInstance.ProductInstance
 mkOrderProductInstance caseId prodInst = do
-  now <- getCurrentTimeUTC
-  id <- generateGUID
-  shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
+  (now, id, shortId) <- getIdShortIdAndTime
   return $
     ProductInstance.ProductInstance
       { _id = ProductInstanceId id,
@@ -347,20 +308,21 @@ mkOnConfirmPayload c pis allPis trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
-          { domain = "MOBILITY",
-            action = "CONFIRM",
-            version = Just "0.1",
-            transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            message_id = Nothing,
-            timestamp = currTime,
-            dummy = ""
+          { _domain = "MOBILITY",
+            _action = "CONFIRM",
+            _version = Just "0.8.0",
+            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _session_id = Nothing,
+            _timestamp = currTime,
+            _token = Nothing,
+            _status = Nothing
           }
   trip <- mkTrip trackerCase
-  service <- GT.mkServiceOffer c pis allPis (Just trip) Nothing
+  order <- GT.mkOrder c (head pis) (Just trip)
   return
     OnConfirmReq
       { context,
-        message = service
+        message = ConfirmOrder order
       }
 
 serviceStatus :: StatusReq -> FlowHandler StatusRes
@@ -387,16 +349,17 @@ mkOnServiceStatusPayload c pis allPis trackerCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
-          { domain = "MOBILITY",
-            action = "on_status",
-            version = Just "0.1",
-            transaction_id = c ^. #_shortId,
-            message_id = Nothing,
-            timestamp = currTime,
-            dummy = ""
+          { _domain = "MOBILITY",
+            _action = "on_status",
+            _version = Just "0.1",
+            _transaction_id = c ^. #_shortId,
+            _session_id = Nothing,
+            _timestamp = currTime,
+            _token = Nothing,
+            _status = Nothing
           }
   trip <- mapM mkTrip trackerCase
-  service <- GT.mkServiceOffer c pis allPis trip Nothing
+  service <- GT.mkServiceOffer c pis allPis Nothing
   return
     OnStatusReq
       { context,
@@ -406,7 +369,7 @@ mkOnServiceStatusPayload c pis allPis trackerCase = do
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
 trackTrip req = withFlowHandler $ do
   L.logInfo "track trip API Flow" $ show req
-  let tripId = req ^. #message . #id
+  let tripId = req ^. #message . #tracking . #id
   case_ <- Case.findById (CaseId tripId)
   case case_ ^. #_parentCaseId of
     Just parentCaseId -> do
@@ -436,33 +399,30 @@ mkOnTrackTripPayload case_ pCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
-          { domain = "MOBILITY",
-            action = "on_track",
-            version = Just "0.1",
-            transaction_id = pCase ^. #_shortId,
-            message_id = Nothing,
-            timestamp = currTime,
-            dummy = ""
+          { _domain = "MOBILITY",
+            _action = "on_track",
+            _version = Just "0.8.0",
+            _transaction_id = pCase ^. #_shortId,
+            _session_id = Nothing,
+            _timestamp = currTime,
+            _token = Nothing,
+            _status = Nothing
           }
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (case_ ^. #_id)
-  let embed_url = GT.baseTrackingUrl <> "/" <> _getCaseId (case_ ^. #_id) <> "/embed"
   trip <- mkTrip case_
-  let trackingUrl = GT.mkTracking "PULL" data_url embed_url
-  let tracker = Tracker trip (Just trackingUrl)
+  let tracking = GT.mkTracking "PULL" data_url
   return
     OnTrackTripReq
       { context,
-        message = tracker
+        message =
+          OnTrackReqMessage (Just tracking)
       }
 
 mkTrip :: Case -> Flow Trip
 mkTrip c = do
-  let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (c ^. #_id)
-      embed_url = GT.baseTrackingUrl <> "/" <> _getCaseId (c ^. #_id) <> "/embed"
   pi <- ProductInstance.findByCaseId $ c ^. #_id
   driver <- mapM mkDriverInfo $ pi ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (pi ^. #_entityId)
-  -- let vehicleInfo = decodeMTypeFromText <$> prod ^. #_info
   L.logInfo "vehicle" $ show vehicle
   return $
     Trip
@@ -474,10 +434,7 @@ mkTrip c = do
               rating = Nothing
             },
         travellers = [],
-        tracking = GT.mkTracking "PULL" data_url embed_url,
-        corridor_type = "ON-DEMAND",
-        state = "", -- TODO: need to take it from product
-        fare = Nothing, -- TODO: need to take it from product
+        fare = Nothing,
         route = Nothing
       }
 
@@ -496,13 +453,14 @@ mkCancelRidePayload prodInstId = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
-          { domain = "MOBILITY",
-            action = "on_cancel",
-            version = Just "0.7.1",
-            transaction_id = "",
-            message_id = Nothing,
-            timestamp = currTime,
-            dummy = ""
+          { _domain = "MOBILITY",
+            _action = "on_cancel",
+            _version = Just "0.7.1",
+            _transaction_id = "",
+            _session_id = Nothing,
+            _timestamp = currTime,
+            _token = Nothing,
+            _status = Nothing
           }
   tripObj <- mkCancelTripObj prodInstId
   return
@@ -526,9 +484,13 @@ mkCancelTripObj prodInstId = do
               rating = Nothing
             },
         travellers = [],
-        tracking = Tracking "" Nothing,
-        corridor_type = "",
-        state = show $ productInstance ^. #_status,
         fare = Just $ GT.mkPrice productInstance,
         route = Nothing
       }
+
+getIdShortIdAndTime :: GuidLike b => Flow (LocalTime, b, Text)
+getIdShortIdAndTime = do
+  now <- getCurrentTimeUTC
+  id <- generateGUID
+  shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
+  return (now, id, shortId)

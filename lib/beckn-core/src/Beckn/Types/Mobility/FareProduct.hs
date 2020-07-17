@@ -1,16 +1,14 @@
 module Beckn.Types.Mobility.FareProduct where
 
-import Beckn.Types.Core.Item
-import Beckn.Types.Core.Policy
+import Beckn.Types.Core.Descriptor
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
 data FareProduct = FareProduct
   { _id :: Text,
-    _fare_media :: Text,
-    _name :: Text,
-    _fare_policy :: Policy,
-    _applies_to_items :: [Item]
+    _descriptor :: Descriptor,
+    _policy_id :: Text
   }
   deriving (Generic, Show)
 
@@ -19,3 +17,11 @@ instance FromJSON FareProduct where
 
 instance ToJSON FareProduct where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance Example FareProduct where
+  example =
+    FareProduct
+      { _id = idExample,
+        _descriptor = example,
+        _policy_id = idExample
+      }

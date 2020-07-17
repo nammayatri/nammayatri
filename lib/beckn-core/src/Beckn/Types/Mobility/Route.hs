@@ -2,13 +2,11 @@ module Beckn.Types.Mobility.Route where
 
 import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.Stop
-import Data.Text
-import Data.Time
+import Beckn.Utils.Common
 import EulerHS.Prelude
 
-data Route = Route
-  { _edge :: RouteEdge,
-    _stops :: [Stop]
+newtype Route = Route
+  { _edge :: RouteEdge
   }
   deriving (Generic, Show)
 
@@ -18,11 +16,17 @@ instance FromJSON Route where
 instance ToJSON Route where
   toJSON = genericToJSON stripLensPrefixOptions
 
+instance Example Route where
+  example =
+    Route
+      { _edge = example
+      }
+
 data RouteEdge = RouteEdge
-  { _endpoints :: Endpoint,
-    _path :: String,
+  { _path :: String,
     _duration :: Scalar,
-    _distance :: Scalar
+    _distance :: Scalar,
+    _stops :: [Stop]
   }
   deriving (Generic, Show)
 
@@ -32,14 +36,11 @@ instance FromJSON RouteEdge where
 instance ToJSON RouteEdge where
   toJSON = genericToJSON stripLensPrefixOptions
 
-data Endpoint = Endpoint
-  { _start :: Stop,
-    _stop :: Stop
-  }
-  deriving (Generic, Show)
-
-instance FromJSON Endpoint where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Endpoint where
-  toJSON = genericToJSON stripLensPrefixOptions
+instance Example RouteEdge where
+  example =
+    RouteEdge
+      { _path = "",
+        _duration = example,
+        _distance = example,
+        _stops = example
+      }

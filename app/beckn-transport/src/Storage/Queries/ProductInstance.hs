@@ -7,17 +7,14 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
 import Types.API.ProductInstance
-import Types.App
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT)
@@ -154,6 +151,16 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
+joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+  i <- B.filter_ pred1 $ B.all_ tbl1
+  j <- B.filter_ pred2 $ B.all_ tbl2
+  k <- B.filter_ pred3 $
+    B.join_ tbl3 $
+      \line ->
+        CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+          B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
+  pure (i, j, k)
+
 productInstanceJoin :: Int -> Int -> [Case.CaseType] -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoin _limit _offset csTypes orgId status = do
   joinedValues <-
@@ -182,15 +189,6 @@ productInstanceJoin _limit _offset csTypes orgId status = do
           _fromLocation = Nothing,
           _toLocation = Nothing
         }
-    joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
-      i <- B.filter_ pred1 $ B.all_ tbl1
-      j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $
-        B.join_ tbl3 $
-          \line ->
-            CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
-              B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
-      pure (i, j, k)
 
 productInstanceJoinWithoutLimits :: Case.CaseType -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoinWithoutLimits csType orgId status = do
@@ -216,15 +214,6 @@ productInstanceJoinWithoutLimits csType orgId status = do
           _fromLocation = Nothing,
           _toLocation = Nothing
         }
-    joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
-      i <- B.filter_ pred1 $ B.all_ tbl1
-      j <- B.filter_ pred2 $ B.all_ tbl2
-      k <- B.filter_ pred3 $
-        B.join_ tbl3 $
-          \line ->
-            CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
-              B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
-      pure (i, j, k)
 
 findById :: ProductInstanceId -> Flow Storage.ProductInstance
 findById pid =

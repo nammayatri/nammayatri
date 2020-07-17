@@ -3,13 +3,14 @@
 module App where
 
 import qualified App.Server as App
+import App.Types
 import Beckn.Constants.APIErrorCode
+import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (prepareAppOptions, runFlowR)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as T
@@ -18,13 +19,11 @@ import Network.Wai
 import Network.Wai.Handler.Warp
   ( Settings,
     defaultSettings,
-    run,
     runSettings,
     setOnExceptionResponse,
     setPort,
   )
 import Servant
-import Servant.Server
 import Storage.DB.Config
 import Storage.Redis.Config
 import qualified System.Environment as SE
@@ -38,29 +37,30 @@ runTransporterBackendApp = do
 
 runTransporterBackendApp' :: Int -> Settings -> IO ()
 runTransporterBackendApp' port settings = do
-  reqHeadersKey <- V.newKey
+  let appEnv = AppEnv CommonEnv
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,
             T._logFilePath = "/tmp/beckn-transport.log",
             T._isAsync = True
           }
+  reqHeadersKey <- V.newKey
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections
-    try (runFlowR flowRt () prepare) >>= \case
+    try (runFlowR flowRt appEnv prepare) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
         putStrLn @String "Initializing Redis Connections..."
-        try (runFlowR flowRt () prepareRedisConnections) >>= \case
+        try (runFlowR flowRt appEnv prepareRedisConnections) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ -> do
             putStrLn @String "Initializing Options..."
-            try (runFlowR flowRt () prepareAppOptions) >>= \case
+            try (runFlowR flowRt appEnv prepareAppOptions) >>= \case
               Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
               Right _ ->
                 putStrLn @String ("Runtime created. Starting server at port " <> show port)
-            runSettings settings $ App.run reqHeadersKey (App.EnvR flowRt ())
+            runSettings settings $ App.run reqHeadersKey (App.EnvR flowRt appEnv)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse exception = do

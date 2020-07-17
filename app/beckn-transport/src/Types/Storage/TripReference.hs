@@ -14,7 +14,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 import Types.App
 
 data Status = NOT_STARTED | WAITING | ON_GOING | COMPLETED | CANCELLED

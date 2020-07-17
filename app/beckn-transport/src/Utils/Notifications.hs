@@ -10,21 +10,13 @@ import Beckn.Types.Mobility.Intent as Intent
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common (decodeFromText, showTimeIst)
-import Control.Lens.Prism (_Just)
+import Beckn.Utils.Common (showTimeIst)
 import qualified Data.Text as T
-import Data.Time
-import Data.Time.LocalTime
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
-import Storage.Queries.Vehicle as Vehicle
+import qualified Storage.Queries.Products as QP
+import qualified Storage.Queries.Vehicle as QV
 
 -- | Send FCM "search" notification to provider admins
 notifyTransportersOnSearch :: Case -> Intent -> [Person] -> Flow ()
@@ -36,7 +28,7 @@ notifyTransportersOnSearch c intent =
         show (_getCaseId $ c ^. #_id)
     title = FCMNotificationTitle $ T.pack "New ride request!"
     model =
-      fromMaybe "unknown model" $ intent ^. #vehicle . #model
+      fromMaybe "unknown model" $ intent ^. #_vehicle . #model
     body =
       FCMNotificationBody $
         unwords
@@ -50,13 +42,13 @@ notifyTransportersOnSearch c intent =
 -- | Send FCM "confirm" notification to provider admins
 notifyTransportersOnConfirm :: Case -> ProductInstance -> [Person] -> Flow ()
 notifyTransportersOnConfirm c pi admins = do
-  p <- Products.findById (_productId pi)
+  p <- QP.findById (_productId pi)
   model <- case p ^. #_udf3 of
     Nothing -> pure unknown
     Just vehicleId -> do
-      v_ <- Vehicle.findVehicleById (VehicleId vehicleId)
-      case v_ of
-        Just v -> pure $ fromMaybe unknown $ Vehicle._model v
+      mvehicle <- QV.findVehicleById (VehicleId vehicleId)
+      case mvehicle of
+        Just vehicle -> pure $ fromMaybe unknown $ Vehicle._model vehicle
         Nothing -> pure unknown
   traverse_
     (notifyPerson title (body model) notificationData)

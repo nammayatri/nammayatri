@@ -9,19 +9,17 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
 import qualified Utils.Defaults as Default
 
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandler $ do
-  vehicle <- transformFlow req >>= addOrgId orgId
+  vehicle <- createTransform req >>= addOrgId orgId
   QV.create vehicle
   return $ CreateVehicleRes vehicle
 
@@ -36,7 +34,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM =
 updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do
   vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
-  updatedVehicle <- transformFlow2 req vehicle
+  updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 

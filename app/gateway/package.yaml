@@ -37,6 +37,7 @@ default-extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes

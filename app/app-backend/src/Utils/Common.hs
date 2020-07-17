@@ -4,14 +4,10 @@ import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
 import qualified Beckn.Utils.Extra as Utils
 import Beckn.Utils.Servant.Auth
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
-import qualified Data.Time as DT
-import Data.Time.Clock
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -20,13 +16,12 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
 
 -- | Performs simple token verification.
-type TokenAuth = TokenAuth' VerifyToken
+type TokenAuth = TokenAuth' "token" VerifyToken
 
 data VerifyToken = VerifyToken
 
 instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = Person.Person
-  verifyToken = Utils.Common.verifyPerson
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
@@ -36,6 +31,9 @@ verifyPerson token = do
   sr <- Utils.Common.verifyToken token
   Person.findById (PersonId $ SR._EntityId sr)
     >>= fromMaybeM500 "Could not find user"
+
+verifyPersonAction :: VerificationAction VerifyToken AppEnv
+verifyPersonAction = VerificationAction Utils.Common.verifyPerson
 
 verifyToken :: RegToken -> Flow SR.RegistrationToken
 verifyToken token =

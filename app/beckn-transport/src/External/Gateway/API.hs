@@ -7,17 +7,13 @@ import Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import External.Gateway.Types
 import Servant
-import Servant.API.ContentTypes
-import Servant.Client
 
 onSearch req =
-  void $ ET.client Search.onSearchAPI req
+  void $ ET.client Search.onSearchAPI "mobility-provider-key" req
 
 type TrackAPI =
   "on_track"
-    :> "trip"
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -29,7 +25,6 @@ onTrackTrip req =
 
 type ConfirmAPI =
   "on_confirm"
-    :> "services"
     :> ReqBody '[JSON] Confirm.OnConfirmReq
     :> Post '[JSON] Confirm.OnConfirmRes
 
@@ -41,7 +36,6 @@ onConfirm req =
 
 type CancelAPI =
   "on_cancel"
-    :> "services"
     :> ReqBody '[JSON] OnCancelReq
     :> Post '[JSON] OnCancelRes
 

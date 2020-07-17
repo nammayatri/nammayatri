@@ -2,9 +2,8 @@
 
 module Beckn.Types.Mobility.Driver where
 
-import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person
-import Data.Generics.Labels
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -14,9 +13,24 @@ data Driver = Driver
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+instance Example Driver where
+  example =
+    Driver
+      { descriptor = example,
+        experience = example
+      }
+
 data Experience = Experience
   { label :: Text,
     value :: Text,
     unit :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+instance Example Experience where
+  example =
+    Experience
+      { label = "Taxi driver",
+        value = "5",
+        unit = "stars"
+      }

@@ -7,7 +7,6 @@ import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
-import EulerHS.Language (Flow)
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import qualified EulerHS.Types as ET
@@ -15,7 +14,7 @@ import Servant
 import Types.API.Location
 
 type ConfirmAPI =
-  "confirm" :> "services" :> ReqBody '[JSON] Confirm.ConfirmReq :> Post '[JSON] Confirm.ConfirmRes
+  "confirm" :> ReqBody '[JSON] Confirm.ConfirmReq :> Post '[JSON] Confirm.ConfirmRes
 
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
@@ -24,7 +23,7 @@ confirm req =
   void $ ET.client confirmAPI req
 
 search req =
-  void $ client Search.searchAPI req
+  void $ client Search.searchAPI "mobility-app-key" req
 
 type LocationAPI =
   "location"
@@ -38,7 +37,6 @@ location = client locationAPI
 
 type TrackTripAPI =
   "track"
-    :> "trip"
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
 
@@ -50,7 +48,6 @@ trackTrip req =
 
 type CancelAPI =
   "cancel"
-    :> "services"
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
 

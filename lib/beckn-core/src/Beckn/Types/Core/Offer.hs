@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Offer where
 
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -17,6 +18,15 @@ instance FromJSON Offer where
 instance ToJSON Offer where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+instance Example Offer where
+  example =
+    Offer
+      { _id = idExample,
+        _name = "Offer #7312",
+        _code = "O7312",
+        _ref = example
+      }
+
 data OfferRef = OfferRef
   { _type :: Text, --"category", "service", "item"
     _ids :: [Text]
@@ -28,3 +38,10 @@ instance FromJSON OfferRef where
 
 instance ToJSON OfferRef where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example OfferRef where
+  example =
+    OfferRef
+      { _type = "service",
+        _ids = one idExample
+      }

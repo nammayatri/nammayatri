@@ -3,20 +3,17 @@
 
 module App.Routes where
 
-import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes (..))
+import App.Types
+import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes)
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Track
 import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..), generateGUID)
-import Beckn.Types.Core.Ack
+import Beckn.Types.Common (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.ProductInstance
-import Data.Aeson
 import qualified Data.Vault.Lazy as V
-import qualified Epass.App.Routes as Epass
 import EulerHS.Prelude
-import Network.Wai.Parse
 import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
@@ -36,7 +33,7 @@ import qualified Types.API.Location as Location
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
-import Types.App
+import Utils.Auth (VerifyAPIKey)
 import Utils.Common (TokenAuth)
 
 type AppAPI =
@@ -52,7 +49,6 @@ type AppAPI =
            :<|> CancelAPI
            :<|> CronAPI
            :<|> RouteAPI
-           :<|> Epass.EPassAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -71,7 +67,6 @@ appServer key =
     :<|> cancelFlow
     :<|> cronFlow
     :<|> routeApiFlow
-    :<|> Epass.epassServer key
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -96,8 +91,11 @@ registrationFlow =
 
 -------- Search Flow --------
 type SearchAPI =
-  (TokenAuth :> Search.SearchAPI)
-    :<|> Search.OnSearchAPI
+  "search"
+    :> TokenAuth
+    :> ReqBody '[JSON] Search.SearchReq
+    :> Post '[JSON] AckResponse
+    :<|> Search.OnSearchAPI VerifyAPIKey
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
@@ -111,7 +109,6 @@ type ConfirmAPI =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
-      :> "services"
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
@@ -159,12 +156,10 @@ infoFlow regToken =
 ------- Track trip Flow -------
 type TrackTripAPI =
   "track"
-    :> "trip"
     :> TokenAuth
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
-    :> "trip"
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -189,13 +184,11 @@ productInstanceFlow =
 -------- Cancel Flow----------
 type CancelAPI =
   "cancel"
-    :> "services"
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     -- on cancel
     :<|> "on_cancel"
-    :> "services"
     :> ReqBody '[JSON] Cancel.OnCancelReq
     :> Post '[JSON] Cancel.OnCancelRes
 

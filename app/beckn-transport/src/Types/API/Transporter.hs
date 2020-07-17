@@ -9,14 +9,10 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import Data.Generics.Labels
 import Data.Swagger
 import Data.Time.LocalTime
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant.Swagger
 import qualified Storage.Queries.Location as QL
 
 data TransporterReq = TransporterReq
@@ -45,8 +41,8 @@ data TransporterReq = TransporterReq
 instance FromJSON TransporterReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 TransporterReq SO.Organization where
-  transformFlow req = do
+instance CreateTransform TransporterReq SO.Organization Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- transformToLocation req
@@ -115,8 +111,8 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, ToSchema, Show, FromJSON)
 
-instance Transform UpdateTransporterReq SO.Organization where
-  transformFlow2 req org = do
+instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
+  modifyTransform req org = do
     now <- getCurrentTimeUTC
     return $
       org

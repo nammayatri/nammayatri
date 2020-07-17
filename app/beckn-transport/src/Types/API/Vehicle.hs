@@ -2,16 +2,13 @@
 
 module Types.API.Vehicle where
 
+import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.App
 import Beckn.Types.Common as BC
 import Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Extra
-import Data.Generics.Labels
 import Data.Swagger
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant.Swagger
 
 -- Create Person request and response
 data CreateVehicleReq = CreateVehicleReq
@@ -31,8 +28,8 @@ data CreateVehicleReq = CreateVehicleReq
 instance FromJSON CreateVehicleReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 CreateVehicleReq SV.Vehicle where
-  transformFlow req = do
+instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     return $
@@ -78,8 +75,8 @@ data UpdateVehicleReq = UpdateVehicleReq
 instance FromJSON UpdateVehicleReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform UpdateVehicleReq SV.Vehicle where
-  transformFlow2 req vehicle = do
+instance ModifyTransform UpdateVehicleReq SV.Vehicle Flow where
+  modifyTransform req vehicle = do
     now <- getCurrentTimeUTC
     return $
       vehicle

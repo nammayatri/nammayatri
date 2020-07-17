@@ -6,12 +6,7 @@ import App.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App as BC
 import Beckn.Types.Core.Amount
-import Beckn.Types.Core.Catalog
-import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Item
-import Beckn.Types.Core.Price
-import Beckn.Types.Mobility.Service
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
@@ -21,8 +16,6 @@ import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import qualified Data.Accessor as Lens
-import Data.Aeson
 import qualified Data.Text as T
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
@@ -33,16 +26,12 @@ import Servant
 import Storage.Queries.Case as Case
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
-import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.ProductInstance as QPI
 import Storage.Queries.Products as PQ
-import qualified Storage.Queries.RegistrationToken as QR
-import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
 import qualified Types.API.ProductInstance as CPR
-import Types.API.Registration
 import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
@@ -154,17 +143,18 @@ mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
-          { domain = "MOBILITY",
-            action = "SEARCH",
-            version = Just "0.1",
-            transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            message_id = Nothing,
-            timestamp = currTime,
-            dummy = ""
+          { _domain = "MOBILITY",
+            _action = "SEARCH",
+            _version = Just "0.1",
+            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _session_id = Nothing,
+            _token = Nothing,
+            _timestamp = currTime,
+            _status = Nothing
           }
-  service <- GT.mkServiceOffer c pis allPis Nothing (Just orgInfo)
+  service <- GT.mkServiceOffer c pis allPis (Just orgInfo)
   return
     OnSearchReq
       { context,
-        message = service
+        message = OnSearchServices [service]
       }

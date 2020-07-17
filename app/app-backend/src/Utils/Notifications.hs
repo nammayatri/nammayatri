@@ -5,30 +5,17 @@ module Utils.Notifications where
 import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.API.Track
 import Beckn.Types.App
-import Beckn.Types.Core.Person (full_name)
-import Beckn.Types.Mobility.Driver as Driver
-import Beckn.Types.Mobility.Tracking
-import Beckn.Types.Mobility.Trip
-import Beckn.Types.Mobility.Vehicle as Vehicle
 import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Person as Person hiding (full_name)
+import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products as Products
 import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common (decodeFromText, showTimeIst)
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
-import Data.Time
-import Data.Time.Format (formatTime)
-import Data.Time.LocalTime
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified Storage.Queries.Case as Case
+import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import Types.ProductInfo as ProductInfo
 
 -- @boazjohn:
@@ -49,7 +36,7 @@ import Types.ProductInfo as ProductInfo
 -- When case doesn't have any product, there is no notification.
 notifyOnProductCancelCb :: ProductInstance -> Flow ()
 notifyOnProductCancelCb pi = do
-  c <- Case.findById $ pi ^. #_caseId
+  c <- QC.findById $ pi ^. #_caseId
   let mpersonId = Case._requestor c
       productInstanceId = pi ^. #_id
       minfo :: (Maybe ProductInfo) = decodeFromText =<< pi ^. #_info
@@ -62,11 +49,11 @@ notifyOnProductCancelCb pi = do
                 FCMData CANCELLED_PRODUCT SHOW FCM.Product $
                   show (_getProductInstanceId productInstanceId)
               title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-              provider_name = info ^. #_provider . _Just . #_name
+              providerName = info ^. #_provider . _Just . #_name
               body =
                 FCMNotificationBody $
                   unwords
-                    [ provider_name,
+                    [ providerName,
                       "had to cancel your ride scehduled for",
                       showTimeIst (Case._startTime c) <> ".",
                       "Check the app for more details."
@@ -75,38 +62,37 @@ notifyOnProductCancelCb pi = do
         _ -> pure ()
     _ -> pure ()
 
--- | Notifocation on confirmation callback
--- unused, left as a sample, can be removed later
-notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> Flow ()
-notifyOnConfirmCb personId c tracker =
-  if isJust personId
-    then do
-      person <- Person.findById $ PersonId (fromJust personId)
-      case person of
-        Just p -> do
-          let notificationData =
-                FCMData CONFIRM_CALLBACK SHOW FCM.Case $
-                  show (_getCaseId $ c ^. #_id)
-              vehicle_category = case tracker of
-                Nothing -> "unknown"
-                Just t ->
-                  fromMaybe "unknown" $ Case._udf1 c
-              title = FCMNotificationTitle $ T.pack "Congratulations!"
-              body =
-                FCMNotificationBody $
-                  unwords
-                    [ "You have successfully booked a",
-                      vehicle_category,
-                      "for",
-                      showTimeIst $ Case._startTime c,
-                      "with",
-                      -- driver_name,
-                      "Click here for details."
-                    ]
-                    <> "."
-          notifyPerson title body notificationData p
-        _ -> pure ()
-    else pure ()
+-- -- | Notification on confirmation callback
+-- -- unused, left as a sample, can be removed later
+-- notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> Flow ()
+-- notifyOnConfirmCb personId c tracker =
+--   if isJust personId
+--     then do
+--       person <- Person.findById $ PersonId (fromJust personId)
+--       case person of
+--         Just p -> do
+--           let notificationData =
+--                 FCMData CONFIRM_CALLBACK SHOW FCM.Case $
+--                   show (_getCaseId $ c ^. #_id)
+--               vehicleCategory = case tracker of
+--                 Nothing -> "unknown"
+--                 Just t ->
+--                   fromMaybe "unknown" $ Case._udf1 c
+--               title = FCMNotificationTitle $ T.pack "Congratulations!"
+--               body =
+--                 FCMNotificationBody $
+--                   unwords
+--                     [ "You have successfully booked a",
+--                       vehicleCategory,
+--                       "for",
+--                       showTimeIst $ Case._startTime c,
+--                       "with",
+--                       -- driverName,
+--                       ". Click here for details."
+--                     ]
+--           notifyPerson title body notificationData p
+--         _ -> pure ()
+--     else pure ()
 
 notifyOnExpiration :: Case -> Flow ()
 notifyOnExpiration caseObj = do
@@ -154,27 +140,27 @@ notifyOnTrackCb personId tracker c =
   if isJust personId
     then do
       let caseId = Case._id c
-      person <- Person.findById $ PersonId (fromJust personId)
-      case person of
+      mperson <- Person.findById $ PersonId (fromJust personId)
+      case mperson of
         Just p -> do
           let notificationData =
                 FCMData TRACKING_CALLBACK SHOW FCM.Case $
                   show caseId
-              trip = tracker ^. #trip
-              reg_number =
+              trip = tracker ^. #_trip
+              regNumber =
                 trip ^. #vehicle . _Just . #registration . _Just . #number
               model =
                 fromMaybe "unknown model" $ trip ^. #vehicle . _Just . #model
-              driver_name =
+              driverName =
                 trip ^. #driver . #persona . _Just . #descriptor . #first_name
               title = FCMNotificationTitle $ T.pack "Ride details updated!"
               body =
                 FCMNotificationBody $
                   unwords
-                    [ driver_name,
+                    [ driverName,
                       "will come in a",
                       model,
-                      "(" <> reg_number <> "),",
+                      "(" <> regNumber <> "),",
                       "to pick you up on",
                       showTimeIst (Case._startTime c) <> ".",
                       "You would be notified 15 mins before the",
@@ -187,8 +173,8 @@ notifyOnTrackCb personId tracker c =
 notifyOnSearchCb :: PersonId -> Case -> [ProductInstance] -> Flow ()
 notifyOnSearchCb personId c productInstances = do
   let caseId = Case._id c
-  person <- Person.findById personId
-  case person of
+  mperson <- Person.findById personId
+  case mperson of
     Just p -> do
       let notificationData =
             FCMData SEARCH_CALLBACK SHOW FCM.Case $

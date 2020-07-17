@@ -1,7 +1,5 @@
 module Beckn.Types.Core.Schedule where
 
-import Beckn.Types.Core.Api
-import Beckn.Types.Core.Contact
 import Data.Text
 import Data.Time.LocalTime
 import EulerHS.Prelude

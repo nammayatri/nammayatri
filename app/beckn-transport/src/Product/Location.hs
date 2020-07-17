@@ -6,16 +6,13 @@ import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
 import qualified Beckn.Types.MapSearch as MapSearch
-import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Data.Generics.Labels
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import Servant
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Redis.Queries as Redis
 import Types.API.Location as Location
 

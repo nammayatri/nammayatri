@@ -10,11 +10,8 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Extra
-import Data.Generics.Labels
 import Data.Swagger
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant.Swagger
 import qualified Storage.Queries.Location as QL
 
 data UpdatePersonReq = UpdatePersonReq
@@ -49,10 +46,10 @@ data UpdatePersonReq = UpdatePersonReq
 instance FromJSON UpdatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform UpdatePersonReq SP.Person where
-  transformFlow2 req person = do
+instance ModifyTransform UpdatePersonReq SP.Person Flow where
+  modifyTransform req person = do
     location <- updateOrCreateLocation req $ SP._locationId person
-    return $
+    return
       person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
           SP._firstName = ifJust (req ^. #_firstName) (person ^. #_firstName),
@@ -102,7 +99,7 @@ createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
-  return $
+  return
     SL.Location
       { SL._id = id,
         SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
@@ -165,12 +162,12 @@ data CreatePersonReq = CreatePersonReq
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance Transform2 CreatePersonReq SP.Person where
-  transformFlow req = do
+instance CreateTransform CreatePersonReq SP.Person Flow where
+  createTransform req = do
     id <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- createLocationT req
-    return $
+    return
       SP.Person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
           SP._id = id,
@@ -208,7 +205,7 @@ createLocationRec :: CreatePersonReq -> Flow SL.Location
 createLocationRec req = do
   id <- BC.generateGUID
   now <- getCurrentTimeUTC
-  return $
+  return
     SL.Location
       { SL._id = id,
         SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
