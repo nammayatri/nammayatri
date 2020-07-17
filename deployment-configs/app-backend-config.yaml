@@ -17,9 +17,12 @@ data:
   REDIS_MAX_CONNECTIONS: "50"
   REDIS_MAX_IDLE_TIME: "30"
   REDIS_CONNECTION_TIMEOUT: "100"
-  # GATEWAY_HOST: "beckn-transport.atlas" ## Changed based on deployment variant (dev/sandbox)
-  GATEWAY_PORT: "8014"
-  GATEWAY_PATH: "/v1"
+  # BECKN_GATEWAY_HOST: "beckn-gateway.atlas" ## Changed based on deployment variant (dev/sandbox)
+  BECKN_GATEWAY_PORT: "8015"
+  BECKN_GATEWAY_PATH: "/v1"
+  # BECKN_PROVIDER_HOST: "beckn-transport.atlas" ## Changed based on deployment variant (dev/sandbox)
+  BECKN_PROVIDER_PORT: "8014"
+  BECKN_PROVIDER_PATH: "/v1"
   USE_FAKE_SMS: "7891"
   DEFAULT_CASE_EXPIRY: "7200"
   DEFAULT_CONFIRM_EXPIRY: "7200"
