@@ -41,7 +41,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   MPI.create orderProductInstance
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
-  baseUrl <- Gateway.getBaseUrl
+  baseUrl <- Gateway.getProviderBaseUrl
   order <- mkOrder productInstance
   eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   let ack =

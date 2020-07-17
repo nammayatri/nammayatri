@@ -65,10 +65,18 @@ status url req = do
     Right _ -> L.logInfo "Status" "Status successfully delivered"
   return $ first show res
 
-getBaseUrl :: Flow BaseUrl
-getBaseUrl = L.runIO $ do
-  host <- fromMaybe "localhost" <$> lookupEnv "GATEWAY_HOST"
-  port <- fromMaybe 8014 . (>>= readMaybe) <$> lookupEnv "GATEWAY_PORT"
-  path <- fromMaybe "/v1" <$> lookupEnv "GATEWAY_PATH"
+getGatewayBaseUrl :: Flow BaseUrl
+getGatewayBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_GATEWAY_HOST"
+  port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "BECKN_GATEWAY_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_GATEWAY_PATH"
+  return $
+    BaseUrl Http host port path
+
+getProviderBaseUrl :: Flow BaseUrl
+getProviderBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_PROVIDER_HOST"
+  port <- fromMaybe 8014 . (>>= readMaybe) <$> lookupEnv "BECKN_PROVIDER_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_PROVIDER_PATH"
   return $
     BaseUrl Http host port path

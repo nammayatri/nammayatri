@@ -43,7 +43,7 @@ getProductInfo person prodInstId = withFlowHandler $ do
 
 getLocation :: Person.Person -> Text -> FlowHandler GetLocationRes
 getLocation person caseId = withFlowHandler $ do
-  baseUrl <- External.getBaseUrl
+  baseUrl <- External.getProviderBaseUrl
   productInstances <- MPI.listAllProductInstanceByPerson person (ByApplicationId $ CaseId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
   -- TODO: what if there are multiple CONFIRMED products possible?

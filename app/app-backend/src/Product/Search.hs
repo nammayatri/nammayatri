@@ -47,7 +47,7 @@ search person req = withFlowHandler $ do
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
-  gatewayUrl <- Gateway.getBaseUrl
+  gatewayUrl <- Gateway.getGatewayBaseUrl
   eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =
         case eres of

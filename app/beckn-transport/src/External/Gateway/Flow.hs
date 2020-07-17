@@ -15,7 +15,7 @@ import System.Environment
 
 onSearch :: OnSearchReq -> Flow (Either Text ())
 onSearch req = do
-  url <- getBaseUrl
+  url <- getGatewayBaseUrl
   res <- L.callAPI url $ API.onSearch req
   whenRight res $ \_ ->
     L.logInfo "OnSearch" "OnSearch callback successfully delivered"
@@ -25,7 +25,7 @@ onSearch req = do
 
 onTrackTrip :: OnTrackTripReq -> Flow (Either Text ())
 onTrackTrip req = do
-  url <- getBaseUrl
+  url <- getAppBaseUrl
   res <- L.callAPI url $ API.onTrackTrip req
   whenRight res $ \_ ->
     L.logInfo "OnTrackTrip" "OnTrackTrip callback successfully delivered"
@@ -45,7 +45,7 @@ onUpdate req = do
 
 onConfirm :: OnConfirmReq -> Flow (Either Text ())
 onConfirm req = do
-  url <- getBaseUrl
+  url <- getAppBaseUrl
   res <- L.callAPI url $ API.onConfirm req
   whenRight res $ \_ ->
     L.logInfo "OnConfirm" "OnConfirm callback successfully delivered"
@@ -55,7 +55,7 @@ onConfirm req = do
 
 onCancel :: OnCancelReq -> Flow (Either Text ())
 onCancel req = do
-  url <- getBaseUrl
+  url <- getAppBaseUrl
   res <- L.callAPI url $ API.onCancel req
   whenRight res $ \_ ->
     L.logInfo "OnCancel" "OnCancel callback successfully delivered"
@@ -65,7 +65,7 @@ onCancel req = do
 
 onStatus :: OnStatusReq -> Flow (Either Text ())
 onStatus req = do
-  url <- getBaseUrl
+  url <- getAppBaseUrl
   res <- L.callAPI url $ API.onStatus req
   whenRight res $ \_ ->
     L.logInfo "OnStatus" "OnStatus callback successfully delivered"
@@ -73,10 +73,18 @@ onStatus req = do
     L.logError "error occurred while sending onStatus Callback: " (show err)
   return $ first show res
 
-getBaseUrl :: Flow BaseUrl
-getBaseUrl = L.runIO $ do
-  host <- fromMaybe "localhost" <$> lookupEnv "GATEWAY_HOST"
-  port <- fromMaybe 8013 . (>>= readMaybe) <$> lookupEnv "GATEWAY_PORT"
-  path <- fromMaybe "/v1" <$> lookupEnv "GATEWAY_PATH"
+getGatewayBaseUrl :: Flow BaseUrl
+getGatewayBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_GATEWAY_HOST"
+  port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "BECKN_GATEWAY_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_GATEWAY_PATH"
+  return $
+    BaseUrl Http host port path
+
+getAppBaseUrl :: Flow BaseUrl
+getAppBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_APP_HOST"
+  port <- fromMaybe 8013 . (>>= readMaybe) <$> lookupEnv "BECKN_APP_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_APP_PATH"
   return $
     BaseUrl Http host port path
