@@ -1,6 +1,5 @@
 module Types.ProductInfo where
 
-import Beckn.Types.API.Track
 import Beckn.Types.Core.Provider
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Trip

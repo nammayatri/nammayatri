@@ -15,8 +15,6 @@ import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Default.Class
-import Data.Map (Map)
-import Data.Text (Text)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 

@@ -5,12 +5,9 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import Data.Time
-import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
 

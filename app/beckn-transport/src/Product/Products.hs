@@ -6,21 +6,14 @@ import App.Types
 import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Product
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
-import Data.Aeson
 import qualified Data.Text as T
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
 import qualified Storage.Queries.Products as PQ
-import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Products
-import Types.App
-import qualified Utils.Notifications as Notify
 
 createProduct :: Text -> CreateProdReq -> FlowHandler ProdRes
 createProduct orgId req = withFlowHandler $ do

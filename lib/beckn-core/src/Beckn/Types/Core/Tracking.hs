@@ -2,7 +2,6 @@
 
 module Beckn.Types.Core.Tracking where
 
-import Beckn.Types.Core.Image
 import EulerHS.Prelude
 
 data Tracking = Tracking

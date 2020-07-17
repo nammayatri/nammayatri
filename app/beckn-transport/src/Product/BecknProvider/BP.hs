@@ -11,14 +11,8 @@ import Beckn.Types.API.Track
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Location as BL
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Tracking as Tracking
 import Beckn.Types.Mobility.Driver
-import Beckn.Types.Mobility.Intent
-import Beckn.Types.Mobility.Service
 import Beckn.Types.Mobility.Stop as BS
-import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case as SC
@@ -26,16 +20,10 @@ import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products as Product
-import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Data.Text as T
 import Data.Time
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
@@ -46,11 +34,9 @@ import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as ProductInstance
-import Storage.Queries.Products as Product
 import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
-import Types.Notification
 import qualified Utils.Notifications as Notify
 
 -- 1) Create Parent Case with Customer Request Details
