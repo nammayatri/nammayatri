@@ -63,7 +63,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
             _fulfillment = Nothing
           }
 
-onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
@@ -82,7 +82,7 @@ onConfirm req = withFlowHandler $ do
   QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
   QPI.updateMultiple (_getProductInstanceId pid) uPrd
   QPI.updateStatus pid SPI.CONFIRMED
-  return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"
+  return $ AckResponse (req ^. #context) (Ack "on_confirm" "Ok") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
