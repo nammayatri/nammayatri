@@ -9,19 +9,15 @@ import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Extra
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Generics.Labels
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time.LocalTime
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.API
-import Servant.Swagger
 import qualified Storage.Queries.Location as QL
 
 data EntityType = VEHICLE | PASS | TICKET

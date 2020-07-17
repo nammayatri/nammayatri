@@ -6,9 +6,7 @@ import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified EulerHS.Language as L
