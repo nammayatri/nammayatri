@@ -71,7 +71,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  notifyTripDetailsToGateway piId
+  notifyTripDetailsToGateway searchPi
   notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
 
@@ -188,15 +188,12 @@ updateStatus user piId req = do
     _ -> L.throwException $ err400 {errBody = "DRIVER_VEHICLE_UNASSIGNED"}
   return ()
 
-notifyTripDetailsToGateway :: ProductInstanceId -> Flow ()
-notifyTripDetailsToGateway piId = do
-  pi <- PIQ.findById piId
-  piList <- PIQ.findAllByParentId (pi ^. #_parentId)
-  cases <- CQ.findAllByIds (PI._caseId <$> piList)
-  let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.LOCATIONTRACKER) cases
-  let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDESEARCH) cases
+notifyTripDetailsToGateway :: PI.ProductInstance -> Flow ()
+notifyTripDetailsToGateway searchPi = do
+  trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
+  parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, Just y) -> BP.notifyTripUrlToGateway x y
+    (Just x, y) -> BP.notifyTripUrlToGateway x y
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()
@@ -230,8 +227,14 @@ updateTrip piId k = do
     PI.CANCELLED -> do
       trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
+      searchPi <- case pi ^. #_parentId of
+        Just id -> PIQ.findById id
+        Nothing ->
+          L.throwException $
+            err400 {errBody = "INVALID FLOW"}
       PIQ.updateStatus (PI._id trackerPi) PI.COMPLETED
       PIQ.updateStatus (PI._id orderPi) PI.CANCELLED
+      PIQ.updateStatus (PI._id searchPi) PI.CANCELLED
       CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
       CQ.updateStatus (Case._id orderCase_) Case.CLOSED
       return ()

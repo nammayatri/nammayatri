@@ -87,14 +87,19 @@ cancel req = withFlowHandler $ do
   uuid <- L.generateGUID
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
   prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
-  piList <- ProductInstance.findAllByParentId (prodInst ^. #_parentId)
+  piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
   -- TODO: Should we check if all case's products were cancelled
   -- before cancelling a case?
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
-  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
-  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
-  ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
-  ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+  case piList of
+    [] -> return ()
+    _ -> do
+      trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+      orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
+      ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
+      ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+      return ()
+  ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
   notifyCancelToGateway prodInstId
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]

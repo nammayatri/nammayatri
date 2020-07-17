@@ -115,6 +115,8 @@ mkOrderCase Case.Case {..} = do
         _parentCaseId = Just _id,
         _fromLocationId = _fromLocationId,
         _toLocationId = _fromLocationId,
+        _startTime = _startTime,
+        _requestor = _requestor,
         _createdAt = now,
         _updatedAt = now,
         ..

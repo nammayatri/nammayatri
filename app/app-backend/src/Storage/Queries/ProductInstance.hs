@@ -198,6 +198,13 @@ findByParentIdType mparentId csType =
       B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
         &&. _type ==. B.val_ csType
 
+findAllByParentId :: Maybe ProductInstanceId -> Flow [Storage.ProductInstance]
+findAllByParentId id =
+  DB.findAll dbTable (predicate id)
+    >>= either DB.throwDBError pure
+  where
+    predicate id Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ id
+
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
