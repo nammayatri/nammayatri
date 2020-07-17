@@ -11,11 +11,9 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.Case as API
-import Utils.Common (verifyToken)
 
 status ::
   Person.Person ->

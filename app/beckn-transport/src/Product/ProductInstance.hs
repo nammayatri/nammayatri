@@ -8,15 +8,10 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as ProdInst
-import qualified Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
 import Beckn.Utils.Common (encodeToText, fromMaybeM400, withFlowHandler)
 import Beckn.Utils.Extra (headMaybe)
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Text as T
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
@@ -25,9 +20,7 @@ import qualified Storage.Queries.Case as CQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ
-import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as VQ
-import System.Environment
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
 import qualified Utils.Defaults as Default

@@ -2,7 +2,6 @@ module App.Types where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import EulerHS.Prelude
 
 newtype AppEnv = AppEnv
   { commonEnv :: CommonEnv

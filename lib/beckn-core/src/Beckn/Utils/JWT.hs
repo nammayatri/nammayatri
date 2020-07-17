@@ -4,7 +4,7 @@
 module Beckn.Utils.JWT where
 
 import Control.Applicative
-import Control.Exception (SomeException, displayException, try)
+import Control.Exception (try)
 import qualified Data.Aeson as J
 import Data.Aeson.Casing
 import Data.Aeson.TH

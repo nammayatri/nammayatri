@@ -5,21 +5,16 @@ module Product.Cancel where
 import App.Types
 import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
-import Beckn.Types.Common (IdObject (..))
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import Servant.Client
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import Types.API.Cancel as Cancel
 import qualified Utils.Notifications as Notify
 

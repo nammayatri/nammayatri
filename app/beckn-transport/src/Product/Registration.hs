@@ -12,9 +12,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
-import qualified Data.Accessor as Lens
 import Data.Aeson
-import Data.Generics.Labels
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

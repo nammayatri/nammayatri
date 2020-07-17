@@ -9,21 +9,16 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common as Common
-import Beckn.Types.Core.Ack as Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
-import Beckn.Types.Core.Provider
-import Beckn.Types.Core.Scalar
 import Beckn.Types.Core.ScalarRange
 import Beckn.Types.Mobility.Intent
 import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Types.Mobility.Vehicle
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.Products as Products
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Time
-import Data.Time.LocalTime (LocalTime)
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)

@@ -3,11 +3,9 @@ module Storage.Redis.Queries where
 import App.Types
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Storage.Redis.Config
 
 runKV = L.runKVDB "redis"
 

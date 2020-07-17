@@ -12,9 +12,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
-import qualified Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.Map as Map
+import Data.Aeson (encode)
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -23,7 +21,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import System.Environment
 import Types.API.Registration
-import Types.App
 import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes

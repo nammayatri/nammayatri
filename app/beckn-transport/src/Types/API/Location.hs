@@ -4,7 +4,6 @@ import Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as SL
 import Data.Swagger
 import EulerHS.Prelude
-import Servant.Swagger
 
 data UpdateLocationReq = UpdateLocationReq
   { locationType :: Maybe SL.LocationType,

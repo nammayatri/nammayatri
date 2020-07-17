@@ -1,7 +1,5 @@
 module Beckn.Types.Core.Tag where
 
-import Beckn.Types.Core.Api
-import Beckn.Types.Core.Contact
 import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
