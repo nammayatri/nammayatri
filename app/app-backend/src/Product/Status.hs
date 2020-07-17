@@ -11,9 +11,10 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (mkAckResponse, withFlowHandler)
-import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import Servant
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Status as Status
@@ -39,9 +40,26 @@ onStatus req = withFlowHandler $ do
   let context = req ^. #context
       txnId = context ^. #_transaction_id
       prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
-      state = req ^. #message . #order . #_state
-      status = read (T.unpack state) :: PI.ProductInstanceStatus
+      state = matchStatus $ req ^. #message . #order . #_state
+  status <- case state of
+    Just k -> return k
+    Nothing -> L.throwException $ err400 {errBody = "INCORRECT STATUS"}
   productInstance <- QPI.findById prodInstId
   orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
   QPI.updateStatus (orderPi ^. #_id) status
   mkAckResponse txnId "status"
+
+-- Utility Functions
+
+matchStatus :: Text -> Maybe PI.ProductInstanceStatus
+matchStatus state = case state of
+  "VALID" -> Just PI.VALID
+  "INVALID" -> Just PI.INVALID
+  "INPROGRESS" -> Just PI.INPROGRESS
+  "CONFIRMED" -> Just PI.CONFIRMED
+  "COMPLETED" -> Just PI.COMPLETED
+  "INSTOCK" -> Just PI.INSTOCK
+  "OUTOFSTOCK" -> Just PI.OUTOFSTOCK
+  "CANCELLED" -> Just PI.CANCELLED
+  "EXPIRED" -> Just PI.EXPIRED
+  _ -> Nothing
