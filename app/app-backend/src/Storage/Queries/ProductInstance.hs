@@ -134,9 +134,18 @@ listAllProductInstanceWithOffset limit offset id stats csTypes =
   DB.findAllWithLimitOffsetWhere dbTable (predicate id stats csTypes) limit offset orderBy
     >>= either DB.throwDBError pure
   where
-    predicate (ByApplicationId i) s csTypes Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s) &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
-    predicate (ByCustomerId i) s csTypes Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s) &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
-    predicate (ById i) s csTypes Storage.ProductInstance {..} = _productId ==. B.val_ i &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s) &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+    predicate (ByApplicationId i) s csTypes Storage.ProductInstance {..} =
+      _caseId ==. B.val_ i
+        &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s)
+        &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+    predicate (ByCustomerId i) s csTypes Storage.ProductInstance {..} =
+      _personId ==. B.val_ (Just i)
+        &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s)
+        &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+    predicate (ById i) s csTypes Storage.ProductInstance {..} =
+      _productId ==. B.val_ i
+        &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s)
+        &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
     orderBy Storage.ProductInstance {..} = B.desc_ _updatedAt
 
 listAllProductInstance :: ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
