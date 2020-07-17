@@ -22,6 +22,7 @@ instance Example Image where
   example =
     Image
       { _type = "URL",
+        _label = Nothing,
         _url = Just "https://i.imgur.com/MjeqeUP.gif",
         _data = Nothing
       }
