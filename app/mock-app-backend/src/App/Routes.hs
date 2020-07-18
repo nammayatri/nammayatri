@@ -1,11 +1,13 @@
 module App.Routes where
 
 import App.Types
-import qualified Beckn.Types.API.Search as Search
+import Beckn.Types.Common (AckResponse (..))
+import Beckn.Utils.Servant.Auth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Search as P
-import Servant
+import Servant hiding (Context)
+import "beckn-gateway" Types.API.Search (OnSearchReq)
 import Utils.Auth
 
 type MockAppBackendAPI =
@@ -26,9 +28,13 @@ mockAppBackendServer _key =
 
 type TriggerSearchAPI =
   "trigger"
-    :> Get '[JSON] Search.SearchRes
+    :> Get '[JSON] AckResponse
 
-type OnSearchAPI = Search.OnSearchAPI VerifyAPIKey
+type OnSearchAPI =
+  "on_search"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] AckResponse
 
 onSearchFlow :: FlowServer OnSearchAPI
 onSearchFlow = P.searchCb
