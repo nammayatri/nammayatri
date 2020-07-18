@@ -107,8 +107,8 @@ onCancel req = withFlowHandler $ do
   piList <- QPI.findAllByParentId (Just prodInstId)
   case piList of
     [] -> return ()
-    s -> do
-      let orderPi = head s
+    s : _ -> do
+      let orderPi = s
       QPI.updateStatus (PI._id orderPi) PI.CANCELLED
       return ()
   productInstance <- QPI.findById prodInstId
@@ -116,15 +116,17 @@ onCancel req = withFlowHandler $ do
   let caseId = productInstance ^. #_caseId
   -- notify customer
   case_ <- Case.findById caseId
-  let personId = Case._requestor case_
-  Notify.notifyOnProductCancelCb personId case_ prodInstId
+  Notify.notifyOnProductCancelCb productInstance
   --
   arrPICase <- QPI.findAllByCaseId caseId
   let arrTerminalPI =
         filter
           ( \pi -> do
               let status = pi ^. #_status
-              status == PI.COMPLETED || status == PI.OUTOFSTOCK || status == PI.CANCELLED || status == PI.INVALID
+              status == PI.COMPLETED
+                || status == PI.OUTOFSTOCK
+                || status == PI.CANCELLED
+                || status == PI.INVALID
           )
           arrPICase
   when

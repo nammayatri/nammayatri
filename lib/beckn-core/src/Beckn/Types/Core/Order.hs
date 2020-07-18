@@ -4,6 +4,7 @@ module Beckn.Types.Core.Order where
 
 import Beckn.Types.Core.Billing
 import Beckn.Types.Core.Fulfillment
+import Beckn.Utils.Common
 import Data.Time.LocalTime
 import EulerHS.Prelude
 
@@ -22,3 +23,14 @@ instance FromJSON Order where
 
 instance ToJSON Order where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Order where
+  example =
+    Order
+      { _id = idExample,
+        _state = "State",
+        _billing = Nothing,
+        _fulfillment = Nothing,
+        _created_at = example,
+        _updated_at = example
+      }
