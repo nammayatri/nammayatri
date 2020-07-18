@@ -108,14 +108,16 @@ deletePerson orgId personId = withFlowHandler $ do
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonRes
 linkEntity orgId personId req = withFlowHandler $ do
   person <- QP.findPersonById (PersonId personId)
-  vehicle <-
-    QV.findVehicleById (VehicleId (req ^. #_vehicleId))
-      >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
+  case req ^. #_entityType of
+    VEHICLE ->
+      QV.findVehicleById (VehicleId (req ^. #_entityId))
+        >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
+    _ -> L.throwException $ err400 {errBody = "UNSUPPORTED ENTITY TYPE"}
   when
     (person ^. #_organizationId /= Just orgId)
     (L.throwException $ err401 {errBody = "Unauthorized"})
-  QP.updateEntity (PersonId personId) (req ^. #_vehicleId)
-  return $ PersonRes $ person {SP._udf1 = Just (req ^. #_vehicleId)}
+  QP.updateEntity (PersonId personId) (req ^. #_entityId)
+  return $ PersonRes $ person {SP._udf1 = Just (req ^. #_entityId)}
 
 -- Utility Functions
 
