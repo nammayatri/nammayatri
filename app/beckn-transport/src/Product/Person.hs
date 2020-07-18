@@ -3,18 +3,24 @@
 module Product.Person where
 
 import App.Types
+import qualified Beckn.External.MyValueFirst.Flow as SF
+import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import Data.Aeson (encode)
 import Data.Maybe
+import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
+import System.Environment
 import Types.API.Person
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -35,7 +41,12 @@ createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
-  return $ UpdatePersonRes person
+  org <- OQ.findOrganizationById (OrganizationId orgId)
+  case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
+    (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
+      sendInviteSms (countryCode <> mobileNumber) (org ^. #_name)
+      return $ UpdatePersonRes person
+    _ -> return $ UpdatePersonRes person
   where
     validateDriver :: CreatePersonReq -> Flow ()
     validateDriver req =
@@ -158,3 +169,20 @@ mkPersonRes entityType person = do
         _updatedAt = person ^. #_updatedAt,
         _linkedEntity = entity
       }
+
+sendInviteSms :: Text -> Text -> Flow ()
+sendInviteSms phoneNumber orgName = do
+  username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
+  password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
+  res <-
+    SF.submitSms
+      SF.defaultBaseUrl
+      SMS.SubmitSms
+        { SMS._username = T.pack username,
+          SMS._password = T.pack password,
+          SMS._from = SMS.JUSPAY,
+          SMS._to = phoneNumber,
+          SMS._category = SMS.BULK,
+          SMS._text = SF.constructInviteSms orgName
+        }
+  whenLeft res $ \err -> L.throwException err503 {errBody = encode err}

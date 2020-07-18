@@ -1,10 +1,9 @@
-{-# LANGUAGE DuplicateRecordFields #-}
+module Beckn.Types.FMD.Intent where
 
-module Beckn.Types.Core.Intent where
-
+import Beckn.Types.Core.Location
 import Beckn.Types.Core.Tag
+import Beckn.Types.FMD.Package
 import Beckn.Utils.Common
-import Data.Text
 import EulerHS.Prelude
 
 data Intent = Intent
@@ -12,12 +11,17 @@ data Intent = Intent
     _provider_id :: Maybe Text,
     _category_id :: Maybe Text,
     _item_id :: Maybe Text,
+    _pickups :: [Location],
+    _drops :: [Location],
+    _packages :: [Package],
+    -- FIXME: tags field name clashes with the one from Core.Intent
+    -- We have assumed the domain one here takes precedence
     _tags :: [Tag]
   }
   deriving (Generic, Show)
 
 instance FromJSON Intent where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 instance ToJSON Intent where
   toJSON = genericToJSON stripAllLensPrefixOptions
@@ -25,9 +29,12 @@ instance ToJSON Intent where
 instance Example Intent where
   example =
     Intent
-      { _query_string = Just "search",
+      { _query_string = Nothing,
         _provider_id = Nothing,
         _category_id = Nothing,
         _item_id = Nothing,
+        _pickups = example,
+        _drops = example,
+        _packages = example,
         _tags = example
       }

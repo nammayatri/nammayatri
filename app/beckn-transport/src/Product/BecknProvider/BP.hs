@@ -46,13 +46,14 @@ import qualified Utils.Notifications as Notify
 search :: () -> SearchReq -> FlowHandler AckResponse
 search _unit req = withFlowHandler $ do
   --TODO: Need to add authenticator
+  let intent = req ^. #message . #intent
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime currTime (req ^. #message . #intent . #_origin . #_departure_time . #_est)
+  validity <- getValidTime currTime (intent ^. #_origin . #_departure_time . #_est)
   uuid1 <- L.generateGUID
-  let fromLocation = mkFromStop req uuid1 currTime $ req ^. #message . #intent . #_origin
+  let fromLocation = mkFromStop req uuid1 currTime $ intent ^. #_origin
   uuid2 <- L.generateGUID
-  let toLocation = mkFromStop req uuid2 currTime $ req ^. #message . #intent . #_destination
+  let toLocation = mkFromStop req uuid2 currTime $ intent ^. #_destination
   Loc.create fromLocation
   Loc.create toLocation
   let c = mkCase req uuid currTime validity fromLocation toLocation
@@ -63,7 +64,7 @@ search _unit req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       (_getOrganizationId . Org._id <$> transporters)
-  Notify.notifyTransportersOnSearch c admins
+  Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -84,7 +85,7 @@ cancel req = withFlowHandler $ do
     [] -> pure ()
     pi : _ -> do
       c <- Case.findById $ ProductInstance._caseId pi
-      Notify.notifyTransportersOnCancel c prodInstId admins
+      Notify.notifyTransportersOnCancel c admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
@@ -156,10 +157,11 @@ mkCase req uuid now validity fromLocation toLocation = do
 confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
-  let prodInstId = req ^. #message . #order . #_id
+  let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
   let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
   search_case <- Case.findBySid caseShortId
-  productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
+  productInstance <- ProductInstance.findById prodInstId
+  currTime <- getCurrentTimeUTC
   orderCase <- mkOrderCase search_case
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -176,7 +178,7 @@ confirm req = withFlowHandler $ do
   notifyGateway search_case prodInstId trackerCase
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
-  Notify.notifyTransportersOnConfirm search_case admins
+  Notify.notifyTransportersOnConfirm search_case productInstance admins
   mkAckResponse uuid "confirm"
 
 mkOrderCase :: SC.Case -> Flow SC.Case
@@ -293,7 +295,7 @@ mkTrackerCase case_ uuid now shortId =
       _updatedAt = now
     }
 
-notifyGateway :: Case -> Text -> Case -> Flow ()
+notifyGateway :: Case -> ProductInstanceId -> Case -> Flow ()
 notifyGateway c prodInstId trackerCase = do
   L.logInfo "notifyGateway" $ show c
   pis <- ProductInstance.findAllByCaseId (c ^. #_id)
