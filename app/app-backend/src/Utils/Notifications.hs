@@ -18,7 +18,7 @@ import qualified Storage.Queries.Case as QC
 import qualified Storage.Queries.Person as Person
 import Types.ProductInfo as ProductInfo
 
--- @boazjohn:
+-- Note:
 -- When customer searches case is created in the BA, and search request is
 -- sent to BP, which creates a case in the BP also. When someone responds to
 -- that saying, they can offer this ride, onSearch is called to BP for each
@@ -62,38 +62,6 @@ notifyOnProductCancelCb pi = do
         _ -> pure ()
     _ -> pure ()
 
--- -- | Notification on confirmation callback
--- -- unused, left as a sample, can be removed later
--- notifyOnConfirmCb :: Maybe Text -> Case -> Maybe Tracker -> Flow ()
--- notifyOnConfirmCb personId c tracker =
---   if isJust personId
---     then do
---       person <- Person.findById $ PersonId (fromJust personId)
---       case person of
---         Just p -> do
---           let notificationData =
---                 FCMData CONFIRM_CALLBACK SHOW FCM.Case $
---                   show (_getCaseId $ c ^. #_id)
---               vehicleCategory = case tracker of
---                 Nothing -> "unknown"
---                 Just t ->
---                   fromMaybe "unknown" $ Case._udf1 c
---               title = FCMNotificationTitle $ T.pack "Congratulations!"
---               body =
---                 FCMNotificationBody $
---                   unwords
---                     [ "You have successfully booked a",
---                       vehicleCategory,
---                       "for",
---                       showTimeIst $ Case._startTime c,
---                       "with",
---                       -- driverName,
---                       ". Click here for details."
---                     ]
---           notifyPerson title body notificationData p
---         _ -> pure ()
---     else pure ()
-
 notifyOnExpiration :: Case -> Flow ()
 notifyOnExpiration caseObj = do
   let caseId = Case._id caseObj
@@ -130,7 +98,7 @@ notifyOnRegistration regToken person =
       body =
         FCMNotificationBody $
           unwords
-            [ "Welcome to Beckn.",
+            [ "Welcome to Beckn Mobility!",
               "Click here to book your first ride with us."
             ]
    in notifyPerson title body notificationData person
@@ -150,7 +118,7 @@ notifyOnTrackCb personId tracker c =
               regNumber =
                 trip ^. #vehicle . _Just . #registration . _Just . #number
               model =
-                fromMaybe "unknown model" $ trip ^. #vehicle . _Just . #model
+                fromMaybe "unknown" $ trip ^. #vehicle . _Just . #model
               driverName =
                 trip ^. #driver . #persona . _Just . #descriptor . #first_name
               title = FCMNotificationTitle $ T.pack "Ride details updated!"
@@ -158,13 +126,12 @@ notifyOnTrackCb personId tracker c =
                 FCMNotificationBody $
                   unwords
                     [ driverName,
-                      "will come in a",
+                      "will be arriving in a",
                       model,
                       "(" <> regNumber <> "),",
                       "to pick you up on",
                       showTimeIst (Case._startTime c) <> ".",
-                      "You would be notified 15 mins before the",
-                      "scheduled pick up time."
+                      "You would be notified 15 mins before the scheduled pick up time."
                     ]
           notifyPerson title body notificationData p
         _ -> pure ()

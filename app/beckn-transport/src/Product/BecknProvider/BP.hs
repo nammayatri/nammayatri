@@ -161,6 +161,7 @@ confirm req = withFlowHandler $ do
   let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
   search_case <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById prodInstId
+  currTime <- getCurrentTimeUTC
   orderCase <- mkOrderCase search_case
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance

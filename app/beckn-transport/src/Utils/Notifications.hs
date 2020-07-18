@@ -11,12 +11,9 @@ import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common (showTimeIst)
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified Storage.Queries.Products as QP
-import qualified Storage.Queries.Vehicle as QV
 
 -- | Send FCM "search" notification to provider admins
 notifyTransportersOnSearch :: Case -> Intent -> [Person] -> Flow ()
@@ -27,14 +24,13 @@ notifyTransportersOnSearch c intent =
       FCMData SEARCH_REQUEST SHOW FCM.Organization $
         show (_getCaseId $ c ^. #_id)
     title = FCMNotificationTitle $ T.pack "New ride request!"
-    model =
-      fromMaybe "unknown model" $ intent ^. #_vehicle . #model
+    variant =
+      fromMaybe "Unknown" $ Just $ intent ^. #_vehicle . #variant
     body =
       FCMNotificationBody $
         unwords
-          [ "You have a new ride request for",
-            model,
-            "on",
+          [ "You have a new ride request (" <> variant <> ")",
+            "for",
             showTimeIst (Case._startTime c) <> ".",
             "Visit the app to accept or decline the request."
           ]
@@ -42,19 +38,11 @@ notifyTransportersOnSearch c intent =
 -- | Send FCM "confirm" notification to provider admins
 notifyTransportersOnConfirm :: Case -> ProductInstance -> [Person] -> Flow ()
 notifyTransportersOnConfirm c pi admins = do
-  p <- QP.findById (_productId pi)
-  model <- case p ^. #_udf3 of
-    Nothing -> pure unknown
-    Just vehicleId -> do
-      mvehicle <- QV.findVehicleById (VehicleId vehicleId)
-      case mvehicle of
-        Just vehicle -> pure $ fromMaybe unknown $ Vehicle._model vehicle
-        Nothing -> pure unknown
+  let model = fromMaybe "Unknown" $ c ^. #_udf1
   traverse_
     (notifyPerson title (body model) notificationData)
     admins
   where
-    unknown = T.pack "unknown model"
     notificationData =
       FCMData CONFIRM_REQUEST SHOW FCM.Organization $
         show (_getCaseId $ c ^. #_id)
@@ -65,7 +53,7 @@ notifyTransportersOnConfirm c pi admins = do
           [ "Customer has accepted your offer for",
             model,
             "dated",
-            showTimeIst $ Case._startTime c,
+            (showTimeIst $ Case._startTime c) <> ".",
             "Visit the app to assign a driver."
           ]
 
@@ -99,9 +87,8 @@ notifyOnRegistration regToken =
     body =
       FCMNotificationBody $
         unwords
-          [ "Welcome to Beckn. Click here to view all the open ride",
-            "requests, also you will be notified whenever",
-            "a new request comes in."
+          [ "Welcome to Beckn Mobility! Click here to view all the open ride",
+            "requests. You will be notified whenever a new request comes in."
           ]
 
 notifyTransporterOnExpiration :: Case -> [Person] -> Flow ()

@@ -87,6 +87,7 @@ library:
   ghc-options:
   - -Wincomplete-uni-patterns
   dependencies:
+    - beckn-gateway
     - beckn-core
 
 executables:

@@ -25,5 +25,5 @@ lookupBaseUrl = do
       { baseUrlScheme = Http,
         baseUrlHost = host,
         baseUrlPort = port,
-        baseUrlPath = ""
+        baseUrlPath = "v1"
       }
