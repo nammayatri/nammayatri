@@ -98,6 +98,16 @@ spec:
             host: beckn-app-backend-master
             port:
               number: 8013
+    - match:
+        - uri:
+            prefix: /dev/mock/app/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: mock-app-backend-master
+            port:
+              number: 8016
       timeout: 40s
     - match:
         - uri:
