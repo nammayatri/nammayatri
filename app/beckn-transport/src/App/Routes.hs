@@ -103,7 +103,7 @@ type PersonAPI =
              :> QueryParam "email" Text
              :> QueryParam "identifier" Text
              :> QueryParam "identifierType" SP.IdentifierType
-             :> Get '[JSON] PersonRes
+             :> Get '[JSON] PersonEntityRes
            :<|> AdminTokenAuth
              :> Capture "personId" Text
              :> Delete '[JSON] DeletePersonRes
@@ -111,7 +111,7 @@ type PersonAPI =
              :> Capture "personId" Text
              :> "link"
              :> ReqBody '[JSON] LinkReq
-             :> Post '[JSON] PersonRes
+             :> Post '[JSON] PersonEntityRes
        )
 
 personFlow :: FlowServer PersonAPI

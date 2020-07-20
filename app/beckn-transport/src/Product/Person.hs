@@ -72,7 +72,7 @@ getPerson ::
   Maybe Text ->
   Maybe Text ->
   Maybe SP.IdentifierType ->
-  FlowHandler PersonRes
+  FlowHandler PersonEntityRes
 getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM identifierTypeM =
   withFlowHandler $ do
     user <- QP.findPersonById (PersonId _EntityId)
@@ -95,7 +95,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
           >>= QP.findByIdentifier
           >>= fromMaybeM400 "PERSON_NOT_FOUND"
     hasAccess user person
-    return $ PersonRes person
+    mkPersonRes (person ^. #_udf2 >>= mapEntityType) person
   where
     hasAccess :: SP.Person -> SP.Person -> Flow ()
     hasAccess user person =
@@ -116,7 +116,7 @@ deletePerson orgId personId = withFlowHandler $ do
       return $ DeletePersonRes personId
     else L.throwException $ err401 {errBody = "Unauthorized"}
 
-linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonRes
+linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
   person <- QP.findPersonById (PersonId personId)
   case req ^. #_entityType of
@@ -127,8 +127,9 @@ linkEntity orgId personId req = withFlowHandler $ do
   when
     (person ^. #_organizationId /= Just orgId)
     (L.throwException $ err401 {errBody = "Unauthorized"})
-  QP.updateEntity (PersonId personId) (req ^. #_entityId)
-  return $ PersonRes $ person {SP._udf1 = Just (req ^. #_entityId)}
+  QP.updateEntity (PersonId personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
+  updatedPerson <- QP.findPersonById $ person ^. #_id
+  mkPersonRes (Just $ req ^. #_entityType) updatedPerson
 
 -- Utility Functions
 
@@ -186,3 +187,8 @@ sendInviteSms phoneNumber orgName = do
           SMS._text = SF.constructInviteSms orgName
         }
   whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
+
+mapEntityType :: Text -> Maybe EntityType
+mapEntityType entityType = case entityType of
+  "VEHICLE" -> Just VEHICLE
+  _ -> Nothing
