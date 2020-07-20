@@ -236,6 +236,7 @@ mkProductInstance case_ mprovider personId item = do
         _parentId = Nothing,
         _entityId = Nothing,
         _price = item ^. #_price . #_listed_value,
+        _type = Case.RIDESEARCH,
         _udf1 = Nothing,
         _udf2 = Nothing,
         _udf3 = Nothing,

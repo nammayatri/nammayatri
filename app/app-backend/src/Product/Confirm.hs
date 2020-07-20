@@ -79,7 +79,7 @@ onConfirm req = withFlowHandler $ do
           { SPI._info = encodeToText <$> uInfo
           }
   productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-  QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
+  QCase.updateStatus (SPI._caseId productInstance) Case.COMPLETED
   QPI.updateMultiple (_getProductInstanceId pid) uPrd
   QPI.updateStatus pid SPI.CONFIRMED
   return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"
@@ -95,9 +95,14 @@ mkOrderCase Case.Case {..} = do
         _name = Nothing,
         _description = Just "Case to order a Ride",
         _shortId = shortId,
+        _status = Case.INPROGRESS,
         _industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
         _parentCaseId = Just _id,
+        _fromLocationId = _fromLocationId,
+        _toLocationId = _fromLocationId,
+        _startTime = _startTime,
+        _requestor = _requestor,
         _createdAt = now,
         _updatedAt = now,
         ..
@@ -113,12 +118,13 @@ mkOrderProductInstance caseId prodInst = do
       { _id = ProductInstanceId id,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
-        _personId = Nothing,
+        _personId = prodInst ^. #_personId,
         _entityType = SPI.VEHICLE,
         _entityId = Nothing,
         _shortId = shortId,
         _quantity = 1,
         _price = prodInst ^. #_price,
+        _type = Case.RIDEORDER,
         _organizationId = prodInst ^. #_organizationId,
         _fromLocation = prodInst ^. #_fromLocation,
         _toLocation = prodInst ^. #_toLocation,

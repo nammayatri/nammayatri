@@ -220,7 +220,7 @@ type ProductInstanceAPI =
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
            :<|> TokenAuth
-           :> Capture "productInstanceId" Text
+           :> Capture "productInstanceId" ProductInstanceId
            :> ReqBody '[JSON] ProdInstUpdateReq
            :> Post '[JSON] ProdInstInfo
        )
@@ -316,9 +316,8 @@ cronFlow =
 
 type StatusAPI =
   "status"
-    :> "services"
     :> ( ReqBody '[JSON] StatusReq
-           :> Post '[JSON] AckResponse
+           :> Post '[JSON] StatusRes
        )
 
 statusApiFlow :: FlowServer StatusAPI
