@@ -116,6 +116,8 @@ deriving newtype instance FromBackendRow Postgres DbHash
 
 type HashAlgo = SHA256
 
+-- FIXME: make configurable. We need to rehash everything with
+--   a new salt periodically
 hashSalt :: LByteString
 hashSalt =
   "How wonderful it is that nobody need wait a single \

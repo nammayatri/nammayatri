@@ -1,0 +1,21 @@
+This is a temporary location for the utility we use to modify out DEV deployment scripts.
+
+This utility is a temporary solution to the following problem:
+To deploy our development we shall populate the SQL tables with some initial data, partially encrypted.
+But, since the `passetto` encryption service keys DB isn't yet initialized, we can't do this.
+
+The first proposed soution looks like this:
+1. Tell the `passetto` service's container wait for keys DB being created, then run keys DB initialization utility, then start the `passetto` service proper;
+2. Create the utility, which runs **before** `app-backend`, talks to running `passetto` service, encrypts some initial data, and populates the `app-backend`'s tables with them
+3. Run `app-backend` after.
+
+This solution is problematic in the sence everything shall be synchronized. We shall run 1 first, wait, then run 2, wait, then run 3.
+
+Instead we do this: create standalone utility (`geninis`) using `passetto` *library* which allows us to *simultaneously* generate initial set of keys, *and encrypt* the relevant data with these keys.
+
+Then add generated data to deployment scripts both for `passetto` and `app-backend` databases. Now everything starts with already existing (and coherent) data.
+
+For convenience, the utility also uses `beckn` library to also create hashed counterparts of encrypted data (we need both in our current design), such that everything is centralyzed.
+
+If thу approach proves to be viable, we shall refine and improve the idea and overhaul the deployment infrastructure.
+

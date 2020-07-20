@@ -165,7 +165,8 @@ CREATE TABLE atlas_transporter.person (
     gender character varying(255) NOT NULL,
     identifier_type character varying(255),
     email character varying(255),
-    mobile_number character varying(255),
+    mobile_number_encrypted character varying(255),
+    mobile_number_hash bytea,
     mobile_country_code character varying(255),
     identifier character varying(255),
     rating character varying(255),
@@ -278,83 +279,39 @@ CREATE TABLE atlas_transporter.inventory (
 ALTER TABLE atlas_transporter.inventory OWNER TO atlas;
 
 --
--- Data for Name: case; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
---
-
-COPY atlas_transporter.case (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: product_instance; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
---
-
-COPY atlas_transporter.product_instance (id, case_id, product_id, person_id, short_id, entity_id, entity_type, quantity, price, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: inventory; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
---
-
-COPY atlas_transporter.inventory (id, organization_id, product_id, status, quantity, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: location; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
---
-
-COPY atlas_transporter.location (id, location_type, lat, long, ward, district, city, state, country, pincode, address, bound, created_at, updated_at) FROM stdin;
-\.
-
-
---
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-COPY atlas_transporter.organization (id, name, gstin, status, type, verified, enabled, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at) FROM stdin;
-1926d40f-1223-4eb2-ba5d-7983bde2fd02	juspay	\N	PENDING_VERIFICATION	GATEWAY	t	t	\N	\N	\N	\N	\N	iamfromjuspay	\N	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00
-\.
+INSERT INTO atlas_transporter.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at) values
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'juspay', 'PENDING_VERIFICATION', 'GATEWAY', true, true, 'iamfromjuspay', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
 
 --
 -- Data for Name: person; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-COPY atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) FROM stdin;
-ec34eede-5a3e-4a41-89d4-7290a0d7a629	\N	\N	\N	\N	ADMIN	UNKNOWN	MOBILENUMBER	\N	+919999999999	\N	+919999999999	\N	t	\N	\N	INACTIVE	1926d40f-1223-4eb2-ba5d-7983bde2fd02	\N	\N	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00
-\.
-
+INSERT INTO atlas_transporter.person(id, role, gender, identifier_type, mobile_country_code, identifier, verified, status, organization_id, created_at, updated_at) values
+  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', '91', '+919999999999', true, 'INACTIVE', '1926d40f-1223-4eb2-ba5d-7983bde2fd02', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-COPY atlas_transporter.product (id, name, description, industry, type, rating, status, short_id, price, review, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-998af371-e726-422e-8356-d24085a1d586	AUTO		MOBILITY	RIDE		INSTOCK	Dney75jyIwsKoR7a                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:49:38.726748+00	2020-07-08 16:49:38.726748+00
-5ad086dd-c5c1-49a6-b66d-245d13b70194	HATCHBACK		MOBILITY	RIDE		INSTOCK	EBL2GZPJAHvaxLRO                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:50:01.263198+00	2020-07-08 16:50:01.263198+00
-f726d2fa-2df1-42f0-a009-6795cfdc9b05	SUV		MOBILITY	RIDE		INSTOCK	SldbUk7Kplnz7B6X                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:50:05.31276+00	2020-07-08 16:50:05.31276+00
-ad044fd7-2b62-4f37-93da-e48fe0678de1	SEDAN		MOBILITY	RIDE		INSTOCK	UINnHxAgoQlqkRrD                    	0.0000000000	\N	\N	\N	\N	\N	\N		2020-07-08 16:50:09.231255+00	2020-07-08 16:50:09.231255+00
-\.
-
+INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
+  ('998af371-e726-422e-8356-d24085a1d586', 'AUTO', 'MOBILITY', 'RIDE', 'INSTOCK', 'Dney75jyIwsKoR7a', '0.0000000000', '2020-07-08 16:49:38.726748+00', '2020-07-08 16:49:38.726748+00');
+INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
+  ('5ad086dd-c5c1-49a6-b66d-245d13b70194', 'HATCHBACK', 'MOBILITY', 'RIDE', 'INSTOCK', 'EBL2GZPJAHvaxLRO', '0.0000000000', '2020-07-08 16:50:01.263198+00', '2020-07-08 16:50:01.263198+00');
+INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
+  ('f726d2fa-2df1-42f0-a009-6795cfdc9b05', 'SUV', 'MOBILITY', 'RIDE', 'INSTOCK', 'SldbUk7Kplnz7B6X', '0.0000000000', '2020-07-08 16:50:05.31276+00', '2020-07-08 16:50:05.31276+00');
+INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
+  ('ad044fd7-2b62-4f37-93da-e48fe0678de1', 'SEDAN', 'MOBILITY', 'RIDE', 'INSTOCK', 'UINnHxAgoQlqkRrD', '0.0000000000', '2020-07-08 16:50:09.231255+00', '2020-07-08 16:50:09.231255+00');
 
 --
 -- Data for Name: registration_token; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-COPY atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, info, created_at, updated_at) FROM stdin;
-772453e2-d02b-494a-a4ac-ec1ea0027e18	SMS	OTP	3249	ea37f941-427a-4085-a7d0-96240f166672	t	3	365	3	ec34eede-5a3e-4a41-89d4-7290a0d7a629	USER                                	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00
-\.
-
-
---
--- Data for Name: vehicle; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
---
-
-COPY atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) FROM stdin;
-\.
-
+INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
+  ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
 --
 -- Name: case idx_16386_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
@@ -404,7 +361,7 @@ ALTER TABLE ONLY atlas_transporter.person
     ADD CONSTRAINT idx_16419_primary PRIMARY KEY (id);
 
 ALTER TABLE ONLY atlas_transporter.person
-  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number);
+  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_hash);
 
 ALTER TABLE ONLY atlas_transporter.person
   ADD CONSTRAINT unique_identifier UNIQUE (identifier);
@@ -519,7 +476,10 @@ CREATE INDEX idx_16435_entity_id ON atlas_transporter.registration_token USING b
 CREATE INDEX idx_16435_entity_type ON atlas_transporter.registration_token USING btree (entity_type);
 
 
+UPDATE atlas_transporter.person SET
+    mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='
+  , mobile_number_hash = decode('0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', 'hex') where id = 'ec34eede-5a3e-4a41-89d4-7290a0d7a629';
+
 --
 -- PostgreSQL database dump complete
 --
-

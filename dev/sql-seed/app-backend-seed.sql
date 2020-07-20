@@ -412,7 +412,7 @@ ALTER TABLE ONLY atlas_app.person
     ADD CONSTRAINT idx_16451_primary PRIMARY KEY (id);
 
 ALTER TABLE ONLY atlas_app.person
-  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_encrypted);
+  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_hash);
 
 ALTER TABLE ONLY atlas_app.person
   ADD CONSTRAINT unique_identifier UNIQUE (identifier);
@@ -619,6 +619,15 @@ CREATE INDEX idx_16475_tag ON atlas_app.tag USING btree (tag);
 CREATE INDEX idx_16475_tag_type ON atlas_app.tag USING btree (tag_type);
 
 
---
+INSERT INTO atlas_app.person(id, role, gender, identifier_type, mobile_country_code, identifier, verified, status, created_at, updated_at) values
+  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', '91', '+919999999999', false, 'INACTIVE', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
+
+INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
+  ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', false, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
+
+UPDATE atlas_app.person SET
+    mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='
+  , mobile_number_hash = decode('0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', 'hex') where id = 'ec34eede-5a3e-4a41-89d4-7290a0d7a629';
+
 -- PostgreSQL database dump complete
 --
