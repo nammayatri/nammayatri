@@ -52,7 +52,7 @@ buildContext act tid localTime =
   Context
     { _domain = "FINAL-MILE-DELIVERY",
       _action = act,
-      _version = Just "0.8.0",
+      _version = Just "0.7.0",
       _transaction_id = tid,
       _session_id = Nothing,
       _timestamp = localTime,
