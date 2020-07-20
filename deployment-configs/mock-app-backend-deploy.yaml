@@ -40,7 +40,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: GATEWAY_HOST
-              value: beckn-gateway-master.atlas
+              value: beckn-gateway-$DEPLOY_VARIANT.atlas
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: mock-app-backend-$DEPLOY_VARIANT
           ports:
