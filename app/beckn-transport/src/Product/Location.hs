@@ -193,7 +193,7 @@ getRoute' fromLat fromLon toLat toLon = do
     Left err -> do
       L.logInfo "GetRoute" (show err)
       return Nothing
-    Right MapSearch.Response {..} -> do
+    Right MapSearch.Response {..} ->
       if null routes
         then return Nothing
         else return . Just $ head routes
