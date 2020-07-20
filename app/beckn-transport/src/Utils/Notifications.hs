@@ -53,7 +53,7 @@ notifyTransportersOnConfirm c pi admins = do
           [ "Customer has accepted your offer for",
             model,
             "dated",
-            (showTimeIst $ Case._startTime c) <> ".",
+            showTimeIst (Case._startTime c) <> ".",
             "Visit the app to assign a driver."
           ]
 
