@@ -322,7 +322,8 @@ mkOnConfirmPayload c pis allPis trackerCase = do
   return
     OnConfirmReq
       { context,
-        message = ConfirmOrder order
+        message = ConfirmOrder order,
+        error = Nothing
       }
 
 serviceStatus :: StatusReq -> FlowHandler StatusRes
@@ -363,7 +364,8 @@ mkOnServiceStatusPayload c pis allPis trackerCase = do
   return
     OnStatusReq
       { context,
-        message = service
+        message = service,
+        error = Nothing
       }
 
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
@@ -422,7 +424,8 @@ mkOnTrackTripPayload trackerCase parentCase = do
     OnTrackTripReq
       { context,
         message =
-          OnTrackReqMessage (Just tracking)
+          OnTrackReqMessage (Just tracking),
+        error = Nothing
       }
 
 mkTrip :: Case -> Flow Trip
@@ -497,7 +500,8 @@ mkCancelRidePayload prodInstId = do
   return
     OnCancelReq
       { context,
-        message = tripObj
+        message = tripObj,
+        error = Nothing
       }
 
 mkCancelTripObj :: Text -> Flow Trip

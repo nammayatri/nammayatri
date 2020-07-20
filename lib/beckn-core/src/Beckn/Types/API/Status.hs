@@ -4,6 +4,7 @@ module Beckn.Types.API.Status where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Beckn.Types.Mobility.Service
 import EulerHS.Prelude
 
@@ -17,7 +18,8 @@ type StatusRes = AckResponse
 
 data OnStatusReq = OnStatusReq
   { context :: Context,
-    message :: Service
+    message :: Service,
+    error :: Maybe Error
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
