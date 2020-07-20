@@ -3,10 +3,12 @@
 module Beckn.Types.MapSearch
   ( module Beckn.Types.MapSearch,
     module Data.Geospatial,
+    module Data.LineString,
   )
 where
 
 import Data.Geospatial
+import Data.LineString
 import Data.Time.LocalTime
 import EulerHS.Prelude
 
@@ -20,8 +22,8 @@ data TravelMode = CAR | MOTORCYCLE | BICYCLE | FOOT
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Route = Route
-  { distance :: Float, -- meters
-    duration :: Integer, -- milisecond
+  { distanceInM :: Float, -- meters
+    durationInS :: Integer, -- seconds
     boundingBox :: Maybe BoundingBoxWithoutCRS,
     snapped_waypoints :: Maybe GeospatialGeometry,
     mode :: TravelMode,

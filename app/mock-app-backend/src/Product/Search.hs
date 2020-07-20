@@ -9,7 +9,6 @@ where
 
 import App.Types
 import App.Utils
-import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, SearchRes, searchAPI)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
@@ -20,6 +19,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
+import "beckn-gateway" Types.API.Search (OnSearchReq, searchAPI)
 
 gatewayLookup :: FlowR r (String, Int)
 gatewayLookup =
@@ -36,10 +36,10 @@ gatewayBaseUrl = do
       { baseUrlScheme = Http,
         baseUrlHost = host,
         baseUrlPort = port,
-        baseUrlPath = ""
+        baseUrlPath = "v1"
       }
 
-triggerSearch :: FlowHandlerR r SearchRes
+triggerSearch :: FlowHandlerR r AckResponse
 triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   baseUrl <- gatewayBaseUrl
   transactionId <- EL.generateGUID
@@ -55,7 +55,7 @@ triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHand
         _error = Nothing
       }
 
-searchCb :: () -> OnSearchReq -> FlowHandler OnSearchRes
+searchCb :: () -> OnSearchReq -> FlowHandler AckResponse
 searchCb _unit req = withFlowHandler $ do
   let ack = Ack {_action = "on_search", _message = "OK"}
       resp = AckResponse (req ^. #context) ack Nothing
