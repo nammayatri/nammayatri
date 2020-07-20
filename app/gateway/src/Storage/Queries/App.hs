@@ -33,8 +33,8 @@ mkApp providerId name key url =
 apps :: [Org.Organization]
 apps =
   [ mkApp "mobility-app" "mobility" "mobility-app-key" "http://localhost:8013/v1",
-    mkApp "test-app1" "Test App 1" "test-app-1-key" "http://localhost:8016/v1",
-    mkApp "test-app2" "Test App 2" "test-app-2-key" "http://localhost:8016/v1"
+    mkApp "mock-app-atlas" "Mock Atlas App" "test-app-1-key" "http://mock-app-backend-master.atlas:8016/v1",
+    mkApp "test-app-2" "Test App 2" "test-app-2-key" "http://localhost:8016/v1"
   ]
 
 -- FIXME: this should take a RegToken

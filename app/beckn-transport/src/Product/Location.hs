@@ -77,8 +77,9 @@ updateLocation _ caseId req = withFlowHandler $ do
   return $ UpdateLocationRes "SUCCESS"
 
 getLocation :: Text -> FlowHandler GetLocationRes
-getLocation caseId = withFlowHandler $ do
-  GetLocationRes . map fromCacheLocationInfo <$> Redis.getKeyRedis caseId
+getLocation caseId =
+  withFlowHandler $
+    GetLocationRes . map fromCacheLocationInfo <$> Redis.getKeyRedis caseId
 
 updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> CachedLocationInfo -> Flow CachedLocationInfo
 updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
