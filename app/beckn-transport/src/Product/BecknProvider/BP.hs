@@ -8,6 +8,7 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
+import Beckn.Types.API.Update
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -386,6 +387,14 @@ notifyTripUrlToGateway case_ parentCase = do
   Gateway.onTrackTrip onTrackTripPayload
   return ()
 
+notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> Flow ()
+notifyTripInfoToGateway prodInst trackerCase parentCase = do
+  pis <- ProductInstance.findAllByCaseId (parentCase ^. #_id)
+  onUpdatePayload <- mkOnUpdatePayload pis trackerCase parentCase
+  L.logInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
+  Gateway.onUpdate onUpdatePayload
+  return ()
+
 notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
   onCancelPayload <- mkCancelRidePayload prodInstId
@@ -394,21 +403,20 @@ notifyCancelToGateway prodInstId = do
   return ()
 
 mkOnTrackTripPayload :: Case -> Case -> Flow OnTrackTripReq
-mkOnTrackTripPayload case_ pCase = do
+mkOnTrackTripPayload trackerCase parentCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
           { _domain = "MOBILITY",
             _action = "on_track",
             _version = Just "0.8.0",
-            _transaction_id = pCase ^. #_shortId,
+            _transaction_id = parentCase ^. #_shortId,
             _session_id = Nothing,
             _timestamp = currTime,
             _token = Nothing,
             _status = Nothing
           }
-  let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (case_ ^. #_id)
-  trip <- mkTrip case_
+  let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (trackerCase ^. #_id)
   let tracking = GT.mkTracking "PULL" data_url
   return
     OnTrackTripReq
@@ -435,6 +443,30 @@ mkTrip c = do
         travellers = [],
         fare = Nothing,
         route = Nothing
+      }
+
+mkOnUpdatePayload :: [ProductInstance] -> Case -> Case -> Flow OnUpdateReq
+mkOnUpdatePayload prodInsts case_ pCase = do
+  currTime <- getCurrentTimeUTC
+  let context =
+        Context
+          { _domain = "MOBILITY",
+            _action = "on_update",
+            _version = Just "0.8.0",
+            _transaction_id = pCase ^. #_shortId,
+            _session_id = Nothing,
+            _timestamp = currTime,
+            _token = Nothing,
+            _status = Nothing
+          }
+  trip <- mkTrip case_
+  order <- GT.mkOrder pCase (head prodInsts) (Just trip)
+  return
+    OnUpdateReq
+      { context,
+        message =
+          OnUpdateOrder order,
+        error = Nothing
       }
 
 mkDriverInfo :: PersonId -> Flow Driver

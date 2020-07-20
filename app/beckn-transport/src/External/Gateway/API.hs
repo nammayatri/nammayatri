@@ -5,6 +5,7 @@ import Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
+import Beckn.Types.API.Update as Update
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
@@ -56,3 +57,14 @@ statusAPI = Proxy
 
 onStatus req =
   void $ ET.client statusAPI req
+
+type UpdateAPI =
+  "on_update"
+    :> ReqBody '[JSON] Update.OnUpdateReq
+    :> Post '[JSON] Update.OnUpdateRes
+
+updateAPI :: Proxy UpdateAPI
+updateAPI = Proxy
+
+onUpdate req =
+  void $ ET.client updateAPI req

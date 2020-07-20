@@ -30,7 +30,8 @@ type UpdateRes = AckResponse
 
 data OnUpdateReq = OnUpdateReq
   { context :: Context,
-    message :: OnUpdateOrder
+    message :: OnUpdateOrder,
+    error :: Maybe Error
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

@@ -6,6 +6,7 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
+import Beckn.Types.API.Update
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
@@ -30,6 +31,16 @@ onTrackTrip req = do
     L.logInfo "OnTrackTrip" "OnTrackTrip callback successfully delivered"
   whenLeft res $ \err ->
     L.logError "error occurred while sending OnTrackTrip Callback: " (show err)
+  return $ first show res
+
+onUpdate :: OnUpdateReq -> Flow (Either Text ())
+onUpdate req = do
+  url <- getBaseUrl
+  res <- L.callAPI url $ API.onUpdate req
+  whenRight res $ \_ ->
+    L.logInfo "OnUpdate" "OnUpdate callback successfully delivered"
+  whenLeft res $ \err ->
+    L.logError "error occurred while sending OnUpdate Callback: " (show err)
   return $ first show res
 
 onConfirm :: OnConfirmReq -> Flow (Either Text ())

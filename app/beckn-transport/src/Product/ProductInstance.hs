@@ -80,19 +80,18 @@ update SR.RegistrationToken {..} prodInstId req = withFlowHandler $ do
         >>= fromMaybeM400 "VEHICLE NOT FOUND"
     Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
   infoObj <- updateInfo (ProductInstanceId prodInstId) (Just driverInfo) (Just vehicleInfo)
-  notifyTripDataToGateway (ProductInstanceId prodInstId)
+  notifyTripDataToGateway pi
   notifyCancelReq updatedProd (req ^. #_status)
   return $ updatedProd {ProdInst._info = infoObj}
 
-notifyTripDataToGateway :: ProductInstanceId -> Flow ()
-notifyTripDataToGateway prodInstId = do
-  prodInst <- PIQ.findById prodInstId
+notifyTripDataToGateway :: ProdInst.ProductInstance -> Flow ()
+notifyTripDataToGateway prodInst = do
   piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
   cases <- CQ.findAllByIds (ProdInst._caseId <$> piList)
   let trackerCase = headMaybe $ filter (\x -> x ^. #_type == Case.LOCATIONTRACKER) cases
   let parentCase = headMaybe $ filter (\x -> x ^. #_type == Case.RIDESEARCH) cases
   case (trackerCase, parentCase) of
-    (Just x, Just y) -> BP.notifyTripUrlToGateway x y
+    (Just x, Just y) -> BP.notifyTripInfoToGateway prodInst x y
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Maybe SP.Person -> Maybe V.Vehicle -> Flow (Maybe Text)
