@@ -31,7 +31,7 @@ services:
     ports:
       - "6379:6379"
   encryption-server:
-    image: "juspayin/passetto-hs:9c62b19"
+    image: "juspayin/passetto-hs:753f5e9"
     container_name: "encryption-server"
     command: demo  # for DEV only
     ports:
