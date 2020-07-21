@@ -31,7 +31,7 @@ main_ n p pid pmo = do
   sodiumInit
   m <- newKey
   em <- encryptMasterKey (passwordFromText p) m
-  ks <- sequence $ replicate n newKeypair
+  ks <- replicateM n newKeypair
   eks <- mapM (encryptKey m) ks
   writeFile "passetto_init_data.sql" $ unlines $
                 ("INSERT INTO \"Passetto\".\"Master\" (key) values (decode('" <> b2hexs em <> "', 'hex'));") :
