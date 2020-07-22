@@ -7,6 +7,7 @@ import Beckn.Types.API.Search
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Provider as Core
 import Beckn.Types.Mobility.Intent
@@ -187,6 +188,10 @@ mkProduct case_ mprovider item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider -- Nothing
+  price <-
+    case convertDecimalValueToAmount $ item ^. #_price . #_listed_value of
+      Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
+      Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -199,7 +204,7 @@ mkProduct case_ mprovider item = do
         _industry = case_ ^. #_industry,
         _type = Products.RIDE,
         _status = Products.INSTOCK,
-        _price = item ^. #_price . #_listed_value,
+        _price = price,
         _rating = Nothing,
         _review = Nothing,
         _udf1 = Nothing,
@@ -217,6 +222,10 @@ mkProductInstance case_ mprovider personId item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
+  price <-
+    case convertDecimalValueToAmount $ item ^. #_price . #_listed_value of
+      Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
+      Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -235,7 +244,7 @@ mkProductInstance case_ mprovider personId item = do
         _validTill = case_ ^. #_validTill,
         _parentId = Nothing,
         _entityId = Nothing,
-        _price = item ^. #_price . #_listed_value,
+        _price = price,
         _type = Case.RIDESEARCH,
         _udf1 = Nothing,
         _udf2 = Nothing,

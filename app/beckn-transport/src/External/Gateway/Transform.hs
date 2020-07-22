@@ -4,6 +4,7 @@ module External.Gateway.Transform where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
@@ -71,15 +72,17 @@ mkItem prodInst =
 
 mkPrice :: ProductInstance -> Price
 mkPrice prodInst =
-  Price
-    { _currency = "INR", -- TODO : Fetch this from product
-      _estimated_value = prodInst ^. #_price,
-      _computed_value = prodInst ^. #_price,
-      _listed_value = prodInst ^. #_price,
-      _offered_value = prodInst ^. #_price,
-      _range = Nothing,
-      _breakup = []
-    }
+  let amt = convertAmountToDecimalValue $ prodInst ^. #_price
+   in Price
+        { _currency = "INR", -- TODO : Fetch this from product
+          _value = amt,
+          _estimated_value = amt,
+          _computed_value = amt,
+          _listed_value = amt,
+          _offered_value = amt,
+          _minimum_value = amt,
+          _maximum_value = amt
+        }
 
 mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Organization -> Flow Mobility.Service
 mkServiceOffer c pis allPis orgInfo = do
