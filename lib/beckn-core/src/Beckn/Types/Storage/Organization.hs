@@ -40,6 +40,8 @@ data OrganizationType = TRANSPORTER | PASS | GATEWAY | APP | PROVIDER
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck Postgres OrganizationType
+
 instance FromBackendRow Postgres OrganizationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
