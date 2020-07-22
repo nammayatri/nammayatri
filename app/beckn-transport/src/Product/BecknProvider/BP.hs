@@ -13,6 +13,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Order
 import Beckn.Types.Mobility.Driver
+import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop as BS
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
@@ -138,7 +139,7 @@ mkCase req uuid now validity fromLocation toLocation = do
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = req ^. #context . #_transaction_id,
+      _shortId = req ^. #context . #_request_transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
@@ -154,7 +155,7 @@ mkCase req uuid now validity fromLocation toLocation = do
       _fromLocationId = TA._getLocationId $ fromLocation ^. #_id,
       _toLocationId = TA._getLocationId $ toLocation ^. #_id,
       _udf1 = Just $ intent ^. #_vehicle . #variant,
-      _udf2 = Just $ show $ intent ^. #_payload . #_travellers . #_count,
+      _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
       _udf3 = Nothing,
       _udf4 = Nothing,
       _udf5 = Nothing,
@@ -167,7 +168,7 @@ confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
-  let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
+  let caseShortId = req ^. #context . #_request_transaction_id -- change to message.transactionId
   searchCase <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById prodInstId
   orderCase <- mkOrderCase searchCase
@@ -324,13 +325,17 @@ mkOnConfirmPayload c pis allPis trackerCase = do
   let context =
         Context
           { _domain = "MOBILITY",
-            _action = "CONFIRM",
-            _version = Just "0.8.0",
-            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            _session_id = Nothing,
+            _action = "confirm",
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
   trip <- mkTrip trackerCase
   order <- GT.mkOrder c (head pis) (Just trip)
@@ -366,25 +371,28 @@ mkOnServiceStatusPayload piId trackerPi = do
         Context
           { _domain = "MOBILITY",
             _action = "on_status",
-            _version = Just "0.1",
-            _transaction_id = "",
-            _session_id = Nothing,
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = "",
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
-  order <- mkOrderRes piId (show $ trackerPi ^. #_status)
+  order <- mkOrderRes piId (_getProductsId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
   let onStatusMessage = OnStatusReqMessage order
   return $ OnStatusReq context onStatusMessage
   where
-    mkOrderRes prodInstId status = do
+    mkOrderRes prodInstId productId status = do
       now <- getCurrentTimeUTC
       return $
         Order
           { _id = prodInstId,
             _state = T.pack status,
-            _billing = Nothing,
-            _fulfillment = Nothing,
+            _items = [productId],
             _created_at = now,
             _updated_at = now
           }
@@ -424,12 +432,16 @@ mkOnTrackTripPayload case_ pCase = do
         Context
           { _domain = "MOBILITY",
             _action = "on_track",
-            _version = Just "0.8.0",
-            _transaction_id = pCase ^. #_shortId,
-            _session_id = Nothing,
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = pCase ^. #_shortId,
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (case_ ^. #_id)
   trip <- mkTrip case_
@@ -451,12 +463,9 @@ mkTrip c = do
     Trip
       { id = _getCaseId $ c ^. #_id,
         vehicle = vehicle,
-        driver =
-          TripDriver
-            { persona = driver,
-              rating = Nothing
-            },
-        travellers = [],
+        driver,
+        payload =
+          Payload Nothing [] Nothing,
         fare = Nothing,
         route = Nothing
       }
@@ -478,12 +487,16 @@ mkCancelRidePayload prodInstId = do
         Context
           { _domain = "MOBILITY",
             _action = "on_cancel",
-            _version = Just "0.7.1",
-            _transaction_id = "",
-            _session_id = Nothing,
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = "",
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
   tripObj <- mkCancelTripObj prodInstId
   return
@@ -501,12 +514,8 @@ mkCancelTripObj prodInstId = do
     Trip
       { id = prodInstId,
         vehicle = vehicle,
-        driver =
-          TripDriver
-            { persona = driver,
-              rating = Nothing
-            },
-        travellers = [],
+        driver,
+        payload = Payload Nothing [] Nothing,
         fare = Just $ GT.mkPrice productInstance,
         route = Nothing
       }

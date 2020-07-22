@@ -3,34 +3,35 @@
 module Beckn.Types.Mobility.Driver where
 
 import Beckn.Types.Core.Person
+import Beckn.Types.Core.Rating
 import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
 data Driver = Driver
-  { descriptor :: Person,
-    experience :: Maybe Experience
+  -- Core Person type
+  { name :: Name,
+    image :: Maybe Image,
+    dob :: Maybe Text,
+    organization_name :: Maybe Text,
+    gender :: Text, -- male, female
+    email :: Maybe Text,
+    phones :: [Text], -- Phone numer in E.164 format (ITUT recommendation
+    experience :: Maybe Text, -- Duration as per ISO8601 format
+    rating :: Maybe Rating
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 instance Example Driver where
   example =
     Driver
-      { descriptor = example,
-        experience = example
-      }
-
-data Experience = Experience
-  { label :: Text,
-    value :: Text,
-    unit :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance Example Experience where
-  example =
-    Experience
-      { label = "Taxi driver",
-        value = "5",
-        unit = "stars"
+      { name = example,
+        image = example,
+        dob = Just "28-11-1990",
+        organization_name = Nothing,
+        gender = "male",
+        email = Just "john.smith@email.com",
+        phones = ["+919999999999"],
+        experience = Nothing,
+        rating = Nothing
       }

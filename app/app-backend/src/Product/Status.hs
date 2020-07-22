@@ -38,7 +38,7 @@ status person StatusReq {..} = withFlowHandler $ do
 onStatus :: API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus req = withFlowHandler $ do
   let context = req ^. #context
-      txnId = context ^. #_transaction_id
+      txnId = context ^. #_request_transaction_id
       prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
       state = matchStatus $ req ^. #message . #order . #_state
   status <- case state of

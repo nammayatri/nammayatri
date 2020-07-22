@@ -61,12 +61,16 @@ mkAckResponse' txnId action message = do
       { _context =
           Context
             { _domain = "MOBILITY",
+              _country = Nothing,
+              _city = Nothing,
               _action = action,
-              _version = Nothing,
-              _transaction_id = txnId,
+              _core_version = Nothing,
+              _domain_version = Nothing,
+              _bap_nw_address = Nothing,
+              _bg_nw_address = Nothing,
+              _bpp_nw_address = Nothing,
+              _request_transaction_id = txnId,
               _timestamp = currTime,
-              _session_id = Nothing,
-              _status = Nothing,
               _token = Nothing
             },
         _message =

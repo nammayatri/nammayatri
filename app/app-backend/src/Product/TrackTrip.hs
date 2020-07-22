@@ -45,7 +45,7 @@ trackCb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message . #tracking
-      caseId = CaseId $ req ^. #context . #_transaction_id
+      caseId = CaseId $ req ^. #context . #_request_transaction_id
   case_ <- Case.findById caseId
   pi <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
   let confirmedProducts = pi
