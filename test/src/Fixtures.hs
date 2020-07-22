@@ -6,6 +6,7 @@ import qualified "beckn-transport" App as TransporterBE
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
+import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
@@ -20,15 +21,19 @@ import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Types.Mobility.Vehicle
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Time
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
 import System.Environment (setEnv)
+import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
+import qualified "app-backend" Types.API.ProductInstance as AppPI
+import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "app-backend" Types.API.Search as AppBESearch
 
@@ -172,6 +177,17 @@ buildSearchReq guid = do
   utcTime <- getCurrentTime
   pure $ searchReq "search" guid utcTime localTme
 
+cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
+onCancelRide :: Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes
+cancelRide :<|> onCancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
+
+buildAppCancelReq :: Text -> LocalTime -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
+buildAppCancelReq guid localTime entityId entityType =
+  CancelAPI.CancelReq
+    { context = buildContext "cancel" guid localTime,
+      message = CancelAPI.Cancel entityId entityType
+    }
+
 -- For the idea behind generating a client, when nested routes are involved,
 -- see https://github.com/haskell-servant/servant/issues/335
 newtype CaseAPIClient = CaseAPIClient {mkCaseClient :: Text -> CaseClient}
@@ -228,6 +244,19 @@ listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 buildListLeads :: ClientM [TbeCase.CaseRes]
 buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing (Just True)
 
+listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
+listDriverRides :: Text -> Text -> ClientM TbePI.RideListRes
+listVehicleRides :: Text -> Text -> ClientM TbePI.RideListRes
+listCasesByProductInstance :: Text -> Text -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
+rideUpdate :: Text -> ProductInstanceId -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
+listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> rideUpdate = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
+
+listPIs :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
+listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
+
+buildListPIs :: PI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
+buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Just 50) Nothing
+
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =
   TbeCase.UpdateCaseReq
@@ -235,8 +264,33 @@ buildUpdateCaseReq =
       _transporterChoice = "ACCEPTED"
     }
 
+buildUpdatePIReq :: TbePI.ProdInstUpdateReq
+buildUpdatePIReq =
+  TbePI.ProdInstUpdateReq
+    { _status = Nothing,
+      _personId = Just testDriverId,
+      _vehicleId = Just testVehilcleId
+    }
+
+buildUpdateStatusReq :: PI.ProductInstanceStatus -> TbePI.ProdInstUpdateReq
+buildUpdateStatusReq status =
+  TbePI.ProdInstUpdateReq
+    { _status = Just status,
+      _personId = Nothing,
+      _vehicleId = Nothing
+    }
+
+buildOrgRideReq :: PI.ProductInstanceStatus -> Case.CaseType -> ClientM TbePI.ProductInstanceList
+buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
+
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
+
+testVehilcleId :: Text
+testVehilcleId = "ccf7193b-10e6-4f7e-b166-8c47f6497326"
+
+testDriverId :: Text
+testDriverId = "0219fdf4-ce91-465a-933e-8231e0fd5d8c"
 
 appInitiateLogin :: Reg.InitiateLoginReq -> ClientM Reg.InitiateLoginRes
 appVerifyLogin :: Text -> Reg.LoginReq -> ClientM Reg.LoginRes

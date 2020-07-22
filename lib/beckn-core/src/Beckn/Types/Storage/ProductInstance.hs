@@ -35,6 +35,11 @@ instance FromHttpApiData ProductInstanceStatus where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
+instance ToHttpApiData ProductInstanceStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 type ProductInstanceType = Case.CaseType
 
 data EntityType = VEHICLE | PASS | TICKET
