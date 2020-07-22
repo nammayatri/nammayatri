@@ -11,4 +11,4 @@ import Storage.Queries.Organization
 
 -- FIXME: this should take a RegToken
 lookupKey :: App.APIKey -> Flow (Maybe Org.Organization)
-lookupKey = findOrgByApiKey
+lookupKey = findOrgByApiKey Org.APP
