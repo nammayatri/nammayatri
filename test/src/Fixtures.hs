@@ -9,8 +9,8 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common as Common
-import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Location
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Intent
@@ -81,20 +81,23 @@ intentPayload =
 
 price :: Price
 price =
-  Price
-    { _currency = "INR",
-      _estimated_value = Amount 800,
-      _computed_value = Amount 800,
-      _listed_value = Amount 800,
-      _offered_value = Amount 800,
-      _range = Nothing,
-      _breakup = []
-    }
+  let amt = DecimalValue "800" ""
+   in Price
+        { _currency = "INR",
+          _value = amt,
+          _estimated_value = amt,
+          _computed_value = amt,
+          _listed_value = amt,
+          _offered_value = amt,
+          _minimum_value = amt,
+          _maximum_value = amt
+        }
 
 getStop :: LocalTime -> Stop.Stop
 getStop stopTime =
   Stop.Stop
-    { _descriptor = Nothing,
+    { _id = "05515eacc3b546e083489d9e24aba88d",
+      _descriptor = Nothing,
       _location = location,
       _arrival_time = Stop.StopTime stopTime (Just stopTime),
       _departure_time = Stop.StopTime stopTime (Just stopTime)
@@ -126,6 +129,9 @@ buildContext act tid localTime =
       _city = Nothing,
       _core_version = Just "0.8.0",
       _domain_version = Just "0.8.0",
+      _bap_nw_address = Nothing,
+      _bg_nw_address = Nothing,
+      _bpp_nw_address = Nothing,
       _request_transaction_id = tid,
       _timestamp = localTime,
       _token = Nothing
