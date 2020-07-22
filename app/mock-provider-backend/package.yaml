@@ -81,6 +81,7 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror=unused-imports
+  - -Werror=missing-fields
 
 library:
   source-dirs: src
