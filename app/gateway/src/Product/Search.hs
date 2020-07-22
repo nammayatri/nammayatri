@@ -35,7 +35,7 @@ search org req = withFlowHandler $ do
   resps <- forM providerUrls $ \providerUrl -> do
     baseUrl <- parseOrgUrl providerUrl
     eRes <- L.callAPI baseUrl $ search' "" req
-    L.logDebug @Text "gateway" $ "search: req: " <> show req <> ", resp: " <> show eRes
+    L.logDebug @Text "gateway" $ "search: req: " <> show (toJSON req) <> ", resp: " <> show eRes
     return $ isRight eRes
   if or resps
     then do
@@ -52,5 +52,5 @@ searchCb _org req = withFlowHandler $ do
   eRes <- L.callAPI baseUrl $ onSearch "" req
   let ack = either (Ack "Error" . show) (^. #_message) eRes
       resp = AckResponse (req ^. #context) ack Nothing
-  L.logDebug @Text "gateway" $ "search_cb: req: " <> show req <> ", resp: " <> show resp
+  L.logDebug @Text "gateway" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
   return resp

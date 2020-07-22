@@ -34,7 +34,7 @@ instance FromHttpApiData Status where
 
 --------------------------------------------------------------------------------------
 
-data OrganizationType = TRANSPORTER | PASS | GATEWAY
+data OrganizationType = TRANSPORTER | PASS | GATEWAY | APP | PROVIDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
@@ -67,7 +67,8 @@ data OrganizationT f = Organization
     _apiKey :: B.C f (Maybe Text),
     _callbackUrl :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _updatedAt :: B.C f LocalTime,
+    _callbackApiKey :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
