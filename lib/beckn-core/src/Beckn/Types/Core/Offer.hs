@@ -7,7 +7,6 @@ import EulerHS.Prelude
 data Offer = Offer
   { _id :: Text,
     _name :: Text,
-    _code :: Text,
     _ref :: OfferRef
   }
   deriving (Generic, Show)
@@ -23,7 +22,6 @@ instance Example Offer where
     Offer
       { _id = idExample,
         _name = "Offer #7312",
-        _code = "O7312",
         _ref = example
       }
 

@@ -47,7 +47,7 @@ search person req = withFlowHandler $ do
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
   gatewayUrl <- Gateway.getBaseUrl
-  eres <- Gateway.search gatewayUrl $ req & #context . #_transaction_id .~ _getCaseId (case_ ^. #_id)
+  eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
@@ -73,7 +73,7 @@ searchCbService req service = do
   -- TODO: Verify api key here
   let mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
-      caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+      caseId = CaseId $ req ^. #context . #_request_transaction_id --CaseId $ service ^. #_id
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
@@ -138,9 +138,9 @@ mkCase req userId from to = do
         _fromLocationId = TA._getLocationId $ from ^. #_id,
         _toLocationId = TA._getLocationId $ to ^. #_id,
         _udf1 = Just $ intent ^. #_vehicle . #variant,
-        _udf2 = Just $ show $ intent ^. #_payload . #_travellers . #_count,
+        _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
         _udf3 = Nothing,
-        _udf4 = Just $ context ^. #_transaction_id,
+        _udf4 = Just $ context ^. #_request_transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,

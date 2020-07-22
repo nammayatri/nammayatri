@@ -9,10 +9,12 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common as Common
+import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
-import Beckn.Types.Core.ScalarRange
+import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Intent
+import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Types.Mobility.Vehicle
 import qualified Beckn.Types.Storage.Case as Case
@@ -72,12 +74,22 @@ intentVehicle =
 intentPayload :: Payload
 intentPayload =
   Payload
-    { _travellers = TravellerReqInfo {_count = 0},
-      _luggage = Luggage {_count = 2, _weight_range = Nothing, _dimensions = Nothing}
+    { _travellers = [],
+      _luggage = Nothing,
+      _travel_group = Nothing
     }
 
-fareRange :: ScalarRange
-fareRange = ScalarRange {_min = 10, _max = 1000}
+price :: Price
+price =
+  Price
+    { _currency = "INR",
+      _estimated_value = Amount 800,
+      _computed_value = Amount 800,
+      _listed_value = Amount 800,
+      _offered_value = Amount 800,
+      _range = Nothing,
+      _breakup = []
+    }
 
 getStop :: LocalTime -> Stop.Stop
 getStop stopTime =
@@ -100,8 +112,8 @@ buildIntent localTime =
       _stops = [],
       _vehicle = intentVehicle,
       _payload = intentPayload,
-      _transfer_attrs = Nothing,
-      _fare_range = fareRange,
+      _transfer = Nothing,
+      _fare = price,
       _tags = []
     }
 
@@ -110,12 +122,13 @@ buildContext act tid localTime =
   Context
     { _domain = "MOBILITY",
       _action = act,
-      _version = Just "0.8.0",
-      _transaction_id = tid,
-      _session_id = Nothing,
+      _country = Nothing,
+      _city = Nothing,
+      _core_version = Just "0.8.0",
+      _domain_version = Just "0.8.0",
+      _request_transaction_id = tid,
       _timestamp = localTime,
-      _token = Nothing,
-      _status = Nothing
+      _token = Nothing
     }
 
 searchReq :: Text -> Text -> LocalTime -> Search.SearchReq

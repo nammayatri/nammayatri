@@ -1,13 +1,15 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.Core.Descriptor where
+module Beckn.Types.Core.Model where
 
 import Beckn.Types.Core.Image
 import Beckn.Utils.Common
 import EulerHS.Prelude
 
-data Descriptor = Descriptor
-  { _name :: Maybe Text,
+data Model = Model
+  { _id :: Text,
+    -- Core descriptor type
+    _name :: Maybe Text,
     _code :: Maybe Text,
     _symbol :: Maybe Text,
     _short_desc :: Maybe Text,
@@ -18,16 +20,17 @@ data Descriptor = Descriptor
   }
   deriving (Generic, Show)
 
-instance FromJSON Descriptor where
+instance FromJSON Model where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON Descriptor where
+instance ToJSON Model where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-instance Example Descriptor where
+instance Example Model where
   example =
-    Descriptor
-      { _name = Just "Some Name",
+    Model
+      { _id = idExample,
+        _name = Just "Some Name",
         _code = Nothing,
         _symbol = Nothing,
         _short_desc = Just "Short description",
