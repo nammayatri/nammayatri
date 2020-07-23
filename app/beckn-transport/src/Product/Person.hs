@@ -186,7 +186,7 @@ sendInviteSms phoneNumber orgName = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructInviteSms orgName
         }
-  whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
+  whenLeft res $ \err -> return () -- ignore error silently
 
 mapEntityType :: Text -> Maybe EntityType
 mapEntityType entityType = case entityType of
