@@ -15,8 +15,8 @@ import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
+import qualified Models.Case as Case
 import Servant
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Redis.Queries as Redis
 import Types.API.Location as Location

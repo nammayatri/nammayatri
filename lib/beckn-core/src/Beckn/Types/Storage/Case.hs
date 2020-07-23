@@ -14,7 +14,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
-import Servant.API
+import Servant
 
 data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -174,3 +174,29 @@ fieldEMod =
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
+
+validateStatusTransition :: CaseStatus -> CaseStatus -> Either Text ()
+validateStatusTransition oldState newState =
+  if oldState == newState
+    then allowed
+    else t oldState newState
+  where
+    forbidden =
+      Left $
+        T.pack $
+          "It is not allowed to change Case status from "
+            <> show oldState
+            <> " to "
+            <> show newState
+    allowed = Right ()
+    t NEW CONFIRMED = allowed
+    t NEW CLOSED = allowed
+    t NEW _ = forbidden
+    t CONFIRMED INPROGRESS = allowed
+    t CONFIRMED CLOSED = allowed
+    t CONFIRMED _ = forbidden
+    t INPROGRESS COMPLETED = allowed
+    t INPROGRESS CLOSED = allowed
+    t INPROGRESS _ = forbidden
+    t COMPLETED _ = forbidden
+    t CLOSED _ = forbidden

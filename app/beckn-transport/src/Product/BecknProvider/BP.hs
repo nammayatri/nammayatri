@@ -30,8 +30,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
+import Models.Case as Case
 import Servant
-import Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
