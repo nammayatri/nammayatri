@@ -96,13 +96,15 @@ transformToLocation req location =
     }
 
 createLocation :: UpdatePersonReq -> Flow SL.Location
-createLocation UpdatePersonReq{..} = do
+createLocation UpdatePersonReq {..} = do
   _id <- BC.generateGUID
   _createdAt <- getCurrentTimeUTC
-  pure SL.Location {
-         _locationType = fromMaybe SL.PINCODE _locationType,
-         _updatedAt = _createdAt,
-         ..}
+  pure
+    SL.Location
+      { _locationType = fromMaybe SL.PINCODE _locationType,
+        _updatedAt = _createdAt,
+        ..
+      }
 
 ifJust a b = if isJust a then a else b
 
@@ -188,12 +190,12 @@ createLocationT req = do
   QL.create location
   return location
 
-createLocationRec :: CreatePersonReq -> Flow SL.Location
-createLocationRec CreatePersonReq{..} = createLocation UpdatePersonReq{_organizationId = Nothing, ..}
 -- FIXME? This is to silence hlint reusing as much code from `createLocation`
 --   as possible, still we need fake _organizationId here ...
 -- Better solution in he long run is to factor out common data reducing this
 --   enormous amount of duplication ...
+createLocationRec :: CreatePersonReq -> Flow SL.Location
+createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {_organizationId = Nothing, ..}
 
 newtype ListPersonRes = ListPersonRes
   {users :: [SP.Person]}

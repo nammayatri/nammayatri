@@ -193,10 +193,11 @@ getRoute' fromLat fromLon toLat toLon = do
     Left err -> do
       L.logInfo "GetRoute" (show err)
       return Nothing
-    Right MapSearch.Response {..} -> pure $
-      if null routes
-        then Nothing
-        else Just $ head routes
+    Right MapSearch.Response {..} ->
+      pure $
+        if null routes
+          then Nothing
+          else Just $ head routes
   where
     getRouteRequest = do
       let from = MapSearch.LatLong $ MapSearch.PointXY fromLat fromLon
