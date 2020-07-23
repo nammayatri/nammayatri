@@ -172,7 +172,7 @@ deriveTableEncryption ''PersonTE
 -- TODO: move it to appropriate place
 maskPerson :: Person -> Person
 maskPerson person =
-  person {_deviceToken = (FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken) <$> (person ^. #_deviceToken)}
+  person {_deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person ^. #_deviceToken)}
   where
     trimToken token =
       if length token > 6
