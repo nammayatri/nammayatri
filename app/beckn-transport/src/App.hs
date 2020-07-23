@@ -32,9 +32,9 @@ import qualified System.Environment as SE
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
   port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  runTransporterBackendApp' port
-    $ setOnExceptionResponse transporterExceptionResponse
-    $ setPort port defaultSettings
+  runTransporterBackendApp' port $
+    setOnExceptionResponse transporterExceptionResponse $
+      setPort port defaultSettings
 
 -- | Prepare common applications options
 prepareAppOptions :: Flow ()

@@ -31,9 +31,10 @@ main_ n p pid pmo = do
   em <- encryptMasterKey (passwordFromText p) m
   ks <- replicateM n newKeypair
   eks <- mapM (encryptKey m) ks
-  writeFile "passetto_init_data.sql" $ unlines $
-    ("INSERT INTO \"Passetto\".\"Master\" (key) values (decode('" <> b2hexs em <> "', 'hex'));")
-      : map (\k -> "INSERT INTO \"Passetto\".\"Keys\" (encryptedKeyPair) values(decode('" <> b2hexs k <> "', 'hex'));") eks
+  writeFile "passetto_init_data.sql" $
+    unlines $
+      ("INSERT INTO \"Passetto\".\"Master\" (key) values (decode('" <> b2hexs em <> "', 'hex'));") :
+      map (\k -> "INSERT INTO \"Passetto\".\"Keys\" (encryptedKeyPair) values(decode('" <> b2hexs k <> "', 'hex'));") eks
   ek <- mkKeysContext (V.fromList ks) >>= runReaderT (encryptPayload $ "S" <> renderJSon (A.String pmo))
   let genAddEnc table =
         writeFile (toString table <> "_add_encrypted_phone.sql") $
