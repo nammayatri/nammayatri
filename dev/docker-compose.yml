@@ -26,6 +26,19 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+  gateway-db:
+    image: "postgres:12.3"
+    container_name: "atlas-gateway"
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./sql-seed/gateway-backend-seed.sql:/docker-entrypoint-initdb.d/gateway-backend-seed.sql:Z
+    environment:
+      - POSTGRES_DB=atlas_gateway
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   transporter-redis:
     image: "redis:5"
     ports:

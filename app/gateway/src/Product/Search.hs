@@ -29,13 +29,13 @@ parseOrgUrl =
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
   let search' = ET.client searchAPI
-      messageId = req ^. #context . #_transaction_id
+      messageId = req ^. #context . #_request_transaction_id
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providerUrls <- BP.lookup $ req ^. #context
   resps <- forM providerUrls $ \providerUrl -> do
     baseUrl <- parseOrgUrl providerUrl
     eRes <- L.callAPI baseUrl $ search' "" req
-    L.logDebug @Text "gateway" $ "search: req: " <> show req <> ", resp: " <> show eRes
+    L.logDebug @Text "gateway" $ "search: req: " <> show (toJSON req) <> ", resp: " <> show eRes
     return $ isRight eRes
   if or resps
     then do
@@ -46,11 +46,11 @@ search org req = withFlowHandler $ do
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
   let onSearch = ET.client onSearchAPI
-      messageId = req ^. #context . #_transaction_id
+      messageId = req ^. #context . #_request_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
   eRes <- L.callAPI baseUrl $ onSearch "" req
   let ack = either (Ack "Error" . show) (^. #_message) eRes
       resp = AckResponse (req ^. #context) ack Nothing
-  L.logDebug @Text "gateway" $ "search_cb: req: " <> show req <> ", resp: " <> show resp
+  L.logDebug @Text "gateway" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
   return resp

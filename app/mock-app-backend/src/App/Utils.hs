@@ -52,12 +52,16 @@ buildContext act tid localTime =
   Context
     { _domain = "FINAL-MILE-DELIVERY",
       _action = act,
-      _version = Just "0.8.0",
-      _transaction_id = tid,
-      _session_id = Nothing,
+      _country = Nothing,
+      _city = Nothing,
+      _core_version = Just "0.8.0",
+      _domain_version = Just "0.7.0",
+      _bap_nw_address = Nothing,
+      _bg_nw_address = Nothing,
+      _bpp_nw_address = Nothing,
+      _request_transaction_id = tid,
       _timestamp = localTime,
-      _token = Nothing,
-      _status = Nothing
+      _token = Nothing
     }
 
 searchReq :: Text -> Text -> LocalTime -> SearchReq

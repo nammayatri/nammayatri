@@ -145,13 +145,17 @@ mkOnSearchPayload c pis allPis orgInfo = do
   let context =
         Context
           { _domain = "MOBILITY",
+            _country = Nothing,
+            _city = Nothing,
             _action = "SEARCH",
-            _version = Just "0.1",
-            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            _session_id = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _token = Nothing,
-            _timestamp = currTime,
-            _status = Nothing
+            _timestamp = currTime
           }
   service <- GT.mkServiceOffer c pis allPis (Just orgInfo)
   return

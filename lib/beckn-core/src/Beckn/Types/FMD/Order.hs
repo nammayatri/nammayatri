@@ -1,9 +1,7 @@
 module Beckn.Types.FMD.Order where
 
-import Beckn.Types.Core.Billing
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Dimensions
-import Beckn.Types.Core.Fulfillment
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Scalar
 import Beckn.Types.FMD.Item
@@ -15,8 +13,7 @@ import EulerHS.Prelude
 data Order = Order
   { _id :: Text,
     _state :: Text,
-    _billing :: Maybe Billing,
-    _fulfillment :: Maybe Fulfillment,
+    _items :: [Text],
     _created_at :: LocalTime,
     _updated_at :: LocalTime,
     _tasks :: [Task],
@@ -35,8 +32,7 @@ instance Example Order where
     Order
       { _id = idExample,
         _state = "READY",
-        _billing = Nothing,
-        _fulfillment = Nothing,
+        _items = [idExample],
         _created_at = example,
         _updated_at = example,
         _tasks = example,

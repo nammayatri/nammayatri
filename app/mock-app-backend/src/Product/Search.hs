@@ -46,8 +46,8 @@ triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHand
   req <- EL.runIO $ buildSearchReq transactionId
   eRes <-
     callClient "search" baseUrl $
-      client searchAPI "test-app-1-key" req
-  EL.logDebug @Text "mock_app_backend" $ "context: " <> show (eRes ^. #_context) <> ", resp: " <> show (eRes ^. #_message)
+      client searchAPI "test-app-2-key" req
+  EL.logDebug @Text "mock_app_backend" $ "context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
       { _context = req ^. #context,
@@ -59,5 +59,5 @@ searchCb :: () -> OnSearchReq -> FlowHandler AckResponse
 searchCb _unit req = withFlowHandler $ do
   let ack = Ack {_action = "on_search", _message = "OK"}
       resp = AckResponse (req ^. #context) ack Nothing
-  EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show req <> ", resp: " <> show resp
+  EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
   return resp

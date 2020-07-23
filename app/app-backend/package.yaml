@@ -94,6 +94,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror=unused-imports
+    - -Werror=missing-fields
   dependencies:
     - beckn-core
 

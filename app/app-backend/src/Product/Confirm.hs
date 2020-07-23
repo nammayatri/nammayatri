@@ -41,7 +41,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   baseUrl <- Gateway.getBaseUrl
-  order <- mkOrder productInstanceId
+  order <- mkOrder productInstance
   eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   let ack =
         case eres of
@@ -49,18 +49,16 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack Nothing
   where
-    mkOrder prodInstId = do
+    mkOrder productInstance = do
       now <- getCurrentTimeUTC
       return $
         BO.Order
-          { _id = prodInstId,
+          { _id = _getProductInstanceId $ productInstance ^. #_id,
             _state = Nothing,
-            _billing = Nothing,
+            _items = [_getProductsId $ productInstance ^. #_productId],
             _created_at = now,
             _updated_at = now,
-            _trip = Nothing,
-            _invoice = Nothing,
-            _fulfillment = Nothing
+            _trip = Nothing
           }
 
 onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes

@@ -6,7 +6,7 @@ import Data.Text
 import EulerHS.Prelude
 
 data Transfer = Transfer
-  { _mode :: Text,
+  { _mode :: Text, -- "WALK", "SHUTTLE", "TRAVELATOR", "ELEVATOR", "ESCALATOR"
     _route :: Route
   }
   deriving (Generic, Show)

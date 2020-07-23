@@ -2,8 +2,6 @@
 
 module Beckn.Types.Core.Order where
 
-import Beckn.Types.Core.Billing
-import Beckn.Types.Core.Fulfillment
 import Beckn.Utils.Common
 import Data.Time.LocalTime
 import EulerHS.Prelude
@@ -11,8 +9,7 @@ import EulerHS.Prelude
 data Order = Order
   { _id :: Text,
     _state :: Text,
-    _billing :: Maybe Billing,
-    _fulfillment :: Maybe Fulfillment,
+    _items :: [Text],
     _created_at :: LocalTime,
     _updated_at :: LocalTime
   }
@@ -29,8 +26,7 @@ instance Example Order where
     Order
       { _id = idExample,
         _state = "State",
-        _billing = Nothing,
-        _fulfillment = Nothing,
+        _items = [idExample],
         _created_at = example,
         _updated_at = example
       }

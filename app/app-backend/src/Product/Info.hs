@@ -2,6 +2,7 @@ module Product.Info where
 
 import App.Types
 import Beckn.Types.App
+import qualified Beckn.Types.Mobility.Payload as Trip
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
@@ -30,8 +31,8 @@ getProductInfo person prodInstId = withFlowHandler $ do
           return $
             GetProductInfoRes
               { vehicle = Trip.vehicle trip,
-                driver = Just $ Trip.driver trip,
-                travellers = Trip.travellers trip,
+                driver = Trip.driver trip,
+                travellers = Trip._travellers $ Trip.payload trip,
                 fare = Trip.fare trip,
                 caseId = _getCaseId (SPI._caseId productInstance),
                 product = productInstance
