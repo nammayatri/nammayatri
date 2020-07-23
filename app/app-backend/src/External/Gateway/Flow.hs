@@ -4,6 +4,7 @@ import App.Types
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
+import qualified Beckn.Types.API.Status as Status
 import qualified Beckn.Types.API.Track as Track
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -54,6 +55,14 @@ cancel url req = do
   case res of
     Left err -> L.logError "error occurred while cancel trip: " (show err)
     Right _ -> L.logInfo "Cancel" "Cancel successfully delivered"
+  return $ first show res
+
+status :: BaseUrl -> Status.StatusReq -> Flow (Either Text ())
+status url req = do
+  res <- L.callAPI url $ API.status req
+  case res of
+    Left err -> L.logError "error occurred while getting status: " (show err)
+    Right _ -> L.logInfo "Status" "Status successfully delivered"
   return $ first show res
 
 getBaseUrl :: Flow BaseUrl

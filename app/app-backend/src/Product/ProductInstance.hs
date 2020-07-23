@@ -17,10 +17,10 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.ProductInstance
 
-list :: Person.Person -> [SPI.ProductInstanceStatus] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list person status mlimit moffset = withFlowHandler $ do
+list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list person status csTypes mlimit moffset = withFlowHandler $ do
   piList <-
-    ProductInstance.listAllProductInstanceWithOffset limit offset (ProductInstance.ByCustomerId $ person ^. #_id) status
+    ProductInstance.listAllProductInstanceWithOffset limit offset (ProductInstance.ByCustomerId $ person ^. #_id) status csTypes
   caseList <- Case.findAllByIds (SPI._caseId <$> piList)
   prodList <- Products.findAllByIds (SPI._productId <$> piList)
   locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))

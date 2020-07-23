@@ -41,7 +41,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   baseUrl <- Gateway.getBaseUrl
-  order <- mkOrder productInstanceId
+  order <- mkOrder productInstance
   eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   let ack =
         case eres of
@@ -49,18 +49,16 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack Nothing
   where
-    mkOrder prodInstId = do
+    mkOrder productInstance = do
       now <- getCurrentTimeUTC
       return $
         BO.Order
-          { _id = prodInstId,
+          { _id = _getProductInstanceId $ productInstance ^. #_id,
             _state = Nothing,
-            _billing = Nothing,
+            _items = [_getProductsId $ productInstance ^. #_productId],
             _created_at = now,
             _updated_at = now,
-            _trip = Nothing,
-            _invoice = Nothing,
-            _fulfillment = Nothing
+            _trip = Nothing
           }
 
 onConfirm :: OnConfirmReq -> FlowHandler AckResponse
@@ -79,7 +77,7 @@ onConfirm req = withFlowHandler $ do
           { SPI._info = encodeToText <$> uInfo
           }
   productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-  QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
+  QCase.updateStatus (SPI._caseId productInstance) Case.COMPLETED
   QPI.updateMultiple (_getProductInstanceId pid) uPrd
   QPI.updateStatus pid SPI.CONFIRMED
   return $ AckResponse (req ^. #context) (Ack "on_confirm" "Ok") Nothing
@@ -95,9 +93,14 @@ mkOrderCase Case.Case {..} = do
         _name = Nothing,
         _description = Just "Case to order a Ride",
         _shortId = shortId,
+        _status = Case.INPROGRESS,
         _industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
         _parentCaseId = Just _id,
+        _fromLocationId = _fromLocationId,
+        _toLocationId = _fromLocationId,
+        _startTime = _startTime,
+        _requestor = _requestor,
         _createdAt = now,
         _updatedAt = now,
         ..
@@ -113,12 +116,13 @@ mkOrderProductInstance caseId prodInst = do
       { _id = ProductInstanceId id,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
-        _personId = Nothing,
+        _personId = prodInst ^. #_personId,
         _entityType = SPI.VEHICLE,
         _entityId = Nothing,
         _shortId = shortId,
         _quantity = 1,
         _price = prodInst ^. #_price,
+        _type = Case.RIDEORDER,
         _organizationId = prodInst ^. #_organizationId,
         _fromLocation = prodInst ^. #_fromLocation,
         _toLocation = prodInst ^. #_toLocation,

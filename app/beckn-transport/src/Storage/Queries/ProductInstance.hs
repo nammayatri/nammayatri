@@ -151,7 +151,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
   i <- B.filter_ pred1 $ B.all_ tbl1
   j <- B.filter_ pred2 $ B.all_ tbl2
   k <- B.filter_ pred3 $
@@ -168,7 +168,7 @@ productInstanceJoin _limit _offset csTypes orgId status = do
       limit
       offset
       orderByDesc
-      (joinQuery csTable prodTable dbTable (csPred csTypes) prodPred (piPred orgId status))
+      (productInstancejoinQuery csTable prodTable dbTable (csPred csTypes) prodPred (piPred orgId status))
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
@@ -195,7 +195,7 @@ productInstanceJoinWithoutLimits csType orgId status = do
   joinedValues <-
     DB.findAllByJoinWithoutLimits
       orderByDesc
-      (joinQuery csTable prodTable dbTable (csPred csType) (prodPred orgId) (cprPred status))
+      (productInstancejoinQuery csTable prodTable dbTable (csPred csType) (prodPred orgId) (cprPred status))
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
@@ -221,8 +221,8 @@ findById pid =
   where
     predicate pid Storage.ProductInstance {..} = _id ==. B.val_ pid
 
-updateDvr :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
-updateDvr ids driverId = do
+updateDriver :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
+updateDriver ids driverId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
@@ -237,8 +237,8 @@ updateDvr ids driverId = do
           _updatedAt <-. B.val_ currTime
         ]
 
-updateVeh :: [ProductInstanceId] -> Maybe Text -> Flow ()
-updateVeh ids vehId = do
+updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
+updateVehicle ids vehId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
@@ -286,3 +286,19 @@ findAllByParentId id =
     >>= either DB.throwDBError pure
   where
     predicate id Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ id
+
+findByIdType :: [ProductInstanceId] -> Case.CaseType -> Flow Storage.ProductInstance
+findByIdType ids csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      _id `B.in_` (B.val_ <$> ids)
+        &&. _type ==. B.val_ csType
+
+findByParentIdType :: Maybe ProductInstanceId -> Case.CaseType -> Flow Storage.ProductInstance
+findByParentIdType mparentId csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
+        &&. _type ==. B.val_ csType

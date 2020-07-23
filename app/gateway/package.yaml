@@ -59,6 +59,7 @@ ghc-options:
   - -Wall
   - -Wcompat
   - -Widentities
+  - -Wunused-imports
 
 library:
   source-dirs: src
@@ -66,6 +67,8 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - aeson
+    - beam-core
+    - beam-postgres
     - beckn-core
     - bytestring
     - cache
@@ -73,6 +76,7 @@ library:
     - http-types
     - servant-client
     - servant-server
+    - text
     - vault
     - wai
     - warp

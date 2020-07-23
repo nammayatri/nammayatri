@@ -6,7 +6,14 @@ import Data.Text
 import EulerHS.Prelude
 
 data Operator = Operator
-  { _descriptor :: Person,
+  -- Core Person type
+  { _name :: Name,
+    _image :: Maybe Image,
+    _dob :: Maybe Text,
+    _organization_name :: Maybe Text,
+    _gender :: Text, -- male, female
+    _email :: Maybe Text,
+    _phones :: [Text], -- Phone numer in E.164 format (ITUT recommendation
     _experience :: Experience
   }
   deriving (Generic, Show)
@@ -20,7 +27,13 @@ instance ToJSON Operator where
 instance Example Operator where
   example =
     Operator
-      { _descriptor = example,
+      { _name = example,
+        _image = example,
+        _dob = Just "28-11-1990",
+        _organization_name = Nothing,
+        _gender = "male",
+        _email = Just "john.smith@email.com",
+        _phones = ["+919999999999"],
         _experience = example
       }
 
