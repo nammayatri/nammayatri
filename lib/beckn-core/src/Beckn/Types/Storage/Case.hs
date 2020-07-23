@@ -191,6 +191,7 @@ validateStatusTransition oldState newState =
     allowed = Right ()
     t NEW CONFIRMED = allowed
     t NEW CLOSED = allowed
+    t NEW COMPLETED = allowed
     t NEW _ = forbidden
     t CONFIRMED INPROGRESS = allowed
     t CONFIRMED CLOSED = allowed
