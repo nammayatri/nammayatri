@@ -4,7 +4,7 @@ module Product.Case.CRUD where
 
 import App.Types
 import Beckn.Types.API.Search
-import Beckn.Types.App as BC
+import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
 import Beckn.Types.Storage.Case as Case
@@ -22,8 +22,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
+import Models.Case as Case
 import Servant
-import Storage.Queries.Case as Case
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
@@ -108,6 +108,7 @@ createProductInstance cs prod price orgId status = do
           _entityType = ProdInst.VEHICLE,
           _entityId = Nothing,
           _quantity = 1,
+          _type = Case.RIDESEARCH,
           _price = fromMaybe 0 price,
           _status = status,
           _startTime = Case._startTime cs,
@@ -116,7 +117,7 @@ createProductInstance cs prod price orgId status = do
           _fromLocation = Just (Case._fromLocationId cs),
           _toLocation = Just (Case._toLocationId cs),
           _organizationId = orgId,
-          _parentId = Just $ ProductInstanceId piId,
+          _parentId = Nothing,
           _udf1 = Case._udf1 cs,
           _udf2 = Case._udf2 cs,
           _udf3 = Case._udf3 cs,
@@ -144,13 +145,17 @@ mkOnSearchPayload c pis allPis orgInfo = do
   let context =
         Context
           { _domain = "MOBILITY",
+            _country = Nothing,
+            _city = Nothing,
             _action = "SEARCH",
-            _version = Just "0.1",
-            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            _session_id = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _token = Nothing,
-            _timestamp = currTime,
-            _status = Nothing
+            _timestamp = currTime
           }
   service <- GT.mkServiceOffer c pis allPis (Just orgInfo)
   return

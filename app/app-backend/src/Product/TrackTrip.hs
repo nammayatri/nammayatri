@@ -14,8 +14,8 @@ import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.ProductInstance as ProductInstance
+import qualified Models.Case as MC
+import qualified Models.ProductInstance as MPI
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
 
@@ -23,7 +23,7 @@ track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track _ req = withFlowHandler $ do
   let context = req ^. #context
       prodInstId = req ^. #message . #order . #id
-  prdInst <- ProductInstance.findById $ ProductInstanceId prodInstId
+  prdInst <- MPI.findById $ ProductInstanceId prodInstId
   ack <-
     case decodeFromText =<< (prdInst ^. #_info) of
       Nothing -> return $ Ack "Error" "No product to track"
@@ -45,9 +45,9 @@ trackCb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message . #tracking
-      caseId = CaseId $ req ^. #context . #_transaction_id
-  case_ <- Case.findById caseId
-  pi <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
+      caseId = CaseId $ req ^. #context . #_request_transaction_id
+  case_ <- MC.findById caseId
+  pi <- MPI.listAllProductInstance (ByApplicationId caseId) [ProductInstance.CONFIRMED]
   let confirmedProducts = pi
   res <-
     case length confirmedProducts of
@@ -72,7 +72,7 @@ updateTracker prodInst mtracking = do
       let mtracker = updateTracker info mtracking
           uInfo = info {ProductInfo._tracker = mtracker}
           updatedPrd = prodInst {ProductInstance._info = Just $ encodeToText uInfo}
-      ProductInstance.updateMultiple (_getProductInstanceId $ prodInst ^. #_id) updatedPrd
+      MPI.updateMultiple (prodInst ^. #_id) updatedPrd
       return mtracker
   where
     updateTracker info mtracking =

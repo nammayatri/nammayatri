@@ -79,6 +79,7 @@ CREATE TABLE atlas_transporter.product_instance (
     entity_type character varying(255) NOT NULL,
     quantity bigint NOT NULL,
     price numeric(30,10) NOT NULL,
+    type character varying(255) NOT NULL,
     status character varying(255) NOT NULL,
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone,

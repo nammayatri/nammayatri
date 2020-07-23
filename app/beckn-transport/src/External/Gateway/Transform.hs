@@ -4,8 +4,7 @@ module External.Gateway.Transform where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.Core.Api
-import Beckn.Types.Core.Contact
+import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Person as BPerson
@@ -27,28 +26,28 @@ import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified Utils.Defaults as Defaults
 
 mkCatalog :: [ProductInstance] -> Flow Mobility.Catalog
 mkCatalog prodInsts = do
   catalogId <- L.generateGUID
   return
     Mobility.Catalog
-      { _id = Just catalogId,
+      { _id = catalogId,
         _categories = [],
         _brands = [],
-        _exp = Nothing,
+        _models = [],
+        _ttl = Nothing,
         _items = mkItem <$> prodInsts,
+        _offers = [],
         _fare_products = []
       }
 
 mkDescriptor :: ProductInstance -> Descriptor
 mkDescriptor prodInst =
   Descriptor
-    { _id = _getProductInstanceId $ prodInst ^. #_id,
-      _name = Nothing,
+    { _name = Nothing,
       _code = Nothing,
-      _sym = Nothing,
+      _symbol = Nothing,
       _short_desc = Nothing,
       _long_desc = Nothing,
       _images = [],
@@ -73,15 +72,17 @@ mkItem prodInst =
 
 mkPrice :: ProductInstance -> Price
 mkPrice prodInst =
-  Price
-    { _currency = "INR", -- TODO : Fetch this from product
-      _estimated_value = prodInst ^. #_price,
-      _computed_value = prodInst ^. #_price,
-      _listed_value = prodInst ^. #_price,
-      _offered_value = prodInst ^. #_price,
-      _range = Nothing,
-      _breakup = []
-    }
+  let amt = convertAmountToDecimalValue $ prodInst ^. #_price
+   in Price
+        { _currency = "INR", -- TODO : Fetch this from product
+          _value = amt,
+          _estimated_value = amt,
+          _computed_value = amt,
+          _listed_value = amt,
+          _offered_value = amt,
+          _minimum_value = amt,
+          _maximum_value = amt
+        }
 
 mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Organization -> Flow Mobility.Service
 mkServiceOffer c pis allPis orgInfo = do
@@ -101,12 +102,10 @@ mkOrder c pi trip = do
     Mobility.Order
       { _id = _getProductInstanceId $ pi ^. #_id,
         _state = Nothing,
-        _billing = Nothing,
-        _fulfillment = Nothing,
+        _items = [_getProductsId $ pi ^. #_productId],
         _created_at = now,
         _updated_at = now,
-        _trip = trip,
-        _invoice = Nothing
+        _trip = trip
       }
 
 baseTrackingUrl :: Text
@@ -122,35 +121,44 @@ mkTracking method dataUrl =
 
 mkDriverObj :: Person.Person -> Driver
 mkDriverObj person =
-  Driver
-    { descriptor = mkPerson person,
-      experience = Nothing
-    }
+  let bPerson = mkPerson person
+   in Driver
+        { name = bPerson ^. #name,
+          image = bPerson ^. #image,
+          dob = bPerson ^. #dob,
+          organization_name = bPerson ^. #organization_name,
+          gender = bPerson ^. #gender,
+          email = bPerson ^. #email,
+          phones = bPerson ^. #phones,
+          experience = Nothing,
+          rating = Nothing
+        }
 
 mkPerson :: Person.Person -> BPerson.Person
 mkPerson person =
   BPerson.Person
-    { title = "",
-      first_name = fromMaybe "" (person ^. #_firstName),
-      middle_name = fromMaybe "" (person ^. #_middleName),
-      last_name = fromMaybe "" (person ^. #_lastName),
-      full_name = fromMaybe "" (person ^. #_fullName),
+    { name =
+        Name
+          { _additional_name = person ^. #_middleName,
+            _family_name = person ^. #_lastName,
+            _given_name = fromMaybe "" (person ^. #_firstName),
+            _call_sign = Nothing,
+            _honorific_prefix = Nothing,
+            _honorific_suffix = Nothing
+          },
       image = Nothing,
       dob = Nothing,
+      organization_name = Nothing,
       gender = show $ person ^. #_gender,
-      contact =
-        Contact
-          { email = person ^. #_email,
-            mobile =
-              Just
-                Mobile
-                  { country_code = person ^. #_mobileCountryCode,
-                    number = person ^. #_mobileNumber -- TODO: need to take last 10
-                  },
-            landline = Nothing,
-            ivr = []
-          }
+      email = person ^. #_email,
+      phones = maybeToList getPhone
     }
+  where
+    getPhone =
+      case (person ^. #_mobileCountryCode, person ^. #_mobileNumber) of
+        (Just ccode, Just number) -> Just $ ccode <> number
+        (Nothing, Just number) -> Just number
+        _ -> Nothing
 
 mkVehicleObj :: Vehicle.Vehicle -> BVehicle.Vehicle
 mkVehicleObj vehicle =
@@ -175,17 +183,34 @@ mkProvider :: Organization -> Provider
 mkProvider orgInfo =
   Provider
     { _id = _getOrganizationId $ orgInfo ^. #_id,
-      _name = orgInfo ^. #_name,
-      _website = fromMaybe "" (orgInfo ^. #_callbackUrl),
-      _contact = mkContact (orgInfo ^. #_mobileNumber),
-      _api = Api "" Defaults.localTime
-    }
-
-mkContact :: Maybe Text -> Contact
-mkContact mobileNumber =
-  Contact
-    { email = Nothing,
-      mobile = Just (Mobile Nothing mobileNumber),
-      landline = Nothing,
-      ivr = []
+      _descriptor =
+        Descriptor
+          { _name = Just $ orgInfo ^. #_name,
+            _code = Nothing,
+            _symbol = Nothing,
+            _short_desc = Nothing,
+            _long_desc = Nothing,
+            _images = [],
+            _audio = Nothing,
+            _3d_render = Nothing
+          },
+      _poc =
+        Just $
+          BPerson.Person
+            { name =
+                Name
+                  { _additional_name = Nothing,
+                    _family_name = Nothing,
+                    _given_name = "",
+                    _call_sign = Nothing,
+                    _honorific_prefix = Nothing,
+                    _honorific_suffix = Nothing
+                  },
+              image = Nothing,
+              dob = Nothing,
+              organization_name = Just $ orgInfo ^. #_name,
+              gender = "",
+              email = Nothing,
+              phones = maybeToList $ orgInfo ^. #_mobileNumber
+            }
     }

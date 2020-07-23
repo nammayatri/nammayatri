@@ -65,6 +65,7 @@ dependencies:
   - http-client
   - http-types
   - lens
+  - mtl
   - postgresql-simple
   - pureMD5
   - purescript-bridge
@@ -93,6 +94,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror=unused-imports
+    - -Werror=missing-fields
   dependencies:
     - beckn-core
 

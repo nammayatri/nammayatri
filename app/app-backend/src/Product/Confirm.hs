@@ -17,9 +17,10 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as MC
+import qualified Models.Case as QCase
+import qualified Models.ProductInstance as MPI
 import Servant
-import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.ProductInstance as QPI
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import qualified Types.ProductInfo as Products
@@ -35,13 +36,13 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
       err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
   QCase.create orderCase_
-  productInstance <- QPI.findById (ProductInstanceId productInstanceId)
+  productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
-  QPI.create orderProductInstance
+  MPI.create orderProductInstance
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   baseUrl <- Gateway.getBaseUrl
-  order <- mkOrder productInstanceId
+  order <- mkOrder productInstance
   eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   let ack =
         case eres of
@@ -49,18 +50,16 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
           Right _ -> Ack "confirm" "Ok"
   return $ AckResponse context ack Nothing
   where
-    mkOrder prodInstId = do
+    mkOrder productInstance = do
       now <- getCurrentTimeUTC
       return $
         BO.Order
-          { _id = prodInstId,
+          { _id = _getProductInstanceId $ productInstance ^. #_id,
             _state = Nothing,
-            _billing = Nothing,
+            _items = [_getProductsId $ productInstance ^. #_productId],
             _created_at = now,
             _updated_at = now,
-            _trip = Nothing,
-            _invoice = Nothing,
-            _fulfillment = Nothing
+            _trip = Nothing
           }
 
 onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
@@ -70,7 +69,7 @@ onConfirm req = withFlowHandler $ do
   let trip = req ^. #message . #order . #_trip
       pid = ProductInstanceId $ req ^. #message . #order . #_id
       tracker = flip Products.Tracker Nothing <$> trip
-  prdInst <- QPI.findById pid
+  prdInst <- MPI.findById pid
   -- TODO: update tracking prodInfo in .info
   let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
   let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
@@ -78,10 +77,10 @@ onConfirm req = withFlowHandler $ do
         prdInst
           { SPI._info = encodeToText <$> uInfo
           }
-  productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-  QCase.updateStatus (SPI._caseId productInstance) Case.INPROGRESS
-  QPI.updateMultiple (_getProductInstanceId pid) uPrd
-  QPI.updateStatus pid SPI.CONFIRMED
+  productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
+  MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
+  MPI.updateMultiple pid uPrd
+  MPI.updateStatus pid SPI.CONFIRMED
   return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"
 
 mkOrderCase :: Case.Case -> Flow Case.Case
@@ -95,9 +94,14 @@ mkOrderCase Case.Case {..} = do
         _name = Nothing,
         _description = Just "Case to order a Ride",
         _shortId = shortId,
+        _status = Case.INPROGRESS,
         _industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
         _parentCaseId = Just _id,
+        _fromLocationId = _fromLocationId,
+        _toLocationId = _fromLocationId,
+        _startTime = _startTime,
+        _requestor = _requestor,
         _createdAt = now,
         _updatedAt = now,
         ..
@@ -113,12 +117,13 @@ mkOrderProductInstance caseId prodInst = do
       { _id = ProductInstanceId id,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
-        _personId = Nothing,
+        _personId = prodInst ^. #_personId,
         _entityType = SPI.VEHICLE,
         _entityId = Nothing,
         _shortId = shortId,
         _quantity = 1,
         _price = prodInst ^. #_price,
+        _type = Case.RIDEORDER,
         _organizationId = prodInst ^. #_organizationId,
         _fromLocation = prodInst ^. #_fromLocation,
         _toLocation = prodInst ^. #_toLocation,

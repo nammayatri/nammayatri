@@ -39,7 +39,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            #------ DB configs ------#
+            #------ MySQL DB configs ------#
             - name: MYSQL_HOST
               valueFrom:
                 configMapKeyRef:
@@ -65,6 +65,32 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: MYSQL_PASSWORD
+            #------ Postgres DB configs ------#
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-app-backend-configs
+                  key: PGSQL_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-app-backend-configs
+                  key: PGSQL_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-app-backend-configs
+                  key: PGSQL_DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: PGSQL_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: PGSQL_PASSWORD
             #------ Redis configs ------#
             - name: REDIS_HOST
               valueFrom:

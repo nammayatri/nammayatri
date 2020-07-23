@@ -18,9 +18,9 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Runtime as R
-import qualified EulerHS.Types as T
+import qualified EulerHS.Types as ET
 import Network.HTTP.Types (hContentType)
 import Servant
 import Servant.Client (BaseUrl)
@@ -37,6 +37,46 @@ getCurrTime = L.runIO $ do
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
+
+-- | Get rid of database error
+-- convert it into UnknownDomainError
+checkDBError :: L.MonadFlow m => ET.DBResult a -> m a
+checkDBError dbres = checkDBError' dbres DatabaseError
+
+-- | Get rid of database error
+-- convert it into specified DomainError
+-- f converts DBError to DomainError
+checkDBError' :: L.MonadFlow m => ET.DBResult a -> (ET.DBError -> DomainError) -> m a
+checkDBError' dbres f =
+  case dbres of
+    Left err -> throwDomainError $ f err
+    Right res -> pure res
+
+-- | Get rid of database error and empty result
+-- convert it into UnknownDomainError
+checkDBErrorOrEmpty :: L.MonadFlow m => ET.DBResult (Maybe a) -> DomainError -> m a
+checkDBErrorOrEmpty dbres = checkDBErrorOrEmpty' dbres DatabaseError
+
+-- | Get rid of database error and empty result
+-- convert it into specified DomainError
+-- f converts DBError to DomainError
+checkDBErrorOrEmpty' :: L.MonadFlow m => ET.DBResult (Maybe a) -> (ET.DBError -> DomainError) -> DomainError -> m a
+checkDBErrorOrEmpty' dbres f domainErrOnEmpty =
+  case dbres of
+    Left err -> throwDomainError $ f err
+    Right maybeRes -> case maybeRes of
+      Nothing -> throwDomainError domainErrOnEmpty
+      Just x -> pure x
+
+-- | Throw DomainError if DBError occurs
+throwOnDBError :: L.MonadFlow m => ET.DBResult a -> DomainError -> m a
+throwOnDBError dbres domainError =
+  checkDBError' dbres $ const domainError
+
+-- Throw DomainErrors if DBError occurs or the result is empty
+throwOnDBErrorOrEmpty :: L.MonadFlow m => ET.DBResult (Maybe a) -> DomainError -> DomainError -> m a
+throwOnDBErrorOrEmpty dbres domainErrorOnDbError =
+  checkDBErrorOrEmpty' dbres (const domainErrorOnDbError)
 
 fromMaybeM :: L.MonadFlow m => ServerError -> Maybe a -> m a
 fromMaybeM err Nothing = L.throwException err
@@ -61,12 +101,16 @@ mkAckResponse' txnId action message = do
       { _context =
           Context
             { _domain = "MOBILITY",
+              _country = Nothing,
+              _city = Nothing,
               _action = action,
-              _version = Nothing,
-              _transaction_id = txnId,
+              _core_version = Nothing,
+              _domain_version = Nothing,
+              _bap_nw_address = Nothing,
+              _bg_nw_address = Nothing,
+              _bpp_nw_address = Nothing,
+              _request_transaction_id = txnId,
               _timestamp = currTime,
-              _session_id = Nothing,
-              _status = Nothing,
               _token = Nothing
             },
         _message =
@@ -169,12 +213,36 @@ throwJsonError401H = throwJsonErrorH ... err401
 showTimeIst :: LocalTime -> Text
 showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addLocalTime (60 * 330)
 
+throwDomainError :: L.MonadFlow m => DomainError -> m a
+throwDomainError err =
+  case err of
+    UnknownDomainError msg -> t err401 msg
+    -- TODO get more details from db error?
+    DatabaseError (ET.DBError _ text) -> t err500 $ show text
+    -- Case errors
+    CaseErr suberr -> case suberr of
+      CaseNotFound -> t err404 "Case not found"
+      CaseStatusTransitionErr msg -> t err405 msg
+    -- Product Instance errors
+    ProductInstanceErr suberr -> case suberr of
+      ProductInstanceNotFound -> t err404 "Product Instance not found"
+      ProductInstanceStatusTransitionErr msg -> t err405 msg
+    -- Product errors
+    ProductErr suberr -> case suberr of
+      ProductNotFound -> t err404 "Product not found"
+      ProductNotUpdated -> t err405 "Product not updated"
+      ProductNotCreated -> t err405 "Product not created"
+    AuthErr UnAuthorized -> t err401 "Unauthorized"
+    _ -> t err500 "Unknown error"
+  where
+    t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg
+
 -- TODO: the @desc@ argument should become part of monadic context
 callClient ::
-  (T.JSONEx a, L.MonadFlow m) =>
+  (ET.JSONEx a, L.MonadFlow m) =>
   Text ->
   BaseUrl ->
-  T.EulerClient a ->
+  ET.EulerClient a ->
   m a
 callClient desc baseUrl cli =
   L.callAPI baseUrl cli >>= \case

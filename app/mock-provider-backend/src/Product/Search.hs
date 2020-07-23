@@ -26,7 +26,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
       callClient "search" baseUrl $
         client
           onSearchAPI
-          "test-provider-1-key"
+          "test-provider-2-key"
           OnSearchReq
             { context = req ^. #context,
               message = toJSON ans

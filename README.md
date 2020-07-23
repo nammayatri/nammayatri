@@ -8,6 +8,9 @@ More about beckn:
 * [spec](https://github.com/beckn/protocol-specifications/)
 * [website](https://beckn.org/)
 
+Conforms to beckn spec [0.8.0 commit](https://github.com/beckn/protocol-specifications/tree/0b5b2fa3cca0ae1b7a99f2c88359bea9d589d067)
+
+
 ## This project contains three modules
 * `app-backend` - frontend facing APIs (BA), has more end-user specific implementations
 * `beckn-transport` - beckn provider (BP), implmenting mobility spec

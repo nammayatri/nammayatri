@@ -14,7 +14,7 @@ import Beckn.Utils.Common (decodeFromText, showTimeIst)
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified Storage.Queries.Case as QC
+import qualified Models.Case as Case
 import qualified Storage.Queries.Person as Person
 import Types.ProductInfo as ProductInfo
 
@@ -36,7 +36,7 @@ import Types.ProductInfo as ProductInfo
 -- When case doesn't have any product, there is no notification.
 notifyOnProductCancelCb :: ProductInstance -> Flow ()
 notifyOnProductCancelCb pi = do
-  c <- QC.findById $ pi ^. #_caseId
+  c <- Case.findById $ pi ^. #_caseId
   let mpersonId = Case._requestor c
       productInstanceId = pi ^. #_id
       minfo :: (Maybe ProductInfo) = decodeFromText =<< pi ^. #_info
@@ -49,7 +49,7 @@ notifyOnProductCancelCb pi = do
                 FCMData CANCELLED_PRODUCT SHOW FCM.Product $
                   show (_getProductInstanceId productInstanceId)
               title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-              providerName = info ^. #_provider . _Just . #_name
+              providerName = info ^. #_provider . _Just . #_descriptor . #_name . _Just
               body =
                 FCMNotificationBody $
                   unwords
@@ -120,7 +120,7 @@ notifyOnTrackCb personId tracker c =
               model =
                 fromMaybe "unknown" $ trip ^. #vehicle . _Just . #model
               driverName =
-                trip ^. #driver . #persona . _Just . #descriptor . #first_name
+                trip ^. #driver . _Just . #name . #_given_name
               title = FCMNotificationTitle $ T.pack "Ride details updated!"
               body =
                 FCMNotificationBody $
