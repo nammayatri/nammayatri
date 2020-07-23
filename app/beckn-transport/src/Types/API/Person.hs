@@ -97,13 +97,11 @@ transformToLocation req location =
 
 createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation UpdatePersonReq{..} = do
-  id <- BC.generateGUID
-  now <- getCurrentTimeUTC
+  _id <- BC.generateGUID
+  _createdAt <- getCurrentTimeUTC
   pure SL.Location {
-         _id = id,
          _locationType = fromMaybe SL.PINCODE _locationType,
-         _createdAt = now,
-         _updatedAt = now,
+         _updatedAt = _createdAt,
          ..}
 
 ifJust a b = if isJust a then a else b
