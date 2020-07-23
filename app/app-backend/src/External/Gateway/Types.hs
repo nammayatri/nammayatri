@@ -6,8 +6,8 @@ module External.Gateway.Types where
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
+import qualified Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
-import EulerHS.Language (Flow)
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import qualified EulerHS.Types as ET
@@ -57,3 +57,14 @@ cancelAPI = Proxy
 
 cancel req =
   void $ client cancelAPI req
+
+type StatusAPI =
+  "status"
+    :> ReqBody '[JSON] Status.StatusReq
+    :> Post '[JSON] Status.StatusRes
+
+statusAPI :: Proxy StatusAPI
+statusAPI = Proxy
+
+status req =
+  void $ client statusAPI req

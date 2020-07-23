@@ -4,19 +4,17 @@
 module App.Routes where
 
 import App.Types
-import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes (..))
+import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes)
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
+import qualified Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..), generateGUID)
-import Beckn.Types.Core.Ack
+import Beckn.Types.Common (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.ProductInstance
-import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
-import Network.Wai.Parse
 import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
@@ -26,6 +24,7 @@ import qualified Product.Location as Location
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
+import qualified Product.Status as Status
 import qualified Product.TrackTrip as TrackTrip
 import Servant
 import qualified Types.API.Cancel as Cancel
@@ -36,7 +35,7 @@ import qualified Types.API.Location as Location
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
-import Types.App
+import Types.API.Status
 import Utils.Auth (VerifyAPIKey)
 import Utils.Common (TokenAuth)
 
@@ -53,6 +52,7 @@ type AppAPI =
            :<|> CancelAPI
            :<|> CronAPI
            :<|> RouteAPI
+           :<|> StatusAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -71,6 +71,7 @@ appServer key =
     :<|> cancelFlow
     :<|> cronFlow
     :<|> routeApiFlow
+    :<|> statusFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -177,6 +178,7 @@ type ProductInstanceAPI =
   "productInstance"
     :> ( TokenAuth
            :> QueryParams "status" ProductInstanceStatus
+           :> QueryParams "type" Case.CaseType
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> Get '[JSON] ProductInstance.ProductInstanceList
@@ -220,3 +222,17 @@ type RouteAPI =
 
 routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoute
+
+-------- Status Flow----------
+type StatusAPI =
+  "status"
+    :> TokenAuth
+    :> ReqBody '[JSON] StatusReq
+    :> Post '[JSON] StatusRes
+    :<|> "on_status"
+    :> ReqBody '[JSON] Status.OnStatusReq
+    :> Post '[JSON] Status.OnStatusRes
+
+statusFlow =
+  Status.status
+    :<|> Status.onStatus

@@ -1,15 +1,17 @@
 module Beckn.Types.Core.Offer where
 
-import Beckn.Types.App
+import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Common
 import Data.Text
+import Data.Time.LocalTime
 import EulerHS.Prelude
 
 data Offer = Offer
   { _id :: Text,
-    _name :: Text,
-    _code :: Text,
-    _ref :: OfferRef
+    _descriptor :: Descriptor,
+    _applies_to :: OfferRef,
+    _start_date :: LocalTime,
+    _end_date :: LocalTime
   }
   deriving (Generic, Show)
 
@@ -23,9 +25,10 @@ instance Example Offer where
   example =
     Offer
       { _id = idExample,
-        _name = "Offer #7312",
-        _code = "O7312",
-        _ref = example
+        _descriptor = example,
+        _applies_to = example,
+        _start_date = example,
+        _end_date = example
       }
 
 data OfferRef = OfferRef

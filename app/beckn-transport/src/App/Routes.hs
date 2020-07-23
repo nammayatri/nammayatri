@@ -8,16 +8,12 @@ import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
-import Beckn.Types.Storage.Products
 import Beckn.Types.Storage.Vehicle
-import Data.Aeson
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
-import Network.Wai.Parse
 import Product.BecknProvider.BP as BP
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron
@@ -29,7 +25,6 @@ import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
-import Servant.Multipart
 import Types.API.Case
 import Types.API.Cron
 import Types.API.Location as Location
@@ -225,7 +220,7 @@ type ProductInstanceAPI =
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
            :<|> TokenAuth
-           :> Capture "productInstanceId" Text
+           :> Capture "productInstanceId" ProductInstanceId
            :> ReqBody '[JSON] ProdInstUpdateReq
            :> Post '[JSON] ProdInstInfo
        )
@@ -321,9 +316,8 @@ cronFlow =
 
 type StatusAPI =
   "status"
-    :> "services"
     :> ( ReqBody '[JSON] StatusReq
-           :> Post '[JSON] AckResponse
+           :> Post '[JSON] StatusRes
        )
 
 statusApiFlow :: FlowServer StatusAPI

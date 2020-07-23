@@ -3,12 +3,12 @@ module Beckn.Types.Mobility.Stop where
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Utils.Common
-import Data.Text
 import Data.Time
 import EulerHS.Prelude
 
 data Stop = Stop
-  { _descriptor :: Maybe Descriptor,
+  { _id :: Text,
+    _descriptor :: Maybe Descriptor,
     _location :: Location,
     _arrival_time :: StopTime,
     _departure_time :: StopTime
@@ -43,7 +43,8 @@ instance Example StopTime where
 instance Example Stop where
   example =
     Stop
-      { _descriptor = example,
+      { _id = idExample,
+        _descriptor = example,
         _location = example,
         _arrival_time = example,
         _departure_time = example

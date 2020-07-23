@@ -9,14 +9,10 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import Data.Generics.Labels
 import Data.Swagger
 import Data.Time.LocalTime
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant.Swagger
 import qualified Storage.Queries.Location as QL
 
 data TransporterReq = TransporterReq
@@ -69,7 +65,8 @@ instance CreateTransform TransporterReq SO.Organization Flow where
           SO._verified = False,
           SO._enabled = True,
           SO._createdAt = now,
-          SO._updatedAt = now
+          SO._updatedAt = now,
+          SO._callbackApiKey = Nothing
         }
 
 transformToLocation :: TransporterReq -> Flow SL.Location

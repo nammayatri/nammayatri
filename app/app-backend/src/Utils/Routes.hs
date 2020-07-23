@@ -1,16 +1,9 @@
 module Utils.Routes where
 
 import App.Types
-import Beckn.Types.App
-import Beckn.Types.Core.Api
-import Beckn.Types.Core.Contact
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Provider
 import Beckn.Utils.Extra (getCurrentTimeUTC)
-import qualified EulerHS.Interpreters as I
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Types.App
 
 buildContext :: Text -> Text -> Flow Context
 buildContext action tId = do
@@ -18,42 +11,15 @@ buildContext action tId = do
   return $
     Context
       { _domain = "MOBILITY",
+        _country = Nothing,
+        _city = Nothing,
         _action = action,
-        _version = Nothing,
-        _transaction_id = tId,
-        _session_id = Nothing,
+        _core_version = Nothing,
+        _domain_version = Nothing,
+        _request_transaction_id = tId,
+        _bap_nw_address = Nothing,
+        _bg_nw_address = Nothing,
+        _bpp_nw_address = Nothing,
         _token = Nothing,
-        _timestamp = now,
-        _status = Nothing
+        _timestamp = now
       }
-
-defaultProvider lt =
-  Provider
-    { _id = "",
-      _name = "",
-      _website = "",
-      _contact = contact_,
-      _api = Api "" lt
-    }
-
-contact_ =
-  Contact
-    { email = Just "",
-      mobile = Just mobile_,
-      landline = Just landLine_,
-      ivr = []
-    }
-
-mobile_ =
-  Mobile
-    { country_code = Just "",
-      number = Just ""
-    }
-
-landLine_ =
-  LandLine
-    { country_code = "",
-      std_code = "",
-      number = "",
-      extension = ""
-    }

@@ -1,7 +1,6 @@
 module Beckn.Utils.Defaults where
 
 import Data.Time
-import Data.Time.Calendar (Day (..))
 import EulerHS.Prelude
 
 localTime :: LocalTime

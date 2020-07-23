@@ -7,17 +7,14 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
 import Types.API.ProductInstance
-import Types.App
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT)
@@ -175,7 +172,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-joinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
   i <- B.filter_ pred1 $ B.all_ tbl1
   j <- B.filter_ pred2 $ B.all_ tbl2
   k <- B.filter_ pred3 $
@@ -192,7 +189,7 @@ productInstanceJoin _limit _offset csTypes orgId status = do
       limit
       offset
       orderByDesc
-      (joinQuery csTable prodTable dbTable (csPred csTypes) prodPred (piPred orgId status))
+      (productInstancejoinQuery csTable prodTable dbTable (csPred csTypes) prodPred (piPred orgId status))
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
@@ -219,7 +216,7 @@ productInstanceJoinWithoutLimits csType orgId status = do
   joinedValues <-
     DB.findAllByJoinWithoutLimits
       orderByDesc
-      (joinQuery csTable prodTable dbTable (csPred csType) (prodPred orgId) (cprPred status))
+      (productInstancejoinQuery csTable prodTable dbTable (csPred csType) (prodPred orgId) (cprPred status))
       >>= either DB.throwDBError pure
   return $ mkJoinRes <$> joinedValues
   where
@@ -245,8 +242,8 @@ findById pid =
   where
     predicate pid Storage.ProductInstance {..} = _id ==. B.val_ pid
 
-updateDvr :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
-updateDvr ids driverId = do
+updateDriver :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
+updateDriver ids driverId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
@@ -261,8 +258,8 @@ updateDvr ids driverId = do
           _updatedAt <-. B.val_ currTime
         ]
 
-updateVeh :: [ProductInstanceId] -> Maybe Text -> Flow ()
-updateVeh ids vehId = do
+updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
+updateVehicle ids vehId = do
   (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
@@ -310,3 +307,19 @@ findAllByParentId id =
     >>= either DB.throwDBError pure
   where
     predicate id Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ id
+
+findByIdType :: [ProductInstanceId] -> Case.CaseType -> Flow Storage.ProductInstance
+findByIdType ids csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      _id `B.in_` (B.val_ <$> ids)
+        &&. _type ==. B.val_ csType
+
+findByParentIdType :: Maybe ProductInstanceId -> Case.CaseType -> Flow Storage.ProductInstance
+findByParentIdType mparentId csType =
+  DB.findOneWithErr dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
+        &&. _type ==. B.val_ csType

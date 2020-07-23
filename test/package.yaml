@@ -70,6 +70,13 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror=unused-imports
+    - -Werror=missing-fields
   dependencies:
     - hspec
     - hspec-core

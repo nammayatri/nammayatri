@@ -2,7 +2,6 @@ module App.Server where
 
 import App.Routes (transporterAPI, transporterServer)
 import App.Types
-import Beckn.Types.App
 import qualified Beckn.Utils.Servant.Server as BU
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude

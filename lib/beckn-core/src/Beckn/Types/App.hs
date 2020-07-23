@@ -7,7 +7,6 @@ module Beckn.Types.App where
 
 import Beckn.Types.Error
 import Beckn.Utils.TH
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Servant
@@ -98,3 +97,11 @@ type CronAuthKey = Text
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
 
 type DomainResult a = Either DomainError a
+
+-- TODO: Add this later if required
+
+-- | ByOrganizationId OrganizationId
+data ListById
+  = ByApplicationId CaseId
+  | ById ProductsId
+  | ByCustomerId PersonId

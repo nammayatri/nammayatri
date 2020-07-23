@@ -7,8 +7,8 @@ import Beckn.Types.API.Search
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
-import qualified Beckn.Types.Core.Location as Core
 import qualified Beckn.Types.Core.Provider as Core
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service as BM
@@ -18,7 +18,7 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, withFlowHandler)
 import Beckn.Utils.Extra
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
@@ -30,12 +30,10 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.Product as Products
+import qualified Models.ProductInstance as ProductInstance
 import Servant
 import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import System.Environment
-import Types.App
 import Types.ProductInfo
 import Utils.Common (generateShortId)
 import qualified Utils.Notifications as Notify
@@ -50,7 +48,7 @@ search person req = withFlowHandler $ do
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
   gatewayUrl <- Gateway.getBaseUrl
-  eres <- Gateway.search gatewayUrl $ req & #context . #_transaction_id .~ _getCaseId (case_ ^. #_id)
+  eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =
         case eres of
           Left err -> Ack "Error" (show err)
@@ -76,7 +74,7 @@ searchCbService req service = do
   -- TODO: Verify api key here
   let mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
-      caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+      caseId = CaseId $ req ^. #context . #_request_transaction_id --CaseId $ service ^. #_id
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
@@ -95,7 +93,7 @@ searchCbService req service = do
       productInstances <- traverse (mkProductInstance case_ mprovider personId) items
       traverse_ ProductInstance.create productInstances
       extendCaseExpiry case_
-      Notify.notifyOnSearchCb personId caseId productInstances
+      Notify.notifyOnSearchCb personId case_ productInstances
   let ack = Ack "on_search" "OK"
   return $ AckResponse (req ^. #context) ack Nothing
   where
@@ -141,9 +139,9 @@ mkCase req userId from to = do
         _fromLocationId = TA._getLocationId $ from ^. #_id,
         _toLocationId = TA._getLocationId $ to ^. #_id,
         _udf1 = Just $ intent ^. #_vehicle . #variant,
-        _udf2 = Just $ show $ intent ^. #_payload . #_travellers . #_count,
+        _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
         _udf3 = Nothing,
-        _udf4 = Just $ context ^. #_transaction_id,
+        _udf4 = Just $ context ^. #_request_transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,
@@ -190,6 +188,10 @@ mkProduct case_ mprovider item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider -- Nothing
+  price <-
+    case convertDecimalValueToAmount $ item ^. #_price . #_listed_value of
+      Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
+      Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -202,7 +204,7 @@ mkProduct case_ mprovider item = do
         _industry = case_ ^. #_industry,
         _type = Products.RIDE,
         _status = Products.INSTOCK,
-        _price = item ^. #_price . #_listed_value,
+        _price = price,
         _rating = Nothing,
         _review = Nothing,
         _udf1 = Nothing,
@@ -220,6 +222,10 @@ mkProductInstance case_ mprovider personId item = do
   now <- getCurrentTimeUTC
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
+  price <-
+    case convertDecimalValueToAmount $ item ^. #_price . #_listed_value of
+      Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
+      Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -238,7 +244,8 @@ mkProductInstance case_ mprovider personId item = do
         _validTill = case_ ^. #_validTill,
         _parentId = Nothing,
         _entityId = Nothing,
-        _price = item ^. #_price . #_listed_value,
+        _price = price,
+        _type = Case.RIDESEARCH,
         _udf1 = Nothing,
         _udf2 = Nothing,
         _udf3 = Nothing,

@@ -1,37 +1,27 @@
 module Product.Info where
 
 import App.Types
-import qualified Beckn.Types.API.Track as Tracker
 import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..), generateGUID)
-import Beckn.Types.Core.Ack
-import Beckn.Types.Mobility.Service
+import qualified Beckn.Types.Mobility.Payload as Trip
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import qualified Beckn.Types.Storage.Products as SProducts
 import Beckn.Utils.Common (decodeFromText, withFlowHandler)
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified EulerHS.Types as ET
 import qualified External.Gateway.Flow as External
-import qualified Models.Case as QCase
-import qualified Models.Product as QProducts
+import qualified Models.Case as MC
+import qualified Models.ProductInstance as MPI
 import Servant
-import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Location
 import Types.API.Product
-import Types.App
 import Types.ProductInfo as ProductInfo
-import Utils.Routes
 
 getProductInfo :: Person.Person -> Text -> FlowHandler GetProductInfoRes
 getProductInfo person prodInstId = withFlowHandler $ do
-  productInstance <- QPI.findById (ProductInstanceId prodInstId)
-  case' <- QCase.findIdByPerson person (SPI._caseId productInstance)
+  productInstance <- MPI.findById (ProductInstanceId prodInstId)
+  case' <- MC.findIdByPerson person (SPI._caseId productInstance)
   case decodeFromText =<< SPI._info productInstance of
     Just info ->
       case ProductInfo._tracker info of
@@ -41,8 +31,8 @@ getProductInfo person prodInstId = withFlowHandler $ do
           return $
             GetProductInfoRes
               { vehicle = Trip.vehicle trip,
-                driver = Just $ Trip.driver trip,
-                travellers = Trip.travellers trip,
+                driver = Trip.driver trip,
+                travellers = Trip._travellers $ Trip.payload trip,
                 fare = Trip.fare trip,
                 caseId = _getCaseId (SPI._caseId productInstance),
                 product = productInstance
@@ -54,7 +44,7 @@ getProductInfo person prodInstId = withFlowHandler $ do
 getLocation :: Person.Person -> Text -> FlowHandler GetLocationRes
 getLocation person caseId = withFlowHandler $ do
   baseUrl <- External.getBaseUrl
-  productInstances <- QPI.listAllProductInstanceByPerson person (QPI.ByApplicationId $ CaseId caseId) [SPI.CONFIRMED]
+  productInstances <- MPI.listAllProductInstanceByPerson person (ByApplicationId $ CaseId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ L.throwException $ err400 {errBody = "INVALID_CASE"}
   -- TODO: what if there are multiple CONFIRMED products possible?
   case decodeFromText =<< SPI._info (head productInstances) of

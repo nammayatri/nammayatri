@@ -7,10 +7,9 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data Descriptor = Descriptor
-  { _id :: Text,
-    _name :: Maybe Text,
+  { _name :: Maybe Text,
     _code :: Maybe Text,
-    _sym :: Maybe Text,
+    _symbol :: Maybe Text,
     _short_desc :: Maybe Text,
     _long_desc :: Maybe Text,
     _images :: [Image],
@@ -28,10 +27,9 @@ instance ToJSON Descriptor where
 instance Example Descriptor where
   example =
     Descriptor
-      { _id = idExample,
-        _name = Just "Some Name",
+      { _name = Just "Some Name",
         _code = Nothing,
-        _sym = Nothing,
+        _symbol = Nothing,
         _short_desc = Just "Short description",
         _long_desc = Just "Long description",
         _images = example,

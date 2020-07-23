@@ -11,14 +11,10 @@ import Beckn.Types.API.Track
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Location as BL
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Tracking as Tracking
+import Beckn.Types.Core.Order
 import Beckn.Types.Mobility.Driver
-import Beckn.Types.Mobility.Intent
-import Beckn.Types.Mobility.Service
+import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop as BS
-import Beckn.Types.Mobility.Tracking
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case as SC
@@ -26,16 +22,10 @@ import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Products as Product
-import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import Beckn.Utils.Extra
-import Data.Accessor as Lens
-import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Data.Text as T
 import Data.Time
-import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
@@ -46,11 +36,9 @@ import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as ProductInstance
-import Storage.Queries.Products as Product
 import Storage.Queries.Vehicle as Vehicle
 import System.Environment
 import qualified Test.RandomStrings as RS
-import Types.Notification
 import qualified Utils.Notifications as Notify
 
 -- 1) Create Parent Case with Customer Request Details
@@ -60,13 +48,14 @@ import qualified Utils.Notifications as Notify
 search :: () -> SearchReq -> FlowHandler AckResponse
 search _unit req = withFlowHandler $ do
   --TODO: Need to add authenticator
+  let intent = req ^. #message . #intent
   uuid <- L.generateGUID
   currTime <- getCurrentTimeUTC
-  validity <- getValidTime currTime (req ^. #message . #intent . #_origin . #_departure_time . #_est)
+  validity <- getValidTime currTime (intent ^. #_origin . #_departure_time . #_est)
   uuid1 <- L.generateGUID
-  let fromLocation = mkFromStop req uuid1 currTime $ req ^. #message . #intent . #_origin
+  let fromLocation = mkFromStop req uuid1 currTime $ intent ^. #_origin
   uuid2 <- L.generateGUID
-  let toLocation = mkFromStop req uuid2 currTime $ req ^. #message . #intent . #_destination
+  let toLocation = mkFromStop req uuid2 currTime $ intent ^. #_destination
   Loc.create fromLocation
   Loc.create toLocation
   let c = mkCase req uuid currTime validity fromLocation toLocation
@@ -77,7 +66,7 @@ search _unit req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       (_getOrganizationId . Org._id <$> transporters)
-  Notify.notifyTransportersOnSearch c admins
+  Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -90,7 +79,15 @@ cancel req = withFlowHandler $ do
   -- TODO: Should we check if all case's products were cancelled
   -- before cancelling a case?
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
-  ProductInstance.updateStatusByIds (ProductInstance._id <$> piList) ProductInstance.CANCELLED
+  case piList of
+    [] -> return ()
+    _ -> do
+      trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+      orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
+      ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
+      ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+      return ()
+  ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
   notifyCancelToGateway prodInstId
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
@@ -98,7 +95,7 @@ cancel req = withFlowHandler $ do
     [] -> pure ()
     pi : _ -> do
       c <- Case.findById $ ProductInstance._caseId pi
-      Notify.notifyTransportersOnCancel c prodInstId admins
+      Notify.notifyTransportersOnCancel c admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
@@ -142,7 +139,7 @@ mkCase req uuid now validity fromLocation toLocation = do
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = req ^. #context . #_transaction_id,
+      _shortId = req ^. #context . #_request_transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
@@ -158,7 +155,7 @@ mkCase req uuid now validity fromLocation toLocation = do
       _fromLocationId = TA._getLocationId $ fromLocation ^. #_id,
       _toLocationId = TA._getLocationId $ toLocation ^. #_id,
       _udf1 = Just $ intent ^. #_vehicle . #variant,
-      _udf2 = Just $ show $ intent ^. #_payload . #_travellers . #_count,
+      _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
       _udf3 = Nothing,
       _udf4 = Nothing,
       _udf5 = Nothing,
@@ -170,27 +167,28 @@ mkCase req uuid now validity fromLocation toLocation = do
 confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo "confirm API Flow" "Reached"
-  let prodInstId = req ^. #message . #order . #_id
-  let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
-  search_case <- Case.findBySid caseShortId
-  productInstance <- ProductInstance.findById (ProductInstanceId prodInstId)
-  orderCase <- mkOrderCase search_case
+  let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
+  let caseShortId = req ^. #context . #_request_transaction_id -- change to message.transactionId
+  searchCase <- Case.findBySid caseShortId
+  productInstance <- ProductInstance.findById prodInstId
+  orderCase <- mkOrderCase searchCase
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
-  ProductInstance.updateStatusByIds [productInstance ^. #_id, orderProductInstance ^. #_id] ProductInstance.CONFIRMED
+  ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   (currTime, uuid, shortId) <- getIdShortIdAndTime
-  let trackerCase = mkTrackerCase search_case uuid currTime shortId
+  let trackerCase = mkTrackerCase searchCase uuid currTime shortId
   Case.create trackerCase
   uuid1 <- L.generateGUID
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
-  notifyGateway search_case prodInstId trackerCase
+  Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
+  notifyGateway searchCase prodInstId trackerCase
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
-  Notify.notifyTransportersOnConfirm search_case admins
+  Notify.notifyTransportersOnConfirm searchCase productInstance admins
   mkAckResponse uuid "confirm"
 
 mkOrderCase :: SC.Case -> Flow SC.Case
@@ -205,6 +203,9 @@ mkOrderCase SC.Case {..} = do
         _industry = SC.MOBILITY,
         _type = SC.RIDEORDER,
         _parentCaseId = Just _id,
+        _status = SC.INPROGRESS,
+        _fromLocationId = _fromLocationId,
+        _toLocationId = _toLocationId,
         _createdAt = now,
         _updatedAt = now,
         ..
@@ -224,6 +225,7 @@ mkOrderProductInstance caseId prodInst = do
         _shortId = shortId,
         _quantity = 1,
         _price = prodInst ^. #_price,
+        _type = SC.RIDEORDER,
         _organizationId = prodInst ^. #_organizationId,
         _fromLocation = prodInst ^. #_fromLocation,
         _toLocation = prodInst ^. #_toLocation,
@@ -231,7 +233,7 @@ mkOrderProductInstance caseId prodInst = do
         _endTime = prodInst ^. #_endTime,
         _validTill = prodInst ^. #_validTill,
         _parentId = Just (prodInst ^. #_id),
-        _status = ProductInstance.INSTOCK,
+        _status = ProductInstance.CONFIRMED,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now,
@@ -258,6 +260,7 @@ mkTrackerProductInstance piId caseId prodInst currTime = do
         _parentId = Just (prodInst ^. #_id),
         _organizationId = prodInst ^. #_organizationId,
         _entityId = Nothing,
+        _type = SC.LOCATIONTRACKER,
         _startTime = prodInst ^. #_startTime,
         _endTime = prodInst ^. #_endTime,
         _fromLocation = prodInst ^. #_fromLocation,
@@ -307,7 +310,7 @@ mkTrackerCase case_ uuid now shortId =
       _updatedAt = now
     }
 
-notifyGateway :: Case -> Text -> Case -> Flow ()
+notifyGateway :: Case -> ProductInstanceId -> Case -> Flow ()
 notifyGateway c prodInstId trackerCase = do
   L.logInfo "notifyGateway" $ show c
   pis <- ProductInstance.findAllByCaseId (c ^. #_id)
@@ -322,13 +325,17 @@ mkOnConfirmPayload c pis allPis trackerCase = do
   let context =
         Context
           { _domain = "MOBILITY",
-            _action = "CONFIRM",
-            _version = Just "0.8.0",
-            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            _session_id = Nothing,
+            _action = "confirm",
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
   trip <- mkTrip trackerCase
   order <- GT.mkOrder c (head pis) (Just trip)
@@ -341,43 +348,54 @@ mkOnConfirmPayload c pis allPis trackerCase = do
 serviceStatus :: StatusReq -> FlowHandler StatusRes
 serviceStatus req = withFlowHandler $ do
   L.logInfo "serviceStatus API Flow" $ show req
-  let caseId = req ^. #message . #id
-  c <- Case.findById (CaseId caseId)
-  pis <- ProductInstance.findAllByCaseId (c ^. #_id)
+  --  let caseSid = req ^. #message . #service . #id
+  --  c <- Case.findBySid caseSid
+  let piId = req ^. #message . #order . #id -- transporter search product instance id
+  trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  trackerCase <- Case.findByParentCaseIdAndType (CaseId caseId) SC.LOCATIONTRACKER
-  notifyServiceStatusToGateway c pis pis trackerCase
+  notifyServiceStatusToGateway piId trackerPi
   uuid <- L.generateGUID
-  mkAckResponse uuid "track"
+  mkAckResponse uuid "status"
 
-notifyServiceStatusToGateway :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> Flow ()
-notifyServiceStatusToGateway c pis allpis trackerCase = do
-  onServiceStatusPayload <- mkOnServiceStatusPayload c pis allpis trackerCase
+notifyServiceStatusToGateway :: Text -> ProductInstance -> Flow ()
+notifyServiceStatusToGateway piId trackerPi = do
+  onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
   L.logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   Gateway.onStatus onServiceStatusPayload
   return ()
 
-mkOnServiceStatusPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Case -> Flow OnStatusReq
-mkOnServiceStatusPayload c pis allPis trackerCase = do
+mkOnServiceStatusPayload :: Text -> ProductInstance -> Flow OnStatusReq
+mkOnServiceStatusPayload piId trackerPi = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
           { _domain = "MOBILITY",
             _action = "on_status",
-            _version = Just "0.1",
-            _transaction_id = c ^. #_shortId,
-            _session_id = Nothing,
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = "",
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
-  trip <- mapM mkTrip trackerCase
-  service <- GT.mkServiceOffer c pis allPis Nothing
-  return
-    OnStatusReq
-      { context,
-        message = service
-      }
+  order <- mkOrderRes piId (_getProductsId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
+  let onStatusMessage = OnStatusReqMessage order
+  return $ OnStatusReq context onStatusMessage
+  where
+    mkOrderRes prodInstId productId status = do
+      now <- getCurrentTimeUTC
+      return $
+        Order
+          { _id = prodInstId,
+            _state = T.pack status,
+            _items = [productId],
+            _created_at = now,
+            _updated_at = now
+          }
 
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
 trackTrip req = withFlowHandler $ do
@@ -402,7 +420,7 @@ notifyTripUrlToGateway case_ parentCase = do
 
 notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
-  onCancelPayload <- mkCancelRidePayload prodInstId
+  onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
   L.logInfo "notifyGateway Request" $ show onCancelPayload
   Gateway.onCancel onCancelPayload
   return ()
@@ -414,12 +432,16 @@ mkOnTrackTripPayload case_ pCase = do
         Context
           { _domain = "MOBILITY",
             _action = "on_track",
-            _version = Just "0.8.0",
-            _transaction_id = pCase ^. #_shortId,
-            _session_id = Nothing,
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = pCase ^. #_shortId,
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (case_ ^. #_id)
   trip <- mkTrip case_
@@ -441,12 +463,9 @@ mkTrip c = do
     Trip
       { id = _getCaseId $ c ^. #_id,
         vehicle = vehicle,
-        driver =
-          TripDriver
-            { persona = driver,
-              rating = Nothing
-            },
-        travellers = [],
+        driver,
+        payload =
+          Payload Nothing [] Nothing,
         fare = Nothing,
         route = Nothing
       }
@@ -468,12 +487,16 @@ mkCancelRidePayload prodInstId = do
         Context
           { _domain = "MOBILITY",
             _action = "on_cancel",
-            _version = Just "0.7.1",
-            _transaction_id = "",
-            _session_id = Nothing,
+            _country = Nothing,
+            _city = Nothing,
+            _core_version = Just "0.8.0",
+            _domain_version = Just "0.8.0",
+            _request_transaction_id = "",
+            _bap_nw_address = Nothing,
+            _bg_nw_address = Nothing,
+            _bpp_nw_address = Nothing,
             _timestamp = currTime,
-            _token = Nothing,
-            _status = Nothing
+            _token = Nothing
           }
   tripObj <- mkCancelTripObj prodInstId
   return
@@ -491,12 +514,8 @@ mkCancelTripObj prodInstId = do
     Trip
       { id = prodInstId,
         vehicle = vehicle,
-        driver =
-          TripDriver
-            { persona = driver,
-              rating = Nothing
-            },
-        travellers = [],
+        driver,
+        payload = Payload Nothing [] Nothing,
         fare = Just $ GT.mkPrice productInstance,
         route = Nothing
       }

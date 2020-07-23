@@ -2,8 +2,6 @@
 
 module Beckn.Types.Mobility.Order where
 
-import Beckn.Types.Core.Billing
-import Beckn.Types.Core.Fulfillment
 import Beckn.Types.Mobility.Trip
 import Data.Time.LocalTime
 import EulerHS.Prelude
@@ -11,12 +9,10 @@ import EulerHS.Prelude
 data Order = Order
   { _id :: Text,
     _state :: Maybe Text,
-    _billing :: Maybe Billing,
-    _fulfillment :: Maybe Fulfillment,
+    _items :: [Text],
     _created_at :: LocalTime,
     _updated_at :: LocalTime,
-    _trip :: Maybe Trip,
-    _invoice :: Maybe Text
+    _trip :: Maybe Trip
   }
   deriving (Generic, Show)
 

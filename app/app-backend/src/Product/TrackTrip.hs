@@ -11,16 +11,11 @@ import Beckn.Types.Core.Tracking
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
-import qualified Models.Case as Case
-import qualified Models.Product as Products
+import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
 
@@ -28,7 +23,7 @@ track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track _ req = withFlowHandler $ do
   let context = req ^. #context
       prodInstId = req ^. #message . #order . #id
-  prdInst <- ProductInstance.findById $ ProductInstanceId prodInstId
+  prdInst <- MPI.findById $ ProductInstanceId prodInstId
   ack <-
     case decodeFromText =<< (prdInst ^. #_info) of
       Nothing -> return $ Ack "Error" "No product to track"
@@ -50,9 +45,9 @@ trackCb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
       tracking = req ^. #message . #tracking
-      caseId = CaseId $ req ^. #context . #_transaction_id
-  case_ <- Case.findById caseId
-  pi <- ProductInstance.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
+      caseId = CaseId $ req ^. #context . #_request_transaction_id
+  case_ <- MC.findById caseId
+  pi <- MPI.listAllProductInstance (ByApplicationId caseId) [ProductInstance.CONFIRMED]
   let confirmedProducts = pi
   res <-
     case length confirmedProducts of

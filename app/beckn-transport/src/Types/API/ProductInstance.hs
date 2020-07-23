@@ -1,13 +1,10 @@
 module Types.API.ProductInstance where
 
-import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import Beckn.Types.Storage.ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
-import Data.Default
 import Data.Swagger
-import Data.Time
 import EulerHS.Prelude
 
 data ProductInstanceRes = ProductInstanceRes

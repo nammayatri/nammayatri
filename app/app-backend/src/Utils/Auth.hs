@@ -1,7 +1,6 @@
 module Utils.Auth where
 
 import App.Types
-import Beckn.Utils.Common (fromMaybeM400)
 import Beckn.Utils.Servant.Auth
 import EulerHS.Prelude
 

@@ -4,7 +4,6 @@ import Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as SL
 import Data.Swagger
 import EulerHS.Prelude
-import Servant.Swagger
 
 data UpdateLocationReq = UpdateLocationReq
   { locationType :: Maybe SL.LocationType,
@@ -36,8 +35,8 @@ data LocationInfo = LocationInfo
     country :: Maybe Text,
     pincode :: Maybe Text,
     address :: Maybe Text,
-    duration :: Maybe Integer,
-    distance :: Maybe Float,
+    durationInS :: Maybe Integer, -- seconds
+    distanceInM :: Maybe Float, -- meters
     bbox :: Maybe BoundingBoxWithoutCRS,
     waypoints :: Maybe GeospatialGeometry,
     snapped_waypoints :: Maybe GeospatialGeometry

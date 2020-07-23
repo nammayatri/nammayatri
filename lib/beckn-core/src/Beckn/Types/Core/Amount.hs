@@ -5,7 +5,7 @@
 -- Functions rationalToString, validate
 -- are only exported for testing purposes.
 module Beckn.Types.Core.Amount
-  ( Amount,
+  ( Amount (..),
     rationalToString,
     validate,
   )

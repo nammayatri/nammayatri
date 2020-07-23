@@ -2,16 +2,14 @@
 
 module Beckn.Types.Core.Order where
 
-import Beckn.Types.Core.Billing
-import Beckn.Types.Core.Fulfillment
+import Beckn.Utils.Common
 import Data.Time.LocalTime
 import EulerHS.Prelude
 
 data Order = Order
   { _id :: Text,
     _state :: Text,
-    _billing :: Maybe Billing,
-    _fulfillment :: Maybe Fulfillment,
+    _items :: [Text],
     _created_at :: LocalTime,
     _updated_at :: LocalTime
   }
@@ -22,3 +20,13 @@ instance FromJSON Order where
 
 instance ToJSON Order where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Order where
+  example =
+    Order
+      { _id = idExample,
+        _state = "State",
+        _items = [idExample],
+        _created_at = example,
+        _updated_at = example
+      }

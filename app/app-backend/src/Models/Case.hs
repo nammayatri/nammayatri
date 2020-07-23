@@ -7,7 +7,6 @@ import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import Data.Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Q
 

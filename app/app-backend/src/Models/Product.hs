@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Products as Q
 

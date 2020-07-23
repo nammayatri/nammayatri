@@ -6,17 +6,13 @@ import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
 import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
-import qualified Storage.Queries.Person as Person
-import Types.App
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT)

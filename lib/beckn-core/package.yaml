@@ -99,6 +99,8 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
+    - -Werror=unused-imports
+    - -Werror=missing-fields
 
 tests:
   beckn-core-tests:

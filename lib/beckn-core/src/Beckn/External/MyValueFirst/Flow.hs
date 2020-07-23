@@ -26,3 +26,11 @@ defaultBaseUrl =
 constructOtpSms :: Text -> Text -> Text
 constructOtpSms code hash =
   "<#> Your OTP is: " <> code <> "\n" <> hash
+
+-- TODO use appstore link
+constructInviteSms :: Text -> Text
+constructInviteSms orgName =
+  "Welcome to the Beckn Mobility network! Your agency ("
+    <> orgName
+    <> ") has added you as a driver. "
+    <> "Start your rides by installing the app: https://jspy.in/rr/F4n7dy"

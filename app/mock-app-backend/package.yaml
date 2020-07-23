@@ -79,10 +79,12 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -Wunused-imports
+  - -Werror=missing-fields
 
 library:
   source-dirs: src
   dependencies:
+    - beckn-gateway
     - beckn-core
 
 executables:

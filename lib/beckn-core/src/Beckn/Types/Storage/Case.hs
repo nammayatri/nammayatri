@@ -15,7 +15,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant
-import Servant.API
 
 data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

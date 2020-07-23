@@ -3,10 +3,9 @@
 
 module Beckn.Utils.Servant.Server where
 
-import Beckn.Types.App (EnvR, FlowServerR, runTime)
+import Beckn.Types.App (EnvR, FlowServerR)
 import Data.Kind (Type)
 import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
 import Servant
 
 class HasEnvEntry r (context :: [Type]) | context -> r where
