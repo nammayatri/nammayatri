@@ -58,10 +58,10 @@ createPerson orgId req = withFlowHandler $ do
                 err400 {errBody = "DRIVER_ALREADY_CREATED"}
           _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
 
-listPerson :: Text -> [SP.Role] -> Maybe EntityType -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson orgId roles entityType limitM offsetM = withFlowHandler $ do
+listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
+listPerson orgId roles limitM offsetM = withFlowHandler $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
-  respList <- traverse (mkPersonRes entityType) personList
+  respList <- traverse mkPersonRes personList
   return $ ListPersonRes respList
 
 getPerson ::
@@ -95,7 +95,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
           >>= QP.findByIdentifier
           >>= fromMaybeM400 "PERSON_NOT_FOUND"
     hasAccess user person
-    mkPersonRes (person ^. #_udf2 >>= mapEntityType) person
+    mkPersonRes person
   where
     hasAccess :: SP.Person -> SP.Person -> Flow ()
     hasAccess user person =
@@ -129,16 +129,16 @@ linkEntity orgId personId req = withFlowHandler $ do
     (L.throwException $ err401 {errBody = "Unauthorized"})
   QP.updateEntity (PersonId personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
   updatedPerson <- QP.findPersonById $ person ^. #_id
-  mkPersonRes (Just $ req ^. #_entityType) updatedPerson
+  mkPersonRes updatedPerson
 
 -- Utility Functions
 
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}
 
-mkPersonRes :: Maybe EntityType -> SP.Person -> Flow PersonEntityRes
-mkPersonRes entityType person = do
-  entity <- case entityType of
+mkPersonRes :: SP.Person -> Flow PersonEntityRes
+mkPersonRes person = do
+  entity <- case person ^. #_udf2 >>= mapEntityType of
     Just VEHICLE -> do
       vehicle <- QV.findVehicleById $ VehicleId $ fromMaybe "" (person ^. #_udf1)
       return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)

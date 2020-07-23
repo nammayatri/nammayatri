@@ -28,7 +28,7 @@ import Servant
 import Types.API.Case
 import Types.API.Cron
 import Types.API.Location as Location
-import Types.API.Person as PersonAPI
+import Types.API.Person
 import Types.API.ProductInstance
 import Types.API.Products
 import Types.API.Registration
@@ -87,7 +87,6 @@ type PersonAPI =
            :<|> "list"
              :> AdminTokenAuth
              :> QueryParams "roles" SP.Role
-             :> QueryParam "entityType" PersonAPI.EntityType
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes
