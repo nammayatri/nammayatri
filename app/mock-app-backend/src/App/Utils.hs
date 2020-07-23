@@ -7,6 +7,9 @@ import Data.Time
 import EulerHS.Prelude
 import "beckn-gateway" Types.API.Search
 
+newtype FMDSearch = FMDSearch {intent :: Intent}
+  deriving (Generic, Show, ToJSON, FromJSON)
+
 address :: Address
 address =
   Address
@@ -19,11 +22,18 @@ address =
       area_code = "560047"
     }
 
+gps :: GPS
+gps =
+  GPS
+    { lat = "12.9401108",
+      lon = "77.6206631"
+    }
+
 location :: Location
 location =
   Location
-    { _type = "address",
-      _gps = Nothing,
+    { _type = "gps",
+      _gps = Just gps,
       _address = Just address,
       _station_code = Nothing,
       _area_code = Nothing,
@@ -68,7 +78,7 @@ searchReq :: Text -> Text -> LocalTime -> SearchReq
 searchReq act tid localTime =
   SearchReq
     { context = buildContext act tid localTime,
-      message = toJSON buildIntent
+      message = toJSON $ FMDSearch buildIntent
     }
 
 getFutureTime :: IO LocalTime
