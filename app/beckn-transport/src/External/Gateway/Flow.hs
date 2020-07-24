@@ -7,6 +7,7 @@ import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.API.Update
+import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
@@ -16,7 +17,8 @@ import System.Environment
 onSearch :: OnSearchReq -> Flow (Either Text ())
 onSearch req = do
   url <- getGatewayBaseUrl
-  res <- L.callAPI url $ API.onSearch req
+  apiKey <- L.runIO $ lookupEnv "BP_API_KEY"
+  res <- L.callAPI url $ API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req
   whenRight res $ \_ ->
     L.logInfo "OnSearch" "OnSearch callback successfully delivered"
   whenLeft res $ \err ->
@@ -35,7 +37,7 @@ onTrackTrip req = do
 
 onUpdate :: OnUpdateReq -> Flow (Either Text ())
 onUpdate req = do
-  url <- getBaseUrl
+  url <- getAppBaseUrl
   res <- L.callAPI url $ API.onUpdate req
   whenRight res $ \_ ->
     L.logInfo "OnUpdate" "OnUpdate callback successfully delivered"

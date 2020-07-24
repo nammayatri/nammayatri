@@ -6,6 +6,7 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
 import qualified Beckn.Types.API.Status as Status
 import qualified Beckn.Types.API.Track as Track
+import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
@@ -16,7 +17,8 @@ import Types.API.Location
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  res <- L.callAPI url $ API.search req
+  apiKey <- L.runIO $ lookupEnv "BA_API_KEY"
+  res <- L.callAPI url $ API.search (maybe "mobility-app-key" T.pack apiKey) req
   whenRight res $ \_ ->
     L.logInfo "Search" "Search successfully delivered"
   whenLeft res $ \err ->

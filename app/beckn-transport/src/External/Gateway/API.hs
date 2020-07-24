@@ -10,8 +10,8 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
 
-onSearch req =
-  void $ ET.client Search.onSearchAPI "mobility-provider-key" req
+onSearch apiKey req =
+  void $ ET.client Search.onSearchAPI apiKey req
 
 type TrackAPI =
   "on_track"
