@@ -57,7 +57,7 @@ findIdByPerson person caseId = do
 
 -- | Find Cases by list of ids
 findAllByIds :: [CaseId] -> Flow [Case]
-findAllByIds caseIds = do
+findAllByIds caseIds =
   if null caseIds
     then pure []
     else do

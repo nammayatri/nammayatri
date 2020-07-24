@@ -129,7 +129,7 @@ validateCasesStatusesChange' newStatus =
 
 -- | Get Case and validate its status change
 validateStatusChange :: CaseStatus -> Case -> Flow ()
-validateStatusChange newStatus case_ = do
+validateStatusChange newStatus case_ =
   case validateStatusTransition (_status case_) newStatus of
     Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()
