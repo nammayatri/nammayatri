@@ -172,20 +172,27 @@ mkPersonRes person = do
 
 sendInviteSms :: Text -> Text -> Flow ()
 sendInviteSms phoneNumber orgName = do
-  username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
-  password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
-  res <-
-    SF.submitSms
-      SF.defaultBaseUrl
-      SMS.SubmitSms
-        { SMS._username = T.pack username,
-          SMS._password = T.pack password,
-          SMS._from = SMS.JUSPAY,
-          SMS._to = phoneNumber,
-          SMS._category = SMS.BULK,
-          SMS._text = SF.constructInviteSms orgName
-        }
-  whenLeft res $ \err -> return () -- ignore error silently
+  username <- L.runIO $ lookupEnv "SMS_GATEWAY_USERNAME"
+  password <- L.runIO $ lookupEnv "SMS_GATEWAY_PASSWORD"
+  case (username, password) of
+    (Just user, Just pass) -> do
+      res <-
+        SF.submitSms
+          SF.defaultBaseUrl
+          SMS.SubmitSms
+            { SMS._username = T.pack user,
+              SMS._password = T.pack pass,
+              SMS._from = SMS.JUSPAY,
+              SMS._to = phoneNumber,
+              SMS._category = SMS.BULK,
+              SMS._text = SF.constructInviteSms orgName
+            }
+      whenLeft res $ \err -> return () -- ignore error silently
+    _ -> do
+      L.logInfo "CreatePerson" $
+        "Not sending invite SMS "
+          <> "since SMS gateway credentials are not available"
+      return ()
 
 mapEntityType :: Text -> Maybe EntityType
 mapEntityType entityType = case entityType of
