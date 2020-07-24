@@ -28,6 +28,7 @@ import Network.Wai.Handler.Warp as W
 import Network.Wai.Middleware.Prometheus
 import Prometheus
 import Prometheus.Metric.GHC (ghcMetrics)
+import Prometheus.Metric.Proc
 import Servant
 import Servant.Client
 import Servant.Server.Internal.Delayed (addAuthCheck)
@@ -38,10 +39,11 @@ import qualified Servant.Swagger.Internal as S
 serve :: IO ()
 serve = do
   _ <- register ghcMetrics
-  forkIO $ W.run 9999 metricsApp
+  _ <- register procMetrics
+  _ <- forkIO $ W.run 9999 metricsApp
   return ()
 
-addServantInfo proxy app request respond = do
+addServantInfo proxy app request respond =
   let mpath = getSanitizedUrl proxy request
-  let app2 = instrumentHandlerValue (\_ -> "/" <> fromMaybe (DT.intercalate "/" (pathInfo request)) mpath) app
-  app2 request respond
+      fullpath = DT.intercalate "/" (pathInfo request)
+   in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
