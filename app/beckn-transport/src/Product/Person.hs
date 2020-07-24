@@ -188,7 +188,11 @@ sendInviteSms phoneNumber orgName = do
               SMS._text = SF.constructInviteSms orgName
             }
       whenLeft res $ \err -> return () -- ignore error silently
-    _ -> return ()
+    _ -> do
+      L.logInfo "CreatePerson" $
+        "Not sending invite SMS "
+          <> "since SMS gateway credentials are not available"
+      return ()
 
 mapEntityType :: Text -> Maybe EntityType
 mapEntityType entityType = case entityType of
