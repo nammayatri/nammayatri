@@ -13,12 +13,13 @@ import qualified External.Gateway.Types as API
 import Servant.Client
 import System.Environment
 import Types.API.Location
+import Utils.Common
 
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
   apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
-  res <- L.callAPI url $ API.search (maybe "mobility-app-key" T.pack apiKey) req
+  res <- callAPI url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
   whenRight res $ \_ ->
     L.logInfo "Search" "Search successfully delivered"
   whenLeft res $ \err ->
@@ -27,7 +28,7 @@ search url req = do
 
 confirm :: BaseUrl -> Confirm.ConfirmReq -> Flow (Either Text ())
 confirm url req = do
-  res <- L.callAPI url $ API.confirm req
+  res <- callAPI url (API.confirm req) "confirm"
   whenLeft res $ \err ->
     L.logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
@@ -36,7 +37,7 @@ confirm url req = do
 
 location :: BaseUrl -> Text -> Flow (Either Text GetLocationRes)
 location url req = do
-  res <- L.callAPI url $ API.location req
+  res <- callAPI url (API.location req) "location"
   whenLeft res $ \err ->
     L.logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
@@ -45,7 +46,7 @@ location url req = do
 
 track :: BaseUrl -> Track.TrackTripReq -> Flow (Either Text ())
 track url req = do
-  res <- L.callAPI url $ API.trackTrip req
+  res <- callAPI url (API.trackTrip req) "track"
   case res of
     Left err -> L.logError "error occurred while track trip: " (show err)
     Right _ -> L.logInfo "Track" "Track successfully delivered"
@@ -53,7 +54,7 @@ track url req = do
 
 cancel :: BaseUrl -> Cancel.CancelReq -> Flow (Either Text ())
 cancel url req = do
-  res <- L.callAPI url $ API.cancel req
+  res <- callAPI url (API.cancel req) "cancel"
   case res of
     Left err -> L.logError "error occurred while cancel trip: " (show err)
     Right _ -> L.logInfo "Cancel" "Cancel successfully delivered"
@@ -61,7 +62,7 @@ cancel url req = do
 
 status :: BaseUrl -> Status.StatusReq -> Flow (Either Text ())
 status url req = do
-  res <- L.callAPI url $ API.status req
+  res <- callAPI url (API.status req) "status"
   case res of
     Left err -> L.logError "error occurred while getting status: " (show err)
     Right _ -> L.logInfo "Status" "Status successfully delivered"

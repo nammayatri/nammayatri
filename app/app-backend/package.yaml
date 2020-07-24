@@ -75,6 +75,7 @@ dependencies:
   - purescript-bridge
   - servant
   - servant-client
+  - servant-client-core
   - servant-multipart
   - servant-purescript
   - servant-server

@@ -58,6 +58,7 @@ dependencies:
   - beam-core
   - beam-postgres
   - bytestring
+  - clock
   - containers
   - cryptonite
   - data-default

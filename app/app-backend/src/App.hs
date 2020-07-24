@@ -14,8 +14,6 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
-import Data.Default (def)
-import Data.Text as DT
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R

@@ -5,6 +5,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Utils.Extra as Utils
+import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Auth
 import qualified Data.ByteString.Lazy as BSL
@@ -13,6 +14,8 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
+import Servant.Client.Core.ClientError
+import Servant.Client.Core.Response
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
@@ -26,7 +29,7 @@ instance
   SanitizedUrl (sub :: *) =>
   SanitizedUrl (TokenAuth :> sub)
   where
-  getSanitizedUrl _ req = getSanitizedUrl (Proxy :: Proxy sub) $ req
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = Person.Person
@@ -67,3 +70,17 @@ fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
+
+-- TODO: figure out a way to extract the url directly from EulerClient
+callAPI baseUrl req serviceName = do
+  endTracking <- L.runUntracedIO $ Metrics.startTracking serviceName
+  res <- L.callAPI baseUrl req
+  let status = case res of
+        Right _ -> "200"
+        Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
+        Left (DecodeFailure _ (Response code _ _ _)) -> T.pack $ show code
+        Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
+        Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
+        Left (ConnectionError _) -> "Connection error"
+  _ <- L.runUntracedIO $ endTracking status
+  return res

@@ -7,6 +7,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Auth
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -14,6 +15,30 @@ import Servant
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+
+instance
+  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (TokenAuth :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance
+  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (OrgTokenAuth :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance
+  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (DriverTokenAuth :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance
+  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (AdminTokenAuth :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 -- | Performs simple token verification.
 type TokenAuth = TokenAuth' "token" VerifyToken

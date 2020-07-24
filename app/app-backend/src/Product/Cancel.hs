@@ -16,6 +16,7 @@ import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import Servant.Client
 import Types.API.Cancel as Cancel
+import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 cancel :: Person.Person -> CancelReq -> FlowHandler CancelRes
@@ -58,6 +59,7 @@ cancelCase person req = do
       productInstances <- MPI.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
+          Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
           MC.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
@@ -135,5 +137,8 @@ onCancel req = withFlowHandler $ do
           arrPICase
   when
     (length arrTerminalPI == length arrPICase)
-    (MC.updateStatus caseId Case.CLOSED)
+    ( do
+        Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
+        MC.updateStatus caseId Case.CLOSED
+    )
   mkAckResponse txnId "cancel"

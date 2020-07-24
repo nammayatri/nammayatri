@@ -13,6 +13,7 @@ import Data.Default (def)
 import Data.Kind (Type)
 import Data.Map
 import Data.Proxy
+import Data.Ratio ((%))
 import qualified Data.Swagger as DS
 import Data.Text as DT
 import Data.Typeable (typeRep)
@@ -26,7 +27,7 @@ import qualified Network.HTTP.Types as H
 import Network.Wai (Middleware, Request (..))
 import Network.Wai.Handler.Warp as W
 import Network.Wai.Middleware.Prometheus
-import Prometheus
+import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
 import Servant
@@ -35,6 +36,7 @@ import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withRequest)
 import qualified Servant.Swagger as S
 import qualified Servant.Swagger.Internal as S
+import System.Clock (Clock (..), TimeSpec, diffTimeSpec, getTime, toNanoSecs)
 
 serve :: IO ()
 serve = do
@@ -47,3 +49,25 @@ addServantInfo proxy app request respond =
   let mpath = getSanitizedUrl proxy request
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
+
+requestLatency :: P.Vector P.Label2 P.Histogram
+requestLatency =
+  P.unsafeRegister $
+    P.vector ("service", "status") $
+      P.histogram info P.defaultBuckets
+  where
+    info = P.Info "external_request_duration" ""
+
+startTracking :: Text -> IO (Text -> IO ())
+startTracking serviceName = do
+  start <- getTime Monotonic
+  return $ logRequestLatency serviceName start
+
+logRequestLatency :: Text -> TimeSpec -> Text -> IO ()
+logRequestLatency serviceName start status = do
+  end <- getTime Monotonic
+  let latency = fromRational $ toRational (toNanoSecs (end `diffTimeSpec` start) % 1000000000)
+  P.withLabel
+    requestLatency
+    (serviceName, status)
+    (`P.observe` latency)

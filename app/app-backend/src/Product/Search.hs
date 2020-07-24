@@ -37,6 +37,7 @@ import qualified Types.API.Common as API
 import qualified Types.API.Search as API
 import Types.ProductInfo
 import Utils.Common (generateShortId)
+import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 search :: Person.Person -> SearchReq -> FlowHandler API.AckResponse
@@ -48,6 +49,7 @@ search person req = withFlowHandler $ do
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
+  Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   gatewayUrl <- Gateway.getGatewayBaseUrl
   eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =

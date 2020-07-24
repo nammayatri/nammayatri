@@ -25,6 +25,7 @@ import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import qualified Types.ProductInfo as Products
 import Utils.Common (generateShortId)
+import qualified Utils.Metrics as Metrics
 import Utils.Routes
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
@@ -35,6 +36,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
     L.throwException $
       err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
+  Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   QCase.create orderCase_
   productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
@@ -76,6 +78,7 @@ onConfirm req = withFlowHandler $ do
           { SPI._info = encodeToText <$> uInfo
           }
   productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
+  Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
   MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
   MPI.updateMultiple pid uPrd
   MPI.updateStatus pid SPI.CONFIRMED

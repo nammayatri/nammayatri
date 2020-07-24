@@ -14,7 +14,6 @@ import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.ProductInstance
-import Beckn.Utils.Monitoring.Prometheus.Servant
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Cancel as Cancel
