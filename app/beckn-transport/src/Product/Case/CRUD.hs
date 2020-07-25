@@ -161,5 +161,6 @@ mkOnSearchPayload c pis allPis orgInfo = do
   return
     OnSearchReq
       { context,
-        message = OnSearchServices [service]
+        message = OnSearchServices [service],
+        error = Nothing
       }

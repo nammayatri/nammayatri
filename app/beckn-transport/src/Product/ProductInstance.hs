@@ -181,11 +181,11 @@ updateStatus user piId req = do
   return ()
 
 notifyTripDetailsToGateway :: PI.ProductInstance -> Flow ()
-notifyTripDetailsToGateway searchPi = do
-  trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
-  parentCase <- CQ.findById (searchPi ^. #_caseId)
+notifyTripDetailsToGateway prodInst = do
+  trackerCase <- CQ.findByParentCaseIdAndType (prodInst ^. #_caseId) Case.LOCATIONTRACKER
+  parentCase <- CQ.findById (prodInst ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripUrlToGateway x y
+    (Just x, y) -> BP.notifyTripInfoToGateway prodInst x y
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()

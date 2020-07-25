@@ -62,7 +62,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
             _trip = Nothing
           }
 
-onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
@@ -81,7 +81,7 @@ onConfirm req = withFlowHandler $ do
   MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
   MPI.updateMultiple pid uPrd
   MPI.updateStatus pid SPI.CONFIRMED
-  return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"
+  return $ AckResponse (req ^. #context) (Ack "on_confirm" "Ok") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do

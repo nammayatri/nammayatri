@@ -4,6 +4,7 @@ module Beckn.Types.API.Search where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
 import Beckn.Utils.Common
@@ -40,7 +41,8 @@ type SearchRes = AckResponse
 
 data OnSearchReq = OnSearchReq
   { context :: Context,
-    message :: OnSearchServices
+    message :: OnSearchServices,
+    error :: Maybe Error
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

@@ -10,6 +10,7 @@ where
 
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Beckn.Utils.Servant.Auth (APIKeyAuth)
 import Data.Aeson (Value)
 import EulerHS.Prelude
@@ -24,7 +25,8 @@ data SearchReq = SearchReq
 
 data OnSearchReq = OnSearchReq
   { context :: Context,
-    message :: Value
+    message :: Value,
+    error :: Maybe Error
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

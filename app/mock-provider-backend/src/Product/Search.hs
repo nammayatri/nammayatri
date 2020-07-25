@@ -29,7 +29,8 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           "test-provider-2-key"
           OnSearchReq
             { context = req ^. #context,
-              message = toJSON ans
+              message = toJSON ans,
+              error = Nothing
             }
     pass
   return
