@@ -4,7 +4,7 @@ module Product.Case.CRUD where
 
 import App.Types
 import Beckn.Types.API.Search
-import Beckn.Types.App as BC
+import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
 import Beckn.Types.Storage.Case as Case
@@ -22,8 +22,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
+import Models.Case as Case
 import Servant
-import Storage.Queries.Case as Case
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP

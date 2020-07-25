@@ -9,10 +9,10 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
 import EulerHS.Prelude
-import qualified Storage.Queries.Case as Case
+import qualified Models.Case as Case
+import qualified Models.Product as Products
+import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Location as Location
-import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as Products
 import Types.API.Case as API
 
 status ::
@@ -82,6 +82,6 @@ mkProdRes prodList prodInst =
 
 getProdInstances :: Case.Case -> Flow [ProdInstRes]
 getProdInstances case_@Case.Case {..} = do
-  piList <- ProductInstance.findAllByCaseId (Case._id case_)
+  piList <- MPI.findAllByCaseId (Case._id case_)
   products <- Products.findAllByIds (ProductInstance._productId <$> piList)
   return $ mkProdRes products <$> piList

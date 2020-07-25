@@ -190,3 +190,19 @@ deleteById id =
     >>= either DB.throwDBError pure
   where
     predicate id Storage.Person {..} = _id ==. B.val_ id
+
+updateEntity :: PersonId -> Text -> Text -> Flow ()
+updateEntity personId entityId entityType = do
+  (currTime :: LocalTime) <- getCurrentTimeUTC
+  DB.update
+    dbTable
+    (setClause entityId entityType)
+    (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause entityId entityType Storage.Person {..} =
+      mconcat
+        [ _udf1 <-. B.val_ (Just entityId),
+          _udf2 <-. B.val_ (Just entityType)
+        ]
+    predicate personId Storage.Person {..} = _id ==. B.val_ personId

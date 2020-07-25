@@ -52,6 +52,27 @@ findByCaseId id =
   where
     pred id Storage.ProductInstance {..} = _caseId ==. B.val_ id
 
+findById' :: ProductInstanceId -> Flow (T.DBResult (Maybe Storage.ProductInstance))
+findById' productInstanceId =
+  DB.findOne dbTable (predicate productInstanceId)
+  where
+    predicate productInstanceId Storage.ProductInstance {..} =
+      _id ==. B.val_ productInstanceId
+
+findAllByCaseId' :: CaseId -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByCaseId' caseId =
+  DB.findAll dbTable (predicate caseId)
+  where
+    predicate caseId Storage.ProductInstance {..} =
+      _caseId ==. B.val_ caseId
+
+findAllByIds' :: [ProductInstanceId] -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByIds' ids =
+  DB.findAll dbTable (predicate ids)
+  where
+    predicate ids Storage.ProductInstance {..} =
+      B.in_ _id (B.val_ <$> ids)
+
 updateStatusForProducts :: ProductsId -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateStatusForProducts productId status = do
   (currTime :: LocalTime) <- getCurrentTimeUTC

@@ -18,6 +18,7 @@ import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
 
+-- TODO: INVALID status seems to be unused
 data ProductInstanceStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -122,3 +123,34 @@ fieldEMod =
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
+
+validateStatusTransition :: ProductInstanceStatus -> ProductInstanceStatus -> Either Text ()
+validateStatusTransition oldState newState =
+  if oldState == newState
+    then allowed
+    else t oldState newState
+  where
+    forbidden =
+      Left $
+        T.pack $
+          "It is not allowed to change Product Instance status from "
+            <> show oldState
+            <> " to "
+            <> show newState
+    allowed = Right ()
+    t VALID CONFIRMED = allowed
+    t VALID EXPIRED = allowed
+    t VALID _ = forbidden
+    t CONFIRMED INPROGRESS = allowed
+    t CONFIRMED CANCELLED = allowed
+    t CONFIRMED _ = forbidden
+    t INPROGRESS COMPLETED = allowed
+    t INPROGRESS CANCELLED = allowed
+    t INPROGRESS _ = forbidden
+    t COMPLETED _ = forbidden
+    t INSTOCK CONFIRMED = allowed
+    t CANCELLED _ = forbidden
+    t EXPIRED _ = forbidden
+    t INSTOCK _ = forbidden
+    t OUTOFSTOCK _ = forbidden
+    t INVALID _ = forbidden

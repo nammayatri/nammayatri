@@ -12,9 +12,9 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as MC
+import qualified Models.ProductInstance as MPI
 import Servant.Client
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Cancel as Cancel
 import qualified Utils.Notifications as Notify
 
@@ -28,8 +28,8 @@ cancel person req = withFlowHandler $ do
 cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
-  pi <- QPI.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
-  Case.findIdByPerson person (pi ^. #_caseId)
+  pi <- MPI.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  MC.findIdByPerson person (pi ^. #_caseId)
   if isProductInstanceCancellable pi
     then sendCancelReq prodInstId
     else errResp (show (pi ^. #_status))
@@ -50,15 +50,15 @@ cancelProductInstance person req = do
 cancelCase :: Person.Person -> CancelReq -> Flow CancelRes
 cancelCase person req = do
   let caseId = req ^. #message . #entityId
-  case_ <- Case.findIdByPerson person (CaseId caseId)
+  case_ <- MC.findIdByPerson person (CaseId caseId)
   if isCaseCancellable case_
     then do
       let context = req ^. #context
       let txnId = context ^. #_request_transaction_id
-      productInstances <- QPI.findAllByCaseId (CaseId caseId)
+      productInstances <- MPI.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
-          Case.updateStatus (CaseId caseId) Case.CLOSED
+          MC.updateStatus (CaseId caseId) Case.CLOSED
           mkAckResponse txnId "cancel"
         else do
           let cancelPIs = filter isProductInstanceCancellable productInstances
@@ -104,21 +104,24 @@ onCancel req = withFlowHandler $ do
   let prodInstId = ProductInstanceId $ req ^. #message . #id
   -- TODO: Handle usecase where multiple productinstances exists for one product
 
-  piList <- QPI.findAllByParentId (Just prodInstId)
+  piList <- MPI.findAllByParentId (Just prodInstId)
   case piList of
     [] -> return ()
     s : _ -> do
       let orderPi = s
-      QPI.updateStatus (PI._id orderPi) PI.CANCELLED
+      -- TODO what if we update several PI but then get an error?
+      -- wrap everything in a transaction
+      -- or use updateMultiple
+      MPI.updateStatus (PI._id orderPi) PI.CANCELLED
       return ()
-  productInstance <- QPI.findById prodInstId
-  QPI.updateStatus prodInstId PI.CANCELLED
+  productInstance <- MPI.findById prodInstId
+  MPI.updateStatus prodInstId PI.CANCELLED
   let caseId = productInstance ^. #_caseId
   -- notify customer
-  case_ <- Case.findById caseId
+  case_ <- MC.findById caseId
   Notify.notifyOnProductCancelCb productInstance
   --
-  arrPICase <- QPI.findAllByCaseId caseId
+  arrPICase <- MPI.findAllByCaseId caseId
   let arrTerminalPI =
         filter
           ( \pi -> do
@@ -131,5 +134,5 @@ onCancel req = withFlowHandler $ do
           arrPICase
   when
     (length arrTerminalPI == length arrPICase)
-    (Case.updateStatus caseId Case.CLOSED)
+    (MC.updateStatus caseId Case.CLOSED)
   mkAckResponse txnId "cancel"

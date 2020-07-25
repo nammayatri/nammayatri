@@ -31,8 +31,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
+import Models.Case as Case
 import Servant
-import Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -423,10 +423,13 @@ notifyTripUrlToGateway case_ parentCase = do
 notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> Flow ()
 notifyTripInfoToGateway prodInst trackerCase parentCase = do
   pis <- ProductInstance.findAllByCaseId (parentCase ^. #_id)
-  onUpdatePayload <- mkOnUpdatePayload pis trackerCase parentCase
-  L.logInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  Gateway.onUpdate onUpdatePayload
-  return ()
+  traverse_
+    ( \pi -> do
+        onUpdatePayload <- mkOnUpdatePayload pi trackerCase parentCase
+        L.logInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
+        Gateway.onUpdate onUpdatePayload
+    )
+    pis
 
 notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
@@ -480,8 +483,8 @@ mkTrip c = do
         route = Nothing
       }
 
-mkOnUpdatePayload :: [ProductInstance] -> Case -> Case -> Flow OnUpdateReq
-mkOnUpdatePayload prodInsts case_ pCase = do
+mkOnUpdatePayload :: ProductInstance -> Case -> Case -> Flow OnUpdateReq
+mkOnUpdatePayload prodInst case_ pCase = do
   currTime <- getCurrentTimeUTC
   let context =
         Context
@@ -491,7 +494,7 @@ mkOnUpdatePayload prodInsts case_ pCase = do
             _city = Nothing,
             _core_version = Just "0.8.0",
             _domain_version = Just "0.8.0",
-            _request_transaction_id = pCase ^. #_shortId,
+            _request_transaction_id = _getProductInstanceId $ prodInst ^. #_id,
             _bap_nw_address = Nothing,
             _bg_nw_address = Nothing,
             _bpp_nw_address = Nothing,
@@ -499,7 +502,7 @@ mkOnUpdatePayload prodInsts case_ pCase = do
             _token = Nothing
           }
   trip <- mkTrip case_
-  order <- GT.mkOrder pCase (head prodInsts) (Just trip)
+  order <- GT.mkOrder pCase prodInst (Just trip)
   return
     OnUpdateReq
       { context,

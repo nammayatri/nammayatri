@@ -6,6 +6,7 @@ import qualified Beckn.Types.Storage.Products as Storage
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as T
 import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
 
@@ -27,6 +28,12 @@ findAllById ids =
 findById :: ProductsId -> Flow Storage.Products
 findById pid =
   DB.findOneWithErr dbTable (predicate pid)
+  where
+    predicate pid Storage.Products {..} = _id ==. B.val_ pid
+
+findById' :: ProductsId -> Flow (T.DBResult (Maybe Storage.Products))
+findById' pid =
+  DB.findOne dbTable (predicate pid)
   where
     predicate pid Storage.Products {..} = _id ==. B.val_ pid
 
