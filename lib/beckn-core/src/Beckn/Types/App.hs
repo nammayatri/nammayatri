@@ -9,14 +9,17 @@ import Beckn.Types.Error
 import Beckn.Utils.TH
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import EulerHS.Types as T
 import Servant
 
 class HasCommonEnv mFlow where
   getCommonEnv :: mFlow CommonEnv
 
 -- App Types
+
 data CommonEnv = CommonEnv
-  {
+  { defaultDbConfig :: T.PostgresConfig,
+    connTag :: T.ConnTag
   }
 
 data EnvR r = EnvR

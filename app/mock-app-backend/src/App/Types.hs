@@ -3,8 +3,8 @@ module App.Types where
 import Beckn.Types.App
 import Beckn.Types.Common
 
-newtype AppEnv = AppEnv
-  { commonEnv :: CommonEnv
+data AppEnv = AppEnv
+  {
   }
 
 type Env = EnvR AppEnv

@@ -1,6 +1,7 @@
 module Storage.Queries.ProductInstance where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Case as Case
@@ -13,7 +14,6 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import qualified Storage.Queries as DB
 import Types.API.ProductInstance
 import qualified Types.Storage.DB as DB
 

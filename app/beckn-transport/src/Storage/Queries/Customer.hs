@@ -1,10 +1,10 @@
 module Storage.Queries.Customer where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries as DB
 import Types.App
 import qualified Types.Storage.Customer as Storage
 import qualified Types.Storage.DB as DB
