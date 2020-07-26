@@ -4,7 +4,6 @@
 module Beckn.Utils.Servant.Server where
 
 import Beckn.Types.App (EnvR, FlowServerR)
-import Data.Kind (Type)
 import EulerHS.Prelude
 import Servant
 

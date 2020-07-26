@@ -9,7 +9,6 @@ import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Server
 import Control.Lens ((?=))
-import Data.Kind (Type)
 import qualified Data.Swagger as DS
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
