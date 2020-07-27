@@ -1,8 +1,11 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Types.Storage.Person where
 
+import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
 import Data.Aeson
@@ -106,7 +109,7 @@ instance FromHttpApiData Gender where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data PersonT f = Person
+data PersonTE e f = Person
   { _id :: B.C f PersonId,
     _firstName :: B.C f (Maybe Text),
     _middleName :: B.C f (Maybe Text),
@@ -116,7 +119,7 @@ data PersonT f = Person
     _gender :: B.C f Gender,
     _identifierType :: B.C f IdentifierType,
     _email :: B.C f (Maybe Text),
-    _mobileNumber :: B.C f (Maybe Text),
+    _mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
     _mobileCountryCode :: B.C f (Maybe Text),
     _identifier :: B.C f (Maybe Text),
     _rating :: B.C f (Maybe Text),
@@ -131,9 +134,13 @@ data PersonT f = Person
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime
   }
-  deriving (Generic, B.Beamable)
+  deriving (Generic)
 
-type Person = PersonT Identity
+type Person = PersonTE 'AsUnencrypted Identity
+
+type PersonT = PersonTE 'AsEncrypted
+
+instance B.Beamable PersonT
 
 type PersonPrimaryKey = B.PrimaryKey PersonT Identity
 
@@ -154,20 +161,40 @@ instance FromJSON Person where
 
 instance ToSchema Person
 
+instance ToJSON (PersonT Identity)
+
+instance FromJSON (PersonT Identity)
+
 insertExpression org = B.insertValues [org]
+
+deriveTableEncryption ''PersonTE
+
+-- TODO: move it to appropriate place
+maskPerson :: Person -> Person
+maskPerson person =
+  person {_deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person ^. #_deviceToken)}
+  where
+    trimToken token =
+      if length token > 6
+        then T.take 3 token <> "..." <> T.takeEnd 3 token
+        else "..."
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
 fieldEMod =
-  B.modifyTableFields
-    B.tableModification
+  B.modifyTableFields $
+    (B.tableModification @_ @PersonT)
       { _createdAt = "created_at",
         _updatedAt = "updated_at",
         _firstName = "first_name",
         _middleName = "middle_name",
         _lastName = "last_name",
         _fullName = "full_name",
-        _mobileNumber = "mobile_number",
+        _mobileNumber =
+          EncryptedHashed
+            { _encrypted = "mobile_number_encrypted",
+              _hash = "mobile_number_hash"
+            },
         _organizationId = "organization_id",
         _locationId = "location_id",
         _mobileCountryCode = "mobile_country_code",

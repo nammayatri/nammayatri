@@ -42,6 +42,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -62,12 +63,15 @@ dependencies:
   - data-default
   - data-default-class
   - euler-hs
+  - hex-text
   - http-api-data
   - http-client
   - http-client-tls
   - http-types
   - jwt
   - lens
+  - memory
+  - passetto-client
   - pureMD5
   - random-strings
   - servant

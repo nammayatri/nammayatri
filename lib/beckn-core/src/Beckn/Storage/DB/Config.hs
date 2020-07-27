@@ -73,5 +73,5 @@ getOrInitConn = dbHandle L.getOrInitSqlConn
 
 prepareDBConnections ::
   (L.MonadFlow mFlow, HasCommonEnv mFlow) => mFlow (T.SqlConn Pg)
-prepareDBConnections = do
+prepareDBConnections =
   getPgDBConfig >>= connPgOrFail

@@ -1,6 +1,9 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.Person where
 
 import App.Types
+import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
@@ -17,8 +20,9 @@ dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)
 dbTable = DB._person DB.transporterDb
 
 create :: Storage.Person -> Flow ()
-create Storage.Person {..} =
-  DB.createOne dbTable (Storage.insertExpression Storage.Person {..})
+create person = do
+  person' <- encrypt person
+  DB.createOne dbTable (Storage.insertExpression person')
     >>= either DB.throwDBError pure
 
 findPersonById ::
@@ -27,6 +31,7 @@ findPersonById id =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "PERSON_NOT_FOUND"
+    >>= decrypt
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
 
@@ -34,6 +39,7 @@ findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> Flow (Maybe
 findPersonByIdAndRoleAndOrgId id role orgId =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} =
       _id ==. B.val_ id
@@ -44,6 +50,7 @@ findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Rol
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
     limit = toInteger $ fromMaybe 100 mlimit
@@ -60,6 +67,7 @@ findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
+    >>= decrypt
   where
     predicate roles orgIds Storage.Person {..} =
       foldl
@@ -78,16 +86,18 @@ findByMobileNumber ::
 findByMobileNumber countryCode mobileNumber =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} =
       _mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. _mobileNumber ==. B.val_ (Just mobileNumber)
+        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
 
 findByIdentifier ::
   Text -> Flow (Maybe Storage.Person)
 findByIdentifier identifier =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} =
       _identifier ==. B.val_ (Just identifier)
@@ -97,6 +107,7 @@ findByEmail ::
 findByEmail email =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
+    >>= decrypt
   where
     predicate Storage.Person {..} =
       _email ==. B.val_ (Just email)
@@ -116,8 +127,9 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
 updatePersonRec :: PersonId -> Storage.Person -> Flow ()
-updatePersonRec personId person = do
+updatePersonRec personId uperson = do
   now <- getCurrentTimeUTC
+  person <- encrypt uperson
   DB.update dbTable (setClause person now) (predicate personId)
     >>= either DB.throwDBError pure
   where
@@ -145,9 +157,10 @@ updatePersonRec personId person = do
 updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   now <- getCurrentTimeUTC
+  mobileNumber' <- encrypt mobileNumber
   DB.update
     dbTable
-    (setClause identifier identifierType mobileNumber verified now)
+    (setClause identifier identifierType mobileNumber' verified now)
     (predicate personId)
     >>= either DB.throwDBError pure
   where

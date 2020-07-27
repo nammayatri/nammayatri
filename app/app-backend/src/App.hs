@@ -5,10 +5,11 @@ module App where
 import qualified App.Server as App
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
+import Beckn.External.FCM.Utils
 import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
-import Beckn.Utils.Common (prepareAppOptions, runFlowR)
+import Beckn.Utils.Common
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -34,6 +35,12 @@ runAppBackend = do
   runAppBackend' port $
     setOnExceptionResponse appExceptionResponse $
       setPort port defaultSettings
+
+-- | Prepare common applications options
+prepareAppOptions :: Flow ()
+prepareAppOptions =
+  -- FCM token ( options key = FCMTokenKey )
+  createFCMTokenRefreshThread
 
 runAppBackend' :: Int -> Settings -> IO ()
 runAppBackend' port settings = do

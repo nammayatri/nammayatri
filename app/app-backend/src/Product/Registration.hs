@@ -166,7 +166,7 @@ login tokenId req =
                     (req ^. #_deviceToken) <|> (person ^. #_deviceToken)
                 }
         Person.updateMultiple personId updatedPerson
-        LoginRes _token . maskPerson
+        LoginRes _token . SP.maskPerson
           <$> ( Person.findById personId
                   >>= fromMaybeM500 "Could not find user"
               )

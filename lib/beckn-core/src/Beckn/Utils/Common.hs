@@ -2,14 +2,11 @@
 
 module Beckn.Utils.Common where
 
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.External.FCM.Utils (createFCMTokenRefreshThread)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Error
-import qualified Beckn.Types.Storage.Person as Person
 import Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
@@ -149,21 +146,6 @@ authenticate maybeAuth = do
     throw401 =
       L.throwException $
         err401 {errBody = "Invalid Auth"}
-
-maskPerson :: Person.Person -> Person.Person
-maskPerson person =
-  person {Person._deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> person ^. #_deviceToken}
-  where
-    trimToken token =
-      if length token > 6
-        then T.take 3 token <> "..." <> T.takeEnd 3 token
-        else "..."
-
--- | Prepare common applications options
-prepareAppOptions :: FlowR r ()
-prepareAppOptions =
-  -- FCM token ( options key = FCMTokenKey )
-  createFCMTokenRefreshThread
 
 throwJsonError :: L.MonadFlow m => ServerError -> Text -> Text -> m a
 throwJsonError err tag errMsg = do

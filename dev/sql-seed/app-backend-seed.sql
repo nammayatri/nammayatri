@@ -251,7 +251,8 @@ CREATE TABLE atlas_app.person (
     gender character varying(255) NOT NULL,
     identifier_type character varying(255),
     email character varying(255),
-    mobile_number character varying(255),
+    mobile_number_encrypted character varying(255),
+    mobile_number_hash bytea,
     mobile_country_code character varying(255),
     identifier character varying(255),
     rating character varying(255),
@@ -341,104 +342,6 @@ CREATE TABLE atlas_app.tag (
 ALTER TABLE atlas_app.tag OWNER TO atlas;
 
 --
--- Data for Name: case; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.case (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: product_instance; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.product_instance (id, case_id, product_id, person_id, short_id, entity_id, entity_type, quantity, price, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: comment; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.comment (id, commented_on_entity_id, commented_on_entity_type, commented_by, commented_by_entity_type, value, created_at, updated_at, info) FROM stdin;
-\.
-
-
---
--- Data for Name: document; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.document (id, file_url, filename, format, size, file_hash, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: entity_document; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.entity_document (id, entity_id, entity_type, document_id, document_type, created_by, created_by_entity_type, verified, verified_by, verified_by_entity_type, created_at, updated_at, info) FROM stdin;
-\.
-
-
---
--- Data for Name: entity_tag; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.entity_tag (id, tagged_by, tagged_by_entity_id, entity_id, entity_type, tag_id, created_at, updated_at, info) FROM stdin;
-\.
-
-
---
--- Data for Name: location; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.location (id, location_type, lat, long, ward, district, city, state, country, pincode, address, bound, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: organization; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.organization (id, name, gstin, status, type, verified, enabled, location_type, lat, long, ward, district, city, state, country, pincode, address, bound, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: person; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) FROM stdin;
-ec34eede-5a3e-4a41-89d4-7290a0d7a629	\N	\N	\N	\N	ADMIN	UNKNOWN	MOBILENUMBER	\N	+919999999999	\N	+919999999999	\N	f	\N	\N	INACTIVE	\N	\N	\N	\N	2020-05-12 10:23:01+00	2020-05-12 10:23:01+00
-\.
-
-
---
--- Data for Name: product; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.product (id, name, description, industry, type, rating, status, short_id, price, review, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- Data for Name: registration_token; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, info, created_at, updated_at) FROM stdin;
-772453e2-d02b-494a-a4ac-ec1ea0027e18	SMS	OTP	3249	ea37f941-427a-4085-a7d0-96240f166672	f	3	365	3	ec34eede-5a3e-4a41-89d4-7290a0d7a629	USER                                	\N	2020-05-12 10:23:01+00	2020-05-12 10:23:01+00
-\.
-
-
---
--- Data for Name: tag; Type: TABLE DATA; Schema: atlas_app; Owner: atlas
---
-
-COPY atlas_app.tag (id, created_by, created_by_entity_type, tag_type, tag, info, created_at, updated_at) FROM stdin;
-\.
-
-
---
 -- Name: case idx_16386_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas
 --
 
@@ -510,7 +413,7 @@ ALTER TABLE ONLY atlas_app.person
     ADD CONSTRAINT idx_16451_primary PRIMARY KEY (id);
 
 ALTER TABLE ONLY atlas_app.person
-  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number);
+  ADD CONSTRAINT unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_hash);
 
 ALTER TABLE ONLY atlas_app.person
   ADD CONSTRAINT unique_identifier UNIQUE (identifier);
@@ -717,7 +620,15 @@ CREATE INDEX idx_16475_tag ON atlas_app.tag USING btree (tag);
 CREATE INDEX idx_16475_tag_type ON atlas_app.tag USING btree (tag_type);
 
 
---
+INSERT INTO atlas_app.person(id, role, gender, identifier_type, mobile_country_code, identifier, verified, status, created_at, updated_at) values
+  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', '91', '+919999999999', false, 'INACTIVE', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
+
+INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
+  ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', false, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
+
+UPDATE atlas_app.person SET
+    mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='
+  , mobile_number_hash = decode('0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', 'hex') where id = 'ec34eede-5a3e-4a41-89d4-7290a0d7a629';
+
 -- PostgreSQL database dump complete
 --
-
