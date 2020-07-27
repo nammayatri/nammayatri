@@ -4,8 +4,7 @@ import Data.Text
 import EulerHS.Prelude
 
 data Ack = Ack
-  { _action :: Text,
-    _message :: Text
+  { _status :: Text
   }
   deriving (Generic, Show)
 

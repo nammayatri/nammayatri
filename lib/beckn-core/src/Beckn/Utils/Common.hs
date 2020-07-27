@@ -112,8 +112,7 @@ mkAckResponse' txnId action message = do
             },
         _message =
           Ack
-            { _action = action,
-              _message = message
+            { _status = action
             },
         _error = Nothing
       }

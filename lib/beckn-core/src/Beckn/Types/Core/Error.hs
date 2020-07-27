@@ -5,11 +5,14 @@ import EulerHS.Prelude
 
 data Error = Error
   { _t_error :: Maybe TError, --"ISO 3166-1 ALPHA-2", "ISO 3166-1 ALPHA-3", "ISO 3166-1 NUMERIC)"
-    _r_error :: RError,
+    _r_error :: Maybe RError,
     _f_error :: Maybe [FError],
     _d_error :: Maybe Text -- it may changes
   }
   deriving (Generic, Show)
+
+domainError :: Text -> Error
+domainError = Error Nothing Nothing Nothing . Just
 
 instance FromJSON Error where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
