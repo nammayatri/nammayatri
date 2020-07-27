@@ -13,9 +13,9 @@ import qualified Beckn.Types.Storage.Vehicle as V
 import Beckn.Utils.Common (encodeToText, fromMaybeM400, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
 import Servant
-import qualified Storage.Queries.Case as CQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ
@@ -181,11 +181,11 @@ updateStatus user piId req = do
   return ()
 
 notifyTripDetailsToGateway :: PI.ProductInstance -> Flow ()
-notifyTripDetailsToGateway searchPi = do
-  trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
-  parentCase <- CQ.findById (searchPi ^. #_caseId)
+notifyTripDetailsToGateway prodInst = do
+  trackerCase <- CQ.findByParentCaseIdAndType (prodInst ^. #_caseId) Case.LOCATIONTRACKER
+  parentCase <- CQ.findById (prodInst ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripUrlToGateway x y
+    (Just x, y) -> BP.notifyTripInfoToGateway prodInst x y
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()

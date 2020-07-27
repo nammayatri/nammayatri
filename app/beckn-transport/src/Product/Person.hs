@@ -10,7 +10,6 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Data.Aeson (encode)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -19,6 +18,7 @@ import Servant
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Vehicle as QV
 import System.Environment
 import Types.API.Person
 
@@ -58,9 +58,10 @@ createPerson orgId req = withFlowHandler $ do
           _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson orgId roles limitM offsetM =
-  withFlowHandler $
-    ListPersonRes <$> QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
+listPerson orgId roles limitM offsetM = withFlowHandler $ do
+  personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
+  respList <- traverse mkPersonRes personList
+  return $ ListPersonRes respList
 
 getPerson ::
   SR.RegistrationToken ->
@@ -70,7 +71,7 @@ getPerson ::
   Maybe Text ->
   Maybe Text ->
   Maybe SP.IdentifierType ->
-  FlowHandler PersonRes
+  FlowHandler PersonEntityRes
 getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM identifierTypeM =
   withFlowHandler $ do
     user <- QP.findPersonById (PersonId _EntityId)
@@ -93,7 +94,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
           >>= QP.findByIdentifier
           >>= fromMaybeM400 "PERSON_NOT_FOUND"
     hasAccess user person
-    return $ PersonRes person
+    mkPersonRes person
   where
     hasAccess :: SP.Person -> SP.Person -> Flow ()
     hasAccess user person =
@@ -114,24 +115,86 @@ deletePerson orgId personId = withFlowHandler $ do
       return $ DeletePersonRes personId
     else L.throwException $ err401 {errBody = "Unauthorized"}
 
--- Utility Functions --
+linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
+linkEntity orgId personId req = withFlowHandler $ do
+  person <- QP.findPersonById (PersonId personId)
+  case req ^. #_entityType of
+    VEHICLE ->
+      QV.findVehicleById (VehicleId (req ^. #_entityId))
+        >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
+    _ -> L.throwException $ err400 {errBody = "UNSUPPORTED ENTITY TYPE"}
+  when
+    (person ^. #_organizationId /= Just orgId)
+    (L.throwException $ err401 {errBody = "Unauthorized"})
+  QP.updateEntity (PersonId personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
+  updatedPerson <- QP.findPersonById $ person ^. #_id
+  mkPersonRes updatedPerson
+
+-- Utility Functions
 
 addOrgId :: Text -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP._organizationId = Just orgId}
 
+mkPersonRes :: SP.Person -> Flow PersonEntityRes
+mkPersonRes person = do
+  entity <- case person ^. #_udf2 >>= mapEntityType of
+    Just VEHICLE -> do
+      vehicle <- QV.findVehicleById $ VehicleId $ fromMaybe "" (person ^. #_udf1)
+      return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)
+    _ -> return Nothing
+  return $
+    PersonEntityRes
+      { _id = person ^. #_id,
+        _firstName = person ^. #_firstName,
+        _middleName = person ^. #_middleName,
+        _lastName = person ^. #_lastName,
+        _fullName = person ^. #_fullName,
+        _role = person ^. #_role,
+        _gender = person ^. #_gender,
+        _email = person ^. #_email,
+        _identifier = person ^. #_identifier,
+        _identifierType = person ^. #_identifierType,
+        _mobileNumber = person ^. #_mobileNumber,
+        _mobileCountryCode = person ^. #_mobileCountryCode,
+        _verified = person ^. #_verified,
+        _rating = person ^. #_rating,
+        _status = person ^. #_status,
+        _deviceToken = person ^. #_deviceToken,
+        _udf1 = person ^. #_udf1,
+        _udf2 = person ^. #_udf2,
+        _organizationId = person ^. #_organizationId,
+        _description = person ^. #_description,
+        _locationId = person ^. #_locationId,
+        _createdAt = person ^. #_createdAt,
+        _updatedAt = person ^. #_updatedAt,
+        _linkedEntity = entity
+      }
+
 sendInviteSms :: Text -> Text -> Flow ()
 sendInviteSms phoneNumber orgName = do
-  username <- L.runIO $ getEnv "SMS_GATEWAY_USERNAME"
-  password <- L.runIO $ getEnv "SMS_GATEWAY_PASSWORD"
-  res <-
-    SF.submitSms
-      SF.defaultBaseUrl
-      SMS.SubmitSms
-        { SMS._username = T.pack username,
-          SMS._password = T.pack password,
-          SMS._from = SMS.JUSPAY,
-          SMS._to = phoneNumber,
-          SMS._category = SMS.BULK,
-          SMS._text = SF.constructInviteSms orgName
-        }
-  whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
+  username <- L.runIO $ lookupEnv "SMS_GATEWAY_USERNAME"
+  password <- L.runIO $ lookupEnv "SMS_GATEWAY_PASSWORD"
+  case (username, password) of
+    (Just user, Just pass) -> do
+      res <-
+        SF.submitSms
+          SF.defaultBaseUrl
+          SMS.SubmitSms
+            { SMS._username = T.pack user,
+              SMS._password = T.pack pass,
+              SMS._from = SMS.JUSPAY,
+              SMS._to = phoneNumber,
+              SMS._category = SMS.BULK,
+              SMS._text = SF.constructInviteSms orgName
+            }
+      whenLeft res $ \err -> return () -- ignore error silently
+    _ -> do
+      L.logInfo "CreatePerson" $
+        "Not sending invite SMS "
+          <> "since SMS gateway credentials are not available"
+      return ()
+
+mapEntityType :: Text -> Maybe EntityType
+mapEntityType entityType = case entityType of
+  "VEHICLE" -> Just VEHICLE
+  _ -> Nothing

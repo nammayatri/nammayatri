@@ -14,9 +14,9 @@ import Beckn.Utils.Common (mkAckResponse, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as Case
+import qualified Models.ProductInstance as QPI
 import Servant
-import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Status as Status
 import Utils.Routes
 

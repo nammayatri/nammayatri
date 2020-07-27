@@ -9,6 +9,7 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import qualified Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
+import qualified Beckn.Types.API.Update as Update
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
@@ -26,6 +27,7 @@ import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.Status as Status
 import qualified Product.TrackTrip as TrackTrip
+import qualified Product.Update as Update
 import Servant
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
@@ -48,6 +50,7 @@ type AppAPI =
            :<|> CaseAPI
            :<|> InfoAPI
            :<|> TrackTripAPI
+           :<|> UpdateAPI
            :<|> ProductInstanceAPI
            :<|> CancelAPI
            :<|> CronAPI
@@ -67,6 +70,7 @@ appServer key =
     :<|> caseFlow
     :<|> infoFlow
     :<|> trackTripFlow
+    :<|> updateFlow
     :<|> productInstanceFlow
     :<|> cancelFlow
     :<|> cronFlow
@@ -172,6 +176,16 @@ trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
   TrackTrip.track
     :<|> TrackTrip.trackCb
+
+------- Update Flow -------
+type UpdateAPI =
+  "on_update"
+    :> ReqBody '[JSON] Update.OnUpdateReq
+    :> Post '[JSON] Update.OnUpdateRes
+
+updateFlow :: FlowServer UpdateAPI
+updateFlow =
+  Update.onUpdate
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =

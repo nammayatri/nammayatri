@@ -7,7 +7,9 @@ import qualified Beckn.Types.Storage.Person as PS
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (authenticate, withFlowHandler)
 import EulerHS.Prelude
-import qualified Storage.Queries.Case as CQ
+import qualified Models.Case as CQ
+import qualified Models.Case as MC
+import qualified Models.ProductInstance as MCP
 import qualified Storage.Queries.Person as PSQ
 import qualified Storage.Queries.ProductInstance as CPQ
 import Types.API.Cron
@@ -18,8 +20,8 @@ expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
   cases <- CQ.findAllExpiredByStatus [C.NEW] C.RIDESEARCH from to
   productInstances <- CPQ.findAllByCaseIds (C._id <$> cases)
-  CQ.updateStatusByIds (C._id <$> cases) C.CLOSED
-  CPQ.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
+  MC.updateStatusByIds (C._id <$> cases) C.CLOSED
+  MCP.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
   notifyTransporters cases productInstances
   pure $ ExpireCaseRes $ length cases
 

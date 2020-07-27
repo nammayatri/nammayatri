@@ -10,9 +10,23 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Extra
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import Data.Time.LocalTime
 import EulerHS.Prelude
+import Servant.API
 import qualified Storage.Queries.Location as QL
+
+data EntityType = VEHICLE | PASS | TICKET
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromHttpApiData EntityType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data UpdatePersonReq = UpdatePersonReq
   { _firstName :: Maybe Text,
@@ -198,7 +212,7 @@ createLocationRec :: CreatePersonReq -> Flow SL.Location
 createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {_organizationId = Nothing, ..}
 
 newtype ListPersonRes = ListPersonRes
-  {users :: [SP.Person]}
+  {users :: [PersonEntityRes]}
   deriving (Generic, ToJSON, ToSchema)
 
 newtype PersonRes = PersonRes
@@ -208,3 +222,61 @@ newtype PersonRes = PersonRes
 newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, ToSchema)
+
+data LinkReq = LinkReq
+  { _entityId :: Text,
+    _entityType :: EntityType
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON LinkReq where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON LinkReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data LinkedEntity = LinkedEntity
+  { _entityType :: EntityType,
+    _entityValue :: Maybe Text
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON LinkedEntity where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON LinkedEntity where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data PersonEntityRes = PersonEntityRes
+  { _id :: PersonId,
+    _firstName :: Maybe Text,
+    _middleName :: Maybe Text,
+    _lastName :: Maybe Text,
+    _fullName :: Maybe Text,
+    _role :: SP.Role,
+    _gender :: SP.Gender,
+    _identifierType :: SP.IdentifierType,
+    _email :: Maybe Text,
+    _mobileNumber :: Maybe Text,
+    _mobileCountryCode :: Maybe Text,
+    _identifier :: Maybe Text,
+    _rating :: Maybe Text,
+    _verified :: Bool,
+    _udf1 :: Maybe Text,
+    _udf2 :: Maybe Text,
+    _status :: SP.Status,
+    _organizationId :: Maybe Text,
+    _locationId :: Maybe Text,
+    _deviceToken :: Maybe FCM.FCMRecipientToken,
+    _description :: Maybe Text,
+    _createdAt :: LocalTime,
+    _updatedAt :: LocalTime,
+    _linkedEntity :: Maybe LinkedEntity
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON PersonEntityRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON PersonEntityRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions

@@ -66,6 +66,7 @@ dependencies:
   - http-client
   - http-types
   - lens
+  - mtl
   - postgresql-simple
   - pureMD5
   - purescript-bridge

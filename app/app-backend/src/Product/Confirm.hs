@@ -17,9 +17,10 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
+import qualified Models.Case as MC
+import qualified Models.Case as QCase
+import qualified Models.ProductInstance as MPI
 import Servant
-import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.ProductInstance as QPI
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import qualified Types.ProductInfo as Products
@@ -35,9 +36,9 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
       err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
   QCase.create orderCase_
-  productInstance <- QPI.findById (ProductInstanceId productInstanceId)
+  productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
-  QPI.create orderProductInstance
+  MPI.create orderProductInstance
   transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   baseUrl <- Gateway.getBaseUrl
@@ -61,14 +62,14 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
             _trip = Nothing
           }
 
-onConfirm :: OnConfirmReq -> FlowHandler OnConfirmRes
+onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo "on_confirm req" (show req)
   let trip = req ^. #message . #order . #_trip
       pid = ProductInstanceId $ req ^. #message . #order . #_id
       tracker = flip Products.Tracker Nothing <$> trip
-  prdInst <- QPI.findById pid
+  prdInst <- MPI.findById pid
   -- TODO: update tracking prodInfo in .info
   let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
   let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
@@ -76,11 +77,11 @@ onConfirm req = withFlowHandler $ do
         prdInst
           { SPI._info = encodeToText <$> uInfo
           }
-  productInstance <- QPI.findById pid -- TODO: can have multiple cases linked, fix this
-  QCase.updateStatus (SPI._caseId productInstance) Case.COMPLETED
-  QPI.updateMultiple (_getProductInstanceId pid) uPrd
-  QPI.updateStatus pid SPI.CONFIRMED
-  return $ OnConfirmRes (req ^. #context) $ Ack "on_confirm" "Ok"
+  productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
+  MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
+  MPI.updateMultiple pid uPrd
+  MPI.updateStatus pid SPI.CONFIRMED
+  return $ AckResponse (req ^. #context) (Ack "on_confirm" "Ok") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
