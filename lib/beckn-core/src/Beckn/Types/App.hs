@@ -11,6 +11,9 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Servant
 
+class HasCommonEnv mFlow where
+  getCommonEnv :: mFlow CommonEnv
+
 -- App Types
 data CommonEnv = CommonEnv
   {
