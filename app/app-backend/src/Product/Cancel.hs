@@ -113,6 +113,7 @@ onCancel req = withFlowHandler $ do
       -- wrap everything in a transaction
       -- or use updateMultiple
       MPI.updateStatus (PI._id orderPi) PI.CANCELLED
+      MC.updateStatus (PI._caseId orderPi) Case.CLOSED
       return ()
   productInstance <- MPI.findById prodInstId
   MPI.updateStatus prodInstId PI.CANCELLED
