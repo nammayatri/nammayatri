@@ -17,7 +17,7 @@ import System.Environment
 onSearch :: OnSearchReq -> Flow (Either Text ())
 onSearch req = do
   url <- getGatewayBaseUrl
-  apiKey <- L.runIO $ lookupEnv "BP_API_KEY"
+  apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
   res <- L.callAPI url $ API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req
   whenRight res $ \_ ->
     L.logInfo "OnSearch" "OnSearch callback successfully delivered"

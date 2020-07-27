@@ -17,7 +17,7 @@ import Types.API.Location
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  apiKey <- L.runIO $ lookupEnv "BA_API_KEY"
+  apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
   res <- L.callAPI url $ API.search (maybe "mobility-app-key" T.pack apiKey) req
   whenRight res $ \_ ->
     L.logInfo "Search" "Search successfully delivered"
