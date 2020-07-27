@@ -39,6 +39,19 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+  fmd-wrapper-db:
+    image: "postgres:12.3"
+    container_name: "atlas-fmd-wrapper"
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./sql-seed/fmd-wrapper-backend-seed.sql:/docker-entrypoint-initdb.d/fmd-wrapper-backend-seed.sql:Z
+    environment:
+      - POSTGRES_DB=atlas_fmd_wrapper
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   transporter-redis:
     image: "redis:5"
     ports:

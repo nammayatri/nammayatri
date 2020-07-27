@@ -18,6 +18,15 @@ cradle:
     - path: "app/beckn-transport/server/Paths_beckn_transport.hs"
       component: "beckn-transport:exe:beckn-transport-exe"
 
+    - path: "app/fmd-wrapper/src"
+      component: "fmd-wrapper:lib"
+
+    - path: "app/fmd-wrapper/server/Main.hs"
+      component: "fmd-wrapper:exe:fmd-wrapper-exe"
+
+    - path: "app/fmd-wrapper/server/Paths_fmd_wrapper.hs"
+      component: "fmd-wrapper:exe:fmd-wrapper-exe"
+
     - path: "app/gateway/src"
       component: "beckn-gateway:lib"
 
