@@ -24,13 +24,15 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant.Server
+import qualified Storage.DB.Config as Config
 import System.Environment (lookupEnv)
 
 runGateway :: IO ()
 runGateway = do
   port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "PORT"
   cache <- C.newCache Nothing
-  let appEnv = AppEnv CommonEnv cache
+  let commonEnv = CommonEnv Config.defaultDbConfig Config.connectionTag
+  let appEnv = AppEnv commonEnv cache
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,

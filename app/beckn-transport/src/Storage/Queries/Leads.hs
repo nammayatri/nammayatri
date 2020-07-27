@@ -1,10 +1,10 @@
 module Storage.Queries.Leads where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries as DB
 import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Leads as Storage

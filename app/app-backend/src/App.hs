@@ -6,6 +6,8 @@ import qualified App.Server as App
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import Beckn.External.FCM.Utils
+import Beckn.Storage.DB.Config
+import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
 import qualified Data.Aeson as Aeson
@@ -24,7 +26,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant
-import Storage.DB.Config
+import Storage.DB.Config as Config
 import qualified System.Environment as SE
 
 runAppBackend :: IO ()
@@ -42,7 +44,8 @@ prepareAppOptions =
 
 runAppBackend' :: Int -> Settings -> IO ()
 runAppBackend' port settings = do
-  let appEnv = AppEnv App.CommonEnv
+  let commonEnv = CommonEnv Config.defaultDbConfig Config.connectionTag
+  let appEnv = AppEnv commonEnv
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,

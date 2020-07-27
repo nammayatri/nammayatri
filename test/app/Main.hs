@@ -20,7 +20,7 @@ specs = do
   return $
     withResource
       startServers
-      (\(appTid, tbeTid) -> killThread appTid >> killThread tbeTid)
+      (\(appTid, tbeTid, gatewayTid) -> killThread appTid >> killThread tbeTid >> killThread gatewayTid)
       ( \_ ->
           testGroup
             "tests"

@@ -5,6 +5,7 @@ module Storage.Queries.Person where
 import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
@@ -13,7 +14,6 @@ import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)

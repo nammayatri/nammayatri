@@ -144,13 +144,31 @@ spec:
                   name: app-secrets
                   key: TRANSPORTER_OTP_HASH
             #------ Gateway configs ------#
-            - name: BECKN_GATEWAY_BASE_URL
+            - name: GATEWAY_HOST
               value: beckn-app-backend-$DEPLOY_VARIANT.atlas
-            - name: BECKN_GATEWAY_PORT
+            - name: GATEWAY_PORT
               valueFrom:
                 configMapKeyRef:
                   name: beckn-transport-configs
                   key: BECKN_GATEWAY_PORT
+            - name: BECKN_GATEWAY_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-transport-configs
+                  key: BECKN_GATEWAY_PATH
+            #------ Beckn app configs ------#
+            - name: BECKN_APP_HOST
+              value: beckn-app-backend-$DEPLOY_VARIANT.atlas
+            - name: BECKN_APP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-transport-configs
+                  key: BECKN_APP_PORT
+            - name: BECKN_APP_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-transport-configs
+                  key: BECKN_APP_PATH
             #------ General configs ------#
             # - name: USE_FAKE_SMS
             #   valueFrom:

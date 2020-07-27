@@ -6,6 +6,7 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import Beckn.Types.API.Search
 import qualified Beckn.Types.API.Status as Status
 import qualified Beckn.Types.API.Track as Track
+import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
@@ -16,7 +17,8 @@ import Types.API.Location
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  res <- L.callAPI url $ API.search req
+  apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
+  res <- L.callAPI url $ API.search (maybe "mobility-app-key" T.pack apiKey) req
   whenRight res $ \_ ->
     L.logInfo "Search" "Search successfully delivered"
   whenLeft res $ \err ->
@@ -65,10 +67,18 @@ status url req = do
     Right _ -> L.logInfo "Status" "Status successfully delivered"
   return $ first show res
 
-getBaseUrl :: Flow BaseUrl
-getBaseUrl = L.runIO $ do
-  host <- fromMaybe "localhost" <$> lookupEnv "GATEWAY_HOST"
-  port <- fromMaybe 8014 . (>>= readMaybe) <$> lookupEnv "GATEWAY_PORT"
-  path <- fromMaybe "/v1" <$> lookupEnv "GATEWAY_PATH"
+getGatewayBaseUrl :: Flow BaseUrl
+getGatewayBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_GATEWAY_HOST"
+  port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "BECKN_GATEWAY_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_GATEWAY_PATH"
+  return $
+    BaseUrl Http host port path
+
+getProviderBaseUrl :: Flow BaseUrl
+getProviderBaseUrl = L.runIO $ do
+  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_PROVIDER_HOST"
+  port <- fromMaybe 8014 . (>>= readMaybe) <$> lookupEnv "BECKN_PROVIDER_PORT"
+  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_PROVIDER_PATH"
   return $
     BaseUrl Http host port path

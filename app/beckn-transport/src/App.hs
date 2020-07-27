@@ -6,6 +6,7 @@ import qualified App.Server as App
 import App.Types
 import Beckn.Constants.APIErrorCode
 import Beckn.External.FCM.Utils
+import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
@@ -25,7 +26,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant
-import Storage.DB.Config
+import Storage.DB.Config as Config
 import Storage.Redis.Config
 import qualified System.Environment as SE
 
@@ -44,7 +45,8 @@ prepareAppOptions =
 
 runTransporterBackendApp' :: Int -> Settings -> IO ()
 runTransporterBackendApp' port settings = do
-  let appEnv = AppEnv CommonEnv
+  let commonEnv = CommonEnv Config.defaultDbConfig Config.connectionTag
+  let appEnv = AppEnv commonEnv
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,

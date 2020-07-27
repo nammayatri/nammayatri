@@ -26,7 +26,7 @@ status person StatusReq {..} = withFlowHandler $ do
   case_ <- Case.findIdByPerson person (pi ^. #_caseId)
   let caseId = _getCaseId $ case_ ^. #_id
   context <- buildContext "status" caseId
-  baseUrl <- Gateway.getBaseUrl
+  baseUrl <- Gateway.getProviderBaseUrl
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   eres <- Gateway.status baseUrl $ API.StatusReq context statusMessage
   let ack =

@@ -32,7 +32,7 @@ track _ req = withFlowHandler $ do
           Nothing -> return $ Ack "Error" "No product to track"
           Just tracker -> do
             let gTripId = tracker ^. #_trip . #id
-            gatewayUrl <- Gateway.getBaseUrl
+            gatewayUrl <- Gateway.getProviderBaseUrl
             eres <- Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
             case eres of
               Left err ->

@@ -12,7 +12,7 @@ import Data.Time.LocalTime
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (Type)
 import Servant.API
 import Types.App
 

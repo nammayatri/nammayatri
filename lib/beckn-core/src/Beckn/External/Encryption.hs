@@ -35,7 +35,6 @@ import Crypto.Hash.Algorithms (SHA256)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
-import Data.Kind (Type)
 import Database.Beam (Beamable, Columnar, HasSqlEqualityCheck (..), Nullable)
 import Database.Beam.Backend (FromBackendRow (..), HasSqlValueSyntax (..))
 import Database.Beam.Postgres (Postgres)

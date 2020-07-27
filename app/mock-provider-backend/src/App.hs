@@ -27,7 +27,7 @@ import System.Environment (lookupEnv)
 runMockProvider :: IO ()
 runMockProvider = do
   port <- fromMaybe 8017 . (>>= readMaybe) <$> lookupEnv "MOCK_PROVIDER_PORT"
-  let appEnv = AppEnv App.CommonEnv
+  let appEnv = AppEnv
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,

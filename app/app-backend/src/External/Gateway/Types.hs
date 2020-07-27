@@ -23,8 +23,8 @@ confirmAPI = Proxy
 confirm req =
   void $ ET.client confirmAPI req
 
-search req =
-  void $ client Search.searchAPI "mobility-app-key" req
+search key req =
+  void $ client Search.searchAPI key req
 
 type LocationAPI =
   "location"

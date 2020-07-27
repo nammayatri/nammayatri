@@ -37,7 +37,7 @@ cancelProductInstance person req = do
     sendCancelReq prodInstId = do
       let context = req ^. #context
       let txnId = context ^. #_request_transaction_id
-      baseUrl <- Gateway.getBaseUrl
+      baseUrl <- Gateway.getProviderBaseUrl
       let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrderId prodInstId)
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
@@ -62,7 +62,7 @@ cancelCase person req = do
           mkAckResponse txnId "cancel"
         else do
           let cancelPIs = filter isProductInstanceCancellable productInstances
-          baseUrl <- Gateway.getBaseUrl
+          baseUrl <- Gateway.getProviderBaseUrl
           eres <- traverse (callCancelApi context baseUrl) cancelPIs
           case sequence eres of
             Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
@@ -113,6 +113,7 @@ onCancel req = withFlowHandler $ do
       -- wrap everything in a transaction
       -- or use updateMultiple
       MPI.updateStatus (PI._id orderPi) PI.CANCELLED
+      MC.updateStatus (PI._caseId orderPi) Case.CLOSED
       return ()
   productInstance <- MPI.findById prodInstId
   MPI.updateStatus prodInstId PI.CANCELLED
