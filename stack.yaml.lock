@@ -46,12 +46,12 @@ packages:
     version: 1.9.5.1
     git: git@bitbucket.org:juspay/euler-hs.git
     pantry-tree:
-      size: 7424
-      sha256: 8483426ddf09a985376ecace86d049c3168a2e63c1526705a6710661e897d4a3
-    commit: 4d852dbd7fd17bbc0b683d6e79218051e68b66ea
+      size: 7486
+      sha256: a9ccb818ef494809543a091549b077c8b89db3d706b741afd525e640cbc2aef0
+    commit: 306ac10f2d6808d3868e39919336f9f6ea9bc817
   original:
     git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 4d852dbd7fd17bbc0b683d6e79218051e68b66ea
+    commit: 306ac10f2d6808d3868e39919336f9f6ea9bc817
 - completed:
     name: beam-mysql
     version: 0.3.0.0
