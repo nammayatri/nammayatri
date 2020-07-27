@@ -52,8 +52,6 @@ instance ToJSON (CustomerT Identity)
 
 instance FromJSON (CustomerT Identity)
 
-insertExpression org = B.insertValues [org]
-
 deriveTableEncryption ''CustomerTE
 
 fieldEMod ::

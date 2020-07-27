@@ -153,8 +153,6 @@ instance FromJSON Case where
 
 instance ToSchema Case
 
-insertExpression cases = B.insertValues [cases]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)
 fieldEMod =

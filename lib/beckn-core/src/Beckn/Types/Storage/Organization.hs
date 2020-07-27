@@ -97,8 +97,6 @@ instance FromJSON Organization where
 
 instance ToSchema Organization
 
-insertExpression org = B.insertValues [org]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OrganizationT)
 fieldEMod =

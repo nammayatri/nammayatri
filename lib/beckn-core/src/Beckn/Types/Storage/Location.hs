@@ -73,8 +73,6 @@ instance FromJSON Location where
 
 instance ToSchema Location
 
-insertExpression org = B.insertValues [org]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LocationT)
 fieldEMod =

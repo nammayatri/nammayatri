@@ -3,6 +3,7 @@
 module Storage.Queries.RegistrationToken where
 
 import App.Types
+import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.RegistrationToken as Storage

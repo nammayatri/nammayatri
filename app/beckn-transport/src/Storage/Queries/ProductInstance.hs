@@ -1,6 +1,7 @@
 module Storage.Queries.ProductInstance where
 
 import App.Types
+import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Storage.Case

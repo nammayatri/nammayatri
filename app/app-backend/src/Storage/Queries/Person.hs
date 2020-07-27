@@ -4,6 +4,7 @@ module Storage.Queries.Person where
 
 import App.Types
 import Beckn.External.Encryption
+import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage

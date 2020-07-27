@@ -67,8 +67,6 @@ instance FromJSON TripReference where
 
 instance ToSchema TripReference
 
-insertExpression org = B.insertValues [org]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity TripReferenceT)
 fieldEMod =

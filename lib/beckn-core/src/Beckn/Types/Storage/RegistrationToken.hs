@@ -82,8 +82,6 @@ deriving instance ToJSON RegistrationToken
 
 deriving instance FromJSON RegistrationToken
 
-insertExpression regs = B.insertValues [regs]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RegistrationTokenT)
 fieldEMod =

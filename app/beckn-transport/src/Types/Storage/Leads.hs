@@ -47,8 +47,6 @@ instance FromJSON Leads where
 
 instance ToSchema Leads
 
-insertExpression org = B.insertValues [org]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LeadsT)
 fieldEMod =

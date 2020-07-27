@@ -1,6 +1,7 @@
 module Storage.Queries.Leads where
 
 import App.Types
+import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Database.Beam ((==.))
 import qualified Database.Beam as B

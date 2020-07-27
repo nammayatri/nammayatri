@@ -99,8 +99,6 @@ instance FromJSON ProductInstance where
 
 instance ToSchema ProductInstance
 
-insertExpression products = B.insertValues [products]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ProductInstanceT)
 fieldEMod =

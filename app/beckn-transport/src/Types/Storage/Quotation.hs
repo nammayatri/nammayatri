@@ -64,8 +64,6 @@ instance FromJSON Quotation where
 
 instance ToSchema Quotation
 
-insertExpression org = B.insertValues [org]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuotationT)
 fieldEMod =

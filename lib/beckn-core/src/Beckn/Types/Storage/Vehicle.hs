@@ -128,8 +128,6 @@ instance FromJSON Vehicle where
 
 instance ToSchema Vehicle
 
-insertExpression org = B.insertValues [org]
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)
 fieldEMod =

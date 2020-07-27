@@ -2,6 +2,7 @@ module Storage.Queries.Customer where
 
 import App.Types
 import Beckn.External.Encryption
+import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Database.Beam ((==.))
 import qualified Database.Beam as B

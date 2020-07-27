@@ -165,8 +165,6 @@ instance ToJSON (PersonT Identity)
 
 instance FromJSON (PersonT Identity)
 
-insertExpression org = B.insertValues [org]
-
 deriveTableEncryption ''PersonTE
 
 -- TODO: move it to appropriate place
