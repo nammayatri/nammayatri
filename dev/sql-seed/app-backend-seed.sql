@@ -218,18 +218,16 @@ CREATE TABLE atlas_app.organization (
     type character varying(255),
     verified boolean NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
-    location_type character varying(255),
-    lat double precision,
-    long double precision,
-    ward character varying(255),
-    district character varying(255),
-    city character varying(255),
-    state character varying(255),
-    country character varying(255),
-    pincode bigint,
-    address character varying(1024),
-    bound text,
-    info text,
+    location_id character varying(255),
+    description text,
+    mobile_number text,
+    mobile_country_code character varying(255),
+    from_time timestamp with time zone,
+    to_time timestamp with time zone,
+    api_key text,
+    callback_url text,
+    callback_api_key text,
+    head_count bigint,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -562,35 +560,6 @@ CREATE INDEX idx_16434_city ON atlas_app.location USING btree (city);
 --
 
 CREATE INDEX idx_16434_state ON atlas_app.location USING btree (state);
-
-
---
--- Name: idx_16442_city; Type: INDEX; Schema: atlas_app; Owner: atlas
---
-
-CREATE INDEX idx_16442_city ON atlas_app.organization USING btree (city);
-
-
---
--- Name: idx_16442_district; Type: INDEX; Schema: atlas_app; Owner: atlas
---
-
-CREATE INDEX idx_16442_district ON atlas_app.organization USING btree (district);
-
-
---
--- Name: idx_16442_pincode; Type: INDEX; Schema: atlas_app; Owner: atlas
---
-
-CREATE INDEX idx_16442_pincode ON atlas_app.organization USING btree (pincode);
-
-
---
--- Name: idx_16442_ward; Type: INDEX; Schema: atlas_app; Owner: atlas
---
-
-CREATE INDEX idx_16442_ward ON atlas_app.organization USING btree (ward);
-
 
 --
 -- Name: idx_16467_entity_id; Type: INDEX; Schema: atlas_app; Owner: atlas
