@@ -22,6 +22,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   validate person
   organization <- createTransform req
+  validateReq req
   QO.create organization
   QP.updateOrganizationIdAndMakeAdmin (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
   updatedPerson <- QP.findPersonById (PersonId _EntityId)
@@ -34,6 +35,9 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       when (isJust $ SP._organizationId person) $
         L.throwException $
           err400 {errBody = "user already registered an organization"}
+    validateReq req =
+      unless (all (== True) (isJust <$> transporterMandatoryFields req)) $
+        L.throwException $ err400 {errBody = "missing mandatory fields"}
 
 createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes
 createGateway _ req = withFlowHandler $ do
@@ -72,3 +76,12 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   where
     validate person =
       unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+
+transporterMandatoryFields :: TransporterReq -> [Maybe Text]
+transporterMandatoryFields req =
+  [ req ^. #_mobileNumber,
+    req ^. #_mobileCountryCode,
+    req ^. #_district,
+    req ^. #_city,
+    req ^. #_country
+  ]

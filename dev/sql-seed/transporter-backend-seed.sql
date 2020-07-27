@@ -140,10 +140,12 @@ CREATE TABLE atlas_transporter.organization (
     location_id character varying(255),
     description text,
     mobile_number text,
+    mobile_country_code character varying(255),
     from_time timestamp with time zone,
     to_time timestamp with time zone,
     api_key text,
     callback_url text,
+    callback_api_key text,
     head_count bigint,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL

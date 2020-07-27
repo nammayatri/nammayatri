@@ -57,6 +57,7 @@ data OrganizationT f = Organization
     _name :: B.C f Text,
     _description :: B.C f (Maybe Text),
     _mobileNumber :: B.C f (Maybe Text),
+    _mobileCountryCode :: B.C f (Maybe Text),
     _gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
     _locationId :: B.C f (Maybe Text),
@@ -106,9 +107,11 @@ fieldEMod =
         _updatedAt = "updated_at",
         _locationId = "location_id",
         _mobileNumber = "mobile_number",
+        _mobileCountryCode = "mobile_country_code",
         _headCount = "head_count",
         _apiKey = "api_key",
         _fromTime = "from_time",
         _toTime = "to_time",
-        _callbackUrl = "callback_url"
+        _callbackUrl = "callback_url",
+        _callbackApiKey = "callback_api_key"
       }
