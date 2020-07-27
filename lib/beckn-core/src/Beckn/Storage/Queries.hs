@@ -1,6 +1,10 @@
-module Storage.Queries where
+{-# LANGUAGE NamedWildCards #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
-import App.Types
+module Beckn.Storage.Queries where
+
+import qualified Beckn.Storage.DB.Config as DB
+import Beckn.Types.App
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
@@ -8,8 +12,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import Servant (err500, errBody)
-import qualified Storage.DB.Config as DB
-import Types.Config (Config (..))
 
 type PgTable table db =
   ( B.Beamable table,
@@ -17,9 +19,7 @@ type PgTable table db =
   )
 
 type RunPgTable table db =
-  ( PgTable table db,
-    Config T.PostgresConfig
-  )
+  PgTable table db
 
 type ReadablePgTable table db =
   ( PgTable table db,
@@ -28,27 +28,29 @@ type ReadablePgTable table db =
 
 type RunReadablePgTable table db =
   ( ReadablePgTable table db,
-    T.JSONEx (table Identity),
-    Config T.PostgresConfig
+    T.JSONEx (table Identity)
   )
 
+type Table table db = B.DatabaseEntity Postgres db (B.TableEntity table)
+
 run ::
-  ( T.JSONEx a,
-    Config T.PostgresConfig
+  ( L.MonadFlow mFlow,
+    HasCommonEnv mFlow,
+    T.JSONEx a
   ) =>
   L.SqlDB Pg a ->
-  Flow (T.DBResult a)
+  mFlow (T.DBResult a)
 run query = do
-  sqlConfig <- DB.getPgDBConfig theConfig
+  sqlConfig <- DB.getPgDBConfig
   connection <- DB.getOrInitConn sqlConfig
   L.runDB connection query
 
 -- find queries
 findOneWithErr ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  Flow (table Identity)
+  mFlow (table Identity)
 findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
@@ -57,25 +59,25 @@ findOneWithErr dbTable predicate = do
     Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
 
 findOne ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  Flow (T.DBResult (Maybe (table Identity)))
+  mFlow (T.DBResult (Maybe (table Identity)))
 findOne dbTable predicate = run $ findOne' dbTable predicate
 
 findOne' ::
   ReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.SqlDB Pg (Maybe (table Identity))
 findOne' dbTable predicate =
   L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAllOrErr ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  Flow [table Identity]
+  mFlow [table Identity]
 findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
@@ -83,15 +85,15 @@ findAllOrErr dbTable predicate = do
     Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
 
 findAll ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  Flow (T.DBResult [table Identity])
+  mFlow (T.DBResult [table Identity])
 findAll dbTable predicate = run $ findAll' dbTable predicate
 
 findAll' ::
   ReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.SqlDB Pg [table Identity]
 findAll' dbTable predicate =
@@ -99,46 +101,46 @@ findAll' dbTable predicate =
 
 -- TODO: protect from multiple inserts
 createOne ::
-  RunPgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) -> -- dbTable
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunPgTable table db) =>
+  Table table db -> -- dbTable
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  Flow (T.DBResult ())
+  mFlow (T.DBResult ())
 createOne = bulkInsert
 
 createOne' ::
   PgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
 createOne' = bulkInsert'
 
 bulkInsert ::
-  RunPgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunPgTable table db) =>
+  Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  Flow (T.DBResult ())
-bulkInsert dbTable insertExpressions = run $ bulkInsert' dbTable insertExpressions
+  mFlow (T.DBResult ())
+bulkInsert dbTable = run . bulkInsert' dbTable
 
 bulkInsert' ::
   PgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
 bulkInsert' dbTable =
   L.insertRows . B.insert dbTable
 
 findOrCreateOne ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  Flow (T.DBResult (Maybe (table Identity)))
+  mFlow (T.DBResult (Maybe (table Identity)))
 findOrCreateOne dbTable findPredicate insertExpression =
   run $ findOrCreateOne' dbTable findPredicate insertExpression
 
 findOrCreateOne' ::
   ReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg (Maybe (table Identity))
@@ -153,73 +155,112 @@ findOrCreateOne' dbTable findPredicate insertExpression =
         else error "multiple rows found"
 
 findAllRows ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
-  Flow (T.DBResult [table Identity])
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
+  mFlow (T.DBResult [table Identity])
 findAllRows dbTable = run $ findAllRows' dbTable
 
 findAllRows' ::
   ReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   L.SqlDB Pg [table Identity]
 findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
 
 update ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  Flow (T.DBResult ())
+  mFlow (T.DBResult ())
 update dbTable setClause predicate = run $ update' dbTable setClause predicate
 
 update' ::
   ReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
 update' dbTable setClause predicate = L.updateRows $ B.update dbTable setClause predicate
 
 delete ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  Flow (T.DBResult ())
+  mFlow (T.DBResult ())
 delete dbTable predicate = run $ delete' dbTable predicate
 
 delete' ::
   ReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
 delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
 
-throwDBError :: T.DBError -> Flow a
+throwDBError :: L.MonadFlow mFlow => T.DBError -> mFlow a
 throwDBError err =
   L.logError "DB error: " (show err)
     >> L.throwException err500
 
+type Scope2 = BI.QNested (BI.QNested B.QBaseScope)
+
 type Scope3 = BI.QNested (BI.QNested (BI.QNested B.QBaseScope))
 
 findAllWithLimitOffset ::
-  RunReadablePgTable table db =>
-  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  (L.MonadFlow mFlow, HasCommonEnv mFlow, RunReadablePgTable table db) =>
+  Table table db ->
   Integer ->
   Integer ->
   (table (B.QExpr Postgres Scope3) -> BI.QOrd Postgres Scope3 ordering) ->
-  Flow (T.DBResult [table Identity])
+  mFlow (T.DBResult [table Identity])
 findAllWithLimitOffset dbTable limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
--- findAllWithLimitOffsetWhere ::
---   RunReadablePgTable table db =>
---   B.DatabaseEntity Postgres db (B.TableEntity table) ->
---   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
---   Integer ->
---   Integer ->
---   (table (B.QExpr Postgres Scope3) -> BI.QOrd Postgres Scope3 ordering) ->
---   Flow (T.DBResult [table Identity])
+findAllWithLimitOffsetWhere ::
+  ( L.MonadFlow mFlow,
+    HasCommonEnv mFlow,
+    RunReadablePgTable table db
+  ) =>
+  Table table db ->
+  (table (BI.QGenExpr BI.QValueContext Postgres Scope2) -> BI.QExpr Postgres Scope2 Bool) ->
+  Integer ->
+  Integer ->
+  (table (B.QExpr Postgres Scope3) -> BI.QOrd Postgres Scope3 ordering) ->
+  mFlow (T.DBResult [table Identity])
 findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
-  run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.filter_ predicate $ B.all_ dbTable
+  run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.filter_ predicate $ B.orderBy_ orderBy $ B.all_ dbTable
 
+aggregate ::
+  ( L.MonadFlow mFlow,
+    HasCommonEnv mFlow,
+    RunReadablePgTable table db,
+    _
+  ) =>
+  Table table db ->
+  _aggregator ->
+  _predicate ->
+  mFlow (T.DBResult [_result])
 aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggregate_ aggregator $ B.filter_ predicate $ B.all_ dbTable
+
+findAllByJoin ::
+  ( L.MonadFlow mFlow,
+    HasCommonEnv mFlow,
+    _
+  ) =>
+  Integer ->
+  Integer ->
+  _orderBy ->
+  _query ->
+  mFlow (T.DBResult [_result])
+findAllByJoin limit offset orderBy =
+  run . L.findRows . B.select . B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy
+
+findAllByJoinWithoutLimits ::
+  ( L.MonadFlow mFlow,
+    HasCommonEnv mFlow,
+    _
+  ) =>
+  _orderBy ->
+  _query ->
+  mFlow (T.DBResult [_result])
+findAllByJoinWithoutLimits orderBy =
+  run . L.findRows . B.select . B.orderBy_ orderBy

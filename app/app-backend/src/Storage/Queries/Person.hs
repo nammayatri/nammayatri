@@ -3,6 +3,7 @@
 module Storage.Queries.Person where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -10,7 +11,6 @@ import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)

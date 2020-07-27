@@ -6,8 +6,8 @@ import Beckn.Types.FMD.Service
 import Beckn.Utils.Common
 import EulerHS.Prelude
 
-newtype AppEnv = AppEnv
-  { commonEnv :: CommonEnv
+data AppEnv = AppEnv
+  {
   }
 
 type Env = EnvR AppEnv

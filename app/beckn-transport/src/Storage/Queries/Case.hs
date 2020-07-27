@@ -1,6 +1,7 @@
 module Storage.Queries.Case where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Extra
@@ -9,7 +10,6 @@ import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import qualified Storage.Queries as DB
 import qualified Types.Storage.DB as DB
 
 dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT)
