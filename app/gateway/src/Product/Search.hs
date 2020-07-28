@@ -8,8 +8,8 @@ module Product.Search
 where
 
 import App.Types
-import Beckn.Types.Common (AckResponse (..))
-import Beckn.Types.Core.Ack
+import Beckn.Types.Common (AckResponse (..), ack)
+import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (fromMaybeM400, withFlowHandler)
 import qualified EulerHS.Language as L
@@ -40,8 +40,8 @@ search org req = withFlowHandler $ do
   if or resps
     then do
       BA.insert messageId appUrl
-      return $ AckResponse (req ^. #context) (Ack "Successful" "Ok") Nothing
-    else return $ AckResponse (req ^. #context) (Ack "Error" "No providers") Nothing
+      return $ AckResponse (req ^. #context) (ack "ACK") Nothing
+    else return $ AckResponse (req ^. #context) (ack "NACK") (Just $ domainError "No providers")
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
@@ -50,7 +50,8 @@ searchCb _org req = withFlowHandler $ do
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
   eRes <- L.callAPI baseUrl $ onSearch "" req
-  let ack = either (Ack "Error" . show) (^. #_message) eRes
-      resp = AckResponse (req ^. #context) ack Nothing
+  let resp = case eRes of
+        Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
+        Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing
   L.logDebug @Text "gateway" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
   return resp

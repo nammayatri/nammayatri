@@ -8,7 +8,6 @@ where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
@@ -36,7 +35,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
   return
     AckResponse
       { _context = req ^. #context,
-        _message = Ack {_action = "search", _message = "OK"},
+        _message = ack "ACK",
         _error = Nothing
       }
 

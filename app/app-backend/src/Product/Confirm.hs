@@ -6,7 +6,7 @@ import App.Types
 import Beckn.Types.API.Confirm
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Error
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -44,11 +44,9 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   baseUrl <- Gateway.getProviderBaseUrl
   order <- mkOrder productInstance
   eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
-  let ack =
-        case eres of
-          Left err -> Ack "confirm" ("Err: " <> show err)
-          Right _ -> Ack "confirm" "Ok"
-  return $ AckResponse context ack Nothing
+  case eres of
+    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack "ACK") Nothing
   where
     mkOrder productInstance = do
       now <- getCurrentTimeUTC
@@ -81,7 +79,7 @@ onConfirm req = withFlowHandler $ do
   MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
   MPI.updateMultiple pid uPrd
   MPI.updateStatus pid SPI.CONFIRMED
-  return $ AckResponse (req ^. #context) (Ack "on_confirm" "Ok") Nothing
+  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do

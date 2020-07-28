@@ -4,7 +4,6 @@ module Beckn.Utils.Common where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Error
 import Data.Aeson as A
@@ -111,9 +110,7 @@ mkAckResponse' txnId action message = do
               _token = Nothing
             },
         _message =
-          Ack
-            { _status = action
-            },
+          ack action,
         _error = Nothing
       }
 

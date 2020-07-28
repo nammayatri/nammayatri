@@ -27,7 +27,7 @@ data ErrorResponse = ErrorResponse
 
 data AckResponse = AckResponse
   { _context :: Context,
-    _message :: Ack,
+    _message :: AckMessage,
     _error :: Maybe Error
   }
   deriving (Show, Generic)
@@ -37,6 +37,18 @@ instance FromJSON AckResponse where
 
 instance ToJSON AckResponse where
   toJSON = genericToJSON stripLensPrefixOptions
+
+newtype AckMessage = AckMessage {_ack :: Ack}
+  deriving (Show, Generic)
+
+instance FromJSON AckMessage where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON AckMessage where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+ack :: Text -> AckMessage
+ack = AckMessage . Ack
 
 newtype IdObject = IdObject
   { id :: Text

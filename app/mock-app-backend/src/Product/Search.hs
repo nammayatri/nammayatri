@@ -11,7 +11,6 @@ import App.Types
 import App.Utils
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as EL
@@ -51,13 +50,12 @@ triggerSearch = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHand
   return
     AckResponse
       { _context = req ^. #context,
-        _message = Ack {_action = "search", _message = "OK"},
+        _message = ack "ACK",
         _error = Nothing
       }
 
 searchCb :: () -> OnSearchReq -> FlowHandler AckResponse
 searchCb _unit req = withFlowHandler $ do
-  let ack = Ack {_action = "on_search", _message = "OK"}
-      resp = AckResponse (req ^. #context) ack Nothing
+  let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
   return resp

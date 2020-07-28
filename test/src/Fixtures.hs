@@ -30,6 +30,7 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified "app-backend" Types.API.Registration as Reg
+import qualified "app-backend" Types.API.Search as AppBESearch
 
 address :: Address
 address =
@@ -153,7 +154,7 @@ getFutureTime =
 searchServices ::
   Text ->
   Search.SearchReq ->
-  ClientM Common.AckResponse
+  ClientM AppBESearch.AckResponse
 onSearchServices ::
   Text ->
   Search.OnSearchReq ->

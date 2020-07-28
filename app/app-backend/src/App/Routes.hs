@@ -37,6 +37,7 @@ import qualified Types.API.Location as Location
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
+import qualified Types.API.Search as Search'
 import Types.API.Status
 import Utils.Auth (VerifyAPIKey)
 import Utils.Common (TokenAuth)
@@ -103,7 +104,7 @@ type SearchAPI =
   "search"
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] Search'.AckResponse
     :<|> Search.OnSearchAPI VerifyAPIKey
 
 searchFlow :: FlowServer SearchAPI

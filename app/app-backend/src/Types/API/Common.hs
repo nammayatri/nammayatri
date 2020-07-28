@@ -1,10 +1,10 @@
-module Beckn.Types.Core.Ack where
+module Types.API.Common where
 
-import Data.Text
 import EulerHS.Prelude
 
-newtype Ack = Ack
-  { _status :: Text
+data Ack = Ack
+  { _action :: Text,
+    _message :: Text
   }
   deriving (Generic, Show)
 

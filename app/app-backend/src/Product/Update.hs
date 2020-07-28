@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Types.API.Update
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Trip
 import qualified Beckn.Types.Storage.ProductInstance as SPI
@@ -32,7 +31,7 @@ onUpdate req = withFlowHandler $ do
           }
   productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
   MPI.updateMultiple pid uPrd
-  return $ AckResponse (req ^. #context) (Ack "on_update" "Ok") Nothing
+  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo
     getUpdatedProdInfo (Just trip) (Just prdInfo) mtracking =

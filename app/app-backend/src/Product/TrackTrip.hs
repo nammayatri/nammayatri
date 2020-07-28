@@ -6,7 +6,7 @@ import App.Types
 import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -24,21 +24,19 @@ track _ req = withFlowHandler $ do
   let context = req ^. #context
       prodInstId = req ^. #message . #order . #id
   prdInst <- MPI.findById $ ProductInstanceId prodInstId
-  ack <-
-    case decodeFromText =<< (prdInst ^. #_info) of
-      Nothing -> return $ Ack "Error" "No product to track"
-      Just (info :: ProductInfo) ->
-        case ProductInfo._tracker info of
-          Nothing -> return $ Ack "Error" "No product to track"
-          Just tracker -> do
-            let gTripId = tracker ^. #_trip . #id
-            gatewayUrl <- Gateway.getProviderBaseUrl
-            eres <- Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
-            case eres of
-              Left err ->
-                return $ Ack "Error" (show err)
-              Right _ -> return $ Ack "Successful" "Tracking initiated"
-  return $ AckResponse context ack Nothing
+  case decodeFromText =<< (prdInst ^. #_info) of
+    Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
+    Just (info :: ProductInfo) ->
+      case ProductInfo._tracker info of
+        Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
+        Just tracker -> do
+          let gTripId = tracker ^. #_trip . #id
+          gatewayUrl <- Gateway.getProviderBaseUrl
+          eres <- Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
+          case eres of
+            Left err ->
+              return $ AckResponse context (ack "NACK") $ Just $ domainError err
+            Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do
@@ -60,8 +58,8 @@ trackCb req = withFlowHandler $ do
         return $ Right ()
       _ -> return $ Left "Multiple products confirmed, ambiguous selection"
   case res of
-    Left err -> return $ AckResponse context (Ack "Error" err) Nothing
-    Right _ -> return $ AckResponse context (Ack "Successful" "Ok") Nothing
+    Left err -> return $ AckResponse context (ack "NACK") $ Just $ domainError err
+    Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do

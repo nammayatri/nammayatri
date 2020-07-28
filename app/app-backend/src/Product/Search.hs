@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App as TA
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Provider as Core
@@ -34,11 +33,13 @@ import qualified Models.ProductInstance as ProductInstance
 import Servant
 import qualified Storage.Queries.Location as Location
 import System.Environment
+import qualified Types.API.Common as API
+import qualified Types.API.Search as API
 import Types.ProductInfo
 import Utils.Common (generateShortId)
 import qualified Utils.Notifications as Notify
 
-search :: Person.Person -> SearchReq -> FlowHandler SearchRes
+search :: Person.Person -> SearchReq -> FlowHandler API.AckResponse
 search person req = withFlowHandler $ do
   validateDateTime req
   fromLocation <- mkLocation $ req ^. #message . #intent . #_origin
@@ -51,9 +52,9 @@ search person req = withFlowHandler $ do
   eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
   let ack =
         case eres of
-          Left err -> Ack "Error" (show err)
-          Right _ -> Ack "Successful" (_getCaseId $ case_ ^. #_id)
-  return $ AckResponse (req ^. #context) ack Nothing
+          Left err -> API.Ack "Error" (show err)
+          Right _ -> API.Ack "Successful" (_getCaseId $ case_ ^. #_id)
+  return $ API.AckResponse (req ^. #context) ack Nothing
   where
     validateDateTime req = do
       currTime <- getCurrentTimeUTC
@@ -66,8 +67,7 @@ searchCb _unit req = withFlowHandler $ do
   -- TODO: Verify api key here
   let (services :: [Service]) = req ^. #message . #services
   traverse_ (searchCbService req) services
-  let ack = Ack "on_search" "OK"
-  return $ AckResponse (req ^. #context) ack Nothing
+  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 searchCbService :: OnSearchReq -> BM.Service -> Flow OnSearchRes
 searchCbService req service = do
@@ -94,8 +94,7 @@ searchCbService req service = do
       traverse_ ProductInstance.create productInstances
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId case_ productInstances
-  let ack = Ack "on_search" "OK"
-  return $ AckResponse (req ^. #context) ack Nothing
+  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     extendCaseExpiry :: Case.Case -> Flow ()
     extendCaseExpiry Case.Case {..} = do

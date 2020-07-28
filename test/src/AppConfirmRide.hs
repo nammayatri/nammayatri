@@ -1,8 +1,6 @@
 module AppConfirmRide where
 
 import Beckn.Types.App
-import Beckn.Types.Common as Common
-import Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
@@ -16,6 +14,8 @@ import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
+import qualified "app-backend" Types.API.Common as AppCommon
+import qualified "app-backend" Types.API.Search as AppSearch
 
 spec :: Spec
 spec = do
@@ -51,7 +51,7 @@ spec = do
                 ackResult `shouldSatisfy` isRight
                 -- If we reach here, the 'Right' pattern match will always succeed
                 let Right ackResponse = ackResult
-                    appCaseid = (Ack._message . Common._message) ackResponse
+                    appCaseid = (AppCommon._message . AppSearch._message) ackResponse
                 -- Do a List Leads and retrieve transporter case id
                 caseReqResult <- runClient tbeClientEnv buildListLeads
                 caseReqResult `shouldSatisfy` isRight
