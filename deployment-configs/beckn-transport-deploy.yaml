@@ -144,9 +144,9 @@ spec:
                   name: app-secrets
                   key: TRANSPORTER_OTP_HASH
             #------ Gateway configs ------#
-            - name: GATEWAY_HOST
-              value: beckn-app-backend-$DEPLOY_VARIANT.atlas
-            - name: GATEWAY_PORT
+            - name: BECKN_GATEWAY_HOST
+              value: beckn-gateway-$DEPLOY_VARIANT.atlas
+            - name: BECKN_GATEWAY_PORT
               valueFrom:
                 configMapKeyRef:
                   name: beckn-transport-configs
