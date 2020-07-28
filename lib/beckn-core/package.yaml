@@ -68,6 +68,9 @@ dependencies:
   - http-client
   - http-client-tls
   - http-types
+  - prometheus-client
+  - wai-middleware-prometheus
+  - prometheus-metrics-ghc
   - jwt
   - lens
   - memory

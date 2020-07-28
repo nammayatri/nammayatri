@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module App where
@@ -10,8 +11,11 @@ import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
+import Data.Default (def)
+import Data.Text as DT
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -32,6 +36,7 @@ import qualified System.Environment as SE
 runAppBackend :: IO ()
 runAppBackend = do
   port <- fromMaybe 8013 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
+  Metrics.serve
   runAppBackend' port $
     setOnExceptionResponse appExceptionResponse $
       setPort port defaultSettings

@@ -5,8 +5,10 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Utils.Extra as Utils
+import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Auth
 import qualified Data.ByteString.Lazy as BSL
+import Data.Text as DT
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -19,6 +21,12 @@ import qualified Test.RandomStrings as RS
 type TokenAuth = TokenAuth' "token" VerifyToken
 
 data VerifyToken = VerifyToken
+
+instance
+  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (TokenAuth :> sub)
+  where
+  getSanitizedUrl _ req = getSanitizedUrl (Proxy :: Proxy sub) $ req
 
 instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = Person.Person

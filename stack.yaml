@@ -76,6 +76,8 @@ extra-deps:
   - constraints-extras-0.3.0.2@sha256:bf6884be65958e9188ae3c9e5547abfd6d201df021bff8a4704c2c4fe1e1ae5b,1784
   - generic-lens-1.1.0.0 # random breakage without this
   - hex-text-0.1.0.0
+  - prometheus-metrics-ghc-1.0.1@sha256:d12cd520cbedff91bd193e0192056474723e953e69cdf817fb79494d110df390,1231
+  - wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
