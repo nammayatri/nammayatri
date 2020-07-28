@@ -4,6 +4,7 @@ import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Common (encodeToText')
 import qualified Beckn.Utils.Extra as Utils
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
@@ -73,7 +74,7 @@ generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.random
 
 -- TODO: figure out a way to extract the url directly from EulerClient
 callAPI baseUrl req serviceName = do
-  endTracking <- L.runUntracedIO $ Metrics.startTracking serviceName
+  endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
   res <- L.callAPI baseUrl req
   let status = case res of
         Right _ -> "200"

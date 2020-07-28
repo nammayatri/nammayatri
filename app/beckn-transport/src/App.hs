@@ -11,6 +11,7 @@ import Beckn.Storage.Redis.Config
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -34,6 +35,8 @@ import qualified System.Environment as SE
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
   port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
+  metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> SE.lookupEnv "METRICS_PORT"
+  Metrics.serve metricsPort
   runTransporterBackendApp' port $
     setOnExceptionResponse transporterExceptionResponse $
       setPort port defaultSettings

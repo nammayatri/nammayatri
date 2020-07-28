@@ -20,6 +20,7 @@ import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Servant.Client (BaseUrl, parseBaseUrl)
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
+import Utils.Common
 
 parseOrgUrl :: Text -> Flow BaseUrl
 parseOrgUrl =
@@ -35,7 +36,7 @@ search org req = withFlowHandler $ do
   providerUrls <- BP.lookup $ req ^. #context
   resps <- forM providerUrls $ \providerUrl -> do
     baseUrl <- parseOrgUrl providerUrl
-    eRes <- L.callAPI baseUrl $ search' "" req
+    eRes <- callAPI baseUrl (search' "" req) "search"
     L.logDebug @Text "gateway" $
       "request_transaction_id: " <> messageId
         <> ", search: req: "
@@ -55,7 +56,7 @@ searchCb _org req = withFlowHandler $ do
       messageId = req ^. #context . #_request_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
-  eRes <- L.callAPI baseUrl $ onSearch "" req
+  eRes <- callAPI baseUrl (onSearch "" req) "on_search"
   let resp = case eRes of
         Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
         Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing

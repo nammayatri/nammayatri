@@ -13,12 +13,13 @@ import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client
 import System.Environment
+import Utils.Common
 
 onSearch :: OnSearchReq -> Flow (Either Text ())
 onSearch req = do
   url <- getGatewayBaseUrl
   apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
-  res <- L.callAPI url $ API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req
+  res <- callAPI url (API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req) "on_search"
   whenRight res $ \_ ->
     L.logInfo "OnSearch" "OnSearch callback successfully delivered"
   whenLeft res $ \err ->
@@ -28,7 +29,7 @@ onSearch req = do
 onTrackTrip :: OnTrackTripReq -> Flow (Either Text ())
 onTrackTrip req = do
   url <- getAppBaseUrl
-  res <- L.callAPI url $ API.onTrackTrip req
+  res <- callAPI url (API.onTrackTrip req) "on_track"
   whenRight res $ \_ ->
     L.logInfo "OnTrackTrip" "OnTrackTrip callback successfully delivered"
   whenLeft res $ \err ->
@@ -38,7 +39,7 @@ onTrackTrip req = do
 onUpdate :: OnUpdateReq -> Flow (Either Text ())
 onUpdate req = do
   url <- getAppBaseUrl
-  res <- L.callAPI url $ API.onUpdate req
+  res <- callAPI url (API.onUpdate req) "on_update"
   whenRight res $ \_ ->
     L.logInfo "OnUpdate" "OnUpdate callback successfully delivered"
   whenLeft res $ \err ->
@@ -48,7 +49,7 @@ onUpdate req = do
 onConfirm :: OnConfirmReq -> Flow (Either Text ())
 onConfirm req = do
   url <- getAppBaseUrl
-  res <- L.callAPI url $ API.onConfirm req
+  res <- callAPI url (API.onConfirm req) "on_confirm"
   whenRight res $ \_ ->
     L.logInfo "OnConfirm" "OnConfirm callback successfully delivered"
   whenLeft res $ \err ->
@@ -58,7 +59,7 @@ onConfirm req = do
 onCancel :: OnCancelReq -> Flow (Either Text ())
 onCancel req = do
   url <- getAppBaseUrl
-  res <- L.callAPI url $ API.onCancel req
+  res <- callAPI url (API.onCancel req) "on_cancel"
   whenRight res $ \_ ->
     L.logInfo "OnCancel" "OnCancel callback successfully delivered"
   whenLeft res $ \err ->
@@ -68,7 +69,7 @@ onCancel req = do
 onStatus :: OnStatusReq -> Flow (Either Text ())
 onStatus req = do
   url <- getAppBaseUrl
-  res <- L.callAPI url $ API.onStatus req
+  res <- callAPI url (API.onStatus req) "on_status"
   whenRight res $ \_ ->
     L.logInfo "OnStatus" "OnStatus callback successfully delivered"
   whenLeft res $ \err ->

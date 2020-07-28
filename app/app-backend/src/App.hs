@@ -34,7 +34,8 @@ import qualified System.Environment as SE
 runAppBackend :: IO ()
 runAppBackend = do
   port <- fromMaybe 8013 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  Metrics.serve
+  metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> SE.lookupEnv "METRICS_PORT"
+  Metrics.serve metricsPort
   runAppBackend' port $
     setOnExceptionResponse appExceptionResponse $
       setPort port defaultSettings

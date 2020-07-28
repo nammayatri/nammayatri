@@ -8,6 +8,7 @@ import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Cache as C
@@ -30,6 +31,8 @@ import System.Environment (lookupEnv)
 runGateway :: IO ()
 runGateway = do
   port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "PORT"
+  metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> lookupEnv "METRICS_PORT"
+  Metrics.serve metricsPort
   cache <- C.newCache Nothing
   let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
   let appEnv = AppEnv dbEnv cache

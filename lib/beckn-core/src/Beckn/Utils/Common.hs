@@ -125,6 +125,14 @@ decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 encodeToText :: ToJSON a => a -> Text
 encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 
+-- strips double quotes from encoded text
+encodeToText' :: ToJSON a => a -> Text
+encodeToText' s =
+  let s' = encode s
+   in if BSL.length s' < 2
+        then DT.decodeUtf8 $ BSL.toStrict s'
+        else DT.decodeUtf8 $ BSL.toStrict $ BSL.tail $ BSL.init s'
+
 authenticate :: L.MonadFlow m => Maybe CronAuthKey -> m ()
 authenticate maybeAuth = do
   keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"

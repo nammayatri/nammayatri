@@ -1,25 +1,13 @@
 module Beckn.Utils.Monitoring.Prometheus.Servant where
 
 import Beckn.Types.App
-import Beckn.Types.Common
-import Beckn.Utils.Common
 import Beckn.Utils.Servant.Auth
-import Beckn.Utils.Servant.Server
-import Control.Lens ((?=))
-import Data.Default (def)
-import Data.Kind (Type)
 import Data.Proxy
-import qualified Data.Swagger as DS
 import Data.Text as DT
-import Data.Typeable (typeRep)
 import EulerHS.Prelude as E
-import qualified EulerHS.Runtime as R
-import qualified EulerHS.Types as T
-import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Network.Wai (Middleware, Request (..))
+import Network.Wai (Request (..))
 import Servant
-import Servant.Client
 
 class SanitizedUrl a where
   getSanitizedUrl :: Proxy a -> Request -> Maybe Text
@@ -30,7 +18,7 @@ instance
   where
   getSanitizedUrl _ req =
     getSanitizedUrl (Proxy :: Proxy a) req
-      <|> (getSanitizedUrl (Proxy :: Proxy b) req)
+      <|> getSanitizedUrl (Proxy :: Proxy b) req
 
 instance
   ( KnownSymbol (path :: Symbol),
@@ -74,7 +62,7 @@ instance
   where
   getSanitizedUrl _ req = do
     let p = pathInfo req
-    if (E.null p) && requestMethod req == (reflectMethod (Proxy :: Proxy m))
+    if E.null p && requestMethod req == reflectMethod (Proxy :: Proxy m)
       then Just ""
       else Nothing
 
