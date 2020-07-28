@@ -12,14 +12,21 @@ import qualified EulerHS.Runtime as R
 import EulerHS.Types as T
 import Servant
 
-class HasCommonEnv mFlow where
-  getCommonEnv :: mFlow CommonEnv
+class HasDbEnv mFlow where
+  getDbEnv :: mFlow DbEnv
+
+class HasRedisEnv mFlow where
+  getRedisEnv :: mFlow RedisEnv
 
 -- App Types
 
-data CommonEnv = CommonEnv
+data DbEnv = DbEnv
   { defaultDbConfig :: T.PostgresConfig,
     connTag :: T.ConnTag
+  }
+
+newtype RedisEnv = RedisEnv
+  { defaultRedisConfig :: T.RedisConfig
   }
 
 data EnvR r = EnvR

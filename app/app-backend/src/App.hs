@@ -26,7 +26,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant
-import Storage.DB.Config as Config
+import qualified Storage.DB.Config as Config
 import qualified System.Environment as SE
 
 runAppBackend :: IO ()
@@ -44,8 +44,8 @@ prepareAppOptions =
 
 runAppBackend' :: Int -> Settings -> IO ()
 runAppBackend' port settings = do
-  let commonEnv = CommonEnv Config.defaultDbConfig Config.connectionTag
-  let appEnv = AppEnv commonEnv
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let appEnv = AppEnv dbEnv
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,

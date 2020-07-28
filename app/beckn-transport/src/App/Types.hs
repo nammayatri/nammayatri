@@ -4,8 +4,9 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import EulerHS.Prelude
 
-newtype AppEnv = AppEnv
-  { common :: CommonEnv
+data AppEnv = AppEnv
+  { db :: DbEnv,
+    redis :: RedisEnv
   }
 
 type Env = EnvR AppEnv
@@ -16,5 +17,8 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-instance HasCommonEnv Flow where
-  getCommonEnv = asks common
+instance HasDbEnv Flow where
+  getDbEnv = asks db
+
+instance HasRedisEnv Flow where
+  getRedisEnv = asks redis

@@ -5,7 +5,7 @@ import Beckn.Types.Common
 import Control.Monad.Reader
 
 newtype AppEnv = AppEnv
-  { common :: CommonEnv
+  { db :: DbEnv
   }
 
 type Env = EnvR AppEnv
@@ -16,5 +16,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-instance HasCommonEnv Flow where
-  getCommonEnv = asks common
+instance HasDbEnv Flow where
+  getDbEnv = asks db

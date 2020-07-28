@@ -1,41 +1,49 @@
-module Storage.Redis.Queries where
+module Beckn.Storage.Redis.Queries where
 
-import App.Types
+import Beckn.Types.App
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import EulerHS.Types as T
 
+runKV :: L.MonadFlow mFlow => L.KVDB a -> mFlow (T.KVDBAnswer a)
 runKV = L.runKVDB "redis"
 
 -- KV
 setKeyRedis ::
-  forall a.
-  A.ToJSON a =>
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow,
+    A.ToJSON a
+  ) =>
   Text ->
   a ->
-  Flow ()
+  mFlow ()
 setKeyRedis key val =
   void $ runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
 
 setExRedis ::
-  forall a.
-  A.ToJSON a =>
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow,
+    A.ToJSON a
+  ) =>
   Text ->
   a ->
   Int ->
-  Flow ()
+  mFlow ()
 setExRedis key value ttl =
   void $
     runKV $
       L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
 
 getKeyRedis ::
-  forall a.
-  A.FromJSON a =>
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow,
+    A.FromJSON a
+  ) =>
   Text ->
-  Flow (Maybe a)
+  mFlow (Maybe a)
 getKeyRedis key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
   return $
@@ -44,10 +52,12 @@ getKeyRedis key = do
       _ -> Nothing
 
 getKeyRedisWithError ::
-  forall a.
-  A.FromJSON a =>
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow,
+    A.FromJSON a
+  ) =>
   Text ->
-  Flow (Either String a)
+  mFlow (Either String a)
 getKeyRedisWithError key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
   return $
@@ -58,7 +68,15 @@ getKeyRedisWithError key = do
       Right Nothing -> Left $ "No Value found for key : " <> show key
       Left err -> Left $ show err
 
-setHashRedis :: ToJSON a => Text -> Text -> a -> Flow ()
+setHashRedis ::
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow,
+    ToJSON a
+  ) =>
+  Text ->
+  Text ->
+  a ->
+  mFlow ()
 setHashRedis key field value =
   void $
     runKV $
@@ -67,10 +85,23 @@ setHashRedis key field value =
         (DTE.encodeUtf8 field)
         (BSL.toStrict $ A.encode value)
 
-expireRedis :: Text -> Int -> Flow ()
+expireRedis ::
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow
+  ) =>
+  Text ->
+  Int ->
+  mFlow ()
 expireRedis key ttl = void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
 
-getHashKeyRedis :: FromJSON a => Text -> Text -> Flow (Maybe a)
+getHashKeyRedis ::
+  ( L.MonadFlow mFlow,
+    HasRedisEnv mFlow,
+    FromJSON a
+  ) =>
+  Text ->
+  Text ->
+  mFlow (Maybe a)
 getHashKeyRedis key field = do
   resp <- runKV $ L.hget (DTE.encodeUtf8 key) (DTE.encodeUtf8 field)
   return $
@@ -78,10 +109,16 @@ getHashKeyRedis key field = do
       Right (Just v) -> A.decode $ BSL.fromStrict v
       _ -> Nothing
 
-deleteKeyRedis :: Text -> Flow Int
+deleteKeyRedis ::
+  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  Text ->
+  mFlow Int
 deleteKeyRedis = deleteKeysRedis . return
 
-deleteKeysRedis :: [Text] -> Flow Int
+deleteKeysRedis ::
+  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  [Text] ->
+  mFlow Int
 deleteKeysRedis keys = do
   resp <- runKV $ L.del $ map DTE.encodeUtf8 keys
   return $
@@ -89,14 +126,18 @@ deleteKeysRedis keys = do
       Right x -> fromEnum x
       Left err -> -1
 
-incrementKeyRedis :: Text -> Flow (Maybe Integer)
+incrementKeyRedis ::
+  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  Text ->
+  mFlow (Maybe Integer)
 incrementKeyRedis key = do
   val <- runKV . L.incr . DTE.encodeUtf8 $ key
   return $ either (const Nothing) Just val
 
 getKeyRedisText ::
+  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
   Text ->
-  Flow (Maybe Text)
+  mFlow (Maybe Text)
 getKeyRedisText key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
   return $

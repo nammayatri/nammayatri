@@ -31,8 +31,8 @@ runGateway :: IO ()
 runGateway = do
   port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "PORT"
   cache <- C.newCache Nothing
-  let commonEnv = CommonEnv Config.defaultDbConfig Config.connectionTag
-  let appEnv = AppEnv commonEnv cache
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let appEnv = AppEnv dbEnv cache
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,

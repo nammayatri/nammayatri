@@ -4,6 +4,7 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.MapSearch (BoundingBoxWithoutCRS, GeoLine (..), GeospatialGeometry (..), PointXY (..), fromLineString, retrieveXY)
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -18,7 +19,6 @@ import EulerHS.Prelude hiding (state)
 import qualified Models.Case as Case
 import Servant
 import qualified Storage.Queries.Location as Location
-import qualified Storage.Redis.Queries as Redis
 import Types.API.Location as Location
 
 data Waypoint = Waypoint {_lon :: Double, _lat :: Double} deriving (Show, Generic, ToJSON, FromJSON)

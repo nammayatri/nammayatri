@@ -40,12 +40,12 @@ loadPgConfig = do
         }
 
 getPgDBConfig ::
-  (L.MonadFlow mFlow, HasCommonEnv mFlow) =>
+  (L.MonadFlow mFlow, HasDbEnv mFlow) =>
   mFlow (T.DBConfig Pg)
 getPgDBConfig = do
-  commonEnv <- getCommonEnv
-  let defPostgresConfig = defaultDbConfig commonEnv
-  let tag = connTag commonEnv
+  dbEnv <- getDbEnv
+  let defPostgresConfig = defaultDbConfig dbEnv
+  let tag = connTag dbEnv
   mConfig <- L.runIO loadPgConfig
   case mConfig of
     Nothing -> do
@@ -72,6 +72,6 @@ getConn = dbHandle L.getSqlDBConnection
 getOrInitConn = dbHandle L.getOrInitSqlConn
 
 prepareDBConnections ::
-  (L.MonadFlow mFlow, HasCommonEnv mFlow) => mFlow (T.SqlConn Pg)
+  (L.MonadFlow mFlow, HasDbEnv mFlow) => mFlow (T.SqlConn Pg)
 prepareDBConnections =
   getPgDBConfig >>= connPgOrFail
