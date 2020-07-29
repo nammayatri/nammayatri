@@ -3,13 +3,14 @@
 module Beckn.Types.Core.Billing where
 
 import Beckn.Types.Core.Address
+import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
 import EulerHS.Prelude
 
 data Billing = Billing
   { _customer :: Person,
     _address :: Address,
-    _period :: Text -- Describes duration as per ISO8601 format
+    _period :: Duration
   }
   deriving (Generic, Show)
 

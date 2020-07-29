@@ -2,6 +2,7 @@
 
 module Beckn.Types.Mobility.Driver where
 
+import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Rating
 import Beckn.Utils.Common
@@ -17,7 +18,7 @@ data Driver = Driver
     gender :: Text, -- male, female
     email :: Maybe Text,
     phones :: [Text], -- Phone numer in E.164 format (ITUT recommendation
-    experience :: Maybe Text, -- Duration as per ISO8601 format
+    experience :: Maybe Duration,
     rating :: Maybe Rating
   }
   deriving (Generic, Show, FromJSON, ToJSON)
