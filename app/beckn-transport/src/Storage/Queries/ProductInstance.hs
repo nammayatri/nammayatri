@@ -201,7 +201,7 @@ productInstanceJoin _limit _offset csTypes orgId status = do
     prodPred Product.Products {..} = B.val_ True
     piPred orgId status Storage.ProductInstance {..} =
       _organizationId ==. B.val_ orgId
-        &&. _status `B.in_` (B.val_ <$> status) ||. complementVal status
+        &&. (_status `B.in_` (B.val_ <$> status) ||. complementVal status)
     mkJoinRes (cs, pr, cpr) =
       ProductInstanceRes
         { _case = cs,
@@ -226,7 +226,7 @@ productInstanceJoinWithoutLimits csType orgId status = do
     prodPred orgId Product.Products {..} = B.val_ True
     cprPred status Storage.ProductInstance {..} =
       _organizationId ==. B.val_ orgId
-        &&. _status `B.in_` (B.val_ <$> status) ||. complementVal status
+        &&. (_status `B.in_` (B.val_ <$> status) ||. complementVal status)
     mkJoinRes (cs, pr, cpr) =
       ProductInstanceRes
         { _case = cs,
