@@ -15,6 +15,9 @@ data Context = Context
     _action :: Text, -- "search", "select", "init", "confirm", "update", "status", "track", "cancel", "feedback", "support", "on_search", "on_select", "on_init", "on_confirm", "on_update", "on_status", "on_track", "on_cancel", "on_feedback", "on_support"
     _core_version :: Maybe Text,
     _domain_version :: Maybe Text,
+    _bap_id :: Maybe Text,
+    _bg_id :: Maybe Text,
+    _bpp_id :: Maybe Text,
     _bap_nw_address :: Maybe Text,
     _bg_nw_address :: Maybe Text,
     _bpp_nw_address :: Maybe Text,

@@ -61,6 +61,7 @@ buildIntent =
 buildContext :: Text -> Text -> IO Context
 buildContext act tid = do
   localTime <- getFutureTime
+  bapId <- lookupEnv "MOCK_APP_ID"
   bapNwAddr <- lookupEnv "MOCK_APP_NW_ADDRESS"
   return $
     Context
@@ -70,6 +71,9 @@ buildContext act tid = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.7.0",
+        _bap_id = fromString <$> bapId,
+        _bg_id = Nothing,
+        _bpp_id = Nothing,
         _bap_nw_address = fromString <$> bapNwAddr,
         _bg_nw_address = Nothing,
         _bpp_nw_address = Nothing,

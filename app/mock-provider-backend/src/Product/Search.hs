@@ -20,8 +20,13 @@ import "beckn-gateway" Types.API.Search (OnSearchReq (..), SearchReq, onSearchAP
 
 search :: () -> SearchReq -> FlowHandlerR r AckResponse
 search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
+  bppId <- L.runIO $ lookupEnv "MOCK_PROVIDER_ID"
   bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDR"
-  let context = (req ^. #context) {_bpp_nw_address = fromString <$> bppNwAddr}
+  let context =
+        (req ^. #context)
+          { _bpp_id = fromString <$> bppId,
+            _bpp_nw_address = fromString <$> bppNwAddr
+          }
   forkAsync "Search" $ do
     baseUrl <- lookupBaseUrl
     ans <- mkSearchAnswer

@@ -32,7 +32,7 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
-import Servant
+import Servant hiding (Context)
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -320,24 +320,31 @@ notifyGateway c prodInstId trackerCase = do
   Gateway.onConfirm onConfirmPayload
   return ()
 
+mkContext :: Text -> Text -> Flow Context
+mkContext action tId = do
+  currTime <- getCurrentTimeUTC
+  return
+    Context
+      { _domain = "MOBILITY",
+        _action = action,
+        _country = Nothing,
+        _city = Nothing,
+        _core_version = Just "0.8.0",
+        _domain_version = Just "0.8.0",
+        _request_transaction_id = tId,
+        _bap_id = Nothing,
+        _bg_id = Nothing,
+        _bpp_id = Nothing,
+        _bap_nw_address = Nothing,
+        _bg_nw_address = Nothing,
+        _bpp_nw_address = Nothing,
+        _timestamp = currTime,
+        _token = Nothing
+      }
+
 mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> Flow OnConfirmReq
 mkOnConfirmPayload c pis allPis trackerCase = do
-  currTime <- getCurrentTimeUTC
-  let context =
-        Context
-          { _domain = "MOBILITY",
-            _action = "confirm",
-            _country = Nothing,
-            _city = Nothing,
-            _core_version = Just "0.8.0",
-            _domain_version = Just "0.8.0",
-            _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            _bap_nw_address = Nothing,
-            _bg_nw_address = Nothing,
-            _bpp_nw_address = Nothing,
-            _timestamp = currTime,
-            _token = Nothing
-          }
+  context <- mkContext "confirm" $ c ^. #_shortId -- TODO : What should be the txnId
   trip <- mkTrip trackerCase
   order <- GT.mkOrder c (head pis) (Just trip)
   return
@@ -368,22 +375,7 @@ notifyServiceStatusToGateway piId trackerPi = do
 
 mkOnServiceStatusPayload :: Text -> ProductInstance -> Flow OnStatusReq
 mkOnServiceStatusPayload piId trackerPi = do
-  currTime <- getCurrentTimeUTC
-  let context =
-        Context
-          { _domain = "MOBILITY",
-            _action = "on_status",
-            _country = Nothing,
-            _city = Nothing,
-            _core_version = Just "0.8.0",
-            _domain_version = Just "0.8.0",
-            _request_transaction_id = "",
-            _bap_nw_address = Nothing,
-            _bg_nw_address = Nothing,
-            _bpp_nw_address = Nothing,
-            _timestamp = currTime,
-            _token = Nothing
-          }
+  context <- mkContext "on_status" "" -- FIXME: transaction id?
   order <- mkOrderRes piId (_getProductsId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
   let onStatusMessage = OnStatusReqMessage order
   return $ OnStatusReq context onStatusMessage Nothing
@@ -440,22 +432,7 @@ notifyCancelToGateway prodInstId = do
 
 mkOnTrackTripPayload :: Case -> Case -> Flow OnTrackTripReq
 mkOnTrackTripPayload trackerCase parentCase = do
-  currTime <- getCurrentTimeUTC
-  let context =
-        Context
-          { _domain = "MOBILITY",
-            _action = "on_track",
-            _country = Nothing,
-            _city = Nothing,
-            _core_version = Just "0.8.0",
-            _domain_version = Just "0.8.0",
-            _request_transaction_id = parentCase ^. #_shortId,
-            _bap_nw_address = Nothing,
-            _bg_nw_address = Nothing,
-            _bpp_nw_address = Nothing,
-            _timestamp = currTime,
-            _token = Nothing
-          }
+  context <- mkContext "on_track" $ parentCase ^. #_shortId
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (trackerCase ^. #_id)
   let tracking = GT.mkTracking "PULL" data_url
   return
@@ -485,22 +462,7 @@ mkTrip c = do
 
 mkOnUpdatePayload :: ProductInstance -> Case -> Case -> Flow OnUpdateReq
 mkOnUpdatePayload prodInst case_ pCase = do
-  currTime <- getCurrentTimeUTC
-  let context =
-        Context
-          { _domain = "MOBILITY",
-            _action = "on_update",
-            _country = Nothing,
-            _city = Nothing,
-            _core_version = Just "0.8.0",
-            _domain_version = Just "0.8.0",
-            _request_transaction_id = _getProductInstanceId $ prodInst ^. #_id,
-            _bap_nw_address = Nothing,
-            _bg_nw_address = Nothing,
-            _bpp_nw_address = Nothing,
-            _timestamp = currTime,
-            _token = Nothing
-          }
+  context <- mkContext "on_update" $ _getProductInstanceId $ prodInst ^. #_id
   trip <- mkTrip case_
   order <- GT.mkOrder pCase prodInst (Just trip)
   return
@@ -523,22 +485,7 @@ mkVehicleInfo vehicleId = do
 
 mkCancelRidePayload :: Text -> Flow OnCancelReq
 mkCancelRidePayload prodInstId = do
-  currTime <- getCurrentTimeUTC
-  let context =
-        Context
-          { _domain = "MOBILITY",
-            _action = "on_cancel",
-            _country = Nothing,
-            _city = Nothing,
-            _core_version = Just "0.8.0",
-            _domain_version = Just "0.8.0",
-            _request_transaction_id = "",
-            _bap_nw_address = Nothing,
-            _bg_nw_address = Nothing,
-            _bpp_nw_address = Nothing,
-            _timestamp = currTime,
-            _token = Nothing
-          }
+  context <- mkContext "on_cancel" "" -- FIXME: transaction id?
   tripObj <- mkCancelTripObj prodInstId
   return
     OnCancelReq
