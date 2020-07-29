@@ -12,6 +12,7 @@ import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (fromMaybeM400, withFlowHandler)
+import Data.Aeson (encode)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -35,7 +36,12 @@ search org req = withFlowHandler $ do
   resps <- forM providerUrls $ \providerUrl -> do
     baseUrl <- parseOrgUrl providerUrl
     eRes <- L.callAPI baseUrl $ search' "" req
-    L.logDebug @Text "gateway" $ "search: req: " <> show (toJSON req) <> ", resp: " <> show eRes
+    L.logDebug @Text "gateway" $
+      "request_transaction_id: " <> messageId
+        <> ", search: req: "
+        <> decodeUtf8 (encode req)
+        <> ", resp: "
+        <> show eRes
     return $ isRight eRes
   if or resps
     then do
@@ -53,5 +59,10 @@ searchCb _org req = withFlowHandler $ do
   let resp = case eRes of
         Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
         Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing
-  L.logDebug @Text "gateway" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
+  L.logDebug @Text "gateway" $
+    "request_transaction_id: " <> messageId
+      <> ", search_cb: req: "
+      <> decodeUtf8 (encode req)
+      <> ", resp: "
+      <> show resp
   return resp
