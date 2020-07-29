@@ -5,6 +5,7 @@ import Beckn.Types.Core.Location
 import Beckn.Types.FMD.Intent
 import Data.Time
 import EulerHS.Prelude
+import System.Environment (lookupEnv)
 import "beckn-gateway" Types.API.Search
 
 newtype FMDSearch = FMDSearch {intent :: Intent}
@@ -57,29 +58,29 @@ buildIntent =
       _tags = []
     }
 
-buildContext :: Text -> Text -> LocalTime -> Context
-buildContext act tid localTime =
-  Context
-    { _domain = "FINAL-MILE-DELIVERY",
-      _action = act,
-      _country = Nothing,
-      _city = Nothing,
-      _core_version = Just "0.8.0",
-      _domain_version = Just "0.7.0",
-      _bap_nw_address = Nothing,
-      _bg_nw_address = Nothing,
-      _bpp_nw_address = Nothing,
-      _request_transaction_id = tid,
-      _timestamp = localTime,
-      _token = Nothing
-    }
+buildContext :: Text -> Text -> IO Context
+buildContext act tid = do
+  localTime <- getFutureTime
+  bapNwAddr <- lookupEnv "MOCK_APP_NW_ADDRESS"
+  return $
+    Context
+      { _domain = "FINAL-MILE-DELIVERY",
+        _action = act,
+        _country = Nothing,
+        _city = Nothing,
+        _core_version = Just "0.8.0",
+        _domain_version = Just "0.7.0",
+        _bap_nw_address = fromString <$> bapNwAddr,
+        _bg_nw_address = Nothing,
+        _bpp_nw_address = Nothing,
+        _request_transaction_id = tid,
+        _timestamp = localTime,
+        _token = Nothing
+      }
 
-searchReq :: Text -> Text -> LocalTime -> SearchReq
-searchReq act tid localTime =
-  SearchReq
-    { context = buildContext act tid localTime,
-      message = toJSON $ FMDSearch buildIntent
-    }
+searchReq :: Text -> Text -> IO SearchReq
+searchReq act tid =
+  SearchReq <$> buildContext act tid <*> pure (toJSON $ FMDSearch buildIntent)
 
 getFutureTime :: IO LocalTime
 getFutureTime =
@@ -87,4 +88,4 @@ getFutureTime =
   (zonedTimeToLocalTime . utcToZonedTime utc) . addUTCTime 7200 <$> getCurrentTime
 
 buildSearchReq :: Text -> IO SearchReq
-buildSearchReq guid = searchReq "search" guid <$> getFutureTime
+buildSearchReq = searchReq "search"
