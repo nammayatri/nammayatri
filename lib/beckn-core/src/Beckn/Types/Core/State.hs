@@ -2,24 +2,29 @@ module Beckn.Types.Core.State where
 
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Common
-import Data.Aeson
-import Data.Text
+import Data.Aeson (Value)
 import Data.Time.LocalTime
 import EulerHS.Prelude hiding (State)
 
 data State = State
-  { descriptor :: Descriptor,
-    updated_at :: Maybe LocalTime,
-    updated_by :: Maybe Text,
-    update_metadata :: Maybe Value
+  { _descriptor :: Descriptor,
+    _updated_at :: Maybe LocalTime,
+    _updated_by :: Text,
+    _update_metadata :: Maybe Value
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
+
+instance FromJSON State where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON State where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 instance Example State where
   example =
     State
-      { descriptor = example,
-        updated_at = Nothing,
-        updated_by = Nothing,
-        update_metadata = Nothing
+      { _descriptor = example,
+        _updated_at = Nothing,
+        _updated_by = "example",
+        _update_metadata = Nothing
       }

@@ -2,7 +2,6 @@ module Beckn.Types.Core.PaymentEndpoint where
 
 import Beckn.Types.Core.Person
 import Beckn.Utils.Common
-import Data.Text
 import EulerHS.Prelude
 
 data PaymentEndpoint = PaymentEndpoint
@@ -40,3 +39,11 @@ instance FromJSON BankAccount where
 
 instance ToJSON BankAccount where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example BankAccount where
+  example =
+    BankAccount
+      { _account_number = "1234567890",
+        _account_holder_name = "account holder",
+        _ifsc_code = "sbi123456"
+      }

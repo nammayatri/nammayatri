@@ -4,6 +4,7 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Types.Core.Person
 import Beckn.Types.FMD.Agent
+import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
 import Data.Time.LocalTime
@@ -37,6 +38,7 @@ data Task = Task
     _state :: Text,
     _pickup :: PickupOrDrop,
     _drop :: PickupOrDrop,
+    _package :: Package,
     _agent :: Agent,
     _vehicle :: Vehicle,
     _created_at :: LocalTime,
@@ -59,6 +61,7 @@ instance Example Task where
         _state = "ASSIGNED-AGENT",
         _pickup = example,
         _drop = example,
+        _package = example,
         _agent = example,
         _vehicle = example,
         _created_at = example,

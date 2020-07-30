@@ -2,6 +2,7 @@ module Beckn.Types.Mobility.Transfer where
 
 -- import           Types.API.External.Mobility.Mode -- not availble in github
 import Beckn.Types.Mobility.Route
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -16,3 +17,10 @@ instance FromJSON Transfer where
 
 instance ToJSON Transfer where
   toJSON = genericToJSON stripLensPrefixOptions
+
+instance Example Transfer where
+  example =
+    Transfer
+      { _mode = "WALK",
+        _route = example
+      }

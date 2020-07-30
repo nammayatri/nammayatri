@@ -6,6 +6,7 @@ import EulerHS.Prelude
 
 data Rating = Rating
   { _value :: Text,
+    _unit :: Text,
     _scale :: [Text]
   }
   deriving (Generic, Show)
@@ -20,5 +21,6 @@ instance Example Rating where
   example =
     Rating
       { _value = "5",
+        _unit = "****",
         _scale = ["10"]
       }

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Confirm where
 
@@ -7,6 +8,7 @@ import Beckn.Types.API.Confirm
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Error
+import Beckn.Types.Core.Order (OrderItem (..))
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -41,7 +43,6 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   MPI.create orderProductInstance
-  transactionId <- L.generateGUID
   context <- buildContext "confirm" caseId
   baseUrl <- Gateway.getProviderBaseUrl
   order <- mkOrder productInstance
@@ -56,16 +57,18 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
         BO.Order
           { _id = _getProductInstanceId $ productInstance ^. #_id,
             _state = Nothing,
-            _items = [_getProductsId $ productInstance ^. #_productId],
             _created_at = now,
             _updated_at = now,
+            _items = [OrderItem (_getProductsId $ productInstance ^. #_productId) Nothing],
+            _billing = Nothing,
+            _payment = Nothing,
             _trip = Nothing
           }
 
 onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
-  L.logInfo "on_confirm req" (show req)
+  L.logInfo @Text "on_confirm req" (show req)
   let trip = req ^. #message . #order . #_trip
       pid = ProductInstanceId $ req ^. #message . #order . #_id
       tracker = flip Products.Tracker Nothing <$> trip
@@ -87,11 +90,11 @@ onConfirm req = withFlowHandler $ do
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
   now <- getCurrentTimeUTC
-  id <- generateGUID
+  caseId <- generateGUID
   shortId <- generateShortId
   return
     Case.Case
-      { _id = id,
+      { _id = caseId,
         _name = Nothing,
         _description = Just "Case to order a Ride",
         _shortId = shortId,
@@ -111,11 +114,11 @@ mkOrderCase Case.Case {..} = do
 mkOrderProductInstance :: CaseId -> SPI.ProductInstance -> Flow SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   now <- getCurrentTimeUTC
-  id <- generateGUID
+  piid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SPI.ProductInstance
-      { _id = ProductInstanceId id,
+      { _id = ProductInstanceId piid,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = prodInst ^. #_personId,

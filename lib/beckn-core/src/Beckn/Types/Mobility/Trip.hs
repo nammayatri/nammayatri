@@ -6,6 +6,7 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Route
+import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
 import Data.Text
@@ -13,6 +14,8 @@ import EulerHS.Prelude
 
 data Trip = Trip
   { id :: Text,
+    origin :: Maybe Stop,
+    destination :: Maybe Stop,
     vehicle :: Maybe Vehicle,
     driver :: Maybe Driver,
     payload :: Payload,
@@ -25,6 +28,8 @@ instance Example Trip where
   example =
     Trip
       { id = idExample,
+        origin = example,
+        destination = example,
         vehicle = example,
         driver = example,
         payload = example,

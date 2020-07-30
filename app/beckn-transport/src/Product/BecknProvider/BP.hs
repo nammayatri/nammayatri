@@ -386,9 +386,11 @@ mkOnServiceStatusPayload piId trackerPi = do
         Order
           { _id = prodInstId,
             _state = T.pack status,
-            _items = [productId],
+            _items = [OrderItem productId Nothing],
             _created_at = now,
-            _updated_at = now
+            _updated_at = now,
+            _billing = Nothing,
+            _payment = Nothing
           }
 
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
@@ -452,10 +454,11 @@ mkTrip c = do
   return $
     Trip
       { id = _getCaseId $ c ^. #_id,
+        origin = Nothing,
+        destination = Nothing,
         vehicle = vehicle,
         driver,
-        payload =
-          Payload Nothing [] Nothing,
+        payload = Payload Nothing Nothing [] Nothing,
         fare = Nothing,
         route = Nothing
       }
@@ -502,9 +505,11 @@ mkCancelTripObj prodInstId = do
   return $
     Trip
       { id = prodInstId,
+        origin = Nothing,
+        destination = Nothing,
         vehicle = vehicle,
         driver,
-        payload = Payload Nothing [] Nothing,
+        payload = Payload Nothing Nothing [] Nothing,
         fare = Just $ GT.mkPrice productInstance,
         route = Nothing
       }

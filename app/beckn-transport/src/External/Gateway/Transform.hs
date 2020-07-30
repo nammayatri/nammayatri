@@ -7,6 +7,7 @@ import Beckn.Types.App
 import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
+import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
@@ -43,7 +44,7 @@ mkCatalog prodInsts = do
       }
 
 mkDescriptor :: ProductInstance -> Descriptor
-mkDescriptor prodInst =
+mkDescriptor _prodInst =
   Descriptor
     { _name = Nothing,
       _code = Nothing,
@@ -85,7 +86,7 @@ mkPrice prodInst =
         }
 
 mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Organization -> Flow Mobility.Service
-mkServiceOffer c pis allPis orgInfo = do
+mkServiceOffer c pis _allPis orgInfo = do
   catalog <- mkCatalog pis
   return
     Mobility.Service
@@ -96,15 +97,17 @@ mkServiceOffer c pis allPis orgInfo = do
       }
 
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
-mkOrder c pi trip = do
+mkOrder _c pri trip = do
   now <- getCurrentTimeUTC
   return
     Mobility.Order
-      { _id = _getProductInstanceId $ pi ^. #_id,
-        _state = Nothing,
-        _items = [_getProductsId $ pi ^. #_productId],
+      { _id = _getProductInstanceId $ pri ^. #_id,
+        _items = [OrderItem (_getProductsId $ pri ^. #_productId) Nothing],
         _created_at = now,
         _updated_at = now,
+        _state = Nothing,
+        _billing = Nothing,
+        _payment = Nothing,
         _trip = trip
       }
 

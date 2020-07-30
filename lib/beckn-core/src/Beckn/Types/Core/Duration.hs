@@ -1,9 +1,11 @@
 module Beckn.Types.Core.Duration where
 
 import Beckn.Utils.Common
-import Data.Text
+import EulerHS.Prelude
 
-type Duration = Text -- duration as per ISO8601 format
+newtype Duration = Duration Text
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 instance Example Duration where
-  example = "P1D" -- 1 day
+  example =
+    Duration "P1D"

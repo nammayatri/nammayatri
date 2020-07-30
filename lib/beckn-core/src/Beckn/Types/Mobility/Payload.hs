@@ -8,7 +8,8 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data Luggage = Luggage
-  { _weight :: Scalar,
+  { _count :: Integer,
+    _weight :: Scalar,
     _dimensions :: Dimensions
   }
   deriving (Generic, Show)
@@ -21,6 +22,7 @@ instance ToJSON Luggage where
 
 data Payload = Payload
   { _luggage :: Maybe Luggage,
+    _traveller_count :: Maybe Integer,
     _travellers :: [Traveller],
     _travel_group :: Maybe TravelGroup
   }
@@ -36,6 +38,7 @@ instance Example Payload where
   example =
     Payload
       { _luggage = Nothing,
+        _traveller_count = Just 1,
         _travellers = example,
         _travel_group = Nothing
       }

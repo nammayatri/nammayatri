@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Address where
 
+import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
@@ -22,3 +23,18 @@ instance FromJSON Address where
 
 instance ToJSON Address where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Address where
+  example =
+    Address
+      { _name = "Address",
+        _door = Nothing,
+        _building = Nothing,
+        _street = Nothing,
+        _locality = Nothing,
+        _ward = Nothing,
+        _city = "BLR",
+        _state = "Karnataka",
+        _country = "India",
+        _area_code = "560095"
+      }

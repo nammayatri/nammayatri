@@ -77,6 +77,7 @@ intentPayload :: Payload
 intentPayload =
   Payload
     { _travellers = [],
+      _traveller_count = Just 2,
       _luggage = Nothing,
       _travel_group = Nothing
     }
@@ -102,7 +103,8 @@ getStop stopTime =
       _descriptor = Nothing,
       _location = location,
       _arrival_time = Stop.StopTime stopTime (Just stopTime),
-      _departure_time = Stop.StopTime stopTime (Just stopTime)
+      _departure_time = Stop.StopTime stopTime (Just stopTime),
+      _transfers = []
     }
 
 buildIntent :: LocalTime -> Intent

@@ -22,7 +22,7 @@ instance Example PaymentPolicy where
       { supported_currencies = Nothing,
         credit_type = "POSTPAID",
         settlement_type = "BULK",
-        credit_duration = "30D",
+        credit_duration = example,
         mode = "RTGS",
         method = "ELECTRONIC",
         penalty_terms = ["Delay in payment after due date will incur 10 INR per day of non-payment"]
