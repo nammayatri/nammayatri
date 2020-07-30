@@ -11,7 +11,7 @@ RUN chmod 400 /root/.ssh/id_rsa
 RUN ssh-keyscan -H "bitbucket.org" >> ~/.ssh/known_hosts
 
 # Make sure we haven't added any hlint warnings
-RUN hlint_count=$(hlint -g -j | tail -n 1 | cut -f 1 -d ' ') && \
+RUN hlint_count=$(hlint -g -j --json | jq '.|length') && \
   echo "Found ${hlint_count} warnings" && \
   test ${hlint_count} -le 1
 # And that we're ormolu-clean

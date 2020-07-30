@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    DEP_LABEL = "${sh(script: 'echo $JOB_BASE_NAME | tr \'/\' \'_\' | tr \'%2F\' \'_\' ', returnStdout: true)}"
+    DEP_LABEL = "${sh(script: 'echo $JOB_BASE_NAME | sed -e \'s/\\//_/g\' -e \'s/%2F/_/g\' ', returnStdout: true)}"
   }
 
   stages {
