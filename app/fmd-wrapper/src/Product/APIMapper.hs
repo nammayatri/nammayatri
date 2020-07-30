@@ -8,25 +8,26 @@ import Beckn.Types.FMD.API.Search (SearchReq, SearchRes)
 import Beckn.Types.FMD.API.Select (SelectReq, SelectRes)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
+import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 
-search :: () -> SearchReq -> FlowHandler SearchRes
-search _ req = error "Not implemented yet"
+search :: Organization -> SearchReq -> FlowHandler SearchRes
+search org req = error "Not implemented yet"
 
-select :: () -> SelectReq -> FlowHandler SelectRes
-select _ req = error "Not implemented yet"
+select :: Organization -> SelectReq -> FlowHandler SelectRes
+select org req = error "Not implemented yet"
 
-init :: () -> InitReq -> FlowHandler InitRes
-init _ req = error "Not implemented yet"
+init :: Organization -> InitReq -> FlowHandler InitRes
+init org req = error "Not implemented yet"
 
-confirm :: () -> ConfirmReq -> FlowHandler ConfirmRes
-confirm _ req = error "Not implemented yet"
+confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
+confirm org req = error "Not implemented yet"
 
-track :: () -> TrackReq -> FlowHandler TrackRes
-track _ req = error "Not implemented yet"
+track :: Organization -> TrackReq -> FlowHandler TrackRes
+track org req = error "Not implemented yet"
 
-status :: () -> StatusReq -> FlowHandler StatusRes
-status _ req = error "Not implemented yet"
+status :: Organization -> StatusReq -> FlowHandler StatusRes
+status org req = error "Not implemented yet"
 
-cancel :: () -> CancelReq -> FlowHandler CancelRes
-cancel _ req = error "Not implemented yet"
+cancel :: Organization -> CancelReq -> FlowHandler CancelRes
+cancel org req = error "Not implemented yet"
