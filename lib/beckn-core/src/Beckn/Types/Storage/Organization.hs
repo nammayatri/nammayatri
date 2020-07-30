@@ -71,7 +71,8 @@ data OrganizationT f = Organization
     _callbackUrl :: B.C f (Maybe Text),
     _createdAt :: B.C f LocalTime,
     _updatedAt :: B.C f LocalTime,
-    _callbackApiKey :: B.C f (Maybe Text)
+    _callbackApiKey :: B.C f (Maybe Text),
+    _info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

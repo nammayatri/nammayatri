@@ -228,6 +228,7 @@ CREATE TABLE atlas_app.organization (
     callback_url text,
     callback_api_key text,
     head_count bigint,
+    info text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

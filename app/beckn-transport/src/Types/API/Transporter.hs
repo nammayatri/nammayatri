@@ -68,7 +68,8 @@ instance CreateTransform TransporterReq SO.Organization Flow where
           SO._enabled = True,
           SO._createdAt = now,
           SO._updatedAt = now,
-          SO._callbackApiKey = Nothing
+          SO._callbackApiKey = Nothing,
+          SO._info = Nothing
         }
 
 transformToLocation :: TransporterReq -> Flow SL.Location

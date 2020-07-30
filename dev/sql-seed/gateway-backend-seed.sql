@@ -118,7 +118,8 @@ CREATE TABLE atlas_gateway.organization (
     head_count bigint,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    callback_api_key text
+    callback_api_key text,
+    info text
 );
 
 
@@ -150,11 +151,11 @@ COPY atlas_gateway.location (id, location_type, lat, long, ward, district, city,
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_gateway; Owner: atlas
 --
 
-COPY atlas_gateway.organization (id, name, gstin, status, type, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key) FROM stdin;
-test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	t	t	\N	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N
-mobility-provider                   	mobility	\N	APPROVED	PROVIDER	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N
-test-app-2                          	Test App 2	\N	APPROVED	APP	t	t	\N	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N
-mobility-app                        	mobility	\N	APPROVED	APP	t	t	\N	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8013/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N
+COPY atlas_gateway.organization (id, name, gstin, status, type, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) FROM stdin;
+test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	t	t	\N	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
+mobility-provider                   	mobility	\N	APPROVED	PROVIDER	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
+test-app-2                          	Test App 2	\N	APPROVED	APP	t	t	\N	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
+mobility-app                        	mobility	\N	APPROVED	APP	t	t	\N	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8013/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
 \.
 
 --

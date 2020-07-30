@@ -148,7 +148,8 @@ CREATE TABLE atlas_transporter.organization (
     callback_api_key text,
     head_count bigint,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    info text
 );
 
 
@@ -285,8 +286,8 @@ ALTER TABLE atlas_transporter.inventory OWNER TO atlas;
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-INSERT INTO atlas_transporter.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'juspay', 'PENDING_VERIFICATION', 'GATEWAY', true, true, 'iamfromjuspay', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
+INSERT INTO atlas_transporter.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at, info) values
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'juspay', 'PENDING_VERIFICATION', 'GATEWAY', true, true, 'iamfromjuspay', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL);
 
 
 --
