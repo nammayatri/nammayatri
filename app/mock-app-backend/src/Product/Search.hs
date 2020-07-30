@@ -11,6 +11,7 @@ import App.Types
 import App.Utils
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as EL
@@ -18,7 +19,6 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
-import "beckn-gateway" Types.API.Search (OnSearchReq, searchAPI)
 
 gatewayLookup :: FlowR r (String, Int)
 gatewayLookup =

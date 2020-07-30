@@ -2,14 +2,13 @@ module App.Utils where
 
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
+import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.Intent
+import Beckn.Types.FMD.Order
 import Data.Time
 import EulerHS.Prelude
 import System.Environment (lookupEnv)
-import "beckn-gateway" Types.API.Search
-
-newtype FMDSearch = FMDSearch {intent :: Intent}
-  deriving (Generic, Show, ToJSON, FromJSON)
 
 address :: Address
 address =
@@ -45,17 +44,20 @@ location =
       _3dspace = Nothing
     }
 
-buildIntent :: Intent
+buildIntent :: SearchIntent
 buildIntent =
-  Intent
-    { _query_string = Nothing,
-      _provider_id = Nothing,
-      _category_id = Nothing,
-      _item_id = Nothing,
-      _pickups = [location],
-      _drops = [location],
-      _packages = [],
-      _tags = []
+  SearchIntent
+    { intent =
+        Intent
+          { _query_string = Nothing,
+            _provider_id = Nothing,
+            _category_id = Nothing,
+            _item_id = Nothing,
+            _pickups = [location],
+            _drops = [location],
+            _packages = [],
+            _tags = []
+          }
     }
 
 buildContext :: Text -> Text -> IO Context

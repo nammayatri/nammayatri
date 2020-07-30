@@ -2,12 +2,12 @@ module App.Routes where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.FMD.API.Search (OnSearchReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Search as P
 import Servant hiding (Context)
-import "beckn-gateway" Types.API.Search (OnSearchReq)
 import Utils.Auth
 
 type MockAppBackendAPI =

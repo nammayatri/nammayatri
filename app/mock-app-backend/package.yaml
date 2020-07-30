@@ -84,7 +84,6 @@ ghc-options:
 library:
   source-dirs: src
   dependencies:
-    - beckn-gateway
     - beckn-core
 
 executables:
