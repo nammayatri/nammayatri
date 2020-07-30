@@ -180,12 +180,14 @@ getBecknError err msg =
 throwJsonError500,
   throwJsonError501,
   throwJsonError400,
-  throwJsonError401 ::
+  throwJsonError401,
+  throwJsonError404 ::
     L.MonadFlow m => Text -> Text -> m a
 throwJsonError500 = throwJsonError err500
 throwJsonError501 = throwJsonError err501
 throwJsonError400 = throwJsonError err400
 throwJsonError401 = throwJsonError err401
+throwJsonError404 = throwJsonError err404
 
 throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandlerR r a
 throwJsonErrorH = withFlowHandler ... throwJsonError

@@ -2,6 +2,7 @@
 
 module Beckn.Types.Error where
 
+import Data.Text as T
 import EulerHS.Prelude
 import EulerHS.Types (DBError)
 
@@ -11,7 +12,12 @@ newtype ErrorCode = ErrorCode Int
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 newtype ErrorMsg = ErrorMsg Text
-  deriving (Generic, Eq, Show, Read, FromJSON, ToJSON, IsString)
+  -- { _getErrorText :: Text
+  -- }
+  deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
+
+instance IsString ErrorMsg where
+  fromString = ErrorMsg . T.pack
 
 data DomainError
   = AuthErr AuthError

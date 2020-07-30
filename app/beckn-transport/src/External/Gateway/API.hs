@@ -1,17 +1,19 @@
 module External.Gateway.API where
 
+import Beckn.Types.API.Call
 import Beckn.Types.API.Cancel
-import Beckn.Types.API.Confirm as Confirm
-import qualified Beckn.Types.API.Search as Search
-import Beckn.Types.API.Status as Status
+import Beckn.Types.API.Confirm
+import Beckn.Types.API.Search
+import Beckn.Types.API.Status
 import Beckn.Types.API.Track
-import Beckn.Types.API.Update as Update
+import Beckn.Types.API.Update
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
 
+onSearch :: Text -> OnSearchReq -> ET.EulerClient ()
 onSearch apiKey req =
-  void $ ET.client Search.onSearchAPI apiKey req
+  void $ ET.client onSearchAPI apiKey req
 
 type TrackAPI =
   "on_track"
@@ -21,19 +23,19 @@ type TrackAPI =
 trackTripAPI :: Proxy TrackAPI
 trackTripAPI = Proxy
 
-onTrackTrip req =
-  void $ ET.client trackTripAPI req
+onTrackTrip :: OnTrackTripReq -> ET.EulerClient ()
+onTrackTrip = void . ET.client trackTripAPI
 
 type ConfirmAPI =
   "on_confirm"
-    :> ReqBody '[JSON] Confirm.OnConfirmReq
-    :> Post '[JSON] Confirm.OnConfirmRes
+    :> ReqBody '[JSON] OnConfirmReq
+    :> Post '[JSON] OnConfirmRes
 
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
 
-onConfirm req =
-  void $ ET.client confirmAPI req
+onConfirm :: OnConfirmReq -> ET.EulerClient ()
+onConfirm = void . ET.client confirmAPI
 
 type CancelAPI =
   "on_cancel"
@@ -43,27 +45,39 @@ type CancelAPI =
 cancelAPI :: Proxy CancelAPI
 cancelAPI = Proxy
 
-onCancel req =
-  void $ ET.client cancelAPI req
+onCancel :: OnCancelReq -> ET.EulerClient ()
+onCancel = void . ET.client cancelAPI
 
 type StatusAPI =
   "on_status"
-    :> ReqBody '[JSON] Status.OnStatusReq
-    :> Post '[JSON] Status.OnStatusRes
+    :> ReqBody '[JSON] OnStatusReq
+    :> Post '[JSON] OnStatusRes
 
 statusAPI :: Proxy StatusAPI
 statusAPI = Proxy
 
-onStatus req =
-  void $ ET.client statusAPI req
+onStatus :: OnStatusReq -> ET.EulerClient ()
+onStatus = void . ET.client statusAPI
+
+type CallAPI =
+  "call"
+    :> "to_customer"
+    :> ReqBody '[JSON] CallReq
+    :> Post '[JSON] CallRes
+
+callAPI :: Proxy CallAPI
+callAPI = Proxy
+
+initiateCall :: CallReq -> ET.EulerClient ()
+initiateCall = void . ET.client callAPI
 
 type UpdateAPI =
   "on_update"
-    :> ReqBody '[JSON] Update.OnUpdateReq
-    :> Post '[JSON] Update.OnUpdateRes
+    :> ReqBody '[JSON] OnUpdateReq
+    :> Post '[JSON] OnUpdateRes
 
 updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
 
-onUpdate req =
-  void $ ET.client updateAPI req
+onUpdate :: OnUpdateReq -> ET.EulerClient ()
+onUpdate = void . ET.client updateAPI

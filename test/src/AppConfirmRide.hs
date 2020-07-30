@@ -73,5 +73,11 @@ spec = do
                 confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
                 confirmResult `shouldSatisfy` isRight
   where
+    -- initiate exotel call (uncomment this for call tests)
+    -- callTranId <- UUID.nextUUID
+    -- cReq <- buildCallReq (UUID.toText $ fromJust callTranId) "4bf94783-cce4-4692-9a3d-605d279015ee"
+    -- callResult <- runClient appClientEnv (appCallToProvider appRegistrationToken cReq)
+    -- callResult `shouldSatisfy` isRight
+
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance

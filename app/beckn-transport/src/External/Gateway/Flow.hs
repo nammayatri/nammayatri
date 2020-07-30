@@ -1,6 +1,7 @@
 module External.Gateway.Flow where
 
 import App.Types
+import Beckn.Types.API.Call
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -91,3 +92,13 @@ getAppBaseUrl = L.runIO $ do
   path <- fromMaybe "/v1" <$> lookupEnv "BECKN_APP_PATH"
   return $
     BaseUrl Http host port path
+
+initiateCall :: CallReq -> Flow (Either Text ())
+initiateCall req = do
+  url <- getAppBaseUrl
+  res <- L.callAPI url $ API.initiateCall req
+  whenRight res $ \_ ->
+    L.logInfo "initiateCall" "initiateCall successfully delivered"
+  whenLeft res $ \err ->
+    L.logError "error occurred while sending initiateCall: " (show err)
+  return $ first show res

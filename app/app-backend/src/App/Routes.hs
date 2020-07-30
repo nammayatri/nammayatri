@@ -4,6 +4,7 @@
 module App.Routes where
 
 import App.Types
+import qualified Beckn.Types.API.Call as Call
 import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes)
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
@@ -16,6 +17,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.ProductInstance
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
+import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
@@ -55,6 +57,7 @@ type AppAPI =
            :<|> ProductInstanceAPI
            :<|> CancelAPI
            :<|> CronAPI
+           :<|> CallAPIs
            :<|> RouteAPI
            :<|> StatusAPI
        )
@@ -75,6 +78,7 @@ appServer key =
     :<|> productInstanceFlow
     :<|> cancelFlow
     :<|> cronFlow
+    :<|> callFlow
     :<|> routeApiFlow
     :<|> statusFlow
 
@@ -228,6 +232,23 @@ type CronAPI =
 cronFlow :: FlowServer CronAPI
 cronFlow =
   Cron.updateCases
+
+-------- Initiate a call (Exotel) APIs --------
+type CallAPIs =
+  "call"
+    :> ( "to_provider"
+           :> TokenAuth
+           :> ReqBody '[JSON] Call.CallReq
+           :> Post '[JSON] Call.CallRes
+           :<|> "to_customer"
+           :> ReqBody '[JSON] Call.CallReq
+           :> Post '[JSON] Call.CallRes
+       )
+
+callFlow :: FlowServer CallAPIs
+callFlow =
+  Call.initiateCallToProvider
+    :<|> Call.initiateCallToCustomer
 
 type RouteAPI =
   "route"

@@ -1,6 +1,7 @@
 module App.Routes where
 
 import App.Types
+import qualified Beckn.Types.API.Call as Call
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -15,6 +16,7 @@ import Beckn.Types.Storage.Vehicle
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
+import qualified Product.Call as Call
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron
 import qualified Product.Location as Location
@@ -54,6 +56,7 @@ type TransportAPI =
            :<|> VehicleAPI
            :<|> LocationAPI
            :<|> ProductAPI
+           :<|> CallAPIs
            :<|> RouteAPI
        )
 
@@ -286,6 +289,7 @@ transporterServer key =
     :<|> vehicleFlow
     :<|> locationFlow
     :<|> productFlow
+    :<|> callFlow
     :<|> routeApiFlow
 
 searchApiFlow :: FlowServer (SearchAPI VerifyAPIKey)
@@ -337,6 +341,18 @@ type TrackAPI =
 
 trackApiFlow :: FlowServer TrackAPI
 trackApiFlow = BP.trackTrip
+
+-------- Initiate a call (Exotel) APIs --------
+type CallAPIs =
+  "call"
+    :> "to_customer"
+    :> TokenAuth
+    :> ReqBody '[JSON] Call.CallReq
+    :> Post '[JSON] Call.CallRes
+
+callFlow :: FlowServer CallAPIs
+callFlow =
+  Call.initiateCall
 
 type RouteAPI =
   "route"
