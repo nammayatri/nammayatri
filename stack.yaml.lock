@@ -185,6 +185,34 @@ packages:
       sha256: 84ce6d618602d39e89e28b1a9cc41f0def4786d7046ac0a742557b5ab5381466
   original:
     hackage: hex-text-0.1.0.0
+- completed:
+    hackage: prometheus-metrics-ghc-1.0.1@sha256:d12cd520cbedff91bd193e0192056474723e953e69cdf817fb79494d110df390,1231
+    pantry-tree:
+      size: 293
+      sha256: b412f2835ee5791a7f4f634c416227b70bae50511666d9f68683e5e21b5c2821
+  original:
+    hackage: prometheus-metrics-ghc-1.0.1@sha256:d12cd520cbedff91bd193e0192056474723e953e69cdf817fb79494d110df390,1231
+- completed:
+    hackage: wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
+    pantry-tree:
+      size: 307
+      sha256: 6d64803c639ed4c7204ea6fab0536b97d3ee16cdecb9b4a883cd8e56d3c61402
+  original:
+    hackage: wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
+- completed:
+    hackage: prometheus-proc-0.1.3.0@sha256:84f56e9c886be777d5afd14fc57fff156137a611f0db0fe080b97fc602103c23,1058
+    pantry-tree:
+      size: 282
+      sha256: c3150da9edb4578e64a02f095e677c9a1ef1323673faf5be887547fc68c543f0
+  original:
+    hackage: prometheus-proc-0.1.3.0@sha256:84f56e9c886be777d5afd14fc57fff156137a611f0db0fe080b97fc602103c23,1058
+- completed:
+    hackage: unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
+    pantry-tree:
+      size: 322
+      sha256: 50912d2ac162c8fab4243c9d73b8a2adb3bb609fbe13853bb8396c7e7b3b87e2
+  original:
+    hackage: unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
 snapshots:
 - completed:
     size: 496112

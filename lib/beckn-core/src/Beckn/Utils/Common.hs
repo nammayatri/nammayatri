@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Beckn.Utils.Common where
 
 import Beckn.Types.App

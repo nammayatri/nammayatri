@@ -6,8 +6,9 @@ import Beckn.Types.FMD.Service
 import Beckn.Utils.Common
 import EulerHS.Prelude
 
-newtype AppEnv = AppEnv
-  { common :: CommonEnv
+data AppEnv = AppEnv
+  { dbEnv :: DbEnv,
+    redisEnv :: RedisEnv
   }
 
 type Env = EnvR AppEnv
@@ -29,5 +30,8 @@ instance Example OnSearchServices where
       { services = example
       }
 
-instance HasCommonEnv Flow where
-  getCommonEnv = asks common
+instance HasDbEnv Flow where
+  getDbEnv = asks dbEnv
+
+instance HasRedisEnv Flow where
+  getRedisEnv = asks redisEnv

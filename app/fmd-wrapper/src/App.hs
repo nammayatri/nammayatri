@@ -24,13 +24,15 @@ import Network.Wai.Handler.Warp
   )
 import Servant.Server
 import Storage.DB.Config as Config
+import Storage.Redis.Config as Config
 import System.Environment (lookupEnv)
 
 runFMDWrapper :: IO ()
 runFMDWrapper = do
   port <- fromMaybe 8018 . (>>= readMaybe) <$> lookupEnv "MOCK_PROVIDER_PORT"
-  let commonEnv = CommonEnv Config.defaultDbConfig Config.connectionTag
-  let appEnv = AppEnv commonEnv
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let redisEnv = RedisEnv Config.defaultRedisConfig
+  let appEnv = AppEnv dbEnv redisEnv
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
