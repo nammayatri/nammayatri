@@ -12,12 +12,14 @@ import App.Utils
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
 import Beckn.Utils.Common
+import Control.Lens.At (ix)
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant.Client (BaseUrl (..), Scheme (..))
+import Servant.Client (BaseUrl (..), Scheme (..), parseBaseUrl)
 import qualified System.Environment as SE
 
 gatewayLookup :: FlowR r (String, Int)
@@ -58,4 +60,14 @@ searchCb :: () -> OnSearchReq -> FlowHandler AckResponse
 searchCb _unit req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
+  let mBppUrl = parseBaseUrl . toString =<< req ^. #context . #_bpp_nw_address
+      -- FIXME: why is ix 0 not producing a Maybe?
+      itemId = req ^. #message . #services . ix 0 . #_catalog . #_items . ix 0 . #_id
+  selectReq <- EL.runIO $ buildSelectReq (req ^. #context) itemId
+  case mBppUrl of
+    Nothing -> EL.logError @Text "mock_app_backend" "Bad bpp_nw_address"
+    Just bppUrl ->
+      void $
+        callClient "select" bppUrl $
+          client selectAPI "test-app-2-key" selectReq
   return resp

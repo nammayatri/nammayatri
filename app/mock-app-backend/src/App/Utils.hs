@@ -6,6 +6,8 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.Intent
 import Beckn.Types.FMD.Order
+import Beckn.Types.FMD.Task
+import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 import System.Environment (lookupEnv)
@@ -60,6 +62,33 @@ buildIntent =
           }
     }
 
+buildDraftOrder :: Text -> IO Order
+buildDraftOrder itemId = do
+  now <- toLocalTime <$> getCurrentTime
+  return $
+    Order
+      { _id = "draft-task-1",
+        _state = "DRAFT", -- FIXME?
+        _items = [itemId],
+        _created_at = now,
+        _updated_at = now,
+        _tasks =
+          [ Task
+              { _id = "draft-task-1",
+                _next_task_id = Nothing,
+                _previous_task_id = Nothing,
+                _state = "", -- FIXME: no relevant value in spec
+                _pickup = PickupOrDrop location [] example,
+                _drop = PickupOrDrop location [] example,
+                _package = example, -- FIXME: references item and price
+                _agent = example, -- FIXME: we can't fill this
+                _vehicle = example, -- FIXME: we can't fill this
+                _created_at = now,
+                _updated_at = now
+              }
+          ]
+      }
+
 buildContext :: Text -> Text -> IO Context
 buildContext act tid = do
   localTime <- getFutureTime
@@ -84,14 +113,22 @@ buildContext act tid = do
         _token = Nothing
       }
 
-searchReq :: Text -> Text -> IO SearchReq
-searchReq act tid =
-  SearchReq <$> buildContext act tid <*> pure (toJSON $ FMDSearch buildIntent)
+toLocalTime :: UTCTime -> LocalTime
+toLocalTime = zonedTimeToLocalTime . utcToZonedTime utc
 
 getFutureTime :: IO LocalTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
-  (zonedTimeToLocalTime . utcToZonedTime utc) . addUTCTime 7200 <$> getCurrentTime
+  toLocalTime . addUTCTime 7200 <$> getCurrentTime
 
 buildSearchReq :: Text -> IO SearchReq
-buildSearchReq = searchReq "search"
+buildSearchReq tid = SearchReq <$> buildContext "search" tid <*> pure buildIntent
+
+buildSelectReq :: Context -> Text -> IO SelectReq
+buildSelectReq ctx itemId = do
+  order <- buildDraftOrder itemId
+  return $
+    SelectReq
+      { context = ctx {_action = "select"},
+        message = DraftOrder order
+      }
