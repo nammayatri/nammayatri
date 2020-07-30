@@ -9,7 +9,7 @@ import Beckn.Types.Core.Option
 import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Price
 import Beckn.Types.FMD.Order
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))

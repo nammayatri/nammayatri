@@ -1,7 +1,7 @@
 module Beckn.Utils.Monitoring.Prometheus.Servant where
 
 import Beckn.Types.App
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import Data.Proxy
 import Data.Text as DT
 import EulerHS.Prelude as E

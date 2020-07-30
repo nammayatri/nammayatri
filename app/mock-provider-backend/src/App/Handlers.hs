@@ -2,7 +2,7 @@ module App.Handlers where
 
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Search as P

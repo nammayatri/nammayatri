@@ -7,7 +7,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.Order
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))

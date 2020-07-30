@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Utils.Servant.Auth where
+module Beckn.Utils.Servant.HeaderAuth where
 
 import Beckn.Types.App
 import Beckn.Types.Common

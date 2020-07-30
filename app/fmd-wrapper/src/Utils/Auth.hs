@@ -3,7 +3,7 @@ module Utils.Auth where
 import App.Types
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (fromMaybeM400)
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import Control.Monad ()
 import EulerHS.Prelude
 import qualified Storage.Queries.Gateway as BG

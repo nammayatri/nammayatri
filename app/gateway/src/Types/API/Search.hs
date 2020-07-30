@@ -11,7 +11,7 @@ where
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
-import Beckn.Utils.Servant.Auth (APIKeyAuth)
+import Beckn.Utils.Servant.HeaderAuth (APIKeyAuth)
 import Data.Aeson (Value)
 import EulerHS.Prelude
 import Servant hiding (Context)

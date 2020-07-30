@@ -1,7 +1,7 @@
 module Utils.Auth where
 
 import App.Types
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
 
 -- | TODO: Perform some API key verification.

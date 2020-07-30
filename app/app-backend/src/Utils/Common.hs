@@ -8,7 +8,7 @@ import Beckn.Utils.Common (encodeToText')
 import qualified Beckn.Utils.Extra as Utils
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
-import Beckn.Utils.Servant.Auth
+import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text as DT
 import qualified Data.Text as T
