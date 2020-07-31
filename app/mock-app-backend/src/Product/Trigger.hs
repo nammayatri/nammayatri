@@ -2,7 +2,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Product.Trigger
-  ( trigger,
+  ( TriggerFlow (..),
+    trigger,
   )
 where
 
@@ -11,11 +12,28 @@ import App.Utils
 import Beckn.Types.Common
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
+import Data.List (lookup)
+import qualified Data.Text as T
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant hiding (Context)
 import Servant.Client (BaseUrl (..), Scheme (..))
 import qualified System.Environment as SE
+
+data TriggerFlow
+  = SimpleConfirm
+  deriving (Eq, Show, Generic)
+
+instance FromHttpApiData TriggerFlow where
+  -- FIXME: there must be some clever way to derive this mechanically
+  parseQueryParam flow =
+    maybeToRight noMatch $
+      lookup flow flows
+    where
+      flows =
+        [("simple-confirm", SimpleConfirm)]
+      noMatch = "Invalid flow. Specify one of: " <> T.intercalate ", " (fst <$> flows)
 
 gatewayLookup :: FlowR r (String, Int)
 gatewayLookup =
@@ -35,8 +53,8 @@ gatewayBaseUrl = do
         baseUrlPath = "v1"
       }
 
-trigger :: FlowHandler AckResponse
-trigger = withFlowHandler $ do
+trigger :: TriggerFlow -> FlowHandler AckResponse
+trigger _flow = withFlowHandler $ do
   baseUrl <- gatewayBaseUrl
   transactionId <- EL.generateGUID
   req <- buildSearchReq transactionId

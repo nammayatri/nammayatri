@@ -41,6 +41,7 @@ mockAppBackendServer _key =
 
 type TriggerAPI =
   "trigger"
+    :> QueryParam' '[Required, String] "flow" T.TriggerFlow
     :> Get '[JSON] AckResponse
 
 triggerFlow :: FlowServer TriggerAPI
