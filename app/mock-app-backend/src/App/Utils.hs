@@ -1,5 +1,6 @@
 module App.Utils where
 
+import App.Types
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
 import Beckn.Types.FMD.API.Search
@@ -9,6 +10,7 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Utils.Common
 import Data.Time
+import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import System.Environment (lookupEnv)
 
@@ -62,9 +64,9 @@ buildIntent =
           }
     }
 
-buildDraftOrder :: Text -> IO Order
+buildDraftOrder :: Text -> Flow Order
 buildDraftOrder itemId = do
-  now <- toLocalTime <$> getCurrentTime
+  now <- EL.runIO $ toLocalTime <$> getCurrentTime
   return $
     Order
       { _id = "draft-task-1",
@@ -89,11 +91,11 @@ buildDraftOrder itemId = do
           ]
       }
 
-buildContext :: Text -> Text -> IO Context
+buildContext :: Text -> Text -> Flow Context
 buildContext act tid = do
   localTime <- getFutureTime
-  bapId <- lookupEnv "MOCK_APP_ID"
-  bapNwAddr <- lookupEnv "MOCK_APP_NW_ADDRESS"
+  bapId <- EL.runIO $ lookupEnv "MOCK_APP_ID"
+  bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
   return $
     Context
       { _domain = "FINAL-MILE-DELIVERY",
@@ -116,15 +118,18 @@ buildContext act tid = do
 toLocalTime :: UTCTime -> LocalTime
 toLocalTime = zonedTimeToLocalTime . utcToZonedTime utc
 
-getFutureTime :: IO LocalTime
+getFutureTime :: Flow LocalTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
-  toLocalTime . addUTCTime 7200 <$> getCurrentTime
+  EL.runIO $ toLocalTime . addUTCTime 7200 <$> getCurrentTime
 
-buildSearchReq :: Text -> IO SearchReq
-buildSearchReq tid = SearchReq <$> buildContext "search" tid <*> pure buildIntent
+buildSearchReq :: Text -> Flow SearchReq
+buildSearchReq tid = do
+  ctx <- buildContext "search" tid
+  let intent = buildIntent
+  pure $ SearchReq ctx intent
 
-buildSelectReq :: Context -> Text -> IO SelectReq
+buildSelectReq :: Context -> Text -> Flow SelectReq
 buildSelectReq ctx itemId = do
   order <- buildDraftOrder itemId
   return $
