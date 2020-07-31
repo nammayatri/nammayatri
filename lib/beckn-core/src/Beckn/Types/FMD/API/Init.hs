@@ -5,7 +5,6 @@ module Beckn.Types.FMD.API.Init where
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
-import Beckn.Types.Core.Invoice
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -46,8 +45,7 @@ data OnInitReq = OnInitReq
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data InitResMessage = InitResMessage
-  { order :: Order,
-    invoice :: Invoice
+  { order :: Order
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

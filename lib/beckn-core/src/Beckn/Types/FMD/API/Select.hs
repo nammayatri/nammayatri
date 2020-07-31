@@ -36,23 +36,24 @@ data SelectReq = SelectReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+newtype DraftOrder = DraftOrder
+  { order :: Order
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
 type SelectRes = AckResponse
 
 data OnSelectReq = OnSelectReq
   { context :: Context,
-    message :: Quote,
+    message :: OnSelectMessage,
     error :: Maybe Error
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-newtype Quote = Quote
-  { quote :: Quotation
+data OnSelectMessage = OnSelectMessage
+  { order :: Order,
+    quote :: Quotation
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type OnSelectRes = AckResponse
-
-newtype DraftOrder = DraftOrder
-  { draft_order :: Order
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
