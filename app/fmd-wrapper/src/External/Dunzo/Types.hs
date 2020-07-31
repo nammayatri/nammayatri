@@ -122,6 +122,8 @@ data RunnerDetails = RunnerDetails
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
+-- FIXME: Rewrite packageContentOptions and drop this
+{-# HLINT ignore PackageContent #-}
 data PackageContent
   = Documents_or_Books
   | Clothes_or_Accessories
