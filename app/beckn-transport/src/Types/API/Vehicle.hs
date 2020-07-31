@@ -56,7 +56,7 @@ newtype CreateVehicleRes = CreateVehicleRes
   deriving (Generic, ToJSON, ToSchema)
 
 newtype ListVehicleRes = ListVehicleRes
-  {vehicles :: [SV.Vehicle]}
+  {vehicles :: [VehicleRes]}
   deriving (Generic, ToJSON, ToSchema)
 
 data UpdateVehicleReq = UpdateVehicleReq
@@ -98,3 +98,33 @@ type UpdateVehicleRes = CreateVehicleRes
 newtype DeleteVehicleRes = DeleteVehicleRes
   {vehicleId :: Text}
   deriving (Generic, ToJSON, ToSchema)
+
+data VehicleRes = VehicleRes
+  { _vehicle :: SV.Vehicle,
+    _driver :: Maybe Driver
+  }
+  deriving (Generic, ToSchema)
+
+instance FromJSON VehicleRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON VehicleRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data Driver = Driver
+  { _id :: Text,
+    _firstName :: Maybe Text,
+    _middleName :: Maybe Text,
+    _lastName :: Maybe Text,
+    _fullName :: Maybe Text,
+    _rating :: Maybe Text,
+    _verified :: Bool,
+    _organizationId :: Maybe Text
+  }
+  deriving (Generic, ToSchema)
+
+instance FromJSON Driver where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Driver where
+  toJSON = genericToJSON stripAllLensPrefixOptions

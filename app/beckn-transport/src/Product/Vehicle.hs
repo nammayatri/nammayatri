@@ -24,16 +24,18 @@ createVehicle orgId req = withFlowHandler $ do
   return $ CreateVehicleRes vehicle
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles orgId variantM categoryM energyTypeM limitM offsetM =
-  withFlowHandler $
-    ListVehicleRes <$> QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
+listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $ do
+  personList <- QP.findAllByOrgIds [SP.DRIVER] [orgId]
+  vehicleList <- QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
+  let respList = mkVehicleRes personList <$> vehicleList
+  return $ ListVehicleRes respList
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
 
 updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do
-  vehicle <- QV.findByIdAndOrgId (VehicleId {_getVechicleId = vehicleId}) orgId
+  vehicle <- QV.findByIdAndOrgId (VehicleId {_getVehicleId = vehicleId}) orgId
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
@@ -68,3 +70,29 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
 
 addOrgId :: Text -> SV.Vehicle -> Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
+
+mkVehicleRes :: [SP.Person] -> SV.Vehicle -> VehicleRes
+mkVehicleRes personList vehicle =
+  let mdriver =
+        find
+          ( \person ->
+              SP._udf1 person == Just (_getVehicleId $ vehicle ^. #_id)
+          )
+          personList
+   in VehicleRes
+        { _vehicle = vehicle,
+          _driver = mkDriverObj <$> mdriver
+        }
+
+mkDriverObj :: SP.Person -> Driver
+mkDriverObj person =
+  Driver
+    { _id = _getPersonId $ person ^. #_id,
+      _firstName = person ^. #_firstName,
+      _middleName = person ^. #_middleName,
+      _lastName = person ^. #_lastName,
+      _fullName = person ^. #_fullName,
+      _rating = person ^. #_rating,
+      _verified = person ^. #_verified,
+      _organizationId = person ^. #_organizationId
+    }

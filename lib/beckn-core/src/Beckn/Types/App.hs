@@ -76,7 +76,7 @@ newtype LocationId = LocationId
 deriveIdentifierInstances ''LocationId
 
 newtype VehicleId = VehicleId
-  { _getVechicleId :: Text
+  { _getVehicleId :: Text
   }
   deriving (Generic, Show)
 
