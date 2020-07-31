@@ -1,6 +1,6 @@
-module Product.APIMapper where
+module Product.Dunzo.Flow where
 
-import App.Types (FlowHandler)
+import App.Types
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
@@ -11,24 +11,23 @@ import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 
--- TODO: add switching logic to figure out the client instance
-search :: Organization -> SearchReq -> FlowHandler SearchRes
+search :: Organization -> SearchReq -> Flow SearchRes
 search org req = error "Not implemented yet"
 
-select :: Organization -> SelectReq -> FlowHandler SelectRes
+select :: Organization -> SelectReq -> Flow SelectRes
 select org req = error "Not implemented yet"
 
-init :: Organization -> InitReq -> FlowHandler InitRes
+init :: Organization -> InitReq -> Flow InitRes
 init org req = error "Not implemented yet"
 
-confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
+confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = error "Not implemented yet"
 
-track :: Organization -> TrackReq -> FlowHandler TrackRes
+track :: Organization -> TrackReq -> Flow TrackRes
 track org req = error "Not implemented yet"
 
-status :: Organization -> StatusReq -> FlowHandler StatusRes
+status :: Organization -> StatusReq -> Flow StatusRes
 status org req = error "Not implemented yet"
 
-cancel :: Organization -> CancelReq -> FlowHandler CancelRes
+cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = error "Not implemented yet"
