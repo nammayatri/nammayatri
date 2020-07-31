@@ -7,7 +7,9 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
@@ -28,11 +30,29 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
             _bpp_nw_address = fromString <$> bppNwAddr
           }
   case context ^. #_request_transaction_id of
-    tId | tId == noSearchResultId -> pass
+    tId
+      | tId == noSearchResultId ->
+        pass
+    tId
+      | tId == searchPickupLocationNotServiceableId ->
+        sendResponse context $ errorResponse "FMD001"
     _ ->
+      sendResponse context happyServices
+  return
+    AckResponse
+      { _context = context,
+        _message = ack "ACK",
+        _error = Nothing
+      }
+  where
+    happyServices = (OnSearchServices example, Nothing)
+
+    errorResponse err = (OnSearchServices emptyCatalog, Just $ domainError err)
+
+    sendResponse context (msg, err) =
       forkAsync "Search" $ do
         baseUrl <- lookupBaseUrl
-        resp <- mkSearchResponse
+        L.runIO $ threadDelay 0.5e6
         AckResponse {} <-
           callClient "search" baseUrl $
             client
@@ -40,18 +60,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
               "test-provider-2-key"
               OnSearchReq
                 { context = context {_action = "on_search"},
-                  message = resp,
-                  error = Nothing
+                  message = msg,
+                  error = err
                 }
         pass
-  return
-    AckResponse
-      { _context = context,
-        _message = ack "ACK",
-        _error = Nothing
-      }
-
-mkSearchResponse :: FlowR r OnSearchServices
-mkSearchResponse = do
-  L.runIO $ threadDelay 0.5e6
-  return $ OnSearchServices example

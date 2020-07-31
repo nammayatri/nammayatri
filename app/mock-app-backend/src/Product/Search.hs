@@ -26,8 +26,10 @@ searchCb _unit req = withFlowHandler $ do
   selectReq <- buildSelectReq (req ^. #context) itemId
   case bppUrl $ req ^. #context of
     Nothing -> EL.logError @Text "mock_app_backend" "Bad bpp_nw_address"
-    Just url ->
-      void $
-        callClient "select" url $
-          client selectAPI "test-app-2-key" selectReq
+    Just url
+      | isNothing (req ^. #error) ->
+        void $
+          callClient "select" url $
+            client selectAPI "test-app-2-key" selectReq
+    _ -> pass
   return resp

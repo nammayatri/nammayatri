@@ -25,6 +25,7 @@ import qualified System.Environment as SE
 data TriggerFlow
   = SimpleConfirm
   | NoSearchResult
+  | SearchErrorFMD001
   deriving (Eq, Show, Generic)
 
 instance FromHttpApiData TriggerFlow where
@@ -35,7 +36,8 @@ instance FromHttpApiData TriggerFlow where
     where
       flows =
         [ ("simple-confirm", SimpleConfirm),
-          ("no-search-result", NoSearchResult)
+          ("no-search-result", NoSearchResult),
+          ("search-error-fmd-001", SearchErrorFMD001)
         ]
       noMatch = "Invalid flow. Specify one of: " <> T.intercalate ", " (fst <$> flows)
 
@@ -64,6 +66,7 @@ trigger flow = withFlowHandler $ do
     case flow of
       SimpleConfirm -> EL.generateGUID
       NoSearchResult -> pure noSearchResultId
+      SearchErrorFMD001 -> pure searchPickupLocationNotServiceableId
   req <- buildSearchReq transactionId
   eRes <-
     callClient "search" baseUrl $
