@@ -38,3 +38,15 @@ instance Example Catalog where
         _items = example,
         _offers = example
       }
+
+emptyCatalog :: Catalog
+emptyCatalog =
+  Catalog
+    { _id = "empty",
+      _categories = [],
+      _brands = [],
+      _models = [],
+      _ttl = example,
+      _items = [],
+      _offers = []
+    }
