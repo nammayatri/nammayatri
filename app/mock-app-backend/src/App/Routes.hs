@@ -13,13 +13,14 @@ import qualified Product.Confirm as P
 import qualified Product.Init as P
 import qualified Product.Search as P
 import qualified Product.Select as P
+import qualified Product.Trigger as T
 import Servant hiding (Context)
 import Utils.Auth
 
 type MockAppBackendAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> TriggerSearchAPI
+           :<|> TriggerAPI
            :<|> OnSearchAPI
            :<|> OnSelectAPI
            :<|> OnInitAPI
@@ -32,15 +33,18 @@ mockAppBackendAPI = Proxy
 mockAppBackendServer :: V.Key (HashMap Text Text) -> FlowServer MockAppBackendAPI
 mockAppBackendServer _key =
   pure "Mock app backend is UP"
-    :<|> triggerSearchFlow
+    :<|> triggerFlow
     :<|> onSearchFlow
     :<|> onSelectFlow
     :<|> onInitFlow
     :<|> onConfirmFlow
 
-type TriggerSearchAPI =
+type TriggerAPI =
   "trigger"
     :> Get '[JSON] AckResponse
+
+triggerFlow :: FlowServer TriggerAPI
+triggerFlow = T.trigger
 
 type OnSearchAPI =
   "on_search"
@@ -50,9 +54,6 @@ type OnSearchAPI =
 
 onSearchFlow :: FlowServer OnSearchAPI
 onSearchFlow = P.searchCb
-
-triggerSearchFlow :: FlowServer TriggerSearchAPI
-triggerSearchFlow = P.triggerSearch
 
 type OnSelectAPI =
   "on_select"
