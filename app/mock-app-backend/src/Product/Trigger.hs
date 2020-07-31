@@ -12,6 +12,7 @@ import App.Utils
 import Beckn.Types.Common
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
+import Beckn.Utils.Mock
 import Data.List (lookup)
 import qualified Data.Text as T
 import qualified EulerHS.Language as EL
@@ -23,6 +24,7 @@ import qualified System.Environment as SE
 
 data TriggerFlow
   = SimpleConfirm
+  | NoSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromHttpApiData TriggerFlow where
@@ -32,7 +34,9 @@ instance FromHttpApiData TriggerFlow where
       lookup flow flows
     where
       flows =
-        [("simple-confirm", SimpleConfirm)]
+        [ ("simple-confirm", SimpleConfirm),
+          ("no-search-result", NoSearchResult)
+        ]
       noMatch = "Invalid flow. Specify one of: " <> T.intercalate ", " (fst <$> flows)
 
 gatewayLookup :: FlowR r (String, Int)
@@ -54,9 +58,12 @@ gatewayBaseUrl = do
       }
 
 trigger :: TriggerFlow -> FlowHandler AckResponse
-trigger _flow = withFlowHandler $ do
+trigger flow = withFlowHandler $ do
   baseUrl <- gatewayBaseUrl
-  transactionId <- EL.generateGUID
+  transactionId <-
+    case flow of
+      SimpleConfirm -> EL.generateGUID
+      NoSearchResult -> pure noSearchResultId
   req <- buildSearchReq transactionId
   eRes <-
     callClient "search" baseUrl $

@@ -10,6 +10,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
+import Beckn.Utils.Mock
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -26,20 +27,23 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           { _bpp_id = fromString <$> bppId,
             _bpp_nw_address = fromString <$> bppNwAddr
           }
-  forkAsync "Search" $ do
-    baseUrl <- lookupBaseUrl
-    resp <- mkSearchResponse
-    AckResponse {} <-
-      callClient "search" baseUrl $
-        client
-          onSearchAPI
-          "test-provider-2-key"
-          OnSearchReq
-            { context = context {_action = "on_search"},
-              message = resp,
-              error = Nothing
-            }
-    pass
+  case context ^. #_request_transaction_id of
+    tId | tId == noSearchResultId -> pass
+    _ ->
+      forkAsync "Search" $ do
+        baseUrl <- lookupBaseUrl
+        resp <- mkSearchResponse
+        AckResponse {} <-
+          callClient "search" baseUrl $
+            client
+              onSearchAPI
+              "test-provider-2-key"
+              OnSearchReq
+                { context = context {_action = "on_search"},
+                  message = resp,
+                  error = Nothing
+                }
+        pass
   return
     AckResponse
       { _context = context,
