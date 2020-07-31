@@ -61,7 +61,7 @@ data TokenReq = TokenReq
   deriving (Generic, Show)
 
 newtype TokenRes = TokenRes
-  {token :: Text}
+  {token :: Token}
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data QuoteReq = QuoteReq

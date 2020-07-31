@@ -1,4 +1,4 @@
-module Storage.Queries.Gateway
+module Storage.Queries.Provider
   ( lookupKey,
   )
 where
@@ -10,4 +10,4 @@ import EulerHS.Prelude
 import Storage.Queries.Organization
 
 lookupKey :: App.APIKey -> Flow (Maybe Org.Organization)
-lookupKey = findOrgByApiKey Org.GATEWAY
+lookupKey = findOrgByApiKey Org.PROVIDER

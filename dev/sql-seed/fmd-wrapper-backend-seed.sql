@@ -85,6 +85,7 @@ CREATE TABLE atlas_fmd_wrapper.organization (
     location_id character varying(255),
     description text,
     mobile_number text,
+    mobile_country_code text,
     from_time timestamp with time zone,
     to_time timestamp with time zone,
     api_key text,
@@ -114,12 +115,9 @@ COPY atlas_fmd_wrapper."case" (id, name, description, short_id, industry, type, 
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_fmd_wrapper; Owner: atlas
 --
 
-COPY atlas_fmd_wrapper.organization (id, name, gstin, status, type, verified, enabled, location_id, description, mobile_number, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) FROM stdin;
-test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	t	t	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-mobility-provider                   	mobility	\N	APPROVED	PROVIDER	t	t	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-test-app-2                          	Test App 2	\N	APPROVED	APP	t	t	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-mobility-app                        	mobility	\N	APPROVED	APP	t	t	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-\.
+INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at, info) values
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'PROVIDER', true, true, 'test-bpp-id', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', '{"dzBAConfigs":[{"bap_nw_address":"http://bap.api.example.com","paymentPolicy":{"credit_type":"POSTPAID","supported_currencies":["INR"],"mode":"RTGS","penalty_terms":["Delay in payment after due date will incur 10 INR per day of non-payment"],"credit_duration":"P30D","method":"ELECTRONIC","settlement_type":"BULK"}}],"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzUrl":"https://apis-staging.dunzo.in","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f"}');
+
 
 --
 -- TOC entry 2837 (class 2606 OID 16460)

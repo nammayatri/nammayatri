@@ -9,11 +9,13 @@ import Beckn.Types.FMD.API.Select (SelectReq, SelectRes)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Organization (Organization)
+import Beckn.Utils.Common (withFlowHandler)
 import EulerHS.Prelude
+import qualified Product.Dunzo.Flow as DZ
 
 -- TODO: add switching logic to figure out the client instance
 search :: Organization -> SearchReq -> FlowHandler SearchRes
-search org req = error "Not implemented yet"
+search org req = withFlowHandler $ DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
 select org req = error "Not implemented yet"
