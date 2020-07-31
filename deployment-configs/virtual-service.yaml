@@ -111,6 +111,17 @@ spec:
       timeout: 40s
     - match:
         - uri:
+            prefix: /dev/mock/provider/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: mock-provider-backend-master
+            port:
+              number: 8017
+      timeout: 40s
+    - match:
+        - uri:
             prefix: /dev/transport/
       rewrite:
         uri: /
