@@ -3,6 +3,8 @@ module App.Utils where
 import App.Types
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location
+import Beckn.Types.FMD.API.Confirm
+import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.Intent
@@ -136,4 +138,20 @@ buildSelectReq ctx itemId = do
     SelectReq
       { context = ctx {_action = "select"},
         message = DraftOrder order
+      }
+
+buildInitReq :: Context -> Text -> Flow InitReq
+buildInitReq ctx quotId = do
+  return $
+    InitReq
+      { context = ctx {_action = "init"},
+        message = InitReqMessage quotId example
+      }
+
+buildConfirmReq :: Context -> Text -> Flow ConfirmReq
+buildConfirmReq ctx orderId = do
+  return $
+    ConfirmReq
+      { context = ctx {_action = "confirm"},
+        message = ConfirmReqMessage orderId example
       }
