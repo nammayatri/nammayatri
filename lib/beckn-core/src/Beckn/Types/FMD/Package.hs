@@ -11,11 +11,11 @@ import EulerHS.Prelude
 data Package = Package
   { _id :: Text,
     _parent_package_id :: Maybe Text,
-    _descriptor :: Descriptor,
+    _descriptor :: Maybe Descriptor,
     _contents :: [Item],
-    _price :: Price,
+    _price :: Maybe Price,
     _weight :: Scalar,
-    _dimensions :: Dimensions
+    _dimensions :: Maybe Dimensions
   }
   deriving (Generic, Show)
 

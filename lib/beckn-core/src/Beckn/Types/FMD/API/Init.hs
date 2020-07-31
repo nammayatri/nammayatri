@@ -44,7 +44,7 @@ data OnInitReq = OnInitReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data InitResMessage = InitResMessage
+newtype InitResMessage = InitResMessage
   { order :: Order
   }
   deriving (Generic, Show, FromJSON, ToJSON)

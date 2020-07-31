@@ -46,7 +46,7 @@ data OnTrackReq = OnTrackReq
 
 data TrackReqMessage = TrackReqMessage
   { order_id :: Text,
-    tracking :: Tracking
+    callback_url :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

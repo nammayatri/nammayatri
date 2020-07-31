@@ -39,10 +39,10 @@ data Task = Task
     _pickup :: PickupOrDrop,
     _drop :: PickupOrDrop,
     _package :: Package,
-    _agent :: Agent,
-    _vehicle :: Vehicle,
-    _created_at :: LocalTime,
-    _updated_at :: LocalTime
+    _agent :: Maybe Agent,
+    _vehicle :: Maybe Vehicle,
+    _created_at :: Maybe LocalTime,
+    _updated_at :: Maybe LocalTime
   }
   deriving (Generic, Show)
 

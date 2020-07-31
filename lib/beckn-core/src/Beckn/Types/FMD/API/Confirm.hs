@@ -6,7 +6,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Invoice
-import Beckn.Types.Core.Payment
+import Beckn.Types.Core.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
@@ -45,9 +45,8 @@ data OnConfirmReq = OnConfirmReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data ConfirmReqMessage = ConfirmReqMessage
-  { order_id :: Text,
-    payment :: Payment
+newtype ConfirmReqMessage = ConfirmReqMessage
+  { order :: Order
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

@@ -60,7 +60,7 @@ searchCb _unit req = withFlowHandler $ do
   EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
   let mBppUrl = parseBaseUrl . toString =<< req ^. #context . #_bpp_nw_address
       -- FIXME: why is ix 0 not producing a Maybe?
-      itemId = req ^. #message . #services . ix 0 . #_catalog . #_items . ix 0 . #_id
+      itemId = req ^. #message . #catalog . #_items . ix 0 . #_id
   selectReq <- buildSelectReq (req ^. #context) itemId
   case mBppUrl of
     Nothing -> EL.logError @Text "mock_app_backend" "Bad bpp_nw_address"

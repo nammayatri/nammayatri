@@ -50,4 +50,4 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
 mkSearchResponse :: FlowR r OnSearchServices
 mkSearchResponse = do
   L.runIO $ threadDelay 0.5e6
-  return $ OnSearchServices [example]
+  return $ OnSearchServices example

@@ -20,8 +20,7 @@ initCb _unit req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   EL.logDebug @Text "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   let mBppUrl = parseBaseUrl . toString =<< req ^. #context . #_bpp_nw_address
-      orderId = req ^. #message . #order . #_id
-  confirmReq <- buildConfirmReq (req ^. #context) orderId
+  confirmReq <- buildConfirmReq (req ^. #context)
   case mBppUrl of
     Nothing -> EL.logError @Text "mock-app-backend" "Bad bpp_nw_address"
     Just bppUrl ->

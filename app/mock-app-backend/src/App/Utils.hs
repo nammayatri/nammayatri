@@ -72,7 +72,7 @@ buildDraftOrder itemId = do
   return $
     Order
       { _id = "draft-task-1",
-        _state = "DRAFT", -- FIXME?
+        _state = Nothing,
         _items = [itemId],
         _created_at = now,
         _updated_at = now,
@@ -87,8 +87,8 @@ buildDraftOrder itemId = do
                 _package = example, -- FIXME: references item and price
                 _agent = example, -- FIXME: we can't fill this
                 _vehicle = example, -- FIXME: we can't fill this
-                _created_at = now,
-                _updated_at = now
+                _created_at = Just now,
+                _updated_at = Just now
               }
           ]
       }
@@ -148,10 +148,10 @@ buildInitReq ctx quotId = do
         message = InitReqMessage quotId example
       }
 
-buildConfirmReq :: Context -> Text -> Flow ConfirmReq
-buildConfirmReq ctx orderId = do
+buildConfirmReq :: Context -> Flow ConfirmReq
+buildConfirmReq ctx = do
   return $
     ConfirmReq
       { context = ctx {_action = "confirm"},
-        message = ConfirmReqMessage orderId example
+        message = ConfirmReqMessage example
       }
