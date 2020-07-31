@@ -18,7 +18,7 @@ import System.Environment (lookupEnv)
 init :: () -> InitReq -> FlowHandlerR r AckResponse
 init _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   bppId <- L.runIO $ lookupEnv "MOCK_PROVIDER_ID"
-  bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDR"
+  bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
   let context =
         (req ^. #context)
           { _bpp_id = fromString <$> bppId,
