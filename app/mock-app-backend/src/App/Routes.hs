@@ -2,12 +2,14 @@ module App.Routes where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.FMD.API.Confirm (OnConfirmReq)
 import Beckn.Types.FMD.API.Init (OnInitReq)
 import Beckn.Types.FMD.API.Search (OnSearchReq)
 import Beckn.Types.FMD.API.Select (OnSelectReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
+import qualified Product.Confirm as P
 import qualified Product.Init as P
 import qualified Product.Search as P
 import qualified Product.Select as P
@@ -21,6 +23,7 @@ type MockAppBackendAPI =
            :<|> OnSearchAPI
            :<|> OnSelectAPI
            :<|> OnInitAPI
+           :<|> OnConfirmAPI
        )
 
 mockAppBackendAPI :: Proxy MockAppBackendAPI
@@ -33,6 +36,7 @@ mockAppBackendServer _key =
     :<|> onSearchFlow
     :<|> onSelectFlow
     :<|> onInitFlow
+    :<|> onConfirmFlow
 
 type TriggerSearchAPI =
   "trigger"
@@ -67,3 +71,12 @@ type OnInitAPI =
 
 onInitFlow :: FlowServer OnInitAPI
 onInitFlow = P.initCb
+
+type OnConfirmAPI =
+  "on_confirm"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] OnConfirmReq
+    :> Post '[JSON] AckResponse
+
+onConfirmFlow :: FlowServer OnConfirmAPI
+onConfirmFlow = P.confirmCb
