@@ -54,6 +54,8 @@ dependencies:
   - app-backend
   - beckn-transport
   - beckn-gateway
+  - mock-app-backend
+  - mock-provider-backend
   - beckn-core
   - aeson
   - base >= 4.7 && < 5

@@ -3,6 +3,8 @@ module Fixtures where
 import qualified "app-backend" App as AppBE
 import qualified "beckn-gateway" App as GatewayBE
 import qualified "beckn-transport" App as TransporterBE
+import qualified "mock-app-backend" App as MockAppBE
+import qualified "mock-provider-backend" App as MockProviderBE
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
@@ -329,13 +331,15 @@ verifyLoginReq tokenId = appVerifyLogin tokenId buildLoginReq
 runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
 runClient clientEnv x = runClientM x clientEnv
 
-startServers :: IO (ThreadId, ThreadId, ThreadId)
+startServers :: IO (ThreadId, ThreadId, ThreadId, ThreadId, ThreadId)
 startServers = do
   setEnv "USE_FAKE_SMS" "7891"
   appTid <- forkIO AppBE.runAppBackend
   tbeTid <- forkIO TransporterBE.runTransporterBackendApp
   gatewayTid <- forkIO GatewayBE.runGateway
-  return (appTid, tbeTid, gatewayTid)
+  mockAppTid <- forkIO MockAppBE.runMockApp
+  mockProvTid <- forkIO MockProviderBE.runMockProvider
+  return (appTid, tbeTid, gatewayTid, mockAppTid, mockProvTid)
 
 getLoggerCfg :: FilePath -> T.LoggerConfig
 getLoggerCfg fName =

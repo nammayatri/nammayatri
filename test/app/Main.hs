@@ -20,11 +20,10 @@ specs = do
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   hcSpec <- testSpec "HealthCheck" HC.spec
-
   return $
     withResource
       startServers
-      (\(appTid, tbeTid, gatewayTid) -> killThread appTid >> killThread tbeTid >> killThread gatewayTid)
+      (\(appTid, tbeTid, gatewayTid, mockAppTid, mockProvTid) -> traverse_ killThread [appTid, tbeTid, gatewayTid, mockAppTid, mockProvTid])
       ( \_ ->
           testGroup
             "tests"
