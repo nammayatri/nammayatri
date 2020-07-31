@@ -28,7 +28,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           }
   forkAsync "Search" $ do
     baseUrl <- lookupBaseUrl
-    ans <- mkSearchAnswer
+    resp <- mkSearchResponse
     AckResponse {} <-
       callClient "search" baseUrl $
         client
@@ -36,7 +36,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           "test-provider-2-key"
           OnSearchReq
             { context = context,
-              message = ans,
+              message = resp,
               error = Nothing
             }
     pass
@@ -47,7 +47,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
         _error = Nothing
       }
 
-mkSearchAnswer :: FlowR r OnSearchServices
-mkSearchAnswer = do
+mkSearchResponse :: FlowR r OnSearchServices
+mkSearchResponse = do
   L.runIO $ threadDelay 0.5e6
   return $ OnSearchServices [example]
