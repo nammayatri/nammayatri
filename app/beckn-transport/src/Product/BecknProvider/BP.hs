@@ -186,7 +186,7 @@ confirm req = withFlowHandler $ do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
-  notifyGateway searchCase prodInstId trackerCase
+  notifyGateway searchCase productInstance trackerCase
   admins <-
     Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
   Notify.notifyTransportersOnConfirm searchCase productInstance admins
@@ -311,11 +311,11 @@ mkTrackerCase case_ uuid now shortId =
       _updatedAt = now
     }
 
-notifyGateway :: Case -> ProductInstanceId -> Case -> Flow ()
-notifyGateway c _prodInstId trackerCase = do
+notifyGateway :: Case -> ProductInstance -> Case -> Flow ()
+notifyGateway c prodInst trackerCase = do
   L.logInfo @Text "notifyGateway" $ show c
-  pis <- ProductInstance.findAllByCaseId (c ^. #_id)
-  onConfirmPayload <- mkOnConfirmPayload c pis pis trackerCase
+  allPis <- ProductInstance.findAllByCaseId (c ^. #_id)
+  onConfirmPayload <- mkOnConfirmPayload c [prodInst] allPis trackerCase
   L.logInfo @Text "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
   _ <- Gateway.onConfirm onConfirmPayload
   return ()
