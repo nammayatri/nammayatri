@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module App.Utils where
 
 import App.Types
@@ -14,6 +16,7 @@ import Beckn.Utils.Common
 import Data.Time
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
+import Servant.Client (BaseUrl, parseBaseUrl)
 import System.Environment (lookupEnv)
 
 address :: Address
@@ -155,3 +158,7 @@ buildConfirmReq ctx = do
       { context = ctx {_action = "confirm"},
         message = ConfirmReqMessage example
       }
+
+bppUrl :: Context -> Maybe BaseUrl
+bppUrl context =
+  parseBaseUrl . toString =<< context ^. #_bpp_nw_address
