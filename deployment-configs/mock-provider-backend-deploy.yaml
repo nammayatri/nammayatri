@@ -41,6 +41,10 @@ spec:
                   fieldPath: status.podIP
             - name: GATEWAY_HOST
               value: beckn-gateway-$DEPLOY_VARIANT.atlas
+            - name: MOCK_PROVIDER_ID
+              value: JUSPAY.BPP.MOCK.1
+            - name: MOCK_PROVIDER_NW_ADDRESS
+              value: https://api.sandbox.beckn.juspay.in/dev/mock/provider/v1/
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: mock-provider-backend-$DEPLOY_VARIANT
           ports:
