@@ -7,6 +7,7 @@ import qualified "mock-app-backend" App as MockAppBE
 import qualified "mock-provider-backend" App as MockProviderBE
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
+import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.External.FCM.Types
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
@@ -28,6 +29,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Time
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import qualified "mock-app-backend" Product.Trigger as MockAppTrigger
 import Servant hiding (Context)
 import Servant.Client
 import System.Environment (setEnv)
@@ -228,6 +230,9 @@ buildCaseStatusRes caseId = do
       CaseClient {..} = mkCaseClient appRegistrationToken
       appCaseId = buildCaseId caseId
   getCaseStatusRes appCaseId
+
+triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
+triggerSearchReq = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
 appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes

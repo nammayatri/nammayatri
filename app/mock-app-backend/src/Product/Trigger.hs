@@ -13,8 +13,11 @@ import Beckn.Types.Common
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.List (lookup)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
@@ -26,7 +29,7 @@ data TriggerFlow
   = SimpleConfirm
   | NoSearchResult
   | SearchErrorFMD001
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Generic, ToJSON)
 
 instance FromHttpApiData TriggerFlow where
   -- FIXME: there must be some clever way to derive this mechanically
@@ -40,6 +43,13 @@ instance FromHttpApiData TriggerFlow where
           ("search-error-fmd-001", SearchErrorFMD001)
         ]
       noMatch = "Invalid flow. Specify one of: " <> T.intercalate ", " (fst <$> flows)
+
+instance ToHttpApiData TriggerFlow where
+  toQueryParam SimpleConfirm = "simple-confirm"
+  toQueryParam NoSearchResult = "no-search-result"
+  toQueryParam SearchErrorFMD001 = "search-error-fmd-001"
+  toHeader = BSL.toStrict . encode
+  toUrlPiece = DT.decodeUtf8 . toHeader
 
 gatewayLookup :: FlowR r (String, Int)
 gatewayLookup =

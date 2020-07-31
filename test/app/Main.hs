@@ -6,6 +6,7 @@ import DriverCancelRide as DCR
 import EulerHS.Prelude
 import Fixtures (startServers)
 import HealthCheck as HC
+import MockAppSearch as MAS
 import SuccessFlow as SF
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
@@ -20,6 +21,7 @@ specs = do
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   hcSpec <- testSpec "HealthCheck" HC.spec
+  maSpec <- testSpec "MockAppSearch" MAS.spec
   return $
     withResource
       startServers
@@ -28,6 +30,6 @@ specs = do
           testGroup
             "tests"
             [ testGroup "HealthCheck" [hcSpec],
-              after AllSucceed "HealthCheck" $ testGroup "Other" [clSpec, sfSpec, crSpec, dcrSpec]
+              after AllSucceed "HealthCheck" $ testGroup "Other" [clSpec, sfSpec, maSpec, crSpec, dcrSpec]
             ]
       )
