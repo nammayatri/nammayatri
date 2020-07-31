@@ -5,10 +5,10 @@ module Product.Search
   )
 where
 
-import App.Types
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
@@ -16,7 +16,6 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 import Product.GatewayLookup
 import System.Environment (lookupEnv)
-import "beckn-gateway" Types.API.Search (OnSearchReq (..), SearchReq, onSearchAPI)
 
 search :: () -> SearchReq -> FlowHandlerR r AckResponse
 search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
@@ -37,7 +36,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           "test-provider-2-key"
           OnSearchReq
             { context = context,
-              message = toJSON ans,
+              message = ans,
               error = Nothing
             }
     pass
@@ -51,4 +50,4 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
 mkSearchAnswer :: FlowR r OnSearchServices
 mkSearchAnswer = do
   L.runIO $ threadDelay 0.5e6
-  return example
+  return $ OnSearchServices [example]
