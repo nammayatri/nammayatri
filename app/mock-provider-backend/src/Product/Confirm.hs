@@ -39,7 +39,7 @@ confirm _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlow
               onConfirmAPI
               "test-provider-2-key"
               OnConfirmReq
-                { context = context,
+                { context = context {_action = "on_confirm"},
                   message = resp,
                   error = Nothing
                 }

@@ -36,7 +36,7 @@ select _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
               onSelectAPI
               "test-provider-2-key"
               OnSelectReq
-                { context = context,
+                { context = context {_action = "on_select"},
                   message = quote,
                   error = Nothing
                 }

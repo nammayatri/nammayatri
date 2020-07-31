@@ -35,7 +35,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           onSearchAPI
           "test-provider-2-key"
           OnSearchReq
-            { context = context,
+            { context = context {_action = "on_search"},
               message = resp,
               error = Nothing
             }
