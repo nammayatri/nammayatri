@@ -124,8 +124,8 @@ buildIntent localTime =
       _tags = []
     }
 
-buildContext :: Text -> Text -> LocalTime -> Context
-buildContext act tid localTime =
+buildContext :: Text -> Text -> UTCTime -> Context
+buildContext act tid utcTime =
   Context
     { _domain = "MOBILITY",
       _action = act,
@@ -140,14 +140,14 @@ buildContext act tid localTime =
       _bg_nw_address = Nothing,
       _bpp_nw_address = Nothing,
       _request_transaction_id = tid,
-      _timestamp = localTime,
+      _timestamp = utcTime,
       _token = Nothing
     }
 
-searchReq :: Text -> Text -> LocalTime -> Search.SearchReq
-searchReq act tid localTime =
+searchReq :: Text -> Text -> UTCTime -> LocalTime -> Search.SearchReq
+searchReq act tid utcTime localTime =
   Search.SearchReq
-    { context = buildContext act tid localTime,
+    { context = buildContext act tid utcTime,
       message = Search.SearchIntent $ buildIntent localTime
     }
 
@@ -167,7 +167,10 @@ onSearchServices ::
 searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: Text -> IO Search.SearchReq
-buildSearchReq guid = searchReq "search" guid <$> getFutureTime
+buildSearchReq guid = do
+  localTme <- getFutureTime
+  utcTime <- getCurrentTime
+  pure $ searchReq "search" guid utcTime localTme
 
 -- For the idea behind generating a client, when nested routes are involved,
 -- see https://github.com/haskell-servant/servant/issues/335

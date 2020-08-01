@@ -322,7 +322,7 @@ notifyGateway c prodInstId trackerCase = do
 
 mkContext :: Text -> Text -> Flow Context
 mkContext action tId = do
-  currTime <- getCurrentTimeUTC
+  currTime <- getCurrTime'
   return
     Context
       { _domain = "MOBILITY",

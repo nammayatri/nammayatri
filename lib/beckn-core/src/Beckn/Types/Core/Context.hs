@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Context where
 
 import Data.Text
-import Data.Time.LocalTime
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data Context = Context
@@ -20,7 +20,7 @@ data Context = Context
     _bg_nw_address :: Maybe Text,
     _bpp_nw_address :: Maybe Text,
     _request_transaction_id :: Text,
-    _timestamp :: LocalTime, -- ["format": "date-time"]
+    _timestamp :: UTCTime, -- ["format": "date-time"]
     _token :: Maybe Text
   }
   deriving (Generic, Show)

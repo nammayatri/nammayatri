@@ -141,7 +141,7 @@ notifyGateway c pi orgId = do
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis allPis orgInfo = do
-  currTime <- getCurrentTimeUTC
+  currTime <- getCurrTime'
   let context =
         Context
           { _domain = "MOBILITY",

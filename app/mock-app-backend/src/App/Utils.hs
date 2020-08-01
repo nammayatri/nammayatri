@@ -100,7 +100,7 @@ buildDraftOrder itemId = do
 
 buildContext :: Text -> Text -> Flow Context
 buildContext act tid = do
-  localTime <- getFutureTime
+  utcTime <- getCurrTime'
   bapId <- EL.runIO $ lookupEnv "MOCK_APP_ID"
   bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
   return $
@@ -118,7 +118,7 @@ buildContext act tid = do
         _bg_nw_address = Nothing,
         _bpp_nw_address = Nothing,
         _request_transaction_id = tid,
-        _timestamp = localTime,
+        _timestamp = utcTime,
         _token = Nothing
       }
 

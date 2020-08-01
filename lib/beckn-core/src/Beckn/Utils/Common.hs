@@ -29,6 +29,9 @@ getCurrTime = L.runIO $ do
   timezone <- getTimeZone utc'
   pure $ utcToLocalTime timezone utc'
 
+getCurrTime' :: L.MonadFlow m => m UTCTime
+getCurrTime' = L.runIO getCurrentTime
+
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
 
@@ -89,7 +92,7 @@ mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
 mkAckResponse' :: L.MonadFlow m => Text -> Text -> Text -> m AckResponse
 mkAckResponse' txnId action message = do
-  currTime <- getCurrTime
+  currTime <- getCurrTime'
   return
     AckResponse
       { _context =
