@@ -65,7 +65,7 @@ mkQuoteReq SearchReq {..} = do
         pickup_lng = plon,
         drop_lat = dlat,
         drop_lng = dlon,
-        category_id = (\item -> item ^. #_category_id) $ head items
+        category_id = (\item -> fromMaybe "pickup_drop" $ item ^. #_category_id) $ head items
       }
 
 readCoord :: Text -> Flow Double
