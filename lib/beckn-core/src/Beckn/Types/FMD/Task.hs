@@ -33,6 +33,7 @@ instance Example PickupOrDrop where
 
 data Task = Task
   { _id :: Text,
+    _item_id :: Text,
     _next_task_id :: Maybe Text,
     _previous_task_id :: Maybe Text,
     _state :: Text,
@@ -56,6 +57,7 @@ instance Example Task where
   example =
     Task
       { _id = idExample,
+        _item_id = idExample,
         _next_task_id = Nothing,
         _previous_task_id = Nothing,
         _state = "ASSIGNED-AGENT",

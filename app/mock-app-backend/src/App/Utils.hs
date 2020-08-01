@@ -10,6 +10,7 @@ import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.Intent
+import Beckn.Types.FMD.Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Utils.Common
@@ -76,12 +77,13 @@ buildDraftOrder itemId = do
     Order
       { _id = "draft-task-1",
         _state = Nothing,
-        _items = [itemId],
+        _items = [example {_id = itemId}],
         _created_at = now,
         _updated_at = now,
         _tasks =
           [ Task
               { _id = "draft-task-1",
+                _item_id = itemId,
                 _next_task_id = Nothing,
                 _previous_task_id = Nothing,
                 _state = "", -- FIXME: no relevant value in spec
