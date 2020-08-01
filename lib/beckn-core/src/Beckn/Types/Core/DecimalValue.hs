@@ -9,7 +9,7 @@ import EulerHS.Prelude
 
 data DecimalValue = DecimalValue
   { _integral :: Text,
-    _fraction :: Text
+    _fractional :: Text
   }
   deriving (Generic, Show)
 
@@ -23,16 +23,16 @@ instance Example DecimalValue where
   example =
     DecimalValue
       { _integral = "10",
-        _fraction = "50"
+        _fractional = "50"
       }
 
 convertDecimalValueToAmount :: DecimalValue -> Maybe Amount
 convertDecimalValueToAmount decimalValue =
   let integral = decimalValue ^. #_integral
       fraction =
-        if decimalValue ^. #_fraction == ""
+        if decimalValue ^. #_fractional == ""
           then ""
-          else "." <> decimalValue ^. #_fraction
+          else "." <> decimalValue ^. #_fractional
    in decodeFromText (integral <> fraction)
 
 convertAmountToDecimalValue :: Amount -> DecimalValue
@@ -40,5 +40,5 @@ convertAmountToDecimalValue amount =
   let amt' = encodeToText amount
       amt = split (== '.') amt'
    in if length amt == 2
-        then DecimalValue {_integral = head amt, _fraction = amt !! 1}
-        else DecimalValue {_integral = head amt, _fraction = ""}
+        then DecimalValue {_integral = head amt, _fractional = amt !! 1}
+        else DecimalValue {_integral = head amt, _fractional = ""}
