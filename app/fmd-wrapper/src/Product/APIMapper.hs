@@ -18,7 +18,7 @@ search :: Organization -> SearchReq -> FlowHandler SearchRes
 search org req = withFlowHandler $ DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
-select org req = error "Not implemented yet"
+select org req = withFlowHandler $ DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
 init org req = error "Not implemented yet"

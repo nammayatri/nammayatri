@@ -68,7 +68,20 @@ search org req = do
         Nothing -> L.logDebug "getQuoteErr" "UNABLE_TO_DECODE_ERR"
 
 select :: Organization -> SelectReq -> Flow SelectRes
-select org req = error "Not implemented yet"
+select org req = do
+  (clientId, clientSecret, url, baConfigs, bpId, bpNwAddr) <- getDunzoConfig org
+  baseUrl <- parseBaseUrl url
+  tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016"
+  token <- fetchToken tokenUrl clientId clientSecret
+  quoteReq <- mkNewQuoteReq req
+  eres <- API.getQuote clientId token baseUrl quoteReq
+  L.logInfo "select" $ show eres
+  case eres of
+    Left err -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "NACK") (Just $ domainError $ show err)
+    Right res -> do
+      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+      cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+      return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
 
 init :: Organization -> InitReq -> Flow InitRes
 init org req = error "Not implemented yet"

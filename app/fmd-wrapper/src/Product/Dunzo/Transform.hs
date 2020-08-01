@@ -13,6 +13,7 @@ import qualified Beckn.Types.Core.Error as Err
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (throwJsonError400, throwJsonError500)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
@@ -55,6 +56,49 @@ mkQuoteReq SearchReq {..} = do
   when
     (isNothing dgps)
     (throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND")
+  plat <- readCoord (fromJust pgps ^. #lat)
+  plon <- readCoord (fromJust pgps ^. #lon)
+  dlat <- readCoord (fromJust dgps ^. #lat)
+  dlon <- readCoord (fromJust dgps ^. #lon)
+  return $
+    QuoteReq
+      { pickup_lat = plat,
+        pickup_lng = plon,
+        drop_lat = dlat,
+        drop_lng = dlon,
+        category_id = (\item -> fromMaybe "pickup_drop" $ item ^. #_category_id) $ head items
+      }
+
+mkNewQuoteReq :: SelectReq -> Flow QuoteReq
+mkNewQuoteReq SelectReq {..} = do
+  let tasks = message ^. #order ^. #_tasks
+      task = head tasks
+      pickup = task ^. #_pickup ^. #_location
+      drop = task ^. #_drop ^. #_location
+      package = task ^. #_package
+      items = package ^. #_contents
+  -- let intent = message ^. #intent
+  --     pickups = intent ^. #_pickups
+  --     drops = intent ^. #_drops
+  --     packages = intent ^. #_packages
+  --     items = concat $ (\pkg -> pkg ^. #_contents) <$> packages
+  -- when
+  --   (length pickups /= 1)
+  --   (throwJsonError400 "ERR" "NUMBER_OF_PICKUPS_EXCEEDES_LIMIT")
+  -- when
+  --   (length drops /= 1)
+  --   (throwJsonError400 "ERR" "NUMBER_OF_DROPS_EXCEEDES_LIMIT")
+  -- when
+  --   (null items)
+  -- (throwJsonError400 "ERR" "NUMBER_OF_ITEMS_NONE")
+  let pgps = pickup ^. #_gps
+      dgps = drop ^. #_gps
+  -- when
+  --   (isNothing pgps)
+  --   (throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND")
+  -- when
+  --   (isNothing dgps)
+  --   (throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND")
   plat <- readCoord (fromJust pgps ^. #lat)
   plon <- readCoord (fromJust pgps ^. #lon)
   dlat <- readCoord (fromJust dgps ^. #lat)
