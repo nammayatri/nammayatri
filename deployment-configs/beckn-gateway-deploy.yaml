@@ -39,6 +39,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: GATEWAY_ID
+              value: JUSPAY.BG.1
+            - name: GATEWAY_NW_ADDRESS
+              value: https://api.sandbox.beckn.juspay.in/dev/gateway/v1/
             #------ Postgres DB configs ------#
             - name: DB_HOST
               valueFrom:

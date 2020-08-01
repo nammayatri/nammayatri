@@ -37,7 +37,7 @@ search org req = withFlowHandler $ do
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providerUrls <- BP.lookup $ req ^. #context
   bgId <- L.runIO $ lookupEnv "GATEWAY_ID"
-  bgNwAddr <- L.runIO $ lookupEnv "GATEWAY_NW_ADDR"
+  bgNwAddr <- L.runIO $ lookupEnv "GATEWAY_NW_ADDRESS"
   let context =
         (req ^. #context)
           { _bg_id = fromString <$> bgId,
