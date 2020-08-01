@@ -4,10 +4,12 @@ module Product.Dunzo.Transform where
 
 import App.Types
 import Beckn.Types.Common (generateGUID)
+import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Descriptor
+import qualified Beckn.Types.Core.Error as Err
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
 import Beckn.Types.FMD.API.Search
@@ -20,11 +22,11 @@ import External.Dunzo.Types
 import Types.Wrapper
 import Utils.Common (getClientConfig)
 
-getDunzoConfig :: Organization -> Flow (ClientId, ClientSecret, Text, [BAConfig])
+getDunzoConfig :: Organization -> Flow (ClientId, ClientSecret, Text, [BAConfig], Text, Text)
 getDunzoConfig org = do
   config <- getClientConfig org
   case config of
-    Dunzo dzClientId dzClientSecret dzUrl dzBAConfigs -> return (dzClientId, dzClientSecret, dzUrl, dzBAConfigs)
+    Dunzo dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress -> return (dzClientId, dzClientSecret, dzUrl, dzBAConfigs, dzBPId, dzBPNwAddress)
     _ -> throwJsonError500 "CLIENT_CONFIG" "MISMATCH"
 
 mkQuoteReq :: SearchReq -> Flow QuoteReq
@@ -36,23 +38,23 @@ mkQuoteReq SearchReq {..} = do
       items = concat $ (\pkg -> pkg ^. #_contents) <$> packages
   when
     (length pickups /= 1)
-    (throwJsonError400 "NUMBER_OF_PICKUPS" "EXCEEDES_LIMIT")
+    (throwJsonError400 "ERR" "NUMBER_OF_PICKUPS_EXCEEDES_LIMIT")
   when
     (length drops /= 1)
-    (throwJsonError400 "NUMBER_OF_DROPS" "EXCEEDES_LIMIT")
+    (throwJsonError400 "ERR" "NUMBER_OF_DROPS_EXCEEDES_LIMIT")
   when
     (null items)
-    (throwJsonError400 "NUMBER_OF_ITEMS" "NONE")
+    (throwJsonError400 "ERR" "NUMBER_OF_ITEMS_NONE")
   let pickup1 = head pickups
       drop1 = head drops
       pgps = pickup1 ^. #_gps
       dgps = drop1 ^. #_gps
   when
     (isNothing pgps)
-    (throwJsonError400 "PICKUP_LOCATION" "NOT_FOUND")
+    (throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND")
   when
     (isNothing dgps)
-    (throwJsonError400 "DROP_LOCATION" "NOT_FOUND")
+    (throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND")
   plat <- readCoord (fromJust pgps ^. #lat)
   plon <- readCoord (fromJust pgps ^. #lon)
   dlat <- readCoord (fromJust dgps ^. #lat)
@@ -70,8 +72,38 @@ readCoord :: Text -> Flow Double
 readCoord text = do
   let mCoord = readMaybe $ T.unpack text
   case mCoord of
-    Nothing -> throwJsonError400 "LOCATION" "READ_ERROR"
+    Nothing -> throwJsonError400 "ERR" "LOCATION_READ_ERROR"
     Just v -> return v
+
+mkOnSearchErrReq :: Organization -> Context -> Error -> Flow OnSearchReq
+mkOnSearchErrReq org context res@Error {..} = do
+  now <- getCurrentTimeUTC
+  id <- generateGUID
+  return $
+    OnSearchReq
+      { context = context,
+        message = OnSearchServices (catalog id now),
+        error = Just error
+      }
+  where
+    catalog id now =
+      Catalog
+        { _id = id,
+          _categories = [],
+          _brands = [],
+          _models = [],
+          _ttl = now,
+          _items = [],
+          _offers = []
+        }
+
+    error =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = code,
+          _path = Nothing,
+          _message = Just message
+        }
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
 mkOnSearchReq org context res@QuoteRes {..} = do
@@ -96,6 +128,9 @@ mkOnSearchReq org context res@QuoteRes {..} = do
           _offers = []
         }
 
+updateContext :: Context -> Text -> Text -> Context
+updateContext Context {..} bpId bpNwAddress = Context {_bpp_nw_address = Just bpNwAddress, _bpp_id = Just bpId, ..}
+
 mkSearchItem :: Text -> QuoteRes -> Item
 mkSearchItem id QuoteRes {..} =
   Item
@@ -114,14 +149,14 @@ mkSearchItem id QuoteRes {..} =
     price =
       Price
         { _currency = "INR",
-          _value = value,
-          _estimated_value = value,
-          _computed_value = value,
-          _listed_value = value,
-          _offered_value = value,
-          _minimum_value = value,
-          _maximum_value = value
+          _value = Nothing,
+          _estimated_value = Just value,
+          _computed_value = Nothing,
+          _listed_value = Nothing,
+          _offered_value = Nothing,
+          _minimum_value = Nothing,
+          _maximum_value = Nothing
         }
-    value = DecimalValue "" "" -- FIX this
+    value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
     descriptor = Descriptor n n n n n [] n n
     n = Nothing

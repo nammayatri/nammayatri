@@ -12,14 +12,13 @@ import qualified Types.Storage.DB as DB
 dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT)
 dbTable = DB._organization DB.appDb
 
-findOrgByApiKey ::
-  Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
-findOrgByApiKey oType apiKey =
+findOrgByApiKey :: App.APIKey -> Flow (Maybe Org.Organization)
+findOrgByApiKey apiKey =
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Org.Organization {..} =
-      _apiKey ==. B.val_ (Just apiKey) &&. _type ==. B.val_ oType
+      _apiKey ==. B.val_ (Just apiKey)
 
 listOrganizations ::
   Maybe Int ->

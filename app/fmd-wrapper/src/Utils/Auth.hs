@@ -6,7 +6,7 @@ import Beckn.Utils.Common (fromMaybeM400)
 import Beckn.Utils.Servant.HeaderAuth
 import Control.Monad ()
 import EulerHS.Prelude
-import qualified Storage.Queries.Provider as BP
+import qualified Storage.Queries.Organization as Org
 
 -- | TODO: Perform some API key verification.
 data VerifyAPIKey = VerifyAPIKey
@@ -18,4 +18,4 @@ instance VerificationMethod VerifyAPIKey where
     \If you don't have an API key, register the app/gateway."
 
 verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
-verifyApiKey = VerificationAction (BP.lookupKey >=> fromMaybeM400 "INVALID_API_KEY")
+verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM400 "INVALID_API_KEY")

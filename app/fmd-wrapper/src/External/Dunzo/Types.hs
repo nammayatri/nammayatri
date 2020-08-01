@@ -199,3 +199,10 @@ instance ToJSON TaskState where
 
 instance FromJSON TaskState where
   parseJSON = genericParseJSON taskStateOptions
+
+data Error = Error
+  { code :: Text,
+    message :: Text,
+    details :: Value
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)

@@ -6,6 +6,7 @@ import External.Dunzo.Types (ClientId, ClientSecret)
 
 data BAConfig = BAConfig
   { bap_nw_address :: Text,
+    bap_id :: Text,
     paymentPolicy :: PaymentPolicy
   }
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -15,6 +16,8 @@ data WrapperClientConfig = Dunzo
   { dzClientId :: ClientId,
     dzClientSecret :: ClientSecret,
     dzUrl :: Text,
-    dzBAConfigs :: [BAConfig]
+    dzBAConfigs :: [BAConfig],
+    dzBPId :: Text,
+    dzBPNwAddress :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)

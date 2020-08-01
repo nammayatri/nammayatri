@@ -12,8 +12,8 @@ import Servant.Client (BaseUrl, ClientError)
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"
-    :> QueryParam "client-id" Text
-    :> QueryParam "client-secret" Text
+    :> Header "client-id" Text
+    :> Header "client-secret" Text
     :> Get '[JSON] TokenRes
 
 getTokenAPI :: Proxy GetTokenAPI

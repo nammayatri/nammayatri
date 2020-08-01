@@ -14,41 +14,60 @@ import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (fromMaybeM500, throwJsonError500)
-import qualified Data.Text as T
+import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
 import Product.Dunzo.Transform
-import Servant.Client (BaseUrl (..), Scheme (..))
+import Servant.Client (BaseUrl (..), ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Dunzo as Dz
+import Utils.Common (parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do
-  (clientId, clientSecret, url, baConfigs) <- getDunzoConfig org
-  let baseUrl = getBaseUrl url
-  token <- fetchToken baseUrl clientId clientSecret
+  (clientId, clientSecret, url, baConfigs, bpId, bpNwAddr) <- getDunzoConfig org
+  baseUrl <- parseBaseUrl url
+  tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
+  token <- fetchToken tokenUrl clientId clientSecret
   quoteReq <- mkQuoteReq req
   eres <- API.getQuote clientId token baseUrl quoteReq
-  case eres of
-    Left err -> return $ AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
-    Right res -> do
-      onSearchReq <- mkOnSearchReq org (req ^. #context) res
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-      cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-      sendCb cbApiKey (getCbBaseUrl cbUrl) onSearchReq
-      return $ AckResponse (req ^. #context) (ack "ACK") Nothing
+  merr <-
+    case eres of
+      Left err ->
+        case err of
+          FailureResponse _ (Response _ _ _ body) -> sendErrCb org bpId bpNwAddr body
+          _ -> return $ Left (show err)
+      Right res -> sendCb org bpId bpNwAddr res
+  case merr of
+    Left err -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "NACK") (Just $ domainError err)
+    Right _ -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
   where
-    getCbBaseUrl cbUrl =
-      BaseUrl
-        { baseUrlScheme = Https,
-          baseUrlHost = T.unpack cbUrl,
-          baseUrlPort = 443,
-          baseUrlPath = ""
-        }
+    sendCb org bpId bpNwAddr res = do
+      onSearchReq <- mkOnSearchReq org (updateContext (req ^. #context) bpId bpNwAddr) res
+      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+      cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+      cbres <- callCbAPI cbApiKey cbUrl onSearchReq
+      L.logDebug "cb" $
+        decodeUtf8 (encode onSearchReq)
+          <> show cbres
+      return $ Right ()
 
-    sendCb cbApiKey cbUrl req = L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey req
+    callCbAPI cbApiKey cbUrl req = L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey req
+
+    sendErrCb org bpId bpNwAddr errbody =
+      case decode errbody of
+        Just err -> do
+          cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+          cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+          onSearchErrReq <- mkOnSearchErrReq org (updateContext (req ^. #context) bpId bpNwAddr) err
+          cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
+          L.logDebug "cb" $
+            decodeUtf8 (encode onSearchErrReq)
+              <> show cbres
+          return $ Right ()
+        Nothing -> return $ Left "UNABLE_TO_DECODE_ERR"
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = error "Not implemented yet"
@@ -83,12 +102,3 @@ fetchToken baseUrl clientId clientSecret = do
   where
     callAPI =
       API.getToken baseUrl (TokenReq clientId clientSecret)
-
-getBaseUrl :: Text -> BaseUrl
-getBaseUrl url =
-  BaseUrl
-    { baseUrlScheme = Https,
-      baseUrlHost = T.unpack url,
-      baseUrlPort = 443,
-      baseUrlPath = ""
-    }
