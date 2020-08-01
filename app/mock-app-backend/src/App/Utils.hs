@@ -144,7 +144,7 @@ buildSelectReq ctx itemId = do
       }
 
 buildInitReq :: Context -> Text -> Flow InitReq
-buildInitReq ctx quotId = do
+buildInitReq ctx quotId =
   return $
     InitReq
       { context = ctx {_action = "init"},
@@ -152,7 +152,7 @@ buildInitReq ctx quotId = do
       }
 
 buildConfirmReq :: Context -> Flow ConfirmReq
-buildConfirmReq ctx = do
+buildConfirmReq ctx =
   return $
     ConfirmReq
       { context = ctx {_action = "confirm"},

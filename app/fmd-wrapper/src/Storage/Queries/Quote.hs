@@ -13,5 +13,5 @@ createQuote = do
   return quoteId
 
 lookupQuote :: Text -> Flow (Maybe Text)
-lookupQuote key = do
+lookupQuote key =
   getKeyRedis ("Quote_" <> key)
