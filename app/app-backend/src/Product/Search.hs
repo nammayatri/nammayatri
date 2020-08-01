@@ -190,7 +190,7 @@ mkProduct case_ mprovider item = do
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider -- Nothing
   price <-
-    case convertDecimalValueToAmount $ item ^. #_price . #_listed_value of
+    case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
@@ -224,7 +224,7 @@ mkProductInstance case_ mprovider personId item = do
   let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
   price <-
-    case convertDecimalValueToAmount $ item ^. #_price . #_listed_value of
+    case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product

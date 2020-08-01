@@ -16,7 +16,7 @@ data Intent = Intent
     _packages :: [Package],
     -- FIXME: tags field name clashes with the one from Core.Intent
     -- We have assumed the domain one here takes precedence
-    _tags :: [Tag]
+    _tags :: Maybe [Tag]
   }
   deriving (Generic, Show)
 

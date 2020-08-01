@@ -87,13 +87,13 @@ price =
   let amt = DecimalValue "800" ""
    in Price
         { _currency = "INR",
-          _value = amt,
-          _estimated_value = amt,
-          _computed_value = amt,
-          _listed_value = amt,
-          _offered_value = amt,
-          _minimum_value = amt,
-          _maximum_value = amt
+          _value = Just amt,
+          _estimated_value = Just amt,
+          _computed_value = Just amt,
+          _listed_value = Just amt,
+          _offered_value = Just amt,
+          _minimum_value = Just amt,
+          _maximum_value = Just amt
         }
 
 getStop :: LocalTime -> Stop.Stop

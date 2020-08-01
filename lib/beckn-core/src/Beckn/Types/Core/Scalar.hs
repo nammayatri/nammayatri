@@ -6,11 +6,11 @@ import Data.Text
 import EulerHS.Prelude
 
 data Scalar = Scalar
-  { _type :: Text, -- ["CONSTANT", "VARIABLE"]
+  { _type :: Maybe Text, -- ["CONSTANT", "VARIABLE"]
     _value :: Maybe Double,
     _estimated_value :: Maybe Double,
     _computed_value :: Maybe Double,
-    _range :: ScalarRange,
+    _range :: Maybe ScalarRange,
     _unit :: Text
   }
   deriving (Generic, Show)
@@ -24,7 +24,7 @@ instance ToJSON Scalar where
 instance Example Scalar where
   example =
     Scalar
-      { _type = "CONSTANT",
+      { _type = Just "CONSTANT",
         _value = Just 12.345,
         _estimated_value = Just 12.345,
         _computed_value = Just 12.345,

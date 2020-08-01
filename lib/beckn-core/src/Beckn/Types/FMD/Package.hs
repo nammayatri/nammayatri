@@ -9,7 +9,7 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data Package = Package
-  { _id :: Text,
+  { _id :: Maybe Text,
     _parent_package_id :: Maybe Text,
     _descriptor :: Maybe Descriptor,
     _contents :: [Item],
@@ -28,7 +28,7 @@ instance ToJSON Package where
 instance Example Package where
   example =
     Package
-      { _id = idExample,
+      { _id = Just idExample,
         _parent_package_id = Nothing,
         _descriptor = example,
         _contents = example,

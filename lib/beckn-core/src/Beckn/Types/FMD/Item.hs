@@ -7,17 +7,17 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data Item = Item
-  { _id :: Text,
+  { _id :: Maybe Text,
     _parent_item_id :: Maybe Text,
-    _descriptor :: Descriptor,
-    _price :: Price,
+    _descriptor :: Maybe Descriptor,
+    _price :: Maybe Price,
     _model_id :: Maybe Text,
     _category_id :: Text,
     _brand_id :: Maybe Text,
-    _promotional :: Bool,
+    _promotional :: Maybe Bool,
     _ttl :: Maybe Integer,
-    _tags :: [Tag],
-    _fragile :: Bool
+    _tags :: Maybe [Tag],
+    _fragile :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -30,15 +30,15 @@ instance ToJSON Item where
 instance Example Item where
   example =
     Item
-      { _id = idExample,
+      { _id = Just idExample,
         _parent_item_id = Nothing,
         _descriptor = example,
         _price = example,
         _model_id = Nothing,
         _category_id = idExample,
         _brand_id = Nothing,
-        _promotional = False,
+        _promotional = Nothing,
         _ttl = Nothing,
         _tags = example,
-        _fragile = True
+        _fragile = Nothing
       }

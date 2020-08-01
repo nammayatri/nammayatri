@@ -65,7 +65,7 @@ buildIntent =
             _pickups = [location],
             _drops = [location],
             _packages = [],
-            _tags = []
+            _tags = Nothing
           }
     }
 

@@ -76,13 +76,13 @@ mkPrice prodInst =
   let amt = convertAmountToDecimalValue $ prodInst ^. #_price
    in Price
         { _currency = "INR", -- TODO : Fetch this from product
-          _value = amt,
-          _estimated_value = amt,
-          _computed_value = amt,
-          _listed_value = amt,
-          _offered_value = amt,
-          _minimum_value = amt,
-          _maximum_value = amt
+          _value = Just amt,
+          _estimated_value = Just amt,
+          _computed_value = Just amt,
+          _listed_value = Just amt,
+          _offered_value = Just amt,
+          _minimum_value = Just amt,
+          _maximum_value = Just amt
         }
 
 mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Organization -> Flow Mobility.Service
