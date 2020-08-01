@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fmd-wrapper-configs
+  namespace: atlas
+data:
+  PGSQL_HOST: "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  PGSQL_PORT: "5432"
+  PGSQL_DB: "atlas_fmd_wrapper"
+  REDIS_HOST: "ec-redis-beta-001.bfw4iw.0001.apse1.cache.amazonaws.com"
+  REDIS_PORT: "6379"
+  REDIS_DB: "1"
+  REDIS_AUTH: "Nothing" # fix this later
+  REDIS_MAX_CONNECTIONS: "50"
+  REDIS_MAX_IDLE_TIME: "30"
+  REDIS_CONNECTION_TIMEOUT: "100"

@@ -6,7 +6,7 @@ metadata:
   labels:
     version: latest
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: beckn-transport-$DEPLOY_VARIANT

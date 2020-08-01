@@ -79,6 +79,17 @@ spec:
       timeout: 40s
     - match:
         - uri:
+            prefix: /fmd/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: fmd-wrapper-sandbox
+            port:
+              number: 8018
+      timeout: 40s
+    - match:
+        - uri:
             prefix: /gateway/
       rewrite:
         uri: /
@@ -141,4 +152,15 @@ spec:
             host: beckn-gateway-master
             port:
               number: 8015
+      timeout: 40s
+    - match:
+        - uri:
+            prefix: /dev/fmd/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: fmd-wrapper-master
+            port:
+              number: 8018
       timeout: 40s

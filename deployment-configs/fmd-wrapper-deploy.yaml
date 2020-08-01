@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mock-app-backend-$DEPLOY_VARIANT
+  name: fmd-wrapper-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: mock-app-backend-$DEPLOY_VARIANT
+      app: fmd-wrapper-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: mock-app-backend-$DEPLOY_VARIANT
+        app: fmd-wrapper-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'echo "starting app server" && /opt/app/mock-app-backend-exe'
+            - 'echo "starting app server" && /opt/app/fmd-wrapper-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,22 +39,78 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: GATEWAY_HOST
-              value: beckn-gateway-$DEPLOY_VARIANT.atlas
-            - name: MOCK_APP_ID
-              value: JUSPAY.BAP.MOCK.1
-            - name: MOCK_APP_NW_ADDRESS
-              value: https://api.sandbox.beckn.juspay.in/dev/mock/app/v1/
+            #------ Postgres DB configs ------#
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: PGSQL_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: PGSQL_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: PGSQL_DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: PGSQL_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: PGSQL_PASSWORD
+            #------ Redis configs ------#
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_PORT
+            - name: REDIS_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_DB
+            - name: REDIS_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_AUTH
+            - name: REDIS_MAX_CONNECTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_MAX_CONNECTIONS
+            - name: REDIS_MAX_IDLE_TIME
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_MAX_IDLE_TIME
+            - name: REDIS_CONNECTION_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: fmd-wrapper-configs
+                  key: REDIS_CONNECTION_TIMEOUT
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
-          name: mock-app-backend-$DEPLOY_VARIANT
+          name: fmd-wrapper-$DEPLOY_VARIANT
           ports:
-            - containerPort: 8016
-              name: app-http
+            - containerPort: 8018
+              name: transport-http
           livenessProbe:
             failureThreshold: 3
             httpGet:
               path: /v1/
-              port: 8016
+              port: 8018
             initialDelaySeconds: 30
             periodSeconds: 20
             successThreshold: 1
@@ -63,7 +119,7 @@ spec:
             failureThreshold: 2
             httpGet:
               path: /v1/
-              port: 8016
+              port: 8018
             initialDelaySeconds: 30
             periodSeconds: 12
             successThreshold: 1
@@ -75,6 +131,10 @@ spec:
             limits:
               cpu: 1000m
               memory: 1024Mi
+          volumeMounts:
+            - mountPath: "/var/local/beckn"
+              name: fcm-key
+              readOnly: true
           securityContext:
             privileged: false
         - args:
@@ -87,7 +147,7 @@ spec:
             - --binaryPath
             - /usr/local/bin/envoy
             - --serviceCluster
-            - mock-app-backend-$DEPLOY_VARIANT.$(POD_NAMESPACE)
+            - fmd-wrapper-$DEPLOY_VARIANT.$(POD_NAMESPACE)
             - --drainDuration
             - 45s
             - --parentShutdownDuration
@@ -109,7 +169,7 @@ spec:
             - --statusPort
             - "15020"
             - --applicationPorts
-            - "8016"
+            - "8018"
           env:
             - name: POD_NAME
               valueFrom:
@@ -134,13 +194,13 @@ spec:
             - name: ISTIO_META_INTERCEPTION_MODE
               value: REDIRECT
             - name: ISTIO_META_INCLUDE_INBOUND_PORTS
-              value: "8016"
+              value: "8018"
             - name: ISTIO_METAJSON_ANNOTATIONS
               value: |
                 {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
             - name: ISTIO_METAJSON_LABELS
               value: |
-                {"app":"mock-app-backend-$DEPLOY_VARIANT","version":"latest"}
+                {"app":"fmd-wrapper-$DEPLOY_VARIANT","version":"latest"}
           image: docker.io/istio/proxyv2:1.2.2
           imagePullPolicy: IfNotPresent
           lifecycle:
@@ -196,7 +256,7 @@ spec:
             - -x
             - ""
             - -b
-            - "8016"
+            - "8018"
             - -d
             - "15020"
           image: docker.io/istio/proxy_init:1.2.2
@@ -220,6 +280,9 @@ spec:
         - emptyDir:
             medium: Memory
           name: istio-envoy
+        - name: fcm-key
+          secret:
+            secretName: beckn-fcm-key
         - name: istio-certs
           secret:
             optional: true
@@ -230,13 +293,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: mock-app-backend-$DEPLOY_VARIANT
+  name: fmd-wrapper-$DEPLOY_VARIANT
   labels:
-    app: mock-app-backend-$DEPLOY_VARIANT
+    app: fmd-wrapper-$DEPLOY_VARIANT
 spec:
   ports:
-    - port: 8016
-      targetPort: 8016
-      name: app-http
+    - port: 8018
+      targetPort: 8018
+      name: transport-http
   selector:
-    app: mock-app-backend-$DEPLOY_VARIANT
+    app: fmd-wrapper-$DEPLOY_VARIANT
