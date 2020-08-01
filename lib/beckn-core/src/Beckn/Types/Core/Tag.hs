@@ -5,7 +5,7 @@ import Data.Text
 import EulerHS.Prelude
 
 data Tag = Tag
-  { _label :: Text,
+  { _key :: Text,
     _value :: Text
   }
   deriving (Generic, Show)
@@ -19,6 +19,6 @@ instance ToJSON Tag where
 instance Example Tag where
   example =
     Tag
-      { _label = "key",
+      { _key = "key",
         _value = "value"
       }
