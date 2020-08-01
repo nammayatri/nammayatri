@@ -5,6 +5,7 @@ module Beckn.Types.Common where
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
+import Data.Aeson
 import Data.Generics.Labels ()
 import Data.Swagger
 import qualified EulerHS.Language as L
@@ -33,10 +34,18 @@ data AckResponse = AckResponse
   deriving (Show, Generic)
 
 instance FromJSON AckResponse where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON =
+    genericParseJSON
+      stripAllLensPrefixOptions
+        { omitNothingFields = True
+        }
 
 instance ToJSON AckResponse where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON =
+    genericToJSON
+      stripLensPrefixOptions
+        { omitNothingFields = True
+        }
 
 newtype AckMessage = AckMessage {_ack :: Ack}
   deriving (Show, Generic)
