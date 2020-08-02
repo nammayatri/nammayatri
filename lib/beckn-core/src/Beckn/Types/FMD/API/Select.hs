@@ -52,7 +52,7 @@ data OnSelectReq = OnSelectReq
 
 data OnSelectMessage = OnSelectMessage
   { order :: Order,
-    quote :: Quotation
+    quote :: Maybe Quotation
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

@@ -18,7 +18,8 @@ selectCb :: () -> OnSelectReq -> FlowHandler AckResponse
 selectCb _unit req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   EL.logDebug @Text "mock_app_backend" $ "select_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
-  let quotId = req ^. #message . #quote . #_id
+  let mquote = req ^. #message . #quote
+      quotId = maybe "" (\q -> q ^. #_id) mquote
   initReq <- buildInitReq (req ^. #context) quotId
   case bppUrl $ req ^. #context of
     Nothing -> EL.logError @Text "mock-app-backend" "Bad bpp_nw_address"
