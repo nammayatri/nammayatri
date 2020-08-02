@@ -4,15 +4,16 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..), ack)
+import Beckn.Types.Core.Error (domainError)
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
-import Beckn.Types.FMD.API.Select (SelectReq, SelectRes, onSelectAPI)
+import Beckn.Types.FMD.API.Select (OnSelectReq, SelectReq, SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeM500, throwJsonError500)
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, throwJsonError500)
 import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -22,6 +23,7 @@ import External.Dunzo.Types
 import Product.Dunzo.Transform
 import Servant.Client (BaseUrl (..), ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Dunzo as Dz
+import Storage.Queries.Quote
 import Utils.Common (parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
@@ -84,7 +86,11 @@ select org req = do
     Right res -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
   where
     sendCallback req (Right res) cbUrl cbApiKey = do
-      onSelectReq <- mkOnSelectReq req res
+      (onSelectReq :: OnSelectReq) <- mkOnSelectReq req res
+      let mquote = onSelectReq ^. (#message . #quote)
+          quoteId = maybe "" (\q -> q ^. #_id) mquote
+          quoteData = encodeToText (onSelectReq ^. #message)
+      storeQuote quoteId quoteData
       L.logInfo "on_select" $ "on_select cb req" <> show onSelectReq
       onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
       L.logInfo "on_select" $ "on_select cb resp" <> show onSelectResp

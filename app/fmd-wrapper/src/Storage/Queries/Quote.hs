@@ -15,3 +15,9 @@ createQuote = do
 lookupQuote :: Text -> Flow (Maybe Text)
 lookupQuote key =
   getKeyRedis ("Quote_" <> key)
+
+storeQuote :: Text -> Text -> Flow ()
+storeQuote quoteId quote = do
+  let ttl = 86400
+  setExRedis ("Quote_" <> quoteId) quote ttl
+  return ()
