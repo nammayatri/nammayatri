@@ -10,7 +10,6 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Provider as Provider
 
 -- TODO: Filter by domain
-lookup :: B.Context -> Flow [Text]
-lookup _context = do
-  providers <- Provider.listProviders
-  return . catMaybes $ Org._callbackUrl <$> providers
+lookup :: B.Context -> Flow [Org.Organization]
+lookup _context =
+  filter (isJust . Org._callbackUrl) <$> Provider.listProviders

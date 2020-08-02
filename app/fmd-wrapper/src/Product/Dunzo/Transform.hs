@@ -142,7 +142,7 @@ mkSearchItem id QuoteRes {..} =
       _category_id = Just category_id,
       _brand_id = Nothing,
       _promotional = False,
-      _ttl = Just $ eta ^. #pickup + eta ^. #drop, -- FIX this
+      _ttl = Just $ eta ^. #pickup + eta ^. #dropoff, -- FIX this
       _tags = []
     }
   where

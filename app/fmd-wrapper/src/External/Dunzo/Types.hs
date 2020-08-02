@@ -83,7 +83,7 @@ data QuoteRes = QuoteRes
 
 data Eta = Eta
   { pickup :: Integer, -- minutes
-    drop :: Integer -- minutes
+    dropoff :: Integer -- minutes
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 

@@ -4,7 +4,6 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..), ack)
-import Beckn.Types.Core.Error (domainError)
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
@@ -32,17 +31,18 @@ search org req = do
   tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
   token <- fetchToken tokenUrl clientId clientSecret
   quoteReq <- mkQuoteReq req
-  eres <- API.getQuote clientId token baseUrl quoteReq
-  merr <-
-    case eres of
-      Left err ->
-        case err of
-          FailureResponse _ (Response _ _ _ body) -> sendErrCb org bpId bpNwAddr body
-          _ -> return $ Left (show err)
-      Right res -> sendCb org bpId bpNwAddr res
-  case merr of
-    Left err -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "NACK") (Just $ domainError err)
-    Right _ -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
+  env <- ask
+  lift $
+    L.forkFlow "Search" $
+      flip runReaderT env do
+        eres <- API.getQuote clientId token baseUrl quoteReq
+        case eres of
+          Left err ->
+            case err of
+              FailureResponse _ (Response _ _ _ body) -> sendErrCb org bpId bpNwAddr body
+              _ -> L.logDebug "getQuoteErr" (show err)
+          Right res -> sendCb org bpId bpNwAddr res
+  return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
   where
     sendCb org bpId bpNwAddr res = do
       onSearchReq <- mkOnSearchReq org (updateContext (req ^. #context) bpId bpNwAddr) res
@@ -52,7 +52,6 @@ search org req = do
       L.logDebug "cb" $
         decodeUtf8 (encode onSearchReq)
           <> show cbres
-      return $ Right ()
 
     callCbAPI cbApiKey cbUrl req = L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey req
 
@@ -66,8 +65,7 @@ search org req = do
           L.logDebug "cb" $
             decodeUtf8 (encode onSearchErrReq)
               <> show cbres
-          return $ Right ()
-        Nothing -> return $ Left "UNABLE_TO_DECODE_ERR"
+        Nothing -> L.logDebug "getQuoteErr" "UNABLE_TO_DECODE_ERR"
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = error "Not implemented yet"
