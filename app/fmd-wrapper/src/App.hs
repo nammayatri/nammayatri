@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module App
   ( runFMDWrapper,
   )
@@ -6,8 +8,10 @@ where
 import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
+import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import Beckn.Types.App
 import qualified Beckn.Types.App as App
+import Beckn.Utils.Common (runFlowR)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -42,9 +46,12 @@ runFMDWrapper = do
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
           setPort port defaultSettings
+  reqHeadersKey <- V.newKey
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
-    reqHeadersKey <- V.newKey
-    runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
+    putStrLn @String "Initializing Redis Connections..."
+    try (runFlowR flowRt appEnv prepareRedisConnections) >>= \case
+      Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+      Right _ -> runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 
 mockAppExceptionResponse :: SomeException -> Response
 mockAppExceptionResponse exception = do
