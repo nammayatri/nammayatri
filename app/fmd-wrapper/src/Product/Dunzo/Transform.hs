@@ -47,8 +47,8 @@ mkQuoteReq SearchReq {..} = do
     (throwJsonError400 "ERR" "NUMBER_OF_ITEMS_NONE")
   let pickup1 = head pickups
       drop1 = head drops
-      pgps = pickup1 ^. #_gps
-      dgps = drop1 ^. #_gps
+      pgps = pickup1 ^. (#_location . #_gps)
+      dgps = drop1 ^. (#_location . #_gps)
   when
     (isNothing pgps)
     (throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND")
