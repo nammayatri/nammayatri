@@ -54,8 +54,8 @@ location =
       _3dspace = Nothing
     }
 
-buildIntent :: LocalTime -> SearchIntent
-buildIntent localTime =
+buildIntent :: UTCTime -> SearchIntent
+buildIntent utcTime =
   SearchIntent
     { intent =
         Intent
@@ -63,8 +63,8 @@ buildIntent localTime =
             _provider_id = Nothing,
             _category_id = Nothing,
             _item_id = Nothing,
-            _pickups = [PickupDrop location localTime],
-            _drops = [PickupDrop location localTime],
+            _pickups = [PickupDrop location utcTime],
+            _drops = [PickupDrop location utcTime],
             _packages = [],
             _tags = Nothing
           }
@@ -133,7 +133,7 @@ getFutureTime =
 buildSearchReq :: Text -> Flow SearchReq
 buildSearchReq tid = do
   ctx <- buildContext "search" tid
-  now <- EL.runIO $ toLocalTime <$> getCurrentTime
+  now <- getCurrTime'
   let intent = buildIntent now
   pure $ SearchReq ctx intent
 
