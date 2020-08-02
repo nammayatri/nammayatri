@@ -8,7 +8,7 @@ import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
-import Beckn.Types.FMD.API.Select (SelectReq, SelectRes)
+import Beckn.Types.FMD.API.Select (SelectReq, SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Organization (Organization)
@@ -73,15 +73,31 @@ select org req = do
   baseUrl <- parseBaseUrl url
   tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016"
   token <- fetchToken tokenUrl clientId clientSecret
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   quoteReq <- mkNewQuoteReq req
   eres <- API.getQuote clientId token baseUrl quoteReq
   L.logInfo "select" $ show eres
+  sendCallback req eres cbUrl cbApiKey -- TODO: do this async
   case eres of
     Left err -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "NACK") (Just $ domainError $ show err)
-    Right res -> do
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-      cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-      return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
+    Right res -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
+  where
+    sendCallback req (Right res) cbUrl cbApiKey = do
+      onSelectReq <- mkOnSelectReq req res
+      L.logInfo "on_select" $ "on_select cb req" <> show onSelectReq
+      onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+      L.logInfo "on_select" $ "on_select cb resp" <> show onSelectResp
+      return ()
+    sendCallback req (Left (FailureResponse _ (Response _ _ _ body))) cbUrl cbApiKey =
+      case decode body of
+        Just err -> do
+          onSelectReq <- mkOnSelectErrReq req err
+          L.logInfo "on_select" $ "on_select cb err req" <> show onSelectReq
+          onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+          L.logInfo "on_select" $ "on_select cb err resp" <> show onSelectResp
+          return ()
+        Nothing -> return ()
 
 init :: Organization -> InitReq -> Flow InitRes
 init org req = error "Not implemented yet"

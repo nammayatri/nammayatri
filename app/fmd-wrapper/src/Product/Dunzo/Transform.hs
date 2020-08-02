@@ -12,6 +12,7 @@ import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Error as Err
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Price
+import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)
@@ -71,34 +72,14 @@ mkQuoteReq SearchReq {..} = do
 
 mkNewQuoteReq :: SelectReq -> Flow QuoteReq
 mkNewQuoteReq SelectReq {..} = do
-  let tasks = message ^. #order ^. #_tasks
+  let tasks = message ^. (#order . #_tasks)
       task = head tasks
-      pickup = task ^. #_pickup ^. #_location
-      drop = task ^. #_drop ^. #_location
+      pickup = task ^. (#_pickup . #_location)
+      drop = task ^. (#_drop . #_location)
       package = task ^. #_package
       items = package ^. #_contents
-  -- let intent = message ^. #intent
-  --     pickups = intent ^. #_pickups
-  --     drops = intent ^. #_drops
-  --     packages = intent ^. #_packages
-  --     items = concat $ (\pkg -> pkg ^. #_contents) <$> packages
-  -- when
-  --   (length pickups /= 1)
-  --   (throwJsonError400 "ERR" "NUMBER_OF_PICKUPS_EXCEEDES_LIMIT")
-  -- when
-  --   (length drops /= 1)
-  --   (throwJsonError400 "ERR" "NUMBER_OF_DROPS_EXCEEDES_LIMIT")
-  -- when
-  --   (null items)
-  -- (throwJsonError400 "ERR" "NUMBER_OF_ITEMS_NONE")
-  let pgps = pickup ^. #_gps
+      pgps = pickup ^. #_gps
       dgps = drop ^. #_gps
-  -- when
-  --   (isNothing pgps)
-  --   (throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND")
-  -- when
-  --   (isNothing dgps)
-  --   (throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND")
   plat <- readCoord (fromJust pgps ^. #lat)
   plon <- readCoord (fromJust pgps ^. #lon)
   dlat <- readCoord (fromJust dgps ^. #lat)
@@ -204,3 +185,48 @@ mkSearchItem id QuoteRes {..} =
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
     descriptor = Descriptor n n n n n [] n n
     n = Nothing
+
+mkOnSelectReq :: SelectReq -> QuoteRes -> Flow OnSelectReq
+mkOnSelectReq req@SelectReq {..} res@QuoteRes {..} = do
+  now <- getCurrentTimeUTC
+  id <- generateGUID
+  let order = req ^. (#message . #order)
+      price = mkPrice estimated_price
+      quotation = Quotation {_id = id, _price = price, _ttl = Nothing}
+  return $
+    OnSelectReq
+      { context = context,
+        message = OnSelectMessage order (Just quotation),
+        error = Nothing
+      }
+  where
+    mkPrice estimatedPrice =
+      Price
+        { _currency = "INR",
+          _value = Nothing,
+          _estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
+          _computed_value = Nothing,
+          _listed_value = Nothing,
+          _offered_value = Nothing,
+          _minimum_value = Nothing,
+          _maximum_value = Nothing
+        }
+
+mkOnSelectErrReq :: SelectReq -> Error -> Flow OnSelectReq
+mkOnSelectErrReq req res@Error {..} = do
+  let context = req ^. #context
+  let order = req ^. (#message . #order)
+  return $
+    OnSelectReq
+      { context = context,
+        message = OnSelectMessage order Nothing,
+        error = Just mkError
+      }
+  where
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = code,
+          _path = Nothing,
+          _message = Just message
+        }
