@@ -4,7 +4,6 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..), ack)
-import Beckn.Types.Core.Error (domainError)
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
@@ -77,13 +76,15 @@ select org req = do
   token <- fetchToken tokenUrl clientId clientSecret
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  quoteReq <- mkNewQuoteReq req
-  eres <- API.getQuote clientId token baseUrl quoteReq
-  L.logInfo "select" $ show eres
-  sendCallback req eres cbUrl cbApiKey -- TODO: do this async
-  case eres of
-    Left err -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "NACK") (Just $ domainError $ show err)
-    Right res -> return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
+  env <- ask
+  lift $
+    L.forkFlow "Select" $
+      flip runReaderT env do
+        quoteReq <- mkNewQuoteReq req
+        eres <- API.getQuote clientId token baseUrl quoteReq
+        L.logInfo "select" $ show eres
+        sendCallback req eres cbUrl cbApiKey
+  return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
   where
     sendCallback req (Right res) cbUrl cbApiKey = do
       (onSelectReq :: OnSelectReq) <- mkOnSelectReq req res
@@ -104,6 +105,7 @@ select org req = do
           L.logInfo "on_select" $ "on_select cb err resp" <> show onSelectResp
           return ()
         Nothing -> return ()
+    sendCallback req _ cbUrl cbApiKey = return ()
 
 init :: Organization -> InitReq -> Flow InitRes
 init org req = error "Not implemented yet"
