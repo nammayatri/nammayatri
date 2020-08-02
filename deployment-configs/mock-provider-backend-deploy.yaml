@@ -6,7 +6,7 @@ metadata:
   labels:
     version: latest
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: mock-provider-backend-$DEPLOY_VARIANT
