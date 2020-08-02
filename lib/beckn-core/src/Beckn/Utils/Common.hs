@@ -282,6 +282,12 @@ instance Example a => Example [a] where
 instance Example LocalTime where
   example = LocalTime (ModifiedJulianDay 20202) midday
 
+instance Example UTCTime where
+  example =
+    UTCTime
+      (fromGregorian 2020 8 2)
+      (timeOfDayToTime (TimeOfDay 7 7 7))
+
 -- until we start using newtypes everywhere
 idExample :: Text
 idExample = "123e4567-e89b-12d3-a456-426655440000"

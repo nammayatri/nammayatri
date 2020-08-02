@@ -4,7 +4,7 @@ import Beckn.Types.Core.Location
 import Beckn.Types.Core.Tag
 import Beckn.Types.FMD.Package
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data Intent = Intent
@@ -42,7 +42,7 @@ instance Example Intent where
 
 data PickupDrop = PickupDrop
   { _location :: Location,
-    _time :: LocalTime
+    _time :: UTCTime
   }
   deriving (Generic, Show)
 
