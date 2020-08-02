@@ -17,5 +17,5 @@ getClientConfig org =
 
 parseBaseUrl :: Text -> Flow S.BaseUrl
 parseBaseUrl url =
-  L.runIO $ do
+  L.runIO $
     S.parseBaseUrl $ T.unpack url
