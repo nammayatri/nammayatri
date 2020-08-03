@@ -76,8 +76,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    - -Werror=unused-imports
-    - -Werror=missing-fields
+    - -Werror
   dependencies:
     - hspec
     - hspec-core

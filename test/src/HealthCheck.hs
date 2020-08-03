@@ -1,7 +1,6 @@
 module HealthCheck where
 
 import Data.Text.Encoding as DT
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
 import qualified EulerHS.Types as T
@@ -19,7 +18,6 @@ healthCheckBackendC = client (Proxy :: Proxy HealthCheckAPI)
 
 spec :: Spec
 spec = do
-  reqHeadersKey <- runIO V.newKey
   appManager <- runIO $ Client.newManager tlsManagerSettings
   tbeManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl =
@@ -41,11 +39,11 @@ spec = do
   around (withFlowRuntime (Just loggerCfg)) $
     describe "Testing App Backend APIs" $
       it "Testing health check API" $
-        \flowRt ->
+        \_flowRt ->
           hspec $
             it "Health Check API should return success" $
               do
-                result <- runClient appClientEnv healthCheckBackendC
-                result `shouldBe` Right (DT.decodeUtf8 "App is UP")
-                result <- runClient tbeClientEnv healthCheckBackendC
-                result `shouldBe` Right (DT.decodeUtf8 "App is UP")
+                appResult <- runClient appClientEnv healthCheckBackendC
+                appResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
+                tbeResult <- runClient tbeClientEnv healthCheckBackendC
+                tbeResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
