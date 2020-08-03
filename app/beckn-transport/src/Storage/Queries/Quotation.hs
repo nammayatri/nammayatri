@@ -31,19 +31,20 @@ findQuotationById id =
 
 listQuotations :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.Quotation]
 listQuotations mlimit moffset status =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Quotation {..} = B.desc_ _createdAt
-    predicate status Storage.Quotation {..} =
+    predicate Storage.Quotation {..} =
       foldl
         (&&.)
         (B.val_ True)
         [ _status `B.in_` (B.val_ <$> status) ||. complementVal status
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -59,9 +60,9 @@ update id status = do
     (setClause status currTime)
     (predicate id)
   where
-    predicate id Storage.Quotation {..} = _id ==. B.val_ id
-    setClause status currTime Storage.Quotation {..} =
+    predicate qid Storage.Quotation {..} = _id ==. B.val_ qid
+    setClause scStatus currTime Storage.Quotation {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ scStatus
         ]

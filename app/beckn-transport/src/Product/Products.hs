@@ -16,19 +16,19 @@ import qualified Test.RandomStrings as RS
 import Types.API.Products
 
 createProduct :: Text -> CreateProdReq -> FlowHandler ProdRes
-createProduct orgId req = withFlowHandler $ do
-  product <- mkProduct req
-  PQ.create product
-  return product
+createProduct _orgId req = withFlowHandler $ do
+  prod <- mkProduct req
+  PQ.create prod
+  return prod
 
 mkProduct :: CreateProdReq -> Flow Product.Products
 mkProduct req = do
-  id <- L.generateGUID
+  pid <- L.generateGUID
   now <- getCurrentTimeUTC
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
     Product.Products
-      { Product._id = ProductsId id,
+      { Product._id = ProductsId pid,
         Product._name = req ^. #_name,
         Product._description = req ^. #_description,
         Product._industry = Case.MOBILITY,

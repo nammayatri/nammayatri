@@ -37,7 +37,7 @@ notifyTransportersOnSearch c intent =
 
 -- | Send FCM "confirm" notification to provider admins
 notifyTransportersOnConfirm :: Case -> ProductInstance -> [Person] -> Flow ()
-notifyTransportersOnConfirm c pi admins = do
+notifyTransportersOnConfirm c _prodInst admins = do
   let model = fromMaybe "Unknown" $ c ^. #_udf1
   traverse_
     (notifyPerson title (body model) notificationData)

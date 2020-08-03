@@ -35,8 +35,8 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       when (isJust $ SP._organizationId person) $
         L.throwException $
           err400 {errBody = "user already registered an organization"}
-    validateReq req =
-      unless (all (== True) (isJust <$> transporterMandatoryFields req)) $
+    validateReq treq =
+      unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
         L.throwException $ err400 {errBody = "missing mandatory fields"}
 
 createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes

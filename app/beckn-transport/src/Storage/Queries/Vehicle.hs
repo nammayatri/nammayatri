@@ -40,13 +40,13 @@ findByIdAndOrgId id orgId =
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> Flow [Storage.Vehicle]
 findAllWithLimitOffsetByOrgIds mlimit moffset orgIds =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds) limit offset orderByDesc
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
-    limit = toInteger $ fromMaybe 100 mlimit
-    offset = toInteger $ fromMaybe 0 moffset
-    predicate orgIds Storage.Vehicle {..} =
+    limit = fromMaybe 100 mlimit
+    offset = fromMaybe 0 moffset
+    predicate Storage.Vehicle {..} =
       foldl
         (&&.)
         (B.val_ True)
@@ -54,14 +54,15 @@ findAllWithLimitOffsetByOrgIds mlimit moffset orgIds =
 
 findAllByOrgIds :: [Text] -> Flow [Storage.Vehicle]
 findAllByOrgIds orgIds =
-  DB.findAllOrErr dbTable (predicate orgIds)
+  DB.findAllOrErr dbTable predicate
   where
-    predicate orgIds Storage.Vehicle {..} =
+    predicate Storage.Vehicle {..} =
       foldl
         (&&.)
         (B.val_ True)
         [_organizationId `B.in_` (B.val_ <$> orgIds) ||. complementVal orgIds]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -71,18 +72,18 @@ updateVehicleRec vehicle =
   DB.update dbTable (setClause vehicle) (predicate $ vehicle ^. #_id)
     >>= either DB.throwDBError pure
   where
-    setClause vehicle Storage.Vehicle {..} =
+    setClause pVehicle Storage.Vehicle {..} =
       mconcat
-        [ _capacity <-. B.val_ (Storage._capacity vehicle),
-          _category <-. B.val_ (Storage._category vehicle),
-          _make <-. B.val_ (Storage._make vehicle),
-          _model <-. B.val_ (Storage._model vehicle),
-          _size <-. B.val_ (Storage._size vehicle),
-          _variant <-. B.val_ (Storage._variant vehicle),
-          _color <-. B.val_ (Storage._color vehicle),
-          _energyType <-. B.val_ (Storage._energyType vehicle),
-          _registrationCategory <-. B.val_ (Storage._registrationCategory vehicle),
-          _updatedAt <-. B.val_ (Storage._updatedAt vehicle)
+        [ _capacity <-. B.val_ (Storage._capacity pVehicle),
+          _category <-. B.val_ (Storage._category pVehicle),
+          _make <-. B.val_ (Storage._make pVehicle),
+          _model <-. B.val_ (Storage._model pVehicle),
+          _size <-. B.val_ (Storage._size pVehicle),
+          _variant <-. B.val_ (Storage._variant pVehicle),
+          _color <-. B.val_ (Storage._color pVehicle),
+          _energyType <-. B.val_ (Storage._energyType pVehicle),
+          _registrationCategory <-. B.val_ (Storage._registrationCategory pVehicle),
+          _updatedAt <-. B.val_ (Storage._updatedAt pVehicle)
         ]
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
 
@@ -91,7 +92,7 @@ deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Vehicle {..} = _id ==. B.val_ id
+    predicate vid Storage.Vehicle {..} = _id ==. B.val_ vid
 
 findByAnyOf :: Maybe Text -> Maybe Text -> Flow (Maybe Storage.Vehicle)
 findByAnyOf registrationNoM vehicleIdM =

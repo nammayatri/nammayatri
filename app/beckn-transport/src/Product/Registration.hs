@@ -57,11 +57,11 @@ initiateFlow req = do
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
   let role = fromMaybe SP.USER (req ^. #_role)
-  id <- BC.generateGUID
+  pid <- BC.generateGUID
   now <- getCurrentTimeUTC
   return $
     SP.Person
-      { _id = id,
+      { _id = pid,
         _firstName = Nothing,
         _middleName = Nothing,
         _lastName = Nothing,
@@ -90,7 +90,7 @@ makeSession ::
   InitiateLoginReq -> Text -> SR.RTEntityType -> Maybe Text -> Flow SR.RegistrationToken
 makeSession req entityId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
-  id <- L.generateGUID
+  rtid <- L.generateGUID
   token <- L.generateGUID
   now <- getCurrentTimeUTC
   attempts <-
@@ -101,7 +101,7 @@ makeSession req entityId entityType fakeOtp = do
     L.runIO $ fromMaybe 365 . (>>= readMaybe) <$> lookupEnv "TOKEN_EXPIRY"
   return $
     SR.RegistrationToken
-      { _id = id,
+      { _id = rtid,
         _token = token,
         _attempts = attempts,
         _authMedium = req ^. #_medium,
@@ -195,6 +195,6 @@ reInitiateLogin tokenId req =
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
         sendOTP (countryCode <> mobileNumber) _authValueHash
-        QR.updateAttempts (_attempts - 1) _id
+        _ <- QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}

@@ -31,19 +31,20 @@ findTripReferenceById id =
 
 listTripReferences :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.TripReference]
 listTripReferences mlimit moffset status =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.TripReference {..} = B.desc_ _createdAt
-    predicate status Storage.TripReference {..} =
+    predicate Storage.TripReference {..} =
       foldl
         (&&.)
         (B.val_ True)
         [ _status `B.in_` (B.val_ <$> status) ||. complementVal status
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -59,9 +60,9 @@ update id status = do
     (setClause status currTime)
     (predicate id)
   where
-    predicate id Storage.TripReference {..} = _id ==. B.val_ id
-    setClause status currTime Storage.TripReference {..} =
+    predicate tripId Storage.TripReference {..} = _id ==. B.val_ tripId
+    setClause newStatus currTime Storage.TripReference {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ newStatus
         ]

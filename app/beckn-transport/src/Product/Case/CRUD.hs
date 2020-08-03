@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Case.CRUD where
 
@@ -63,9 +64,9 @@ list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = with
         >>= buildResponse
       where
         buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == _getLocationId (Location._id x)) locList
-        prepare cs from to =
+        prepare pcs from to =
           CaseRes
-            { _case = cs,
+            { _case = pcs,
               _fromLocation = from,
               _toLocation = to
             }
@@ -81,12 +82,13 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
   case SP._organizationId person of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
-        pi <- createProductInstance c p _quote orgId ProdInst.INSTOCK
-        notifyGateway c pi orgId
+        prodInst <- createProductInstance c p _quote orgId ProdInst.INSTOCK
+        notifyGateway c prodInst orgId
         return c
       "DECLINED" -> do
-        pi <- createProductInstance c p _quote orgId ProdInst.OUTOFSTOCK
+        _ <- createProductInstance c p _quote orgId ProdInst.OUTOFSTOCK
         return c
+      _ -> L.throwException $ err400 {errBody = "TRANSPORTER CHOICE INVALID"}
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> ProdInst.ProductInstanceStatus -> Flow ProductInstance
@@ -94,11 +96,11 @@ createProductInstance cs prod price orgId status = do
   piId <- L.generateGUID
   (currTime :: LocalTime) <- getCurrentTimeUTC
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  let productInst = getProdInst piId shortId cs prod price orgId currTime
+  let productInst = getProdInst piId shortId currTime
   QPI.create productInst
   return productInst
   where
-    getProdInst piId shortId cs prod price orgId currTime =
+    getProdInst piId shortId currTime =
       ProductInstance
         { _id = ProductInstanceId piId,
           _caseId = Case._id cs,
@@ -129,14 +131,14 @@ createProductInstance cs prod price orgId status = do
         }
 
 notifyGateway :: Case -> ProductInstance -> Text -> Flow ()
-notifyGateway c pi orgId = do
-  L.logInfo "notifyGateway" $ show c
+notifyGateway c prodInst orgId = do
+  L.logInfo @Text "notifyGateway" $ show c
   allPis <- QPI.findAllByCaseId (c ^. #_id)
-  L.logInfo "notifyGateway" $ show pi
+  L.logInfo @Text "notifyGateway" $ show prodInst
   orgInfo <- OQ.findOrganizationById (OrganizationId orgId)
-  onSearchPayload <- mkOnSearchPayload c [pi] allPis orgInfo
-  L.logInfo "notifyGateway Request" $ show onSearchPayload
-  Gateway.onSearch onSearchPayload
+  onSearchPayload <- mkOnSearchPayload c [prodInst] allPis orgInfo
+  L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
+  _ <- Gateway.onSearch onSearchPayload
   return ()
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq

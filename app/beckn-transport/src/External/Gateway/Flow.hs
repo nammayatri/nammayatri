@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module External.Gateway.Flow where
 
 import App.Types
@@ -22,9 +24,9 @@ onSearch req = do
   apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
   res <- callAPI url (API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req) "on_search"
   whenRight res $ \_ ->
-    L.logInfo "OnSearch" "OnSearch callback successfully delivered"
+    L.logInfo @Text "OnSearch" "OnSearch callback successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending onSearch Callback: " (show err)
+    L.logError @Text "error occurred while sending onSearch Callback: " (show err)
   return $ first show res
 
 onTrackTrip :: OnTrackTripReq -> Flow (Either Text ())
@@ -32,9 +34,9 @@ onTrackTrip req = do
   url <- getAppBaseUrl
   res <- callAPI url (API.onTrackTrip req) "on_track"
   whenRight res $ \_ ->
-    L.logInfo "OnTrackTrip" "OnTrackTrip callback successfully delivered"
+    L.logInfo @Text "OnTrackTrip" "OnTrackTrip callback successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending OnTrackTrip Callback: " (show err)
+    L.logError @Text "error occurred while sending OnTrackTrip Callback: " (show err)
   return $ first show res
 
 onUpdate :: OnUpdateReq -> Flow (Either Text ())
@@ -42,9 +44,9 @@ onUpdate req = do
   url <- getAppBaseUrl
   res <- callAPI url (API.onUpdate req) "on_update"
   whenRight res $ \_ ->
-    L.logInfo "OnUpdate" "OnUpdate callback successfully delivered"
+    L.logInfo @Text "OnUpdate" "OnUpdate callback successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending OnUpdate Callback: " (show err)
+    L.logError @Text "error occurred while sending OnUpdate Callback: " (show err)
   return $ first show res
 
 onConfirm :: OnConfirmReq -> Flow (Either Text ())
@@ -52,9 +54,9 @@ onConfirm req = do
   url <- getAppBaseUrl
   res <- callAPI url (API.onConfirm req) "on_confirm"
   whenRight res $ \_ ->
-    L.logInfo "OnConfirm" "OnConfirm callback successfully delivered"
+    L.logInfo @Text "OnConfirm" "OnConfirm callback successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending onConfirm Callback: " (show err)
+    L.logError @Text "error occurred while sending onConfirm Callback: " (show err)
   return $ first show res
 
 onCancel :: OnCancelReq -> Flow (Either Text ())
@@ -62,9 +64,9 @@ onCancel req = do
   url <- getAppBaseUrl
   res <- callAPI url (API.onCancel req) "on_cancel"
   whenRight res $ \_ ->
-    L.logInfo "OnCancel" "OnCancel callback successfully delivered"
+    L.logInfo @Text "OnCancel" "OnCancel callback successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending onCancel Callback: " (show err)
+    L.logError @Text "error occurred while sending onCancel Callback: " (show err)
   return $ first show res
 
 onStatus :: OnStatusReq -> Flow (Either Text ())
@@ -72,9 +74,9 @@ onStatus req = do
   url <- getAppBaseUrl
   res <- callAPI url (API.onStatus req) "on_status"
   whenRight res $ \_ ->
-    L.logInfo "OnStatus" "OnStatus callback successfully delivered"
+    L.logInfo @Text "OnStatus" "OnStatus callback successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending onStatus Callback: " (show err)
+    L.logError @Text "error occurred while sending onStatus Callback: " (show err)
   return $ first show res
 
 getGatewayBaseUrl :: Flow BaseUrl
@@ -98,7 +100,7 @@ initiateCall req = do
   url <- getAppBaseUrl
   res <- L.callAPI url $ API.initiateCall req
   whenRight res $ \_ ->
-    L.logInfo "initiateCall" "initiateCall successfully delivered"
+    L.logInfo @Text "initiateCall" "initiateCall successfully delivered"
   whenLeft res $ \err ->
-    L.logError "error occurred while sending initiateCall: " (show err)
+    L.logError @Text "error occurred while sending initiateCall: " (show err)
   return $ first show res

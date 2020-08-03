@@ -49,14 +49,14 @@ findPersonByIdAndRoleAndOrgId id role orgId =
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate roles orgIds) limit offset orderByDesc
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
     >>= decrypt
   where
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
-    limit = toInteger $ fromMaybe 100 mlimit
-    offset = toInteger $ fromMaybe 0 moffset
-    predicate roles orgIds Storage.Person {..} =
+    limit = fromMaybe 100 mlimit
+    offset = fromMaybe 0 moffset
+    predicate Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
@@ -67,10 +67,10 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds =
-  DB.findAllOrErr dbTable (predicate roles orgIds)
+  DB.findAllOrErr dbTable predicate
     >>= decrypt
   where
-    predicate roles orgIds Storage.Person {..} =
+    predicate Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
@@ -78,6 +78,7 @@ findAllByOrgIds roles orgIds =
           _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -119,9 +120,9 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause orgId n Storage.Person {..} =
+    setClause sOrgId n Storage.Person {..} =
       mconcat
-        [ _organizationId <-. B.val_ (Just orgId),
+        [ _organizationId <-. B.val_ (Just sOrgId),
           _role <-. B.val_ Storage.ADMIN,
           _updatedAt <-. B.val_ n
         ]
@@ -189,34 +190,33 @@ update id status verified deviceTokenM = do
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause status verified currTime deviceToken Storage.Person {..} =
+    setClause sStatus sVerified currTime deviceToken Storage.Person {..} =
       mconcat
-        [ _status <-. B.val_ status,
+        [ _status <-. B.val_ sStatus,
           _updatedAt <-. B.val_ currTime,
-          _verified <-. B.val_ verified,
+          _verified <-. B.val_ sVerified,
           _deviceToken <-. B.val_ deviceToken
         ]
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
 deleteById :: PersonId -> Flow ()
 deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
 updateEntity :: PersonId -> Text -> Text -> Flow ()
 updateEntity personId entityId entityType = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
   DB.update
     dbTable
     (setClause entityId entityType)
     (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause entityId entityType Storage.Person {..} =
+    setClause sEntityId sEntityType Storage.Person {..} =
       mconcat
-        [ _udf1 <-. B.val_ (Just entityId),
-          _udf2 <-. B.val_ (Just entityType)
+        [ _udf1 <-. B.val_ (Just sEntityId),
+          _udf2 <-. B.val_ (Just sEntityType)
         ]
-    predicate personId Storage.Person {..} = _id ==. B.val_ personId
+    predicate pId Storage.Person {..} = _id ==. B.val_ pId

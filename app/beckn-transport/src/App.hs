@@ -14,7 +14,6 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as T
@@ -58,7 +57,6 @@ runTransporterBackendApp' port settings = do
             T._logFilePath = "/tmp/beckn-transport.log",
             T._isAsync = True
           }
-  reqHeadersKey <- V.newKey
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections
@@ -74,7 +72,7 @@ runTransporterBackendApp' port settings = do
               Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
               Right _ ->
                 putStrLn @String ("Runtime created. Starting server at port " <> show port)
-            runSettings settings $ App.run reqHeadersKey (App.EnvR flowRt appEnv)
+            runSettings settings $ App.run (App.EnvR flowRt appEnv)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse exception = do

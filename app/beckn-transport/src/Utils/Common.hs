@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Utils.Common where
 
@@ -22,25 +23,25 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 
 instance
-  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (sub :: Type) =>
   SanitizedUrl (TokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance
-  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (sub :: Type) =>
   SanitizedUrl (OrgTokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance
-  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (sub :: Type) =>
   SanitizedUrl (DriverTokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance
-  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (sub :: Type) =>
   SanitizedUrl (AdminTokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)

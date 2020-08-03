@@ -30,12 +30,12 @@ instance FromJSON CreateVehicleReq where
 
 instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
   createTransform req = do
-    id <- BC.generateGUID
+    vid <- BC.generateGUID
     now <- getCurrentTimeUTC
     return $
       SV.Vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-          SV._id = id,
+          SV._id = vid,
           SV._capacity = req ^. #_capacity,
           SV._category = req ^. #_category,
           SV._make = req ^. #_make,

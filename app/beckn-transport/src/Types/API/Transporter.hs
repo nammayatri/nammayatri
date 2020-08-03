@@ -44,13 +44,13 @@ instance FromJSON TransporterReq where
 
 instance CreateTransform TransporterReq SO.Organization Flow where
   createTransform req = do
-    id <- BC.generateGUID
+    oid <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- transformToLocation req
     QL.create location
     return $
       SO.Organization
-        { SO._id = id,
+        { SO._id = oid,
           SO._name = req ^. #_name,
           SO._description = req ^. #_description,
           SO._mobileNumber = req ^. #_mobileNumber,
@@ -74,11 +74,11 @@ instance CreateTransform TransporterReq SO.Organization Flow where
 
 transformToLocation :: TransporterReq -> Flow SL.Location
 transformToLocation req = do
-  id <- BC.generateGUID
+  locId <- BC.generateGUID
   now <- getCurrentTimeUTC
   return $
     SL.Location
-      { SL._id = id,
+      { SL._id = locId,
         SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
         SL._lat = req ^. #_lat,
         SL._long = req ^. #_long,
@@ -126,5 +126,3 @@ instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
           SO._enabled = fromMaybe (org ^. #_enabled) (req ^. #enabled),
           SO._updatedAt = now
         }
-
-ifJust a b = if isJust a then a else b

@@ -35,27 +35,27 @@ updateLocationRec locationId location = do
   DB.update dbTable (setClause location now) (predicate locationId)
     >>= either DB.throwDBError pure
   where
-    setClause location n Storage.Location {..} =
+    setClause loc n Storage.Location {..} =
       mconcat
-        [ _locationType <-. B.val_ (Storage._locationType location),
-          _lat <-. B.val_ (Storage._lat location),
-          _long <-. B.val_ (Storage._long location),
-          _ward <-. B.val_ (Storage._ward location),
-          _district <-. B.val_ (Storage._district location),
-          _city <-. B.val_ (Storage._city location),
-          _state <-. B.val_ (Storage._state location),
-          _country <-. B.val_ (Storage._country location),
-          _pincode <-. B.val_ (Storage._pincode location),
-          _address <-. B.val_ (Storage._address location),
-          _bound <-. B.val_ (Storage._bound location),
+        [ _locationType <-. B.val_ (Storage._locationType loc),
+          _lat <-. B.val_ (Storage._lat loc),
+          _long <-. B.val_ (Storage._long loc),
+          _ward <-. B.val_ (Storage._ward loc),
+          _district <-. B.val_ (Storage._district loc),
+          _city <-. B.val_ (Storage._city loc),
+          _state <-. B.val_ (Storage._state loc),
+          _country <-. B.val_ (Storage._country loc),
+          _pincode <-. B.val_ (Storage._pincode loc),
+          _address <-. B.val_ (Storage._address loc),
+          _bound <-. B.val_ (Storage._bound loc),
           _updatedAt <-. B.val_ n
         ]
     predicate id Storage.Location {..} = _id ==. B.val_ id
 
 findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
 findAllByLocIds fromIds toIds =
-  DB.findAllOrErr dbTable (pred (LocationId <$> fromIds) (LocationId <$> toIds))
+  DB.findAllOrErr dbTable (predicate (LocationId <$> fromIds) (LocationId <$> toIds))
   where
-    pred fromIds toIds Storage.Location {..} =
-      B.in_ _id (B.val_ <$> fromIds)
-        ||. B.in_ _id (B.val_ <$> toIds)
+    predicate pFromIds pToIds Storage.Location {..} =
+      B.in_ _id (B.val_ <$> pFromIds)
+        ||. B.in_ _id (B.val_ <$> pToIds)

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Organization where
 
@@ -27,12 +28,12 @@ create Storage.Organization {..} =
 
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
-  L.logInfo "verifying token" $ show regToken
+  L.logInfo @Text "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "UNAUTHENTICATED_USER"
   where
-    predicate regToken Storage.Organization {..} = _apiKey ==. B.val_ (Just regToken)
+    predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
 findOrganizationById :: OrganizationId -> Flow Storage.Organization
 findOrganizationById id =
@@ -49,13 +50,13 @@ listOrganizations ::
   [Storage.Status] ->
   Flow [Storage.Organization]
 listOrganizations mlimit moffset oType status =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Organization {..} = B.desc_ _createdAt
-    predicate oType status Storage.Organization {..} =
+    predicate Storage.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
@@ -63,6 +64,7 @@ listOrganizations mlimit moffset oType status =
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -78,11 +80,11 @@ update id status = do
     (setClause status currTime)
     (predicate id)
   where
-    predicate id Storage.Organization {..} = _id ==. B.val_ id
-    setClause status currTime Storage.Organization {..} =
+    predicate oid Storage.Organization {..} = _id ==. B.val_ oid
+    setClause scStatus currTime Storage.Organization {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ scStatus
         ]
 
 updateOrganizationRec :: Storage.Organization -> Flow ()
@@ -90,13 +92,13 @@ updateOrganizationRec org =
   DB.update dbTable (setClause org) (predicate $ org ^. #_id)
     >>= either DB.throwDBError pure
   where
-    setClause org Storage.Organization {..} =
+    setClause sOrg Storage.Organization {..} =
       mconcat
-        [ _name <-. B.val_ (Storage._name org),
-          _description <-. B.val_ (Storage._description org),
-          _headCount <-. B.val_ (Storage._headCount org),
-          _enabled <-. B.val_ (Storage._enabled org),
-          _updatedAt <-. B.val_ (Storage._updatedAt org),
-          _fromTime <-. B.val_ (Storage._fromTime org)
+        [ _name <-. B.val_ (Storage._name sOrg),
+          _description <-. B.val_ (Storage._description sOrg),
+          _headCount <-. B.val_ (Storage._headCount sOrg),
+          _enabled <-. B.val_ (Storage._enabled sOrg),
+          _updatedAt <-. B.val_ (Storage._updatedAt sOrg),
+          _fromTime <-. B.val_ (Storage._fromTime sOrg)
         ]
     predicate id Storage.Organization {..} = _id ==. B.val_ id

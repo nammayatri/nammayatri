@@ -52,9 +52,9 @@ findBySid sid = do
 
 -- | Validate and update Case status
 updateStatus :: CaseId -> CaseStatus -> Flow ()
-updateStatus id status = do
-  validateCaseStatuseChange status id
-  result <- Q.updateStatus id status
+updateStatus cid status = do
+  validateCaseStatuseChange status cid
+  result <- Q.updateStatus cid status
   checkDBError result
 
 -- | Validate and update Cases statuses

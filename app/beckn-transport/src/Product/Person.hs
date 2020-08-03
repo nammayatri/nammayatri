@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Person where
 
@@ -24,13 +25,13 @@ import Types.API.Person
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
-  verifyPerson personId _EntityId
+  verifyPerson _EntityId
   person <- QP.findPersonById (PersonId _EntityId)
   updatedPerson <- modifyTransform req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
   where
-    verifyPerson personId entityId =
+    verifyPerson entityId =
       when (personId /= entityId) $
         L.throwException $
           err400 {errBody = "PERSON_ID_MISMATCH"}
@@ -48,9 +49,9 @@ createPerson orgId req = withFlowHandler $ do
     _ -> return $ UpdatePersonRes person
   where
     validateDriver :: CreatePersonReq -> Flow ()
-    validateDriver req =
-      when (req ^. #_role == Just SP.DRIVER) $
-        case (req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
+    validateDriver preq =
+      when (preq ^. #_role == Just SP.DRIVER) $
+        case (preq ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               L.throwException $
@@ -118,7 +119,7 @@ deletePerson orgId personId = withFlowHandler $ do
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
   person <- QP.findPersonById (PersonId personId)
-  case req ^. #_entityType of
+  _ <- case req ^. #_entityType of
     VEHICLE ->
       QV.findVehicleById (VehicleId (req ^. #_entityId))
         >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
@@ -175,21 +176,21 @@ sendInviteSms phoneNumber orgName = do
   username <- L.runIO $ lookupEnv "SMS_GATEWAY_USERNAME"
   password <- L.runIO $ lookupEnv "SMS_GATEWAY_PASSWORD"
   case (username, password) of
-    (Just user, Just pass) -> do
+    (Just user, Just passw) -> do
       res <-
         SF.submitSms
           SF.defaultBaseUrl
           SMS.SubmitSms
             { SMS._username = T.pack user,
-              SMS._password = T.pack pass,
+              SMS._password = T.pack passw,
               SMS._from = SMS.JUSPAY,
               SMS._to = phoneNumber,
               SMS._category = SMS.BULK,
               SMS._text = SF.constructInviteSms orgName
             }
-      whenLeft res $ \err -> return () -- ignore error silently
+      whenLeft res $ \_err -> return () -- ignore error silently
     _ -> do
-      L.logInfo "CreatePerson" $
+      L.logInfo @Text "CreatePerson" $
         "Not sending invite SMS "
           <> "since SMS gateway credentials are not available"
       return ()

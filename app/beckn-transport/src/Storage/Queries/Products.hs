@@ -23,24 +23,24 @@ findAllById :: [ProductsId] -> Flow [Storage.Products]
 findAllById ids =
   DB.findAllOrErr dbTable (predicate ids)
   where
-    predicate ids Storage.Products {..} =
-      B.in_ _id (B.val_ <$> ids)
+    predicate pids Storage.Products {..} =
+      B.in_ _id (B.val_ <$> pids)
 
 findById :: ProductsId -> Flow Storage.Products
 findById pid =
-  DB.findOneWithErr dbTable (predicate pid)
+  DB.findOneWithErr dbTable predicate
   where
-    predicate pid Storage.Products {..} = _id ==. B.val_ pid
+    predicate Storage.Products {..} = _id ==. B.val_ pid
 
 findById' :: ProductsId -> Flow (T.DBResult (Maybe Storage.Products))
 findById' pid =
-  DB.findOne dbTable (predicate pid)
+  DB.findOne dbTable predicate
   where
-    predicate pid Storage.Products {..} = _id ==. B.val_ pid
+    predicate Storage.Products {..} = _id ==. B.val_ pid
 
 findByName :: Text -> Flow Storage.Products
 findByName name =
-  DB.findOneWithErr dbTable (predicate name)
+  DB.findOneWithErr dbTable predicate
   where
-    predicate name Storage.Products {..} =
+    predicate Storage.Products {..} =
       _name ==. B.val_ name

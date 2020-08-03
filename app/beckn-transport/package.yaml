@@ -79,7 +79,6 @@ dependencies:
   - servant-swagger
   - swagger2
   - text
-  - vault
   - wai
   - wai-extra
   - warp
@@ -95,8 +94,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    - -Werror=unused-imports
-    - -Werror=missing-fields
+    - -Werror
   dependencies:
     - beckn-core
 

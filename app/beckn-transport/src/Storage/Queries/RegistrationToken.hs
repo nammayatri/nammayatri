@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.RegistrationToken where
 
@@ -37,16 +38,16 @@ updateVerified id verified = do
   DB.update dbTable (setClause verified now) (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause verified currTime Storage.RegistrationToken {..} =
+    setClause scVerified currTime Storage.RegistrationToken {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _verified <-. B.val_ verified
+          _verified <-. B.val_ scVerified
         ]
-    predicate id Storage.RegistrationToken {..} = _id ==. B.val_ id
+    predicate rtid Storage.RegistrationToken {..} = _id ==. B.val_ rtid
 
 verifyToken :: RegToken -> Flow Storage.RegistrationToken
 verifyToken regToken = do
-  L.logInfo "verifying token" $ show regToken
+  L.logInfo @Text "verifying token" $ show regToken
   findRegistrationTokenByToken regToken
 
 findRegistrationTokenByToken :: RegToken -> Flow Storage.RegistrationToken
@@ -55,7 +56,7 @@ findRegistrationTokenByToken regToken =
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_TOKEN"
   where
-    predicate regToken Storage.RegistrationToken {..} = _token ==. B.val_ regToken
+    predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
@@ -73,4 +74,4 @@ deleteByEntitiyId id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.RegistrationToken {..} = _EntityId ==. B.val_ id
+    predicate rtid Storage.RegistrationToken {..} = _EntityId ==. B.val_ rtid

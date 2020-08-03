@@ -12,8 +12,8 @@ import Beckn.Types.Common
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
+import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import qualified Product.Call as Call
@@ -202,6 +202,9 @@ type CaseAPI =
            :> Post '[JSON] Case
        )
 
+caseFlow ::
+  (RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes)
+    :<|> (RegistrationToken -> Text -> UpdateCaseReq -> FlowHandler Case)
 caseFlow =
   Case.list
     :<|> Case.update
@@ -234,6 +237,29 @@ type ProductInstanceAPI =
            :> Post '[JSON] ProdInstInfo
        )
 
+productInstanceFlow ::
+  ( RegistrationToken ->
+    [ProductInstanceStatus] ->
+    [CaseType] ->
+    Maybe Int ->
+    Maybe Int ->
+    FlowHandler ProductInstanceList
+  )
+    :<|> ( (RegistrationToken -> Text -> FlowHandler RideListRes)
+             :<|> ( (RegistrationToken -> Text -> FlowHandler RideListRes)
+                      :<|> ( ( RegistrationToken ->
+                               Text ->
+                               Maybe CaseType ->
+                               FlowHandler CaseListRes
+                             )
+                               :<|> ( RegistrationToken ->
+                                      ProductInstanceId ->
+                                      ProdInstUpdateReq ->
+                                      FlowHandler ProdInstInfo
+                                    )
+                           )
+                  )
+         )
 productInstanceFlow =
   ProductInstance.list
     :<|> ProductInstance.listDriverRides
@@ -249,6 +275,7 @@ type ProductAPI =
            :> Post '[JSON] ProdRes
        )
 
+productFlow :: Text -> CreateProdReq -> FlowHandler ProdRes
 productFlow =
   Product.createProduct
 
@@ -263,6 +290,9 @@ type LocationAPI =
              :> Post '[JSON] UpdateLocationRes
        )
 
+locationFlow ::
+  (Text -> FlowHandler GetLocationRes)
+    :<|> (RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes)
 locationFlow =
   Location.getLocation
     :<|> Location.updateLocation
@@ -272,8 +302,8 @@ locationFlow =
 transporterAPI :: Proxy TransportAPI
 transporterAPI = Proxy
 
-transporterServer :: V.Key (HashMap Text Text) -> FlowServer TransportAPI
-transporterServer key =
+transporterServer :: FlowServer TransportAPI
+transporterServer =
   pure "App is UP"
     :<|> registrationFlow
     :<|> personFlow

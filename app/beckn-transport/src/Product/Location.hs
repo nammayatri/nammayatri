@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Location where
 
@@ -65,10 +66,10 @@ updateLocation _ caseId req = withFlowHandler $ do
         case (fromLocation ^. #_lat, fromLocation ^. #_long) of
           (Just custLat, Just custLong) -> do
             -- Get route and eta
-            route <- getRoute' driverLat driverLon custLat custLong
-            createLocationInfo req (Just $ Waypoint custLong custLat) route
+            lRoute <- getRoute' driverLat driverLon custLat custLong
+            createLocationInfo req (Just $ Waypoint custLong custLat) lRoute
           _ -> do
-            L.logInfo "GetRoute" "Lat,Long for fromLocation not found"
+            L.logInfo @Text "GetRoute" "Lat,Long for fromLocation not found"
             createLocationInfo req Nothing Nothing
       Redis.setKeyRedis caseId loc
     Just (loc :: CachedLocationInfo) -> do
@@ -191,7 +192,7 @@ getRoute' fromLat fromLon toLat toLon = do
   routeE <- MapSearch.getRoute getRouteRequest
   case routeE of
     Left err -> do
-      L.logInfo "GetRoute" (show err)
+      L.logInfo @Text "GetRoute" (show err)
       return Nothing
     Right MapSearch.Response {..} ->
       pure $

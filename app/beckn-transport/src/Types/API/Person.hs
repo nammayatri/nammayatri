@@ -88,9 +88,9 @@ updateOrCreateLocation req Nothing = do
   location <- createLocation req
   QL.create location
   return location
-updateOrCreateLocation req (Just id) = do
-  location <- QL.findLocationById (LocationId id)
-  QL.updateLocationRec (LocationId id) $ transformToLocation req location
+updateOrCreateLocation req (Just locId) = do
+  location <- QL.findLocationById (LocationId locId)
+  QL.updateLocationRec (LocationId locId) $ transformToLocation req location
   return location
 
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
@@ -120,11 +120,11 @@ createLocation UpdatePersonReq {..} = do
         ..
       }
 
+ifJust :: Maybe a -> Maybe a -> Maybe a
 ifJust a b = if isJust a then a else b
 
+ifJustExtract :: Maybe a -> a -> a
 ifJustExtract a b = fromMaybe b a
-
-(^^.) f g = g f
 
 newtype UpdatePersonRes = UpdatePersonRes
   {user :: SP.Person}
@@ -167,13 +167,13 @@ instance FromJSON CreatePersonReq where
 
 instance CreateTransform CreatePersonReq SP.Person Flow where
   createTransform req = do
-    id <- BC.generateGUID
+    pid <- BC.generateGUID
     now <- getCurrentTimeUTC
     location <- createLocationT req
     return
       SP.Person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-          SP._id = id,
+          SP._id = pid,
           SP._firstName = req ^. #_firstName,
           SP._middleName = req ^. #_middleName,
           SP._lastName = req ^. #_lastName,
