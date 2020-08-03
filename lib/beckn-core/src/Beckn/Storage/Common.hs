@@ -1,5 +1,13 @@
+{-# LANGUAGE NamedWildCards #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+
 module Beckn.Storage.Common where
 
 import qualified Database.Beam as B
+import Database.Beam.Postgres
 
-insertExpression values = B.insertValues [values]
+insertExpression ::
+  _ =>
+  table B.Identity ->
+  B.SqlInsertValues Postgres (table (B.QExpr Postgres s))
+insertExpression value = B.insertValues [value]
