@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Product.Info where
 
 import App.Types
@@ -11,7 +13,6 @@ import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as External
-import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import Servant
 import Types.API.Location
@@ -19,9 +20,8 @@ import Types.API.Product
 import Types.ProductInfo as ProductInfo
 
 getProductInfo :: Person.Person -> Text -> FlowHandler GetProductInfoRes
-getProductInfo person prodInstId = withFlowHandler $ do
+getProductInfo _person prodInstId = withFlowHandler $ do
   productInstance <- MPI.findById (ProductInstanceId prodInstId)
-  case' <- MC.findIdByPerson person (SPI._caseId productInstance)
   case decodeFromText =<< SPI._info productInstance of
     Just info ->
       case ProductInfo._tracker info of
@@ -38,7 +38,7 @@ getProductInfo person prodInstId = withFlowHandler $ do
                 product = productInstance
               }
     Nothing ->
-      L.logInfo "get Product info" "No info found in products table"
+      L.logInfo @Text "get Product info" "No info found in products table"
         >> L.throwException (err400 {errBody = "NO_DETAILS_FOUND"})
 
 getLocation :: Person.Person -> Text -> FlowHandler GetLocationRes

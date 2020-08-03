@@ -42,14 +42,15 @@ listOrganizations mlimit moffset oType status =
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Organization {..} = B.desc_ _createdAt
-    predicate oType status Storage.Organization {..} =
+    predicate pOType pStatus Storage.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _status `B.in_` (B.val_ <$> status) ||. complementVal status,
-          _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
+        [ _status `B.in_` (B.val_ <$> status) ||. complementVal pStatus,
+          _type `B.in_` (B.val_ <$> oType) ||. complementVal pOType
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -65,9 +66,9 @@ update id status = do
     (setClause status currTime)
     (predicate id)
   where
-    predicate id Storage.Organization {..} = _id ==. B.val_ id
-    setClause status currTime Storage.Organization {..} =
+    predicate pid Storage.Organization {..} = _id ==. B.val_ pid
+    setClause pStatus currTime Storage.Organization {..} =
       mconcat
         [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
+          _status <-. B.val_ pStatus
         ]

@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module External.Gateway.Flow where
 
 import App.Types
@@ -21,51 +23,51 @@ search url req = do
   apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
   res <- callAPI url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
   whenRight res $ \_ ->
-    L.logInfo "Search" "Search successfully delivered"
+    L.logInfo @Text "Search" "Search successfully delivered"
   whenLeft res $ \err ->
-    L.logError "Search" ("error occurred while search: " <> show err)
+    L.logError @Text "Search" ("error occurred while search: " <> show err)
   return $ first show res
 
 confirm :: BaseUrl -> Confirm.ConfirmReq -> Flow (Either Text ())
 confirm url req = do
   res <- callAPI url (API.confirm req) "confirm"
   whenLeft res $ \err ->
-    L.logError "error occurred while confirm: " (show err)
+    L.logError @Text "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    L.logError "Confirm" ("error occurred while confirm: " <> show err)
+    L.logError @Text "Confirm" ("error occurred while confirm: " <> show err)
   return $ first show res
 
 location :: BaseUrl -> Text -> Flow (Either Text GetLocationRes)
 location url req = do
   res <- callAPI url (API.location req) "location"
   whenLeft res $ \err ->
-    L.logError "error occurred while confirm: " (show err)
+    L.logError @Text "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    L.logError "Location" ("error occurred while getting location: " <> show err)
+    L.logError @Text "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
 track :: BaseUrl -> Track.TrackTripReq -> Flow (Either Text ())
 track url req = do
   res <- callAPI url (API.trackTrip req) "track"
   case res of
-    Left err -> L.logError "error occurred while track trip: " (show err)
-    Right _ -> L.logInfo "Track" "Track successfully delivered"
+    Left err -> L.logError @Text "error occurred while track trip: " (show err)
+    Right _ -> L.logInfo @Text "Track" "Track successfully delivered"
   return $ first show res
 
 cancel :: BaseUrl -> Cancel.CancelReq -> Flow (Either Text ())
 cancel url req = do
   res <- callAPI url (API.cancel req) "cancel"
   case res of
-    Left err -> L.logError "error occurred while cancel trip: " (show err)
-    Right _ -> L.logInfo "Cancel" "Cancel successfully delivered"
+    Left err -> L.logError @Text "error occurred while cancel trip: " (show err)
+    Right _ -> L.logInfo @Text "Cancel" "Cancel successfully delivered"
   return $ first show res
 
 status :: BaseUrl -> Status.StatusReq -> Flow (Either Text ())
 status url req = do
   res <- callAPI url (API.status req) "status"
   case res of
-    Left err -> L.logError "error occurred while getting status: " (show err)
-    Right _ -> L.logInfo "Status" "Status successfully delivered"
+    Left err -> L.logError @Text "error occurred while getting status: " (show err)
+    Right _ -> L.logInfo @Text "Status" "Status successfully delivered"
   return $ first show res
 
 getGatewayBaseUrl :: Flow BaseUrl

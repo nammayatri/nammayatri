@@ -30,7 +30,7 @@ findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] ->
 findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset =
   DB.findAllWithLimitOffsetWhere
     dbTable
-    (predicate pins cities states districts wards)
+    predicate
     limit
     offset
     orderByDesc
@@ -39,7 +39,7 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset =
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Storage.Location {..} = B.desc_ _createdAt
-    predicate pins cities states districts wards Storage.Location {..} =
+    predicate Storage.Location {..} =
       foldl
         (&&.)
         (B.val_ True)
@@ -50,13 +50,14 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset =
           _ward `B.in_` (B.val_ . Just <$> wards) ||. complementVal wards
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
 findAllByIds :: [Text] -> Flow [Storage.Location]
 findAllByIds locIds =
-  DB.findAllOrErr dbTable (pred (LocationId <$> locIds))
+  DB.findAllOrErr dbTable (predicate (LocationId <$> locIds))
   where
-    pred locIds Storage.Location {..} =
-      B.in_ _id (B.val_ <$> locIds)
+    predicate locationIds Storage.Location {..} =
+      B.in_ _id (B.val_ <$> locationIds)

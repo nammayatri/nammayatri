@@ -24,9 +24,9 @@ create prdInst = do
 
 -- | Validate and update ProductInstance status
 updateStatus :: ProductInstanceId -> ProductInstanceStatus -> Flow ()
-updateStatus id status = do
-  validatePIStatusChange status id
-  result <- Q.updateStatus id status
+updateStatus piid status = do
+  validatePIStatusChange status piid
+  result <- Q.updateStatus piid status
   checkDBError result
 
 -- | Bulk validate and update Case's ProductInstances statuses
@@ -37,9 +37,9 @@ updateAllProductInstancesByCaseId caseId status = do
   checkDBError result
 
 updateMultiple :: ProductInstanceId -> ProductInstance -> Flow ()
-updateMultiple id prdInst = do
-  validatePIStatusChange (_status prdInst) id
-  result <- Q.updateMultiple id prdInst
+updateMultiple piid prdInst = do
+  validatePIStatusChange (_status prdInst) piid
+  result <- Q.updateMultiple piid prdInst
   checkDBError result
 
 -- | Find Product Instance by id
@@ -85,23 +85,23 @@ validateStatusChange newStatus caseProduct =
     _ -> pure ()
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
-listAllProductInstanceWithOffset limit offset id stats csTypes = do
-  result <- Q.listAllProductInstanceWithOffset limit offset id stats csTypes
+listAllProductInstanceWithOffset limit offset piid stats csTypes = do
+  result <- Q.listAllProductInstanceWithOffset limit offset piid stats csTypes
   checkDBError result
 
 listAllProductInstance :: ListById -> [ProductInstanceStatus] -> Flow [ProductInstance]
-listAllProductInstance id status = do
-  result <- Q.listAllProductInstance id status
+listAllProductInstance piid status = do
+  result <- Q.listAllProductInstance piid status
   checkDBError result
 
 listAllProductInstanceByPerson :: Person.Person -> ListById -> [ProductInstanceStatus] -> Flow [ProductInstance]
-listAllProductInstanceByPerson person id status = do
-  result <- Q.listAllProductInstanceByPerson person id status
+listAllProductInstanceByPerson person piid status = do
+  result <- Q.listAllProductInstanceByPerson person piid status
   checkDBError result
 
 findAllByParentId :: Maybe ProductInstanceId -> Flow [ProductInstance]
-findAllByParentId id = do
-  result <- Q.findAllByParentId id
+findAllByParentId piid = do
+  result <- Q.findAllByParentId piid
   checkDBError result
 
 findByParentIdType :: Maybe ProductInstanceId -> Case.CaseType -> Flow ProductInstance

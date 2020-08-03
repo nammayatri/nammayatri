@@ -34,7 +34,7 @@ findByToken token =
   DB.findOne dbTable (predicate token)
     >>= either DB.throwDBError pure
   where
-    predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
+    predicate rtoken Storage.RegistrationToken {..} = _token ==. B.val_ rtoken
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
@@ -52,4 +52,4 @@ deleteByPersonId id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.RegistrationToken {..} = _EntityId ==. B.val_ id
+    predicate rtid Storage.RegistrationToken {..} = _EntityId ==. B.val_ rtid

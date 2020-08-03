@@ -35,11 +35,11 @@ import Types.ProductInfo as ProductInfo
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
 notifyOnProductCancelCb :: ProductInstance -> Flow ()
-notifyOnProductCancelCb pi = do
-  c <- Case.findById $ pi ^. #_caseId
+notifyOnProductCancelCb prodInst = do
+  c <- Case.findById $ prodInst ^. #_caseId
   let mpersonId = Case._requestor c
-      productInstanceId = pi ^. #_id
-      minfo :: (Maybe ProductInfo) = decodeFromText =<< pi ^. #_info
+      productInstanceId = prodInst ^. #_id
+      minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst ^. #_info
   case (mpersonId, minfo) of
     (Just personId, Just info) -> do
       person <- Person.findById $ PersonId personId

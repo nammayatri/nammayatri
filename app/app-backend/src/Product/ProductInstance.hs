@@ -34,11 +34,11 @@ list person status csTypes mlimit moffset = withFlowHandler $ do
         >>= buildResponse
       where
         buildResponse k = prepare locList prodInst k <$> find (\z -> SPI._productId prodInst == Product._id z) prodList
-        prepare locList prodInst cs prod =
+        prepare locationList prodInstance cs prod =
           ProductInstanceRes
             { _case = cs,
               _product = prod,
-              _productInstance = prodInst,
-              _fromLocation = find (\x -> Case._fromLocationId cs == _getLocationId (Loc._id x)) locList,
-              _toLocation = find (\x -> Case._toLocationId cs == _getLocationId (Loc._id x)) locList
+              _productInstance = prodInstance,
+              _fromLocation = find (\x -> Case._fromLocationId cs == _getLocationId (Loc._id x)) locationList,
+              _toLocation = find (\x -> Case._toLocationId cs == _getLocationId (Loc._id x)) locationList
             }

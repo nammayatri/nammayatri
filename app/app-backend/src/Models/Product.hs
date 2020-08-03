@@ -5,7 +5,7 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (product)
 import qualified Storage.Queries.Products as Q
 
 -- The layer between Storage.Queries and our business logic
@@ -22,8 +22,8 @@ create product = do
 
 -- | Find Product by id
 findById :: ProductsId -> Flow Products
-findById id = do
-  result <- Q.findById id
+findById pid = do
+  result <- Q.findById pid
   checkDBErrorOrEmpty result $ CaseErr CaseNotFound
 
 findAllByIds :: [ProductsId] -> Flow [Products]

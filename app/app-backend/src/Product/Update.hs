@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Update where
 
@@ -18,10 +19,9 @@ import qualified Types.ProductInfo as ProdInfo
 onUpdate :: OnUpdateReq -> FlowHandler AckResponse
 onUpdate req = withFlowHandler $ do
   -- TODO: Verify api key here
-  L.logInfo "on_update req" (show req)
+  L.logInfo @Text "on_update req" (show req)
   let trip = req ^. #message . #order . #_trip
       pid = ProductInstanceId $ req ^. #message . #order . #_id
-      tracker = flip ProdInfo.Tracker Nothing <$> trip
   prdInst <- MPI.findById pid
   let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
       uInfo = getUpdatedProdInfo trip mprdInfo (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
@@ -29,7 +29,6 @@ onUpdate req = withFlowHandler $ do
         prdInst
           { SPI._info = encodeToText <$> uInfo
           }
-  productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
   MPI.updateMultiple pid uPrd
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where

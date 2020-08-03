@@ -29,11 +29,11 @@ cancel person req = withFlowHandler $ do
 cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
-  pi <- MPI.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
-  MC.findIdByPerson person (pi ^. #_caseId)
-  if isProductInstanceCancellable pi
+  prodInst <- MPI.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  _ <- MC.findIdByPerson person (prodInst ^. #_caseId)
+  if isProductInstanceCancellable prodInst
     then sendCancelReq prodInstId
-    else errResp (show (pi ^. #_status))
+    else errResp (show (prodInst ^. #_status))
   where
     sendCancelReq prodInstId = do
       let context = req ^. #context
@@ -78,15 +78,15 @@ cancelCase person req = do
       BaseUrl ->
       PI.ProductInstance ->
       Flow (Either Text ())
-    callCancelApi context baseUrl pi = do
+    callCancelApi context baseUrl prodInst = do
       let txnId = context ^. #_request_transaction_id
-      let prodInstId = _getProductInstanceId $ pi ^. #_id
+      let prodInstId = _getProductInstanceId $ prodInst ^. #_id
       let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrderId prodInstId)
       Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
-isProductInstanceCancellable pi =
-  case pi ^. #_status of
+isProductInstanceCancellable prodInst =
+  case prodInst ^. #_status of
     PI.CONFIRMED -> True
     PI.VALID -> True
     PI.INSTOCK -> True
@@ -121,14 +121,13 @@ onCancel req = withFlowHandler $ do
   MPI.updateStatus prodInstId PI.CANCELLED
   let caseId = productInstance ^. #_caseId
   -- notify customer
-  case_ <- MC.findById caseId
   Notify.notifyOnProductCancelCb productInstance
   --
   arrPICase <- MPI.findAllByCaseId caseId
   let arrTerminalPI =
         filter
-          ( \pi -> do
-              let status = pi ^. #_status
+          ( \prodInst -> do
+              let status = prodInst ^. #_status
               status == PI.COMPLETED
                 || status == PI.OUTOFSTOCK
                 || status == PI.CANCELLED

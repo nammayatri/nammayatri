@@ -22,8 +22,8 @@ import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandler $ do
-  pi <- QPI.findById (ProductInstanceId productInstanceId)
-  case_ <- Case.findIdByPerson person (pi ^. #_caseId)
+  piid <- QPI.findById (ProductInstanceId productInstanceId)
+  case_ <- Case.findIdByPerson person (piid ^. #_caseId)
   let caseId = _getCaseId $ case_ ^. #_id
   context <- buildContext "status" caseId
   baseUrl <- Gateway.getProviderBaseUrl
@@ -38,19 +38,18 @@ onStatus req = withFlowHandler $ do
   let context = req ^. #context
       txnId = context ^. #_request_transaction_id
       prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
-      state = matchStatus $ req ^. #message . #order . #_state
-  status <- case state of
+      orderState = matchStatus $ req ^. #message . #order . #_state
+  orderStatus <- case orderState of
     Just k -> return k
     Nothing -> L.throwException $ err400 {errBody = "INCORRECT STATUS"}
-  productInstance <- QPI.findById prodInstId
   orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
-  QPI.updateStatus (orderPi ^. #_id) status
+  QPI.updateStatus (orderPi ^. #_id) orderStatus
   mkAckResponse txnId "status"
 
 -- Utility Functions
 
 matchStatus :: Text -> Maybe PI.ProductInstanceStatus
-matchStatus state = case state of
+matchStatus piStatus = case piStatus of
   "VALID" -> Just PI.VALID
   "INVALID" -> Just PI.INVALID
   "INPROGRESS" -> Just PI.INPROGRESS

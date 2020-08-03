@@ -14,8 +14,8 @@ import qualified Beckn.Types.API.Update as Update
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
@@ -65,8 +65,8 @@ type AppAPI =
 appAPI :: Proxy AppAPI
 appAPI = Proxy
 
-appServer :: V.Key (HashMap Text Text) -> FlowServer AppAPI
-appServer key =
+appServer :: FlowServer AppAPI
+appServer =
   pure "App is UP"
     :<|> registrationFlow
     :<|> searchFlow
@@ -203,6 +203,13 @@ type ProductInstanceAPI =
            :> Get '[JSON] ProductInstance.ProductInstanceList
        )
 
+productInstanceFlow ::
+  Person.Person ->
+  [ProductInstanceStatus] ->
+  [Case.CaseType] ->
+  Maybe Int ->
+  Maybe Int ->
+  FlowHandler ProductInstance.ProductInstanceList
 productInstanceFlow =
   ProductInstance.list
 
@@ -217,6 +224,12 @@ type CancelAPI =
     :> ReqBody '[JSON] Cancel.OnCancelReq
     :> Post '[JSON] Cancel.OnCancelRes
 
+cancelFlow ::
+  ( Person.Person ->
+    Cancel.CancelReq ->
+    FlowHandler Cancel.CancelRes
+  )
+    :<|> (Cancel.OnCancelReq -> FlowHandler Cancel.OnCancelRes)
 cancelFlow =
   Cancel.cancel
     :<|> Cancel.onCancel
@@ -269,6 +282,12 @@ type StatusAPI =
     :> ReqBody '[JSON] Status.OnStatusReq
     :> Post '[JSON] Status.OnStatusRes
 
+statusFlow ::
+  ( Person.Person ->
+    StatusReq ->
+    FlowHandler StatusRes
+  )
+    :<|> (Status.OnStatusReq -> FlowHandler Status.OnStatusRes)
 statusFlow =
   Status.status
     :<|> Status.onStatus

@@ -39,14 +39,15 @@ findAllByOrgIds roles orgIds =
   DB.findAllOrErr dbTable (predicate roles orgIds)
     >>= decrypt
   where
-    predicate roles orgIds Storage.Person {..} =
+    predicate pRoles pOrgIds Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
+        [ _role `B.in_` (B.val_ <$> pRoles) ||. complementVal roles,
+          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal pOrgIds
         ]
 
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
@@ -80,25 +81,25 @@ updateMultiple personId person = do
   DB.update dbTable (setClause now person) (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause now (person :: Storage.Person) Storage.Person {..} =
+    setClause now (sPerson :: Storage.Person) Storage.Person {..} =
       mconcat
         [ _updatedAt <-. B.val_ now,
-          _firstName <-. B.val_ (person ^. #_firstName),
-          _middleName <-. B.val_ (person ^. #_middleName),
-          _lastName <-. B.val_ (person ^. #_lastName),
-          _fullName <-. B.val_ (person ^. #_fullName),
-          _gender <-. B.val_ (person ^. #_gender),
-          _email <-. B.val_ (person ^. #_email),
-          _organizationId <-. B.val_ (person ^. #_organizationId),
-          _locationId <-. B.val_ (person ^. #_locationId),
-          _description <-. B.val_ (person ^. #_description),
-          _status <-. B.val_ (person ^. #_status),
-          _role <-. B.val_ (person ^. #_role),
-          _identifier <-. B.val_ (person ^. #_identifier),
-          _rating <-. B.val_ (person ^. #_rating),
-          _deviceToken <-. B.val_ (person ^. #_deviceToken),
-          _udf1 <-. B.val_ (person ^. #_udf1),
-          _udf2 <-. B.val_ (person ^. #_udf2)
+          _firstName <-. B.val_ (sPerson ^. #_firstName),
+          _middleName <-. B.val_ (sPerson ^. #_middleName),
+          _lastName <-. B.val_ (sPerson ^. #_lastName),
+          _fullName <-. B.val_ (sPerson ^. #_fullName),
+          _gender <-. B.val_ (sPerson ^. #_gender),
+          _email <-. B.val_ (sPerson ^. #_email),
+          _organizationId <-. B.val_ (sPerson ^. #_organizationId),
+          _locationId <-. B.val_ (sPerson ^. #_locationId),
+          _description <-. B.val_ (sPerson ^. #_description),
+          _status <-. B.val_ (sPerson ^. #_status),
+          _role <-. B.val_ (sPerson ^. #_role),
+          _identifier <-. B.val_ (sPerson ^. #_identifier),
+          _rating <-. B.val_ (sPerson ^. #_rating),
+          _deviceToken <-. B.val_ (sPerson ^. #_deviceToken),
+          _udf1 <-. B.val_ (sPerson ^. #_udf1),
+          _udf2 <-. B.val_ (sPerson ^. #_udf2)
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
@@ -119,18 +120,18 @@ update id statusM nameM emailM roleM identTypeM identM = do
     (predicate id)
     >>= either DB.throwDBError pure
   where
-    setClause statusM nameM emailM roleM identM identTypeM currTime Storage.Person {..} =
+    setClause scStatusM scNameM scEmailM scRoleM scIdentM scIdentTypeM currTime Storage.Person {..} =
       mconcat
         ( [ _updatedAt <-. B.val_ currTime
           ]
-            <> (\name -> [_fullName <-. B.val_ name]) nameM
-            <> (\email -> [_email <-. B.val_ email]) emailM
-            <> maybe [] (\role -> [_role <-. B.val_ role]) roleM
-            <> maybe [] (\status -> [_status <-. B.val_ status]) statusM
-            <> maybe [] (\iden -> [_identifier <-. B.val_ (Just iden)]) identM
-            <> maybe [] (\idT -> [_identifierType <-. B.val_ idT]) identTypeM
+            <> (\name -> [_fullName <-. B.val_ name]) scNameM
+            <> (\email -> [_email <-. B.val_ email]) scEmailM
+            <> maybe [] (\role -> [_role <-. B.val_ role]) scRoleM
+            <> maybe [] (\status -> [_status <-. B.val_ status]) scStatusM
+            <> maybe [] (\iden -> [_identifier <-. B.val_ (Just iden)]) scIdentM
+            <> maybe [] (\idT -> [_identifierType <-. B.val_ idT]) scIdentTypeM
         )
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
 updatePersonOrgId :: Text -> PersonId -> Flow ()
 updatePersonOrgId orgId personId = do
@@ -163,10 +164,10 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds =
   where
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    predicate orgIds [] Storage.Person {..} =
-      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> orgIds)
-    predicate orgIds roles Storage.Person {..} =
-      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> orgIds) &&. _role `B.in_` (B.val_ <$> roles)
+    predicate pOrgIds [] Storage.Person {..} =
+      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> pOrgIds)
+    predicate pOrgIds pRoles Storage.Person {..} =
+      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> pOrgIds) &&. _role `B.in_` (B.val_ <$> pRoles)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
 deleteById :: PersonId -> Flow ()
@@ -174,4 +175,4 @@ deleteById id =
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate pid Storage.Person {..} = _id ==. B.val_ pid

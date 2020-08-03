@@ -78,15 +78,15 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
 
 -- | Update Case validity date
 updateValidTill :: CaseId -> LocalTime -> Flow ()
-updateValidTill id validTill = do
-  result <- Q.updateValidTill id validTill
+updateValidTill cid validTill = do
+  result <- Q.updateValidTill cid validTill
   checkDBError result
 
 -- | Validate and update Case status
 updateStatus :: CaseId -> CaseStatus -> Flow ()
-updateStatus id status = do
-  validateStatusChange status id
-  result <- Q.updateStatus id status
+updateStatus cid status = do
+  validateStatusChange status cid
+  result <- Q.updateStatus cid status
   checkDBError result
 
 -- | Validate and update Case status and its udfs
@@ -99,9 +99,9 @@ updateStatusAndUdfs ::
   Maybe Text ->
   Maybe Text ->
   Flow ()
-updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
-  validateStatusChange status id
-  result <- Q.updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5
+updateStatusAndUdfs cid status udf1 udf2 udf3 udf4 udf5 = do
+  validateStatusChange status cid
+  result <- Q.updateStatusAndUdfs cid status udf1 udf2 udf3 udf4 udf5
   checkDBError result
 
 -- | Find Cases by locations

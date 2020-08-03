@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+
 module Utils.Common where
 
 import App.Types
@@ -27,7 +29,7 @@ type TokenAuth = TokenAuth' "token" VerifyToken
 data VerifyToken = VerifyToken
 
 instance
-  SanitizedUrl (sub :: *) =>
+  SanitizedUrl (sub :: Type) =>
   SanitizedUrl (TokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)

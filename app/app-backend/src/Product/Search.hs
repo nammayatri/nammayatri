@@ -52,15 +52,15 @@ search person req = withFlowHandler $ do
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   gatewayUrl <- Gateway.getGatewayBaseUrl
   eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
-  let ack =
+  let sAck =
         case eres of
           Left err -> API.Ack "Error" (show err)
           Right _ -> API.Ack "Successful" (_getCaseId $ case_ ^. #_id)
-  return $ API.AckResponse (req ^. #context) ack Nothing
+  return $ API.AckResponse (req ^. #context) sAck Nothing
   where
-    validateDateTime req = do
+    validateDateTime sreq = do
       currTime <- getCurrentTimeUTC
-      when ((req ^. #message . #intent . #_origin . #_departure_time . #_est) < currTime) $
+      when ((sreq ^. #message . #intent . #_origin . #_departure_time . #_est) < currTime) $
         L.throwException $
           err400 {errBody = "Invalid start time"}
 
@@ -110,7 +110,7 @@ searchCbService req service = do
 mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do
   now <- getCurrentTimeUTC
-  id <- generateGUID
+  cid <- generateGUID
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
   -- If the insert fails, maybe retry automatically as there
@@ -121,7 +121,7 @@ mkCase req userId from to = do
   validTill <- getCaseExpiry $ req ^. #message . #intent . #_origin . #_departure_time . #_est
   return
     Case.Case
-      { _id = id,
+      { _id = cid,
         _name = Nothing,
         _description = Just "Case to search for a Ride",
         _shortId = shortId,
@@ -156,7 +156,6 @@ mkCase req userId from to = do
       let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
           minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffLocalTime` now
-          defaultExpiry = fromInteger caseExpiry `addLocalTime` now
           validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
@@ -164,11 +163,11 @@ mkLocation :: BS.Stop -> Flow Location.Location
 mkLocation BS.Stop {..} = do
   let loc = _location
   now <- getCurrentTimeUTC
-  id <- generateGUID
+  locId <- generateGUID
   let mgps = loc ^. #_gps
   return
     Location.Location
-      { _id = id,
+      { _id = locId,
         _locationType = Location.POINT,
         _lat = read . T.unpack . (^. #lat) <$> mgps,
         _long = read . T.unpack . (^. #lon) <$> mgps,
@@ -185,10 +184,8 @@ mkLocation BS.Stop {..} = do
       }
 
 mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> Flow Products.Products
-mkProduct case_ mprovider item = do
+mkProduct case_ _mprovider item = do
   now <- getCurrentTimeUTC
-  let validTill = addLocalTime (60 * 30) now
-  let info = ProductInfo mprovider -- Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
@@ -221,7 +218,6 @@ mkProduct case_ mprovider item = do
 mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow ProductInstance.ProductInstance
 mkProductInstance case_ mprovider personId item = do
   now <- getCurrentTimeUTC
-  let validTill = addLocalTime (60 * 30) now
   let info = ProductInfo mprovider Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
