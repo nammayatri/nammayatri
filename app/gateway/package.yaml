@@ -59,6 +59,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -Wunused-imports
+  - -Werror
 
 library:
   source-dirs: src
