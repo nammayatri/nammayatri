@@ -36,17 +36,13 @@ mkQuoteReq SearchReq {..} = do
   let intent = message ^. #intent
       pickups = intent ^. #_pickups
       drops = intent ^. #_drops
-      packages = intent ^. #_packages
-      items = concat $ (\pkg -> pkg ^. #_contents) <$> packages
+      categoryId = intent ^. #_category_id
   when
     (length pickups /= 1)
     (throwJsonError400 "ERR" "NUMBER_OF_PICKUPS_EXCEEDES_LIMIT")
   when
     (length drops /= 1)
     (throwJsonError400 "ERR" "NUMBER_OF_DROPS_EXCEEDES_LIMIT")
-  when
-    (null items)
-    (throwJsonError400 "ERR" "NUMBER_OF_ITEMS_NONE")
   let pickup1 = head pickups
       drop1 = head drops
       pgps = pickup1 ^. (#_location . #_gps)
@@ -67,7 +63,7 @@ mkQuoteReq SearchReq {..} = do
         pickup_lng = plon,
         drop_lat = dlat,
         drop_lng = dlon,
-        category_id = (\item -> fromMaybe "pickup_drop" $ item ^. #_category_id) $ head items
+        category_id = "pickup_drop"
       }
 
 mkNewQuoteReq :: SelectReq -> Flow QuoteReq
@@ -90,7 +86,7 @@ mkNewQuoteReq SelectReq {..} = do
         pickup_lng = plon,
         drop_lat = dlat,
         drop_lng = dlon,
-        category_id = (\item -> fromMaybe "pickup_drop" $ item ^. #_category_id) $ head items
+        category_id = "pickup_drop"
       }
 
 readCoord :: Text -> Flow Double
