@@ -62,7 +62,11 @@ data TokenReq = TokenReq
 
 newtype TokenRes = TokenRes
   {token :: Token}
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
+
+deriving newtype instance ToJSON TokenRes
+
+deriving newtype instance FromJSON TokenRes
 
 data QuoteReq = QuoteReq
   { pickup_lat :: Double,
@@ -177,7 +181,11 @@ data CreateTaskReq = CreateTaskReq
 type CreateTaskRes = TaskStatus
 
 newtype CancelTaskReq = CancelTaskReq {cancellation_reason :: Text}
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
+
+deriving newtype instance ToJSON CancelTaskReq
+
+deriving newtype instance FromJSON CancelTaskReq
 
 packageContentOptions :: Options
 packageContentOptions =

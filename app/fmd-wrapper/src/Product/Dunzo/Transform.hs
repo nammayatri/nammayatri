@@ -16,10 +16,10 @@ import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (throwJsonError400, throwJsonError500)
+import Beckn.Utils.Common (throwJsonError400)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import qualified Data.Text as T
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
 import Types.Wrapper
 import Utils.Common (getClientConfig)
@@ -40,7 +40,6 @@ getDunzoConfig org = do
   case config of
     Dunzo dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress ->
       return $ DunzoConfig dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress
-    _ -> throwJsonError500 "CLIENT_CONFIG" "MISMATCH"
 
 mkQuoteReq :: SearchReq -> Flow QuoteReq
 mkQuoteReq SearchReq {..} = do
@@ -63,9 +62,9 @@ mkQuoteReq SearchReq {..} = do
                 drop_lng = dlon,
                 category_id = "pickup_drop"
               }
-        (Just pgps, Nothing) -> dropLocationNotFound
+        (Just _, Nothing) -> dropLocationNotFound
         _ -> pickupLocationNotFound
-    ([pickup], _) -> oneDropLocationExpected
+    ([_], _) -> oneDropLocationExpected
     _ -> onePickupLocationExpected
   where
     onePickupLocationExpected = throwJsonError400 "ERR" "ONE_PICKUP_LOCATION_EXPECTED"
@@ -79,8 +78,6 @@ mkNewQuoteReq SelectReq {..} = do
       task = head tasks
       pickup = task ^. (#_pickup . #_location)
       drop = task ^. (#_drop . #_location)
-      package = task ^. #_package
-      items = package ^. #_contents
       pgps = pickup ^. #_gps
       dgps = drop ^. #_gps
   plat <- readCoord (fromJust pgps ^. #lat)
@@ -102,19 +99,19 @@ readCoord text = do
   maybe (throwJsonError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
 
 mkOnSearchErrReq :: Organization -> Context -> Error -> Flow OnSearchReq
-mkOnSearchErrReq org context res@Error {..} = do
+mkOnSearchErrReq _ context Error {..} = do
   now <- getCurrentTimeUTC
-  id <- generateGUID
+  cid <- generateGUID
   return $
     OnSearchReq
       { context = context,
-        message = OnSearchServices (catalog id now),
-        error = Just error
+        message = OnSearchServices (catalog cid now),
+        error = Just err
       }
   where
-    catalog id now =
+    catalog cid now =
       Catalog
-        { _id = id,
+        { _id = cid,
           _categories = [],
           _brands = [],
           _models = [],
@@ -123,7 +120,7 @@ mkOnSearchErrReq org context res@Error {..} = do
           _offers = []
         }
 
-    error =
+    err =
       Err.Error
         { _type = "DOMAIN-ERROR",
           _code = code,
@@ -132,20 +129,20 @@ mkOnSearchErrReq org context res@Error {..} = do
         }
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
-mkOnSearchReq org context res@QuoteRes {..} = do
+mkOnSearchReq _ context res@QuoteRes {..} = do
   now <- getCurrentTimeUTC
-  id <- generateGUID
+  cid <- generateGUID
   itemid <- generateGUID
   return $
     OnSearchReq
       { context = context,
-        message = OnSearchServices (catalog id itemid now),
+        message = OnSearchServices (catalog cid itemid now),
         error = Nothing
       }
   where
-    catalog id itemid now =
+    catalog cid itemid now =
       Catalog
-        { _id = id,
+        { _id = cid,
           _categories = [],
           _brands = [],
           _models = [],
@@ -158,9 +155,9 @@ updateContext :: Context -> Text -> Text -> Context
 updateContext Context {..} bpId bpNwAddress = Context {_bpp_nw_address = Just bpNwAddress, _bpp_id = Just bpId, ..}
 
 mkSearchItem :: Text -> QuoteRes -> Item
-mkSearchItem id QuoteRes {..} =
+mkSearchItem itemId QuoteRes {..} =
   Item
-    { _id = id,
+    { _id = itemId,
       _parent_item_id = Nothing,
       _descriptor = descriptor,
       _price = price,
@@ -188,12 +185,11 @@ mkSearchItem id QuoteRes {..} =
     n = Nothing
 
 mkOnSelectReq :: SelectReq -> QuoteRes -> Flow OnSelectReq
-mkOnSelectReq req@SelectReq {..} res@QuoteRes {..} = do
-  now <- getCurrentTimeUTC
-  id <- generateGUID
+mkOnSelectReq req@SelectReq {..} QuoteRes {..} = do
+  qid <- generateGUID
   let order = req ^. (#message . #order)
       price = mkPrice estimated_price
-      quotation = Quotation {_id = id, _price = price, _ttl = Nothing}
+      quotation = Quotation {_id = qid, _price = price, _ttl = Nothing}
   return $
     OnSelectReq
       { context = context,
@@ -214,7 +210,7 @@ mkOnSelectReq req@SelectReq {..} res@QuoteRes {..} = do
         }
 
 mkOnSelectErrReq :: SelectReq -> Error -> Flow OnSelectReq
-mkOnSelectErrReq req res@Error {..} = do
+mkOnSelectErrReq req Error {..} = do
   let context = req ^. #context
   let order = req ^. (#message . #order)
   return $

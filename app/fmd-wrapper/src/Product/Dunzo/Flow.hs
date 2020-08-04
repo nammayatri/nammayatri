@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Dunzo.Flow where
 
@@ -38,32 +39,32 @@ search org req = do
           Left err ->
             case err of
               FailureResponse _ (Response _ _ _ body) -> sendErrCb org bpId bpNwAddr body
-              _ -> L.logDebug "getQuoteErr" (show err)
+              _ -> L.logDebug @Text "getQuoteErr" (show err)
           Right res -> sendCb org bpId bpNwAddr res
   return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
   where
-    sendCb org bpId bpNwAddr res = do
-      onSearchReq <- mkOnSearchReq org (updateContext (req ^. #context) bpId bpNwAddr) res
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
-      cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+    sendCb org' bpId bpNwAddr res = do
+      onSearchReq <- mkOnSearchReq org' (updateContext (req ^. #context) bpId bpNwAddr) res
+      cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+      cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       cbres <- callCbAPI cbApiKey cbUrl onSearchReq
-      L.logDebug "cb" $
+      L.logDebug @Text "cb" $
         decodeUtf8 (encode onSearchReq)
           <> show cbres
 
-    callCbAPI cbApiKey cbUrl req = L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey req
+    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onSearchAPI cbApiKey
 
-    sendErrCb org bpId bpNwAddr errbody =
+    sendErrCb org' bpId bpNwAddr errbody =
       case decode errbody of
         Just err -> do
-          cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
-          cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-          onSearchErrReq <- mkOnSearchErrReq org (updateContext (req ^. #context) bpId bpNwAddr) err
+          cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+          cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+          onSearchErrReq <- mkOnSearchErrReq org' (updateContext (req ^. #context) bpId bpNwAddr) err
           cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
-          L.logDebug "cb" $
+          L.logDebug @Text "cb" $
             decodeUtf8 (encode onSearchErrReq)
               <> show cbres
-        Nothing -> L.logDebug "getQuoteErr" "UNABLE_TO_DECODE_ERR"
+        Nothing -> L.logDebug @Text "getQuoteErr" "UNABLE_TO_DECODE_ERR"
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
@@ -76,45 +77,45 @@ select org req = do
       flip runReaderT env do
         quoteReq <- mkNewQuoteReq req
         eres <- getQuote config quoteReq
-        L.logInfo "select" $ show eres
+        L.logInfo @Text "select" $ show eres
         sendCallback req eres cbUrl cbApiKey
   return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
   where
-    sendCallback req (Right res) cbUrl cbApiKey = do
-      (onSelectReq :: OnSelectReq) <- mkOnSelectReq req res
+    sendCallback req' (Right res) cbUrl cbApiKey = do
+      (onSelectReq :: OnSelectReq) <- mkOnSelectReq req' res
       let mquote = onSelectReq ^. (#message . #quote)
           quoteId = maybe "" (\q -> q ^. #_id) mquote
           quoteData = encodeToText (onSelectReq ^. #message)
       storeQuote quoteId quoteData
-      L.logInfo "on_select" $ "on_select cb req" <> show onSelectReq
+      L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
       onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
-      L.logInfo "on_select" $ "on_select cb resp" <> show onSelectResp
+      L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
       return ()
-    sendCallback req (Left (FailureResponse _ (Response _ _ _ body))) cbUrl cbApiKey =
+    sendCallback req' (Left (FailureResponse _ (Response _ _ _ body))) cbUrl cbApiKey =
       case decode body of
         Just err -> do
-          onSelectReq <- mkOnSelectErrReq req err
-          L.logInfo "on_select" $ "on_select cb err req" <> show onSelectReq
+          onSelectReq <- mkOnSelectErrReq req' err
+          L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
           onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
-          L.logInfo "on_select" $ "on_select cb err resp" <> show onSelectResp
+          L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
           return ()
         Nothing -> return ()
-    sendCallback req _ cbUrl cbApiKey = return ()
+    sendCallback _ _ _ _ = return ()
 
 init :: Organization -> InitReq -> Flow InitRes
-init org req = error "Not implemented yet"
+init _ _ = error "Not implemented yet"
 
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
-confirm org req = error "Not implemented yet"
+confirm _ _ = error "Not implemented yet"
 
 track :: Organization -> TrackReq -> Flow TrackRes
-track org req = error "Not implemented yet"
+track _ _ = error "Not implemented yet"
 
 status :: Organization -> StatusReq -> Flow StatusRes
-status org req = error "Not implemented yet"
+status _ _ = error "Not implemented yet"
 
 cancel :: Organization -> CancelReq -> Flow CancelRes
-cancel org req = error "Not implemented yet"
+cancel _ _ = error "Not implemented yet"
 
 getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
 getQuote DunzoConfig {..} quoteReq = do

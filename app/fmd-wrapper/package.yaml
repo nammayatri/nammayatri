@@ -76,18 +76,15 @@ dependencies:
   - random-strings
   - vault
 
-ghc-options:
+library:
+  source-dirs: src
+  ghc-options:
   - -Wall
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror=unused-imports
-  - -Werror=missing-fields
-
-library:
-  source-dirs: src
-  ghc-options:
-  - -Wincomplete-uni-patterns
+  - -Wno-unrecognised-pragmas
+  - -Werror
   dependencies:
     - beckn-core
 
@@ -99,7 +96,6 @@ executables:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
-      - -Wincomplete-uni-patterns
     dependencies:
       - fmd-wrapper
       - beckn-core
