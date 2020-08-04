@@ -36,35 +36,31 @@ mkQuoteReq SearchReq {..} = do
   let intent = message ^. #intent
       pickups = intent ^. #_pickups
       drops = intent ^. #_drops
-      categoryId = intent ^. #_category_id
-  when
-    (length pickups /= 1)
-    (throwJsonError400 "ERR" "NUMBER_OF_PICKUPS_EXCEEDES_LIMIT")
-  when
-    (length drops /= 1)
-    (throwJsonError400 "ERR" "NUMBER_OF_DROPS_EXCEEDES_LIMIT")
-  let pickup1 = head pickups
-      drop1 = head drops
-      pgps = pickup1 ^. (#_location . #_gps)
-      dgps = drop1 ^. (#_location . #_gps)
-  when
-    (isNothing pgps)
-    (throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND")
-  when
-    (isNothing dgps)
-    (throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND")
-  plat <- readCoord (fromJust pgps ^. #lat)
-  plon <- readCoord (fromJust pgps ^. #lon)
-  dlat <- readCoord (fromJust dgps ^. #lat)
-  dlon <- readCoord (fromJust dgps ^. #lon)
-  return $
-    QuoteReq
-      { pickup_lat = plat,
-        pickup_lng = plon,
-        drop_lat = dlat,
-        drop_lng = dlon,
-        category_id = "pickup_drop"
-      }
+  case (pickups, drops) of
+    ([pickup], [drop]) ->
+      case (pickup ^. #_location . #_gps, drop ^. #_location . #_gps) of
+        (Just pgps, Just dgps) -> do
+          plat <- readCoord (pgps ^. #lat)
+          plon <- readCoord (pgps ^. #lon)
+          dlat <- readCoord (dgps ^. #lat)
+          dlon <- readCoord (dgps ^. #lon)
+          return $
+            QuoteReq
+              { pickup_lat = plat,
+                pickup_lng = plon,
+                drop_lat = dlat,
+                drop_lng = dlon,
+                category_id = "pickup_drop"
+              }
+        (Just pgps, Nothing) -> dropLocationNotFound
+        _ -> pickupLocationNotFound
+    ([pickup], _) -> oneDropLocationExpected
+    _ -> onePickupLocationExpected
+  where
+    onePickupLocationExpected = throwJsonError400 "ERR" "ONE_PICKUP_LOCATION_EXPECTED"
+    oneDropLocationExpected = throwJsonError400 "ERR" "ONE_DROP_LOCATION_EXPECTED"
+    pickupLocationNotFound = throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND"
+    dropLocationNotFound = throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND"
 
 mkNewQuoteReq :: SelectReq -> Flow QuoteReq
 mkNewQuoteReq SelectReq {..} = do
@@ -92,9 +88,7 @@ mkNewQuoteReq SelectReq {..} = do
 readCoord :: Text -> Flow Double
 readCoord text = do
   let mCoord = readMaybe $ T.unpack text
-  case mCoord of
-    Nothing -> throwJsonError400 "ERR" "LOCATION_READ_ERROR"
-    Just v -> return v
+  maybe (throwJsonError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
 
 mkOnSearchErrReq :: Organization -> Context -> Error -> Flow OnSearchReq
 mkOnSearchErrReq org context res@Error {..} = do
