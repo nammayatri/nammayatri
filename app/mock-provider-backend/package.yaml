@@ -80,8 +80,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror=unused-imports
-  - -Werror=missing-fields
+  - -Werror
 
 library:
   source-dirs: src
