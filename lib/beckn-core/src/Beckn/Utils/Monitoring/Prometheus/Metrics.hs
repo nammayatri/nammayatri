@@ -56,7 +56,7 @@ startTracking host serviceName = do
 logRequestLatency :: Text -> Text -> TimeSpec -> Text -> IO ()
 logRequestLatency host serviceName start status = do
   end <- getTime Monotonic
-  let latency = fromRational $ (toNanoSecs (end `diffTimeSpec` start) % 1000000000)
+  let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
   P.withLabel
     requestLatency
     (host, serviceName, status)

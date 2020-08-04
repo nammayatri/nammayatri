@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Storage.Redis.Config where
 
 import Beckn.Types.App
@@ -31,8 +33,8 @@ loadRedisConfig = do
             connectAuth = Nothing, -- FIXME: this should use auth
             connectDatabase = read db,
             connectMaxConnections = read maxConnections,
-            connectMaxIdleTime = (fromRational . toRational) $ (read maxIdleTime :: Integer),
-            connectTimeout = (fromRational . toRational . (read :: String -> Integer)) <$> mtimeout
+            connectMaxIdleTime = fromRational . toRational @Integer $ read maxIdleTime,
+            connectTimeout = fromRational . toRational @Integer . read <$> mtimeout
           }
 
 prepareRedisConnections :: (L.MonadFlow mFlow, HasRedisEnv mFlow) => mFlow ()

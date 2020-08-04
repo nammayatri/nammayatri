@@ -5,9 +5,12 @@ import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import EulerHS.Types (EulerClient, JSONEx)
+import Servant.Client.Core (BaseUrl)
 import Servant.Client.Core.ClientError
 import Servant.Client.Core.Response
 
+callAPI :: (L.MonadFlow m, JSONEx a) => BaseUrl -> EulerClient a -> Text -> m (Either ClientError a)
 callAPI baseUrl req serviceName = do
   endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
   res <- L.callAPI baseUrl req
