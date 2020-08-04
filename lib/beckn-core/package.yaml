@@ -108,8 +108,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    - -Werror=unused-imports
-    - -Werror=missing-fields
+    - -Werror
 
 tests:
   beckn-core-tests:

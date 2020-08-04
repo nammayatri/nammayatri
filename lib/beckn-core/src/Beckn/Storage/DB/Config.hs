@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Storage.DB.Config where
 
 import Beckn.Types.App
@@ -27,7 +29,7 @@ loadPgConfig = do
     host <- mhost
     port <- mport
     user <- muser
-    pass <- mpass
+    passw <- mpass
     db <- mdb
     p <- readMaybe port
     Just $
@@ -35,7 +37,7 @@ loadPgConfig = do
         { connectHost = host,
           connectPort = p,
           connectUser = user,
-          connectPassword = pass,
+          connectPassword = passw,
           connectDatabase = db
         }
 
@@ -49,7 +51,7 @@ getPgDBConfig = do
   mConfig <- L.runIO loadPgConfig
   case mConfig of
     Nothing -> do
-      L.logInfo "Config" "Could not load postgres config from env. Using defaults."
+      L.logInfo @Text "Config" "Could not load postgres config from env. Using defaults."
       pure $ T.mkPostgresPoolConfig tag defPostgresConfig poolConfig
     Just config -> pure $ T.mkPostgresPoolConfig tag config poolConfig
 

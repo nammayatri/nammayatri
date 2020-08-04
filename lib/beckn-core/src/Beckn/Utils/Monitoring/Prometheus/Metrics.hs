@@ -8,8 +8,9 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Ratio ((%))
 import Data.Text as DT
 import EulerHS.Prelude as E
-import Network.Wai (Request (..))
+import Network.Wai (Application, Request (..))
 import Network.Wai.Handler.Warp as W
+import Network.Wai.Internal (Response, ResponseReceived)
 import Network.Wai.Middleware.Prometheus
 import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
@@ -18,12 +19,22 @@ import System.Clock (Clock (..), TimeSpec, diffTimeSpec, getTime, toNanoSecs)
 
 serve :: Int -> IO ()
 serve port = do
-  register ghcMetrics
-  register procMetrics
+  _ <- register ghcMetrics
+  _ <- register procMetrics
   putStrLn @String $ "Prometheus server started at port " <> show port
-  forkIO $ W.run port metricsApp
+  _ <- forkIO $ W.run port metricsApp
   return ()
 
+addServantInfo ::
+  forall k (a :: k).
+  SanitizedUrl a =>
+  Proxy a ->
+  Application ->
+  Request ->
+  ( Network.Wai.Internal.Response ->
+    IO Network.Wai.Internal.ResponseReceived
+  ) ->
+  IO Network.Wai.Internal.ResponseReceived
 addServantInfo proxy app request respond =
   let mpath = getSanitizedUrl proxy request
       fullpath = DT.intercalate "/" (pathInfo request)
@@ -45,7 +56,7 @@ startTracking host serviceName = do
 logRequestLatency :: Text -> Text -> TimeSpec -> Text -> IO ()
 logRequestLatency host serviceName start status = do
   end <- getTime Monotonic
-  let latency = fromRational $ toRational (toNanoSecs (end `diffTimeSpec` start) % 1000000000)
+  let latency = fromRational $ (toNanoSecs (end `diffTimeSpec` start) % 1000000000)
   P.withLabel
     requestLatency
     (host, serviceName, status)

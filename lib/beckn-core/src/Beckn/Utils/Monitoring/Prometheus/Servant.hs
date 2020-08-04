@@ -13,7 +13,7 @@ class SanitizedUrl a where
   getSanitizedUrl :: Proxy a -> Request -> Maybe Text
 
 instance
-  (SanitizedUrl (a :: *), SanitizedUrl (b :: *)) =>
+  (SanitizedUrl (a :: Type), SanitizedUrl (b :: Type)) =>
   SanitizedUrl (a :<|> b)
   where
   getSanitizedUrl _ req =
@@ -22,7 +22,7 @@ instance
 
 instance
   ( KnownSymbol (path :: Symbol),
-    SanitizedUrl (subroute :: *)
+    SanitizedUrl (subroute :: Type)
   ) =>
   SanitizedUrl (path :> subroute)
   where
@@ -33,7 +33,6 @@ instance
       else do
         let (x : xs) = path
             p = DT.pack $ symbolVal (Proxy :: Proxy path)
-            maybeUrl = getSanitizedUrl (Proxy :: Proxy subroute) $ req {pathInfo = xs}
         if p == x
           then
             let maybeUrl = getSanitizedUrl (Proxy :: Proxy subroute) $ req {pathInfo = xs}
@@ -42,7 +41,7 @@ instance
 
 instance
   ( KnownSymbol (capture :: Symbol),
-    SanitizedUrl (subroute :: *)
+    SanitizedUrl (subroute :: Type)
   ) =>
   SanitizedUrl (Capture capture a :> subroute)
   where
@@ -51,7 +50,7 @@ instance
     if E.null path
       then Nothing
       else
-        let (x : xs) = path
+        let (_ : xs) = path
             p = DT.pack $ ":" <> symbolVal (Proxy :: Proxy capture)
             maybeUrl = getSanitizedUrl (Proxy :: Proxy subroute) $ req {pathInfo = xs}
          in (\url -> Just (p <> "/" <> url)) =<< maybeUrl
@@ -67,37 +66,37 @@ instance
       else Nothing
 
 instance
-  SanitizedUrl (subroute :: *) =>
+  SanitizedUrl (subroute :: Type) =>
   SanitizedUrl (QueryParams (h :: Symbol) a :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
 
 instance
-  SanitizedUrl (subroute :: *) =>
+  SanitizedUrl (subroute :: Type) =>
   SanitizedUrl (Header h a :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
 
 instance
-  SanitizedUrl (subroute :: *) =>
+  SanitizedUrl (subroute :: Type) =>
   SanitizedUrl (ReqBody cts a :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
 
 instance
-  SanitizedUrl (subroute :: *) =>
+  SanitizedUrl (subroute :: Type) =>
   SanitizedUrl (APIKeyAuth v :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
 
 instance
-  SanitizedUrl (subroute :: *) =>
+  SanitizedUrl (subroute :: Type) =>
   SanitizedUrl (QueryParam name t :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
 
 instance
-  SanitizedUrl (subroute :: *) =>
+  SanitizedUrl (subroute :: Type) =>
   SanitizedUrl (MandatoryQueryParam name t :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)

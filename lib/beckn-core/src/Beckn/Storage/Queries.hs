@@ -1,5 +1,7 @@
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Beckn.Storage.Queries where
 
@@ -198,7 +200,7 @@ delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
 
 throwDBError :: L.MonadFlow mFlow => T.DBError -> mFlow a
 throwDBError err =
-  L.logError "DB error: " (show err)
+  L.logError @Text "DB error: " (show err)
     >> L.throwException err500
 
 type Scope2 = BI.QNested (BI.QNested B.QBaseScope)

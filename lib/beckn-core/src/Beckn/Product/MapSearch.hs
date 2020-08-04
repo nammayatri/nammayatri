@@ -71,7 +71,7 @@ distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2) =
       rlat2 = deg2Rad lat2
       -- Calculated distance is real (not imaginary) when 0 <= h <= 1
       -- Ideally in our use case h wouldn't go out of bounds
-      h = (sin (dlat / 2) ^ 2) + cos rlat1 * cos rlat2 * (sin (dlon / 2) ^ 2)
+      h = (sin (dlat / 2) ^ (2 :: Integer)) + cos rlat1 * cos rlat2 * (sin (dlon / 2) ^ (2 :: Integer))
    in -- Float precision for distance is sufficient as we are working with `meter` units
       realToFrac $ 2 * r * atan2 (sqrt h) (sqrt (1 - h))
 

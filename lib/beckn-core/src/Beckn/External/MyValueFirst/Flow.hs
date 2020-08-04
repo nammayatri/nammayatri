@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.External.MyValueFirst.Flow where
 
 import qualified Beckn.External.MyValueFirst.API as API
@@ -11,7 +13,7 @@ submitSms :: BaseUrl -> SubmitSms -> FlowR r (Either Text ())
 submitSms url params = do
   res <- L.callAPI url $ API.submitSms params
   whenRight res $ \_ ->
-    L.logInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
+    L.logInfo @Text "SMS" $ "Submitted sms successfully to " <> show (_to params)
   return $ first show res
 
 defaultBaseUrl :: BaseUrl

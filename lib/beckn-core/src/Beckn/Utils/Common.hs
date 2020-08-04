@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Utils.Common where
 
 import Beckn.Types.App
@@ -91,7 +93,7 @@ mkAckResponse :: L.MonadFlow m => Text -> Text -> m AckResponse
 mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
 mkAckResponse' :: L.MonadFlow m => Text -> Text -> Text -> m AckResponse
-mkAckResponse' txnId action message = do
+mkAckResponse' txnId action _message = do
   currTime <- getCurrTime'
   return
     AckResponse
@@ -215,6 +217,8 @@ throwDomainError err =
     CaseErr suberr -> case suberr of
       CaseNotFound -> t err404 "Case not found"
       CaseStatusTransitionErr msg -> t err405 msg
+      CaseNotCreated -> t err404 "Case not created"
+      CaseNotUpdated -> t err404 "Case not updated"
     -- Product Instance errors
     ProductInstanceErr suberr -> case suberr of
       ProductInstanceNotFound -> t err404 "Product Instance not found"
@@ -239,7 +243,7 @@ callClient ::
 callClient desc baseUrl cli =
   L.callAPI baseUrl cli >>= \case
     Left err -> do
-      L.logError "cli" $ "Failure in " <> show desc <> " call to " <> show baseUrl <> ": " <> show err
+      L.logError @Text "cli" $ "Failure in " <> show desc <> " call to " <> show baseUrl <> ": " <> show err
       L.throwException err
     Right x -> pure x
 
@@ -263,7 +267,7 @@ forkAsync desc action =
         `catchAny` \e -> I.runFlow flowRt (logErr e)
   where
     logErr e =
-      L.logWarning "Thread" $
+      L.logWarning @Text "Thread" $
         "Thread " <> show desc <> " died with error: " <> show e
 
 class Example a where

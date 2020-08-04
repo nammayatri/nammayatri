@@ -119,12 +119,12 @@ deleteKeysRedis ::
   (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
   [Text] ->
   mFlow Int
-deleteKeysRedis keys = do
-  resp <- runKV $ L.del $ map DTE.encodeUtf8 keys
+deleteKeysRedis rKeys = do
+  resp <- runKV $ L.del $ map DTE.encodeUtf8 rKeys
   return $
     case resp of
       Right x -> fromEnum x
-      Left err -> -1
+      Left _ -> -1
 
 incrementKeyRedis ::
   (L.MonadFlow mFlow, HasRedisEnv mFlow) =>

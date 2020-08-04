@@ -63,18 +63,18 @@ rationalToString precision rational
       if fracPrecision <= 0 || null fracPart
         then intPart
         else intPart <> "." <> take fracPrecision fracPart
-    numerator = R.numerator rational
-    denominator = R.denominator rational
-    sign = if numerator < 0 then "-" else ""
+    rNumerator = R.numerator rational
+    rDenominator = R.denominator rational
+    sign = if rNumerator < 0 then "-" else ""
     intPart = sign <> show quotient
     fracPrecision = precision - length intPart
     fracPart = expand remainder
-    (quotient, remainder) = abs numerator `quotRem` denominator
+    (quotient, remainder) = abs rNumerator `quotRem` rDenominator
     expand currentRemainder
       | currentRemainder == 0 = ""
       | otherwise = show digit <> expand nextRemainder
       where
-        (digit, nextRemainder) = (10 * currentRemainder) `quotRem` denominator
+        (digit, nextRemainder) = (10 * currentRemainder) `quotRem` rDenominator
 
 -- Note: amountToString will fail with an error if the integer
 -- part of the number exceeds the precision (total number of digits).
@@ -124,10 +124,10 @@ instance FromJSON Amount where
 
 instance ToSchema Amount where
   declareNamedSchema _ = do
-    schema <- declareSchema (Proxy :: Proxy Text)
+    aSchema <- declareSchema (Proxy :: Proxy Text)
     return $
       NamedSchema (Just "amount") $
-        schema
+        aSchema
           & description
             ?~ "Monetary amount in a string representation \
                \with an optional leading \"-\" for negative numbers. \

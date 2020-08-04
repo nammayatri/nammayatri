@@ -11,7 +11,7 @@ loadRedisConfig :: IO (Maybe T.KVDBConfig)
 loadRedisConfig = do
   mhost <- lookupEnv "REDIS_HOST"
   mport <- lookupEnv "REDIS_PORT"
-  mauth <- lookupEnv "REDIS_AUTH"
+  _mauth <- lookupEnv "REDIS_AUTH"
   mdb <- lookupEnv "REDIS_DB"
   mmaxConnections <- lookupEnv "REDIS_MAX_CONNECTIONS"
   mmaxIdleTime <- lookupEnv "REDIS_MAX_IDLE_TIME"
@@ -31,8 +31,8 @@ loadRedisConfig = do
             connectAuth = Nothing, -- FIXME: this should use auth
             connectDatabase = read db,
             connectMaxConnections = read maxConnections,
-            connectMaxIdleTime = fromRational . toRational . read $ maxIdleTime,
-            connectTimeout = fromRational . toRational . read <$> mtimeout
+            connectMaxIdleTime = (fromRational . toRational) $ (read maxIdleTime :: Integer),
+            connectTimeout = (fromRational . toRational . (read :: String -> Integer)) <$> mtimeout
           }
 
 prepareRedisConnections :: (L.MonadFlow mFlow, HasRedisEnv mFlow) => mFlow ()
@@ -48,7 +48,7 @@ prepareRedisConnections = do
     "Failed to get or initialize connection to Redis."
   eitherResp <- L.runKVDB "redis" $ L.setex "dummy" 1 "dummy"
   case eitherResp of
-    Left err ->
+    Left _ ->
       throwFailedWithLog
         KVDBConnectionFailedException
         "Failed to get or initialize connection to Redis."
