@@ -20,23 +20,20 @@ import qualified EulerHS.Types as ET
 import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
 import Product.Dunzo.Transform
-import Servant.Client (BaseUrl (..), ClientError (..), ResponseF (..))
+import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Dunzo as Dz
 import Storage.Queries.Quote
 import Utils.Common (parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do
-  (clientId, clientSecret, url, baConfigs, bpId, bpNwAddr) <- getDunzoConfig org
-  baseUrl <- parseBaseUrl url
-  tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
-  token <- fetchToken tokenUrl clientId clientSecret
+  config@DunzoConfig {..} <- getDunzoConfig org
   quoteReq <- mkQuoteReq req
   env <- ask
   lift $
     L.forkFlow "Search" $
       flip runReaderT env do
-        eres <- API.getQuote clientId token baseUrl quoteReq
+        eres <- getQuote config quoteReq
         case eres of
           Left err ->
             case err of
@@ -70,10 +67,7 @@ search org req = do
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
-  (clientId, clientSecret, url, baConfigs, bpId, bpNwAddr) <- getDunzoConfig org
-  baseUrl <- parseBaseUrl url
-  tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016"
-  token <- fetchToken tokenUrl clientId clientSecret
+  config@DunzoConfig {..} <- getDunzoConfig org
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   env <- ask
@@ -81,7 +75,7 @@ select org req = do
     L.forkFlow "Select" $
       flip runReaderT env do
         quoteReq <- mkNewQuoteReq req
-        eres <- API.getQuote clientId token baseUrl quoteReq
+        eres <- getQuote config quoteReq
         L.logInfo "select" $ show eres
         sendCallback req eres cbUrl cbApiKey
   return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
@@ -122,18 +116,21 @@ status org req = error "Not implemented yet"
 cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = error "Not implemented yet"
 
-fetchToken :: BaseUrl -> ClientId -> ClientSecret -> Flow Token
-fetchToken baseUrl clientId clientSecret = do
-  mToken <- Dz.getToken
-  case mToken of
-    Nothing -> do
-      eres <- callAPI
-      case eres of
-        Left err -> throwJsonError500 "TOKEN_ERR" (show err)
-        Right (TokenRes token) -> do
-          Dz.insertToken token
-          return token
-    Just token -> return token
+getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
+getQuote DunzoConfig {..} quoteReq = do
+  baseUrl <- parseBaseUrl url
+  token <- fetchToken
+  API.getQuote clientId token baseUrl quoteReq
   where
-    callAPI =
-      API.getToken baseUrl (TokenReq clientId clientSecret)
+    fetchToken = do
+      tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
+      mToken <- Dz.getToken
+      case mToken of
+        Nothing -> do
+          eres <- API.getToken tokenUrl (TokenReq clientId clientSecret)
+          case eres of
+            Left err -> throwJsonError500 "TOKEN_ERR" (show err)
+            Right (TokenRes token) -> do
+              Dz.insertToken token
+              return token
+        Just token -> return token

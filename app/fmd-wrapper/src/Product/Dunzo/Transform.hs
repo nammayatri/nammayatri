@@ -24,11 +24,22 @@ import External.Dunzo.Types
 import Types.Wrapper
 import Utils.Common (getClientConfig)
 
-getDunzoConfig :: Organization -> Flow (ClientId, ClientSecret, Text, [BAConfig], Text, Text)
+data DunzoConfig = DunzoConfig
+  { clientId :: ClientId,
+    clientSecret :: ClientSecret,
+    url :: Text,
+    baConfigs :: [BAConfig],
+    bpId :: Text,
+    bpNwAddr :: Text
+  }
+  deriving (Show)
+
+getDunzoConfig :: Organization -> Flow DunzoConfig
 getDunzoConfig org = do
   config <- getClientConfig org
   case config of
-    Dunzo dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress -> return (dzClientId, dzClientSecret, dzUrl, dzBAConfigs, dzBPId, dzBPNwAddress)
+    Dunzo dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress ->
+      return $ DunzoConfig dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress
     _ -> throwJsonError500 "CLIENT_CONFIG" "MISMATCH"
 
 mkQuoteReq :: SearchReq -> Flow QuoteReq
