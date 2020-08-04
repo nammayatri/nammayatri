@@ -13,6 +13,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (fromMaybeM400, fromMaybeM500, withFlowHandler)
+import qualified Beckn.Utils.Servant.Trail.Client as UT
 import Data.Aeson (encode)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -32,7 +33,7 @@ parseOrgUrl =
 
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
-  let search' = ET.client searchAPI
+  let search' = ET.client $ UT.withClientTracing searchAPI
       messageId = req ^. #context . #_request_transaction_id
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providers <- BP.lookup $ req ^. #context
@@ -63,7 +64,7 @@ search org req = withFlowHandler $ do
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
-  let onSearch = ET.client onSearchAPI
+  let onSearch = ET.client $ UT.withClientTracing onSearchAPI
       messageId = req ^. #context . #_request_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl

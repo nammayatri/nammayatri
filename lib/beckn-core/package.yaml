@@ -55,8 +55,10 @@ dependencies:
   - base >= 4.7 && < 5
   - beam-core
   - beam-postgres
+  - binary
   - bytestring
   - clock
+  - case-insensitive
   - containers
   - cryptonite
   - data-default-class
@@ -74,9 +76,14 @@ dependencies:
   - lens
   - memory
   - passetto-client
+  - network
+  - pureMD5
   - random-strings
   - servant
   - servant-client
+  - servant-client-core
+  - servant-multipart
+  - servant-purescript
   - servant-server
   - servant-swagger
   - swagger2
@@ -85,13 +92,14 @@ dependencies:
   - wai-extra
   - warp
   - time
+  - time-units
   - template-haskell
   - generic-lens
   - base64-bytestring
   - utf8-string
   - geojson
   - safe-money
-
+  
 library:
   source-dirs:
     - src

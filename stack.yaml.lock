@@ -213,6 +213,13 @@ packages:
       sha256: 50912d2ac162c8fab4243c9d73b8a2adb3bb609fbe13853bb8396c7e7b3b87e2
   original:
     hackage: unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
+- completed:
+    hackage: time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
+    pantry-tree:
+      size: 212
+      sha256: 9b516d4195fcea22cd1f4335cfe210e88deca397ba7dacc494d5a2feb69e1af8
+  original:
+    hackage: time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
 snapshots:
 - completed:
     size: 496112

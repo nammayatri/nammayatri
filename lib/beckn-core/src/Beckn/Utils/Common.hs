@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import Data.Time.Units (TimeUnit, fromMicroseconds)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -36,6 +37,9 @@ getCurrTime' = L.runIO getCurrentTime
 
 defaultLocalTime :: LocalTime
 defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
+
+roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
+roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError

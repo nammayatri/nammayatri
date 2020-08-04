@@ -78,8 +78,11 @@ library:
     - servant-server
     - servant-client-core
     - text
+    - time
+    - time-units
     - vault
     - wai
+    - wai-extra
     - warp
 
 executables:
