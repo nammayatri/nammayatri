@@ -24,22 +24,11 @@ import External.Dunzo.Types
 import Types.Wrapper
 import Utils.Common (getClientConfig)
 
-data DunzoConfig = DunzoConfig
-  { clientId :: ClientId,
-    clientSecret :: ClientSecret,
-    url :: Text,
-    baConfigs :: [BAConfig],
-    bpId :: Text,
-    bpNwAddr :: Text
-  }
-  deriving (Show)
-
 getDunzoConfig :: Organization -> Flow DunzoConfig
 getDunzoConfig org = do
   config <- getClientConfig org
   case config of
-    Dunzo dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress ->
-      return $ DunzoConfig dzClientId dzClientSecret dzUrl dzBAConfigs dzBPId dzBPNwAddress
+    Dunzo dzConfig -> return dzConfig
 
 mkQuoteReq :: SearchReq -> Flow QuoteReq
 mkQuoteReq SearchReq {..} = do

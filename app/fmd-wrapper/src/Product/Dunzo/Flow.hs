@@ -25,27 +25,25 @@ import Product.Dunzo.Transform
 import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Dunzo as Dz
 import Storage.Queries.Quote
-import Utils.Common (parseBaseUrl)
+import Types.Wrapper (DunzoConfig (..))
+import Utils.Common (fork, parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do
   config@DunzoConfig {..} <- getDunzoConfig org
   quoteReq <- mkQuoteReq req
-  env <- ask
-  lift $
-    L.forkFlow "Search" $
-      flip runReaderT env do
-        eres <- getQuote config quoteReq
-        case eres of
-          Left err ->
-            case err of
-              FailureResponse _ (Response _ _ _ body) -> sendErrCb org bpId bpNwAddr body
-              _ -> L.logDebug @Text "getQuoteErr" (show err)
-          Right res -> sendCb org bpId bpNwAddr res
-  return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
+  fork "Search" $ do
+    eres <- getQuote config quoteReq
+    case eres of
+      Left err ->
+        case err of
+          FailureResponse _ (Response _ _ _ body) -> sendErrCb org dzBPId dzBPNwAddress body
+          _ -> L.logDebug @Text "getQuoteErr" (show err)
+      Right res -> sendCb org dzBPId dzBPNwAddress res
+  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
   where
-    sendCb org' bpId bpNwAddr res = do
-      onSearchReq <- mkOnSearchReq org' (updateContext (req ^. #context) bpId bpNwAddr) res
+    sendCb org' dzBPId dzBPNwAddress res = do
+      onSearchReq <- mkOnSearchReq org' (updateContext (req ^. #context) dzBPId dzBPNwAddress) res
       cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
       cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       cbres <- callCbAPI cbApiKey cbUrl onSearchReq
@@ -55,12 +53,12 @@ search org req = do
 
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onSearchAPI cbApiKey
 
-    sendErrCb org' bpId bpNwAddr errbody =
+    sendErrCb org' dzBPId dzBPNwAddress errbody =
       case decode errbody of
         Just err -> do
           cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
           cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-          onSearchErrReq <- mkOnSearchErrReq org' (updateContext (req ^. #context) bpId bpNwAddr) err
+          onSearchErrReq <- mkOnSearchErrReq org' (updateContext (req ^. #context) dzBPId dzBPNwAddress) err
           cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
           L.logDebug @Text "cb" $
             decodeUtf8 (encode onSearchErrReq)
@@ -71,20 +69,17 @@ select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
   config@DunzoConfig {..} <- getDunzoConfig org
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  env <- ask
-  let maybeBaConfig = find (\x -> req ^. #context . #_bap_id == Just (x ^. #bap_id)) baConfigs
+  let maybeBaConfig = find (\x -> req ^. #context . #_bap_id == Just (x ^. #bap_id)) dzBAConfigs
   baUrl <-
     fromMaybeM500 "CB_URL_NOT_CONFIGURED" $
       (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_bap_nw_address)
   cbUrl <- parseBaseUrl baUrl
-  lift $
-    L.forkFlow "Select" $
-      flip runReaderT env do
-        quoteReq <- mkNewQuoteReq req
-        eres <- getQuote config quoteReq
-        L.logInfo @Text "select" $ show eres
-        sendCallback req eres cbUrl cbApiKey
-  return $ AckResponse (updateContext (req ^. #context) bpId bpNwAddr) (ack "ACK") Nothing
+  fork "Select" do
+    quoteReq <- mkNewQuoteReq req
+    eres <- getQuote config quoteReq
+    L.logInfo @Text "select" $ show eres
+    sendCallback req eres cbUrl cbApiKey
+  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
   where
     sendCallback req' (Right res) cbUrl cbApiKey = do
       (onSelectReq :: OnSelectReq) <- mkOnSelectReq req' res
@@ -123,20 +118,21 @@ cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel _ _ = error "Not implemented yet"
 
 getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
-getQuote DunzoConfig {..} quoteReq = do
-  baseUrl <- parseBaseUrl url
-  token <- fetchToken
-  API.getQuote clientId token baseUrl quoteReq
-  where
-    fetchToken = do
-      tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
-      mToken <- Dz.getToken
-      case mToken of
-        Nothing -> do
-          eres <- API.getToken tokenUrl (TokenReq clientId clientSecret)
-          case eres of
-            Left err -> throwJsonError500 "TOKEN_ERR" (show err)
-            Right (TokenRes token) -> do
-              Dz.insertToken token
-              return token
-        Just token -> return token
+getQuote conf@DunzoConfig {..} quoteReq = do
+  baseUrl <- parseBaseUrl dzUrl
+  token <- fetchToken conf
+  API.getQuote dzClientId token baseUrl quoteReq
+
+fetchToken :: DunzoConfig -> Flow Token
+fetchToken DunzoConfig {..} = do
+  tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
+  mToken <- Dz.getToken
+  case mToken of
+    Nothing -> do
+      eres <- API.getToken tokenUrl (TokenReq dzClientId dzClientSecret)
+      case eres of
+        Left err -> throwJsonError500 "TOKEN_ERR" (show err)
+        Right (TokenRes token) -> do
+          Dz.insertToken token
+          return token
+    Just token -> return token

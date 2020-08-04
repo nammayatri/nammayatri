@@ -19,3 +19,8 @@ parseBaseUrl :: Text -> Flow S.BaseUrl
 parseBaseUrl url =
   L.runIO $
     S.parseBaseUrl $ T.unpack url
+
+fork :: Text -> Flow () -> Flow ()
+fork desc f = do
+  env <- ask
+  lift $ L.forkFlow desc $ runReaderT f env
