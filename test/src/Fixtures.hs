@@ -25,8 +25,9 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Time
 import EulerHS.Prelude
+import qualified EulerHS.Types as T
 import Servant hiding (Context)
-import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
+import Servant.Client
 import System.Environment (setEnv)
 import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
@@ -181,10 +182,10 @@ cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 onCancelRide :: Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes
 cancelRide :<|> onCancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
-buildAppCancelReq :: Text -> LocalTime -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
-buildAppCancelReq guid localTime entityId entityType =
+buildAppCancelReq :: Text -> UTCTime -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
+buildAppCancelReq guid utcTime entityId entityType =
   CancelAPI.CancelReq
-    { context = buildContext "cancel" guid localTime,
+    { context = buildContext "cancel" guid utcTime,
       message = CancelAPI.Cancel entityId entityType
     }
 
@@ -269,7 +270,7 @@ buildUpdatePIReq =
   TbePI.ProdInstUpdateReq
     { _status = Nothing,
       _personId = Just testDriverId,
-      _vehicleId = Just testVehilcleId
+      _vehicleId = Just testVehicleId
     }
 
 buildUpdateStatusReq :: PI.ProductInstanceStatus -> TbePI.ProdInstUpdateReq
@@ -286,11 +287,11 @@ buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csTy
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
 
-testVehilcleId :: Text
-testVehilcleId = "ccf7193b-10e6-4f7e-b166-8c47f6497326"
+testVehicleId :: Text
+testVehicleId = "0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94"
 
 testDriverId :: Text
-testDriverId = "0219fdf4-ce91-465a-933e-8231e0fd5d8c"
+testDriverId = "6bc4bc84-2c43-425d-8853-22f47bd06691"
 
 appInitiateLogin :: Reg.InitiateLoginReq -> ClientM Reg.InitiateLoginRes
 appVerifyLogin :: Text -> Reg.LoginReq -> ClientM Reg.LoginRes
@@ -335,3 +336,29 @@ startServers = do
   tbeTid <- forkIO TransporterBE.runTransporterBackendApp
   gatewayTid <- forkIO GatewayBE.runGateway
   return (appTid, tbeTid, gatewayTid)
+
+getLoggerCfg :: FilePath -> T.LoggerConfig
+getLoggerCfg fName =
+  T.defaultLoggerConfig
+    { T._logToFile = True,
+      T._logFilePath = "/tmp/" <> fName,
+      T._isAsync = False
+    }
+
+getAppBaseUrl :: BaseUrl
+getAppBaseUrl =
+  BaseUrl
+    { baseUrlScheme = Http,
+      baseUrlHost = "localhost",
+      baseUrlPort = 8013,
+      baseUrlPath = "/v1"
+    }
+
+getTransporterBaseUrl :: BaseUrl
+getTransporterBaseUrl =
+  BaseUrl
+    { baseUrlScheme = Http,
+      baseUrlHost = "localhost",
+      baseUrlPort = 8014,
+      baseUrlPath = "/v1"
+    }

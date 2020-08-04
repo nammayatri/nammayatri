@@ -1,4 +1,4 @@
-module SuccessFlow where
+module DriverCancelRide where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
@@ -27,10 +27,10 @@ spec = do
       transporterBaseUrl = getTransporterBaseUrl
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv tbeManager transporterBaseUrl
-      loggerCfg = getLoggerCfg "app-backend-successflow-test"
+      loggerCfg = getLoggerCfg "driver-cancel-flow"
   around (withFlowRuntime (Just loggerCfg)) $
     describe "Testing App and Transporter APIs" $
-      it "Testing API flow for successful booking and completion of ride" $
+      it "Testing API flow for ride cancelled by Driver" $
         \_flowRt ->
           do
             -- Do an App Search
@@ -85,38 +85,19 @@ spec = do
                 (rideUpdate appRegistrationToken transporterOrderPiId buildUpdatePIReq)
             assignDriverVehicleResult `shouldSatisfy` isRight
 
-            -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
-            inProgressStatusResult <-
+            -- Driver updates RIDEORDER PI to CANCELLED
+            cancelStatusResult <-
               runClient
                 tbeClientEnv
-                (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.INPROGRESS))
-            inProgressStatusResult `shouldSatisfy` isRight
+                (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED))
+            cancelStatusResult `shouldSatisfy` isRight
 
-            inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)
-            inprogressPiListResult `shouldSatisfy` isRight
+            piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)
+            piListResult `shouldSatisfy` isRight
 
-            -- Check if app RIDEORDER PI got updated to status INPROGRESS
-            checkPiInResult inprogressPiListResult productInstanceId
-
-            -- Update RIDEORDER PI to COMPLETED once driver ends his trip
-            completedStatusResult <-
-              runClient
-                tbeClientEnv
-                (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.COMPLETED))
-            completedStatusResult `shouldSatisfy` isRight
-
-            completedPiListResult <- runClient appClientEnv (buildListPIs PI.COMPLETED)
-            completedPiListResult `shouldSatisfy` isRight
-
-            -- Check if app RIDEORDER PI got updated to status COMPLETED
-            checkPiInResult completedPiListResult productInstanceId
+            -- Check if app RIDEORDER PI got updated to status CANCELLED
+            checkPiInResult piListResult productInstanceId
   where
-    -- initiate exotel call (uncomment this for call tests)
-    -- callTranId <- UUID.nextUUID
-    -- cReq <- buildCallReq (UUID.toText $ fromJust callTranId) "4bf94783-cce4-4692-9a3d-605d279015ee"
-    -- callResult <- runClient appClientEnv (appCallToProvider appRegistrationToken cReq)
-    -- callResult `shouldSatisfy` isRight
-
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance
 
