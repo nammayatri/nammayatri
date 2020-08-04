@@ -79,7 +79,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -Wunused-imports
-  - -Werror=missing-fields
+  - -Werror
 
 library:
   source-dirs: src
