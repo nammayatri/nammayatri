@@ -14,6 +14,7 @@ import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (encodeToText, fromMaybeM500, throwJsonError500)
+import Control.Lens.Combinators
 import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -69,9 +70,13 @@ search org req = do
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
   config@DunzoConfig {..} <- getDunzoConfig org
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   env <- ask
+  let maybeBaConfig = find (\x -> req ^. #context . #_bap_id == Just (x ^. #bap_id)) baConfigs
+  baUrl <-
+    fromMaybeM500 "CB_URL_NOT_CONFIGURED" $
+      (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_bap_nw_address)
+  cbUrl <- parseBaseUrl baUrl
   lift $
     L.forkFlow "Select" $
       flip runReaderT env do
