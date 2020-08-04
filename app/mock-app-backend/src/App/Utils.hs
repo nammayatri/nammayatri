@@ -77,7 +77,7 @@ buildDraftOrder itemId = do
     Order
       { _id = "draft-task-1",
         _state = Nothing,
-        _items = [example {_id = itemId}],
+        _items = [example {_id = Just itemId}],
         _created_at = now,
         _updated_at = now,
         _tasks =

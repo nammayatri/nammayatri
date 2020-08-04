@@ -7,7 +7,7 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data Item = Item
-  { _id :: Text,
+  { _id :: Maybe Text,
     _parent_item_id :: Maybe Text,
     _descriptor :: Maybe Descriptor,
     _price :: Maybe Price,
@@ -30,7 +30,7 @@ instance ToJSON Item where
 instance Example Item where
   example =
     Item
-      { _id = idExample,
+      { _id = Just idExample,
         _parent_item_id = Nothing,
         _descriptor = example,
         _price = example,
