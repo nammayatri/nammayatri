@@ -30,6 +30,7 @@ import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.ProductInstance as QPI
 import Storage.Queries.Products as PQ
+import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
 import qualified Types.API.ProductInstance as CPR
@@ -144,21 +145,23 @@ notifyGateway c prodInst orgId = do
 mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrTime'
+  bppId <- L.runIO $ lookupEnv "PROVIDER_ID"
+  bppNwAddr <- L.runIO $ lookupEnv "PROVIDER_NW_ADDRESS"
   let context =
         Context
           { _domain = "MOBILITY",
             _country = Nothing,
             _city = Nothing,
-            _action = "SEARCH",
+            _action = "ON_SEARCH",
             _core_version = Just "0.8.0",
             _domain_version = Just "0.8.0",
             _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             _bap_id = Nothing,
             _bg_id = Nothing,
-            _bpp_id = Nothing,
+            _bpp_id = fromString <$> bppId,
             _bap_nw_address = Nothing,
             _bg_nw_address = Nothing,
-            _bpp_nw_address = Nothing,
+            _bpp_nw_address = fromString <$> bppNwAddr,
             _token = Nothing,
             _timestamp = currTime
           }

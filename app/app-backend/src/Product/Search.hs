@@ -6,6 +6,7 @@ import App.Types
 import Beckn.Types.API.Search
 import Beckn.Types.App as TA
 import Beckn.Types.Common
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Provider as Core
@@ -51,12 +52,20 @@ search person req = withFlowHandler $ do
   Case.create case_
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   gatewayUrl <- Gateway.getGatewayBaseUrl
-  eres <- Gateway.search gatewayUrl $ req & #context . #_request_transaction_id .~ _getCaseId (case_ ^. #_id)
+  bapId <- L.runIO $ lookupEnv "APP_ID"
+  bapNwAddr <- L.runIO $ lookupEnv "APP_NW_ADDRESS"
+  let context =
+        (req ^. #context)
+          { _request_transaction_id = _getCaseId (case_ ^. #_id),
+            _bap_id = fromString <$> bapId,
+            _bap_nw_address = fromString <$> bapNwAddr
+          }
+  eres <- Gateway.search gatewayUrl $ req & #context .~ context
   let sAck =
         case eres of
           Left err -> API.Ack "Error" (show err)
           Right _ -> API.Ack "Successful" (_getCaseId $ case_ ^. #_id)
-  return $ API.AckResponse (req ^. #context) sAck Nothing
+  return $ API.AckResponse context sAck Nothing
   where
     validateDateTime sreq = do
       currTime <- getCurrentTimeUTC
