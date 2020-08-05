@@ -11,13 +11,19 @@ import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Error as Err
 import Beckn.Types.Core.Item
+import Beckn.Types.Core.MonetaryValue
+import Beckn.Types.Core.Payment
+import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
+import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
+import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (throwJsonError400)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Control.Lens ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
@@ -30,8 +36,8 @@ getDunzoConfig org = do
   case config of
     Dunzo dzConfig -> return dzConfig
 
-mkQuoteReq :: SearchReq -> Flow QuoteReq
-mkQuoteReq SearchReq {..} = do
+mkQuoteReqFromSearch :: SearchReq -> Flow QuoteReq
+mkQuoteReqFromSearch SearchReq {..} = do
   let intent = message ^. #intent
       pickups = intent ^. #_pickups
       drops = intent ^. #_drops
@@ -61,8 +67,8 @@ mkQuoteReq SearchReq {..} = do
     pickupLocationNotFound = throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND"
     dropLocationNotFound = throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND"
 
-mkNewQuoteReq :: SelectReq -> Flow QuoteReq
-mkNewQuoteReq SelectReq {..} = do
+mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
+mkQuoteReqFromSelect SelectReq {..} = do
   let tasks = message ^. (#order . #_tasks)
       task = head tasks
       pickup = task ^. (#_pickup . #_location)
@@ -206,6 +212,54 @@ mkOnSelectErrReq req Error {..} = do
     OnSelectReq
       { context = context,
         message = OnSelectMessage order Nothing,
+        error = Just mkError
+      }
+  where
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = code,
+          _path = Nothing,
+          _message = Just message
+        }
+
+mkOnInitReq :: Text -> Order -> PaymentPolicy -> InitReq -> QuoteRes -> Flow OnInitReq
+mkOnInitReq orderId order terms req QuoteRes {..} = do
+  let billing = req ^. (#message . #order . #_billing)
+  return $
+    OnInitReq
+      { context = req ^. #context,
+        message = InitResMessage (order & #_id ?~ orderId & #_payment ?~ mkPayment & #_billing .~ billing),
+        error = Nothing
+      }
+  where
+    mkPayment =
+      Payment
+        { _transaction_id = Nothing,
+          _type = Just "PRE-FULFILLMENT",
+          _payer = Nothing,
+          _payee = Nothing,
+          _method = "RTGS",
+          _amount = price,
+          _state = Nothing,
+          _due_date = Nothing,
+          _duration = Nothing,
+          _terms = Just terms
+        }
+
+    price =
+      MonetaryValue
+        { _currency = "INR",
+          _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
+        }
+
+mkOnInitErrReq :: InitReq -> Error -> Flow OnInitReq
+mkOnInitErrReq req Error {..} = do
+  let order = req ^. (#message . #order)
+  return $
+    OnInitReq
+      { context = req ^. #context,
+        message = InitResMessage order,
         error = Just mkError
       }
   where

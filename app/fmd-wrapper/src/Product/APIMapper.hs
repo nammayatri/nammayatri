@@ -21,7 +21,7 @@ select :: Organization -> SelectReq -> FlowHandler SelectRes
 select org req = withFlowHandler $ DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
-init _ _ = error "Not implemented yet"
+init org req = withFlowHandler $ DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
 confirm _ _ = error "Not implemented yet"

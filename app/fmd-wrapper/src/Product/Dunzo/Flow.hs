@@ -4,16 +4,19 @@
 module Product.Dunzo.Flow where
 
 import App.Types
+import Beckn.Types.App (CaseId (..))
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
-import Beckn.Types.FMD.API.Init (InitReq, InitRes)
+import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
-import Beckn.Types.FMD.API.Select (OnSelectReq, SelectReq, SelectRes, onSelectAPI)
+import Beckn.Types.FMD.API.Select (DraftOrder (..), OnSelectReq, SelectReq (..), SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
+import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, throwJsonError500)
+import Beckn.Utils.Common (encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError500)
+import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Control.Lens.Combinators
 import Data.Aeson
 import qualified EulerHS.Language as L
@@ -23,17 +26,19 @@ import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
 import Product.Dunzo.Transform
 import Servant.Client (ClientError (..), ResponseF (..))
+import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
-import Storage.Queries.Quote
-import Types.Wrapper (DunzoConfig (..))
+import qualified Storage.Queries.Quote as Storage
+import Types.Wrapper
 import Utils.Common (fork, parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do
   config@DunzoConfig {..} <- getDunzoConfig org
-  quoteReq <- mkQuoteReq req
+  quoteReq <- mkQuoteReqFromSearch req
   fork "Search" $ do
     eres <- getQuote config quoteReq
+    L.logInfo @Text "QuoteRes" $ show eres
     case eres of
       Left err ->
         case err of
@@ -75,9 +80,9 @@ select org req = do
       (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_bap_nw_address)
   cbUrl <- parseBaseUrl baUrl
   fork "Select" do
-    quoteReq <- mkNewQuoteReq req
+    quoteReq <- mkQuoteReqFromSelect req
     eres <- getQuote config quoteReq
-    L.logInfo @Text "select" $ show eres
+    L.logInfo @Text "QuoteRes" $ show eres
     sendCallback req eres cbUrl cbApiKey
   return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
   where
@@ -85,8 +90,9 @@ select org req = do
       (onSelectReq :: OnSelectReq) <- mkOnSelectReq req' res
       let mquote = onSelectReq ^. (#message . #quote)
           quoteId = maybe "" (\q -> q ^. #_id) mquote
-          quoteData = encodeToText (onSelectReq ^. #message)
-      storeQuote quoteId quoteData
+          msg = onSelectReq ^. #message
+          quote = OrderDetails (msg ^. #order) (fromJust $ msg ^. #quote) -- quote is already created
+      Storage.storeQuote quoteId quote
       L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
       onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
       L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
@@ -103,7 +109,78 @@ select org req = do
     sendCallback _ _ _ _ = return ()
 
 init :: Organization -> InitReq -> Flow InitRes
-init _ _ = error "Not implemented yet"
+init org req = do
+  conf@DunzoConfig {..} <- getDunzoConfig org
+  let context = req ^. #context
+  let quoteId = req ^. (#message . #quotation_id)
+  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  baConfig <-
+    find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
+      & fromMaybeM500 "BAP_NOT_CONFIGURED"
+  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
+  fork "init" do
+    quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
+    eres <- getQuote conf quoteReq
+    L.logInfo @Text "QuoteRes" $ show eres
+    sendCb orderDetails req baConfig eres
+  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
+  where
+    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onInitAPI cbApiKey
+
+    sendCb orderDetails req' baConfig (Right res) = do
+      let quoteId = req' ^. (#message . #quotation_id)
+          cbApiKey = baConfig ^. #bap_api_key
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      -- quoteId will be used as orderId
+      onInitReq <- mkOnInitReq quoteId (orderDetails ^. #order) (baConfig ^. #paymentPolicy) req' res
+      createCase (onInitReq ^. (#message . #order)) (orderDetails ^. #quote)
+      onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
+      L.logInfo @Text "on_init" $ show onInitResp
+      return ()
+    sendCb _ req' baConfig (Left (FailureResponse _ (Response _ _ _ body))) = do
+      let cbApiKey = baConfig ^. #bap_api_key
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      case decode body of
+        Just err -> do
+          onInitReq <- mkOnInitErrReq req' err
+          onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
+          L.logInfo @Text "on_init err" $ show onInitResp
+          return ()
+        Nothing -> return ()
+    sendCb _ _ _ _ = return ()
+
+    createCase order quote = do
+      now <- getCurrentTimeUTC
+      let case_ =
+            Case
+              { _id = CaseId $ fromJust $ order ^. #_id,
+                _name = Nothing,
+                _description = Nothing,
+                _shortId = "",
+                _industry = GROCERY,
+                _type = RIDEORDER,
+                _exchangeType = ORDER,
+                _status = NEW,
+                _startTime = now,
+                _endTime = Nothing,
+                _validTill = now,
+                _provider = Nothing,
+                _providerType = Nothing,
+                _requestor = Nothing,
+                _requestorType = Nothing,
+                _parentCaseId = Nothing,
+                _fromLocationId = "",
+                _toLocationId = "",
+                _udf1 = Just $ encodeToText (OrderDetails order quote),
+                _udf2 = Nothing,
+                _udf3 = Nothing,
+                _udf4 = Nothing,
+                _udf5 = Nothing,
+                _info = Nothing,
+                _createdAt = now,
+                _updatedAt = now
+              }
+      Storage.create case_
 
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm _ _ = error "Not implemented yet"

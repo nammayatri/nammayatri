@@ -49,18 +49,18 @@ CREATE TABLE atlas_fmd_wrapper."case" (
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone,
     valid_till timestamp with time zone NOT NULL,
-    gateway character varying(255),
-    gateway_type character varying(255),
+    provider character varying(255),
+    provider_type character varying(255),
     requestor character varying(255),
     requestor_type character varying(255),
     parent_case_id character varying(255),
     from_location_id character varying(36),
     to_location_id character varying(36),
-    udf1 character varying(255),
-    udf2 character varying(255),
-    udf3 character varying(255),
-    udf4 character varying(255),
-    udf5 character varying(255),
+    udf1 text,
+    udf2 text,
+    udf3 text,
+    udf4 text,
+    udf5 text,
     info text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -101,22 +101,13 @@ CREATE TABLE atlas_fmd_wrapper.organization (
 ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas;
 
 --
--- TOC entry 2997 (class 0 OID 16386)
--- Dependencies: 203
--- Data for Name: case; Type: TABLE DATA; Schema: atlas_fmd_wrapper; Owner: atlas
---
-
-COPY atlas_fmd_wrapper."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, gateway, gateway_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-\.
-
---
 -- TOC entry 3000 (class 0 OID 16410)
 -- Dependencies: 206
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_fmd_wrapper; Owner: atlas
 --
 
 INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'PROVIDER', true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key', '{"dzBAConfigs":[{"bap_nw_address":"localhost:8013","bap_id":"beckn-app-backend","paymentPolicy":{"credit_type":"POSTPAID","supported_currencies":["INR"],"mode":"RTGS","penalty_terms":["Delay in payment after due date will incur 10 INR per day of non-payment"],"credit_duration":"P30D","method":"ELECTRONIC","settlement_type":"BULK"}}],"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzUrl":"apis-staging.dunzo.in","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","dzBPId":"fmd-wrapper.dunzo","dzBPNwAddress":"http://localhost:8018"}');
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'PROVIDER', true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key', '{"dzBAConfigs":[{"bap_nw_address":"localhost:8013","bap_id":"beckn-app-backend","bap_api_key":"test_key","paymentPolicy":{"credit_type":"POSTPAID","supported_currencies":["INR"],"mode":"RTGS","penalty_terms":["Delay in payment after due date will incur 10 INR per day of non-payment"],"credit_duration":"P30D","method":"ELECTRONIC","settlement_type":"BULK"}}],"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzUrl":"apis-staging.dunzo.in","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","dzBPId":"fmd-wrapper.dunzo","dzBPNwAddress":"http://localhost:8018"}');
 
 
 --
@@ -135,14 +126,6 @@ ALTER TABLE ONLY atlas_fmd_wrapper."case"
 
 ALTER TABLE ONLY atlas_fmd_wrapper.organization
     ADD CONSTRAINT idx_16410_primary PRIMARY KEY (id);
-
-
---
--- TOC entry 2838 (class 1259 OID 16481)
--- Name: idx_16386_gateway; Type: INDEX; Schema: atlas_fmd_wrapper; Owner: atlas
---
-
-CREATE INDEX idx_16386_gateway ON atlas_fmd_wrapper."case" USING btree (gateway);
 
 
 --
