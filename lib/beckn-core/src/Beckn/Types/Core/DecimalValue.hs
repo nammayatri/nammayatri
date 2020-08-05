@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Beckn.Types.Core.DecimalValue where
 
 import Beckn.Types.Core.Amount
@@ -9,7 +7,7 @@ import EulerHS.Prelude
 
 data DecimalValue = DecimalValue
   { _integral :: Text,
-    _fractional :: Text
+    _fractional :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -23,22 +21,20 @@ instance Example DecimalValue where
   example =
     DecimalValue
       { _integral = "10",
-        _fractional = "50"
+        _fractional = Just "50"
       }
 
 convertDecimalValueToAmount :: DecimalValue -> Maybe Amount
-convertDecimalValueToAmount decimalValue =
-  let integral = decimalValue ^. #_integral
-      fraction =
-        if decimalValue ^. #_fractional == ""
-          then ""
-          else "." <> decimalValue ^. #_fractional
-   in decodeFromText (integral <> fraction)
+convertDecimalValueToAmount (DecimalValue integral (Just fractional)) =
+  amountFromString $ integral <> "." <> fractional
+convertDecimalValueToAmount (DecimalValue integral Nothing) =
+  amountFromString integral
 
 convertAmountToDecimalValue :: Amount -> DecimalValue
 convertAmountToDecimalValue amount =
-  let amt' = encodeToText amount
-      amt = split (== '.') amt'
-   in if length amt == 2
-        then DecimalValue {_integral = head amt, _fractional = amt !! 1}
-        else DecimalValue {_integral = head amt, _fractional = ""}
+  case split (== '.') amountString of
+    [integral, fractional] -> DecimalValue integral (Just fractional)
+    [integral] -> DecimalValue integral Nothing
+    _ -> error $ "Cannot convert " <> amountString <> " to a DecimalValue."
+  where
+    amountString = amountToString amount

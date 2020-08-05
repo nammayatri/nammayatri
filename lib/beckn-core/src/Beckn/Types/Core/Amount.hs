@@ -8,6 +8,8 @@ module Beckn.Types.Core.Amount
   ( Amount (..),
     rationalToString,
     validate,
+    amountToString,
+    amountFromString,
   )
 where
 

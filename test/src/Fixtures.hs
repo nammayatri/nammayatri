@@ -90,7 +90,7 @@ intentPayload =
 
 price :: Price
 price =
-  let amt = DecimalValue "800" ""
+  let amt = DecimalValue "800" Nothing
    in Price
         { _currency = "INR",
           _value = Just amt,
