@@ -75,7 +75,7 @@ buildDraftOrder itemId = do
   now <- EL.runIO $ toLocalTime <$> getCurrentTime
   return $
     Order
-      { _id = "draft-task-1",
+      { _id = Just "draft-task-1",
         _state = Nothing,
         _items = [example {_id = Just itemId}],
         _created_at = now,
@@ -95,7 +95,9 @@ buildDraftOrder itemId = do
                 _created_at = Just now,
                 _updated_at = Just now
               }
-          ]
+          ],
+        _billing = Nothing,
+        _payment = Nothing
       }
 
 buildContext :: Text -> Text -> Flow Context
