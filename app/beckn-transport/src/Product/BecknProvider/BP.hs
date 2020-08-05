@@ -415,15 +415,11 @@ notifyTripUrlToGateway case_ parentCase = do
   return ()
 
 notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> Flow ()
-notifyTripInfoToGateway _prodInst trackerCase parentCase = do
-  pis <- ProductInstance.findAllByCaseId (parentCase ^. #_id)
-  traverse_
-    ( \prdInst -> do
-        onUpdatePayload <- mkOnUpdatePayload prdInst trackerCase parentCase
-        L.logInfo @Text "notifyTripInfoToGateway Request" $ show onUpdatePayload
-        Gateway.onUpdate onUpdatePayload
-    )
-    pis
+notifyTripInfoToGateway prodInst trackerCase parentCase = do
+  onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
+  L.logInfo @Text "notifyTripInfoToGateway Request" $ show onUpdatePayload
+  _ <- Gateway.onUpdate onUpdatePayload
+  return ()
 
 notifyCancelToGateway :: Text -> Flow ()
 notifyCancelToGateway prodInstId = do
