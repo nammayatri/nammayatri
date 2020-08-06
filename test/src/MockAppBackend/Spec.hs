@@ -3,6 +3,7 @@ module MockAppBackend.Spec where
 import EulerHS.Prelude
 import MockAppBackend.Fixtures (startServers)
 import qualified MockAppBackend.HealthCheck as HC
+import qualified MockAppBackend.OnSearch as OnSearch
 import qualified MockAppBackend.TriggerSearch as TriggerSearch
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
@@ -11,7 +12,7 @@ mkTestTree :: IO TestTree
 mkTestTree = do
   healthCheckSpec <- testSpec "HealthCheck" HC.spec
   triggerSearchSpec <- testSpec "TriggerSearch" TriggerSearch.spec
-
+  onSearchSpec <- testSpec "OnSearch" OnSearch.spec
   return $
     withResource
       startServers
@@ -21,6 +22,6 @@ mkTestTree = do
             "MockAppBackend"
             [ healthCheckSpec,
               after AllSucceed "HealthCheck" $
-                testGroup "APIs" [triggerSearchSpec]
+                testGroup "APIs" [triggerSearchSpec, onSearchSpec]
             ]
       )

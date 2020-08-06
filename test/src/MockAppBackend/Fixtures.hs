@@ -3,8 +3,10 @@ module MockAppBackend.Fixtures where
 import qualified "beckn-gateway" App as GatewayBE
 import qualified "mock-app-backend" App as MockAppBE
 import qualified "mock-provider-backend" App as MockProviderBE
+import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -61,12 +63,24 @@ getLoggerConfig t =
       T._isAsync = False
     }
 
-triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
-triggerSearchReq = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
-
 startServers :: IO (ThreadId, ThreadId, ThreadId)
 startServers = do
   mockAppTid <- forkIO MockAppBE.runMockApp
   mockProvTid <- forkIO MockProviderBE.runMockProvider
   gatewayTid <- forkIO GatewayBE.runGateway
   return (mockAppTid, mockProvTid, gatewayTid)
+
+triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
+triggerSearchReq = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
+
+onSearchFlow :: Text -> OnSearchReq -> ClientM Common.AckResponse
+onSearchFlow = client (Proxy :: Proxy MockAppRoutes.OnSearchAPI)
+
+buildOnSearchReq :: Context -> OnSearchReq
+buildOnSearchReq context =
+  OnSearchReq
+    { context,
+      message = OnSearchServices example,
+      error = Nothing
+    }
+
