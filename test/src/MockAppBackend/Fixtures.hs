@@ -6,6 +6,7 @@ import qualified "mock-provider-backend" App as MockProviderBE
 import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
@@ -105,6 +106,17 @@ buildOnInitReq context =
   OnInitReq
     { context,
       message = InitResMessage example,
+      error = Nothing
+    }
+
+onConfirmFlow :: Text -> OnConfirmReq -> ClientM Common.AckResponse
+onConfirmFlow = client (Proxy :: Proxy MockAppRoutes.OnConfirmAPI)
+
+buildOnConfirmReq :: Context -> OnConfirmReq
+buildOnConfirmReq context =
+  OnConfirmReq
+    { context,
+      message = ConfirmResMessage example,
       error = Nothing
     }
 
