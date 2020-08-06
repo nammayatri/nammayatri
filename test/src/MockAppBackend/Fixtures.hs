@@ -7,6 +7,7 @@ import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -81,6 +82,17 @@ buildOnSearchReq context =
   OnSearchReq
     { context,
       message = OnSearchServices example,
+      error = Nothing
+    }
+
+onSelectFlow :: Text -> OnSelectReq -> ClientM Common.AckResponse
+onSelectFlow = client (Proxy :: Proxy MockAppRoutes.OnSelectAPI)
+
+buildOnSelectReq :: Context -> OnSelectReq
+buildOnSelectReq context =
+  OnSelectReq
+    { context,
+      message = OnSelectMessage example example,
       error = Nothing
     }
 
