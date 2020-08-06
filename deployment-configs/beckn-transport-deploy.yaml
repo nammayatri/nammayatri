@@ -39,6 +39,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: PROVIDER_ID
+              value: JUSPAY.MOBILITY.PROVIDER.UAT.1
+            - name: PROVIDER_NW_ADDRESS
+              value: https://api.sandbox.beckn.juspay.in/dev/transport/v1/
             #------ MySQL DB configs ------#
             - name: MYSQL_HOST
               valueFrom:
