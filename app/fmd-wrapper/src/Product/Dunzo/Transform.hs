@@ -12,13 +12,16 @@ import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Error as Err
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.MonetaryValue
+import Beckn.Types.Core.Operator
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.PaymentPolicy
+import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
+import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (throwJsonError400)
@@ -260,6 +263,57 @@ mkOnInitErrReq req Error {..} = do
     OnInitReq
       { context = req ^. #context,
         message = InitResMessage order,
+        error = Just mkError
+      }
+  where
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = code,
+          _path = Nothing,
+          _message = Just message
+        }
+
+mkOnStatusReq :: StatusReq -> Text -> Order -> TaskStatus -> Flow OnStatusReq
+mkOnStatusReq req orgName order status = do
+  now <- getCurrentTimeUTC
+  return $
+    OnStatusReq
+      { context = req ^. #context,
+        message = StatusResMessage (updateOrder now),
+        error = Nothing
+      }
+  where
+    updateOrder cTime =
+      order & #_state ?~ show (status ^. #state)
+        & #_updated_at .~ cTime
+        & #_tasks .~ (updateTask cTime <$> (order ^. #_tasks))
+
+    updateTask cTime task =
+      task & #_agent .~ (getAgent <$> status ^. #runner)
+        & #_state .~ show (status ^. #state)
+        & #_updated_at ?~ cTime
+
+    getAgent runner =
+      Operator
+        { _name = Name n n (runner ^. #name) n n n,
+          _image = n,
+          _dob = n,
+          _organization_name = Just orgName,
+          _gender = n,
+          _email = n,
+          _phones = [runner ^. #phone_number],
+          _experience = n
+        }
+
+    n = Nothing
+
+mkOnStatusErrReq :: StatusReq -> Order -> Error -> Flow OnStatusReq
+mkOnStatusErrReq req order Error {..} =
+  return $
+    OnStatusReq
+      { context = req ^. #context,
+        message = StatusResMessage order,
         error = Just mkError
       }
   where

@@ -30,7 +30,7 @@ track :: Organization -> TrackReq -> FlowHandler TrackRes
 track _ _ = error "Not implemented yet"
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
-status _ _ = error "Not implemented yet"
+status org req = withFlowHandler $ DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
 cancel _ _ = error "Not implemented yet"

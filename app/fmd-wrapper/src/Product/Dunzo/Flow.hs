@@ -11,11 +11,11 @@ import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
 import Beckn.Types.FMD.API.Select (DraftOrder (..), OnSelectReq, SelectReq (..), SelectRes, onSelectAPI)
-import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
+import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError500)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError500)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Control.Lens.Combinators
 import Data.Aeson
@@ -189,7 +189,56 @@ track :: Organization -> TrackReq -> Flow TrackRes
 track _ _ = error "Not implemented yet"
 
 status :: Organization -> StatusReq -> Flow StatusRes
-status _ _ = error "Not implemented yet"
+status org req = do
+  conf@DunzoConfig {..} <- getDunzoConfig org
+  let orderId = req ^. (#message . #order_id)
+  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  baConfig <-
+    find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
+      & fromMaybeM500 "BAP_NOT_CONFIGURED"
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  let taskId = case_ ^. #_shortId
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  fork "status" do
+    eres <- getStatus conf (TaskId taskId)
+    L.logInfo @Text "StatusRes" $ show eres
+    sendCb case_ orderDetails req baConfig eres
+  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
+  where
+    getStatus conf@DunzoConfig {..} taskId = do
+      baseUrl <- parseBaseUrl dzUrl
+      token <- fetchToken conf
+      API.taskStatus dzClientId token baseUrl taskId
+
+    updateCase caseId orderDetails taskStatus case_ = do
+      let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
+      Storage.update caseId updatedCase
+
+    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onStatusAPI cbApiKey
+
+    sendCb case_ orderDetails req' baConfig (Right taskStatus) = do
+      let cbApiKey = baConfig ^. #bap_api_key
+          order = orderDetails ^. #order
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      onStatusReq <- mkOnStatusReq req' (org ^. #_name) order taskStatus
+      let updatedOrder = onStatusReq ^. (#message . #order)
+          updatedOrderDetails = orderDetails & #order .~ updatedOrder
+      updateCase (case_ ^. #_id) updatedOrderDetails taskStatus case_
+      onStatusRes <- callCbAPI cbApiKey cbUrl onStatusReq
+      L.logInfo @Text "on_status " $ show onStatusRes
+      pass
+    sendCb _ orderDetails req' baConfig (Left (FailureResponse _ (Response _ _ _ body))) = do
+      let cbApiKey = baConfig ^. #bap_api_key
+          order = orderDetails ^. #order
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      case decode body of
+        Just err -> do
+          onStatusReq <- mkOnStatusErrReq req' order err
+          onStatusResp <- callCbAPI cbApiKey cbUrl onStatusReq
+          L.logInfo @Text "on_status err " $ show onStatusResp
+          pass
+        Nothing -> pass
+    sendCb _ _ _ _ _ = pass
 
 cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel _ _ = error "Not implemented yet"
