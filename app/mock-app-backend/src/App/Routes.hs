@@ -6,6 +6,7 @@ import Beckn.Types.FMD.API.Confirm (OnConfirmReq)
 import Beckn.Types.FMD.API.Init (OnInitReq)
 import Beckn.Types.FMD.API.Search (OnSearchReq)
 import Beckn.Types.FMD.API.Select (OnSelectReq)
+import Beckn.Types.FMD.API.Track (OnTrackReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -13,6 +14,7 @@ import qualified Product.Confirm as P
 import qualified Product.Init as P
 import qualified Product.Search as P
 import qualified Product.Select as P
+import qualified Product.Track as P
 import qualified Product.Trigger as T
 import Servant hiding (Context)
 import Utils.Auth
@@ -25,6 +27,7 @@ type MockAppBackendAPI =
            :<|> OnSelectAPI
            :<|> OnInitAPI
            :<|> OnConfirmAPI
+           :<|> OnTrackAPI
        )
 
 mockAppBackendAPI :: Proxy MockAppBackendAPI
@@ -38,6 +41,7 @@ mockAppBackendServer _key =
     :<|> onSelectFlow
     :<|> onInitFlow
     :<|> onConfirmFlow
+    :<|> onTrackFlow
 
 type TriggerAPI =
   "trigger"
@@ -82,3 +86,12 @@ type OnConfirmAPI =
 
 onConfirmFlow :: FlowServer OnConfirmAPI
 onConfirmFlow = P.confirmCb
+
+type OnTrackAPI =
+  "on_track"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] OnTrackReq
+    :> Post '[JSON] AckResponse
+
+onTrackFlow :: FlowServer OnTrackAPI
+onTrackFlow = P.trackCb

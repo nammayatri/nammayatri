@@ -2,6 +2,7 @@
 
 module Beckn.Types.Core.Tracking where
 
+import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data Tracking = Tracking
@@ -16,3 +17,11 @@ instance FromJSON Tracking where
 
 instance ToJSON Tracking where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Tracking where
+  example =
+    Tracking
+      { _url = Just "https://api.example.com/track",
+        _required_params = Just "",
+        _metadata = Just ""
+      }
