@@ -27,7 +27,7 @@ confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
 confirm _ _ = error "Not implemented yet"
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
-track _ _ = error "Not implemented yet"
+track org req = withFlowHandler $ DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
 status org req = withFlowHandler $ DZ.status org req

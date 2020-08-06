@@ -6,18 +6,19 @@ module Product.Dunzo.Flow where
 import App.Types
 import Beckn.Types.App (CaseId (..))
 import Beckn.Types.Common (AckResponse (..), ack)
+import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
 import Beckn.Types.FMD.API.Select (DraftOrder (..), OnSelectReq, SelectReq (..), SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
-import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
+import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError500)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
-import Control.Lens.Combinators
+import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -45,7 +46,7 @@ search org req = do
           FailureResponse _ (Response _ _ _ body) -> sendErrCb org dzBPId dzBPNwAddress body
           _ -> L.logDebug @Text "getQuoteErr" (show err)
       Right res -> sendCb org dzBPId dzBPNwAddress res
-  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
+  returnAck config (req ^. #context)
   where
     sendCb org' dzBPId dzBPNwAddress res = do
       onSearchReq <- mkOnSearchReq org' (updateContext (req ^. #context) dzBPId dzBPNwAddress) res
@@ -84,7 +85,7 @@ select org req = do
     eres <- getQuote config quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
     sendCallback req eres cbUrl cbApiKey
-  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
+  returnAck config (req ^. #context)
   where
     sendCallback req' (Right res) cbUrl cbApiKey = do
       (onSelectReq :: OnSelectReq) <- mkOnSelectReq req' res
@@ -114,16 +115,14 @@ init org req = do
   let context = req ^. #context
   let quoteId = req ^. (#message . #quotation_id)
   bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  baConfig <-
-    find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
-      & fromMaybeM500 "BAP_NOT_CONFIGURED"
+  baConfig <- getBAConfig bapNwAddr conf
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
   fork "init" do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
     eres <- getQuote conf quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
     sendCb orderDetails req baConfig eres
-  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
+  returnAck conf (req ^. #context)
   where
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onInitAPI cbApiKey
 
@@ -186,16 +185,30 @@ confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm _ _ = error "Not implemented yet"
 
 track :: Organization -> TrackReq -> Flow TrackRes
-track _ _ = error "Not implemented yet"
+track org req = do
+  let orderId = req ^. (#message . #order_id)
+  conf@DunzoConfig {..} <- getDunzoConfig org
+  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  baConfig <- getBAConfig bapNwAddr conf
+  void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  fork "track" do
+    -- No dunzo equivalent api yet
+    onTrackReq <- mkOnTrack req
+    eres <- callCbAPI baConfig onTrackReq
+    L.logInfo @Text "on_track" $ show eres
+  returnAck conf (req ^. #context)
+  where
+    callCbAPI baConfig req' = do
+      let cbApiKey = baConfig ^. #bap_api_key
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey req'
 
 status :: Organization -> StatusReq -> Flow StatusRes
 status org req = do
   conf@DunzoConfig {..} <- getDunzoConfig org
   let orderId = req ^. (#message . #order_id)
   bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  baConfig <-
-    find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
-      & fromMaybeM500 "BAP_NOT_CONFIGURED"
+  baConfig <- getBAConfig bapNwAddr conf
   case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = case_ ^. #_shortId
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
@@ -203,7 +216,7 @@ status org req = do
     eres <- getStatus conf (TaskId taskId)
     L.logInfo @Text "StatusRes" $ show eres
     sendCb case_ orderDetails req baConfig eres
-  return $ AckResponse (updateContext (req ^. #context) dzBPId dzBPNwAddress) (ack "ACK") Nothing
+  returnAck conf (req ^. #context)
   where
     getStatus conf@DunzoConfig {..} taskId = do
       baseUrl <- parseBaseUrl dzUrl
@@ -262,3 +275,11 @@ fetchToken DunzoConfig {..} = do
           Dz.insertToken token
           return token
     Just token -> return token
+
+getBAConfig :: Text -> DunzoConfig -> Flow BAConfig
+getBAConfig bapNwAddr DunzoConfig {..} =
+  find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
+    & fromMaybeM500 "BAP_NOT_CONFIGURED"
+
+returnAck :: DunzoConfig -> Context -> Flow AckResponse
+returnAck DunzoConfig {..} context = return $ AckResponse (updateContext context dzBPId dzBPNwAddress) (ack "ACK") Nothing

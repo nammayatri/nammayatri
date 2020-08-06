@@ -18,10 +18,12 @@ import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
+import Beckn.Types.Core.Tracking
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Status
+import Beckn.Types.FMD.API.Track
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (throwJsonError400)
@@ -323,4 +325,28 @@ mkOnStatusErrReq req order Error {..} =
           _code = code,
           _path = Nothing,
           _message = Just message
+        }
+
+mkOnTrack :: TrackReq -> Flow OnTrackReq
+mkOnTrack req = do
+  return $
+    OnTrackReq
+      { context = req ^. #context,
+        message = TrackResMessage tracking,
+        error = Just mkError
+      }
+  where
+    tracking =
+      Tracking
+        { _url = Nothing,
+          _required_params = Nothing,
+          _metadata = Nothing
+        }
+    -- TODO: fix this after dunzo sends tracking url in api
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = "FMD000",
+          _path = Nothing,
+          _message = Just "NO_TRACKING_URL"
         }
