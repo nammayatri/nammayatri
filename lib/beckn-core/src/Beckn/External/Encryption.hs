@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -249,8 +250,10 @@ deriveTableEncryption name = do
     -- Otherwise, users of 'decrypt' would often have to specify the
     -- exact type of the decrypted thing manually in order for this instance
     -- to be applied.
-    instance (e ~ 'AsEncrypted, f ~ Identity) =>
-             EncryptedItem ($tyQ e f) where
+    instance
+      (e ~ 'AsEncrypted, f ~ Identity) =>
+      EncryptedItem ($tyQ e f)
+      where
       type Unencrypted ($tyQ e f) = $tyQ 'AsUnencrypted Identity
       encryptItem = genericEncryptItem
       decryptItem = genericDecryptItem
