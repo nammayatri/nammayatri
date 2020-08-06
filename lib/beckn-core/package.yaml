@@ -99,7 +99,7 @@ dependencies:
   - utf8-string
   - geojson
   - safe-money
-  
+
 library:
   source-dirs:
     - src

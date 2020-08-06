@@ -13,6 +13,7 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Trail as Trail
+import Utils.Common (fork)
 
 -- TODO: add a test on that request arguments appear in database at least
 -- for one entrypoint
@@ -53,8 +54,10 @@ traceHandler = Util.TraceHandler {..}
     _postAction (Just (reqId, reqTime)) res = do
       now <- getCurrTime
       let duration = roundDiffTimeToUnit $ now `diffLocalTime` reqTime
-      Trail.setResponseInfo reqId duration res >>= \case
-        Left err ->
-          L.logError @Text "trace" $
-            "Saving response on " <> show reqId <> " failed: " <> show err
-        Right () -> pass
+      fork "save external trail" $ do
+        dbres <- Trail.setResponseInfo reqId duration res
+        case dbres of
+          Left err ->
+            L.logError @Text "trace" $
+              "Saving response on " <> show reqId <> " failed: " <> show err
+          Right () -> pass

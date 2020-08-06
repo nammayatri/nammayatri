@@ -45,18 +45,20 @@ data TrailInfo
 
 saveClientTrailFlow :: TrailInfo -> Flow ()
 saveClientTrailFlow (TrailInfo res req) = do
-  _id <- generateGUID
-  dbResult <-
-    TQ.create
-      TS.ExternalTrail
-        { _gatewayId = "gw",
-          ..
-        }
-  case dbResult of
-    Left err ->
-      L.logError @Text "client_trace" $
-        "Failed to save request from gateway to " <> toText _endpointId <> show err
-    Right () -> pure ()
+  fork "save trail" do
+    _id <- generateGUID
+    dbResult <-
+      TQ.create
+        TS.ExternalTrail
+          { _gatewayId = "gw",
+            ..
+          }
+    case dbResult of
+      Left err -> do
+        L.logError @Text "client_trace" $
+          "Failed to save request from gateway to " <> toText _endpointId <> show err
+      Right () -> pure ()
+  pure ()
   where
     _endpointId = UT._endpointId $ UT._content req
     _queryParams = UT._queryString $ UT._content req
@@ -65,3 +67,8 @@ saveClientTrailFlow (TrailInfo res req) = do
     _succeeded = Just $ isRight res
     _response = decodeUtf8 <$> rightToMaybe res
     _error = show <$> leftToMaybe res
+
+fork :: Text -> Flow () -> Flow ()
+fork desc f = do
+  env <- ask
+  lift $ L.forkFlow desc $ runReaderT f env
