@@ -1,4 +1,4 @@
-module AppConfirmRide where
+module Mobility.AppConfirmRide where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
@@ -7,7 +7,7 @@ import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
 import qualified EulerHS.Types as T
-import Fixtures
+import Mobility.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client

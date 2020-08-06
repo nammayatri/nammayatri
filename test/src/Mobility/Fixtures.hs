@@ -1,13 +1,10 @@
-module Fixtures where
+module Mobility.Fixtures where
 
 import qualified "app-backend" App as AppBE
 import qualified "beckn-gateway" App as GatewayBE
 import qualified "beckn-transport" App as TransporterBE
-import qualified "mock-app-backend" App as MockAppBE
-import qualified "mock-provider-backend" App as MockProviderBE
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
-import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.External.FCM.Types
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
@@ -29,7 +26,6 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Time
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified "mock-app-backend" Product.Trigger as MockAppTrigger
 import Servant hiding (Context)
 import Servant.Client
 import System.Environment (setEnv)
@@ -231,9 +227,6 @@ buildCaseStatusRes caseId = do
       appCaseId = buildCaseId caseId
   getCaseStatusRes appCaseId
 
-triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
-triggerSearchReq = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
-
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
 appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
 appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
@@ -336,15 +329,13 @@ verifyLoginReq tokenId = appVerifyLogin tokenId buildLoginReq
 runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
 runClient clientEnv x = runClientM x clientEnv
 
-startServers :: IO (ThreadId, ThreadId, ThreadId, ThreadId, ThreadId)
+startServers :: IO (ThreadId, ThreadId, ThreadId)
 startServers = do
   setEnv "USE_FAKE_SMS" "7891"
   appTid <- forkIO AppBE.runAppBackend
   tbeTid <- forkIO TransporterBE.runTransporterBackendApp
   gatewayTid <- forkIO GatewayBE.runGateway
-  mockAppTid <- forkIO MockAppBE.runMockApp
-  mockProvTid <- forkIO MockProviderBE.runMockProvider
-  return (appTid, tbeTid, gatewayTid, mockAppTid, mockProvTid)
+  return (appTid, tbeTid, gatewayTid)
 
 getLoggerCfg :: FilePath -> T.LoggerConfig
 getLoggerCfg fName =
