@@ -4,12 +4,10 @@ module Beckn.Types.FMD.API.Status where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Error
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
-import Data.Time.LocalTime
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
@@ -53,9 +51,7 @@ newtype StatusReqMessage = StatusReqMessage
 
 type OnStatusRes = AckResponse
 
-data StatusResMessage = StatusResMessage
-  { order :: Order,
-    updated_at :: LocalTime,
-    status_refresh :: Duration
+newtype StatusResMessage = StatusResMessage
+  { order :: Order
   }
   deriving (Generic, Show, ToJSON, FromJSON)
