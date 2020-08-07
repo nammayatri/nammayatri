@@ -5,7 +5,7 @@ module Beckn.Types.FMD.API.Search where
 import Beckn.Types.Common
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.Intent
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -38,12 +38,7 @@ data SearchReq = SearchReq
 
 type SearchRes = AckResponse
 
-data OnSearchReq = OnSearchReq
-  { context :: Context,
-    message :: OnSearchServices,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnSearchReq = CallbackReq OnSearchServices
 
 newtype OnSearchServices = OnSearchServices
   { catalog :: Catalog

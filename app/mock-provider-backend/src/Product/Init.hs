@@ -6,6 +6,7 @@ module Product.Init where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Init
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
@@ -35,10 +36,9 @@ init _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHan
             client
               onInitAPI
               "test-provider-2-key"
-              OnInitReq
+              CallbackReq
                 { context = context,
-                  message = msg,
-                  error = Nothing
+                  contents = Right msg
                 }
         pass
   return

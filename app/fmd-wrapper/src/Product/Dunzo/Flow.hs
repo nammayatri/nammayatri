@@ -11,7 +11,7 @@ import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
-import Beckn.Types.FMD.API.Select (DraftOrder (..), OnSelectReq, SelectReq (..), SelectRes, onSelectAPI)
+import Beckn.Types.FMD.API.Select (DraftOrder (..), SelectReq (..), SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
 import Beckn.Types.Storage.Case
@@ -88,12 +88,13 @@ select org req = do
   returnAck config (req ^. #context)
   where
     sendCallback req' (Right res) cbUrl cbApiKey = do
-      (onSelectReq :: OnSelectReq) <- mkOnSelectReq req' res
-      let mquote = onSelectReq ^. (#message . #quote)
-          quoteId = maybe "" (\q -> q ^. #_id) mquote
-          msg = onSelectReq ^. #message
-          quote = OrderDetails (msg ^. #order) (fromJust $ msg ^. #quote) -- quote is already created
-      Storage.storeQuote quoteId quote
+      quote <- mkQuote res
+      let onSelectMessage = mkOnSelectMessage quote req'
+      let onSelectReq = mkOnSelectReq req' onSelectMessage
+      let quoteId = quote ^. #_id
+      let order = onSelectMessage ^. #order
+      let orderDetails = OrderDetails order quote
+      Storage.storeQuote quoteId orderDetails
       L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
       onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
       L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
@@ -101,7 +102,7 @@ select org req = do
     sendCallback req' (Left (FailureResponse _ (Response _ _ _ body))) cbUrl cbApiKey =
       case decode body of
         Just err -> do
-          onSelectReq <- mkOnSelectErrReq req' err
+          let onSelectReq = mkOnSelectErrReq req' err
           L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
           onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
           L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
@@ -131,8 +132,15 @@ init org req = do
           cbApiKey = baConfig ^. #bap_api_key
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
       -- quoteId will be used as orderId
-      onInitReq <- mkOnInitReq quoteId (orderDetails ^. #order) (baConfig ^. #paymentPolicy) req' res
-      createCase (onInitReq ^. (#message . #order)) (orderDetails ^. #quote)
+      let onInitMessage =
+            mkOnInitMessage
+              quoteId
+              (orderDetails ^. #order)
+              (baConfig ^. #paymentPolicy)
+              req'
+              res
+      let onInitReq = mkOnInitReq req' onInitMessage
+      createCase (onInitMessage ^. #order) (orderDetails ^. #quote)
       onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
@@ -192,8 +200,8 @@ track org req = do
   baConfig <- getBAConfig bapNwAddr conf
   void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   fork "track" do
-    -- No dunzo equivalent api yet
-    onTrackReq <- mkOnTrack req
+    -- TODO: fix this after dunzo sends tracking url in api
+    onTrackReq <- mkOnTrackErrReq req
     eres <- callCbAPI baConfig onTrackReq
     L.logInfo @Text "on_track" $ show eres
   returnAck conf (req ^. #context)
@@ -229,29 +237,27 @@ status org req = do
 
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onStatusAPI cbApiKey
 
-    sendCb case_ orderDetails req' baConfig (Right taskStatus) = do
+    sendCb case_ orderDetails req' baConfig res = do
       let cbApiKey = baConfig ^. #bap_api_key
-          order = orderDetails ^. #order
+      let order = orderDetails ^. #order
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
-      onStatusReq <- mkOnStatusReq req' (org ^. #_name) order taskStatus
-      let updatedOrder = onStatusReq ^. (#message . #order)
-          updatedOrderDetails = orderDetails & #order .~ updatedOrder
-      updateCase (case_ ^. #_id) updatedOrderDetails taskStatus case_
-      onStatusRes <- callCbAPI cbApiKey cbUrl onStatusReq
-      L.logInfo @Text "on_status " $ show onStatusRes
-      pass
-    sendCb _ orderDetails req' baConfig (Left (FailureResponse _ (Response _ _ _ body))) = do
-      let cbApiKey = baConfig ^. #bap_api_key
-          order = orderDetails ^. #order
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
-      case decode body of
-        Just err -> do
-          onStatusReq <- mkOnStatusErrReq req' order err
-          onStatusResp <- callCbAPI cbApiKey cbUrl onStatusReq
-          L.logInfo @Text "on_status err " $ show onStatusResp
-          pass
-        Nothing -> pass
-    sendCb _ _ _ _ _ = pass
+      case res of
+        Right taskStatus -> do
+          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order taskStatus
+          onStatusReq <- mkOnStatusReq req' onStatusMessage
+          let updatedOrder = onStatusMessage ^. #order
+          let updatedOrderDetails = orderDetails & #order .~ updatedOrder
+          updateCase (case_ ^. #_id) updatedOrderDetails taskStatus case_
+          onStatusRes <- callCbAPI cbApiKey cbUrl onStatusReq
+          L.logInfo @Text "on_status " $ show onStatusRes
+        Left (FailureResponse _ (Response _ _ _ body)) ->
+          whenJust (decode body) handleError
+          where
+            handleError err = do
+              onStatusReq <- mkOnStatusErrReq req' err
+              onStatusResp <- callCbAPI cbApiKey cbUrl onStatusReq
+              L.logInfo @Text "on_status err " $ show onStatusResp
+        _ -> pass
 
 cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel _ _ = error "Not implemented yet"

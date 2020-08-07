@@ -6,6 +6,7 @@ module Product.Track where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Track
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
@@ -35,10 +36,9 @@ track _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHa
             client
               onTrackAPI
               "test-provider-2-key"
-              OnTrackReq
+              CallbackReq
                 { context = context {_action = "on_track"},
-                  message = trackMessage,
-                  error = Nothing
+                  contents = Right trackMessage
                 }
         pass
   return

@@ -4,8 +4,8 @@ module Beckn.Types.FMD.API.Track where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
+import Beckn.Types.FMD.API.Callback
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
@@ -37,12 +37,7 @@ data TrackReq = TrackReq
 
 type TrackRes = AckResponse
 
-data OnTrackReq = OnTrackReq
-  { context :: Context,
-    message :: TrackResMessage,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnTrackReq = CallbackReq TrackResMessage
 
 data TrackReqMessage = TrackReqMessage
   { order_id :: Text,

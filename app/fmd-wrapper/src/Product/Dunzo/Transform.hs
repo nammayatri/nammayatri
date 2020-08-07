@@ -18,7 +18,7 @@ import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
-import Beckn.Types.Core.Tracking
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
@@ -100,26 +100,12 @@ readCoord text = do
 
 mkOnSearchErrReq :: Organization -> Context -> Error -> Flow OnSearchReq
 mkOnSearchErrReq _ context Error {..} = do
-  now <- getCurrentTimeUTC
-  cid <- generateGUID
   return $
-    OnSearchReq
+    CallbackReq
       { context = context,
-        message = OnSearchServices (catalog cid now),
-        error = Just err
+        contents = Left err
       }
   where
-    catalog cid now =
-      Catalog
-        { _id = cid,
-          _categories = [],
-          _brands = [],
-          _models = [],
-          _ttl = now,
-          _items = [],
-          _offers = []
-        }
-
     err =
       Err.Error
         { _type = "DOMAIN-ERROR",
@@ -134,10 +120,9 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
   cid <- generateGUID
   itemid <- generateGUID
   return $
-    OnSearchReq
+    CallbackReq
       { context = context,
-        message = OnSearchServices (catalog cid itemid now),
-        error = Nothing
+        contents = Right $ OnSearchServices (catalog cid itemid now)
       }
   where
     catalog cid itemid now =
@@ -184,19 +169,12 @@ mkSearchItem itemId QuoteRes {..} =
     descriptor = Descriptor n n n n n [] n n
     n = Nothing
 
-mkOnSelectReq :: SelectReq -> QuoteRes -> Flow OnSelectReq
-mkOnSelectReq req@SelectReq {..} QuoteRes {..} = do
+mkQuote :: QuoteRes -> Flow Quotation
+mkQuote QuoteRes {..} = do
   qid <- generateGUID
-  let order = req ^. (#message . #order)
-      price = mkPrice estimated_price
-      quotation = Quotation {_id = qid, _price = price, _ttl = Nothing}
-  return $
-    OnSelectReq
-      { context = context,
-        message = OnSelectMessage order (Just quotation),
-        error = Nothing
-      }
+  return $ Quotation {_id = qid, _price = price, _ttl = Nothing}
   where
+    price = mkPrice estimated_price
     mkPrice estimatedPrice =
       Price
         { _currency = "INR",
@@ -209,16 +187,24 @@ mkOnSelectReq req@SelectReq {..} QuoteRes {..} = do
           _maximum_value = Nothing
         }
 
-mkOnSelectErrReq :: SelectReq -> Error -> Flow OnSelectReq
-mkOnSelectErrReq req Error {..} = do
-  let context = req ^. #context
-  let order = req ^. (#message . #order)
-  return $
-    OnSelectReq
-      { context = context,
-        message = OnSelectMessage order Nothing,
-        error = Just mkError
-      }
+mkOnSelectMessage :: Quotation -> SelectReq -> OnSelectMessage
+mkOnSelectMessage quote req = OnSelectMessage order quote
+  where
+    order = req ^. #message . #order
+
+mkOnSelectReq :: SelectReq -> OnSelectMessage -> OnSelectReq
+mkOnSelectReq req msg =
+  CallbackReq
+    { context = req ^. #context,
+      contents = Right msg
+    }
+
+mkOnSelectErrReq :: SelectReq -> Error -> OnSelectReq
+mkOnSelectErrReq req Error {..} =
+  CallbackReq
+    { context = req ^. #context,
+      contents = Left mkError
+    }
   where
     mkError =
       Err.Error
@@ -228,15 +214,10 @@ mkOnSelectErrReq req Error {..} = do
           _message = Just message
         }
 
-mkOnInitReq :: Text -> Order -> PaymentPolicy -> InitReq -> QuoteRes -> Flow OnInitReq
-mkOnInitReq orderId order terms req QuoteRes {..} = do
-  let billing = req ^. (#message . #order . #_billing)
-  return $
-    OnInitReq
-      { context = req ^. #context,
-        message = InitResMessage (order & #_id ?~ orderId & #_payment ?~ mkPayment & #_billing .~ billing),
-        error = Nothing
-      }
+mkOnInitMessage :: Text -> Order -> PaymentPolicy -> InitReq -> QuoteRes -> InitResMessage
+mkOnInitMessage orderId order terms req QuoteRes {..} =
+  InitResMessage $
+    order & #_id ?~ orderId & #_payment ?~ mkPayment & #_billing .~ billing
   where
     mkPayment =
       Payment
@@ -251,21 +232,26 @@ mkOnInitReq orderId order terms req QuoteRes {..} = do
           _duration = Nothing,
           _terms = Just terms
         }
-
     price =
       MonetaryValue
         { _currency = "INR",
           _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
         }
+    billing = req ^. #message . #order . #_billing
+
+mkOnInitReq :: InitReq -> InitResMessage -> OnInitReq
+mkOnInitReq req msg =
+  CallbackReq
+    { context = req ^. #context,
+      contents = Right msg
+    }
 
 mkOnInitErrReq :: InitReq -> Error -> Flow OnInitReq
 mkOnInitErrReq req Error {..} = do
-  let order = req ^. (#message . #order)
   return $
-    OnInitReq
+    CallbackReq
       { context = req ^. #context,
-        message = InitResMessage order,
-        error = Just mkError
+        contents = Left mkError
       }
   where
     mkError =
@@ -276,15 +262,11 @@ mkOnInitErrReq req Error {..} = do
           _message = Just message
         }
 
-mkOnStatusReq :: StatusReq -> Text -> Order -> TaskStatus -> Flow OnStatusReq
-mkOnStatusReq req orgName order status = do
+{-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
+mkOnStatusMessage :: Text -> Order -> TaskStatus -> Flow StatusResMessage
+mkOnStatusMessage orgName order status = do
   now <- getCurrentTimeUTC
-  return $
-    OnStatusReq
-      { context = req ^. #context,
-        message = StatusResMessage (updateOrder now),
-        error = Nothing
-      }
+  return $ StatusResMessage (updateOrder now)
   where
     updateOrder cTime =
       order & #_state ?~ show (status ^. #state)
@@ -310,13 +292,20 @@ mkOnStatusReq req orgName order status = do
 
     n = Nothing
 
-mkOnStatusErrReq :: StatusReq -> Order -> Error -> Flow OnStatusReq
-mkOnStatusErrReq req order Error {..} =
+mkOnStatusReq :: StatusReq -> StatusResMessage -> Flow OnStatusReq
+mkOnStatusReq req msg =
   return $
-    OnStatusReq
+    CallbackReq
       { context = req ^. #context,
-        message = StatusResMessage order,
-        error = Just mkError
+        contents = Right msg
+      }
+
+mkOnStatusErrReq :: StatusReq -> Error -> Flow OnStatusReq
+mkOnStatusErrReq req Error {..} =
+  return $
+    CallbackReq
+      { context = req ^. #context,
+        contents = Left mkError
       }
   where
     mkError =
@@ -327,22 +316,14 @@ mkOnStatusErrReq req order Error {..} =
           _message = Just message
         }
 
-mkOnTrack :: TrackReq -> Flow OnTrackReq
-mkOnTrack req = do
+mkOnTrackErrReq :: TrackReq -> Flow OnTrackReq
+mkOnTrackErrReq req = do
   return $
-    OnTrackReq
+    CallbackReq
       { context = req ^. #context,
-        message = TrackResMessage tracking,
-        error = Just mkError
+        contents = Left mkError
       }
   where
-    tracking =
-      Tracking
-        { _url = Nothing,
-          _required_params = Nothing,
-          _metadata = Nothing
-        }
-    -- TODO: fix this after dunzo sends tracking url in api
     mkError =
       Err.Error
         { _type = "DOMAIN-ERROR",

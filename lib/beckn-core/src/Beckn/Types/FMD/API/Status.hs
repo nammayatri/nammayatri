@@ -4,7 +4,7 @@ module Beckn.Types.FMD.API.Status where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -37,12 +37,7 @@ data StatusReq = StatusReq
 
 type StatusRes = AckResponse
 
-data OnStatusReq = OnStatusReq
-  { context :: Context,
-    message :: StatusResMessage,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnStatusReq = CallbackReq StatusResMessage
 
 newtype StatusReqMessage = StatusReqMessage
   { order_id :: Text

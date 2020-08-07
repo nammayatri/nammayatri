@@ -6,6 +6,7 @@ module Product.Select where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Select
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
@@ -29,16 +30,15 @@ select _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl ->
       forkAsync "Select" $ do
-        quote <- mkQuote
+        onSelectMessage <- mkQuote
         AckResponse {} <-
           callClient "select" appUrl $
             client
               onSelectAPI
               "test-provider-2-key"
-              OnSelectReq
+              CallbackReq
                 { context = context {_action = "on_select"},
-                  message = quote,
-                  error = Nothing
+                  contents = Right onSelectMessage
                 }
         pass
   return

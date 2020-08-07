@@ -4,7 +4,7 @@ module Beckn.Types.FMD.API.Init where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -37,12 +37,7 @@ data InitReq = InitReq
 
 type InitRes = AckResponse
 
-data OnInitReq = OnInitReq
-  { context :: Context,
-    message :: InitResMessage,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnInitReq = CallbackReq InitResMessage
 
 newtype InitResMessage = InitResMessage
   { order :: Order

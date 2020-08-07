@@ -9,6 +9,7 @@ where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
@@ -38,10 +39,9 @@ confirm _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlow
             client
               onConfirmAPI
               "test-provider-2-key"
-              OnConfirmReq
+              CallbackReq
                 { context = context {_action = "on_confirm"},
-                  message = resp,
-                  error = Nothing
+                  contents = Right resp
                 }
         pass
   pure

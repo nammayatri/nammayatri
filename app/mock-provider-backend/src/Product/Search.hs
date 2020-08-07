@@ -7,9 +7,9 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
@@ -35,9 +35,9 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
         pass
     tId
       | tId == searchPickupLocationNotServiceableId ->
-        sendResponse context $ errorResponse "FMD001"
+        sendResponse context $ Left $ domainError "FMD001"
     _ ->
-      sendResponse context happyServices
+      sendResponse context $ Right $ OnSearchServices example
   return
     AckResponse
       { _context = context,
@@ -45,11 +45,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
         _error = Nothing
       }
   where
-    happyServices = (OnSearchServices example, Nothing)
-
-    errorResponse err = (OnSearchServices emptyCatalog, Just $ domainError err)
-
-    sendResponse context (msg, err) =
+    sendResponse context contents =
       forkAsync "Search" $ do
         baseUrl <- lookupBaseUrl
         L.runIO $ threadDelay 0.5e6
@@ -58,9 +54,8 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
             client
               onSearchAPI
               "test-provider-2-key"
-              OnSearchReq
+              CallbackReq
                 { context = context {_action = "on_search"},
-                  message = msg,
-                  error = err
+                  contents = contents
                 }
         pass
