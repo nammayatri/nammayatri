@@ -53,7 +53,7 @@ type OnCancelRes = AckResponse
 data CancelResMessage = CancelResMessage
   { policies :: [Policy],
     reasons :: [Option],
-    price :: Price,
+    price :: Maybe Price,
     order :: Order
   }
   deriving (Generic, Show, ToJSON, FromJSON)
