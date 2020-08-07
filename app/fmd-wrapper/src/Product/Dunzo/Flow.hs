@@ -7,7 +7,7 @@ import App.Types
 import Beckn.Types.App (CaseId (..))
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
+import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
@@ -18,6 +18,7 @@ import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError500)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified EulerHS.Language as L
@@ -217,13 +218,13 @@ status org req = do
   let orderId = req ^. (#message . #order_id)
   bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
-  case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
-  let taskId = case_ ^. #_shortId
-  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  c <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  let taskId = c ^. #_shortId
+  (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
   fork "status" do
     eres <- getStatus conf (TaskId taskId)
     L.logInfo @Text "StatusRes" $ show eres
-    sendCb case_ orderDetails req baConfig eres
+    sendCb c orderDetails req baConfig eres
   returnAck conf (req ^. #context)
   where
     getStatus conf@DunzoConfig {..} taskId = do
@@ -260,7 +261,53 @@ status org req = do
         _ -> pass
 
 cancel :: Organization -> CancelReq -> Flow CancelRes
-cancel _ _ = error "Not implemented yet"
+cancel org req = do
+  let oId = req ^. (#message . #order_id)
+  conf@DunzoConfig {..} <- getDunzoConfig org
+  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapConfig <- getBAConfig bapNwAddr conf
+  case_ <- Storage.findById (CaseId oId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  let taskId = case_ ^. #_shortId
+  orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  fork "cancel" do
+    eres <- callCancelAPI conf (TaskId taskId)
+    L.logInfo @Text "CancelRes" $ show eres
+    sendCb case_ orderDetails req bapConfig eres
+  returnAck conf (req ^. #context)
+  where
+    callCancelAPI conf@DunzoConfig {..} taskId = do
+      baseUrl <- parseBaseUrl dzUrl
+      token <- fetchToken conf
+      -- TODO get cancellation reason
+      API.cancelTask dzClientId token baseUrl taskId ""
+
+    updateCase :: CaseId -> OrderDetails -> Case -> Flow ()
+    updateCase caseId orderDetails case_ = do
+      let updatedOrderDetails = orderDetails & (#order . #_state) ?~ "CANCELLED"
+          updatedCase = case_ {_udf1 = Just $ encodeToText updatedOrderDetails}
+      Storage.update caseId updatedCase
+
+    callCbAPI baConfig req' = do
+      let cbApiKey = baConfig ^. #bap_api_key
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey req'
+
+    sendCb case_ orderDetails req' baConfig res =
+      case res of
+        Right () -> do
+          let order = orderDetails ^. #order
+          onCancelReq <- mkOnCancelReq req' order
+          updateCase (case_ ^. #_id) orderDetails case_
+          onCancelRes <- callCbAPI baConfig onCancelReq
+          L.logInfo @Text "on_cancel " $ show onCancelRes
+        Left (FailureResponse _ (Response _ _ _ body)) ->
+          whenJust (decode body) handleError
+          where
+            handleError err = do
+              onCancelReq <- mkOnCancelErrReq req' err
+              onCancelResp <- callCbAPI baConfig onCancelReq
+              L.logInfo @Text "on_cancel err " $ show onCancelResp
+        _ -> pass
 
 getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
 getQuote conf@DunzoConfig {..} quoteReq = do

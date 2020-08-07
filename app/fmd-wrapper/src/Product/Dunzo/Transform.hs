@@ -19,6 +19,7 @@ import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.API.Callback
+import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
@@ -330,4 +331,36 @@ mkOnTrackErrReq req = do
           _code = "FMD000",
           _path = Nothing,
           _message = Just "NO_TRACKING_URL"
+        }
+
+mkOnCancelReq :: CancelReq -> Order -> Flow OnCancelReq
+mkOnCancelReq req order = do
+  return $
+    CallbackReq
+      { context = req ^. #context,
+        contents = Right cancel
+      }
+  where
+    cancel =
+      CancelResMessage
+        { policies = [],
+          reasons = [],
+          price = Nothing,
+          order = order
+        }
+
+mkOnCancelErrReq :: CancelReq -> Error -> Flow OnCancelReq
+mkOnCancelErrReq req Error {..} = do
+  return $
+    CallbackReq
+      { context = req ^. #context,
+        contents = Left mkError
+      }
+  where
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = code,
+          _path = Nothing,
+          _message = Just message
         }

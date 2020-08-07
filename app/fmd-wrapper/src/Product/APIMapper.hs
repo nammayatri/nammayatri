@@ -33,4 +33,4 @@ status :: Organization -> StatusReq -> FlowHandler StatusRes
 status org req = withFlowHandler $ DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
-cancel _ _ = error "Not implemented yet"
+cancel org req = withFlowHandler $ DZ.cancel org req
