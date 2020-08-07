@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Dunzo.Transform where
 
@@ -11,6 +12,7 @@ import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Error as Err
 import Beckn.Types.Core.Item
+import qualified Beckn.Types.Core.Location as CoreLoc
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.Operator
 import Beckn.Types.Core.Payment
@@ -20,17 +22,22 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Cancel
+import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Track
 import Beckn.Types.FMD.Order
+import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (throwJsonError400)
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (fromMaybeM500, throwJsonError400)
+import Beckn.Utils.Extra (getCurrentTimeUTC, headMaybe)
 import Control.Lens ((?~))
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
 import Types.Wrapper
@@ -364,3 +371,97 @@ mkOnCancelErrReq req Error {..} = do
           _path = Nothing,
           _message = Just message
         }
+
+mkCreateTaskReq :: Order -> Flow CreateTaskReq
+mkCreateTaskReq order = do
+  orderId <- order ^. #_id & fromMaybeM500' "ORDER_ID_MISSING"
+  let [task] = order ^. #_tasks
+  let pickup = task ^. #_pickup
+  let drop = task ^. #_drop
+  pickupDet <- mkLocationDetails pickup
+  dropDet <- mkLocationDetails drop
+  senderDet <- mkPersonDetails pickup
+  receiverDet <- mkPersonDetails drop
+  return $
+    CreateTaskReq
+      { request_id = orderId,
+        pickup_details = pickupDet,
+        drop_details = dropDet,
+        sender_details = senderDet,
+        receiver_details = receiverDet,
+        special_instructions = "Handle with care",
+        package_approx_value = -1.0,
+        package_content = Documents_or_Books, -- TODO: get this dynamically
+        reference_id = orderId
+      }
+  where
+    mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
+    mkLocationDetails PickupOrDrop {..} = do
+      (CoreLoc.GPS lat lon) <- CoreLoc._gps _location & fromMaybeM500' "LAT_LON_NOT_FOUND"
+      lat' <- readCoord lat
+      lon' <- readCoord lon
+      address <- CoreLoc._address _location & fromMaybeM500' "ADDRESS_NOT_FOUND"
+      return $
+        LocationDetails
+          { lat = lat',
+            lng = lon',
+            address =
+              Address
+                { apartment_address = Just $ CoreLoc.door address <> ", " <> CoreLoc.building address,
+                  street_address_1 = CoreLoc.street address,
+                  street_address_2 = Nothing,
+                  landmark = Nothing,
+                  city = Just $ CoreLoc.city address,
+                  state = Nothing,
+                  pincode = Just $ CoreLoc.area_code address,
+                  country = Just $ CoreLoc.country address
+                }
+          }
+
+    mkPersonDetails :: PickupOrDrop -> Flow PersonDetails
+    mkPersonDetails PickupOrDrop {..} = do
+      phone <- headMaybe (_poc ^. #phones) & fromMaybeM500' "PERSON_PHONENUMBER_NOT_FOUND"
+      return $
+        PersonDetails
+          { name = getName (_poc ^. #name),
+            phone_number = phone
+          }
+
+    getName :: Name -> Text
+    getName Name {..} =
+      let def = maybe "" (" " <>)
+       in def _honorific_prefix
+            <> def _honorific_suffix
+            <> _given_name
+            <> def _additional_name
+            <> def _family_name
+
+mkOnConfirmReq :: ConfirmReq -> Order -> Flow OnConfirmReq
+mkOnConfirmReq req order = do
+  return $
+    CallbackReq
+      { context = req ^. #context,
+        contents = Right $ ConfirmResMessage order
+      }
+
+mkOnConfirmErrReq :: ConfirmReq -> Error -> Flow OnConfirmReq
+mkOnConfirmErrReq req Error {..} = do
+  return $
+    CallbackReq
+      { context = req ^. #context,
+        contents = Left mkError
+      }
+  where
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = code,
+          _path = Nothing,
+          _message = Just message
+        }
+
+-- TODO: replace this with proper err logging for forked threads
+fromMaybeM500' :: BSL.ByteString -> Maybe a -> Flow a
+fromMaybeM500' errMsg m = do
+  L.logError @Text "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg)
+  fromMaybeM500 errMsg m

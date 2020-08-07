@@ -7,16 +7,18 @@ import App.Types
 import Beckn.Types.App (CaseId (..))
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
+import qualified Beckn.Types.Core.Order as Core
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)
-import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
+import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
 import Beckn.Types.FMD.API.Select (DraftOrder (..), SelectReq (..), SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
+import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError500)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError400, throwJsonError500)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
@@ -191,7 +193,74 @@ init org req = do
       Storage.create case_
 
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
-confirm _ _ = error "Not implemented yet"
+confirm org req = do
+  dconf@DunzoConfig {..} <- getDunzoConfig org
+  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapConfig <- getBAConfig bapNwAddr dconf
+  let reqOrder = req ^. (#message . #order)
+  let orderId = reqOrder ^. #_id
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  let order = orderDetails ^. #order
+  verifyPayment reqOrder order
+  txnId <-
+    reqOrder ^? #_payment . _Just . #_transaction_id
+      & fromMaybeM400 "TXN_ID_NOT_FOUND"
+  let updatedOrderDetails =
+        orderDetails & ((#order . #_payment . _Just . #_transaction_id) .~ txnId)
+  fork "confirm" do
+    L.logInfo @Text "Confirm" "Started"
+    createTaskReq <- mkCreateTaskReq order
+    L.logInfo @Text "CreateTaskReq" (encodeToText createTaskReq)
+    eres <- createTaskAPI dconf createTaskReq
+    L.logInfo @Text "CreateTaskRes" $ show eres
+    sendCb case_ updatedOrderDetails req bapConfig eres
+  returnAck dconf (req ^. #context)
+  where
+    verifyPayment :: Core.Order -> Order -> Flow ()
+    verifyPayment reqOrder order = do
+      confirmAmount <-
+        reqOrder ^? #_payment . _Just . #_amount . #_value
+          & fromMaybeM400 "INVALID_PAYMENT_AMOUNT"
+      orderAmount <-
+        order ^? #_payment . _Just . #_amount . #_value
+          & fromMaybeM500 "ORDER_AMOUNT_NOT_FOUND"
+      if confirmAmount == orderAmount
+        then pass
+        else throwJsonError400 "AMOUNT_VALIDATION_ERR" "INVALID_ORDER_AMOUNT"
+
+    updateCase case_ orderDetails taskStatus = do
+      let caseId = case_ ^. #_id
+      let updatedCase =
+            case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
+      Storage.update caseId updatedCase
+
+    createTaskAPI conf@DunzoConfig {..} req' = do
+      baseUrl <- parseBaseUrl dzUrl
+      token <- fetchToken conf
+      API.createTask dzClientId token baseUrl req'
+
+    callCbAPI baConfig req' = do
+      let cbApiKey = baConfig ^. #bap_api_key
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey req'
+
+    sendCb case_ orderDetails req' baConfig res =
+      case res of
+        Right taskStatus -> do
+          let order = orderDetails ^. #order
+          updateCase case_ orderDetails taskStatus
+          onConfirmReq <- mkOnConfirmReq req' order
+          eres <- callCbAPI baConfig onConfirmReq
+          L.logInfo @Text "on_confirm" $ show eres
+        Left (FailureResponse _ (Response _ _ _ body)) ->
+          whenJust (decode body) handleError
+          where
+            handleError err = do
+              onConfirmReq <- mkOnConfirmErrReq req' err
+              onConfirmResp <- callCbAPI baConfig onConfirmReq
+              L.logInfo @Text "on_confirm err " $ show onConfirmResp
+        _ -> pass
 
 track :: Organization -> TrackReq -> Flow TrackRes
 track org req = do
