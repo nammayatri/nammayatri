@@ -1,8 +1,6 @@
 module MockAppBackend.Fixtures where
 
-import qualified "beckn-gateway" App as GatewayBE
 import qualified "mock-app-backend" App as MockAppBE
-import qualified "mock-provider-backend" App as MockProviderBE
 import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
@@ -13,7 +11,6 @@ import Beckn.Types.FMD.API.Select
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
-import qualified EulerHS.Types as T
 import qualified "mock-app-backend" Product.Trigger as MockAppTrigger
 import Servant.Client
 
@@ -46,32 +43,8 @@ mockAppBaseUrl =
       baseUrlPath = "/v1"
     }
 
-mockProviderBaseUrl :: BaseUrl
-mockProviderBaseUrl =
-  BaseUrl
-    { baseUrlScheme = Http,
-      baseUrlHost = "localhost",
-      baseUrlPort = 8017,
-      baseUrlPath = "/v1"
-    }
-
-runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
-runClient clientEnv x = runClientM x clientEnv
-
-getLoggerConfig :: String -> T.LoggerConfig
-getLoggerConfig t =
-  T.defaultLoggerConfig
-    { T._logToFile = True,
-      T._logFilePath = "/tmp/log-" <> t,
-      T._isAsync = False
-    }
-
-startServers :: IO (ThreadId, ThreadId, ThreadId)
-startServers = do
-  mockAppTid <- forkIO MockAppBE.runMockApp
-  mockProvTid <- forkIO MockProviderBE.runMockProvider
-  gatewayTid <- forkIO GatewayBE.runGateway
-  return (mockAppTid, mockProvTid, gatewayTid)
+startServer :: IO ThreadId
+startServer = forkIO MockAppBE.runMockApp
 
 triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
 triggerSearchReq = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
@@ -119,4 +92,3 @@ buildOnConfirmReq context =
       message = ConfirmResMessage example,
       error = Nothing
     }
-

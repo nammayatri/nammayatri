@@ -3,13 +3,12 @@ module Mobility.HealthCheck where
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
-import qualified EulerHS.Types as T
-import Mobility.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)
 import Servant.Client
 import Test.Hspec
+import Utils
 
 type HealthCheckAPI = Get '[JSON] Text
 
@@ -32,12 +31,7 @@ spec = do
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv tbeManager transporterBaseUrl
       gatewayClientEnv = mkClientEnv gatewayManager $ appBaseUrl {baseUrlPort = 8015}
-      loggerCfg =
-        T.defaultLoggerConfig
-          { T._logToFile = True,
-            T._logFilePath = "/tmp/app-backend-healthcheck-test",
-            T._isAsync = False
-          }
+      loggerCfg = getLoggerCfg "app-backend-healthcheck-test"
   around (withFlowRuntime (Just loggerCfg)) $
     describe "Testing App Backend APIs" $
       it "Testing health check API" $

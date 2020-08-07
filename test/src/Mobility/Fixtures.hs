@@ -25,7 +25,6 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Data.Time
 import EulerHS.Prelude
-import qualified EulerHS.Types as T
 import Servant hiding (Context)
 import Servant.Client
 import System.Environment (setEnv)
@@ -326,9 +325,6 @@ initiateLoginReq = appInitiateLogin buildInitiateLoginReq
 verifyLoginReq :: Text -> ClientM Reg.LoginRes
 verifyLoginReq tokenId = appVerifyLogin tokenId buildLoginReq
 
-runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
-runClient clientEnv x = runClientM x clientEnv
-
 startServers :: IO (ThreadId, ThreadId, ThreadId)
 startServers = do
   setEnv "USE_FAKE_SMS" "7891"
@@ -336,14 +332,6 @@ startServers = do
   tbeTid <- forkIO TransporterBE.runTransporterBackendApp
   gatewayTid <- forkIO GatewayBE.runGateway
   return (appTid, tbeTid, gatewayTid)
-
-getLoggerCfg :: FilePath -> T.LoggerConfig
-getLoggerCfg fName =
-  T.defaultLoggerConfig
-    { T._logToFile = True,
-      T._logFilePath = "/tmp/" <> fName,
-      T._isAsync = False
-    }
 
 getAppBaseUrl :: BaseUrl
 getAppBaseUrl =

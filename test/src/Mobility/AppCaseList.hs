@@ -9,6 +9,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Registration as Reg
+import Utils
 
 spec :: Spec
 spec = do

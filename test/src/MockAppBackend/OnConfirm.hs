@@ -10,12 +10,13 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
+import Utils
 
 spec :: Spec
 spec = do
   mockAppManager <- runIO $ Client.newManager tlsManagerSettings
   let appClientEnv = mkClientEnv mockAppManager mockAppBaseUrl
-      loggerCfg = getLoggerConfig "mock-app-backend"
+      loggerCfg = getLoggerCfg "mock-app-backend"
   around (withFlowRuntime (Just loggerCfg)) $
     describe "Mock App Backend OnConfirm Api" $
       it "should return valid ack response" $

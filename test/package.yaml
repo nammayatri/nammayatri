@@ -59,6 +59,7 @@ dependencies:
   - beckn-core
   - aeson
   - base >= 4.7 && < 5
+  - data-default-class
   - euler-hs
   - http-client
   - http-client-tls

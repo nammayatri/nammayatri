@@ -1,7 +1,6 @@
 module MockAppBackend.Spec where
 
 import EulerHS.Prelude
-import MockAppBackend.Fixtures (startServers)
 import qualified MockAppBackend.HealthCheck as HC
 import qualified MockAppBackend.OnConfirm as OnConfirm
 import qualified MockAppBackend.OnInit as OnInit
@@ -20,14 +19,9 @@ mkTestTree = do
   onInitSpec <- testSpec "OnInit" OnInit.spec
   onConfirmSpec <- testSpec "OnConfirm" OnConfirm.spec
   return $
-    withResource
-      startServers
-      (\(mockAppTid, mockProviderTid, gatewayTid) -> traverse_ killThread [mockAppTid, mockProviderTid, gatewayTid])
-      ( \_ ->
-          testGroup
-            "MockAppBackend"
-            [ healthCheckSpec,
-              after AllSucceed "HealthCheck" $
-                testGroup "APIs" [triggerSearchSpec, onSearchSpec, onSelectSpec, onInitSpec, onConfirmSpec]
-            ]
-      )
+    testGroup
+      "MockAppBackend"
+      [ healthCheckSpec,
+        after AllSucceed "HealthCheck" $
+          testGroup "APIs" [triggerSearchSpec, onSearchSpec, onSelectSpec, onInitSpec, onConfirmSpec]
+      ]

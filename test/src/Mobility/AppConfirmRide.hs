@@ -16,6 +16,7 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "app-backend" Types.API.Search as AppSearch
+import Utils
 
 spec :: Spec
 spec = do

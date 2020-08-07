@@ -4,7 +4,6 @@ import EulerHS.Prelude
 import Mobility.AppCancelRide as CR
 import Mobility.AppCaseList as CL
 import Mobility.DriverCancelRide as DCR
-import Mobility.Fixtures (startServers)
 import Mobility.HealthCheck as HC
 import Mobility.SuccessFlow as SF
 import Test.Tasty
@@ -18,14 +17,9 @@ mkTestTree = do
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   return $
-    withResource
-      startServers
-      (\(appTid, tbeTid, gatewayTid) -> traverse_ killThread [appTid, tbeTid, gatewayTid])
-      ( \_ ->
-          testGroup
-            "Mobility"
-            [ hcSpec,
-              after AllSucceed "HealthCheck" $
-                testGroup "APIs" [clSpec, sfSpec, crSpec, dcrSpec]
-            ]
-      )
+    testGroup
+      "Mobility"
+      [ hcSpec,
+        after AllSucceed "HealthCheck" $
+          testGroup "APIs" [clSpec, sfSpec, crSpec, dcrSpec]
+      ]
