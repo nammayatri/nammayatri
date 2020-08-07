@@ -6,6 +6,7 @@ import qualified Mobility.Spec as Mobility
 import qualified MockAppBackend.Fixtures as MockAppBackend
 import qualified MockAppBackend.Spec as MockAppBackend
 import qualified MockProviderBackend.Fixtures as MockProviderBackend
+import qualified MockProviderBackend.Spec as MockProviderBackend
 import Test.Tasty
 
 main :: IO ()
@@ -15,6 +16,7 @@ specs :: IO TestTree
 specs = do
   mobilityTests <- Mobility.mkTestTree
   mockAppBackendTests <- MockAppBackend.mkTestTree
+  mockProviderBackendTests <- MockProviderBackend.mkTestTree
   return $
     withResource
       startServers
@@ -23,6 +25,7 @@ specs = do
           testGroup
             "all"
             [ mockAppBackendTests,
+              mockProviderBackendTests,
               mobilityTests
             ]
       )

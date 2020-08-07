@@ -4,6 +4,7 @@ import qualified "mock-provider-backend" App as MockProviderBE
 import "mock-provider-backend" App.Handlers as MockProviderRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -40,4 +41,14 @@ mockProviderBaseUrl =
 
 startServer :: IO ThreadId
 startServer = forkIO MockProviderBE.runMockProvider
+
+searchFlow :: Text -> SearchReq -> ClientM Common.AckResponse
+searchFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderSearchAPI)
+
+buildFMDSearchReq :: Context -> SearchReq
+buildFMDSearchReq context =
+  SearchReq
+    { context,
+      message = SearchIntent example
+    }
 
