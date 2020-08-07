@@ -5,6 +5,7 @@ import "mock-provider-backend" App.Handlers as MockProviderRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -52,3 +53,12 @@ buildFMDSearchReq context =
       message = SearchIntent example
     }
 
+selectFlow :: Text -> SelectReq -> ClientM Common.AckResponse
+selectFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderSelectAPI)
+
+buildFMDSelectReq :: Context -> SelectReq
+buildFMDSelectReq context =
+  SelectReq
+    { context,
+      message = DraftOrder example
+    }
