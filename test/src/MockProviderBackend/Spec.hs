@@ -3,6 +3,7 @@ module MockProviderBackend.Spec where
 import EulerHS.Prelude
 import qualified MockProviderBackend.Confirm as Confirm
 import qualified MockProviderBackend.HealthCheck as HC
+import qualified MockProviderBackend.Init as Init
 import qualified MockProviderBackend.Search as Search
 import qualified MockProviderBackend.Select as Select
 import Test.Tasty
@@ -14,10 +15,11 @@ mkTestTree = do
   searchSpec <- testSpec "Search" Search.spec
   selectSpec <- testSpec "Select" Select.spec
   confirmSpec <- testSpec "Confirm" Confirm.spec
+  initSpec <- testSpec "Init" Init.spec
   return $
     testGroup
       "MockProviderBackend"
       [ healthCheckSpec,
         after AllSucceed "HealthCheck" $
-          testGroup "APIs" [searchSpec, selectSpec, confirmSpec]
+          testGroup "APIs" [searchSpec, selectSpec, confirmSpec, initSpec]
       ]
