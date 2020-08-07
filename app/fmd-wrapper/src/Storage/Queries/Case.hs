@@ -39,7 +39,6 @@ update id case_@Storage.Case {..} = do
         [ _updatedAt <-. B.val_ now,
           _status <-. B.val_ (Storage._status c),
           _shortId <-. B.val_ (Storage._shortId c),
-          _status <-. B.val_ (Storage._status c),
           _startTime <-. B.val_ (Storage._startTime c),
           _endTime <-. B.val_ (Storage._endTime c),
           _parentCaseId <-. B.val_ (Storage._parentCaseId c),

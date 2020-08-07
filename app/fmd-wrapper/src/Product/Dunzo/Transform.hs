@@ -37,6 +37,7 @@ import Control.Lens ((?~))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
@@ -274,14 +275,15 @@ mkOnInitErrReq req Error {..} = do
 mkOnStatusMessage :: Text -> Order -> TaskStatus -> Flow StatusResMessage
 mkOnStatusMessage orgName order status = do
   now <- getCurrentTimeUTC
-  return $ StatusResMessage (updateOrder now)
-  where
-    updateOrder cTime =
-      order & #_state ?~ show (status ^. #state)
-        & #_updated_at .~ cTime
-        & #_tasks .~ (updateTask cTime <$> (order ^. #_tasks))
+  return $ StatusResMessage (updateOrder orgName now order status)
 
-    updateTask cTime task =
+updateOrder :: Text -> LocalTime -> Order -> TaskStatus -> Order
+updateOrder orgName cTime order status =
+  order & #_state ?~ show (status ^. #state)
+    & #_updated_at .~ cTime
+    & #_tasks .~ (updateTask <$> (order ^. #_tasks))
+  where
+    updateTask task =
       task & #_agent .~ (getAgent <$> status ^. #runner)
         & #_state .~ show (status ^. #state)
         & #_updated_at ?~ cTime
@@ -391,7 +393,7 @@ mkCreateTaskReq order = do
         receiver_details = receiverDet,
         special_instructions = "Handle with care",
         package_approx_value = -1.0,
-        package_content = Documents_or_Books, -- TODO: get this dynamically
+        package_content = [Documents_or_Books], -- TODO: get this dynamically
         reference_id = orderId
       }
   where
@@ -409,10 +411,10 @@ mkCreateTaskReq order = do
               Address
                 { apartment_address = Just $ CoreLoc.door address <> ", " <> CoreLoc.building address,
                   street_address_1 = CoreLoc.street address,
-                  street_address_2 = Nothing,
+                  street_address_2 = "",
                   landmark = Nothing,
                   city = Just $ CoreLoc.city address,
-                  state = Nothing,
+                  state = "",
                   pincode = Just $ CoreLoc.area_code address,
                   country = Just $ CoreLoc.country address
                 }
@@ -463,5 +465,7 @@ mkOnConfirmErrReq req Error {..} = do
 -- TODO: replace this with proper err logging for forked threads
 fromMaybeM500' :: BSL.ByteString -> Maybe a -> Flow a
 fromMaybeM500' errMsg m = do
-  L.logError @Text "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg)
+  when
+    (isNothing m)
+    (L.logError @Text "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg))
   fromMaybeM500 errMsg m

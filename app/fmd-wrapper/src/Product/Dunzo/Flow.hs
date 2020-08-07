@@ -143,7 +143,7 @@ init org req = do
               req'
               res
       let onInitReq = mkOnInitReq req' onInitMessage
-      createCase (onInitMessage ^. #order) (orderDetails ^. #quote)
+      createCaseIfNotPresent (onInitMessage ^. #order) (orderDetails ^. #quote)
       onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
@@ -159,14 +159,15 @@ init org req = do
         Nothing -> return ()
     sendCb _ _ _ _ = return ()
 
-    createCase order quote = do
+    createCaseIfNotPresent order quote = do
       now <- getCurrentTimeUTC
+      let caseId = CaseId $ fromJust $ order ^. #_id
       let case_ =
             Case
-              { _id = CaseId $ fromJust $ order ^. #_id,
+              { _id = caseId,
                 _name = Nothing,
                 _description = Nothing,
-                _shortId = "",
+                _shortId = "", -- FIX this
                 _industry = GROCERY,
                 _type = RIDEORDER,
                 _exchangeType = ORDER,
@@ -190,7 +191,10 @@ init org req = do
                 _createdAt = now,
                 _updatedAt = now
               }
-      Storage.create case_
+      mcase <- Storage.findById caseId
+      case mcase of
+        Nothing -> Storage.create case_
+        Just _ -> pass
 
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
@@ -206,7 +210,7 @@ confirm org req = do
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
       & fromMaybeM400 "TXN_ID_NOT_FOUND"
-  let updatedOrderDetails =
+  let updatedOrderDetailsWTxn =
         orderDetails & ((#order . #_payment . _Just . #_transaction_id) .~ txnId)
   fork "confirm" do
     L.logInfo @Text "Confirm" "Started"
@@ -214,7 +218,7 @@ confirm org req = do
     L.logInfo @Text "CreateTaskReq" (encodeToText createTaskReq)
     eres <- createTaskAPI dconf createTaskReq
     L.logInfo @Text "CreateTaskRes" $ show eres
-    sendCb case_ updatedOrderDetails req bapConfig eres
+    sendCb case_ updatedOrderDetailsWTxn req bapConfig eres
   returnAck dconf (req ^. #context)
   where
     verifyPayment :: Core.Order -> Order -> Flow ()
@@ -231,8 +235,13 @@ confirm org req = do
 
     updateCase case_ orderDetails taskStatus = do
       let caseId = case_ ^. #_id
+      let taskId = taskStatus ^. #task_id
       let updatedCase =
-            case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
+            case_
+              { _shortId = getTaskId taskId,
+                _udf1 = Just $ encodeToText orderDetails,
+                _udf2 = Just $ encodeToText taskStatus
+              }
       Storage.update caseId updatedCase
 
     createTaskAPI conf@DunzoConfig {..} req' = do
@@ -248,9 +257,10 @@ confirm org req = do
     sendCb case_ orderDetails req' baConfig res =
       case res of
         Right taskStatus -> do
-          let order = orderDetails ^. #order
-          updateCase case_ orderDetails taskStatus
-          onConfirmReq <- mkOnConfirmReq req' order
+          currTime <- getCurrentTimeUTC
+          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) taskStatus
+          updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
+          onConfirmReq <- mkOnConfirmReq req' uOrder
           eres <- callCbAPI baConfig onConfirmReq
           L.logInfo @Text "on_confirm" $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->

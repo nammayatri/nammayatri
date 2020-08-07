@@ -41,7 +41,7 @@ CREATE TABLE atlas_fmd_wrapper."case" (
     id character(36) NOT NULL,
     name character varying(255),
     description character varying(1024),
-    short_id character varying(36) NOT NULL,
+    short_id character varying(36),
     industry character varying(1024) NOT NULL,
     type character varying(255) NOT NULL,
     exchange_type character varying(255) NOT NULL,
@@ -109,16 +109,6 @@ ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas;
 INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
   ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'PROVIDER', true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key', '{"dzBAConfigs":[{"bap_nw_address":"localhost:8013","bap_id":"beckn-app-backend","bap_api_key":"test_key","paymentPolicy":{"credit_type":"POSTPAID","supported_currencies":["INR"],"mode":"RTGS","penalty_terms":["Delay in payment after due date will incur 10 INR per day of non-payment"],"credit_duration":"P30D","method":"ELECTRONIC","settlement_type":"BULK"}}],"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzUrl":"apis-staging.dunzo.in","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","dzBPId":"fmd-wrapper.dunzo","dzBPNwAddress":"http://localhost:8018"}');
 
-
---
--- TOC entry 2837 (class 2606 OID 16460)
--- Name: case idx_16386_primary; Type: CONSTRAINT; Schema: atlas_fmd_wrapper; Owner: atlas
---
-
-ALTER TABLE ONLY atlas_fmd_wrapper."case"
-    ADD CONSTRAINT idx_16386_primary PRIMARY KEY (id);
-
-
 --
 -- TOC entry 2852 (class 2606 OID 16468)
 -- Name: organization idx_16410_primary; Type: CONSTRAINT; Schema: atlas_fmd_wrapper; Owner: atlas
@@ -126,22 +116,6 @@ ALTER TABLE ONLY atlas_fmd_wrapper."case"
 
 ALTER TABLE ONLY atlas_fmd_wrapper.organization
     ADD CONSTRAINT idx_16410_primary PRIMARY KEY (id);
-
-
---
--- TOC entry 2839 (class 1259 OID 16482)
--- Name: idx_16386_requestor; Type: INDEX; Schema: atlas_fmd_wrapper; Owner: atlas
---
-
-CREATE INDEX idx_16386_requestor ON atlas_fmd_wrapper."case" USING btree (requestor);
-
-
---
--- TOC entry 2840 (class 1259 OID 16483)
--- Name: idx_16386_short_id; Type: INDEX; Schema: atlas_fmd_wrapper; Owner: atlas
---
-
-CREATE UNIQUE INDEX idx_16386_short_id ON atlas_fmd_wrapper."case" USING btree (short_id);
 
 
 -- Completed on 2020-07-20 19:25:37 IST

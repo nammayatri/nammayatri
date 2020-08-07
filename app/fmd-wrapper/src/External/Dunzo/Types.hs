@@ -103,10 +103,10 @@ data LocationDetails = LocationDetails
 data Address = Address
   { apartment_address :: Maybe Text,
     street_address_1 :: Text,
-    street_address_2 :: Maybe Text,
+    street_address_2 :: Text,
     landmark :: Maybe Text,
     city :: Maybe Text,
-    state :: Maybe Text,
+    state :: Text,
     pincode :: Maybe Text,
     country :: Maybe Text
   }
@@ -175,7 +175,7 @@ data CreateTaskReq = CreateTaskReq
     receiver_details :: PersonDetails,
     special_instructions :: Text,
     package_approx_value :: Float,
-    package_content :: PackageContent,
+    package_content :: [PackageContent],
     reference_id :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
