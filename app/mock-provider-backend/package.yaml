@@ -60,7 +60,6 @@ dependencies:
   - http-api-data
   - http-client
   - http-types
-  - lens
   - mtl
   - servant
   - servant-client
@@ -70,8 +69,6 @@ dependencies:
   - wai-extra
   - warp
   - time
-  - template-haskell
-  - random-strings
   - vault
 
 ghc-options:

@@ -51,7 +51,6 @@ default-extensions:
 
 dependencies:
   - aeson
-  - aeson-pretty
   - aeson-casing
   - base >= 4.7 && < 5
   - beam-core
@@ -60,7 +59,6 @@ dependencies:
   - clock
   - containers
   - cryptonite
-  - data-default
   - data-default-class
   - euler-hs
   - hex-text
@@ -76,18 +74,13 @@ dependencies:
   - lens
   - memory
   - passetto-client
-  - pureMD5
   - random-strings
   - servant
   - servant-client
-  - servant-multipart
-  - servant-purescript
   - servant-server
-  - servant-subscriber
   - servant-swagger
   - swagger2
   - text
-  - vault
   - wai
   - wai-extra
   - warp

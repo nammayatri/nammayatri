@@ -72,8 +72,6 @@ dependencies:
   - wai-extra
   - warp
   - time
-  - template-haskell
-  - random-strings
   - vault
 
 library:

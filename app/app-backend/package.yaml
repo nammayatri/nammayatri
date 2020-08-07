@@ -51,15 +51,12 @@ default-extensions:
 
 dependencies:
   - aeson
-  - aeson-pretty
   - base >= 4.7 && < 5
   - base64-bytestring
   - beam-core
   - beam-postgres
   - bytestring
-  - containers
   - cryptonite
-  - data-default
   - euler-hs
   - http-api-data
   - http-client
@@ -69,24 +66,16 @@ dependencies:
   - prometheus-client
   - wai-middleware-prometheus
   - prometheus-metrics-ghc
-  - postgresql-simple
-  - pureMD5
-  - purescript-bridge
   - servant
   - servant-client
   - servant-client-core
-  - servant-multipart
-  - servant-purescript
   - servant-server
-  - servant-subscriber
-  - servant-swagger
   - swagger2
   - text
   - wai
   - wai-extra
   - warp
   - time
-  - template-haskell
   - random-strings
 
 library:
