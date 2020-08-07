@@ -48,7 +48,7 @@ prepareAppOptions =
 
 runTransporterBackendApp' :: Int -> Settings -> IO ()
 runTransporterBackendApp' port settings = do
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
   let redisEnv = RedisEnv Config.defaultRedisConfig
   let appEnv = AppEnv dbEnv redisEnv
   let loggerCfg =

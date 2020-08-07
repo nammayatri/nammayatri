@@ -34,7 +34,7 @@ runGateway = do
   metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> lookupEnv "METRICS_PORT"
   Metrics.serve metricsPort
   cache <- C.newCache Nothing
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
   let appEnv = AppEnv dbEnv cache
   let loggerCfg =
         E.defaultLoggerConfig

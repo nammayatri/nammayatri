@@ -3,7 +3,11 @@
 module Beckn.Storage.DB.Config where
 
 import Beckn.Types.App
+import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
+import qualified Beckn.Types.Storage.Trail as Trail
+import qualified Database.Beam as B
 import Database.Beam.Postgres (Pg)
+import qualified Database.Beam.Schema.Tables as B
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types
@@ -77,3 +81,24 @@ prepareDBConnections ::
   (L.MonadFlow mFlow, HasDbEnv mFlow) => mFlow (T.SqlConn Pg)
 prepareDBConnections =
   getPgDBConfig >>= connPgOrFail
+
+data TrailDb f = TrailDb
+  { _trail :: f (B.TableEntity Trail.TrailT),
+    _externalTrail :: f (B.TableEntity ExternalTrail.ExternalTrailT)
+  }
+  deriving (Generic, B.Database be)
+
+trailDb :: Text -> B.DatabaseSettings be TrailDb
+trailDb dbSchemaName =
+  B.defaultDbSettings
+    `B.withDbModification` B.dbModification
+      { _trail = setSchema dbSchemaName <> Trail.fieldEMod,
+        _externalTrail = setSchema dbSchemaName <> ExternalTrail.fieldEMod
+      }
+  where
+    setSchema x = setEntitySchema (Just x)
+    -- FIXME: this is in beam > 0.8.0.0, and can be removed when we upgrade
+    -- (introduced in beam commit id 4e3539784c4a0d58eea08129edd0dc094b0e9695)
+    modifyEntitySchema modSchema =
+      B.EntityModification (Endo (\(B.DatabaseEntity tbl) -> B.DatabaseEntity (tbl & B.dbEntitySchema %~ modSchema)))
+    setEntitySchema nm = modifyEntitySchema (const nm)

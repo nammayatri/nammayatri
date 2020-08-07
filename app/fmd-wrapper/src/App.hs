@@ -34,7 +34,7 @@ import System.Environment (lookupEnv)
 runFMDWrapper :: IO ()
 runFMDWrapper = do
   port <- fromMaybe 8018 . (>>= readMaybe) <$> lookupEnv "MOCK_PROVIDER_PORT"
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
   let redisEnv = RedisEnv Config.defaultRedisConfig
   let appEnv = AppEnv dbEnv redisEnv
   let loggerCfg =

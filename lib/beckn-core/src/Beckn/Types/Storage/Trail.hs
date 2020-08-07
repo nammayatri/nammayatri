@@ -69,9 +69,6 @@ instance FromJSON Millisecond where
 instance HasSqlValueSyntax PgValueSyntax Millisecond where
   sqlValueSyntax = sqlValueSyntax . fromIntegral @_ @Int64
 
--- instance FromField Millisecond where
---   fromField fi bs = fromIntegral @Int64 <$> fromField fi bs
-
 instance FromBackendRow Postgres Millisecond where
   fromBackendRow = fromIntegral @Int64 <$> fromBackendRow
 

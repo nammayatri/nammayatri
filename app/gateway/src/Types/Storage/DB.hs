@@ -2,18 +2,14 @@
 
 module Types.Storage.DB where
 
-import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Trail as Trail
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import Storage.DB.Config (dbSchema)
 
-data AppDb f = AppDb
-  { _organization :: f (B.TableEntity Organization.OrganizationT),
-    _trail :: f (B.TableEntity Trail.TrailT),
-    _externalTrail :: f (B.TableEntity ExternalTrail.ExternalTrailT)
+newtype AppDb f = AppDb
+  { _organization :: f (B.TableEntity Organization.OrganizationT)
   }
   deriving (Generic, B.Database be)
 
@@ -21,9 +17,7 @@ appDb :: B.DatabaseSettings be AppDb
 appDb =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { _organization = setSchema <> Organization.fieldEMod,
-        _trail = setSchema <> Trail.fieldEMod,
-        _externalTrail = setSchema <> ExternalTrail.fieldEMod
+      { _organization = setSchema <> Organization.fieldEMod
       }
   where
     setSchema = setEntitySchema (Just dbSchema)

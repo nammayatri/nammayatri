@@ -47,7 +47,7 @@ prepareAppOptions =
 
 runAppBackend' :: Int -> Settings -> IO ()
 runAppBackend' port settings = do
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
   let appEnv = AppEnv dbEnv
   let loggerCfg =
         T.defaultLoggerConfig

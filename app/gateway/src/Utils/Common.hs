@@ -3,6 +3,7 @@
 module Utils.Common where
 
 import App.Types
+import qualified Beckn.Storage.Queries.ExternalTrail as TQ
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.ExternalTrail as TS
 import Beckn.Utils.Common (encodeToText')
@@ -17,7 +18,6 @@ import EulerHS.Types (EulerClient, JSONEx)
 import Servant.Client.Core (BaseUrl)
 import Servant.Client.Core.ClientError
 import Servant.Client.Core.Response
-import qualified Storage.Queries.ExternalTrail as TQ
 
 callAPI ::
   (JSONEx a, ToJSON a) =>

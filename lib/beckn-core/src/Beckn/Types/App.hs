@@ -22,7 +22,8 @@ class HasRedisEnv mFlow where
 
 data DbEnv = DbEnv
   { defaultDbConfig :: T.PostgresConfig,
-    connTag :: T.ConnTag
+    connTag :: T.ConnTag,
+    dbSchema :: Text
   }
 
 newtype RedisEnv = RedisEnv
