@@ -9,7 +9,7 @@ data DecimalValue = DecimalValue
   { _integral :: Text,
     _fractional :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show)
 
 instance FromJSON DecimalValue where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

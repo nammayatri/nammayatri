@@ -8,7 +8,7 @@ data MonetaryValue = MonetaryValue
   { _currency :: Text,
     _value :: DecimalValue
   }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show)
 
 instance FromJSON MonetaryValue where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

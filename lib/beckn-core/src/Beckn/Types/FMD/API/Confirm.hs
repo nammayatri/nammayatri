@@ -4,9 +4,9 @@ module Beckn.Types.FMD.API.Confirm where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Invoice
 import Beckn.Types.Core.Order
 import Beckn.Types.FMD.API.Callback
+import qualified Beckn.Types.FMD.Order as FMD
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
@@ -48,6 +48,6 @@ newtype ConfirmReqMessage = ConfirmReqMessage
 type OnConfirmRes = AckResponse
 
 newtype ConfirmResMessage = ConfirmResMessage
-  { order :: Invoice
+  { order :: FMD.Order
   }
   deriving (Generic, Show, ToJSON, FromJSON)
