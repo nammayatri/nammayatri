@@ -174,11 +174,11 @@ spec:
                   name: beckn-app-backend-configs
                   key: BECKN_PROVIDER_PATH
             #------ General configs ------#
-            # - name: USE_FAKE_SMS
-            #   valueFrom:
-            #     configMapKeyRef:
-            #       name: beckn-app-backend-configs
-            #       key: USE_FAKE_SMS
+            - name: USE_FAKE_SMS
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-app-backend-configs
+                  key: USE_FAKE_SMS
             - name: CRON_AUTH_KEY
               valueFrom:
                 secretKeyRef:
