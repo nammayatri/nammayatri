@@ -19,7 +19,7 @@ import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM400, fromMaybeM500, throwJsonError400, throwJsonError500)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, throwJsonError400, throwJsonError500)
 import Beckn.Utils.Extra (getCurrentTimeUTC)
 import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
@@ -35,7 +35,7 @@ import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Quote as Storage
 import Types.Wrapper
-import Utils.Common (fork, parseBaseUrl)
+import Utils.Common (parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do

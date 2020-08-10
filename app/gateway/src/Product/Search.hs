@@ -13,7 +13,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (fromMaybeM400, fromMaybeM500, withFlowHandler)
-import qualified Beckn.Utils.Servant.Trail.Client as UT
+import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, withClientTracing)
 import Data.Aeson (encode)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -23,7 +23,6 @@ import qualified Product.ProviderRegistry as BP
 import Servant.Client (BaseUrl, parseBaseUrl)
 import System.Environment (lookupEnv)
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
-import Utils.Common
 
 parseOrgUrl :: Text -> Flow BaseUrl
 parseOrgUrl =
@@ -33,7 +32,7 @@ parseOrgUrl =
 
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
-  let search' = ET.client $ UT.withClientTracing searchAPI
+  let search' = ET.client $ withClientTracing searchAPI
       messageId = req ^. #context . #_request_transaction_id
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providers <- BP.lookup $ req ^. #context
@@ -48,7 +47,7 @@ search org req = withFlowHandler $ do
     providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
     let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
     baseUrl <- parseOrgUrl providerUrl
-    eRes <- callAPI baseUrl (search' providerApiKey (req & #context .~ context)) "search"
+    eRes <- callAPIWithTrail baseUrl (search' providerApiKey (req & #context .~ context)) "search"
     L.logDebug @Text "gateway" $
       "request_transaction_id: " <> messageId
         <> ", search: req: "
@@ -64,11 +63,11 @@ search org req = withFlowHandler $ do
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
-  let onSearch = ET.client $ UT.withClientTracing onSearchAPI
+  let onSearch = ET.client $ withClientTracing onSearchAPI
       messageId = req ^. #context . #_request_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
-  eRes <- callAPI baseUrl (onSearch "" req) "on_search"
+  eRes <- callAPIWithTrail baseUrl (onSearch "" req) "on_search"
   let resp = case eRes of
         Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
         Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing

@@ -602,3 +602,47 @@ UPDATE atlas_app.person SET
 
 -- PostgreSQL database dump complete
 --
+
+
+CREATE TABLE atlas_app.trail (
+    id character(36) NOT NULL,
+    --customer_id character(36),
+    --session_id character(36),
+    endpoint_id character varying(64) NOT NULL,
+    headers text NOT NULL,
+    query_params text NOT NULL,
+    remote_host text NOT NULL,
+    request_body text,  -- TODO: do we want to limit size of request somehow?
+    is_secure boolean NOT NULL,
+    succeeded boolean,
+    response_status text,
+    response_body text,  -- TODO: do we want to limit size of response somehow?
+                         -- reponse usually contains a list, so data can be infinitely large
+    response_headers text,  -- TODO: limit them?
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    process_duration int
+);
+
+ALTER TABLE ONLY atlas_app."trail"
+    ADD CONSTRAINT idx_trail_primary PRIMARY KEY (id);
+
+
+
+CREATE TABLE atlas_app.external_trail (
+    id character(36) NOT NULL,
+    --customer_id character(36),
+    --session_id character(36),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    gateway_id character varying(16) NOT NULL,
+    endpoint_id character varying(16) NOT NULL,
+    headers text NOT NULL,
+    query_params text NOT NULL,
+    request text,  -- TODO: do we want to limit size of request somehow?
+    succeeded boolean,
+    response text,  -- TODO: do we want to limit size of response somehow?
+                    -- reponse usually contains a list, so data can be infinitely large
+    error text
+);
+
+ALTER TABLE ONLY atlas_app."external_trail"
+    ADD CONSTRAINT idx_external_trail_primary PRIMARY KEY (id);

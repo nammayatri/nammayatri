@@ -7,13 +7,14 @@ import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.API.Update
+import Beckn.Types.Common (AckResponse)
+import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
 
-onSearch :: Text -> OnSearchReq -> ET.EulerClient ()
-onSearch apiKey req =
-  void $ ET.client onSearchAPI apiKey req
+onSearch :: Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
+onSearch = ET.client $ withClientTracing onSearchAPI
 
 type TrackAPI =
   "on_track"
@@ -23,8 +24,8 @@ type TrackAPI =
 trackTripAPI :: Proxy TrackAPI
 trackTripAPI = Proxy
 
-onTrackTrip :: OnTrackTripReq -> ET.EulerClient ()
-onTrackTrip = void . ET.client trackTripAPI
+onTrackTrip :: OnTrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
+onTrackTrip = ET.client $ withClientTracing trackTripAPI
 
 type ConfirmAPI =
   "on_confirm"
@@ -34,8 +35,8 @@ type ConfirmAPI =
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
 
-onConfirm :: OnConfirmReq -> ET.EulerClient ()
-onConfirm = void . ET.client confirmAPI
+onConfirm :: OnConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
+onConfirm = ET.client $ withClientTracing confirmAPI
 
 type CancelAPI =
   "on_cancel"
@@ -45,8 +46,8 @@ type CancelAPI =
 cancelAPI :: Proxy CancelAPI
 cancelAPI = Proxy
 
-onCancel :: OnCancelReq -> ET.EulerClient ()
-onCancel = void . ET.client cancelAPI
+onCancel :: OnCancelReq -> (RequestInfo, ET.EulerClient AckResponse)
+onCancel = ET.client $ withClientTracing cancelAPI
 
 type StatusAPI =
   "on_status"
@@ -56,8 +57,8 @@ type StatusAPI =
 statusAPI :: Proxy StatusAPI
 statusAPI = Proxy
 
-onStatus :: OnStatusReq -> ET.EulerClient ()
-onStatus = void . ET.client statusAPI
+onStatus :: OnStatusReq -> (RequestInfo, ET.EulerClient AckResponse)
+onStatus = ET.client $ withClientTracing statusAPI
 
 type CallAPI =
   "call"
@@ -65,11 +66,11 @@ type CallAPI =
     :> ReqBody '[JSON] CallReq
     :> Post '[JSON] CallRes
 
-callAPI :: Proxy CallAPI
-callAPI = Proxy
+callsAPI :: Proxy CallAPI
+callsAPI = Proxy
 
-initiateCall :: CallReq -> ET.EulerClient ()
-initiateCall = void . ET.client callAPI
+initiateCall :: CallReq -> (RequestInfo, ET.EulerClient AckResponse)
+initiateCall = ET.client $ withClientTracing callsAPI
 
 type UpdateAPI =
   "on_update"
@@ -79,5 +80,5 @@ type UpdateAPI =
 updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
 
-onUpdate :: OnUpdateReq -> ET.EulerClient ()
-onUpdate = void . ET.client updateAPI
+onUpdate :: OnUpdateReq -> (RequestInfo, ET.EulerClient AckResponse)
+onUpdate = ET.client $ withClientTracing updateAPI

@@ -8,6 +8,8 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import qualified Beckn.Types.API.Status as Status
 import Beckn.Types.API.Track
+import Beckn.Types.Common (AckResponse)
+import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import EulerHS.Types (EulerClient, client)
 import qualified EulerHS.Types as ET
@@ -20,13 +22,11 @@ type ConfirmAPI =
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
 
-confirm :: Confirm.ConfirmReq -> EulerClient ()
-confirm req =
-  void $ ET.client confirmAPI req
+confirm :: Confirm.ConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
+confirm = ET.client $ withClientTracing confirmAPI
 
-search :: Text -> Search.SearchReq -> EulerClient ()
-search key req =
-  void $ client Search.searchAPI key req
+search :: Text -> Search.SearchReq -> (RequestInfo, ET.EulerClient AckResponse)
+search = client $ withClientTracing Search.searchAPI
 
 type LocationAPI =
   "location"
@@ -36,8 +36,8 @@ type LocationAPI =
 locationAPI :: Proxy LocationAPI
 locationAPI = Proxy
 
-location :: Text -> EulerClient GetLocationRes
-location = client locationAPI
+location :: Text -> (RequestInfo, EulerClient GetLocationRes)
+location = client $ withClientTracing locationAPI
 
 type TrackTripAPI =
   "track"
@@ -47,9 +47,8 @@ type TrackTripAPI =
 trackTripAPI :: Proxy TrackTripAPI
 trackTripAPI = Proxy
 
-trackTrip :: TrackTripReq -> EulerClient ()
-trackTrip req =
-  void $ client trackTripAPI req
+trackTrip :: TrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
+trackTrip = client $ withClientTracing trackTripAPI
 
 type CancelAPI =
   "cancel"
@@ -59,9 +58,8 @@ type CancelAPI =
 cancelAPI :: Proxy CancelAPI
 cancelAPI = Proxy
 
-cancel :: Cancel.CancelReq -> EulerClient ()
-cancel req =
-  void $ client cancelAPI req
+cancel :: Cancel.CancelReq -> (RequestInfo, ET.EulerClient AckResponse)
+cancel = client $ withClientTracing cancelAPI
 
 type StatusAPI =
   "status"
@@ -71,6 +69,5 @@ type StatusAPI =
 statusAPI :: Proxy StatusAPI
 statusAPI = Proxy
 
-status :: Status.StatusReq -> EulerClient ()
-status req =
-  void $ client statusAPI req
+status :: Status.StatusReq -> (RequestInfo, ET.EulerClient AckResponse)
+status = client $ withClientTracing statusAPI

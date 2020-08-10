@@ -6,7 +6,6 @@ import App.Types
 import qualified Beckn.Types.API.Status as API
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -28,10 +27,7 @@ status person StatusReq {..} = withFlowHandler $ do
   context <- buildContext "status" caseId
   baseUrl <- Gateway.getProviderBaseUrl
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
-  eres <- Gateway.status baseUrl $ API.StatusReq context statusMessage
-  case eres of
-    Left err -> return $ AckResponse context (ack "NACK") (Just $ domainError err)
-    Right _ -> return $ AckResponse context (ack "ACK") Nothing
+  Gateway.status baseUrl $ API.StatusReq context statusMessage
 
 onStatus :: API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus req = withFlowHandler $ do

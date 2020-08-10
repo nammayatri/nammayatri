@@ -3,11 +3,14 @@
 module External.Gateway.Flow where
 
 import App.Types
-import qualified Beckn.Types.API.Cancel as Cancel
-import qualified Beckn.Types.API.Confirm as Confirm
+import Beckn.Types.API.Cancel
+import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
-import qualified Beckn.Types.API.Status as Status
-import qualified Beckn.Types.API.Track as Track
+import Beckn.Types.API.Status
+import Beckn.Types.API.Track
+import Beckn.Types.Common
+import Beckn.Types.Core.Error
+import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
 import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -15,60 +18,70 @@ import qualified External.Gateway.Types as API
 import Servant.Client
 import System.Environment
 import Types.API.Location
-import Utils.Common
 
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
   apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
-  res <- callAPI url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
-  whenRight res $ \_ ->
-    L.logInfo @Text "Search" "Search successfully delivered"
-  whenLeft res $ \err ->
-    L.logError @Text "Search" ("error occurred while search: " <> show err)
-  return $ first show res
+  res <- callAPIWithTrail url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
+  case res of
+    Left err -> do
+      L.logError @Text "Search" ("error occurred while search: " <> show err)
+      return $ Left $ show err
+    Right _ -> do
+      L.logInfo @Text "Search" "Search successfully delivered"
+      return $ Right ()
 
-confirm :: BaseUrl -> Confirm.ConfirmReq -> Flow (Either Text ())
-confirm url req = do
-  res <- callAPI url (API.confirm req) "confirm"
+confirm :: BaseUrl -> ConfirmReq -> Flow AckResponse
+confirm url req@ConfirmReq {context} = do
+  res <- callAPIWithTrail url (API.confirm req) "confirm"
   whenLeft res $ \err ->
     L.logError @Text "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
     L.logError @Text "Confirm" ("error occurred while confirm: " <> show err)
-  return $ first show res
+  case res of
+    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 location :: BaseUrl -> Text -> Flow (Either Text GetLocationRes)
 location url req = do
-  res <- callAPI url (API.location req) "location"
+  res <- callAPIWithTrail url (API.location req) "location"
   whenLeft res $ \err ->
     L.logError @Text "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
     L.logError @Text "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
-track :: BaseUrl -> Track.TrackTripReq -> Flow (Either Text ())
-track url req = do
-  res <- callAPI url (API.trackTrip req) "track"
+track :: BaseUrl -> TrackTripReq -> Flow AckResponse
+track url req@TrackTripReq {context} = do
+  res <- callAPIWithTrail url (API.trackTrip req) "track"
   case res of
     Left err -> L.logError @Text "error occurred while track trip: " (show err)
     Right _ -> L.logInfo @Text "Track" "Track successfully delivered"
-  return $ first show res
-
-cancel :: BaseUrl -> Cancel.CancelReq -> Flow (Either Text ())
-cancel url req = do
-  res <- callAPI url (API.cancel req) "cancel"
   case res of
-    Left err -> L.logError @Text "error occurred while cancel trip: " (show err)
-    Right _ -> L.logInfo @Text "Cancel" "Cancel successfully delivered"
-  return $ first show res
+    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
-status :: BaseUrl -> Status.StatusReq -> Flow (Either Text ())
-status url req = do
-  res <- callAPI url (API.status req) "status"
+cancel :: BaseUrl -> CancelReq -> Flow (Either Text ())
+cancel url req = do
+  res <- callAPIWithTrail url (API.cancel req) "cancel"
+  case res of
+    Left err -> do
+      L.logError @Text "error occurred while cancel trip: " (show err)
+      return $ Left $ show err
+    Right _ -> do
+      L.logInfo @Text "Cancel" "Cancel successfully delivered"
+      return $ Right ()
+
+status :: BaseUrl -> StatusReq -> Flow AckResponse
+status url req@StatusReq {context} = do
+  res <- callAPIWithTrail url (API.status req) "status"
   case res of
     Left err -> L.logError @Text "error occurred while getting status: " (show err)
     Right _ -> L.logInfo @Text "Status" "Status successfully delivered"
-  return $ first show res
+  case res of
+    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 getGatewayBaseUrl :: Flow BaseUrl
 getGatewayBaseUrl = L.runIO $ do

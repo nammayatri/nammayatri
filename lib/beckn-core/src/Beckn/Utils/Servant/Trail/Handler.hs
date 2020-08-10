@@ -1,10 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Product.Trail where
+module Beckn.Utils.Servant.Trail.Handler where
 
-import App.Types
 import qualified Beckn.Storage.Queries.Trail as Trail
+import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Trail as Trail
 import Beckn.Utils.Common
@@ -13,7 +12,6 @@ import qualified Beckn.Utils.Servant.Trail.Types as Util
 import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Utils.Common (fork)
 
 -- TODO: add a test on that request arguments appear in database at least
 -- for one entrypoint
@@ -38,7 +36,7 @@ mkTrail reqId now req =
       _processDuration = Nothing
     }
 
-traceHandler :: Util.TraceHandler Flow
+traceHandler :: HasDbEnv (FlowR r) => Util.TraceHandler (FlowR r)
 traceHandler = Util.TraceHandler {..}
   where
     _preAction req = do
@@ -61,3 +59,4 @@ traceHandler = Util.TraceHandler {..}
             L.logError @Text "trace" $
               "Saving response on " <> show reqId <> " failed: " <> show err
           Right () -> pass
+      pass

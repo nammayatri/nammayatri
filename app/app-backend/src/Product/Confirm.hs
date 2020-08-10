@@ -7,7 +7,6 @@ import App.Types
 import Beckn.Types.API.Confirm
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Error
 import Beckn.Types.Core.Order (OrderItem (..))
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
@@ -46,10 +45,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   context <- buildContext "confirm" caseId
   baseUrl <- Gateway.getProviderBaseUrl
   order <- mkOrder productInstance
-  eres <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
-  case eres of
-    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack "ACK") Nothing
+  Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where
     mkOrder productInstance = do
       now <- getCurrentTimeUTC

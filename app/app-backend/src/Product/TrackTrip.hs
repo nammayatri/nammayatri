@@ -32,11 +32,7 @@ track _ req = withFlowHandler $ do
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
           gatewayUrl <- Gateway.getProviderBaseUrl
-          eres <- Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
-          case eres of
-            Left err ->
-              return $ AckResponse context (ack "NACK") $ Just $ domainError err
-            Right _ -> return $ AckResponse context (ack "ACK") Nothing
+          Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do

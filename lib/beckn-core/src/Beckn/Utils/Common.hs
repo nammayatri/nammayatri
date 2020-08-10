@@ -274,6 +274,13 @@ forkAsync desc action =
       L.logWarning @Text "Thread" $
         "Thread " <> show desc <> " died with error: " <> show e
 
+-- I know it is looking similar to forkAsync but I found it simpler to
+-- be able to use (FlowR r) instead of (FlowR (EnvR r))
+fork :: Text -> FlowR r () -> FlowR r ()
+fork desc f = do
+  env <- ask
+  lift $ L.forkFlow desc $ runReaderT f env
+
 class Example a where
   -- | Sample value of a thing.
   --
