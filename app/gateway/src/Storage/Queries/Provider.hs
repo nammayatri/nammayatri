@@ -16,4 +16,4 @@ lookupKey = findOrgByApiKey Org.PROVIDER
 
 -- FIXME: this should allow filtering by domain
 listProviders :: Flow [Org.Organization]
-listProviders = listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
+listProviders = listOrganizations Nothing Nothing [Org.PROVIDER]

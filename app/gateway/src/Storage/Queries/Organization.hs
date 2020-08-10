@@ -25,10 +25,9 @@ listOrganizations ::
   Maybe Int ->
   Maybe Int ->
   [Org.OrganizationType] ->
-  [Org.Status] ->
   Flow [Org.Organization]
-listOrganizations mlimit moffset oType status =
-  DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
+listOrganizations mlimit moffset oType =
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
     complementVal l
@@ -37,10 +36,11 @@ listOrganizations mlimit moffset oType status =
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     orderByDesc Org.Organization {..} = B.desc_ _createdAt
-    predicate pstatus Org.Organization {..} =
+    predicate Org.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _status `B.in_` (B.val_ <$> pstatus) ||. complementVal pstatus,
+        [ _enabled ==. B.val_ True,
+          _verified ==. B.val_ True,
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]

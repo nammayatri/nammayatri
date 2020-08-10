@@ -12,7 +12,7 @@ import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common (fromMaybeM400, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Common (fork, fromMaybeM400, fromMaybeM500, withFlowHandler)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, withClientTracing)
 import Data.Aeson (encode)
 import qualified EulerHS.Language as L
@@ -43,7 +43,8 @@ search org req = withFlowHandler $ do
           { _bg_id = fromString <$> bgId,
             _bg_nw_address = fromString <$> bgNwAddr
           }
-  resps <- forM providers $ \provider -> do
+  BA.insert messageId appUrl
+  forM_ providers $ \provider -> fork "Provider search" $ do
     providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
     let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
     baseUrl <- parseOrgUrl providerUrl
@@ -54,12 +55,9 @@ search org req = withFlowHandler $ do
         <> decodeUtf8 (encode req)
         <> ", resp: "
         <> show eRes
-    return $ isRight eRes
-  if or resps
-    then do
-      BA.insert messageId appUrl
-      return $ AckResponse context (ack "ACK") Nothing
-    else return $ AckResponse context (ack "NACK") (Just $ domainError "No providers")
+  if null providers
+    then return $ AckResponse context (ack "NACK") (Just $ domainError "No providers")
+    else return $ AckResponse context (ack "ACK") Nothing
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
