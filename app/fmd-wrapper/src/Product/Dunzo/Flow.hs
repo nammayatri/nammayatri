@@ -15,6 +15,7 @@ import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
 import Beckn.Types.FMD.API.Select (DraftOrder (..), SelectReq (..), SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
+import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
@@ -388,6 +389,24 @@ cancel org req = do
               L.logInfo @Text "on_cancel err " $ show onCancelResp
         _ -> pass
 
+update :: Organization -> UpdateReq -> Flow UpdateRes
+update org req = do
+  conf <- getDunzoConfig org
+  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  baConfig <- getBAConfig bapNwAddr conf
+  fork "update" do
+    -- TODO: Dunzo doesnt have update
+    onUpdateReq <- mkOnUpdateErrReq req
+    eres <- callCbAPI baConfig onUpdateReq
+    L.logInfo @Text "on_update" $ show eres
+  returnAck conf (req ^. #context)
+  where
+    callCbAPI baConfig req' = do
+      let cbApiKey = baConfig ^. #bap_api_key
+      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      L.callAPI cbUrl $ ET.client onUpdateAPI cbApiKey req'
+
+-- Helpers
 getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
 getQuote conf@DunzoConfig {..} quoteReq = do
   baseUrl <- parseBaseUrl dzUrl

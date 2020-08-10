@@ -28,6 +28,7 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Track
+import Beckn.Types.FMD.API.Update
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
@@ -460,6 +461,22 @@ mkOnConfirmErrReq req Error {..} = do
           _code = code,
           _path = Nothing,
           _message = Just message
+        }
+
+mkOnUpdateErrReq :: UpdateReq -> Flow OnUpdateReq
+mkOnUpdateErrReq req = do
+  return $
+    CallbackReq
+      { context = req ^. #context,
+        contents = Left mkError
+      }
+  where
+    mkError =
+      Err.Error
+        { _type = "DOMAIN-ERROR",
+          _code = "FMD000",
+          _path = Nothing,
+          _message = Just "UPDATE_NOT_SUPPORTED"
         }
 
 -- TODO: replace this with proper err logging for forked threads

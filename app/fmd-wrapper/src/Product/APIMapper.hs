@@ -8,6 +8,7 @@ import Beckn.Types.FMD.API.Search (SearchReq, SearchRes)
 import Beckn.Types.FMD.API.Select (SelectReq, SelectRes)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
+import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes)
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (withFlowHandler)
 import EulerHS.Prelude
@@ -34,3 +35,6 @@ status org req = withFlowHandler $ DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
 cancel org req = withFlowHandler $ DZ.cancel org req
+
+update :: Organization -> UpdateReq -> FlowHandler UpdateRes
+update org req = withFlowHandler $ DZ.update org req
