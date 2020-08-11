@@ -385,6 +385,8 @@ ALTER TABLE ONLY atlas_transporter.person
 ALTER TABLE ONLY atlas_transporter.person
   ADD CONSTRAINT unique_email UNIQUE (email);
 
+ALTER TABLE ONLY atlas_transporter.organization
+  ADD CONSTRAINT unique_api_key UNIQUE (api_key);
 --
 -- Name: product idx_16427_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
 --

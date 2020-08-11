@@ -420,6 +420,8 @@ ALTER TABLE ONLY atlas_app.person
 ALTER TABLE ONLY atlas_app.person
   ADD CONSTRAINT unique_email UNIQUE (email);
 
+ALTER TABLE ONLY atlas_app.organization
+  ADD CONSTRAINT unique_api_key UNIQUE (api_key);
 --
 -- Name: product idx_16459_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas
 --

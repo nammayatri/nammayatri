@@ -186,6 +186,9 @@ ALTER TABLE ONLY atlas_gateway.organization
     ADD CONSTRAINT idx_16410_primary PRIMARY KEY (id);
 
 
+ALTER TABLE ONLY atlas_gateway.organization
+  ADD CONSTRAINT unique_api_key UNIQUE (api_key);
+
 --
 -- TOC entry 2838 (class 1259 OID 16481)
 -- Name: idx_16386_gateway; Type: INDEX; Schema: atlas_gateway; Owner: atlas

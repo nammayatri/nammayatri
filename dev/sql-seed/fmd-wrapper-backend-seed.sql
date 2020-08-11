@@ -117,7 +117,9 @@ INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, verified, en
 ALTER TABLE ONLY atlas_fmd_wrapper.organization
     ADD CONSTRAINT idx_16410_primary PRIMARY KEY (id);
 
-
+ALTER TABLE ONLY atlas_fmd_wrapper.organization
+  ADD CONSTRAINT unique_api_key UNIQUE (api_key);
+  
 -- Completed on 2020-07-20 19:25:37 IST
 
 --
