@@ -15,6 +15,7 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
+import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Order
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Payload
@@ -71,6 +72,7 @@ search _unit req = withFlowHandler $ do
     Person.findAllByOrgIds
       [Person.ADMIN]
       (_getOrganizationId . Org._id <$> transporters)
+  notifyOrgCountToGateway (c ^. #_shortId) (toInteger $ length transporters)
   Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
@@ -353,6 +355,40 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
       { context,
         contents = Right $ ConfirmOrder order
       }
+
+notifyOrgCountToGateway :: Text -> Integer -> Flow ()
+notifyOrgCountToGateway caseSid count = do
+  onStatusOrgCountPayload <- mkOrgCountPayload caseSid count
+  _ <- Gateway.onStatus onStatusOrgCountPayload
+  return ()
+
+mkOrgCountPayload :: Text -> Integer -> Flow OnStatusReq
+mkOrgCountPayload caseSid count = do
+  context <- mkContext "on_status" "" -- FIXME: transaction id?
+  order <- mkOrgCountRes
+  let onStatusMessage = OnStatusReqMessage order
+  return $ OnStatusReq context onStatusMessage Nothing
+  where
+    mkOrgCountRes = do
+      now <- getCurrentTimeUTC
+      return $
+        Order
+          { _id = caseSid,
+            _state = T.pack $ show ProductInstance.INVALID,
+            _items = [OrderItem caseSid (Just mkItemQuantityRes)],
+            _created_at = now,
+            _updated_at = now,
+            _billing = Nothing,
+            _payment = Nothing
+          }
+    mkItemQuantityRes =
+      ItemQuantity
+        { _allocated = example,
+          _available = Quantity count example,
+          _maximum = example,
+          _minimum = example,
+          _selected = example
+        }
 
 serviceStatus :: StatusReq -> FlowHandler StatusRes
 serviceStatus req = withFlowHandler $ do

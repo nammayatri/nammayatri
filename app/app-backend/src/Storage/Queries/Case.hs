@@ -185,3 +185,15 @@ complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
+
+updateOrgCount :: CaseId -> Text -> Flow (T.DBResult ())
+updateOrgCount caseId count = do
+  currTime <- getCurrentTimeUTC
+  DB.update dbTable (setClause count currTime) (predicate caseId)
+  where
+    setClause pcount currTime Storage.Case {..} =
+      mconcat
+        [ _udf3 <-. B.val_ (Just pcount),
+          _updatedAt <-. B.val_ currTime
+        ]
+    predicate pcaseId Storage.Case {..} = _id ==. B.val_ pcaseId

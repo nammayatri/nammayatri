@@ -38,13 +38,29 @@ onStatus req = withFlowHandler $ do
     Right msg -> do
       let prodInstId = ProductInstanceId $ msg ^. #order . #_id
           orderState = matchStatus $ msg ^. #order . #_state
-      orderStatus <- case orderState of
-        Just k -> return k
+      case orderState of
+        Just PI.INVALID -> updateTransportersCount (msg ^. #order)
+        Just k -> updateProductInstanceStatus prodInstId k
         Nothing -> L.throwException $ err400 {errBody = "INCORRECT STATUS"}
-      orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
-      QPI.updateStatus (orderPi ^. #_id) orderStatus
+      mkAckResponse txnId "status"
     Left err -> L.logError @Text "on_status req" $ "on_status error: " <> show err
-  mkAckResponse txnId "status"
+  where
+    updateTransportersCount order =
+      let items = order ^. #_items
+       in case items of
+            [] -> pure ()
+            item : _ -> do
+              let caseId = item ^. #_id
+                  qty = item ^. #_quantity
+                  count = case qty of
+                    Just val -> val ^. #_available . #_count
+                    Nothing -> 1
+              Case.updateOrgCount (CaseId caseId) (show count)
+              return ()
+    updateProductInstanceStatus prodInstId piStatus = do
+      orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
+      QPI.updateStatus (orderPi ^. #_id) piStatus
+      return ()
 
 -- Utility Functions
 
