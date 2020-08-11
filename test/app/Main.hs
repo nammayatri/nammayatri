@@ -20,7 +20,7 @@ specs = do
   return $
     withResource
       startServers
-      (\_ -> return ())
+      cleanupServers
       ( \_ ->
           testGroup
             "all"
@@ -34,4 +34,5 @@ specs = do
       (appTid, tbeTid, gatewayTid) <- Mobility.startServers
       mockAppTid <- MockAppBackend.startServer
       mockProviderTid <- MockProviderBackend.startServer
-      return (appTid, tbeTid, gatewayTid, mockAppTid, mockProviderTid)
+      return [appTid, tbeTid, gatewayTid, mockAppTid, mockProviderTid]
+    cleanupServers = traverse_ killThread

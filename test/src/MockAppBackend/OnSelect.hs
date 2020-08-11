@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module MockAppBackend.OnSelect where
 
 import Data.Time

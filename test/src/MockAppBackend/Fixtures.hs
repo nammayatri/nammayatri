@@ -4,6 +4,7 @@ import qualified "mock-app-backend" App as MockAppBE
 import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
@@ -54,10 +55,9 @@ onSearchFlow = client (Proxy :: Proxy MockAppRoutes.OnSearchAPI)
 
 buildOnSearchReq :: Context -> OnSearchReq
 buildOnSearchReq context =
-  OnSearchReq
+  CallbackReq
     { context,
-      message = OnSearchServices example,
-      error = Nothing
+      contents = Right $ OnSearchServices example
     }
 
 onSelectFlow :: Text -> OnSelectReq -> ClientM Common.AckResponse
@@ -65,10 +65,9 @@ onSelectFlow = client (Proxy :: Proxy MockAppRoutes.OnSelectAPI)
 
 buildOnSelectReq :: Context -> OnSelectReq
 buildOnSelectReq context =
-  OnSelectReq
+  CallbackReq
     { context,
-      message = OnSelectMessage example example,
-      error = Nothing
+      contents = Right $ OnSelectMessage example example
     }
 
 onInitFlow :: Text -> OnInitReq -> ClientM Common.AckResponse
@@ -76,10 +75,9 @@ onInitFlow = client (Proxy :: Proxy MockAppRoutes.OnInitAPI)
 
 buildOnInitReq :: Context -> OnInitReq
 buildOnInitReq context =
-  OnInitReq
+  CallbackReq
     { context,
-      message = InitResMessage example,
-      error = Nothing
+      contents = Right $ InitResMessage example
     }
 
 onConfirmFlow :: Text -> OnConfirmReq -> ClientM Common.AckResponse
@@ -87,8 +85,7 @@ onConfirmFlow = client (Proxy :: Proxy MockAppRoutes.OnConfirmAPI)
 
 buildOnConfirmReq :: Context -> OnConfirmReq
 buildOnConfirmReq context =
-  OnConfirmReq
+  CallbackReq
     { context,
-      message = ConfirmResMessage example,
-      error = Nothing
+      contents = Right $ ConfirmResMessage example
     }
