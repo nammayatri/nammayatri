@@ -1,0 +1,161 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-app-backend-master
+  name: beckn-app-backend-master
+  namespace: monitoring
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: http-prom
+    scheme: http
+    scrapeTimeout: 15s
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+    - atlas
+  selector:
+    matchLabels:
+      app: beckn-app-backend-master
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-app-backend-sandbox
+  name: beckn-app-backend-sandbox
+  namespace: monitoring
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: http-prom
+    scheme: http
+    scrapeTimeout: 15s
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+    - atlas
+  selector:
+    matchLabels:
+      app: beckn-app-backend-sandbox
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-gateway-master
+  name: beckn-gateway-master
+  namespace: monitoring
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: http-prom
+    scheme: http
+    scrapeTimeout: 15s
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+    - atlas
+  selector:
+    matchLabels:
+      app: beckn-gateway-master
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-gateway-sandbox
+  name: beckn-gateway-sandbox
+  namespace: monitoring
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: http-prom
+    scheme: http
+    scrapeTimeout: 15s
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+    - atlas
+  selector:
+    matchLabels:
+      app: beckn-gateway-sandbox
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-transport-master
+  name: beckn-transport-master
+  namespace: monitoring
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: http-prom
+    scheme: http
+    scrapeTimeout: 15s
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+    - atlas
+  selector:
+    matchLabels:
+      app: beckn-transport-master
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-transport-sandbox
+  name: beckn-transport-sandbox
+  namespace: monitoring
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: http-prom
+    scheme: http
+    scrapeTimeout: 15s
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+    - atlas
+  selector:
+    matchLabels:
+      app: beckn-transport-sandbox
+---

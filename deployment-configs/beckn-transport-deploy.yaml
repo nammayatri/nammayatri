@@ -400,5 +400,8 @@ spec:
     - port: 8014
       targetPort: 8014
       name: transport-http
+    - port: 9999
+      targetPort: 9999
+      name: http-prom
   selector:
     app: beckn-transport-$DEPLOY_VARIANT

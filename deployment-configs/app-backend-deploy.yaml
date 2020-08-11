@@ -400,5 +400,8 @@ spec:
     - port: 8013
       targetPort: 8013
       name: app-http
+    - port: 9999
+      targetPort: 9999
+      name: http-prom
   selector:
     app: beckn-app-backend-$DEPLOY_VARIANT
