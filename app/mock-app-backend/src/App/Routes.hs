@@ -9,6 +9,7 @@ import Beckn.Types.FMD.API.Search (OnSearchReq)
 import Beckn.Types.FMD.API.Select (OnSelectReq)
 import Beckn.Types.FMD.API.Status (OnStatusReq)
 import Beckn.Types.FMD.API.Track (OnTrackReq)
+import Beckn.Types.FMD.API.Update (OnUpdateReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -20,6 +21,7 @@ import qualified Product.Select as P
 import qualified Product.Status as P
 import qualified Product.Track as P
 import qualified Product.Trigger as T
+import qualified Product.Update as P
 import Servant hiding (Context)
 import Utils.Auth
 
@@ -34,6 +36,7 @@ type MockAppBackendAPI =
            :<|> OnTrackAPI
            :<|> OnStatusAPI
            :<|> OnCancelAPI
+           :<|> OnUpdateAPI
        )
 
 mockAppBackendAPI :: Proxy MockAppBackendAPI
@@ -50,6 +53,7 @@ mockAppBackendServer _key =
     :<|> onTrackFlow
     :<|> onStatusFlow
     :<|> onCancelFlow
+    :<|> onUpdateFlow
 
 type TriggerAPI =
   "trigger"
@@ -121,3 +125,12 @@ type OnCancelAPI =
 
 onCancelFlow :: FlowServer OnCancelAPI
 onCancelFlow = P.cancelCb
+
+type OnUpdateAPI =
+  "on_update"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] OnUpdateReq
+    :> Post '[JSON] AckResponse
+
+onUpdateFlow :: FlowServer OnUpdateAPI
+onUpdateFlow = P.updateCb
