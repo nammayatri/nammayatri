@@ -69,14 +69,16 @@ dependencies:
   - vault
   - warp
 
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
+
 library:
-  source-dirs: src
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
+  source-dirs:
+    - src
   dependencies:
     - hspec
     - hspec-core
@@ -86,7 +88,8 @@ library:
 tests:
   beckn-integ-test:
     main: Main.hs
-    source-dirs: app
+    source-dirs:
+      - app
     dependencies:
       - hspec
       - hspec-core

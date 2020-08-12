@@ -41,7 +41,7 @@ parseSuccess :: TestTree
 parseSuccess = testCase "Parse success" $ do
   let result = fromJSON (String "1.25") :: Result Amount
   case result of
-    Error err -> assertFailure "Parsing of \"1.25\" should succeed"
+    Error _ -> assertFailure "Parsing of \"1.25\" should succeed"
     Success _ -> pure ()
 
 parseError :: TestTree

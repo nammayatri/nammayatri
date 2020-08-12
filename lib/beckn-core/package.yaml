@@ -100,15 +100,22 @@ dependencies:
   - geojson
   - safe-money
 
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
+
 library:
   source-dirs:
     - src
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
+  dependencies:
+    - hspec
+    - hspec-core
+    - tasty
+    - tasty-hunit
+    - tasty-hspec
 
 tests:
   beckn-core-tests:
@@ -118,5 +125,8 @@ tests:
       - test/src
     dependencies:
       - beckn-core
+      - hspec
+      - hspec-core
       - tasty
       - tasty-hunit
+      - tasty-hspec
