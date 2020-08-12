@@ -49,7 +49,7 @@ notifyOnProductCancelCb prodInst = do
                 FCMData CANCELLED_PRODUCT SHOW FCM.Product $
                   show (_getProductInstanceId productInstanceId)
               title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-              providerName = info ^. #_provider . _Just . #_descriptor . #_name . _Just
+              providerName = info ^. #_provider . _Just . #name . _Just
               body =
                 FCMNotificationBody $
                   unwords
@@ -116,11 +116,11 @@ notifyOnTrackCb personId tracker c =
                   show caseId
               trip = tracker ^. #_trip
               regNumber =
-                trip ^. #vehicle . _Just . #registration . _Just . #number
+                trip ^. #vehicle . _Just . #registrationNumber . _Just
               model =
                 fromMaybe "unknown" $ trip ^. #vehicle . _Just . #model
               driverName =
-                trip ^. #driver . _Just . #name . #_given_name
+                trip ^. #driver . _Just . #name
               title = FCMNotificationTitle $ T.pack "Ride details updated!"
               body =
                 FCMNotificationBody $

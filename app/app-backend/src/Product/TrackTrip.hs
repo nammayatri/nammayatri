@@ -17,6 +17,7 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import Types.ProductInfo as ProductInfo
+import Utils.Common (fromTrackingToAPITracking)
 import qualified Utils.Notifications as Notify
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
@@ -71,5 +72,5 @@ updateTracker prodInst mtracking = do
   where
     updTracker info tracking =
       case info ^. #_tracker of
-        Just tracker -> Just (Tracker (tracker ^. #_trip) tracking)
+        Just tracker -> Just (Tracker (tracker ^. #_trip) $ fromTrackingToAPITracking <$> tracking)
         Nothing -> Nothing

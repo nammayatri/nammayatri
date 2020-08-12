@@ -21,6 +21,7 @@ import Models.Case as Case
 import Models.ProductInstance as ProductInstance
 import Storage.Queries.Person as Person
 import Types.ProductInfo as ProductInfo
+import Utils.Common (fromAPIDriverToDriver)
 
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
@@ -63,7 +64,7 @@ getProductAndCustomerInfo piId = do
                       person_ <- Person.findById $ PersonId personId
                       case person_ of
                         Nothing -> pure $ Left "Customer not found"
-                        Just person -> pure $ Right (person, driver)
+                        Just person -> pure $ Right (person, fromAPIDriverToDriver driver)
 
 -- | Get person's mobile phone
 getPersonPhone :: Person -> Flow (Either String Text)

@@ -220,7 +220,7 @@ mkProduct case_ _mprovider item = do
 mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow ProductInstance.ProductInstance
 mkProductInstance case_ mprovider personId item = do
   now <- getCurrentTimeUTC
-  let info = ProductInfo mprovider Nothing
+  let info = ProductInfo (fromProviderToAPIProvider <$> mprovider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}

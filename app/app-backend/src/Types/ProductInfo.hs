@@ -1,9 +1,7 @@
 module Types.ProductInfo where
 
-import Beckn.Types.Core.Provider
-import Beckn.Types.Core.Tracking
-import Beckn.Types.Mobility.Trip
 import EulerHS.Prelude
+import Types.Common
 
 data ProductInfo = ProductInfo
   { _provider :: Maybe Provider,

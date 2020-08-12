@@ -25,7 +25,7 @@ import Servant
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import qualified Types.ProductInfo as Products
-import Utils.Common (generateShortId)
+import Utils.Common (fromTripToAPITrip, generateShortId)
 import qualified Utils.Metrics as Metrics
 import Utils.Routes
 
@@ -65,7 +65,7 @@ onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_confirm req" (show req)
-  let trip = req ^. #message . #order . #_trip
+  let trip = fromTripToAPITrip <$> req ^. #message . #order . #_trip
       pid = ProductInstanceId $ req ^. #message . #order . #_id
       tracker = flip Products.Tracker Nothing <$> trip
   prdInst <- MPI.findById pid
