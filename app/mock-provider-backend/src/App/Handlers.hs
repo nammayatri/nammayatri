@@ -8,6 +8,7 @@ import Beckn.Types.FMD.API.Init (InitReq)
 import Beckn.Types.FMD.API.Search (SearchReq)
 import Beckn.Types.FMD.API.Select (SelectReq)
 import Beckn.Types.FMD.API.Status (StatusReq)
+import Beckn.Types.FMD.API.Update (UpdateReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
@@ -17,6 +18,7 @@ import qualified Product.Init as P
 import qualified Product.Search as P
 import qualified Product.Select as P
 import qualified Product.Status as P
+import qualified Product.Update as P
 import Servant
 import Utils.Auth
 
@@ -29,6 +31,7 @@ type ProviderAPI =
            :<|> ProviderConfirmAPI
            :<|> ProviderStatusAPI
            :<|> ProviderCancelAPI
+           :<|> ProviderUpdateAPI
        )
 
 providerAPI :: Proxy ProviderAPI
@@ -70,6 +73,12 @@ type ProviderCancelAPI =
     :> ReqBody '[JSON] CancelReq
     :> Post '[JSON] AckResponse
 
+type ProviderUpdateAPI =
+  "update"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] UpdateReq
+    :> Post '[JSON] AckResponse
+
 mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServerR r ProviderAPI
 mockProviderBackendServer _key =
   pure "Mock provider backend is UP"
@@ -79,6 +88,7 @@ mockProviderBackendServer _key =
     :<|> confirmFlow
     :<|> statusFlow
     :<|> cancelFlow
+    :<|> updateFlow
 
 searchFlow :: FlowServerR r ProviderSearchAPI
 searchFlow = P.search
@@ -97,3 +107,6 @@ statusFlow = P.status
 
 cancelFlow :: FlowServerR r ProviderCancelAPI
 cancelFlow = P.cancel
+
+updateFlow :: FlowServerR r ProviderUpdateAPI
+updateFlow = P.update
