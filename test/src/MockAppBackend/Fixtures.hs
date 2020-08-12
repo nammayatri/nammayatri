@@ -9,6 +9,7 @@ import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
+import Beckn.Types.FMD.API.Update
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -83,4 +84,14 @@ buildOnConfirmReq context =
   CallbackReq
     { context,
       contents = Right $ ConfirmResMessage example
+    }
+
+onUpdateFlow :: Text -> OnUpdateReq -> ClientM Common.AckResponse
+onUpdateFlow = client (Proxy :: Proxy MockAppRoutes.OnUpdateAPI)
+
+buildOnUpdateReq :: Context -> OnUpdateReq
+buildOnUpdateReq context =
+  CallbackReq
+    { context,
+      contents = Right $ UpdateResMessage example
     }

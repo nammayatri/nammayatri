@@ -6,6 +6,7 @@ import qualified MockAppBackend.OnConfirm as OnConfirm
 import qualified MockAppBackend.OnInit as OnInit
 import qualified MockAppBackend.OnSearch as OnSearch
 import qualified MockAppBackend.OnSelect as OnSelect
+import qualified MockAppBackend.OnUpdate as OnUpdate
 import qualified MockAppBackend.TriggerSearch as TriggerSearch
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
@@ -18,10 +19,11 @@ mkTestTree = do
   onSelectSpec <- testSpec "OnSelect" OnSelect.spec
   onInitSpec <- testSpec "OnInit" OnInit.spec
   onConfirmSpec <- testSpec "OnConfirm" OnConfirm.spec
+  onUpdateSpec <- testSpec "OnUpdate" OnUpdate.spec
   return $
     testGroup
       "MockAppBackend"
       [ healthCheckSpec,
         after AllSucceed "HealthCheck" $
-          testGroup "APIs" [triggerSearchSpec, onSearchSpec, onSelectSpec, onInitSpec, onConfirmSpec]
+          testGroup "APIs" [triggerSearchSpec, onSearchSpec, onSelectSpec, onInitSpec, onConfirmSpec, onUpdateSpec]
       ]

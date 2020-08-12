@@ -6,6 +6,7 @@ import qualified MockProviderBackend.HealthCheck as HC
 import qualified MockProviderBackend.Init as Init
 import qualified MockProviderBackend.Search as Search
 import qualified MockProviderBackend.Select as Select
+import qualified MockProviderBackend.Update as Update
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 
@@ -16,10 +17,11 @@ mkTestTree = do
   selectSpec <- testSpec "Select" Select.spec
   confirmSpec <- testSpec "Confirm" Confirm.spec
   initSpec <- testSpec "Init" Init.spec
+  updateSpec <- testSpec "Update" Update.spec
   return $
     testGroup
       "MockProviderBackend"
       [ healthCheckSpec,
         after AllSucceed "HealthCheck" $
-          testGroup "APIs" [searchSpec, selectSpec, confirmSpec, initSpec]
+          testGroup "APIs" [searchSpec, selectSpec, confirmSpec, initSpec, updateSpec]
       ]

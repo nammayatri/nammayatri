@@ -8,6 +8,7 @@ import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
+import Beckn.Types.FMD.API.Update
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -78,4 +79,14 @@ buildFMDConfirmReq context =
   ConfirmReq
     { context,
       message = ConfirmReqMessage example
+    }
+
+updateFlow :: Text -> UpdateReq -> ClientM Common.AckResponse
+updateFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderUpdateAPI)
+
+buildFMDUpdateReq :: Context -> UpdateReq
+buildFMDUpdateReq context =
+  UpdateReq
+    { context,
+      message = UpdateReqMessage "update_pickup_location" example
     }
