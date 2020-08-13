@@ -99,6 +99,11 @@ dependencies:
   - utf8-string
   - geojson
   - safe-money
+  - hspec
+  - hspec-core
+  - tasty
+  - tasty-hunit
+  - tasty-hspec
 
 ghc-options:
   - -Wall
@@ -110,12 +115,6 @@ ghc-options:
 library:
   source-dirs:
     - src
-  dependencies:
-    - hspec
-    - hspec-core
-    - tasty
-    - tasty-hunit
-    - tasty-hspec
 
 tests:
   beckn-core-tests:
@@ -125,8 +124,3 @@ tests:
       - test/src
     dependencies:
       - beckn-core
-      - hspec
-      - hspec-core
-      - tasty
-      - tasty-hunit
-      - tasty-hspec

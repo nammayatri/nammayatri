@@ -71,6 +71,10 @@ dependencies:
   - uuid
   - vault
   - warp
+  - hspec
+  - hspec-core
+  - tasty
+  - tasty-hspec
 
 ghc-options:
   - -Wall
@@ -82,11 +86,6 @@ ghc-options:
 library:
   source-dirs:
     - src
-  dependencies:
-    - hspec
-    - hspec-core
-    - tasty
-    - tasty-hspec
 
 tests:
   beckn-integ-test:
@@ -94,8 +93,4 @@ tests:
     source-dirs:
       - app
     dependencies:
-      - hspec
-      - hspec-core
-      - tasty
-      - tasty-hspec
       - beckn-test
