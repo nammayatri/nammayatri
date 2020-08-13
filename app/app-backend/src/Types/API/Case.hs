@@ -14,7 +14,10 @@ data StatusRes = StatusRes
   { _case :: Case,
     _productInstance :: [ProdInstRes],
     _fromLocation :: Location,
-    _toLocation :: Location
+    _toLocation :: Location,
+    _total :: Maybe Text,
+    _accepted :: Maybe Text,
+    _declined :: Maybe Text
   }
   deriving (Show, Generic, ToSchema)
 

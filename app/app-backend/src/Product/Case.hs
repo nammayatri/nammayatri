@@ -7,7 +7,7 @@ import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Models.Case as Case
@@ -29,7 +29,10 @@ status person caseId = withFlowHandler $ do
   toLocation <-
     fromMaybeM500 "Could not find to location"
       =<< Location.findLocationById (LocationId $ case_ ^. #_toLocationId)
-  return $ StatusRes case_ prodInstRes fromLocation toLocation
+  let accepted = length $ filter (\x -> API._status x == PI.INSTOCK) prodInstRes
+      declined = length $ filter (\x -> API._status x == PI.OUTOFSTOCK) prodInstRes
+      total = case_ ^. #_udf3
+  return $ StatusRes case_ prodInstRes fromLocation toLocation total (Just $ show accepted) (Just $ show declined)
 
 list ::
   Person.Person ->
@@ -84,5 +87,5 @@ mkProdRes prodList prodInst =
 getProdInstances :: Case.Case -> Flow [ProdInstRes]
 getProdInstances case_@Case.Case {..} = do
   piList <- MPI.findAllByCaseId (Case._id case_)
-  products <- Products.findAllByIds (ProductInstance._productId <$> piList)
+  products <- Products.findAllByIds (PI._productId <$> piList)
   return $ mkProdRes products <$> piList

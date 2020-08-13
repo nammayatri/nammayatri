@@ -364,7 +364,7 @@ notifyOrgCountToGateway caseSid count = do
 
 mkOrgCountPayload :: Text -> Integer -> Flow OnStatusReq
 mkOrgCountPayload caseSid count = do
-  context <- mkContext "on_status" "" -- FIXME: transaction id?
+  context <- mkContext "on_status" caseSid
   order <- mkOrgCountRes
   let onStatusMessage = OnStatusReqMessage order
   return $ OnStatusReq context onStatusMessage Nothing

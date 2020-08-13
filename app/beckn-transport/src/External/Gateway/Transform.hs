@@ -87,11 +87,13 @@ mkPrice prodInst =
 
 mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow Mobility.Service
 mkServiceOffer c pis _allPis orgInfo = do
-  catalog <- mkCatalog pis
+  mcatalog <- case pis of
+    [] -> return Nothing
+    _ -> Just <$> mkCatalog pis
   return
     Mobility.Service
       { _id = _getCaseId $ c ^. #_id,
-        _catalog = Just catalog,
+        _catalog = mcatalog,
         _provider = Just $ mkProvider orgInfo,
         _policies = []
       }

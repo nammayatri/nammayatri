@@ -15,7 +15,7 @@ import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common
 import Data.Aeson (encode)
@@ -28,7 +28,7 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.Product as Products
-import qualified Models.ProductInstance as ProductInstance
+import qualified Models.ProductInstance as QPI
 import Servant hiding (Context)
 import qualified Storage.Queries.Location as Location
 import qualified Types.API.Common as API
@@ -83,23 +83,26 @@ searchCbService req service = do
   let mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
       caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+  case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
+  personId <-
+    maybe
+      (L.throwException $ err500 {errBody = "No person linked to case"})
+      (return . PersonId)
+      (Case._requestor case_)
   case mcatalog of
-    Nothing -> return ()
+    Nothing -> do
+      declinedPI <- mkDeclinedProductInstance case_ mprovider personId
+      QPI.create declinedPI
+      return ()
     Just catalog -> do
-      case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
       when
         (case_ ^. #_status == Case.CLOSED)
         (L.throwException $ err400 {errBody = "Case expired"})
-      personId <-
-        maybe
-          (L.throwException $ err500 {errBody = "No person linked to case"})
-          (return . PersonId)
-          (Case._requestor case_)
       let items = catalog ^. #_items
       products <- traverse (mkProduct case_ mprovider) items
       traverse_ Products.create products
       productInstances <- traverse (mkProductInstance case_ mprovider personId) items
-      traverse_ ProductInstance.create productInstances
+      traverse_ QPI.create productInstances
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId case_ productInstances
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
@@ -216,7 +219,7 @@ mkProduct case_ _mprovider item = do
         _updatedAt = now
       }
 
-mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow ProductInstance.ProductInstance
+mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
 mkProductInstance case_ mprovider personId item = do
   now <- getCurrTime
   let info = ProductInfo (fromBeckn <$> mprovider) Nothing
@@ -228,21 +231,56 @@ mkProductInstance case_ mprovider personId item = do
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
   return
-    ProductInstance.ProductInstance
+    PI.ProductInstance
       { _id = ProductInstanceId $ item ^. #_id,
         _shortId = "",
         _caseId = case_ ^. #_id,
         _productId = ProductsId $ item ^. #_id, -- TODO needs to be fixed
         _personId = Just personId,
         _quantity = 1,
-        _entityType = ProductInstance.VEHICLE,
-        _status = ProductInstance.INSTOCK,
+        _entityType = PI.VEHICLE,
+        _status = PI.INSTOCK,
         _startTime = case_ ^. #_startTime,
         _endTime = case_ ^. #_endTime,
         _validTill = case_ ^. #_validTill,
         _parentId = Nothing,
         _entityId = Nothing,
         _price = price,
+        _type = Case.RIDESEARCH,
+        _udf1 = Nothing,
+        _udf2 = Nothing,
+        _udf3 = Nothing,
+        _udf4 = Nothing,
+        _udf5 = Nothing,
+        _fromLocation = Just $ case_ ^. #_fromLocationId,
+        _toLocation = Just $ case_ ^. #_toLocationId,
+        _info = Just $ encodeToText info,
+        _organizationId = "", -- TODO: fix this
+        _createdAt = now,
+        _updatedAt = now
+      }
+
+mkDeclinedProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Flow PI.ProductInstance
+mkDeclinedProductInstance case_ mprovider personId = do
+  now <- getCurrentTimeUTC
+  piId <- generateGUID
+  let info = ProductInfo mprovider Nothing
+  return
+    PI.ProductInstance
+      { _id = ProductInstanceId piId,
+        _shortId = "",
+        _caseId = case_ ^. #_id,
+        _productId = ProductsId piId,
+        _personId = Just personId,
+        _quantity = 1,
+        _entityType = PI.VEHICLE,
+        _status = PI.OUTOFSTOCK,
+        _startTime = case_ ^. #_startTime,
+        _endTime = case_ ^. #_endTime,
+        _validTill = case_ ^. #_validTill,
+        _parentId = Nothing,
+        _entityId = Nothing,
+        _price = 0,
         _type = Case.RIDESEARCH,
         _udf1 = Nothing,
         _udf2 = Nothing,

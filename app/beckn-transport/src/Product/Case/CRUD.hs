@@ -15,7 +15,7 @@ import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.ProductInstance as ProdInst
+import Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -86,16 +86,17 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
   case SP._organizationId person of
     Just orgId -> case _transporterChoice of
       "ACCEPTED" -> do
-        prodInst <- createProductInstance c p _quote orgId ProdInst.INSTOCK
-        notifyGateway c prodInst orgId
+        prodInst <- createProductInstance c p _quote orgId PI.INSTOCK
+        notifyGateway c prodInst orgId PI.INSTOCK
         return c
       "DECLINED" -> do
-        _ <- createProductInstance c p _quote orgId ProdInst.OUTOFSTOCK
+        declinedProdInst <- createProductInstance c p _quote orgId PI.OUTOFSTOCK
+        notifyGateway c declinedProdInst orgId PI.OUTOFSTOCK
         return c
       _ -> L.throwException $ err400 {errBody = "TRANSPORTER CHOICE INVALID"}
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
-createProductInstance :: Case -> Products -> Maybe Amount -> Text -> ProdInst.ProductInstanceStatus -> Flow ProductInstance
+createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do
   piId <- L.generateGUID
   (currTime :: UTCTime) <- getCurrTime
@@ -111,7 +112,7 @@ createProductInstance cs prod price orgId status = do
           _productId = Product._id prod,
           _personId = Nothing,
           _shortId = T.pack shortId,
-          _entityType = ProdInst.VEHICLE,
+          _entityType = PI.VEHICLE,
           _entityId = Nothing,
           _quantity = 1,
           _type = Case.RIDESEARCH,
@@ -134,13 +135,15 @@ createProductInstance cs prod price orgId status = do
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> ProductInstance -> Text -> Flow ()
-notifyGateway c prodInst orgId = do
+notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Flow ()
+notifyGateway c prodInst orgId piStatus = do
   L.logInfo @Text "notifyGateway" $ show c
   allPis <- QPI.findAllByCaseId (c ^. #_id)
   L.logInfo @Text "notifyGateway" $ show prodInst
   orgInfo <- OQ.findOrganizationById (OrganizationId orgId)
-  onSearchPayload <- mkOnSearchPayload c [prodInst] allPis orgInfo
+  onSearchPayload <- case piStatus of
+    PI.OUTOFSTOCK -> mkOnSearchPayload c [] allPis orgInfo
+    _ -> mkOnSearchPayload c [prodInst] allPis orgInfo
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
   _ <- Gateway.onSearch onSearchPayload
   return ()
