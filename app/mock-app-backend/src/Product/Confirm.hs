@@ -25,6 +25,6 @@ confirmCb _unit req = withFlowHandler $ do
   -- quotId = req ^. #message . #order . #_order_id
   -- confirmReq <- buildConfirmReq (req ^. #context) quotId
   case bppUrl $ req ^. #context of
-    Nothing -> EL.logError @Text "mock-app-backend" "Bad bpp_nw_address"
+    Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
     Just _ -> EL.logError @Text "mock-app-backend" "Confirm finished successfully"
   return resp

@@ -20,7 +20,7 @@ initCb _unit req = withFlowHandler $ do
   EL.logDebug @Text "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   confirmReq <- buildConfirmReq (req ^. #context)
   case bppUrl $ req ^. #context of
-    Nothing -> EL.logError @Text "mock-app-backend" "Bad bpp_nw_address"
+    Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
     Just url ->
       void $
         callClient "confirm" url $

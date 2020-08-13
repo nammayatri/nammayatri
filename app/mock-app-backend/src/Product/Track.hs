@@ -18,7 +18,7 @@ trackCb _unit req = withFlowHandler $ do
   EL.logDebug @Text "mock_app_backend" $ "track_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   --  let tracker = req ^. #message .  #tracking
   case bppUrl $ req ^. #context of
-    Nothing -> EL.logError @Text "mock-app-backend" "Bad bpp_nw_address"
+    Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
     Just _ -> EL.logDebug @Text "mock-app-backend" "Tracking Started Successfully"
   -- TODO: make call to update api
   --      void $

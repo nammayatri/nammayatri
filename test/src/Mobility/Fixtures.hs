@@ -138,15 +138,10 @@ buildContext act tid utcTime =
       _city = Nothing,
       _core_version = Just "0.8.0",
       _domain_version = Just "0.8.0",
-      _bap_id = Nothing,
-      _bg_id = Nothing,
-      _bpp_id = Nothing,
-      _bap_nw_address = Nothing,
-      _bg_nw_address = Nothing,
-      _bpp_nw_address = Nothing,
-      _request_transaction_id = tid,
-      _timestamp = utcTime,
-      _token = Nothing
+      _ac_id = Nothing,
+      _transaction_id = tid,
+      _message_id = tid,
+      _timestamp = utcTime
     }
 
 searchReq :: Text -> Text -> UTCTime -> LocalTime -> Search.SearchReq

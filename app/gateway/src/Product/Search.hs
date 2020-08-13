@@ -33,15 +33,13 @@ parseOrgUrl =
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
   let search' = ET.client $ withClientTracing searchAPI
-      messageId = req ^. #context . #_request_transaction_id
+      messageId = req ^. #context . #_transaction_id
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providers <- BP.lookup $ req ^. #context
-  bgId <- L.runIO $ lookupEnv "GATEWAY_ID"
   bgNwAddr <- L.runIO $ lookupEnv "GATEWAY_NW_ADDRESS"
   let context =
         (req ^. #context)
-          { _bg_id = fromString <$> bgId,
-            _bg_nw_address = fromString <$> bgNwAddr
+          { _ac_id = fromString <$> bgNwAddr
           }
   BA.insert messageId appUrl
   forM_ providers $ \provider -> fork "Provider search" $ do
@@ -62,7 +60,7 @@ search org req = withFlowHandler $ do
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _org req = withFlowHandler $ do
   let onSearch = ET.client $ withClientTracing onSearchAPI
-      messageId = req ^. #context . #_request_transaction_id
+      messageId = req ^. #context . #_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
   eRes <- callAPIWithTrail baseUrl (onSearch "" req) "on_search"

@@ -145,7 +145,6 @@ notifyGateway c prodInst orgId = do
 mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrTime'
-  bppId <- L.runIO $ lookupEnv "PROVIDER_ID"
   bppNwAddr <- L.runIO $ lookupEnv "PROVIDER_NW_ADDRESS"
   let context =
         Context
@@ -155,14 +154,9 @@ mkOnSearchPayload c pis allPis orgInfo = do
             _action = "ON_SEARCH",
             _core_version = Just "0.8.0",
             _domain_version = Just "0.8.0",
-            _request_transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
-            _bap_id = Nothing,
-            _bg_id = Nothing,
-            _bpp_id = fromString <$> bppId,
-            _bap_nw_address = Nothing,
-            _bg_nw_address = Nothing,
-            _bpp_nw_address = fromString <$> bppNwAddr,
-            _token = Nothing,
+            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _message_id = c ^. #_shortId,
+            _ac_id = fromString <$> bppNwAddr,
             _timestamp = currTime
           }
   service <- GT.mkServiceOffer c pis allPis (Just orgInfo)

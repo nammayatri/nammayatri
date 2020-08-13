@@ -16,13 +16,8 @@ buildContext action tId = do
         _action = action,
         _core_version = Nothing,
         _domain_version = Nothing,
-        _request_transaction_id = tId,
-        _bap_id = Nothing,
-        _bg_id = Nothing,
-        _bpp_id = Nothing,
-        _bap_nw_address = Nothing,
-        _bg_nw_address = Nothing,
-        _bpp_nw_address = Nothing,
-        _token = Nothing,
+        _transaction_id = tId,
+        _message_id = tId,
+        _ac_id = Nothing,
         _timestamp = now
       }

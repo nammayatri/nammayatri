@@ -109,15 +109,10 @@ mkAckResponse' txnId action _message = do
               _action = action,
               _core_version = Nothing,
               _domain_version = Nothing,
-              _bap_id = Nothing,
-              _bg_id = Nothing,
-              _bpp_id = Nothing,
-              _bap_nw_address = Nothing,
-              _bg_nw_address = Nothing,
-              _bpp_nw_address = Nothing,
-              _request_transaction_id = txnId,
-              _timestamp = currTime,
-              _token = Nothing
+              _ac_id = Nothing,
+              _transaction_id = txnId,
+              _message_id = txnId,
+              _timestamp = currTime
             },
         _message =
           ack action,

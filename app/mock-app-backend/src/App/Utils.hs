@@ -103,7 +103,6 @@ buildDraftOrder itemId = do
 buildContext :: Text -> Text -> Flow Context
 buildContext act tid = do
   utcTime <- getCurrTime'
-  bapId <- EL.runIO $ lookupEnv "MOCK_APP_ID"
   bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
   return $
     Context
@@ -113,15 +112,10 @@ buildContext act tid = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.7.0",
-        _bap_id = fromString <$> bapId,
-        _bg_id = Nothing,
-        _bpp_id = Nothing,
-        _bap_nw_address = fromString <$> bapNwAddr,
-        _bg_nw_address = Nothing,
-        _bpp_nw_address = Nothing,
-        _request_transaction_id = tid,
-        _timestamp = utcTime,
-        _token = Nothing
+        _ac_id = fromString <$> bapNwAddr,
+        _transaction_id = tid,
+        _message_id = tid,
+        _timestamp = utcTime
       }
 
 toLocalTime :: UTCTime -> LocalTime
@@ -166,4 +160,4 @@ buildConfirmReq ctx =
 
 bppUrl :: Context -> Maybe BaseUrl
 bppUrl context =
-  parseBaseUrl . toString =<< context ^. #_bpp_nw_address
+  parseBaseUrl . toString =<< context ^. #_ac_id

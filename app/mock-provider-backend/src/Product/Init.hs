@@ -18,16 +18,14 @@ import System.Environment (lookupEnv)
 
 init :: () -> InitReq -> FlowHandlerR r AckResponse
 init _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
-  bppId <- L.runIO $ lookupEnv "MOCK_PROVIDER_ID"
   bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
   let context =
         (req ^. #context)
-          { _bpp_id = fromString <$> bppId,
-            _bpp_nw_address = fromString <$> bppNwAddr
+          { _ac_id = fromString <$> bppNwAddr
           }
-      mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_bap_nw_address
+      mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
   case mAppUrl of
-    Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
+    Nothing -> L.logError @Text "mock_provider_backend" "Bad ac_id"
     Just appUrl ->
       forkAsync "Init" $ do
         msg <- mkInitResMessage

@@ -37,7 +37,7 @@ cancelProductInstance person req = do
   where
     sendCancelReq prodInstId = do
       let context = req ^. #context
-      let txnId = context ^. #_request_transaction_id
+      let txnId = context ^. #_transaction_id
       baseUrl <- Gateway.getProviderBaseUrl
       let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrderId prodInstId)
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
@@ -45,7 +45,7 @@ cancelProductInstance person req = do
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
     errResp pStatus = do
-      let txnId = req ^. #context . #_request_transaction_id
+      let txnId = req ^. #context . #_transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
 cancelCase :: Person.Person -> CancelReq -> Flow CancelRes
@@ -55,7 +55,7 @@ cancelCase person req = do
   if isCaseCancellable case_
     then do
       let context = req ^. #context
-      let txnId = context ^. #_request_transaction_id
+      let txnId = context ^. #_transaction_id
       productInstances <- MPI.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
@@ -70,7 +70,7 @@ cancelCase person req = do
             Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
             Right _ -> mkAckResponse txnId "cancel"
     else do
-      let txnId = req ^. #context . #_request_transaction_id
+      let txnId = req ^. #context . #_transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
   where
     callCancelApi ::
@@ -79,7 +79,7 @@ cancelCase person req = do
       PI.ProductInstance ->
       Flow (Either Text ())
     callCancelApi context baseUrl prodInst = do
-      let txnId = context ^. #_request_transaction_id
+      let txnId = context ^. #_transaction_id
       let prodInstId = _getProductInstanceId $ prodInst ^. #_id
       let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrderId prodInstId)
       Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
@@ -102,7 +102,7 @@ isCaseCancellable case_ =
 onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
-  let txnId = context ^. #_request_transaction_id
+  let txnId = context ^. #_transaction_id
   let prodInstId = ProductInstanceId $ req ^. #message . #id
   -- TODO: Handle usecase where multiple productinstances exists for one product
 

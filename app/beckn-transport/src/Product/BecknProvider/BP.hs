@@ -140,7 +140,7 @@ mkCase req uuid now validity fromLocation toLocation = do
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = req ^. #context . #_request_transaction_id,
+      _shortId = req ^. #context . #_transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
@@ -169,7 +169,7 @@ confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo @Text "confirm API Flow" "Reached"
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
-  let caseShortId = req ^. #context . #_request_transaction_id -- change to message.transactionId
+  let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
   searchCase <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById prodInstId
   orderCase <- mkOrderCase searchCase
@@ -331,15 +331,10 @@ mkContext action tId = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.8.0",
-        _request_transaction_id = tId,
-        _bap_id = Nothing,
-        _bg_id = Nothing,
-        _bpp_id = Nothing,
-        _bap_nw_address = Nothing,
-        _bg_nw_address = Nothing,
-        _bpp_nw_address = Nothing,
-        _timestamp = currTime,
-        _token = Nothing
+        _transaction_id = tId,
+        _message_id = tId,
+        _ac_id = Nothing,
+        _timestamp = currTime
       }
 
 mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> Flow OnConfirmReq

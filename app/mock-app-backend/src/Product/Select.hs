@@ -27,7 +27,7 @@ selectCb _unit req = withFlowHandler $ do
       let quoteId = msg ^. #quote . #_id
       initReq <- buildInitReq (req ^. #context) quoteId
       case bppUrl $ req ^. #context of
-        Nothing -> EL.logError @Text "mock-app-backend" "Bad bpp_nw_address"
+        Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
         Just url ->
           void $
             callClient "init" url $

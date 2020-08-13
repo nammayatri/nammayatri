@@ -47,13 +47,13 @@ search org req = do
     case eres of
       Left err ->
         case err of
-          FailureResponse _ (Response _ _ _ body) -> sendErrCb org dzBPId dzBPNwAddress body
+          FailureResponse _ (Response _ _ _ body) -> sendErrCb org dzBPNwAddress body
           _ -> L.logDebug @Text "getQuoteErr" (show err)
-      Right res -> sendCb org dzBPId dzBPNwAddress res
+      Right res -> sendCb org dzBPNwAddress res
   returnAck config (req ^. #context)
   where
-    sendCb org' dzBPId dzBPNwAddress res = do
-      onSearchReq <- mkOnSearchReq org' (updateContext (req ^. #context) dzBPId dzBPNwAddress) res
+    sendCb org' dzBPNwAddress res = do
+      onSearchReq <- mkOnSearchReq org' (updateContext (req ^. #context) dzBPNwAddress) res
       cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
       cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       cbres <- callCbAPI cbApiKey cbUrl onSearchReq
@@ -63,12 +63,12 @@ search org req = do
 
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onSearchAPI cbApiKey
 
-    sendErrCb org' dzBPId dzBPNwAddress errbody =
+    sendErrCb org' dzBPNwAddress errbody =
       case decode errbody of
         Just err -> do
           cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
           cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-          onSearchErrReq <- mkOnSearchErrReq org' (updateContext (req ^. #context) dzBPId dzBPNwAddress) err
+          onSearchErrReq <- mkOnSearchErrReq org' (updateContext (req ^. #context) dzBPNwAddress) err
           cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
           L.logDebug @Text "cb" $
             decodeUtf8 (encode onSearchErrReq)
@@ -79,10 +79,10 @@ select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
   config@DunzoConfig {..} <- getDunzoConfig org
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  let maybeBaConfig = find (\x -> req ^. #context . #_bap_id == Just (x ^. #bap_id)) dzBAConfigs
+  let maybeBaConfig = find (\x -> req ^. #context . #_ac_id == Just (x ^. #bap_nw_address)) dzBAConfigs
   baUrl <-
     fromMaybeM500 "CB_URL_NOT_CONFIGURED" $
-      (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_bap_nw_address)
+      (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_ac_id)
   cbUrl <- parseBaseUrl baUrl
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
@@ -119,7 +119,7 @@ init org req = do
   conf@DunzoConfig {..} <- getDunzoConfig org
   let context = req ^. #context
   let quoteId = req ^. (#message . #quotation_id)
-  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
   fork "init" do
@@ -200,7 +200,7 @@ init org req = do
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
   dconf@DunzoConfig {..} <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   bapConfig <- getBAConfig bapNwAddr dconf
   let reqOrder = req ^. (#message . #order)
   let orderId = reqOrder ^. #_id
@@ -277,7 +277,7 @@ track :: Organization -> TrackReq -> Flow TrackRes
 track org req = do
   let orderId = req ^. (#message . #order_id)
   conf@DunzoConfig {..} <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   fork "track" do
@@ -296,7 +296,7 @@ status :: Organization -> StatusReq -> Flow StatusRes
 status org req = do
   conf@DunzoConfig {..} <- getDunzoConfig org
   let orderId = req ^. (#message . #order_id)
-  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   c <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = c ^. #_shortId
@@ -344,7 +344,7 @@ cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = do
   let oId = req ^. (#message . #order_id)
   conf@DunzoConfig {..} <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   bapConfig <- getBAConfig bapNwAddr conf
   case_ <- Storage.findById (CaseId oId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = case_ ^. #_shortId
@@ -392,7 +392,7 @@ cancel org req = do
 update :: Organization -> UpdateReq -> Flow UpdateRes
 update org req = do
   conf <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_bap_nw_address) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_AC_ID"
   baConfig <- getBAConfig bapNwAddr conf
   fork "update" do
     -- TODO: Dunzo doesnt have update
@@ -433,4 +433,4 @@ getBAConfig bapNwAddr DunzoConfig {..} =
     & fromMaybeM500 "BAP_NOT_CONFIGURED"
 
 returnAck :: DunzoConfig -> Context -> Flow AckResponse
-returnAck DunzoConfig {..} context = return $ AckResponse (updateContext context dzBPId dzBPNwAddress) (ack "ACK") Nothing
+returnAck DunzoConfig {..} context = return $ AckResponse (updateContext context dzBPNwAddress) (ack "ACK") Nothing

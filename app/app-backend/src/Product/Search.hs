@@ -52,13 +52,11 @@ search person req = withFlowHandler $ do
   Case.create case_
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   gatewayUrl <- Gateway.getGatewayBaseUrl
-  bapId <- L.runIO $ lookupEnv "APP_ID"
   bapNwAddr <- L.runIO $ lookupEnv "APP_NW_ADDRESS"
   let context =
         (req ^. #context)
-          { _request_transaction_id = _getCaseId (case_ ^. #_id),
-            _bap_id = fromString <$> bapId,
-            _bap_nw_address = fromString <$> bapNwAddr
+          { _transaction_id = _getCaseId (case_ ^. #_id),
+            _ac_id = fromString <$> bapNwAddr
           }
   eres <- Gateway.search gatewayUrl $ req & #context .~ context
   let sAck =
@@ -85,7 +83,7 @@ searchCbService req service = do
   -- TODO: Verify api key here
   let mprovider = service ^. #_provider
       mcatalog = service ^. #_catalog
-      caseId = CaseId $ req ^. #context . #_request_transaction_id --CaseId $ service ^. #_id
+      caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case mcatalog of
     Nothing -> return ()
     Just catalog -> do
@@ -151,7 +149,7 @@ mkCase req userId from to = do
         _udf1 = Just $ intent ^. #_vehicle . #variant,
         _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
         _udf3 = Nothing,
-        _udf4 = Just $ context ^. #_request_transaction_id,
+        _udf4 = Just $ context ^. #_transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,

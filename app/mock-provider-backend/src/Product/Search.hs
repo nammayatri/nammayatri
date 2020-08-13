@@ -22,14 +22,12 @@ import System.Environment (lookupEnv)
 
 search :: () -> SearchReq -> FlowHandlerR r AckResponse
 search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
-  bppId <- L.runIO $ lookupEnv "MOCK_PROVIDER_ID"
   bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
   let context =
         (req ^. #context)
-          { _bpp_id = fromString <$> bppId,
-            _bpp_nw_address = fromString <$> bppNwAddr
+          { _ac_id = fromString <$> bppNwAddr
           }
-  case context ^. #_request_transaction_id of
+  case context ^. #_transaction_id of
     tId
       | tId == noSearchResultId ->
         pass

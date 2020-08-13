@@ -31,7 +31,7 @@ searchCb _unit req = withFlowHandler $ do
               void $
                 callClient "select" url $
                   client selectAPI "test-app-2-key" selectReq
-            Nothing -> EL.logError @Text "mock_app_backend" "Bad bpp_nw_address"
+            Nothing -> EL.logError @Text "mock_app_backend" "Bad ac_id"
         Nothing ->
           EL.logDebug @Text "mock_app_backend" "search_cb error: no items in the catalog."
     Left err -> EL.logDebug @Text "mock_app_backend" $ "search_cb error: " <> show err
