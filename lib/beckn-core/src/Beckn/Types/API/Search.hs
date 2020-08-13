@@ -11,7 +11,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type SearchAPI v =
   "search"
@@ -21,6 +21,16 @@ type SearchAPI v =
 
 searchAPI :: Proxy (SearchAPI v)
 searchAPI = Proxy
+
+type NSDLSearchAPI =
+  "search"
+    :> Header "userid" Text
+    :> Header "Password" Text
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
+
+nsdlSearchAPI :: Proxy NSDLSearchAPI
+nsdlSearchAPI = Proxy
 
 type OnSearchAPI v =
   "on_search"

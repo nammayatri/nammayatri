@@ -22,8 +22,16 @@ import Types.API.Location
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
-  res <- callAPIWithTrail url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
+  mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
+  let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
+  res <- case mNsdlBaseUrl of
+    Just nsdlBaseUrl -> do
+      nsdlBapId <- L.runIO $ lookupEnv "NSDL_BAP_ID"
+      nsdlBapPwd <- L.runIO $ lookupEnv "NSDL_BAP_PASSWORD"
+      callAPIWithTrail nsdlBaseUrl (API.nsdlSearch (T.pack <$> nsdlBapId) (T.pack <$> nsdlBapPwd) req) "search"
+    Nothing -> do
+      apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
+      callAPIWithTrail url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
   case res of
     Left err -> do
       L.logError @Text "Search" ("error occurred while search: " <> show err)
