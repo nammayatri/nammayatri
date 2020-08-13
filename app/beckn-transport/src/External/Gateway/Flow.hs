@@ -23,9 +23,17 @@ import System.Environment
 
 onSearch :: OnSearchReq -> Flow AckResponse
 onSearch req@CallbackReq {context} = do
-  url <- getGatewayBaseUrl
-  apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
-  res <- callAPIWithTrail url (API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req) "on_search"
+  mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
+  let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
+  res <- case mNsdlBaseUrl of
+    Just nsdlBaseUrl -> do
+      nsdlBppId <- L.runIO $ lookupEnv "NSDL_BPP_ID"
+      nsdlBppPwd <- L.runIO $ lookupEnv "NSDL_BPP_PASSWORD"
+      callAPIWithTrail nsdlBaseUrl (API.nsdlOnSearch (T.pack <$> nsdlBppId) (T.pack <$> nsdlBppPwd) req) "on_search"
+    Nothing -> do
+      url <- getGatewayBaseUrl
+      apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
+      callAPIWithTrail url (API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req) "on_search"
   whenRight res $ \_ ->
     L.logInfo @Text "OnSearch" "OnSearch callback successfully delivered"
   whenLeft res $ \err ->

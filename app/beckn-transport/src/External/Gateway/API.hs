@@ -16,6 +16,9 @@ import Servant
 onSearch :: Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 onSearch = ET.client $ withClientTracing onSearchAPI
 
+nsdlOnSearch :: Maybe Text -> Maybe Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
+nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI
+
 type TrackAPI =
   "on_track"
     :> ReqBody '[JSON] OnTrackTripReq

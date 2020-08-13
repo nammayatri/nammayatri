@@ -26,3 +26,6 @@ data:
   USE_FAKE_SMS: "7891"
   DEFAULT_CASE_EXPIRY: "7200"
   DEFAULT_CONFIRM_EXPIRY: "7200"
+  NSDL_GATEWAY_URL: "https://pilot-gateway-1.beckn.nsdl.co.in"
+  NSDL_BPP_ID: "juspaybpp1"
+  NSDL_BPP_PASSWORD: "BecKn_bpp1@1234"

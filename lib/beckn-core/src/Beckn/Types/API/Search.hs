@@ -41,6 +41,16 @@ type OnSearchAPI v =
 onSearchAPI :: Proxy (OnSearchAPI v)
 onSearchAPI = Proxy
 
+type NSDLOnSearchAPI =
+  "search"
+    :> Header "userid" Text
+    :> Header "Password" Text
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] OnSearchRes
+
+nsdlOnSearchAPI :: Proxy NSDLOnSearchAPI
+nsdlOnSearchAPI = Proxy
+
 data SearchReq = SearchReq
   { context :: Context,
     message :: SearchIntent
