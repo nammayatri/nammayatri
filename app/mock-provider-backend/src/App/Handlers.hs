@@ -2,6 +2,7 @@ module App.Handlers where
 
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.FMD.API.Cancel (CancelReq)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq)
 import Beckn.Types.FMD.API.Init (InitReq)
 import Beckn.Types.FMD.API.Search (SearchReq)
@@ -10,6 +11,7 @@ import Beckn.Types.FMD.API.Status (StatusReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
+import qualified Product.Cancel as P
 import qualified Product.Confirm as P
 import qualified Product.Init as P
 import qualified Product.Search as P
@@ -26,6 +28,7 @@ type ProviderAPI =
            :<|> ProviderInitAPI
            :<|> ProviderConfirmAPI
            :<|> ProviderStatusAPI
+           :<|> ProviderCancelAPI
        )
 
 providerAPI :: Proxy ProviderAPI
@@ -61,6 +64,12 @@ type ProviderStatusAPI =
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] AckResponse
 
+type ProviderCancelAPI =
+  "cancel"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] CancelReq
+    :> Post '[JSON] AckResponse
+
 mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServerR r ProviderAPI
 mockProviderBackendServer _key =
   pure "Mock provider backend is UP"
@@ -69,6 +78,7 @@ mockProviderBackendServer _key =
     :<|> initFlow
     :<|> confirmFlow
     :<|> statusFlow
+    :<|> cancelFlow
 
 searchFlow :: FlowServerR r ProviderSearchAPI
 searchFlow = P.search
@@ -84,3 +94,6 @@ confirmFlow = P.confirm
 
 statusFlow :: FlowServerR r ProviderStatusAPI
 statusFlow = P.status
+
+cancelFlow :: FlowServerR r ProviderCancelAPI
+cancelFlow = P.cancel

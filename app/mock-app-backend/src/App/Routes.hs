@@ -2,6 +2,7 @@ module App.Routes where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.FMD.API.Cancel (OnCancelReq)
 import Beckn.Types.FMD.API.Confirm (OnConfirmReq)
 import Beckn.Types.FMD.API.Init (OnInitReq)
 import Beckn.Types.FMD.API.Search (OnSearchReq)
@@ -11,6 +12,7 @@ import Beckn.Types.FMD.API.Track (OnTrackReq)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
+import qualified Product.Cancel as P
 import qualified Product.Confirm as P
 import qualified Product.Init as P
 import qualified Product.Search as P
@@ -31,6 +33,7 @@ type MockAppBackendAPI =
            :<|> OnConfirmAPI
            :<|> OnTrackAPI
            :<|> OnStatusAPI
+           :<|> OnCancelAPI
        )
 
 mockAppBackendAPI :: Proxy MockAppBackendAPI
@@ -46,6 +49,7 @@ mockAppBackendServer _key =
     :<|> onConfirmFlow
     :<|> onTrackFlow
     :<|> onStatusFlow
+    :<|> onCancelFlow
 
 type TriggerAPI =
   "trigger"
@@ -108,3 +112,12 @@ type OnStatusAPI =
 
 onStatusFlow :: FlowServer OnStatusAPI
 onStatusFlow = P.statusCb
+
+type OnCancelAPI =
+  "on_cancel"
+    :> APIKeyAuth VerifyAPIKey
+    :> ReqBody '[JSON] OnCancelReq
+    :> Post '[JSON] AckResponse
+
+onCancelFlow :: FlowServer OnCancelAPI
+onCancelFlow = P.cancelCb
