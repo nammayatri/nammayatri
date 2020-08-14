@@ -19,7 +19,7 @@ instance VerificationMethod VerifyAPIKey where
 
 verifyAPIKeyAction :: VerificationAction VerifyAPIKey AppEnv
 verifyAPIKeyAction = VerificationAction $ \apiKey -> do
-  app <- BA.lookupKey apiKey
-  provider <- BP.lookupKey apiKey
+  app <- BA.lookupKey Org.APP apiKey
+  provider <- BP.lookupKey Org.PROVIDER apiKey
   app <|> provider
     & fromMaybeM400 "INVALID_API_KEY" -- FIXME: Bad HTTP code

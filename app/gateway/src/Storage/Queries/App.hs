@@ -10,5 +10,5 @@ import EulerHS.Prelude
 import Storage.Queries.Organization
 
 -- FIXME: this should take a RegToken
-lookupKey :: App.APIKey -> Flow (Maybe Org.Organization)
-lookupKey = findOrgByApiKey Org.APP
+lookupKey :: Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
+lookupKey = findOrgByApiKey

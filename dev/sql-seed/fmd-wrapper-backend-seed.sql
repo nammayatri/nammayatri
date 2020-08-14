@@ -80,6 +80,7 @@ CREATE TABLE atlas_fmd_wrapper.organization (
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
+    domain character varying(255),
     verified boolean NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     location_id character varying(255),
@@ -106,8 +107,8 @@ ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas;
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_fmd_wrapper; Owner: atlas
 --
 
-INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'PROVIDER', true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key', '{"dzBAConfigs":[{"bap_nw_address":"localhost:8013","bap_id":"beckn-app-backend","bap_api_key":"test_key","paymentPolicy":{"credit_type":"POSTPAID","supported_currencies":["INR"],"mode":"RTGS","penalty_terms":["Delay in payment after due date will incur 10 INR per day of non-payment"],"credit_duration":"P30D","method":"ELECTRONIC","settlement_type":"BULK"}}],"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzUrl":"apis-staging.dunzo.in","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","dzBPId":"fmd-wrapper.dunzo","dzBPNwAddress":"http://localhost:8018"}');
+INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key', '{"dzBAConfigs":[{"bap_nw_address":"localhost:8013","bap_id":"beckn-app-backend","bap_api_key":"test_key","paymentPolicy":{"credit_type":"POSTPAID","supported_currencies":["INR"],"mode":"RTGS","penalty_terms":["Delay in payment after due date will incur 10 INR per day of non-payment"],"credit_duration":"P30D","method":"ELECTRONIC","settlement_type":"BULK"}}],"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzUrl":"apis-staging.dunzo.in","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","dzBPId":"fmd-wrapper.dunzo","dzBPNwAddress":"http://localhost:8018"}');
 
 --
 -- TOC entry 2852 (class 2606 OID 16468)

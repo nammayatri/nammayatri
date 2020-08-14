@@ -34,7 +34,10 @@ instance FromHttpApiData Status where
 
 --------------------------------------------------------------------------------------
 
-data OrganizationType = TRANSPORTER | PASS | GATEWAY | APP | PROVIDER
+data OrganizationType
+  = PROVIDER
+  | APP
+  | GATEWAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
@@ -52,6 +55,40 @@ instance FromHttpApiData OrganizationType where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
+data OrganizationDomain
+  = MOBILITY
+  | FINAL_MILE_DELIVERY
+  | FOOD_AND_BEVERAGE
+  | HEALTHCARE
+  deriving (Show, Eq, Read, Generic, ToSchema)
+
+orgDomainOptions :: Options
+orgDomainOptions =
+  defaultOptions
+    { constructorTagModifier = T.unpack . T.replace "_" "-" . T.pack
+    }
+
+instance ToJSON OrganizationDomain where
+  toJSON = genericToJSON orgDomainOptions
+
+instance FromJSON OrganizationDomain where
+  parseJSON = genericParseJSON orgDomainOptions
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationDomain where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres OrganizationDomain
+
+instance FromBackendRow Postgres OrganizationDomain where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance ToParamSchema OrganizationDomain
+
+instance FromHttpApiData OrganizationDomain where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
 data OrganizationT f = Organization
   { _id :: B.C f OrganizationId,
     _name :: B.C f Text,
@@ -60,6 +97,7 @@ data OrganizationT f = Organization
     _mobileCountryCode :: B.C f (Maybe Text),
     _gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
+    _domain :: B.C f (Maybe OrganizationDomain),
     _locationId :: B.C f (Maybe Text),
     _fromTime :: B.C f (Maybe LocalTime),
     _toTime :: B.C f (Maybe LocalTime),

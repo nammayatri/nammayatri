@@ -61,6 +61,7 @@ listOrganizations mlimit moffset oType status =
         (&&.)
         (B.val_ True)
         [ _status `B.in_` (B.val_ <$> status) ||. complementVal status,
+          _domain ==. B.val_ (Just Storage.MOBILITY),
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]
 

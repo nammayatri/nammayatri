@@ -216,6 +216,7 @@ CREATE TABLE atlas_app.organization (
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
+    domain character varying(255),
     verified boolean NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     location_id character varying(255),

@@ -63,7 +63,7 @@ search _unit req = withFlowHandler $ do
   Loc.create toLocation
   let c = mkCase req uuid currTime validity fromLocation toLocation
   Case.create c
-  transporters <- listOrganizations Nothing Nothing [Org.TRANSPORTER] [Org.APPROVED]
+  transporters <- listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
   -- TODO : Fix show
   admins <-
     Person.findAllByOrgIds
