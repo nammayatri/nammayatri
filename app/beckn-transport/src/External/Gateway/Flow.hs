@@ -4,6 +4,7 @@ module External.Gateway.Flow where
 
 import App.Types
 import Beckn.Types.API.Call
+import Beckn.Types.API.Callback
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -21,7 +22,7 @@ import Servant.Client
 import System.Environment
 
 onSearch :: OnSearchReq -> Flow AckResponse
-onSearch req@OnSearchReq {context} = do
+onSearch req@CallbackReq {context} = do
   url <- getGatewayBaseUrl
   apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
   res <- callAPIWithTrail url (API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req) "on_search"
@@ -34,7 +35,7 @@ onSearch req@OnSearchReq {context} = do
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 onTrackTrip :: OnTrackTripReq -> Flow AckResponse
-onTrackTrip req@OnTrackTripReq {context} = do
+onTrackTrip req@CallbackReq {context} = do
   url <- getAppBaseUrl
   res <- callAPIWithTrail url (API.onTrackTrip req) "on_track"
   whenRight res $ \_ ->
@@ -46,7 +47,7 @@ onTrackTrip req@OnTrackTripReq {context} = do
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 onUpdate :: OnUpdateReq -> Flow AckResponse
-onUpdate req@OnUpdateReq {context} = do
+onUpdate req@CallbackReq {context} = do
   url <- getAppBaseUrl
   res <- callAPIWithTrail url (API.onUpdate req) "on_update"
   whenRight res $ \_ ->
@@ -58,7 +59,7 @@ onUpdate req@OnUpdateReq {context} = do
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 onConfirm :: OnConfirmReq -> Flow AckResponse
-onConfirm req@OnConfirmReq {context} = do
+onConfirm req@CallbackReq {context} = do
   url <- getAppBaseUrl
   res <- callAPIWithTrail url (API.onConfirm req) "on_confirm"
   whenRight res $ \_ ->
@@ -70,7 +71,7 @@ onConfirm req@OnConfirmReq {context} = do
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 onCancel :: OnCancelReq -> Flow AckResponse
-onCancel req@OnCancelReq {context} = do
+onCancel req@CallbackReq {context} = do
   url <- getAppBaseUrl
   res <- callAPIWithTrail url (API.onCancel req) "on_cancel"
   whenRight res $ \_ ->
@@ -82,7 +83,7 @@ onCancel req@OnCancelReq {context} = do
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
 onStatus :: OnStatusReq -> Flow AckResponse
-onStatus req@OnStatusReq {context} = do
+onStatus req@CallbackReq {context} = do
   url <- getAppBaseUrl
   res <- callAPIWithTrail url (API.onStatus req) "on_status"
   whenRight res $ \_ ->

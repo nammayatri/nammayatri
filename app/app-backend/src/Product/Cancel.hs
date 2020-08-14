@@ -108,41 +108,45 @@ onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
 onCancel req = withFlowHandler $ do
   let context = req ^. #context
   let txnId = context ^. #_transaction_id
-  let prodInstId = ProductInstanceId $ req ^. #message . #id
-  -- TODO: Handle usecase where multiple productinstances exists for one product
+  case req ^. #contents of
+    Right msg -> do
+      let prodInstId = ProductInstanceId $ msg ^. #id
+      -- TODO: Handle usecase where multiple productinstances exists for one product
 
-  piList <- MPI.findAllByParentId (Just prodInstId)
-  case piList of
-    [] -> return ()
-    s : _ -> do
-      let orderPi = s
-      -- TODO what if we update several PI but then get an error?
-      -- wrap everything in a transaction
-      -- or use updateMultiple
-      MPI.updateStatus (PI._id orderPi) PI.CANCELLED
-      MC.updateStatus (PI._caseId orderPi) Case.CLOSED
-      return ()
-  productInstance <- MPI.findById prodInstId
-  MPI.updateStatus prodInstId PI.CANCELLED
-  let caseId = productInstance ^. #_caseId
-  -- notify customer
-  Notify.notifyOnProductCancelCb productInstance
-  --
-  arrPICase <- MPI.findAllByCaseId caseId
-  let arrTerminalPI =
-        filter
-          ( \prodInst -> do
-              let status = prodInst ^. #_status
-              status == PI.COMPLETED
-                || status == PI.OUTOFSTOCK
-                || status == PI.CANCELLED
-                || status == PI.INVALID
-          )
-          arrPICase
-  when
-    (length arrTerminalPI == length arrPICase)
-    ( do
-        Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
-        MC.updateStatus caseId Case.CLOSED
-    )
+      piList <- MPI.findAllByParentId (Just prodInstId)
+      case piList of
+        [] -> return ()
+        s : _ -> do
+          let orderPi = s
+          -- TODO what if we update several PI but then get an error?
+          -- wrap everything in a transaction
+          -- or use updateMultiple
+          MPI.updateStatus (PI._id orderPi) PI.CANCELLED
+          MC.updateStatus (PI._caseId orderPi) Case.CLOSED
+          return ()
+      productInstance <- MPI.findById prodInstId
+      MPI.updateStatus prodInstId PI.CANCELLED
+      let caseId = productInstance ^. #_caseId
+      -- notify customer
+      Notify.notifyOnProductCancelCb productInstance
+      --
+      arrPICase <- MPI.findAllByCaseId caseId
+      let arrTerminalPI =
+            filter
+              ( \prodInst -> do
+                  let status = prodInst ^. #_status
+                  status == PI.COMPLETED
+                    || status == PI.OUTOFSTOCK
+                    || status == PI.CANCELLED
+                    || status == PI.INVALID
+              )
+              arrPICase
+      when
+        (length arrTerminalPI == length arrPICase)
+        ( do
+            Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
+            MC.updateStatus caseId Case.CLOSED
+        )
+    Left err -> L.logError @Text "on_cancel req" $ "on_cancel error: " <> show err
   mkAckResponse txnId "cancel"
+

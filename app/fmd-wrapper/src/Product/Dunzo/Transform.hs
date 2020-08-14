@@ -4,6 +4,7 @@
 module Product.Dunzo.Transform where
 
 import App.Types
+import Beckn.Types.API.Callback
 import Beckn.Types.Common (generateGUID)
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Catalog
@@ -20,7 +21,6 @@ import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
-import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init

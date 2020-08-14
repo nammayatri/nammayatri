@@ -19,6 +19,7 @@ import qualified Models.ProductInstance as MPI
 import Types.Common (fromBeckn)
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
+import qualified EulerHS.Language as L
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track _ req = withFlowHandler $ do
@@ -39,25 +40,30 @@ trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do
   -- TODO: verify api key
   let context = req ^. #context
-      tracking = req ^. #message . #tracking
-      caseId = CaseId $ req ^. #context . #_transaction_id
-  case_ <- MC.findById caseId
-  prodInst <- MPI.listAllProductInstance (ByApplicationId caseId) [ProductInstance.CONFIRMED]
-  let confirmedProducts = prodInst
-  res <-
-    case length confirmedProducts of
-      0 -> return $ Right ()
-      1 -> do
-        let productInst = head confirmedProducts
-            personId = Case._requestor case_
-        mtracker <- updateTracker productInst tracking
-        whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
-        return $ Right ()
-      _ -> return $ Left "Multiple products confirmed, ambiguous selection"
-  case res of
-    Left err -> return $ AckResponse context (ack "NACK") $ Just $ domainError err
-    Right _ -> return $ AckResponse context (ack "ACK") Nothing
-
+  case req ^. #contents of
+    Right msg -> do
+      let tracking = msg ^. #tracking
+          caseId = CaseId $ context ^. #_transaction_id
+      case_ <- MC.findById caseId
+      prodInst <- MPI.listAllProductInstance (ByApplicationId caseId) [ProductInstance.CONFIRMED]
+      let confirmedProducts = prodInst
+      res <-
+        case length confirmedProducts of
+          0 -> return $ Right ()
+          1 -> do
+            let productInst = head confirmedProducts
+                personId = Case._requestor case_
+            mtracker <- updateTracker productInst tracking
+            whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
+            return $ Right ()
+          _ -> return $ Left "Multiple products confirmed, ambiguous selection"
+      case res of
+        Left err -> return $ AckResponse context (ack "NACK") $ Just $ domainError err
+        Right _ -> return $ AckResponse context (ack "ACK") Nothing
+    Left err -> do
+      L.logError @Text "on_track_trip req" $ "on_track_trip error: " <> show err
+      return $ AckResponse context (ack "ACK") Nothing
+      
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do
   let minfo = decodeFromText =<< prodInst ^. #_info

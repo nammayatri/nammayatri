@@ -2,9 +2,9 @@
 
 module Beckn.Types.API.Search where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service
 import Beckn.Utils.Common
@@ -39,12 +39,7 @@ data SearchReq = SearchReq
 
 type SearchRes = AckResponse
 
-data OnSearchReq = OnSearchReq
-  { context :: Context,
-    message :: OnSearchServices,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnSearchReq = CallbackReq OnSearchServices
 
 newtype OnSearchServices = OnSearchServices
   { services :: [Service]

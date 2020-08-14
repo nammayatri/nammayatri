@@ -2,9 +2,9 @@ module MockAppBackend.Fixtures where
 
 import qualified "mock-app-backend" App as MockAppBE
 import "mock-app-backend" App.Routes as MockAppRoutes
+import Beckn.Types.API.Callback
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search

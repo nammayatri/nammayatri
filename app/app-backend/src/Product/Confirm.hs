@@ -66,22 +66,25 @@ onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_confirm req" (show req)
-  let trip = fromBeckn <$> req ^. #message . #order . #_trip
-      pid = ProductInstanceId $ req ^. #message . #order . #_id
-      tracker = flip Products.Tracker Nothing <$> trip
-  prdInst <- MPI.findById pid
-  -- TODO: update tracking prodInfo in .info
-  let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
-  let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
-  let uPrd =
-        prdInst
-          { SPI._info = encodeToText <$> uInfo
-          }
-  productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
-  Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
-  MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
-  MPI.updateMultiple pid uPrd
-  MPI.updateStatus pid SPI.CONFIRMED
+  case req ^. #contents of
+    Right msg -> do
+      let trip = fromBeckn <$> msg ^. #order . #_trip
+          pid = ProductInstanceId $ msg ^. #order . #_id
+          tracker = flip Products.Tracker Nothing <$> trip
+      prdInst <- MPI.findById pid
+      -- TODO: update tracking prodInfo in .info
+      let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
+      let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
+      let uPrd =
+            prdInst
+              { SPI._info = encodeToText <$> uInfo
+              }
+      productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
+      Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
+      MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
+      MPI.updateMultiple pid uPrd
+      MPI.updateStatus pid SPI.CONFIRMED
+    Left err -> L.logError @Text "on_confirm req" $ "on_confirm error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case

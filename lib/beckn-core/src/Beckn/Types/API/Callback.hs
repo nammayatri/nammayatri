@@ -1,4 +1,4 @@
-module Beckn.Types.FMD.API.Callback where
+module Beckn.Types.API.Callback where
 
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error

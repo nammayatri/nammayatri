@@ -2,9 +2,9 @@
 
 module Beckn.Types.API.Update where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
 import Beckn.Types.Mobility.Order
 import EulerHS.Prelude
 
@@ -28,12 +28,7 @@ newtype UpdateOrderService = UpdateOrderService
 
 type UpdateRes = AckResponse
 
-data OnUpdateReq = OnUpdateReq
-  { context :: Context,
-    message :: OnUpdateOrder,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnUpdateReq = CallbackReq OnUpdateOrder
 
 newtype OnUpdateOrder = OnUpdateOrder
   { order :: Order

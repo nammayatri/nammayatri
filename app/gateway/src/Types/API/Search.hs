@@ -1,5 +1,5 @@
 module Types.API.Search
-  ( OnSearchReq (..),
+  ( OnSearchReq,
     SearchReq (..),
     OnSearchAPI,
     SearchAPI,
@@ -8,9 +8,9 @@ module Types.API.Search
   )
 where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
 import Beckn.Utils.Servant.HeaderAuth (APIKeyAuth)
 import Data.Aeson (Value)
 import EulerHS.Prelude
@@ -23,12 +23,7 @@ data SearchReq = SearchReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data OnSearchReq = OnSearchReq
-  { context :: Context,
-    message :: Value,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnSearchReq = CallbackReq Value
 
 type SearchAPI =
   "search"

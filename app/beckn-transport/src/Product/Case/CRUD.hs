@@ -4,6 +4,7 @@
 module Product.Case.CRUD where
 
 import App.Types
+import Beckn.Types.API.Callback
 import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Core.Amount
@@ -161,8 +162,7 @@ mkOnSearchPayload c pis allPis orgInfo = do
           }
   service <- GT.mkServiceOffer c pis allPis (Just orgInfo)
   return
-    OnSearchReq
+    CallbackReq
       { context,
-        message = OnSearchServices [service],
-        error = Nothing
+        contents = Right $ OnSearchServices [service]
       }

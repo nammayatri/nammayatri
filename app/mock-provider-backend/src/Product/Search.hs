@@ -5,11 +5,11 @@ module Product.Search
   )
 where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
-import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Search
 import Beckn.Utils.Common
 import Beckn.Utils.Mock

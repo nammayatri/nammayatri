@@ -2,10 +2,10 @@
 
 module Beckn.Types.FMD.API.Search where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.Intent
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()

@@ -4,6 +4,7 @@
 module Product.BecknProvider.BP where
 
 import App.Types
+import Beckn.Types.API.Callback
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
 import Beckn.Types.API.Search
@@ -343,10 +344,9 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
   trip <- mkTrip trackerCase
   order <- GT.mkOrder c (head pis) (Just trip)
   return
-    OnConfirmReq
+    CallbackReq
       { context,
-        message = ConfirmOrder order,
-        error = Nothing
+        contents = Right $ ConfirmOrder order
       }
 
 serviceStatus :: StatusReq -> FlowHandler StatusRes
@@ -373,7 +373,11 @@ mkOnServiceStatusPayload piId trackerPi = do
   context <- mkContext "on_status" "" -- FIXME: transaction id?
   order <- mkOrderRes piId (_getProductsId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
   let onStatusMessage = OnStatusReqMessage order
-  return $ OnStatusReq context onStatusMessage Nothing
+  return $
+    CallbackReq
+      { context = context,
+        contents = Right onStatusMessage
+      }
   where
     mkOrderRes prodInstId productId status = do
       now <- getCurrentTimeUTC
@@ -429,11 +433,9 @@ mkOnTrackTripPayload trackerCase parentCase = do
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (trackerCase ^. #_id)
   let tracking = GT.mkTracking "PULL" data_url
   return
-    OnTrackTripReq
+    CallbackReq
       { context,
-        message =
-          OnTrackReqMessage (Just tracking),
-        error = Nothing
+        contents = Right $ OnTrackReqMessage (Just tracking)
       }
 
 mkTrip :: Case -> Flow Trip
@@ -460,11 +462,9 @@ mkOnUpdatePayload prodInst case_ pCase = do
   trip <- mkTrip case_
   order <- GT.mkOrder pCase prodInst (Just trip)
   return
-    OnUpdateReq
+    CallbackReq
       { context,
-        message =
-          OnUpdateOrder order,
-        error = Nothing
+        contents = Right $ OnUpdateOrder order
       }
 
 mkDriverInfo :: PersonId -> Flow Driver
@@ -482,10 +482,9 @@ mkCancelRidePayload prodInstId = do
   context <- mkContext "on_cancel" "" -- FIXME: transaction id?
   tripObj <- mkCancelTripObj prodInstId
   return
-    OnCancelReq
+    CallbackReq
       { context,
-        message = tripObj,
-        error = Nothing
+        contents = Right tripObj
       }
 
 mkCancelTripObj :: Text -> Flow Trip

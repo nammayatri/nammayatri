@@ -2,9 +2,9 @@
 
 module Beckn.Types.FMD.API.Status where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()

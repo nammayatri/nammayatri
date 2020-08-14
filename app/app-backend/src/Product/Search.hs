@@ -72,8 +72,11 @@ search person req = withFlowHandler $ do
 searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _unit req = withFlowHandler $ do
   -- TODO: Verify api key here
-  let (services :: [Service]) = req ^. #message . #services
-  traverse_ (searchCbService req) services
+  case req ^. #contents of
+    Right msg -> do
+      let (services :: [Service]) = msg ^. #services
+      traverse_ (searchCbService req) services
+    Left err -> L.logError @Text "on_search req" $ "on_search error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 searchCbService :: Search.OnSearchReq -> BM.Service -> Flow Search.OnSearchRes

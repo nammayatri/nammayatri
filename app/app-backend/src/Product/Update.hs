@@ -21,16 +21,19 @@ onUpdate :: OnUpdateReq -> FlowHandler AckResponse
 onUpdate req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_update req" (show req)
-  let trip = req ^. #message . #order . #_trip
-      pid = ProductInstanceId $ req ^. #message . #order . #_id
-  prdInst <- MPI.findById pid
-  let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
-      uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
-      uPrd =
-        prdInst
-          { SPI._info = encodeToText <$> uInfo
-          }
-  MPI.updateMultiple pid uPrd
+  case req ^. #contents of
+    Right msg -> do
+      let trip = msg ^. #order . #_trip
+          pid = ProductInstanceId $ msg ^. #order . #_id
+      prdInst <- MPI.findById pid
+      let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
+          uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
+          uPrd =
+            prdInst
+              { SPI._info = encodeToText <$> uInfo
+              }
+      MPI.updateMultiple pid uPrd
+    Left err -> L.logError @Text "on_update req" $ "on_update error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo

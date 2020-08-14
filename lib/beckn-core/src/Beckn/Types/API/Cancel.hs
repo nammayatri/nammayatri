@@ -2,10 +2,10 @@
 
 module Beckn.Types.API.Cancel where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Descriptor
-import Beckn.Types.Core.Error
 import Beckn.Types.Mobility.Order
 import Beckn.Types.Mobility.Trip
 import EulerHS.Prelude
@@ -18,12 +18,7 @@ data CancelReq = CancelReq
 
 type CancelRes = AckResponse
 
-data OnCancelReq = OnCancelReq
-  { context :: Context,
-    message :: Trip,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnCancelReq = CallbackReq Trip
 
 type OnCancelRes = AckResponse
 

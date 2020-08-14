@@ -3,10 +3,10 @@
 
 module Product.Init where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Callback
 import Beckn.Types.FMD.API.Init
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)

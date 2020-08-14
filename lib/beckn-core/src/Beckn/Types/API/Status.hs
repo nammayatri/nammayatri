@@ -2,11 +2,10 @@
 
 module Beckn.Types.API.Status where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
 import Beckn.Types.Core.Order
--- import Beckn.Types.Mobility.Service
 import EulerHS.Prelude
 
 data StatusReq = StatusReq
@@ -17,12 +16,7 @@ data StatusReq = StatusReq
 
 type StatusRes = AckResponse
 
-data OnStatusReq = OnStatusReq
-  { context :: Context,
-    message :: OnStatusReqMessage,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnStatusReq = CallbackReq OnStatusReqMessage
 
 type OnStatusRes = AckResponse
 

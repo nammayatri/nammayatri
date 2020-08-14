@@ -5,7 +5,7 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.Types.API.Call as Call
-import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq (..), OnCancelRes)
+import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
 import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import qualified Beckn.Types.API.Status as Status

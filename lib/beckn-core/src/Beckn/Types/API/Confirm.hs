@@ -2,9 +2,9 @@
 
 module Beckn.Types.API.Confirm where
 
+import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
 import Beckn.Types.Mobility.Order
 import EulerHS.Prelude
 
@@ -16,12 +16,7 @@ data ConfirmReq = ConfirmReq
 
 type ConfirmRes = AckResponse
 
-data OnConfirmReq = OnConfirmReq
-  { context :: Context,
-    message :: ConfirmOrder,
-    error :: Maybe Error
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnConfirmReq = CallbackReq ConfirmOrder
 
 newtype ConfirmOrder = ConfirmOrder
   { order :: Order

@@ -33,13 +33,16 @@ onStatus :: API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus req = withFlowHandler $ do
   let context = req ^. #context
       txnId = context ^. #_transaction_id
-      prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
-      orderState = matchStatus $ req ^. #message . #order . #_state
-  orderStatus <- case orderState of
-    Just k -> return k
-    Nothing -> L.throwException $ err400 {errBody = "INCORRECT STATUS"}
-  orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
-  QPI.updateStatus (orderPi ^. #_id) orderStatus
+  case req ^. #contents of
+    Right msg -> do
+      let prodInstId = ProductInstanceId $ msg ^. #order . #_id
+          orderState = matchStatus $ msg ^. #order . #_state
+      orderStatus <- case orderState of
+        Just k -> return k
+        Nothing -> L.throwException $ err400 {errBody = "INCORRECT STATUS"}
+      orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
+      QPI.updateStatus (orderPi ^. #_id) orderStatus
+    Left err -> L.logError @Text "on_status req" $ "on_status error: " <> show err
   mkAckResponse txnId "status"
 
 -- Utility Functions
