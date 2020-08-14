@@ -17,8 +17,8 @@ import qualified Models.ProductInstance as MPI
 import Servant
 import Types.API.Location
 import Types.API.Product
+import Types.Common (toBeckn)
 import Types.ProductInfo as ProductInfo
-import Utils.Common (fromAPITripToTrip)
 
 getProductInfo :: Person.Person -> Text -> FlowHandler GetProductInfoRes
 getProductInfo _person prodInstId = withFlowHandler $ do
@@ -28,7 +28,7 @@ getProductInfo _person prodInstId = withFlowHandler $ do
       case ProductInfo._tracker info of
         Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
         Just tracker -> do
-          let trip = fromAPITripToTrip $ ProductInfo._trip tracker
+          let trip = toBeckn $ ProductInfo._trip tracker
           return $
             GetProductInfoRes
               { vehicle = Trip.vehicle trip,
@@ -55,7 +55,7 @@ getLocation person caseId = withFlowHandler $ do
       case mtracker of
         Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
         Just tracker -> do
-          resp <- External.location baseUrl (Trip.id $ fromAPITripToTrip $ ProductInfo._trip tracker)
+          resp <- External.location baseUrl (Trip.id $ toBeckn $ ProductInfo._trip tracker)
           case resp of
             Left err -> L.throwException $ err500 {errBody = encode err}
             Right r -> return r

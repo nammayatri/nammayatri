@@ -14,8 +14,8 @@ import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
+import Types.Common (fromBeckn, toBeckn)
 import qualified Types.ProductInfo as ProdInfo
-import Utils.Common (fromAPITrackingToTracking, fromTrackingToAPITracking, fromTripToAPITrip)
 
 onUpdate :: OnUpdateReq -> FlowHandler AckResponse
 onUpdate req = withFlowHandler $ do
@@ -25,7 +25,7 @@ onUpdate req = withFlowHandler $ do
       pid = ProductInstanceId $ req ^. #message . #order . #_id
   prdInst <- MPI.findById pid
   let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
-      uInfo = getUpdatedProdInfo trip mprdInfo $ fromAPITrackingToTracking <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
+      uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
       uPrd =
         prdInst
           { SPI._info = encodeToText <$> uInfo
@@ -35,6 +35,6 @@ onUpdate req = withFlowHandler $ do
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo
     getUpdatedProdInfo (Just trip) (Just prdInfo) mtracking =
-      let utracker = ProdInfo.Tracker {_trip = fromTripToAPITrip trip, _tracking = fromTrackingToAPITracking <$> mtracking}
+      let utracker = ProdInfo.Tracker {_trip = fromBeckn trip, _tracking = fromBeckn <$> mtracking}
        in Just $ prdInfo {ProdInfo._tracker = Just utracker}
     getUpdatedProdInfo _ _ _ = Nothing

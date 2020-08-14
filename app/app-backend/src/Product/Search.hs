@@ -35,6 +35,7 @@ import qualified Storage.Queries.Location as Location
 import System.Environment
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
+import Types.Common (fromBeckn, toBeckn)
 import Types.ProductInfo
 import Utils.Common
 import qualified Utils.Metrics as Metrics
@@ -43,8 +44,8 @@ import qualified Utils.Notifications as Notify
 search :: Person.Person -> API.SearchReq -> FlowHandler API.AckResponse
 search person req = withFlowHandler $ do
   validateDateTime req
-  fromLocation <- mkLocation $ fromAPIStopToStop $ req ^. #origin
-  toLocation <- mkLocation $ fromAPIStopToStop $ req ^. #destination
+  fromLocation <- mkLocation $ toBeckn $ req ^. #origin
+  toLocation <- mkLocation $ toBeckn $ req ^. #destination
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
@@ -220,7 +221,7 @@ mkProduct case_ _mprovider item = do
 mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow ProductInstance.ProductInstance
 mkProductInstance case_ mprovider personId item = do
   now <- getCurrentTimeUTC
-  let info = ProductInfo (fromProviderToAPIProvider <$> mprovider) Nothing
+  let info = ProductInfo (fromBeckn <$> mprovider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
