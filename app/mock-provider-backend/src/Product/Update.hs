@@ -19,11 +19,11 @@ import System.Environment (lookupEnv)
 update :: () -> UpdateReq -> FlowHandlerR r AckResponse
 update _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
-  let context =
+  let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
+      context =
         (req ^. #context)
-          { _ac_id = fromString <$> bppNwAddr
+          { _ac_id = fromString <$> bppNwAddr -- update caller id
           }
-      mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl ->

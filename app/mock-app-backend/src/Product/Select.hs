@@ -17,6 +17,7 @@ import EulerHS.Types (client)
 selectCb :: () -> OnSelectReq -> FlowHandler AckResponse
 selectCb _unit req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
+  ctx <- updateCaller $ req ^. #context
   EL.logDebug @Text "mock_app_backend" $
     "select_cb: req: "
       <> decodeUtf8 (encode req)
@@ -25,7 +26,7 @@ selectCb _unit req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let quoteId = msg ^. #quote . #_id
-      initReq <- buildInitReq (req ^. #context) quoteId
+      initReq <- buildInitReq ctx quoteId
       case bppUrl $ req ^. #context of
         Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
         Just url ->

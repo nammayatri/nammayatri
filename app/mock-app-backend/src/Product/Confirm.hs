@@ -22,8 +22,9 @@ confirmCb :: () -> OnConfirmReq -> FlowHandler AckResponse
 confirmCb _unit req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   EL.logDebug @Text "mock_app_backend" $ "confirm_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
+  -- ctx <- updateCaller $ req ^. #context
   -- quotId = req ^. #message . #order . #_order_id
-  -- confirmReq <- buildConfirmReq (req ^. #context) quotId
+  -- confirmReq <- buildConfirmReq ctx quotId
   case bppUrl $ req ^. #context of
     Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
     Just _ -> EL.logError @Text "mock-app-backend" "Confirm finished successfully"

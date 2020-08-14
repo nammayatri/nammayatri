@@ -161,3 +161,8 @@ buildConfirmReq ctx =
 bppUrl :: Context -> Maybe BaseUrl
 bppUrl context =
   parseBaseUrl . toString =<< context ^. #_ac_id
+
+updateCaller :: Context -> Flow Context
+updateCaller ctx = do
+  bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
+  return $ ctx {_ac_id = fromString <$> bapNwAddr}
