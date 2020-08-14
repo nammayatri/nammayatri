@@ -3,6 +3,7 @@ module Beckn.Types.Core.Order where
 import Beckn.Types.Core.Billing
 import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Payment
+import Beckn.Types.Core.Quotation
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -14,7 +15,9 @@ data Order = Order
     _updated_at :: UTCTime,
     _items :: [OrderItem],
     _billing :: Maybe Billing,
-    _payment :: Maybe Payment
+    _payment :: Maybe Payment,
+    _update_action :: Maybe Text,
+    _quotation :: Maybe Quotation
   }
   deriving (Generic, Show)
 
@@ -33,7 +36,9 @@ instance Example Order where
         _updated_at = example,
         _items = example,
         _billing = example,
-        _payment = example
+        _payment = example,
+        _update_action = Nothing,
+        _quotation = Nothing
       }
 
 data OrderItem = OrderItem

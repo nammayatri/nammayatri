@@ -3,9 +3,8 @@ module Beckn.Types.Core.Language where
 import Data.Text
 import EulerHS.Prelude
 
-data Language = Language
-  { _standard :: Text, --"ISO 3166-1 ALPHA-2", "ISO 3166-1 ALPHA-3", "ISO 3166-1 NUMERIC)"
-    _code :: Text
+newtype Language = Language
+  { _code :: Text
   }
   deriving (Generic, Show)
 

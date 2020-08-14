@@ -48,10 +48,8 @@ address =
 location :: AppCommon.Location
 location =
   AppCommon.Location
-    { locType = "address",
-      gps = Nothing,
+    { gps = Nothing,
       address = Just address,
-      areaCode = Nothing,
       city = Nothing
     }
 

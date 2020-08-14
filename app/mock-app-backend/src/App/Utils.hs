@@ -3,6 +3,7 @@
 module App.Utils where
 
 import App.Types
+import Beckn.Types.Core.Address
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Location
@@ -24,13 +25,16 @@ import System.Environment (lookupEnv)
 address :: Address
 address =
   Address
-    { door = "#817",
-      building = "Juspay Apartments",
-      street = "27th Main",
-      area = "8th Block Koramangala",
-      city = "Bangalore",
-      country = "India",
-      area_code = "560047"
+    { _name = "Address",
+      _door = Just "#817",
+      _building = Just "Juspay Apartments",
+      _street = Just "27th Main",
+      _city = "Bangalore",
+      _state = "Karnataka",
+      _country = "India",
+      _area_code = "560047",
+      _locality = Just "8th Block Koramangala",
+      _ward = Nothing
     }
 
 gps :: GPS
@@ -43,11 +47,9 @@ gps =
 location :: Location
 location =
   Location
-    { _type = "gps",
-      _gps = Just gps,
+    { _gps = Just gps,
       _address = Just address,
       _station_code = Nothing,
-      _area_code = Nothing,
       _city = Nothing,
       _country = Nothing,
       _circle = Nothing,
@@ -88,8 +90,8 @@ buildDraftOrder itemId = do
                 _next_task_id = Nothing,
                 _previous_task_id = Nothing,
                 _state = "", -- FIXME: no relevant value in spec
-                _pickup = PickupOrDrop location [] example,
-                _drop = PickupOrDrop location [] example,
+                _pickup = PickupOrDrop location [] example Nothing,
+                _drop = PickupOrDrop location [] example Nothing,
                 _package = example, -- FIXME: references item and price
                 _agent = example, -- FIXME: we can't fill this
                 _vehicle = example, -- FIXME: we can't fill this
@@ -98,7 +100,11 @@ buildDraftOrder itemId = do
               }
           ],
         _billing = Nothing,
-        _payment = Nothing
+        _payment = Nothing,
+        _update_action = Nothing,
+        _quotation = Nothing,
+        _type = Nothing,
+        _prev_order_id = Nothing
       }
 
 buildContext :: Text -> Text -> Flow Context

@@ -2,6 +2,7 @@ module Beckn.Types.FMD.Order where
 
 import Beckn.Types.Core.Billing
 import Beckn.Types.Core.Payment
+import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.Item (Item)
 import Beckn.Types.FMD.Task (Task)
 import Beckn.Utils.Common
@@ -16,7 +17,13 @@ data Order = Order
     _updated_at :: UTCTime,
     _tasks :: [Task],
     _billing :: Maybe Billing,
-    _payment :: Maybe Payment
+    _payment :: Maybe Payment,
+    _update_action :: Maybe Text,
+    _quotation :: Maybe Quotation,
+    -- Defines the type of order like a simple order, a return order, an internal order etc.
+    -- The types of orders supported will be defined by the network ecosystem.
+    _type :: Maybe Text,
+    _prev_order_id :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -36,5 +43,9 @@ instance Example Order where
         _updated_at = example,
         _tasks = example,
         _billing = example,
-        _payment = example
+        _payment = example,
+        _update_action = Nothing,
+        _quotation = Nothing,
+        _type = Nothing,
+        _prev_order_id = Nothing
       }

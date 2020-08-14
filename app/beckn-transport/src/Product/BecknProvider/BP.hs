@@ -121,12 +121,12 @@ mkFromStop _req uuid now stop =
           _locationType = SL.POINT,
           _lat = read . T.unpack . (^. #lat) <$> mgps,
           _long = read . T.unpack . (^. #lon) <$> mgps,
-          _ward = (^. #street) <$> maddress,
-          _district = (^. #area) <$> maddress,
-          _city = (^. #city) <$> maddress,
-          _state = Nothing,
-          _country = (^. #country) <$> maddress,
-          _pincode = (^. #area_code) <$> maddress,
+          _ward = (^. #_ward) =<< maddress,
+          _district = Nothing,
+          _city = (^. #_city) <$> maddress,
+          _state = (^. #_state) <$> maddress,
+          _country = (^. #_country) <$> maddress,
+          _pincode = (^. #_area_code) <$> maddress,
           _address = encodeToText <$> maddress,
           _bound = Nothing,
           _createdAt = now,
@@ -389,7 +389,9 @@ mkOnServiceStatusPayload piId trackerPi = do
             _created_at = now,
             _updated_at = now,
             _billing = Nothing,
-            _payment = Nothing
+            _payment = Nothing,
+            _update_action = Nothing,
+            _quotation = Nothing
           }
 
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes

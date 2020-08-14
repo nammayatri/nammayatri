@@ -2,6 +2,7 @@
 
 module Types.Common where
 
+import qualified Beckn.Types.Core.Address as Address
 import qualified Beckn.Types.Core.DecimalValue as DV
 import qualified Beckn.Types.Core.Descriptor as Descriptor
 import qualified Beckn.Types.Core.Location as Location
@@ -40,10 +41,8 @@ newtype City = City Text
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data Location = Location
-  { locType :: Text,
-    gps :: Maybe GPS,
+  { gps :: Maybe GPS,
     address :: Maybe Address,
-    areaCode :: Maybe Text,
     city :: Maybe City
   }
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -182,44 +181,43 @@ instance BecknSpecIso Location.GPS GPS where
         lon = gps ^. #lon
       }
 
-instance BecknSpecIso Location.Address Address where
+instance BecknSpecIso Address.Address Address where
   fromBeckn addr =
     Address
-      { door = addr ^. #door,
-        building = addr ^. #building,
-        street = addr ^. #street,
-        area = addr ^. #area,
-        city = addr ^. #city,
-        country = addr ^. #country,
-        areaCode = addr ^. #area_code
+      { door = fromMaybe "" $ addr ^. #_door,
+        building = fromMaybe "" $ addr ^. #_building,
+        street = fromMaybe "" $ addr ^. #_street,
+        area = fromMaybe "" $ addr ^. #_locality,
+        city = addr ^. #_city,
+        country = addr ^. #_country,
+        areaCode = addr ^. #_area_code
       }
   toBeckn addr =
-    Location.Address
-      { door = addr ^. #door,
-        building = addr ^. #building,
-        street = addr ^. #street,
-        area = addr ^. #area,
-        city = addr ^. #city,
-        country = addr ^. #country,
-        area_code = addr ^. #areaCode
+    Address.Address
+      { _name = "",
+        _door = Just $ addr ^. #door,
+        _building = Just $ addr ^. #building,
+        _street = Just $ addr ^. #street,
+        _locality = Just $ addr ^. #area,
+        _ward = Nothing,
+        _city = addr ^. #city,
+        _state = "",
+        _country = addr ^. #country,
+        _area_code = addr ^. #areaCode
       }
 
 instance BecknSpecIso Location.Location Location where
   fromBeckn loc =
     Location
-      { locType = loc ^. #_type,
-        gps = fromBeckn <$> loc ^. #_gps,
+      { gps = fromBeckn <$> loc ^. #_gps,
         address = fromBeckn <$> loc ^. #_address,
-        areaCode = loc ^. #_area_code,
         city = fromBeckn <$> loc ^. #_city
       }
   toBeckn loc =
     Location.Location
-      { _type = loc ^. #locType,
-        _gps = toBeckn <$> loc ^. #gps,
+      { _gps = toBeckn <$> loc ^. #gps,
         _address = toBeckn <$> loc ^. #address,
         _station_code = Nothing,
-        _area_code = loc ^. #areaCode,
         _city = toBeckn <$> loc ^. #city,
         _country = Nothing,
         _circle = Nothing,

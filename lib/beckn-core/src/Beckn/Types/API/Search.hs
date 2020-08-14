@@ -58,3 +58,18 @@ instance Example OnSearchServices where
     OnSearchServices
       { services = example
       }
+
+type OnSearchEndAPI v =
+  "on_search"
+    :> "end"
+    :> APIKeyAuth v
+    :> ReqBody '[JSON] OnSearchEndReq
+    :> Post '[JSON] OnSearchEndRes
+
+onSearchEndAPI :: Proxy (OnSearchEndAPI v)
+onSearchEndAPI = Proxy
+
+newtype OnSearchEndReq = OnSearchEndReq {context :: Context}
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+type OnSearchEndRes = AckResponse

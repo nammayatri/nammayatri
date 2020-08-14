@@ -2,17 +2,16 @@
 
 module Beckn.Types.Core.Location where
 
+import Beckn.Types.Core.Address
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Common
 import Data.Text
 import EulerHS.Prelude
 
 data Location = Location
-  { _type :: Text, --""gps","address","station_code","area_code","city","country","circle","polygon","3dspace"
-    _gps :: Maybe GPS,
+  { _gps :: Maybe GPS,
     _address :: Maybe Address,
     _station_code :: Maybe Text,
-    _area_code :: Maybe Text,
     _city :: Maybe City,
     _country :: Maybe Country,
     _circle :: Maybe Circle,
@@ -30,11 +29,9 @@ instance ToJSON Location where
 instance Example Location where
   example =
     Location
-      { _type = "gps",
-        _gps = example,
+      { _gps = example,
         _address = Nothing,
         _station_code = Nothing,
-        _area_code = Nothing,
         _city = Nothing,
         _country = Nothing,
         _circle = Nothing,
@@ -53,29 +50,6 @@ instance Example GPS where
     GPS
       { lat = "20.5937",
         lon = "78.9629"
-      }
-
-data Address = Address
-  { door :: Text,
-    building :: Text,
-    street :: Text,
-    area :: Text,
-    city :: Text,
-    country :: Text,
-    area_code :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance Example Address where
-  example =
-    Address
-      { door = "#817",
-        building = "Juspay Apartments",
-        street = "27th Main",
-        area = "8th Block Koramangala",
-        city = "Bangalore",
-        country = "India",
-        area_code = "560047"
       }
 
 -- Can we add district and state in Address?

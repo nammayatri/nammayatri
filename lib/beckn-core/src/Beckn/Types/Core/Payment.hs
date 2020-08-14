@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Payment where
 
+import Beckn.Types.Core.Duration
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.PaymentPolicy
@@ -13,11 +14,11 @@ data Payment = Payment
     _type :: Maybe Text, -- ON-ORDER, PRE-FULFILLMENT, ON-FULFILLMENT, POST-FULFILLMENT
     _payer :: Maybe PaymentEndpoint,
     _payee :: Maybe PaymentEndpoint,
-    _method :: Text, -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
+    _method :: [Text], -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
     _amount :: MonetaryValue,
     _state :: Maybe State,
     _due_date :: Maybe UTCTime,
-    _duration :: Maybe MonetaryValue,
+    _duration :: Maybe Duration,
     _terms :: Maybe PaymentPolicy
   }
   deriving (Generic, Show)
@@ -35,7 +36,7 @@ instance Example Payment where
         _type = Just "ON-ORDER",
         _payer = example,
         _payee = example,
-        _method = "CASH",
+        _method = ["CASH"],
         _amount = example,
         _state = Nothing,
         _due_date = Just example,

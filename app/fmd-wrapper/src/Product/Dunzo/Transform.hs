@@ -6,8 +6,8 @@ module Product.Dunzo.Transform where
 import App.Types
 import Beckn.Types.API.Callback
 import Beckn.Types.Common (generateGUID)
+import qualified Beckn.Types.Core.Address as CoreAddr
 import Beckn.Types.Core.Amount
-import Beckn.Types.Core.Catalog
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Descriptor
@@ -29,6 +29,7 @@ import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Track
 import Beckn.Types.FMD.API.Update
+import Beckn.Types.FMD.Catalog
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
@@ -142,7 +143,8 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
           _models = [],
           _ttl = now,
           _items = [mkSearchItem itemid res],
-          _offers = []
+          _offers = [],
+          _package_categories = []
         }
 
 updateContext :: Context -> Text -> Context
@@ -234,7 +236,7 @@ mkOnInitMessage orderId order terms req QuoteRes {..} =
           _type = Just "PRE-FULFILLMENT",
           _payer = Nothing,
           _payee = Nothing,
-          _method = "RTGS",
+          _method = ["RTGS"],
           _amount = price,
           _state = Nothing,
           _due_date = Nothing,
@@ -409,14 +411,14 @@ mkCreateTaskReq order = do
             lng = lon',
             address =
               Address
-                { apartment_address = Just $ CoreLoc.door address <> ", " <> CoreLoc.building address,
-                  street_address_1 = CoreLoc.street address,
+                { apartment_address = Just (fromMaybe "" (CoreAddr._door address) <> " " <> CoreAddr._name address <> " " <> fromMaybe "" (CoreAddr._building address)),
+                  street_address_1 = fromMaybe "" (CoreAddr._street address),
                   street_address_2 = "",
                   landmark = Nothing,
-                  city = Just $ CoreLoc.city address,
-                  state = "",
-                  pincode = Just $ CoreLoc.area_code address,
-                  country = Just $ CoreLoc.country address
+                  city = Just $ CoreAddr._city address,
+                  state = CoreAddr._state address,
+                  pincode = Just $ CoreAddr._area_code address,
+                  country = Just $ CoreAddr._country address
                 }
           }
 

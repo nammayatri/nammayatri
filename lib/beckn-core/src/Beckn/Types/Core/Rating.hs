@@ -6,8 +6,9 @@ import EulerHS.Prelude
 
 data Rating = Rating
   { _value :: Text,
-    _unit :: Text,
-    _scale :: [Text]
+    _unit :: Text, -- Default:U+2B50 Follows the unicode 13.0 format for emojis : https://unicode.org/emoji/charts/full-emoji-list.html
+    _max_value :: Maybe Text,
+    _direction :: Maybe Text -- Default "UP" - "UP", "DOWN"
   }
   deriving (Generic, Show)
 
@@ -21,6 +22,7 @@ instance Example Rating where
   example =
     Rating
       { _value = "5",
-        _unit = "****",
-        _scale = ["10"]
+        _unit = "U+2B50",
+        _max_value = Just "5",
+        _direction = Just "UP"
       }

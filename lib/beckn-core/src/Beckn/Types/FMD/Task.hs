@@ -7,13 +7,14 @@ import Beckn.Types.FMD.Agent
 import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data PickupOrDrop = PickupOrDrop
   { _location :: Location,
     _instructions :: [Descriptor],
-    _poc :: Person
+    _poc :: Person,
+    _time :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
@@ -28,7 +29,8 @@ instance Example PickupOrDrop where
     PickupOrDrop
       { _location = example,
         _instructions = example,
-        _poc = example
+        _poc = example,
+        _time = Nothing
       }
 
 data Task = Task
@@ -36,7 +38,7 @@ data Task = Task
     _item_id :: Text,
     _next_task_id :: Maybe Text,
     _previous_task_id :: Maybe Text,
-    _state :: Text,
+    _state :: Text, -- "SEARCHINNG-FOR-FMD-AGENT", "ASSIGNED-AGENT", "EN-ROUTE-TO-PICKCUP", "AT-PICKUP-LOCATION", "PICKED-UP-PACKAGE", "EN-ROUTE-TO-DROP", "AT-DROP-LOCATION", "DROPPED-PACKAGE"
     _pickup :: PickupOrDrop,
     _drop :: PickupOrDrop,
     _package :: Package,

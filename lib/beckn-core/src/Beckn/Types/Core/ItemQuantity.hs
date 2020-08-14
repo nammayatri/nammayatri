@@ -6,7 +6,7 @@ import EulerHS.Prelude
 
 data Quantity = Quantity
   { _count :: Integer,
-    _amount :: Scalar
+    _quantity :: Scalar
   }
   deriving (Generic, Show)
 
@@ -20,15 +20,15 @@ instance Example Quantity where
   example =
     Quantity
       { _count = 2,
-        _amount = example
+        _quantity = example
       }
 
 data ItemQuantity = ItemQuantity
-  { _allocated :: Quantity,
-    _available :: Quantity,
-    _maximum :: Quantity,
-    _minimum :: Quantity,
-    _selected :: Quantity
+  { _allocated :: Maybe Quantity,
+    _available :: Maybe Quantity,
+    _maximum :: Maybe Quantity,
+    _minimum :: Maybe Quantity,
+    _selected :: Maybe Quantity
   }
   deriving (Generic, Show)
 

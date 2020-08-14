@@ -28,13 +28,13 @@ instance Example Address where
   example =
     Address
       { _name = "Address",
-        _door = Nothing,
-        _building = Nothing,
-        _street = Nothing,
-        _locality = Nothing,
-        _ward = Nothing,
-        _city = "BLR",
+        _door = Just "#817",
+        _building = Just "Juspay Apartments",
+        _street = Just "27th Main",
+        _city = "Bangalore",
         _state = "Karnataka",
         _country = "India",
-        _area_code = "560095"
+        _area_code = "560047",
+        _locality = Just "8th Block Koramangala",
+        _ward = Nothing
       }
