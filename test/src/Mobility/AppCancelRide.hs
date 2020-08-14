@@ -5,7 +5,6 @@ module Mobility.AppCancelRide where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Data.Time
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -72,13 +71,12 @@ spec = do
             confirmResult `shouldSatisfy` isRight
 
             -- cancel request initiated by App
-            now <- getCurrentTime
             txnId <- UUID.nextUUID
             cancelResult <-
               runClient
                 appClientEnv
                 ( cancelRide appRegistrationToken $
-                    buildAppCancelReq (UUID.toText $ fromJust txnId) now productInstanceId CancelAPI.PRODUCT_INSTANCE
+                    buildAppCancelReq (UUID.toText $ fromJust txnId) productInstanceId CancelAPI.PRODUCT_INSTANCE
                 )
             cancelResult `shouldSatisfy` isRight
 

@@ -1,7 +1,6 @@
 module Types.API.Cancel where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.Context
 import EulerHS.Prelude
 
 data Entity = CASE | PRODUCT_INSTANCE
@@ -14,7 +13,7 @@ data Cancel = Cancel
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data CancelReq = CancelReq
-  { context :: Context,
+  { transaction_id :: Text,
     message :: Cancel
   }
   deriving (Generic, Show, FromJSON, ToJSON)

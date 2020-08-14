@@ -10,16 +10,19 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (mkAckResponse, mkAckResponse', withFlowHandler)
+import Data.Time (getCurrentTime)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import Servant.Client
 import Types.API.Cancel as Cancel
+import Utils.Common (mkContext)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
-cancel :: Person.Person -> CancelReq -> FlowHandler CancelRes
+cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
 cancel person req = withFlowHandler $ do
   let entityType = req ^. #message . #entityType
   case entityType of
@@ -36,26 +39,28 @@ cancelProductInstance person req = do
     else errResp (show (prodInst ^. #_status))
   where
     sendCancelReq prodInstId = do
-      let context = req ^. #context
-      let txnId = context ^. #_transaction_id
+      let txnId = req ^. #transaction_id
       baseUrl <- Gateway.getProviderBaseUrl
+      currTime <- L.runIO getCurrentTime
       let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrderId prodInstId)
+          context = mkContext "cancel" txnId currTime Nothing
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
     errResp pStatus = do
-      let txnId = req ^. #context . #_transaction_id
+      let txnId = req ^. #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
 cancelCase :: Person.Person -> CancelReq -> Flow CancelRes
 cancelCase person req = do
   let caseId = req ^. #message . #entityId
   case_ <- MC.findIdByPerson person (CaseId caseId)
+  currTime <- L.runIO getCurrentTime
   if isCaseCancellable case_
     then do
-      let context = req ^. #context
-      let txnId = context ^. #_transaction_id
+      let txnId = req ^. #transaction_id
+          context = mkContext "cancel" txnId currTime Nothing
       productInstances <- MPI.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
@@ -70,7 +75,7 @@ cancelCase person req = do
             Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
             Right _ -> mkAckResponse txnId "cancel"
     else do
-      let txnId = req ^. #context . #_transaction_id
+      let txnId = req ^. #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
   where
     callCancelApi ::

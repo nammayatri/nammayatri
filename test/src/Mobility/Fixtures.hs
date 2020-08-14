@@ -11,7 +11,6 @@ import qualified Beckn.Types.API.Confirm as Confirm
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common as Common
-import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Payload
@@ -97,21 +96,6 @@ getStop stopTime =
       departureTime = AppCommon.StopTime stopTime (Just stopTime)
     }
 
-buildContext :: Text -> Text -> UTCTime -> Context
-buildContext act tid utcTime =
-  Context
-    { _domain = "MOBILITY",
-      _action = act,
-      _country = Nothing,
-      _city = Nothing,
-      _core_version = Just "0.8.0",
-      _domain_version = Just "0.8.0",
-      _ac_id = Nothing,
-      _transaction_id = tid,
-      _message_id = tid,
-      _timestamp = utcTime
-    }
-
 searchReq :: Text -> UTCTime -> LocalTime -> AppBESearch.SearchReq
 searchReq tid utcTime localTime =
   AppBESearch.SearchReq
@@ -149,10 +133,10 @@ cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 onCancelRide :: Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes
 cancelRide :<|> onCancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
-buildAppCancelReq :: Text -> UTCTime -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
-buildAppCancelReq guid utcTime entityId entityType =
+buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
+buildAppCancelReq guid entityId entityType =
   CancelAPI.CancelReq
-    { context = buildContext "cancel" guid utcTime,
+    { transaction_id = guid,
       message = CancelAPI.Cancel entityId entityType
     }
 
