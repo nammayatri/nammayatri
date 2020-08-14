@@ -17,10 +17,10 @@ instance ToJSON a => ToJSON (CallbackReq a) where
       contextField = "context" .= context
       allFields = case contents of
         Left err -> contextField : ["error" .= err]
-        Right value -> contextField : ["message" .= value]
+        Right message -> contextField : ["message" .= message]
 
 instance FromJSON a => FromJSON (CallbackReq a) where
-  parseJSON = withObject "Request" $ \o ->
+  parseJSON = withObject "CallbackReq" $ \o ->
     CallbackReq
       <$> o .: "context"
       <*> (Left <$> o .: "error" <|> Right <$> o .: "message")
