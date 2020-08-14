@@ -12,8 +12,7 @@ import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (decodeFromText, encodeToText, getCurrTime, withFlowHandler)
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -32,7 +31,7 @@ import Utils.Routes
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
 confirm person API.ConfirmReq {..} = withFlowHandler $ do
-  lt <- getCurrentTimeUTC
+  lt <- getCurrTime
   case_ <- QCase.findIdByPerson person $ CaseId caseId
   when ((case_ ^. #_validTill) < lt) $
     L.throwException $
@@ -49,7 +48,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where
     mkOrder productInstance = do
-      now <- getCurrentTimeUTC
+      now <- getCurrTime
       return $
         BO.Order
           { _id = _getProductInstanceId $ productInstance ^. #_id,
@@ -89,7 +88,7 @@ onConfirm req = withFlowHandler $ do
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   caseId <- generateGUID
   shortId <- generateShortId
   return
@@ -113,7 +112,7 @@ mkOrderCase Case.Case {..} = do
 
 mkOrderProductInstance :: CaseId -> SPI.ProductInstance -> Flow SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   piid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return

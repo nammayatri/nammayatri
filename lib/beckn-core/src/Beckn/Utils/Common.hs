@@ -26,17 +26,14 @@ import System.Environment
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
 
-getCurrTime :: L.MonadFlow m => m LocalTime
-getCurrTime = L.runIO $ do
+getCurrLocalTime :: L.MonadFlow m => m LocalTime
+getCurrLocalTime = L.runIO $ do
   utc' <- getCurrentTime
   timezone <- getTimeZone utc'
   pure $ utcToLocalTime timezone utc'
 
-getCurrTime' :: L.MonadFlow m => m UTCTime
-getCurrTime' = L.runIO getCurrentTime
-
-defaultLocalTime :: LocalTime
-defaultLocalTime = LocalTime (ModifiedJulianDay 58870) (TimeOfDay 1 1 1)
+getCurrTime :: L.MonadFlow m => m UTCTime
+getCurrTime = L.runIO getCurrentTime
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
@@ -98,7 +95,7 @@ mkAckResponse txnId action = mkAckResponse' txnId action "OK"
 
 mkAckResponse' :: L.MonadFlow m => Text -> Text -> Text -> m AckResponse
 mkAckResponse' txnId action _message = do
-  currTime <- getCurrTime'
+  currTime <- getCurrTime
   return
     AckResponse
       { _context =
@@ -203,8 +200,8 @@ throwJsonError401H = throwJsonErrorH ... err401
 -- Converts and Formats in the format
 -- TODO: make a generic function and then pass format
 -- and timezone as arguments. Currently adds +5:30
-showTimeIst :: LocalTime -> Text
-showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addLocalTime (60 * 330)
+showTimeIst :: UTCTime -> Text
+showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addUTCTime (60 * 330)
 
 throwDomainError :: L.MonadFlow m => DomainError -> m a
 throwDomainError err =
@@ -293,9 +290,6 @@ instance Example a => Example (Maybe a) where
 instance Example a => Example [a] where
   example = one example
 
-instance Example LocalTime where
-  example = LocalTime (ModifiedJulianDay 20202) midday
-
 instance Example UTCTime where
   example =
     UTCTime
@@ -305,3 +299,17 @@ instance Example UTCTime where
 -- until we start using newtypes everywhere
 idExample :: Text
 idExample = "123e4567-e89b-12d3-a456-426655440000"
+
+addIfPresent :: [a] -> Maybe a -> [a]
+addIfPresent xs (Just x) = x : xs
+addIfPresent xs _ = xs
+
+isExpired :: L.MonadFlow m => NominalDiffTime -> UTCTime -> m Bool
+isExpired nominal time = do
+  now <- getCurrTime
+  let addedUTCTime = addUTCTime nominal time
+  return $ now > addedUTCTime
+
+headMaybe :: [a] -> Maybe a
+headMaybe [] = Nothing
+headMaybe (x : _) = Just x

@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -103,9 +103,9 @@ data CaseT f = Case
     _type :: B.C f CaseType,
     _exchangeType :: B.C f ExchangeType,
     _status :: B.C f CaseStatus,
-    _startTime :: B.C f LocalTime,
-    _endTime :: B.C f (Maybe LocalTime),
-    _validTill :: B.C f LocalTime,
+    _startTime :: B.C f UTCTime,
+    _endTime :: B.C f (Maybe UTCTime),
+    _validTill :: B.C f UTCTime,
     _provider :: B.C f (Maybe Text),
     _providerType :: B.C f (Maybe ProviderType),
     _requestor :: B.C f (Maybe Text),
@@ -119,8 +119,8 @@ data CaseT f = Case
     _udf4 :: B.C f (Maybe Text),
     _udf5 :: B.C f (Maybe Text),
     _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

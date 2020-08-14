@@ -4,14 +4,14 @@ import Beckn.Types.Core.Billing
 import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Payment
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Order = Order
   { _id :: Text,
     _state :: Text,
-    _created_at :: LocalTime,
-    _updated_at :: LocalTime,
+    _created_at :: UTCTime,
+    _updated_at :: UTCTime,
     _items :: [OrderItem],
     _billing :: Maybe Billing,
     _payment :: Maybe Payment

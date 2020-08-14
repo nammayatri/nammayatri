@@ -6,8 +6,7 @@ import App.Types
 import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Common (withFlowHandler)
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (getCurrTime, withFlowHandler)
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -24,7 +23,7 @@ createProduct _orgId req = withFlowHandler $ do
 mkProduct :: CreateProdReq -> Flow Product.Products
 mkProduct req = do
   pid <- L.generateGUID
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
     Product.Products

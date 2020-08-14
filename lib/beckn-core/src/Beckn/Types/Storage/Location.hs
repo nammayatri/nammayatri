@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -47,8 +47,8 @@ data LocationT f = Location
     _pincode :: B.C f (Maybe Text),
     _address :: B.C f (Maybe Text),
     _bound :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

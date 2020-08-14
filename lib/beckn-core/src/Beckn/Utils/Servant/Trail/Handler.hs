@@ -16,7 +16,7 @@ import EulerHS.Prelude
 -- TODO: add a test on that request arguments appear in database at least
 -- for one entrypoint
 
-mkTrail :: Text -> LocalTime -> Util.RequestInfo -> Trail.Trail
+mkTrail :: Text -> UTCTime -> Util.RequestInfo -> Trail.Trail
 mkTrail reqId now req =
   Trail.Trail
     { _id = reqId,
@@ -51,7 +51,7 @@ traceHandler = Util.TraceHandler {..}
     _postAction Nothing _ = pass
     _postAction (Just (reqId, reqTime)) res = do
       now <- getCurrTime
-      let duration = roundDiffTimeToUnit $ now `diffLocalTime` reqTime
+      let duration = roundDiffTimeToUnit $ now `diffUTCTime` reqTime
       fork "save external trail" $ do
         dbres <- Trail.setResponseInfo reqId duration res
         case dbres of

@@ -72,7 +72,7 @@ buildIntent utcTime =
 
 buildDraftOrder :: Text -> Flow Order
 buildDraftOrder itemId = do
-  now <- EL.runIO $ toLocalTime <$> getCurrentTime
+  now <- getCurrTime
   return $
     Order
       { _id = Just "draft-task-1",
@@ -102,7 +102,7 @@ buildDraftOrder itemId = do
 
 buildContext :: Text -> Text -> Flow Context
 buildContext act tid = do
-  utcTime <- getCurrTime'
+  utcTime <- getCurrTime
   bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
   return $
     Context
@@ -118,18 +118,15 @@ buildContext act tid = do
         _timestamp = utcTime
       }
 
-toLocalTime :: UTCTime -> LocalTime
-toLocalTime = zonedTimeToLocalTime . utcToZonedTime utc
-
-getFutureTime :: Flow LocalTime
+getFutureTime :: Flow UTCTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
-  EL.runIO $ toLocalTime . addUTCTime 7200 <$> getCurrentTime
+  addUTCTime 7200 <$> getCurrTime
 
 buildSearchReq :: Text -> Flow SearchReq
 buildSearchReq tid = do
   ctx <- buildContext "search" tid
-  now <- getCurrTime'
+  now <- getCurrTime
   let intent = buildIntent now
   pure $ SearchReq ctx intent
 

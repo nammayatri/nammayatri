@@ -9,7 +9,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
@@ -34,7 +33,7 @@ findRegistrationToken id =
 
 updateVerified :: Text -> Bool -> Flow ()
 updateVerified id verified = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause verified now) (predicate id)
     >>= either DB.throwDBError pure
   where
@@ -60,7 +59,7 @@ findRegistrationTokenByToken regToken =
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
   findRegistrationToken id >>= maybe (L.throwException err500) pure

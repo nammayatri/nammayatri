@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Schedule where
 
 import Data.Text
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Schedule = Schedule
@@ -17,8 +17,8 @@ instance ToJSON Schedule where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data Slot = Slot
-  { _open :: LocalTime,
-    _close :: LocalTime
+  { _open :: UTCTime,
+    _close :: UTCTime
   }
   deriving (Generic, Show)
 

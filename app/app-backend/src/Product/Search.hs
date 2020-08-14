@@ -17,14 +17,12 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common (encodeToText, withFlowHandler)
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Time (getCurrentTime)
-import Data.Time.LocalTime
+import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -65,7 +63,7 @@ search person req = withFlowHandler $ do
   return $ API.AckResponse (_getCaseId (case_ ^. #_id)) sAck Nothing
   where
     validateDateTime sreq = do
-      currTime <- getCurrentTimeUTC
+      currTime <- getCurrTime
       when ((sreq ^. #origin . #departureTime . #estimated) < currTime) $
         L.throwException $
           err400 {errBody = "Invalid start time"}
@@ -109,16 +107,16 @@ searchCbService req service = do
   where
     extendCaseExpiry :: Case.Case -> Flow ()
     extendCaseExpiry Case.Case {..} = do
-      now <- getCurrentTimeUTC
+      now <- getCurrTime
       confirmExpiry <-
         fromMaybe 1800 . (readMaybe =<<)
           <$> L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
-      let newValidTill = fromInteger confirmExpiry `addLocalTime` now
+      let newValidTill = fromInteger confirmExpiry `addUTCTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
 
 mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   cid <- generateGUID
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
@@ -156,20 +154,20 @@ mkCase req userId from to = do
         _updatedAt = now
       }
   where
-    getCaseExpiry :: LocalTime -> Flow LocalTime
+    getCaseExpiry :: UTCTime -> Flow UTCTime
     getCaseExpiry startTime = do
-      now <- getCurrentTimeUTC
+      now <- getCurrTime
       caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
       let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
           minExpiry = 300 -- 5 minutes
-          timeToRide = startTime `diffLocalTime` now
-          validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
+          timeToRide = startTime `diffUTCTime` now
+          validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
 mkLocation :: BS.Stop -> Flow Location.Location
 mkLocation BS.Stop {..} = do
   let loc = _location
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   locId <- generateGUID
   let mgps = loc ^. #_gps
   return
@@ -192,7 +190,7 @@ mkLocation BS.Stop {..} = do
 
 mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> Flow Products.Products
 mkProduct case_ _mprovider item = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
@@ -224,7 +222,7 @@ mkProduct case_ _mprovider item = do
 
 mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow ProductInstance.ProductInstance
 mkProductInstance case_ mprovider personId item = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   let info = ProductInfo (fromBeckn <$> mprovider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of

@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -40,8 +40,8 @@ data TrackerT f = Tracker
     _long :: B.C f Text,
     _lat :: B.C f Text,
     _gps :: B.C f Text,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

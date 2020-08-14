@@ -1,12 +1,12 @@
 module Types.API.Cron where
 
 import Data.Swagger
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data ExpireCaseReq = ExpireCaseReq
-  { from :: LocalTime,
-    to :: LocalTime
+  { from :: UTCTime,
+    to :: UTCTime
   }
   deriving (Generic, ToSchema, ToJSON, Show, FromJSON)
 

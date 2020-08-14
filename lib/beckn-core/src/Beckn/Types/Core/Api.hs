@@ -2,12 +2,12 @@ module Beckn.Types.Core.Api where
 
 import Beckn.Utils.Common
 import Data.Text
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Api = Api
   { _url :: Text,
-    _exp :: LocalTime
+    _exp :: UTCTime
   }
   deriving (Generic, Show)
 

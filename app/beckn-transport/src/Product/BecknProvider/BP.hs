@@ -26,7 +26,6 @@ import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import qualified Data.Text as T
 import Data.Time
 import qualified EulerHS.Language as L
@@ -53,7 +52,7 @@ search _unit req = withFlowHandler $ do
   --TODO: Need to add authenticator
   let intent = req ^. #message . #intent
   uuid <- L.generateGUID
-  currTime <- getCurrentTimeUTC
+  currTime <- getCurrTime
   validity <- getValidTime currTime (intent ^. #_origin . #_departure_time . #_est)
   uuid1 <- L.generateGUID
   let fromLocation = mkFromStop req uuid1 currTime $ intent ^. #_origin
@@ -102,16 +101,16 @@ cancel req = withFlowHandler $ do
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
-getValidTime :: LocalTime -> LocalTime -> Flow LocalTime
+getValidTime :: UTCTime -> UTCTime -> Flow UTCTime
 getValidTime now startTime = do
   caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
   let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
       minExpiry = 300 -- 5 minutes
-      timeToRide = startTime `diffLocalTime` now
-      validTill = addLocalTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
+      timeToRide = startTime `diffUTCTime` now
+      validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkFromStop :: SearchReq -> Text -> LocalTime -> BS.Stop -> SL.Location
+mkFromStop :: SearchReq -> Text -> UTCTime -> BS.Stop -> SL.Location
 mkFromStop _req uuid now stop =
   let loc = stop ^. #_location
       mgps = loc ^. #_gps
@@ -133,7 +132,7 @@ mkFromStop _req uuid now stop =
           _updatedAt = now
         }
 
-mkCase :: SearchReq -> Text -> LocalTime -> LocalTime -> SL.Location -> SL.Location -> SC.Case
+mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity fromLocation toLocation = do
   let intent = req ^. #message . #intent
   let startTime = req ^. #message . #intent . #_origin . #_departure_time . #_est
@@ -248,7 +247,7 @@ mkOrderProductInstance caseId prodInst = do
 
 -- TODO : Add notifying transporter admin with FCM
 
-mkTrackerProductInstance :: Text -> CaseId -> ProductInstance -> LocalTime -> Flow ProductInstance.ProductInstance
+mkTrackerProductInstance :: Text -> CaseId -> ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
 mkTrackerProductInstance piId caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
@@ -281,7 +280,7 @@ mkTrackerProductInstance piId caseId prodInst currTime = do
         _udf5 = prodInst ^. #_udf5
       }
 
-mkTrackerCase :: SC.Case -> Text -> LocalTime -> Text -> SC.Case
+mkTrackerCase :: SC.Case -> Text -> UTCTime -> Text -> SC.Case
 mkTrackerCase case_ uuid now shortId =
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
@@ -323,7 +322,7 @@ notifyGateway c prodInst trackerCase = do
 
 mkContext :: Text -> Text -> Flow Context
 mkContext action tId = do
-  currTime <- getCurrTime'
+  currTime <- getCurrTime
   return
     Context
       { _domain = "MOBILITY",
@@ -380,7 +379,7 @@ mkOnServiceStatusPayload piId trackerPi = do
       }
   where
     mkOrderRes prodInstId productId status = do
-      now <- getCurrentTimeUTC
+      now <- getCurrTime
       return $
         Order
           { _id = prodInstId,
@@ -504,9 +503,9 @@ mkCancelTripObj prodInstId = do
         route = Nothing
       }
 
-getIdShortIdAndTime :: GuidLike b => Flow (LocalTime, b, Text)
+getIdShortIdAndTime :: GuidLike b => Flow (UTCTime, b, Text)
 getIdShortIdAndTime = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   guid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return (now, guid, shortId)

@@ -59,8 +59,8 @@ data RegistrationTokenT f = RegistrationToken
     _tokenExpiry :: B.C f Int,
     _EntityId :: B.C f Text,
     _entityType :: B.C f RTEntityType,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime,
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime,
     _info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)

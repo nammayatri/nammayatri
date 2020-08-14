@@ -5,7 +5,7 @@ import Beckn.Types.Core.Location
 import Beckn.Types.Mobility.Stop (StopTime)
 import Beckn.Types.Mobility.Transfer
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 newtype ServiceSchedule = ServiceSchedule
@@ -21,7 +21,7 @@ data Schedule = Schedule
     _departure_time :: StopTime,
     _transfers :: [Transfer],
     _status :: Text, -- ON-TIME, DELAYED, EARLY, CANCELLED, SKIP, RETURN
-    _alt_timings :: [LocalTime],
+    _alt_timings :: [UTCTime],
     _alt_services :: [Text]
   }
   deriving (Generic, Show)

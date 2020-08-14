@@ -19,8 +19,7 @@ import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, throwJsonError400, throwJsonError500)
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwJsonError400, throwJsonError500)
 import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
@@ -161,7 +160,7 @@ init org req = do
     sendCb _ _ _ _ = return ()
 
     createCaseIfNotPresent order quote = do
-      now <- getCurrentTimeUTC
+      now <- getCurrTime
       let caseId = CaseId $ fromJust $ order ^. #_id
       let case_ =
             Case
@@ -258,7 +257,7 @@ confirm org req = do
     sendCb case_ orderDetails req' baConfig res =
       case res of
         Right taskStatus -> do
-          currTime <- getCurrentTimeUTC
+          currTime <- getCurrTime
           let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) taskStatus
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
           onConfirmReq <- mkOnConfirmReq req' uOrder

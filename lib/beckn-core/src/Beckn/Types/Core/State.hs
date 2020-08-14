@@ -3,12 +3,12 @@ module Beckn.Types.Core.State where
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Common
 import Data.Aeson (Value)
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude hiding (State)
 
 data State = State
   { _descriptor :: Descriptor,
-    _updated_at :: Maybe LocalTime,
+    _updated_at :: Maybe UTCTime,
     _updated_by :: Text,
     _update_metadata :: Maybe Value
   }

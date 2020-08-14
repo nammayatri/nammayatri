@@ -7,7 +7,7 @@ import Beckn.Types.FMD.Agent
 import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data PickupOrDrop = PickupOrDrop
@@ -42,8 +42,8 @@ data Task = Task
     _package :: Package,
     _agent :: Maybe Agent,
     _vehicle :: Maybe Vehicle,
-    _created_at :: Maybe LocalTime,
-    _updated_at :: Maybe LocalTime
+    _created_at :: Maybe UTCTime,
+    _updated_at :: Maybe UTCTime
   }
   deriving (Generic, Show)
 

@@ -8,7 +8,7 @@ import Beckn.Types.Core.Offer
 import Beckn.Types.Mobility.FareProduct
 import Beckn.Utils.Common
 import Data.Text
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Catalog = Catalog
@@ -16,7 +16,7 @@ data Catalog = Catalog
     _categories :: [Category],
     _brands :: [Brand],
     _models :: [Model],
-    _ttl :: Maybe LocalTime,
+    _ttl :: Maybe UTCTime,
     _items :: [Item],
     _offers :: [Offer],
     -- Mobility specific

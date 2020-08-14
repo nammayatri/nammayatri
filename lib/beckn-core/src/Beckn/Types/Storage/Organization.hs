@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -99,16 +99,16 @@ data OrganizationT f = Organization
     _type :: B.C f OrganizationType,
     _domain :: B.C f (Maybe OrganizationDomain),
     _locationId :: B.C f (Maybe Text),
-    _fromTime :: B.C f (Maybe LocalTime),
-    _toTime :: B.C f (Maybe LocalTime),
+    _fromTime :: B.C f (Maybe UTCTime),
+    _toTime :: B.C f (Maybe UTCTime),
     _headCount :: B.C f (Maybe Int),
     _status :: B.C f Status,
     _verified :: B.C f Bool,
     _enabled :: B.C f Bool,
     _apiKey :: B.C f (Maybe Text),
     _callbackUrl :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime,
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime,
     _callbackApiKey :: B.C f (Maybe Text),
     _info :: B.C f (Maybe Text)
   }

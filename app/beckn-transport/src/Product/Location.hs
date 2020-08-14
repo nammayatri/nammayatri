@@ -12,9 +12,7 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Beckn.Utils.Extra (getCurrentTimeUTC)
-import Data.Time.Clock (nominalDiffTimeToSeconds)
-import Data.Time.LocalTime
+import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import qualified Models.Case as Case
@@ -32,7 +30,7 @@ data CachedLocationInfo = CachedLocationInfo
   { locationType :: Maybe Location.LocationType,
     lat :: Maybe Double,
     long :: Maybe Double,
-    traversed_waypoints :: [(LocalTime, Waypoint)],
+    traversed_waypoints :: [(UTCTime, Waypoint)],
     destLat :: Maybe Double,
     destLon :: Maybe Double,
     ward :: Maybe Text,
@@ -84,7 +82,7 @@ getLocation caseId =
 
 updateLocationInfo :: UpdateLocationReq -> Maybe MapSearch.Route -> CachedLocationInfo -> Flow CachedLocationInfo
 updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   -- lat long will be present
   let lat' = fromJust lat
       long' = fromJust long
@@ -123,7 +121,7 @@ updateLocationInfo UpdateLocationReq {..} routeM currLocInfo = do
         (Just durationInS, Just destLat, Just destLon) -> Just $ calculateETA waypointList (Waypoint destLon destLat) routeEdges durationInS
         _ -> durationM
 
-appendToWaypointList :: (LocalTime, Waypoint) -> [(LocalTime, Waypoint)] -> [(LocalTime, Waypoint)]
+appendToWaypointList :: (UTCTime, Waypoint) -> [(UTCTime, Waypoint)] -> [(UTCTime, Waypoint)]
 appendToWaypointList newLoc list = do
   -- number of waypoints using which average speed is calculated
   let totalWaypointsToTrack = 3 -- minimum 2 required
@@ -135,7 +133,7 @@ appendToWaypointList newLoc list = do
           list' = drop dropLen list
        in list' <> [newLoc]
 
-calculateETA :: [(LocalTime, Waypoint)] -> Waypoint -> [(EdgeLength, Edge)] -> Integer -> Integer
+calculateETA :: [(UTCTime, Waypoint)] -> Waypoint -> [(EdgeLength, Edge)] -> Integer -> Integer
 calculateETA traversedWaypoints (Waypoint destLon destLat) routeEdges initalDuration
   -- initialDuration is in seconds
   | length traversedWaypoints < 2 = initalDuration
@@ -153,13 +151,13 @@ calculateETA traversedWaypoints (Waypoint destLon destLat) routeEdges initalDura
      in if avgSpeed == 0 then 0 else round $ dist / avgSpeed
   where
     calcSpeed ((t1, Waypoint lon1 lat1), (t2, Waypoint lon2 lat2)) =
-      let durationInS = abs $ round $ nominalDiffTimeToSeconds $ diffLocalTime t2 t1
+      let durationInS = abs $ round $ nominalDiffTimeToSeconds $ diffUTCTime t2 t1
           distanceInM = MapSearch.distanceBetweenInMeters (PointXY lon1 lat1) (PointXY lon2 lat2)
        in MapSearch.speedInMPS distanceInM durationInS
 
 createLocationInfo :: UpdateLocationReq -> Maybe Waypoint -> Maybe MapSearch.Route -> Flow CachedLocationInfo
 createLocationInfo UpdateLocationReq {..} destinationM routeM = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   -- lat long will be present
   let lat' = fromJust lat
       long' = fromJust long

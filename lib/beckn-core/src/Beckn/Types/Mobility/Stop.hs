@@ -24,8 +24,8 @@ instance ToJSON Stop where
   toJSON = genericToJSON stripLensPrefixOptions
 
 data StopTime = StopTime
-  { _est :: LocalTime,
-    _act :: Maybe LocalTime
+  { _est :: UTCTime,
+    _act :: Maybe UTCTime
   }
   deriving (Generic, Show)
 

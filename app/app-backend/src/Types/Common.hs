@@ -16,7 +16,7 @@ import qualified Beckn.Types.Mobility.Traveller as Traveller
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
 import Control.Lens.Prism (_Just)
-import Data.Time (LocalTime)
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data GPS = GPS
@@ -49,8 +49,8 @@ data Location = Location
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data StopTime = StopTime
-  { estimated :: LocalTime,
-    actual :: Maybe LocalTime
+  { estimated :: UTCTime,
+    actual :: Maybe UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

@@ -17,7 +17,7 @@ data LeadsReqMsg = LeadsReqMsg
   { domain :: Text, -- "MOBILITY", "FINAL-MILE-DELIVERY", "FOOD-AND-BEVERAGE"
     origin :: CL.Location,
     destination :: CL.Location,
-    time :: LocalTime, -- ["format" : "date-time"]
+    time :: UTCTime, -- ["format" : "date-time"]
     vehicle :: MV.Vehicle,
     -- , payload :: {
     --     travellers :: {

@@ -30,7 +30,7 @@ data TrailT f = Trail
     _responseStatus :: B.C f (Maybe LText),
     _responseBody :: B.C f (Maybe Text),
     _responseHeaders :: B.C f (Maybe LText),
-    _createdAt :: B.C f LocalTime,
+    _createdAt :: B.C f UTCTime,
     _processDuration :: B.C f (Maybe Millisecond)
     -- TODO: is it convenient to store durration in mcs?
     -- maybe use NominalDiffTime (fractional seconds) instead?

@@ -9,7 +9,7 @@ module Types.Storage.Customer where
 import Beckn.External.Encryption
 import Data.Aeson
 import Data.Swagger
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App
@@ -20,8 +20,8 @@ data CustomerTE e f = Customer
     _name :: B.C f Text,
     _mobileNumber :: EncryptedHashedField e f Text,
     _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic)
 

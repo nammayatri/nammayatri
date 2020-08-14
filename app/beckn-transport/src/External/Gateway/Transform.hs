@@ -23,7 +23,7 @@ import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (getCurrTime)
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -98,7 +98,7 @@ mkServiceOffer c pis _allPis orgInfo = do
 
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
 mkOrder _c pri trip = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   return
     Mobility.Order
       { _id = _getProductInstanceId $ pri ^. #_id,

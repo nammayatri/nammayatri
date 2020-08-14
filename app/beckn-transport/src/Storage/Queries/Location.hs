@@ -6,7 +6,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -31,7 +30,7 @@ findLocationById id =
 
 updateLocationRec :: LocationId -> Storage.Location -> Flow ()
 updateLocationRec locationId location = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause location now) (predicate locationId)
     >>= either DB.throwDBError pure
   where

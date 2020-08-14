@@ -9,7 +9,6 @@ import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -48,7 +47,7 @@ createGateway _ req = withFlowHandler $ do
 updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   case maybePerson of
     Just person -> do
       validate person

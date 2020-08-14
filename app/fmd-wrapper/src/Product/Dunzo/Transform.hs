@@ -32,13 +32,12 @@ import Beckn.Types.FMD.API.Update
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeM500, throwJsonError400)
-import Beckn.Utils.Extra (getCurrentTimeUTC, headMaybe)
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
 import Control.Lens ((?~))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
@@ -126,7 +125,7 @@ mkOnSearchErrReq _ context Error {..} = do
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
 mkOnSearchReq _ context res@QuoteRes {..} = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   cid <- generateGUID
   itemid <- generateGUID
   return $
@@ -275,10 +274,10 @@ mkOnInitErrReq req Error {..} = do
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
 mkOnStatusMessage :: Text -> Order -> TaskStatus -> Flow StatusResMessage
 mkOnStatusMessage orgName order status = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   return $ StatusResMessage (updateOrder orgName now order status)
 
-updateOrder :: Text -> LocalTime -> Order -> TaskStatus -> Order
+updateOrder :: Text -> UTCTime -> Order -> TaskStatus -> Order
 updateOrder orgName cTime order status =
   order & #_state ?~ show (status ^. #state)
     & #_updated_at .~ cTime

@@ -88,7 +88,7 @@ price =
           _maximum_value = Just amt
         }
 
-getStop :: LocalTime -> AppCommon.Stop
+getStop :: UTCTime -> AppCommon.Stop
 getStop stopTime =
   AppCommon.Stop
     { location = location,
@@ -96,22 +96,22 @@ getStop stopTime =
       departureTime = AppCommon.StopTime stopTime (Just stopTime)
     }
 
-searchReq :: Text -> UTCTime -> LocalTime -> AppBESearch.SearchReq
-searchReq tid utcTime localTime =
+searchReq :: Text -> UTCTime -> UTCTime -> AppBESearch.SearchReq
+searchReq tid utcTime futureTime =
   AppBESearch.SearchReq
     { transaction_id = tid,
       startTime = utcTime,
-      origin = getStop localTime,
-      destination = getStop localTime,
+      origin = getStop futureTime,
+      destination = getStop futureTime,
       vehicle = vehicle,
       travellers = [],
       fare = AppCommon.DecimalValue "360" $ Just "50"
     }
 
-getFutureTime :: IO LocalTime
+getFutureTime :: IO UTCTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
-  (zonedTimeToLocalTime . utcToZonedTime utc) . addUTCTime 7200 <$> getCurrentTime
+  addUTCTime 7200 <$> getCurrentTime
 
 searchServices ::
   Text ->
@@ -125,9 +125,9 @@ searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAP
 
 buildSearchReq :: Text -> IO AppBESearch.SearchReq
 buildSearchReq guid = do
-  localTme <- getFutureTime
+  futureTime <- getFutureTime
   utcTime <- getCurrentTime
-  pure $ searchReq guid utcTime localTme
+  pure $ searchReq guid utcTime futureTime
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 onCancelRide :: Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes

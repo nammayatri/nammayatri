@@ -5,15 +5,15 @@ import Beckn.Types.Core.Payment
 import Beckn.Types.FMD.Item (Item)
 import Beckn.Types.FMD.Task (Task)
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Order = Order
   { _id :: Maybe Text,
     _state :: Maybe Text,
     _items :: [Item],
-    _created_at :: LocalTime,
-    _updated_at :: LocalTime,
+    _created_at :: UTCTime,
+    _updated_at :: UTCTime,
     _tasks :: [Task],
     _billing :: Maybe Billing,
     _payment :: Maybe Payment

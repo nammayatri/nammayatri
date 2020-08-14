@@ -11,7 +11,7 @@ import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (encodeToText')
-import qualified Beckn.Utils.Extra as Utils
+import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth

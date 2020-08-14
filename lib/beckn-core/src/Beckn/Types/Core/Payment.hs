@@ -5,7 +5,7 @@ import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.State
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude hiding (State)
 
 data Payment = Payment
@@ -16,7 +16,7 @@ data Payment = Payment
     _method :: Text, -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
     _amount :: MonetaryValue,
     _state :: Maybe State,
-    _due_date :: Maybe LocalTime,
+    _due_date :: Maybe UTCTime,
     _duration :: Maybe MonetaryValue,
     _terms :: Maybe PaymentPolicy
   }

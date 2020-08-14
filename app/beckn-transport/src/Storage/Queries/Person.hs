@@ -10,7 +10,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -116,7 +115,7 @@ findByEmail email =
 
 updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either DB.throwDBError pure
   where
@@ -130,7 +129,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
 
 updatePersonRec :: PersonId -> Storage.Person -> Flow ()
 updatePersonRec personId uperson = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   person <- encrypt uperson
   DB.update dbTable (setClause person now) (predicate personId)
     >>= either DB.throwDBError pure
@@ -158,7 +157,7 @@ updatePersonRec personId uperson = do
 
 updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   mobileNumber' <- encrypt mobileNumber
   DB.update
     dbTable
@@ -183,7 +182,7 @@ update ::
   Maybe FCM.FCMRecipientToken ->
   Flow ()
 update id status verified deviceTokenM = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status verified currTime deviceTokenM)

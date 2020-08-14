@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -42,8 +42,8 @@ data TripReferenceT f = TripReference
     _vehicleId :: B.C f (Maybe Text),
     _shortId :: B.C f Text,
     _status :: B.C f Status,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

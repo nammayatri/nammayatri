@@ -8,7 +8,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -79,9 +79,9 @@ findAllByPerson perId =
   where
     predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
-findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> Flow (T.DBResult [Storage.Case])
+findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe UTCTime -> Maybe UTCTime -> Flow (T.DBResult [Storage.Case])
 findAllExpiredByStatus statuses maybeFrom maybeTo = do
-  (now :: LocalTime) <- getCurrentTimeUTC
+  (now :: UTCTime) <- getCurrTime
   DB.findAll dbTable (predicate now)
   where
     predicate now Storage.Case {..} =
@@ -95,9 +95,9 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
             <> maybe [] (\to -> [_createdAt B.<=. B.val_ to]) maybeTo
         )
 
-updateValidTill :: CaseId -> LocalTime -> Flow (T.DBResult ())
+updateValidTill :: CaseId -> UTCTime -> Flow (T.DBResult ())
 updateValidTill id validTill = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause validTill currTime)
@@ -112,7 +112,7 @@ updateValidTill id validTill = do
 
 updateStatus :: CaseId -> Storage.CaseStatus -> Flow (T.DBResult ())
 updateStatus id status = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -127,7 +127,7 @@ updateStatus id status = do
 
 updateStatusAndUdfs :: CaseId -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow (T.DBResult ())
 updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status udf1 udf2 udf3 udf4 udf5 currTime)

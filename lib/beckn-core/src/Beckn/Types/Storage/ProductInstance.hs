@@ -11,7 +11,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -63,9 +63,9 @@ data ProductInstanceT f = ProductInstance
     _price :: B.C f Amount,
     _type :: B.C f ProductInstanceType,
     _status :: B.C f ProductInstanceStatus,
-    _startTime :: B.C f LocalTime,
-    _endTime :: B.C f (Maybe LocalTime),
-    _validTill :: B.C f LocalTime,
+    _startTime :: B.C f UTCTime,
+    _endTime :: B.C f (Maybe UTCTime),
+    _validTill :: B.C f UTCTime,
     _fromLocation :: B.C f (Maybe Text),
     _toLocation :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
@@ -76,8 +76,8 @@ data ProductInstanceT f = ProductInstance
     _udf4 :: B.C f (Maybe Text),
     _udf5 :: B.C f (Maybe Text),
     _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

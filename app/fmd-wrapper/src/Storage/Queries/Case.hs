@@ -5,8 +5,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
-import Beckn.Utils.Common (checkDBError)
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (checkDBError, getCurrTime)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -29,7 +28,7 @@ findById caseId =
 
 update :: CaseId -> Storage.Case -> Flow ()
 update id case_@Storage.Case {..} = do
-  currTime <- getCurrentTimeUTC
+  currTime <- getCurrTime
   DB.update dbTable (setClause currTime case_) (predicate id)
     >>= checkDBError
   where

@@ -3,7 +3,7 @@ module Storage.Queries.Quotation where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -54,7 +54,7 @@ update ::
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status currTime)

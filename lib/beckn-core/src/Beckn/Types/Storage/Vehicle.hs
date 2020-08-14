@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -102,8 +102,8 @@ data VehicleT f = Vehicle
     _energyType :: B.C f (Maybe EnergyType),
     _registrationNo :: B.C f Text,
     _registrationCategory :: B.C f (Maybe RegistrationCategory),
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

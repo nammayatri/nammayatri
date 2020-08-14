@@ -6,7 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
-import Beckn.Utils.Extra
+import Beckn.Utils.Common (getCurrTime)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
@@ -38,7 +38,7 @@ findByToken token =
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
   findById id >>= maybe (L.throwException err500) pure

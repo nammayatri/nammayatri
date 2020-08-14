@@ -8,7 +8,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
-import Beckn.Utils.Extra (getCurrentTimeUTC)
+import Beckn.Utils.Common (getCurrTime)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -77,7 +77,7 @@ findByRoleAndMobileNumber role countryCode mobileNumber =
 
 updateMultiple :: PersonId -> Storage.Person -> Flow ()
 updateMultiple personId person = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause now person) (predicate personId)
     >>= either DB.throwDBError pure
   where
@@ -113,7 +113,7 @@ update ::
   Maybe Text ->
   Flow ()
 update id statusM nameM emailM roleM identTypeM identM = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause statusM nameM emailM roleM identM identTypeM currTime)
@@ -135,7 +135,7 @@ update id statusM nameM emailM roleM identTypeM identM = do
 
 updatePersonOrgId :: Text -> PersonId -> Flow ()
 updatePersonOrgId orgId personId = do
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either DB.throwDBError pure
   where

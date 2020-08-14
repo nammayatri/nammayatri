@@ -71,13 +71,13 @@ findAllByPerson perId = do
   checkDBError result
 
 -- | Find Cases by status and expirtaion date
-findAllExpiredByStatus :: [CaseStatus] -> Maybe LocalTime -> Maybe LocalTime -> Flow [Case]
+findAllExpiredByStatus :: [CaseStatus] -> Maybe UTCTime -> Maybe UTCTime -> Flow [Case]
 findAllExpiredByStatus statuses maybeFrom maybeTo = do
   result <- Q.findAllExpiredByStatus statuses maybeFrom maybeTo
   checkDBError result
 
 -- | Update Case validity date
-updateValidTill :: CaseId -> LocalTime -> Flow ()
+updateValidTill :: CaseId -> UTCTime -> Flow ()
 updateValidTill cid validTill = do
   result <- Q.updateValidTill cid validTill
   checkDBError result

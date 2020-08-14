@@ -7,13 +7,13 @@ import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Person
 import Beckn.Utils.Common
 import Data.Text
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Invoice = Invoice
   { _id :: Text,
     _type :: Text, -- "PROFORMA", "DRAFT", "COMMERCIAL"
-    _date :: LocalTime,
+    _date :: UTCTime,
     _billing :: Maybe Billing,
     _signatory :: Maybe Person,
     _tax_number :: Text,
@@ -21,8 +21,8 @@ data Invoice = Invoice
     _payment :: Payment,
     _breakup :: [BreakupItem],
     _descriptor :: Maybe Descriptor,
-    _created_at :: LocalTime,
-    _updated_at :: LocalTime
+    _created_at :: UTCTime,
+    _updated_at :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -51,7 +51,7 @@ instance Example Invoice where
     Invoice
       { _id = idExample,
         _type = "COMMERCIAL",
-        _date = defaultLocalTime,
+        _date = example,
         _billing = Nothing,
         _signatory = Nothing,
         _tax_number = "MAJSU8723F",
@@ -59,6 +59,6 @@ instance Example Invoice where
         _payment = example,
         _breakup = [],
         _descriptor = example,
-        _created_at = defaultLocalTime,
-        _updated_at = defaultLocalTime
+        _created_at = example,
+        _updated_at = example
       }

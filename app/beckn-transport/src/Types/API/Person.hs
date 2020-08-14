@@ -9,13 +9,13 @@ import Beckn.Types.App
 import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 import Servant.API
 import qualified Storage.Queries.Location as QL
@@ -112,7 +112,7 @@ transformToLocation req location =
 createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation UpdatePersonReq {..} = do
   _id <- BC.generateGUID
-  _createdAt <- getCurrentTimeUTC
+  _createdAt <- getCurrTime
   pure
     SL.Location
       { _locationType = fromMaybe SL.PINCODE _locationType,
@@ -168,7 +168,7 @@ instance FromJSON CreatePersonReq where
 instance CreateTransform CreatePersonReq SP.Person Flow where
   createTransform req = do
     pid <- BC.generateGUID
-    now <- getCurrentTimeUTC
+    now <- getCurrTime
     location <- createLocationT req
     return
       SP.Person
@@ -269,8 +269,8 @@ data PersonEntityRes = PersonEntityRes
     _locationId :: Maybe Text,
     _deviceToken :: Maybe FCM.FCMRecipientToken,
     _description :: Maybe Text,
-    _createdAt :: LocalTime,
-    _updatedAt :: LocalTime,
+    _createdAt :: UTCTime,
+    _updatedAt :: UTCTime,
     _linkedEntity :: Maybe LinkedEntity
   }
   deriving (Show, Generic, ToSchema)

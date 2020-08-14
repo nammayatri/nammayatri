@@ -9,9 +9,9 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Swagger
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.Location as QL
 
@@ -23,8 +23,8 @@ data TransporterReq = TransporterReq
     _gstin :: Maybe Text,
     _orgType :: SO.OrganizationType,
     _orgDomain :: Maybe SO.OrganizationDomain,
-    _fromTime :: Maybe LocalTime,
-    _toTime :: Maybe LocalTime,
+    _fromTime :: Maybe UTCTime,
+    _toTime :: Maybe UTCTime,
     _headCount :: Maybe Int,
     _locationType :: Maybe SL.LocationType,
     _lat :: Maybe Double,
@@ -46,7 +46,7 @@ instance FromJSON TransporterReq where
 instance CreateTransform TransporterReq SO.Organization Flow where
   createTransform req = do
     oid <- BC.generateGUID
-    now <- getCurrentTimeUTC
+    now <- getCurrTime
     location <- transformToLocation req
     QL.create location
     return $
@@ -77,7 +77,7 @@ instance CreateTransform TransporterReq SO.Organization Flow where
 transformToLocation :: TransporterReq -> Flow SL.Location
 transformToLocation req = do
   locId <- BC.generateGUID
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   return $
     SL.Location
       { SL._id = locId,
@@ -119,7 +119,7 @@ data UpdateTransporterReq = UpdateTransporterReq
 
 instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
   modifyTransform req org = do
-    now <- getCurrentTimeUTC
+    now <- getCurrTime
     return $
       org
         { SO._name = fromMaybe (org ^. #_name) (req ^. #name),

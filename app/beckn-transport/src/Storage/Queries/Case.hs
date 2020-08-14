@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
@@ -53,7 +53,7 @@ updateStatus ::
   Flow (T.DBResult ())
 updateStatus id newStatus = do
   -- update data
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause newStatus currTime)
@@ -71,7 +71,7 @@ updateStatusByIds ::
   Storage.CaseStatus ->
   Flow (T.DBResult ())
 updateStatusByIds ids newStatus = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause newStatus currTime)
@@ -100,7 +100,7 @@ findAllByIdType ids type_ =
       _type ==. B.val_ type_
         &&. B.in_ _id (B.val_ <$> ids)
 
-findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> Flow (T.DBResult [Storage.Case])
+findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> UTCTime -> Flow (T.DBResult [Storage.Case])
 findAllByTypeStatuses limit offset csType statuses ignoreIds now =
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
   where
@@ -111,7 +111,7 @@ findAllByTypeStatuses limit offset csType statuses ignoreIds now =
         &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
         &&. _validTill B.>. B.val_ now
 
-findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> LocalTime -> LocalTime -> Flow (T.DBResult [Storage.Case])
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> UTCTime -> UTCTime -> Flow (T.DBResult [Storage.Case])
 findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
   where
@@ -123,9 +123,9 @@ findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime =
         &&. _validTill B.>. B.val_ now
         &&. _createdAt B.<. B.val_ fromTime
 
-findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> LocalTime -> LocalTime -> Flow (T.DBResult [Storage.Case])
+findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> UTCTime -> UTCTime -> Flow (T.DBResult [Storage.Case])
 findAllExpiredByStatus statuses csType from to = do
-  (now :: LocalTime) <- getCurrentTimeUTC
+  (now :: UTCTime) <- getCurrTime
   DB.findAll dbTable (predicate now)
   where
     predicate now Storage.Case {..} =

@@ -9,7 +9,7 @@ import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Provider
 import Beckn.Types.FMD.Paradigm
 import Beckn.Utils.Common
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Service = Service
@@ -33,7 +33,7 @@ data ServiceCatalog = ServiceCatalog
     _categories :: [Category],
     _brands :: [Brand],
     _models :: [Model],
-    _ttl :: Maybe LocalTime,
+    _ttl :: Maybe UTCTime,
     _items :: [Item],
     _offers :: [Offer],
     _paradigms :: [Paradigm]

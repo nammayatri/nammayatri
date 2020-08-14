@@ -17,9 +17,8 @@ import Beckn.Types.Storage.ProductInstance as ProdInst
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import qualified Data.Text as T
-import Data.Time.LocalTime
+import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
@@ -40,7 +39,7 @@ import qualified Utils.Defaults as Default
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
 list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   case person ^. #_organizationId of
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
@@ -96,7 +95,7 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> ProdInst.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do
   piId <- L.generateGUID
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let productInst = getProdInst piId shortId currTime
   QPI.create productInst
@@ -145,7 +144,7 @@ notifyGateway c prodInst orgId = do
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis allPis orgInfo = do
-  currTime <- getCurrTime'
+  currTime <- getCurrTime
   bppNwAddr <- L.runIO $ lookupEnv "PROVIDER_NW_ADDRESS"
   let context =
         Context

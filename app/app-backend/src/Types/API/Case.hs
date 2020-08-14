@@ -7,7 +7,7 @@ import Beckn.Types.Storage.Location
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
 import Data.Swagger
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data StatusRes = StatusRes
@@ -63,9 +63,9 @@ data ProdInstRes = ProdInstRes
     _quantity :: Int,
     _price :: Amount,
     _status :: ProductInstanceStatus,
-    _startTime :: LocalTime,
-    _endTime :: Maybe LocalTime,
-    _validTill :: LocalTime,
+    _startTime :: UTCTime,
+    _endTime :: Maybe UTCTime,
+    _validTill :: UTCTime,
     _fromLocation :: Maybe Text,
     _toLocation :: Maybe Text,
     _organizationId :: Text,
@@ -76,8 +76,8 @@ data ProdInstRes = ProdInstRes
     _udf4 :: Maybe Text,
     _udf5 :: Maybe Text,
     _info :: Maybe Text,
-    _createdAt :: LocalTime,
-    _updatedAt :: LocalTime,
+    _createdAt :: UTCTime,
+    _updatedAt :: UTCTime,
     _product :: Maybe Products
   }
   deriving (Show, Generic, ToSchema)

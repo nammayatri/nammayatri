@@ -10,7 +10,6 @@ import qualified Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Beckn.Utils.Extra
 import qualified Crypto.Number.Generate as Cryptonite
 import Data.Aeson (encode)
 import qualified Data.Text as T
@@ -58,7 +57,7 @@ makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
   role <- fromMaybeM400 "CUSTOMER_ROLE required" (req ^. #_role)
   pid <- BC.generateGUID
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   return $
     SP.Person
       { _id = pid,
@@ -92,7 +91,7 @@ makeSession req entityId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
-  now <- getCurrentTimeUTC
+  now <- getCurrTime
   attempts <-
     L.runIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "SMS_ATTEMPTS"
   authExpiry <-

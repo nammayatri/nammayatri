@@ -9,7 +9,7 @@ where
 
 import Data.Geospatial
 import Data.LineString
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data MapPoint
@@ -34,8 +34,8 @@ data Route = Route
 data Request = Request
   { waypoints :: [MapPoint],
     mode :: Maybe TravelMode, -- Defaults to CAR
-    departureTime :: Maybe LocalTime, -- optionally required for Transit mode which is not supported currently
-    arrivalTime :: Maybe LocalTime, -- optionally required for Transit mode which is not supported currently
+    departureTime :: Maybe UTCTime, -- optionally required for Transit mode which is not supported currently
+    arrivalTime :: Maybe UTCTime, -- optionally required for Transit mode which is not supported currently
     calcPoints :: Maybe Bool -- True (default) if points needs to be calculated
   }
   deriving (Show)

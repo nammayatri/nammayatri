@@ -6,7 +6,7 @@ module Types.Storage.Leads where
 
 import Data.Aeson
 import Data.Swagger
-import Data.Time.LocalTime
+import Data.Time
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App
@@ -22,8 +22,8 @@ data LeadsT f = Leads
     _noOfPassengers :: B.C f Int,
     _luggageCount :: B.C f (Maybe Int),
     _expiryTime :: B.C f Text,
-    _createdAt :: B.C f LocalTime,
-    _updatedAt :: B.C f LocalTime
+    _createdAt :: B.C f UTCTime,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

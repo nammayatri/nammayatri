@@ -3,15 +3,15 @@ module Beckn.Types.Core.Offer where
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Common
 import Data.Text
-import Data.Time.LocalTime
+import Data.Time
 import EulerHS.Prelude
 
 data Offer = Offer
   { _id :: Text,
     _descriptor :: Descriptor,
     _applies_to :: OfferRef,
-    _start_date :: LocalTime,
-    _end_date :: LocalTime
+    _start_date :: UTCTime,
+    _end_date :: UTCTime
   }
   deriving (Generic, Show)
 

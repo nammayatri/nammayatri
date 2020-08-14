@@ -11,7 +11,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Extra
+import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -78,7 +78,7 @@ findAllByIds' ids =
 
 updateStatusForProducts :: ProductsId -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateStatusForProducts productId status = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -96,7 +96,7 @@ updateStatus ::
   Storage.ProductInstanceStatus ->
   Flow (T.DBResult ())
 updateStatus prodInstId status = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -123,7 +123,7 @@ updateStatusByIds ::
   Storage.ProductInstanceStatus ->
   Flow (T.DBResult ())
 updateStatusByIds ids status = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -141,7 +141,7 @@ updateCaseId ::
   CaseId ->
   Flow (T.DBResult ())
 updateCaseId prodInstId caseId = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause caseId currTime)
@@ -247,7 +247,7 @@ findById pid =
 
 updateDriver :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
 updateDriver ids driverId = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause driverId currTime)
@@ -263,7 +263,7 @@ updateDriver ids driverId = do
 
 updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
 updateVehicle ids vehId = do
-  (currTime :: LocalTime) <- getCurrentTimeUTC
+  (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
     (setClause vehId currTime)
