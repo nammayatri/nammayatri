@@ -1,19 +1,25 @@
 module Types.API.Search where
 
-import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Types.API.Common
+import Types.Common
 
 data AckResponse = AckResponse
-  { _context :: Context,
-    _message :: Ack,
-    _error :: Maybe Error
+  { transaction_id :: Text,
+    message :: Ack,
+    error :: Maybe Error
   }
-  deriving (Show, Generic)
+  deriving (Show, FromJSON, ToJSON, Generic)
 
-instance FromJSON AckResponse where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON AckResponse where
-  toJSON = genericToJSON stripLensPrefixOptions
+data SearchReq = SearchReq
+  { transaction_id :: Text,
+    startTime :: UTCTime,
+    origin :: Stop,
+    destination :: Stop,
+    vehicle :: Vehicle,
+    travellers :: [Traveller],
+    fare :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Mobility.AppCancelRide where
 
 import Beckn.Types.App
@@ -18,7 +20,6 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
-import qualified "app-backend" Types.API.Search as AppSearch
 import Utils
 
 spec :: Spec
@@ -42,7 +43,7 @@ spec = do
             ackResult `shouldSatisfy` isRight
             -- If we reach here, the 'Right' pattern match will always succeed
             let Right ackResponse = ackResult
-                appCaseid = (AppCommon._message . AppSearch._message) ackResponse
+                appCaseid = AppCommon._message $ ackResponse ^. #message
             -- Do a List Leads and retrieve transporter case id
             caseReqResult <- runClient tbeClientEnv buildListLeads
             caseReqResult `shouldSatisfy` isRight

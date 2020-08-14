@@ -107,7 +107,7 @@ registrationFlow =
 type SearchAPI =
   "search"
     :> TokenAuth
-    :> ReqBody '[JSON] Search.SearchReq
+    :> ReqBody '[JSON] Search'.SearchReq
     :> Post '[JSON] Search'.AckResponse
     :<|> Search.OnSearchAPI VerifyAPIKey
 

@@ -13,12 +13,8 @@ import Beckn.Types.App
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue
-import Beckn.Types.Core.Location
 import Beckn.Types.Core.Price
-import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
-import qualified Beckn.Types.Mobility.Stop as Stop
-import Beckn.Types.Mobility.Vehicle
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -36,46 +32,38 @@ import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "app-backend" Types.API.Search as AppBESearch
+import qualified "app-backend" Types.Common as AppCommon
 
-address :: Address
+address :: AppCommon.Address
 address =
-  Address
+  AppCommon.Address
     { door = "#817",
       building = "Juspay Apartments",
       street = "27th Main",
       area = "8th Block Koramangala",
       city = "Bangalore",
       country = "India",
-      area_code = "560047"
+      areaCode = "560047"
     }
 
-location :: Location
+location :: AppCommon.Location
 location =
-  Location
-    { _type = "address",
-      _gps = Nothing,
-      _address = Just address,
-      _station_code = Nothing,
-      _area_code = Nothing,
-      _city = Nothing,
-      _country = Nothing,
-      _circle = Nothing,
-      _polygon = Nothing,
-      _3dspace = Nothing
+  AppCommon.Location
+    { locType = "address",
+      gps = Nothing,
+      address = Just address,
+      areaCode = Nothing,
+      city = Nothing
     }
 
-intentVehicle :: Vehicle
-intentVehicle =
-  Vehicle
-    { category = Just "CAR",
+vehicle :: AppCommon.Vehicle
+vehicle =
+  AppCommon.Vehicle
+    { category = Just AppCommon.CAR,
       capacity = Nothing,
-      make = Nothing,
       model = Nothing,
-      size = Nothing,
       variant = "SUV",
-      color = Nothing,
-      energy_type = Nothing,
-      registration = Nothing
+      registrationNumber = Nothing
     }
 
 intentPayload :: Payload
@@ -101,32 +89,12 @@ price =
           _maximum_value = Just amt
         }
 
-getStop :: LocalTime -> Stop.Stop
+getStop :: LocalTime -> AppCommon.Stop
 getStop stopTime =
-  Stop.Stop
-    { _id = "05515eacc3b546e083489d9e24aba88d",
-      _descriptor = Nothing,
-      _location = location,
-      _arrival_time = Stop.StopTime stopTime (Just stopTime),
-      _departure_time = Stop.StopTime stopTime (Just stopTime),
-      _transfers = []
-    }
-
-buildIntent :: LocalTime -> Intent
-buildIntent localTime =
-  Intent
-    { _query_string = Nothing,
-      _provider_id = Nothing,
-      _category_id = Nothing,
-      _item_id = Nothing,
-      _origin = getStop localTime,
-      _destination = getStop localTime,
-      _stops = [],
-      _vehicle = intentVehicle,
-      _payload = intentPayload,
-      _transfer = Nothing,
-      _fare = price,
-      _tags = []
+  AppCommon.Stop
+    { location = location,
+      arrivalTime = AppCommon.StopTime stopTime (Just stopTime),
+      departureTime = AppCommon.StopTime stopTime (Just stopTime)
     }
 
 buildContext :: Text -> Text -> UTCTime -> Context
@@ -144,11 +112,16 @@ buildContext act tid utcTime =
       _timestamp = utcTime
     }
 
-searchReq :: Text -> Text -> UTCTime -> LocalTime -> Search.SearchReq
-searchReq act tid utcTime localTime =
-  Search.SearchReq
-    { context = buildContext act tid utcTime,
-      message = Search.SearchIntent $ buildIntent localTime
+searchReq :: Text -> UTCTime -> LocalTime -> AppBESearch.SearchReq
+searchReq tid utcTime localTime =
+  AppBESearch.SearchReq
+    { transaction_id = tid,
+      startTime = utcTime,
+      origin = getStop localTime,
+      destination = getStop localTime,
+      vehicle = vehicle,
+      travellers = [],
+      fare = AppCommon.DecimalValue "360" $ Just "50"
     }
 
 getFutureTime :: IO LocalTime
@@ -158,7 +131,7 @@ getFutureTime =
 
 searchServices ::
   Text ->
-  Search.SearchReq ->
+  AppBESearch.SearchReq ->
   ClientM AppBESearch.AckResponse
 onSearchServices ::
   Text ->
@@ -166,11 +139,11 @@ onSearchServices ::
   ClientM Search.OnSearchRes
 searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
-buildSearchReq :: Text -> IO Search.SearchReq
+buildSearchReq :: Text -> IO AppBESearch.SearchReq
 buildSearchReq guid = do
   localTme <- getFutureTime
   utcTime <- getCurrentTime
-  pure $ searchReq "search" guid utcTime localTme
+  pure $ searchReq guid utcTime localTme
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 onCancelRide :: Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes

@@ -3,14 +3,12 @@
 module Product.Search where
 
 import App.Types
-import Beckn.Types.API.Search
+import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App as TA
 import Beckn.Types.Common
-import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Provider as Core
-import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Service as BM
 import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
@@ -24,6 +22,7 @@ import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import Data.Time (getCurrentTime)
 import Data.Time.LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -31,21 +30,21 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.Product as Products
 import qualified Models.ProductInstance as ProductInstance
-import Servant
+import Servant hiding (Context)
 import qualified Storage.Queries.Location as Location
 import System.Environment
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
 import Types.ProductInfo
-import Utils.Common (generateShortId)
+import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
-search :: Person.Person -> SearchReq -> FlowHandler API.AckResponse
+search :: Person.Person -> API.SearchReq -> FlowHandler API.AckResponse
 search person req = withFlowHandler $ do
   validateDateTime req
-  fromLocation <- mkLocation $ req ^. #message . #intent . #_origin
-  toLocation <- mkLocation $ req ^. #message . #intent . #_destination
+  fromLocation <- mkLocation $ fromAPIStopToStop $ req ^. #origin
+  toLocation <- mkLocation $ fromAPIStopToStop $ req ^. #destination
   Location.create fromLocation
   Location.create toLocation
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
@@ -53,32 +52,30 @@ search person req = withFlowHandler $ do
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   gatewayUrl <- Gateway.getGatewayBaseUrl
   bapNwAddr <- L.runIO $ lookupEnv "APP_NW_ADDRESS"
-  let context =
-        (req ^. #context)
-          { _transaction_id = _getCaseId (case_ ^. #_id),
-            _ac_id = fromString <$> bapNwAddr
-          }
-  eres <- Gateway.search gatewayUrl $ req & #context .~ context
+  currUtcTime <- L.runIO getCurrentTime
+  let context = mkContext "search" (_getCaseId (case_ ^. #_id)) currUtcTime (fromString <$> bapNwAddr)
+      intent = mkIntent req
+  eres <- Gateway.search gatewayUrl $ Search.SearchReq context $ Search.SearchIntent intent
   let sAck =
         case eres of
           Left err -> API.Ack "Error" (show err)
           Right _ -> API.Ack "Successful" (_getCaseId $ case_ ^. #_id)
-  return $ API.AckResponse context sAck Nothing
+  return $ API.AckResponse (_getCaseId (case_ ^. #_id)) sAck Nothing
   where
     validateDateTime sreq = do
       currTime <- getCurrentTimeUTC
-      when ((sreq ^. #message . #intent . #_origin . #_departure_time . #_est) < currTime) $
+      when ((sreq ^. #origin . #departureTime . #estimated) < currTime) $
         L.throwException $
           err400 {errBody = "Invalid start time"}
 
-searchCb :: () -> OnSearchReq -> FlowHandler OnSearchRes
+searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _unit req = withFlowHandler $ do
   -- TODO: Verify api key here
   let (services :: [Service]) = req ^. #message . #services
   traverse_ (searchCbService req) services
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
-searchCbService :: OnSearchReq -> BM.Service -> Flow OnSearchRes
+searchCbService :: Search.OnSearchReq -> BM.Service -> Flow Search.OnSearchRes
 searchCbService req service = do
   -- TODO: Verify api key here
   let mprovider = service ^. #_provider
@@ -114,7 +111,7 @@ searchCbService req service = do
       let newValidTill = fromInteger confirmExpiry `addLocalTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
 
-mkCase :: SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
+mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do
   now <- getCurrentTimeUTC
   cid <- generateGUID
@@ -123,9 +120,7 @@ mkCase req userId from to = do
   -- If the insert fails, maybe retry automatically as there
   -- is a unique constraint on `shortId`
   shortId <- generateShortId
-  let (intent :: Intent) = req ^. #message . #intent
-      context = req ^. #context
-  validTill <- getCaseExpiry $ req ^. #message . #intent . #_origin . #_departure_time . #_est
+  validTill <- getCaseExpiry $ req ^. #origin . #departureTime . #estimated
   return
     Case.Case
       { _id = cid,
@@ -136,7 +131,7 @@ mkCase req userId from to = do
         _type = Case.RIDESEARCH,
         _exchangeType = Case.FULFILLMENT,
         _status = Case.NEW,
-        _startTime = req ^. #message . #intent . #_origin . #_departure_time . #_est,
+        _startTime = req ^. #origin . #departureTime . #estimated,
         _endTime = Nothing,
         _validTill = validTill,
         _provider = Nothing,
@@ -146,10 +141,10 @@ mkCase req userId from to = do
         _parentCaseId = Nothing,
         _fromLocationId = TA._getLocationId $ from ^. #_id,
         _toLocationId = TA._getLocationId $ to ^. #_id,
-        _udf1 = Just $ intent ^. #_vehicle . #variant,
-        _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
+        _udf1 = Just $ req ^. #vehicle . #variant,
+        _udf2 = Just $ show $ length $ req ^. #travellers,
         _udf3 = Nothing,
-        _udf4 = Just $ context ^. #_transaction_id,
+        _udf4 = Just $ req ^. #transaction_id,
         _udf5 = Nothing,
         _info = Nothing,
         _createdAt = now,

@@ -13,6 +13,7 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Driver
+import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Traveller
@@ -37,6 +38,7 @@ import Servant.Client.Core.Response
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
+import qualified Types.API.Search as API
 import qualified Types.Common as API
 
 -- | Performs simple token verification.
@@ -117,6 +119,23 @@ mkContext action rtid utcTime acId =
       _transaction_id = rtid,
       _message_id = rtid,
       _timestamp = utcTime
+    }
+
+mkIntent :: API.SearchReq -> Intent
+mkIntent req =
+  Intent
+    { _query_string = Nothing,
+      _provider_id = Nothing,
+      _category_id = Nothing,
+      _item_id = Nothing,
+      _tags = [],
+      _origin = fromAPIStopToStop $ req ^. #origin,
+      _destination = fromAPIStopToStop $ req ^. #destination,
+      _stops = [],
+      _vehicle = fromAPIVehicleToVehicle $ req ^. #vehicle,
+      _payload = Payload Nothing Nothing [] Nothing,
+      _transfer = Nothing,
+      _fare = mkPrice $ req ^. #fare
     }
 
 mkPrice :: API.DecimalValue -> Price
