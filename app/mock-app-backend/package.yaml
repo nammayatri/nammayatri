@@ -73,6 +73,8 @@ dependencies:
   - vault
 
 ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
   - -Werror
   - -Wall
   - -Wcompat

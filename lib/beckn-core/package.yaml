@@ -108,6 +108,8 @@ dependencies:
   - either
 
 ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
   - -Wall
   - -Wcompat
   - -Widentities

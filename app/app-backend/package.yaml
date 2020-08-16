@@ -78,6 +78,10 @@ dependencies:
   - time
   - random-strings
 
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+
 library:
   source-dirs: src
   ghc-options:

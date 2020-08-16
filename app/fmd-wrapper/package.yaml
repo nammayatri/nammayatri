@@ -74,15 +74,19 @@ dependencies:
   - time
   - vault
 
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+
 library:
   source-dirs: src
   ghc-options:
-  - -Wall
-  - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
-  - -Wno-unrecognised-pragmas
-  - -Werror
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Wno-unrecognised-pragmas
+    - -Werror
   dependencies:
     - beckn-core
 

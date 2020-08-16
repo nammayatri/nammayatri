@@ -73,17 +73,18 @@ dependencies:
   - vault
 
 ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
   - -Werror
   - -Wall
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror
 
 library:
   source-dirs: src
   ghc-options:
-  - -Wincomplete-uni-patterns
+    - -Wincomplete-uni-patterns
   dependencies:
     - beckn-core
 
