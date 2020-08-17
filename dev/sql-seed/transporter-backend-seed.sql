@@ -369,6 +369,12 @@ ALTER TABLE ONLY atlas_transporter.location
 ALTER TABLE ONLY atlas_transporter.organization
     ADD CONSTRAINT idx_16410_primary PRIMARY KEY (id);
 
+--
+-- Name: vehicle idx_16451_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
+--
+
+ALTER TABLE ONLY atlas_transporter.vehicle
+    ADD CONSTRAINT idx_16451_primary PRIMARY KEY (id);
 
 --
 -- Name: person idx_16419_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
@@ -403,26 +409,46 @@ ALTER TABLE ONLY atlas_transporter.product
 ALTER TABLE ONLY atlas_transporter.registration_token
     ADD CONSTRAINT idx_16435_primary PRIMARY KEY (id);
 
-
---
--- Name: idx_16386_provider; Type: INDEX; Schema: atlas_transporter; Owner: atlas
---
-
-CREATE INDEX idx_16386_provider ON atlas_transporter.case USING btree (provider);
-
-
---
--- Name: idx_16386_requestor; Type: INDEX; Schema: atlas_transporter; Owner: atlas
---
-
-CREATE INDEX idx_16386_requestor ON atlas_transporter.case USING btree (requestor);
-
-
 --
 -- Name: idx_16386_short_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
 --
 
 CREATE UNIQUE INDEX idx_16386_short_id ON atlas_transporter.case USING btree (short_id);
+
+
+--
+-- Name: idx_16386_parent_case_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16386_parent_case_id ON atlas_transporter.case USING btree (parent_case_id);
+
+
+--
+-- Name: idx_16386_status; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16386_status ON atlas_transporter."case" USING btree (status);
+
+
+--
+-- Name: idx_16386_type; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16386_type ON atlas_transporter."case" USING btree (type);
+
+
+--
+-- Name: idx_16419_organization_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16419_organization_id ON atlas_transporter.person USING btree (organization_id);
+
+
+--
+-- Name: idx_16419_role; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16419_role ON atlas_transporter.person USING btree (role);
 
 
 --
@@ -433,13 +459,6 @@ CREATE INDEX idx_16394_case_id ON atlas_transporter.product_instance USING btree
 
 
 --
--- Name: idx_16394_product_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
---
-
-CREATE INDEX idx_16394_product_id ON atlas_transporter.product_instance USING btree (product_id);
-
-
---
 -- Name: idx_16394_entity_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -447,10 +466,45 @@ CREATE INDEX idx_16394_entity_id ON atlas_transporter.product_instance USING btr
 
 
 --
+-- Name: idx_16394_organization_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_organization_id ON atlas_transporter.product_instance USING btree (organization_id);
+
+
+--
+-- Name: idx_16394_parent_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_parent_id ON atlas_transporter.product_instance USING btree (parent_id);
+
+
+--
 -- Name: idx_16394_person_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
 --
 
 CREATE INDEX idx_16394_person_id ON atlas_transporter.product_instance USING btree (person_id);
+
+
+--
+-- Name: idx_16394_product_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_product_id ON atlas_transporter.product_instance USING btree (product_id);
+
+
+--
+-- Name: idx_16394_status; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_status ON atlas_transporter.product_instance USING btree (status);
+
+
+--
+-- Name: idx_16394_type; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16394_type ON atlas_transporter.product_instance USING btree (type);
 
 
 --
@@ -493,6 +547,12 @@ CREATE INDEX idx_16435_entity_id ON atlas_transporter.registration_token USING b
 --
 
 CREATE INDEX idx_16435_entity_type ON atlas_transporter.registration_token USING btree (entity_type);
+
+--
+-- Name: idx_16451_organization_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+--
+
+CREATE INDEX idx_16451_organization_id ON atlas_transporter.vehicle USING btree (organization_id);
 
 
 UPDATE atlas_transporter.person SET

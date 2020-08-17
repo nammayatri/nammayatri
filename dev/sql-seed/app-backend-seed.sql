@@ -462,10 +462,17 @@ CREATE INDEX idx_16386_requestor ON atlas_app.case USING btree (requestor);
 
 
 --
--- Name: idx_16386_short_id; Type: INDEX; Schema: atlas_app; Owner: atlas
+-- Name: idx_16386_status; Type: INDEX; Schema: atlas_app; Owner: atlas
 --
 
-CREATE UNIQUE INDEX idx_16386_short_id ON atlas_app.case USING btree (short_id);
+CREATE INDEX idx_16386_status ON atlas_app."case" USING btree (status);
+
+
+--
+-- Name: idx_16386_type; Type: INDEX; Schema: atlas_app; Owner: atlas
+--
+
+CREATE INDEX idx_16386_type ON atlas_app."case" USING btree (type);
 
 
 --
@@ -483,17 +490,38 @@ CREATE INDEX idx_16394_product_id ON atlas_app.product_instance USING btree (pro
 
 
 --
--- Name: idx_16394_entity_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+-- Name: idx_16394_entity_id; Type: INDEX; Schema: atlas_app; Owner: atlas
 --
 
 CREATE INDEX idx_16394_entity_id ON atlas_app.product_instance USING btree (entity_id);
 
 
 --
--- Name: idx_16394_person_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
+-- Name: idx_16394_parent_id; Type: INDEX; Schema: atlas_app; Owner: atlas
+--
+
+CREATE INDEX idx_16394_parent_id ON atlas_app.product_instance USING btree (parent_id);
+
+
+--
+-- Name: idx_16394_person_id; Type: INDEX; Schema: atlas_app; Owner: atlas
 --
 
 CREATE INDEX idx_16394_person_id ON atlas_app.product_instance USING btree (person_id);
+
+
+--
+-- Name: idx_16394_status; Type: INDEX; Schema: atlas_app; Owner: atlas
+--
+
+CREATE INDEX idx_16394_status ON atlas_app.product_instance USING btree (status);
+
+
+--
+-- Name: idx_16394_type; Type: INDEX; Schema: atlas_app; Owner: atlas
+--
+
+CREATE INDEX idx_16394_type ON atlas_app.product_instance USING btree (type);
 
 
 --
