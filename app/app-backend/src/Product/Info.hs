@@ -1,10 +1,10 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Product.Info where
 
 import App.Types
 import Beckn.Types.App
-import qualified Beckn.Types.Mobility.Payload as Trip
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
@@ -28,13 +28,13 @@ getProductInfo _person prodInstId = withFlowHandler $ do
       case ProductInfo._tracker info of
         Nothing -> L.throwException $ err500 {errBody = "NO_TRACKING_INFORMATION_FOUND"}
         Just tracker -> do
-          let trip = toBeckn $ ProductInfo._trip tracker
+          let trip = ProductInfo._trip tracker
           return $
             GetProductInfoRes
-              { vehicle = Trip.vehicle trip,
-                driver = Trip.driver trip,
-                travellers = Trip._travellers $ Trip.payload trip,
-                fare = Trip.fare trip,
+              { vehicle = trip ^. #vehicle,
+                driver = trip ^. #driver,
+                travellers = trip ^. #travellers,
+                fare = trip ^. #fare,
                 caseId = _getCaseId (SPI._caseId productInstance),
                 product = productInstance
               }
