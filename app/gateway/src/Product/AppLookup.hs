@@ -5,17 +5,12 @@ module Product.AppLookup
 where
 
 import App.Types
-import qualified Data.Cache as C
-import qualified EulerHS.Language as L
+import Beckn.Storage.Redis.Queries
 import EulerHS.Prelude
-import System.Clock (TimeSpec (..))
 
 insert :: Text -> Text -> Flow ()
-insert messageId appUrl = do
-  AppEnv {..} <- ask
-  L.runIO $ C.insert' cache (Just $ TimeSpec 1800 0) messageId appUrl
+insert messageId appUrl =
+  setExRedis messageId appUrl 1800 -- seconds
 
 lookup :: Text -> Flow (Maybe Text)
-lookup messageId = do
-  AppEnv {..} <- ask
-  L.runIO $ C.lookup cache messageId
+lookup = getKeyRedis
