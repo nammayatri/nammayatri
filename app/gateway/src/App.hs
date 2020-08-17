@@ -6,7 +6,9 @@ where
 import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
+import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
+import Beckn.Utils.Common (runFlowR)
 import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
@@ -29,8 +31,8 @@ import Servant.Server
 
 runGateway :: IO ()
 runGateway = do
-  appCfg <- readDhallConfigDefault Z "beckn-gateway"
-  Metrics.serve (metricsPort appCfg)
+  appCfg@AppCfg {..} <- readDhallConfigDefault Z "beckn-gateway"
+  Metrics.serve metricsPort
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
@@ -39,15 +41,16 @@ runGateway = do
           }
   let settings =
         setOnExceptionResponse gatewayExceptionResponse $
-          setPort (port appCfg) defaultSettings
+          setPort port defaultSettings
+  reqHeadersKey <- V.newKey
   cache <- C.newCache Nothing
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
-    reqHeadersKey <- V.newKey
-    _ <- runMigrations appCfg
-    runSettings settings $ run reqHeadersKey (App.EnvR flowRt $ mkAppEnv appCfg cache)
-  where
-    runMigrations AppCfg {..} =
-      migrateIfNeeded migrationPath dbCfg autoMigrate
+    putStrLn @String "Initializing Redis Connections..."
+    try (runFlowR flowRt appCfg $ prepareRedisConnections redisCfg) >>= \case
+      Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+      Right _ -> do
+        void $ migrateIfNeeded migrationPath dbCfg autoMigrate
+        runSettings settings $ run reqHeadersKey (App.EnvR flowRt $ mkAppEnv appCfg cache)
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse exception = do

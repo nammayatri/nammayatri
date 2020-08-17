@@ -16,9 +16,20 @@ let pgcfg =
   , schemaName = "atlas_gateway"
   }
 
+let rcfg =
+  { connectHost = "localhost"
+  , connectPort = 6379
+  , connectAuth = None Text
+  , connectDatabase = +0
+  , connectMaxConnections = +50
+  , connectMaxIdleTime = +30
+  , connectTimeout = None Integer
+  }
+
 in
 
 { dbCfg = pgcfg
+, redisCfg = rcfg
 , port = +8015
 , metricsPort = +9998
 , selfId = Some "JUSPAY.BG.1"

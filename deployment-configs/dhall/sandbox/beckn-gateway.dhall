@@ -16,9 +16,20 @@ let pgcfg =
   , schemaName = "atlas_gateway"
   }
 
+let rcfg =
+  { connectHost = "ec-redis-beta-002.bfw4iw.0001.apse1.cache.amazonaws.com"
+  , connectPort = 6379
+  , connectAuth = None Text
+  , connectDatabase = +1
+  , connectMaxConnections = +50
+  , connectMaxIdleTime = +30
+  , connectTimeout = Some +100
+  }
+
 in
 
 { dbCfg = pgcfg
+, redisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
 , selfId = Some "JUSPAY.BG.1"

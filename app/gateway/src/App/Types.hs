@@ -6,9 +6,11 @@ import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Data.Cache as C
 import EulerHS.Prelude
+import qualified EulerHS.Types as T
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
+    redisCfg :: T.RedisConfig,
     port :: Int,
     metricsPort :: Int,
     selfId :: Maybe Text,
@@ -20,6 +22,7 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
+    redisCfg :: T.RedisConfig,
     gwId :: Maybe Text,
     gwNwAddress :: Maybe Text,
     cache :: C.Cache Text Text,
