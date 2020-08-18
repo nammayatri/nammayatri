@@ -6,6 +6,7 @@ module Utils.Common where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Storage.Person as Person
@@ -98,7 +99,7 @@ callAPI baseUrl req serviceName = do
 mkContext :: Text -> Text -> UTCTime -> Maybe Text -> Context
 mkContext action rtid utcTime acId =
   Context
-    { _domain = "MOBILITY",
+    { _domain = MOBILITY,
       _country = Nothing,
       _city = Nothing,
       _action = action,

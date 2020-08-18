@@ -4,6 +4,7 @@ module Product.APIMapper where
 
 import App.Types
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
@@ -59,7 +60,7 @@ update org req = withFlowHandler $ do
   DZ.update org req
 
 validateDomain :: Context -> Bool
-validateDomain context = context ^. #_domain == "FINAL-MILE-DELIVERY"
+validateDomain context = context ^. #_domain == FINAL_MILE_DELIVERY
 
 -- TODO: get the supported core version from the config file
 validateCoreVersion :: Context -> Bool

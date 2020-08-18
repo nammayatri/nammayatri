@@ -9,6 +9,7 @@ import Beckn.Types.API.Search
 import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
@@ -148,7 +149,7 @@ mkOnSearchPayload c pis allPis orgInfo = do
   bppNwAddr <- L.runIO $ lookupEnv "PROVIDER_NW_ADDRESS"
   let context =
         Context
-          { _domain = "MOBILITY",
+          { _domain = Domain.MOBILITY,
             _country = Nothing,
             _city = Nothing,
             _action = "ON_SEARCH",

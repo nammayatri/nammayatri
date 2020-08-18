@@ -2,12 +2,14 @@
 
 module Beckn.Types.Core.Context where
 
+import Beckn.Types.Core.Domain
+import Data.Aeson
 import Data.Text
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data Context = Context
-  { _domain :: Text, -- "MOBILITY", "FINAL-MILE-DELIVERY", "FOOD-AND-BEVERAGE", "HEALTHCARE"
+  { _domain :: Domain,
     _country :: Maybe Text, -- Country code as per ISO 3166-1 and ISO 3166-2 format"
     _city :: Maybe Text, -- City code
     _action :: Text, -- "search", "select", "init", "confirm", "update", "status", "track", "cancel", "feedback", "support", "on_search", "on_select", "on_init", "on_confirm", "on_update", "on_status", "on_track", "on_cancel", "on_feedback", "on_support"

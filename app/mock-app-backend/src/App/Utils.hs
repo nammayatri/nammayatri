@@ -4,6 +4,7 @@ module App.Utils where
 
 import App.Types
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Location
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
@@ -106,7 +107,7 @@ buildContext act tid = do
   bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
   return $
     Context
-      { _domain = "FINAL-MILE-DELIVERY",
+      { _domain = FINAL_MILE_DELIVERY,
         _action = act,
         _country = Nothing,
         _city = Nothing,

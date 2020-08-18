@@ -14,6 +14,7 @@ import Beckn.Types.API.Update
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Core.Order
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Payload
@@ -325,7 +326,7 @@ mkContext action tId = do
   currTime <- getCurrTime
   return
     Context
-      { _domain = "MOBILITY",
+      { _domain = Domain.MOBILITY,
         _action = action,
         _country = Nothing,
         _city = Nothing,

@@ -2,6 +2,7 @@ module Utils.Routes where
 
 import App.Types
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain
 import Beckn.Utils.Common (getCurrTime)
 import EulerHS.Prelude
 
@@ -10,7 +11,7 @@ buildContext action tId = do
   now <- getCurrTime
   return $
     Context
-      { _domain = "MOBILITY",
+      { _domain = MOBILITY,
         _country = Nothing,
         _city = Nothing,
         _action = action,

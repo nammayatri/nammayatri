@@ -4,6 +4,7 @@ import qualified "mock-provider-backend" App as MockProviderBE
 import "mock-provider-backend" App.Handlers as MockProviderRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
@@ -17,7 +18,7 @@ import Servant.Client
 buildContext :: Text -> Text -> UTCTime -> Context
 buildContext act tid utcTime =
   Context
-    { _domain = "FINAL-MILE-DELIVERY",
+    { _domain = FINAL_MILE_DELIVERY,
       _action = act,
       _country = Nothing,
       _city = Nothing,

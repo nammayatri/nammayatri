@@ -7,20 +7,20 @@ where
 
 import App.Types
 import qualified Beckn.Types.Core.Context as B
+import qualified Beckn.Types.Core.Domain as B
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common (decodeFromText, throwJsonError400)
 import EulerHS.Prelude
 import qualified Storage.Queries.Provider as Provider
 
 lookup :: B.Context -> Flow [Org.Organization]
 lookup _context = do
-  orgDomain <- domainToOrgType (_context ^. #_domain)
+  let orgDomain = domainToOrgType (_context ^. #_domain)
   filter (isJust . Org._callbackUrl)
     <$> Provider.listProviders Org.PROVIDER orgDomain
   where
-    domainToOrgType :: Text -> Flow Org.OrganizationDomain
-    domainToOrgType domain =
-      maybe
-        (throwJsonError400 "Bad Request" "Domain not supported")
-        return
-        $ decodeFromText $ "\"" <> domain <> "\""
+    domainToOrgType :: B.Domain -> Org.OrganizationDomain
+    domainToOrgType domain = case domain of
+      B.MOBILITY -> Org.MOBILITY
+      B.FINAL_MILE_DELIVERY -> Org.FINAL_MILE_DELIVERY
+      B.FOOD_AND_BEVERAGE -> Org.FOOD_AND_BEVERAGE
+      B.HEALTHCARE -> Org.HEALTHCARE

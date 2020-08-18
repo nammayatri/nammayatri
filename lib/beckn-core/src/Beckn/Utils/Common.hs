@@ -5,6 +5,7 @@ module Beckn.Utils.Common where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Domain
 import Beckn.Types.Error
 import Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
@@ -100,7 +101,7 @@ mkAckResponse' txnId action _message = do
     AckResponse
       { _context =
           Context
-            { _domain = "MOBILITY",
+            { _domain = MOBILITY,
               _country = Nothing,
               _city = Nothing,
               _action = action,
