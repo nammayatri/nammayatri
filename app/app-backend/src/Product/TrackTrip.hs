@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.TrackTrip where
 
@@ -12,6 +13,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
@@ -19,7 +21,6 @@ import qualified Models.ProductInstance as MPI
 import Types.Common (fromBeckn)
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
-import qualified EulerHS.Language as L
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track _ req = withFlowHandler $ do
@@ -63,7 +64,7 @@ trackCb req = withFlowHandler $ do
     Left err -> do
       L.logError @Text "on_track_trip req" $ "on_track_trip error: " <> show err
       return $ AckResponse context (ack "ACK") Nothing
-      
+
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do
   let minfo = decodeFromText =<< prodInst ^. #_info

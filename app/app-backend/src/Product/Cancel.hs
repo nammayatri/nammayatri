@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.Cancel where
 
@@ -149,4 +150,3 @@ onCancel req = withFlowHandler $ do
         )
     Left err -> L.logError @Text "on_cancel req" $ "on_cancel error: " <> show err
   mkAckResponse txnId "cancel"
-
