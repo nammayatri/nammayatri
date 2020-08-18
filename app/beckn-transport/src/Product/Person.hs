@@ -127,6 +127,8 @@ linkEntity orgId personId req = withFlowHandler $ do
   when
     (person ^. #_organizationId /= Just orgId)
     (L.throwException $ err401 {errBody = "Unauthorized"})
+  prevPerson <- QP.findByEntityId (req ^. #_entityId)
+  whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
   QP.updateEntity (PersonId personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
   updatedPerson <- QP.findPersonById $ person ^. #_id
   mkPersonRes updatedPerson

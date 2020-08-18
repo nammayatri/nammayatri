@@ -207,15 +207,32 @@ deleteById id =
 
 updateEntity :: PersonId -> Text -> Text -> Flow ()
 updateEntity personId entityId entityType = do
+  let mEntityId =
+        if null entityId
+          then Nothing
+          else Just entityId
+      mEntityType =
+        if null entityType
+          then Nothing
+          else Just entityType
   DB.update
     dbTable
-    (setClause entityId entityType)
+    (setClause mEntityId mEntityType)
     (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause sEntityId sEntityType Storage.Person {..} =
+    setClause mEntityId mEntityType Storage.Person {..} =
       mconcat
-        [ _udf1 <-. B.val_ (Just sEntityId),
-          _udf2 <-. B.val_ (Just sEntityType)
+        [ _udf1 <-. B.val_ mEntityId,
+          _udf2 <-. B.val_ mEntityType
         ]
     predicate pId Storage.Person {..} = _id ==. B.val_ pId
+
+findByEntityId :: Text -> Flow (Maybe Storage.Person)
+findByEntityId entityId =
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= decrypt
+  where
+    predicate Storage.Person {..} =
+      _udf1 ==. B.val_ (Just entityId)
