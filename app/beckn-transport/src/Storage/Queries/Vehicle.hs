@@ -120,3 +120,11 @@ findByIds ids =
   DB.findAllOrErr dbTable predicate
   where
     predicate Storage.Vehicle {..} = B.in_ _id (B.val_ <$> ids)
+
+findByRegistrationNo ::
+  Text -> Flow (Maybe Storage.Vehicle)
+findByRegistrationNo registrationNo =
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Vehicle {..} = _registrationNo ==. B.val_ registrationNo

@@ -19,9 +19,16 @@ import qualified Utils.Defaults as Default
 
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandler $ do
+  validateVehicle
   vehicle <- createTransform req >>= addOrgId orgId
   QV.create vehicle
   return $ CreateVehicleRes vehicle
+  where
+    validateVehicle = do
+      mVehicle <- QV.findByRegistrationNo $ req ^. #_registrationNo
+      when (isJust mVehicle) $
+        L.throwException $
+          err400 {errBody = "RegistrationNo already exists"}
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
 listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $ do

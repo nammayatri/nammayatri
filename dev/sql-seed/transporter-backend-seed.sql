@@ -416,6 +416,9 @@ ALTER TABLE ONLY atlas_transporter.registration_token
 CREATE UNIQUE INDEX idx_16386_short_id ON atlas_transporter.case USING btree (short_id);
 
 
+ALTER TABLE ONLY atlas_transporter.vehicle
+  ADD CONSTRAINT unique_registration_no UNIQUE (registration_no);
+
 --
 -- Name: idx_16386_parent_case_id; Type: INDEX; Schema: atlas_transporter; Owner: atlas
 --
