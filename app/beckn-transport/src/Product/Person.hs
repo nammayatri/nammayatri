@@ -27,6 +27,7 @@ updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler U
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   verifyPerson _EntityId
   person <- QP.findPersonById (PersonId _EntityId)
+  isValidUpdate person
   updatedPerson <- modifyTransform req person
   QP.updatePersonRec (PersonId _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
@@ -35,6 +36,10 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
       when (personId /= entityId) $
         L.throwException $
           err400 {errBody = "PERSON_ID_MISMATCH"}
+    isValidUpdate person =
+      when (isJust (req ^. #_role) && person ^. #_role /= SP.ADMIN) $
+        L.throwException $
+          err401 {errBody = "ADMIN ACCESS REQUIRED"}
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
