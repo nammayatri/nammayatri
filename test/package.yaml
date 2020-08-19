@@ -36,6 +36,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - NumDecimals
   - OverloadedStrings
   - PackageImports
   - PatternSynonyms

@@ -51,5 +51,7 @@ specs = do
       (appTid, tbeTid, gatewayTid) <- Mobility.startServers
       mockAppTid <- MockAppBackend.startServer
       mockProviderTid <- MockProviderBackend.startServer
+      -- Wait for servers to start up
+      threadDelay 0.1e6
       return [appTid, tbeTid, gatewayTid, mockAppTid, mockProviderTid]
     cleanupServers = traverse_ killThread
