@@ -58,12 +58,13 @@ search org req = withFlowHandler $ do
     else return $ AckResponse context (ack "ACK") Nothing
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb _org req = withFlowHandler $ do
+searchCb org req = withFlowHandler $ do
   let onSearch = ET.client $ withClientTracing onSearchAPI
       messageId = req ^. #context . #_transaction_id
   appUrl <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl appUrl
-  eRes <- callAPIWithTrail baseUrl (onSearch "" req) "on_search"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  eRes <- callAPIWithTrail baseUrl (onSearch cbApiKey req) "on_search"
   let resp = case eRes of
         Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
         Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing
