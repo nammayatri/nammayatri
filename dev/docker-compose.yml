@@ -52,6 +52,32 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+  mock-app-db:
+    image: "postgres:12.3"
+    container_name: "atlas-mock-app"
+    ports:
+      - "5437:5432"
+    volumes:
+      - ./sql-seed/mock-app-backend-seed.sql:/docker-entrypoint-initdb.d/mock-app-backend-seed.sql:Z
+    environment:
+      - POSTGRES_DB=atlas_mock_app_backend
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+  mock-provider-db:
+    image: "postgres:12.3"
+    container_name: "atlas-mock-provider"
+    ports:
+      - "5438:5432"
+    volumes:
+      - ./sql-seed/mock-provider-backend-seed.sql:/docker-entrypoint-initdb.d/mock-provider-backend-seed.sql:Z
+    environment:
+      - POSTGRES_DB=atlas_mock_provider_backend
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   transporter-redis:
     image: "redis:5"
     ports:
