@@ -7,6 +7,7 @@ module Beckn.Utils.Servant.HeaderAuth where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Common
+import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Server
 import Control.Lens ((?=))
 import qualified Data.Swagger as DS
@@ -151,3 +152,9 @@ addResponse401 = execState $ do
   where
     response401Name = "Unauthorized"
     response401 = mempty & DS.description .~ "Unauthorized"
+
+instance
+  SanitizedUrl (subroute :: Type) =>
+  SanitizedUrl (APIKeyAuth v :> subroute)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)

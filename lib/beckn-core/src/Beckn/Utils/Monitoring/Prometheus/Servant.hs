@@ -1,7 +1,5 @@
 module Beckn.Utils.Monitoring.Prometheus.Servant where
 
-import Beckn.Types.App
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Proxy
 import Data.Text as DT
 import EulerHS.Prelude as E
@@ -85,18 +83,6 @@ instance
 
 instance
   SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (APIKeyAuth v :> subroute)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
-
-instance
-  SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (QueryParam name t :> subroute)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
-
-instance
-  SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (MandatoryQueryParam name t :> subroute)
+  SanitizedUrl (QueryParam' modifier name t :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
