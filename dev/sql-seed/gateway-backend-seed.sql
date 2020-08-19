@@ -153,8 +153,8 @@ COPY atlas_gateway.location (id, location_type, lat, long, ward, district, city,
 --
 
 COPY atlas_gateway.organization (id, name, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) FROM stdin;
-test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-mobility-provider                   	mobility	\N	APPROVED	PROVIDER	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
+test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	test-provider-2-key	\N
+mobility-provider                   	mobility	\N	APPROVED	PROVIDER	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	mobility-provider-key	\N
 provider-wrapper                   	fmd-wrapper	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	fmd-wrapper-key	http://localhost:8018/v1	\N	2020-08-01 18:37:00+00	2020-08-01 18:37:00+00	test-bpp-key	\N
 test-app-2                          	Test App 2	\N	APPROVED	APP	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
 mobility-app                        	mobility	\N	APPROVED	APP	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8013/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
