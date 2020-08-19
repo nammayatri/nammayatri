@@ -2,7 +2,7 @@ module Utils.Auth where
 
 import App.Types
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeM400)
+import Beckn.Utils.Common (fromMaybeM401)
 import Beckn.Utils.Servant.HeaderAuth
 import Control.Monad ()
 import EulerHS.Prelude
@@ -18,4 +18,4 @@ instance VerificationMethod VerifyAPIKey where
     \If you don't have an API key, register the app/gateway."
 
 verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
-verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM400 "INVALID_API_KEY")
+verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM401 "INVALID_API_KEY")

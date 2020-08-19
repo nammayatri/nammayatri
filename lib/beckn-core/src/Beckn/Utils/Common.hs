@@ -84,10 +84,12 @@ fromMaybeM err Nothing = L.throwException err
 fromMaybeM _ (Just a) = return a
 
 fromMaybeM400,
+  fromMaybeM401,
   fromMaybeM500,
   fromMaybeM503 ::
     L.MonadFlow m => BSL.ByteString -> Maybe a -> m a
 fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
+fromMaybeM401 a = fromMaybeM (err401 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
