@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "on_init" "dummy-txn-id" now
                 onInitReq = buildOnInitReq ctx
-            eitherInitCbRes <- runClient appClientEnv $ onInitFlow "" onInitReq
+            eitherInitCbRes <- runClient appClientEnv $ onInitFlow mockAppApiKey onInitReq
             eitherInitCbRes `shouldSatisfy` isRight

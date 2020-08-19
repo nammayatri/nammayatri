@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "on_update" "dummy-txn-id" now
                 onUpdateReq = buildOnUpdateReq ctx
-            eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow "" onUpdateReq
+            eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow mockAppApiKey onUpdateReq
             eitherUpdateCbRes `shouldSatisfy` isRight

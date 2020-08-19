@@ -10,6 +10,7 @@ import App.Types
 import App.Utils
 import Beckn.Types.Common
 import Beckn.Types.FMD.API.Confirm
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Data.Aeson (encode)
 import qualified EulerHS.Language as EL
@@ -18,8 +19,8 @@ import EulerHS.Prelude
 -- import qualified System.Environment as SE
 -- import qualified Beckn.Types.API.Confirm as Confirm
 
-confirmCb :: () -> OnConfirmReq -> FlowHandler AckResponse
-confirmCb _unit req = withFlowHandler $ do
+confirmCb :: Organization -> OnConfirmReq -> FlowHandler AckResponse
+confirmCb _org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   EL.logDebug @Text "mock_app_backend" $ "confirm_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   -- ctx <- updateCaller $ req ^. #context

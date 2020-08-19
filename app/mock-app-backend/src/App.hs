@@ -6,6 +6,7 @@ where
 import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
+import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -22,12 +23,14 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant.Server
+import Storage.DB.Config as Config
 import System.Environment (lookupEnv)
 
 runMockApp :: IO ()
 runMockApp = do
   port <- fromMaybe 8016 . (>>= readMaybe) <$> lookupEnv "MOCK_APP_PORT"
-  let appEnv = AppEnv
+  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
+  let appEnv = AppEnv dbEnv
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,

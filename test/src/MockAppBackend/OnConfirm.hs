@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "on_confirm" "dummy-txn-id" now
                 onConfirmReq = buildOnConfirmReq ctx
-            eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow "" onConfirmReq
+            eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow mockAppApiKey onConfirmReq
             eitherConfirmCbRes `shouldSatisfy` isRight

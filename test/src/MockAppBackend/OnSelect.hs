@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "on_select" "dummy-txn-id" now
                 onSelectReq = buildOnSelectReq ctx
-            eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow "" onSelectReq
+            eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow mockAppApiKey onSelectReq
             eitherSelectCbRes `shouldSatisfy` isRight

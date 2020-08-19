@@ -23,7 +23,7 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "on_search" "dummy-txn-id" now
                 onSearchReq = buildOnSearchReq ctx
-            eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow "" onSearchReq
+            eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow mockAppApiKey onSearchReq
             eitherSearchCbRes `shouldSatisfy` isRight
 
             return ()

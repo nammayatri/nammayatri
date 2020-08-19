@@ -96,3 +96,6 @@ buildOnUpdateReq context =
     { context,
       contents = Right $ UpdateResMessage example
     }
+
+mockAppApiKey :: Text
+mockAppApiKey = "test-app-2-key"
