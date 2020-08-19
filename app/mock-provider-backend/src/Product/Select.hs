@@ -8,6 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Select
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
@@ -16,9 +17,10 @@ import EulerHS.Types (client)
 import Servant.Client (parseBaseUrl)
 import System.Environment (lookupEnv)
 
-select :: () -> SelectReq -> FlowHandlerR r AckResponse
-select _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
+select :: Organization -> SelectReq -> FlowHandlerR r AckResponse
+select org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
       context =
         (req ^. #context)
@@ -33,7 +35,7 @@ select _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           callClient "select" appUrl $
             client
               onSelectAPI
-              "test-provider-2-key"
+              cbApiKey
               CallbackReq
                 { context = context {_action = "on_select"},
                   contents = Right onSelectMessage

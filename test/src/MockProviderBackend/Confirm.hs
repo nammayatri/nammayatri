@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "confirm" "dummy-txn-id" now
                 confirmReq = buildFMDConfirmReq ctx
-            initiateConfirmRes <- runClient providerClientEnv $ confirmFlow "" confirmReq
+            initiateConfirmRes <- runClient providerClientEnv $ confirmFlow mockProviderApiKey confirmReq
             initiateConfirmRes `shouldSatisfy` isRight

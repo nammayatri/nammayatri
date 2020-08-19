@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "select" "dummy-txn-id" now
                 selectReq = buildFMDSelectReq ctx
-            initiateSelectRes <- runClient providerClientEnv $ selectFlow "" selectReq
+            initiateSelectRes <- runClient providerClientEnv $ selectFlow mockProviderApiKey selectReq
             initiateSelectRes `shouldSatisfy` isRight

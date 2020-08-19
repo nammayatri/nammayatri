@@ -91,3 +91,6 @@ buildFMDUpdateReq context =
     { context,
       message = UpdateReqMessage "update_pickup_location" example
     }
+
+mockProviderApiKey :: Text
+mockProviderApiKey = "test-provider-2-key"

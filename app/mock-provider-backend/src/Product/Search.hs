@@ -11,6 +11,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
 import Control.Monad.Reader (withReaderT)
@@ -20,9 +21,10 @@ import EulerHS.Types (client)
 import Product.GatewayLookup
 import System.Environment (lookupEnv)
 
-search :: () -> SearchReq -> FlowHandlerR r AckResponse
-search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
+search :: Organization -> SearchReq -> FlowHandlerR r AckResponse
+search org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
   bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let context =
         (req ^. #context)
           { _ac_id = fromString <$> bppNwAddr
@@ -33,9 +35,9 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
         pass
     tId
       | tId == searchPickupLocationNotServiceableId ->
-        sendResponse context $ Left $ domainError "FMD001"
+        sendResponse cbApiKey context $ Left $ domainError "FMD001"
     _ ->
-      sendResponse context $ Right $ OnSearchServices example
+      sendResponse cbApiKey context $ Right $ OnSearchServices example
   return
     AckResponse
       { _context = context,
@@ -43,7 +45,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
         _error = Nothing
       }
   where
-    sendResponse context contents =
+    sendResponse cbKey context contents =
       forkAsync "Search" $ do
         baseUrl <- lookupBaseUrl
         L.runIO $ threadDelay 0.5e6
@@ -51,7 +53,7 @@ search _unit req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowH
           callClient "search" baseUrl $
             client
               onSearchAPI
-              "test-provider-2-key"
+              cbKey
               CallbackReq
                 { context = context {_action = "on_search"},
                   contents = contents

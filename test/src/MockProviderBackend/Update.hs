@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "update" "dummy-txn-id" now
                 updateReq = buildFMDUpdateReq ctx
-            initiateUpdateRes <- runClient providerClientEnv $ updateFlow "" updateReq
+            initiateUpdateRes <- runClient providerClientEnv $ updateFlow mockProviderApiKey updateReq
             initiateUpdateRes `shouldSatisfy` isRight

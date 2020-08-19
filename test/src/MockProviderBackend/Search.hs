@@ -23,5 +23,5 @@ spec = do
             now <- getCurrentTime
             let ctx = buildContext "search" "dummy-txn-id" now
                 searchReq = buildFMDSearchReq ctx
-            initiateSearchRes <- runClient providerClientEnv $ searchFlow "" searchReq
+            initiateSearchRes <- runClient providerClientEnv $ searchFlow mockProviderApiKey searchReq
             initiateSearchRes `shouldSatisfy` isRight
