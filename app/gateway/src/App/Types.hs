@@ -16,7 +16,8 @@ data AppCfg = AppCfg
     selfId :: Maybe Text,
     nwAddress :: Maybe Text,
     migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool
+    autoMigrate :: Bool,
+    searchTimeout :: Maybe Int
   }
   deriving (Generic, FromDhall)
 
@@ -27,8 +28,10 @@ data AppEnv = AppEnv
     gwNwAddress :: Maybe Text,
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool
+    autoMigrate :: Bool,
+    searchTimeout :: Maybe Int -- In seconds
   }
+  deriving (Generic)
 
 mkAppEnv :: AppCfg -> C.Cache Text Text -> AppEnv
 mkAppEnv AppCfg {..} c = AppEnv {gwId = selfId, gwNwAddress = nwAddress, cache = c, ..}

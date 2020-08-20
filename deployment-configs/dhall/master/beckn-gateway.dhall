@@ -36,4 +36,5 @@ in
 , nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, searchTimeout = None Integer
 }

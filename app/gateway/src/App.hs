@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module App
   ( runGateway,
   )
