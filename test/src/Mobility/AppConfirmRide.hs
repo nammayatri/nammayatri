@@ -54,23 +54,27 @@ spec = do
                 -- If we reach here, the 'Right' pattern match will always succeed
                 let Right ackResponse = ackResult
                     appCaseid = AppCommon._message $ ackResponse ^. #message
-                -- Do a List Leads and retrieve transporter case id
-                caseReqResult <- runClient tbeClientEnv buildListLeads
-                caseReqResult `shouldSatisfy` isRight
-                -- If we reach here, the 'Right' pattern match will always succeed
-                let Right caseListRes = caseReqResult
-                    caseList = filter (\caseRes -> (Case._shortId . TbeCase._case) caseRes == appCaseid) caseListRes
-                    transporterCurrCaseid = (_getCaseId . Case._id . TbeCase._case . head) caseList
+                theCase :| [] <- poll $ do
+                  -- Do a List Leads and retrieve transporter case id
+                  caseReqResult <- runClient tbeClientEnv buildListLeads
+                  caseReqResult `shouldSatisfy` isRight
+                  -- If we reach here, the 'Right' pattern match will always succeed
+                  let Right caseListRes = caseReqResult
+                      caseList = filter (\caseRes -> (Case._shortId . TbeCase._case) caseRes == appCaseid) caseListRes
+                  return $ nonEmpty caseList
+                let transporterCurrCaseid = (_getCaseId . Case._id . TbeCase._case) theCase
                 -- Transporter accepts the ride
                 accDecRideResult <- runClient tbeClientEnv (acceptOrDeclineRide appRegistrationToken transporterCurrCaseid buildUpdateCaseReq)
                 accDecRideResult `shouldSatisfy` isRight
 
-                -- Do a Case Status request for getting case product to confirm ride
-                -- on app side next
-                statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
-                statusResResult `shouldSatisfy` isRight
-                let Right statusRes = statusResResult
-                    productInstanceId = _getProductInstanceId . AppCase._id . head . productInstances $ statusRes
+                productInstance :| [] <- poll $ do
+                  -- Do a Case Status request for getting case product to confirm ride
+                  -- on app side next
+                  statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
+                  statusResResult `shouldSatisfy` isRight
+                  let Right statusRes = statusResResult
+                  return . nonEmpty $ productInstances statusRes
+                let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
                 -- Confirm ride from app backend
                 confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
                 confirmResult `shouldSatisfy` isRight
