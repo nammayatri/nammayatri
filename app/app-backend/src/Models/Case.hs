@@ -126,7 +126,7 @@ validateStatusChange newStatus caseId = do
     Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()
 
-updateOrgCount :: CaseId -> Text -> Flow ()
-updateOrgCount cId count = do
-  result <- Q.updateOrgCount cId count
+updateInfo :: CaseId -> Text -> Flow ()
+updateInfo cId info = do
+  result <- Q.updateInfo cId info
   checkDBError result

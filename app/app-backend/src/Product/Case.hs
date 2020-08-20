@@ -29,10 +29,7 @@ status person caseId = withFlowHandler $ do
   toLocation <-
     fromMaybeM500 "Could not find to location"
       =<< Location.findLocationById (LocationId $ case_ ^. #_toLocationId)
-  let accepted = length $ filter (\x -> API._status x == PI.INSTOCK) prodInstRes
-      declined = length $ filter (\x -> API._status x == PI.OUTOFSTOCK) prodInstRes
-      total = case_ ^. #_udf3
-  return $ StatusRes case_ prodInstRes fromLocation toLocation total (Just $ show accepted) (Just $ show declined)
+  return $ StatusRes case_ prodInstRes fromLocation toLocation
 
 list ::
   Person.Person ->

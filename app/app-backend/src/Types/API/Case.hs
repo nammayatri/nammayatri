@@ -14,10 +14,7 @@ data StatusRes = StatusRes
   { _case :: Case,
     _productInstance :: [ProdInstRes],
     _fromLocation :: Location,
-    _toLocation :: Location,
-    _total :: Maybe Text,
-    _accepted :: Maybe Text,
-    _declined :: Maybe Text
+    _toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 
@@ -89,4 +86,17 @@ instance FromJSON ProdInstRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
 instance ToJSON ProdInstRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data CaseInfo = CaseInfo
+  { _total :: Maybe Integer,
+    _accepted :: Maybe Integer,
+    _declined :: Maybe Integer
+  }
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON CaseInfo where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON CaseInfo where
   toJSON = genericToJSON stripAllLensPrefixOptions

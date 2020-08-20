@@ -367,10 +367,14 @@ mkOrgCountPayload caseSid count = do
   context <- mkContext "on_status" caseSid
   order <- mkOrgCountRes
   let onStatusMessage = OnStatusReqMessage order
-  return $ OnStatusReq context onStatusMessage Nothing
+  return $
+    CallbackReq
+      { context = context,
+        contents = Right onStatusMessage
+      }
   where
     mkOrgCountRes = do
-      now <- getCurrentTimeUTC
+      now <- getCurrTime
       return $
         Order
           { _id = caseSid,
@@ -379,15 +383,17 @@ mkOrgCountPayload caseSid count = do
             _created_at = now,
             _updated_at = now,
             _billing = Nothing,
-            _payment = Nothing
+            _payment = Nothing,
+            _update_action = Nothing,
+            _quotation = Nothing
           }
     mkItemQuantityRes =
       ItemQuantity
-        { _allocated = example,
-          _available = Quantity count example,
-          _maximum = example,
-          _minimum = example,
-          _selected = example
+        { _allocated = Nothing,
+          _available = Just $ Quantity count example,
+          _maximum = Nothing,
+          _minimum = Nothing,
+          _selected = Nothing
         }
 
 serviceStatus :: StatusReq -> FlowHandler StatusRes

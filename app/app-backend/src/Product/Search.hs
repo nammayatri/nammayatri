@@ -9,7 +9,6 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
-import qualified Beckn.Types.Core.Provider as Core
 import Beckn.Types.Mobility.Service as BM
 import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
@@ -20,6 +19,7 @@ import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time
@@ -28,12 +28,13 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.Product as Products
-import qualified Models.ProductInstance as QPI
-import Servant hiding (Context)
+import qualified Models.ProductInstance as MPI
+import Servant
 import qualified Storage.Queries.Location as Location
+import qualified Types.API.Case as API
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
-import Types.Common (fromBeckn, toBeckn)
+import Types.Common (Provider, fromBeckn, toBeckn)
 import Types.ProductInfo
 import Utils.Common
 import qualified Utils.Metrics as Metrics
@@ -80,7 +81,7 @@ searchCb _unit req = withFlowHandler $ do
 searchCbService :: Search.OnSearchReq -> BM.Service -> Flow Search.OnSearchRes
 searchCbService req service = do
   -- TODO: Verify api key here
-  let mprovider = service ^. #_provider
+  let mprovider = fromBeckn <$> (service ^. #_provider)
       mcatalog = service ^. #_catalog
       caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
@@ -89,22 +90,33 @@ searchCbService req service = do
       (L.throwException $ err500 {errBody = "No person linked to case"})
       (return . PersonId)
       (Case._requestor case_)
-  case mcatalog of
-    Nothing -> do
-      declinedPI <- mkDeclinedProductInstance case_ mprovider personId
-      QPI.create declinedPI
+  case (mprovider, mcatalog) of
+    (Nothing, _) -> L.throwException $ err400 {errBody = "missing provider"}
+    (Just provider, Nothing) -> do
+      declinedPI <- mkDeclinedProductInstance case_ provider personId
+      MPI.create declinedPI
       return ()
-    Just catalog -> do
+    (Just provider, Just catalog) -> do
       when
         (case_ ^. #_status == Case.CLOSED)
         (L.throwException $ err400 {errBody = "Case expired"})
       let items = catalog ^. #_items
-      products <- traverse (mkProduct case_ mprovider) items
+      products <- traverse (mkProduct case_) items
       traverse_ Products.create products
-      productInstances <- traverse (mkProductInstance case_ mprovider personId) items
-      traverse_ QPI.create productInstances
+      productInstances <- traverse (mkProductInstance case_ provider personId) items
+      traverse_ MPI.create productInstances
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId case_ productInstances
+  piList <- MPI.findAllByCaseId (case_ ^. #_id)
+  let piStatusCount = Map.fromListWith (+) $ zip (PI._status <$> piList) $ repeat (1 :: Integer)
+      accepted = Map.lookup PI.INSTOCK piStatusCount
+      declined = Map.lookup PI.OUTOFSTOCK piStatusCount
+      mCaseInfo :: (Maybe API.CaseInfo) = decodeFromText =<< (case_ ^. #_info)
+  _ <- case mCaseInfo of
+    Just info -> do
+      let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
+      Case.updateInfo (case_ ^. #_id) (encodeToText uInfo)
+    Nothing -> return ()
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     extendCaseExpiry :: Case.Case -> Flow ()
@@ -187,8 +199,8 @@ mkLocation BS.Stop {..} = do
         _updatedAt = now
       }
 
-mkProduct :: Case.Case -> Maybe Core.Provider -> Core.Item -> Flow Products.Products
-mkProduct case_ _mprovider item = do
+mkProduct :: Case.Case -> Core.Item -> Flow Products.Products
+mkProduct case_ item = do
   now <- getCurrTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
@@ -219,10 +231,10 @@ mkProduct case_ _mprovider item = do
         _updatedAt = now
       }
 
-mkProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
-mkProductInstance case_ mprovider personId item = do
+mkProductInstance :: Case.Case -> Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
+mkProductInstance case_ provider personId item = do
   now <- getCurrTime
-  let info = ProductInfo (fromBeckn <$> mprovider) Nothing
+  let info = ProductInfo (Just provider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
@@ -255,16 +267,16 @@ mkProductInstance case_ mprovider personId item = do
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _organizationId = "", -- TODO: fix this
+        _organizationId = provider ^. #id,
         _createdAt = now,
         _updatedAt = now
       }
 
-mkDeclinedProductInstance :: Case.Case -> Maybe Core.Provider -> PersonId -> Flow PI.ProductInstance
-mkDeclinedProductInstance case_ mprovider personId = do
-  now <- getCurrentTimeUTC
+mkDeclinedProductInstance :: Case.Case -> Provider -> PersonId -> Flow PI.ProductInstance
+mkDeclinedProductInstance case_ provider personId = do
+  now <- getCurrTime
   piId <- generateGUID
-  let info = ProductInfo mprovider Nothing
+  let info = ProductInfo (Just provider) Nothing
   return
     PI.ProductInstance
       { _id = ProductInstanceId piId,
@@ -290,7 +302,7 @@ mkDeclinedProductInstance case_ mprovider personId = do
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _organizationId = "", -- TODO: fix this
+        _organizationId = provider ^. #id,
         _createdAt = now,
         _updatedAt = now
       }
