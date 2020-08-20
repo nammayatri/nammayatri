@@ -94,10 +94,10 @@ fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 mkAckResponse :: L.MonadFlow m => Text -> Text -> m AckResponse
-mkAckResponse txnId action = mkAckResponse' txnId action "OK"
+mkAckResponse txnId action = mkAckResponse' txnId action "ACK"
 
 mkAckResponse' :: L.MonadFlow m => Text -> Text -> Text -> m AckResponse
-mkAckResponse' txnId action _message = do
+mkAckResponse' txnId action status = do
   currTime <- getCurrTime
   return
     AckResponse
@@ -115,7 +115,7 @@ mkAckResponse' txnId action _message = do
               _timestamp = currTime
             },
         _message =
-          ack action,
+          ack status,
         _error = Nothing
       }
 
