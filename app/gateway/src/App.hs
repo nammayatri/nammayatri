@@ -17,7 +17,6 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Cache as C
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime as E
 import EulerHS.Types as E
@@ -45,7 +44,6 @@ runGateway = do
   let settings =
         setOnExceptionResponse gatewayExceptionResponse $
           setPort port defaultSettings
-  reqHeadersKey <- V.newKey
   cache <- C.newCache Nothing
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing Redis Connections..."
@@ -53,7 +51,7 @@ runGateway = do
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
         void $ migrateIfNeeded migrationPath dbCfg autoMigrate
-        runSettings settings $ run reqHeadersKey (App.EnvR flowRt $ mkAppEnv appCfg cache)
+        runSettings settings $ run (App.EnvR flowRt $ mkAppEnv appCfg cache)
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse exception = do

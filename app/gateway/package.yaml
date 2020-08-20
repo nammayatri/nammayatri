@@ -82,7 +82,7 @@ library:
     - text
     - time
     - time-units
-    - vault
+    - unix
     - wai
     - wai-extra
     - warp
