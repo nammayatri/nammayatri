@@ -64,7 +64,8 @@ search person req = withFlowHandler $ do
   where
     validateDateTime sreq = do
       currTime <- getCurrTime
-      when ((sreq ^. #origin . #departureTime . #estimated) < currTime) $
+      let allowedStartTime = addUTCTime (-2 * 60) currTime
+      when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
         L.throwException $
           err400 {errBody = "Invalid start time"}
 
