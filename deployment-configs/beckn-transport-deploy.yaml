@@ -160,21 +160,26 @@ spec:
                 configMapKeyRef:
                   name: beckn-transport-configs
                   key: BECKN_GATEWAY_PATH
+            - name: GATEWAY_SELECTOR
+              valueFrom:
+                configMapKeyRef:
+                  name: beckn-transport-configs
+                  key: GATEWAY_SELECTOR
             #------ Nsdl Gateway configs ------#
             - name: NSDL_GATEWAY_URL
               valueFrom:
                 configMapKeyRef:
-                  name: beckn-app-backend-configs
+                  name: beckn-transport-configs
                   key: NSDL_GATEWAY_URL
-            - name: NSDL_BPP_ID
+            - name: NSDL_BPP_USERNAME
               valueFrom:
-                configMapKeyRef:
-                  name: beckn-app-backend-configs
-                  key: NSDL_BPP_ID
+                secretKeyRef:
+                  name: app-secrets
+                  key: NSDL_BPP_USERNAME
             - name: NSDL_BPP_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  name: beckn-app-backend-configs
+                secretKeyRef:
+                  name: app-secrets
                   key: NSDL_BPP_PASSWORD
             #------ Beckn app configs ------#
             - name: BECKN_APP_HOST

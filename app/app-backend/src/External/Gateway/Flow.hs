@@ -15,6 +15,7 @@ import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
+import Servant (err500, errBody)
 import Servant.Client
 import System.Environment
 import Types.API.Location
@@ -22,16 +23,21 @@ import Types.API.Location
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
-  let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
-  res <- case mNsdlBaseUrl of
-    Just nsdlBaseUrl -> do
-      nsdlBapId <- L.runIO $ lookupEnv "NSDL_BAP_ID"
-      nsdlBapPwd <- L.runIO $ lookupEnv "NSDL_BAP_PASSWORD"
-      callAPIWithTrail nsdlBaseUrl (API.nsdlSearch (T.pack <$> nsdlBapId) (T.pack <$> nsdlBapPwd) req) "search"
-    Nothing -> do
+  mGatewaySelector <- L.runIO $ lookupEnv "GATEWAY_SELECTOR"
+  res <- case mGatewaySelector of
+    Just "NSDL" -> do
+      mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
+      let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
+      case mNsdlBaseUrl of
+        Just nsdlBaseUrl -> do
+          nsdlBapId <- L.runIO $ lookupEnv "NSDL_BAP_USERNAME"
+          nsdlBapPwd <- L.runIO $ lookupEnv "NSDL_BAP_PASSWORD"
+          callAPIWithTrail nsdlBaseUrl (API.nsdlSearch (T.pack <$> nsdlBapId) (T.pack <$> nsdlBapPwd) req) "search"
+        Nothing -> L.throwException $ err500 {errBody = "invalid nsdl gateway url"}
+    Just "JUSPAY" -> do
       apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
       callAPIWithTrail url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
+    _ -> L.throwException $ err500 {errBody = "gateway not configured"}
   case res of
     Left err -> do
       L.logError @Text "Search" ("error occurred while search: " <> show err)

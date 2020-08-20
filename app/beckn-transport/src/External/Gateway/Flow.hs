@@ -18,22 +18,28 @@ import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
+import Servant (err500, errBody)
 import Servant.Client
 import System.Environment
 
 onSearch :: OnSearchReq -> Flow AckResponse
 onSearch req@CallbackReq {context} = do
-  mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
-  let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
-  res <- case mNsdlBaseUrl of
-    Just nsdlBaseUrl -> do
-      nsdlBppId <- L.runIO $ lookupEnv "NSDL_BPP_ID"
-      nsdlBppPwd <- L.runIO $ lookupEnv "NSDL_BPP_PASSWORD"
-      callAPIWithTrail nsdlBaseUrl (API.nsdlOnSearch (T.pack <$> nsdlBppId) (T.pack <$> nsdlBppPwd) req) "on_search"
-    Nothing -> do
+  mGatewaySelector <- L.runIO $ lookupEnv "GATEWAY_SELECTOR"
+  res <- case mGatewaySelector of
+    Just "NSDL" -> do
+      mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
+      let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
+      case mNsdlBaseUrl of
+        Just nsdlBaseUrl -> do
+          nsdlBppId <- L.runIO $ lookupEnv "NSDL_BPP_USERNAME"
+          nsdlBppPwd <- L.runIO $ lookupEnv "NSDL_BPP_PASSWORD"
+          callAPIWithTrail nsdlBaseUrl (API.nsdlOnSearch (T.pack <$> nsdlBppId) (T.pack <$> nsdlBppPwd) req) "on_search"
+        Nothing -> L.throwException $ err500 {errBody = "invalid nsdl gateway url"}
+    Just "JUSPAY" -> do
       url <- getGatewayBaseUrl
       apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
       callAPIWithTrail url (API.onSearch (maybe "mobility-provider-key" T.pack apiKey) req) "on_search"
+    _ -> L.throwException $ err500 {errBody = "gateway not configured"}
   whenRight res $ \_ ->
     L.logInfo @Text "OnSearch" "OnSearch callback successfully delivered"
   whenLeft res $ \err ->

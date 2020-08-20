@@ -42,7 +42,7 @@ onSearchAPI :: Proxy (OnSearchAPI v)
 onSearchAPI = Proxy
 
 type NSDLOnSearchAPI =
-  "search"
+  "on_search"
     :> Header "userid" Text
     :> Header "Password" Text
     :> ReqBody '[JSON] OnSearchReq
