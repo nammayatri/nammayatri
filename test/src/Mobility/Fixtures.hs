@@ -278,6 +278,7 @@ verifyLoginReq tokenId = appVerifyLogin tokenId buildLoginReq
 startServers :: IO (ThreadId, ThreadId, ThreadId)
 startServers = do
   setEnv "USE_FAKE_SMS" "7891"
+  setEnv "GATEWAY_SELECTOR" "JUSPAY"
   appTid <- forkIO AppBE.runAppBackend
   tbeTid <- forkIO TransporterBE.runTransporterBackendApp
   gatewayTid <- forkIO GatewayBE.runGateway
