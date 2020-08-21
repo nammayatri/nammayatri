@@ -31,7 +31,9 @@ data AppEnv = AppEnv
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
-    exotelCfg :: Maybe ExotelCfg
+    exotelCfg :: Maybe ExotelCfg,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
   deriving (Generic, FromDhall)
 

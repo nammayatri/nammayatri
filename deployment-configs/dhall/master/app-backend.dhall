@@ -57,4 +57,6 @@ in
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = None ExotelCfg
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
 }

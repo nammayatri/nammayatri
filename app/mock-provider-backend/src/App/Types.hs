@@ -14,7 +14,9 @@ data AppEnv = AppEnv
     port :: Int,
     xGatewayUri :: BaseUrl,
     selfId :: Maybe Text,
-    nwAddress :: Maybe Text
+    nwAddress :: Maybe Text,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
   deriving (Generic, FromDhall)
 

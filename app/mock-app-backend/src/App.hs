@@ -8,6 +8,7 @@ import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Beckn.Utils.Migration
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -38,6 +39,7 @@ runMockApp = do
           setPort (port appEnv) defaultSettings
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
+    _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
     runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 
 mockAppExceptionResponse :: SomeException -> Response

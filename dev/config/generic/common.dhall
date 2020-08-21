@@ -36,4 +36,5 @@ in { defaultPoolConfig = defaultPoolConfig
    -- , exotelCfg
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = None Text
+   , autoMigrate = False
    }

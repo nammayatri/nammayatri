@@ -68,6 +68,8 @@ dependencies:
   - http-client
   - http-client-tls
   - http-types
+  - postgresql-simple
+  - postgresql-simple-migration
   - prometheus-client
   - prometheus-proc
   - wai-middleware-prometheus
@@ -103,6 +105,7 @@ dependencies:
   - lens-family-core
   - tasty
   - tasty-hunit
+  - either
 
 ghc-options:
   - -Wall

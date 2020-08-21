@@ -8,6 +8,7 @@ import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
+import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -42,7 +43,11 @@ runGateway = do
   cache <- C.newCache Nothing
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
+    _ <- runMigrations appCfg
     runSettings settings $ run reqHeadersKey (App.EnvR flowRt $ mkAppEnv appCfg cache)
+  where
+    runMigrations AppCfg {..} =
+      migrateIfNeeded migrationPath dbCfg autoMigrate
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse exception = do

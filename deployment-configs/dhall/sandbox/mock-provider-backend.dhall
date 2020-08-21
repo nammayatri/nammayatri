@@ -13,4 +13,6 @@ in
 , xGatewayUri = gwUri
 , selfId = Some "JUSPAY.BPP.MOCK.1"
 , nwAddress = Some "Http://api.sandbox.beckn.juspay.in/dev/mock/provider/v1/"
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
 }

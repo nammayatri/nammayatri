@@ -12,6 +12,7 @@ import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (runFlowR)
 import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
+import Beckn.Utils.Migration
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -45,7 +46,9 @@ runFMDWrapper = do
     putStrLn @String "Initializing Redis Connections..."
     try (runFlowR flowRt appEnv $ prepareRedisConnections $ redisCfg appEnv) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-      Right _ -> runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
+      Right _ -> do
+        _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
+        runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 
 mockAppExceptionResponse :: SomeException -> Response
 mockAppExceptionResponse exception = do

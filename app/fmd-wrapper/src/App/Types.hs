@@ -10,7 +10,9 @@ import qualified EulerHS.Types as T
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     redisCfg :: T.RedisConfig,
-    port :: Int
+    port :: Int,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
   deriving (Generic, FromDhall)
 

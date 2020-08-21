@@ -12,7 +12,9 @@ data AppCfg = AppCfg
     port :: Int,
     metricsPort :: Int,
     selfId :: Maybe Text,
-    nwAddress :: Maybe Text
+    nwAddress :: Maybe Text,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -20,7 +22,9 @@ data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     gwId :: Maybe Text,
     gwNwAddress :: Maybe Text,
-    cache :: C.Cache Text Text
+    cache :: C.Cache Text Text,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
 
 mkAppEnv :: AppCfg -> C.Cache Text Text -> AppEnv

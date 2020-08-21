@@ -11,6 +11,7 @@ import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -64,6 +65,7 @@ runTransporterBackendApp' appEnv settings = do
               Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
               Right _ ->
                 putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
+            _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
             runSettings settings $ App.run (App.EnvR flowRt appEnv)
 
 transporterExceptionResponse :: SomeException -> Response

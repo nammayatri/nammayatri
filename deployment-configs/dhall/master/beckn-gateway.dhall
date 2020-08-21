@@ -22,4 +22,6 @@ in
 , metricsPort = +9999
 , selfId = Some "JUSPAY.BG.1"
 , nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
 }

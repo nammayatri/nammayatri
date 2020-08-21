@@ -227,6 +227,13 @@ packages:
       sha256: 67fda41cf1ae034c7b7d7246550d6f906b3eeae1bbb438fd47a328bf44b6a46e
   original:
     hackage: lens-family-core-2.0.0
+- completed:
+    hackage: postgresql-simple-migration-0.1.15.0@sha256:0e24e96908430f5caf9c1c1d9ca7c5c108e4e0409a255e2cbd77e8cd252dbb02,3879
+    pantry-tree:
+      size: 766
+      sha256: c2843bfe43b804992bc913f33ec6b2c6cb0fc99c6d931b6ff85894e8aef9a99e
+  original:
+    hackage: postgresql-simple-migration-0.1.15.0@sha256:0e24e96908430f5caf9c1c1d9ca7c5c108e4e0409a255e2cbd77e8cd252dbb02,3879
 snapshots:
 - completed:
     size: 496112

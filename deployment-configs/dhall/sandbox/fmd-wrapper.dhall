@@ -1,3 +1,4 @@
+let common = ../generic/common.dhall
 let sec = ../secrets/fmd-wrapper.dhall
 
 let postgresConfig =
@@ -29,4 +30,6 @@ in
 { dbCfg = pgcfg
 , redisCfg = rcfg
 , port = +8018
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
 }

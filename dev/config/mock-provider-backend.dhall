@@ -1,3 +1,5 @@
+let common = ./generic/common.dhall
+
 let gwUri =
   { baseUrlScheme = UrlScheme.Http
   , baseUrlHost = "localhost"
@@ -11,4 +13,6 @@ in
 , xGatewayUri = gwUri
 , selfId = Some "JUSPAY.BPP.MOCK.1"
 , nwAddress = Some "https://localhost/v1/"
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
 }
