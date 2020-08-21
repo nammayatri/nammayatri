@@ -5,8 +5,8 @@ module Product.Search
   )
 where
 
+import App.Types
 import Beckn.Types.API.Callback
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
@@ -14,20 +14,17 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
-import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Product.GatewayLookup
-import System.Environment (lookupEnv)
 
-search :: Organization -> SearchReq -> FlowHandlerR r AckResponse
-search org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
-  bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
+search :: Organization -> SearchReq -> FlowHandler AckResponse
+search org req = withFlowHandler $ do
+  bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let context =
         (req ^. #context)
-          { _ac_id = fromString <$> bppNwAddr
+          { _ac_id = bppNwAddr
           }
   case context ^. #_transaction_id of
     tId
@@ -46,8 +43,8 @@ search org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHan
       }
   where
     sendResponse cbKey context contents =
-      forkAsync "Search" $ do
-        baseUrl <- lookupBaseUrl
+      fork "Search" $ do
+        baseUrl <- xGatewayUri <$> ask
         L.runIO $ threadDelay 0.5e6
         AckResponse {} <-
           callClient "search" baseUrl $

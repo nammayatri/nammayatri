@@ -6,11 +6,11 @@ import qualified App.Server as App
 import App.Types
 import Beckn.Constants.APIErrorCode
 import Beckn.External.FCM.Utils
-import Beckn.Storage.DB.Config
+import Beckn.Storage.DB.Config (prepareDBConnections)
 import Beckn.Storage.Redis.Config
-import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
+import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -27,18 +27,14 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant
-import qualified Storage.DB.Config as Config
-import qualified Storage.Redis.Config as Config
-import qualified System.Environment as SE
 
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
-  port <- fromMaybe 8014 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> SE.lookupEnv "METRICS_PORT"
-  Metrics.serve metricsPort
-  runTransporterBackendApp' port $
+  appEnv <- readDhallConfigDefault tyEnv "beckn-transport"
+  Metrics.serve (metricsPort appEnv)
+  runTransporterBackendApp' appEnv $
     setOnExceptionResponse transporterExceptionResponse $
-      setPort port defaultSettings
+      setPort (port appEnv) defaultSettings
 
 -- | Prepare common applications options
 prepareAppOptions :: Flow ()
@@ -46,11 +42,8 @@ prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
 
-runTransporterBackendApp' :: Int -> Settings -> IO ()
-runTransporterBackendApp' port settings = do
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
-  let redisEnv = RedisEnv Config.defaultRedisConfig
-  let appEnv = AppEnv dbEnv redisEnv
+runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
+runTransporterBackendApp' appEnv settings = do
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,
@@ -59,19 +52,18 @@ runTransporterBackendApp' port settings = do
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
-    let prepare = prepareDBConnections
-    try (runFlowR flowRt appEnv prepare) >>= \case
+    try (runFlowR flowRt appEnv prepareDBConnections) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
         putStrLn @String "Initializing Redis Connections..."
-        try (runFlowR flowRt appEnv prepareRedisConnections) >>= \case
+        try (runFlowR flowRt appEnv $ prepareRedisConnections $ redisCfg appEnv) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ -> do
             putStrLn @String "Initializing Options..."
             try (runFlowR flowRt appEnv prepareAppOptions) >>= \case
               Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
               Right _ ->
-                putStrLn @String ("Runtime created. Starting server at port " <> show port)
+                putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
             runSettings settings $ App.run (App.EnvR flowRt appEnv)
 
 transporterExceptionResponse :: SomeException -> Response

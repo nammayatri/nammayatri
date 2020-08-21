@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'echo "starting app server" && /opt/app/beckn-transport-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/beckn-transport-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,188 +39,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: PROVIDER_ID
-              value: JUSPAY.MOBILITY.PROVIDER.UAT.1
-            - name: PROVIDER_NW_ADDRESS
-              value: https://api.sandbox.beckn.juspay.in/dev/transport/v1/
-            #------ MySQL DB configs ------#
-            - name: MYSQL_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: MYSQL_HOST
-            - name: MYSQL_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: MYSQL_PORT
-            - name: MYSQL_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: MYSQL_DB
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: MYSQL_USER
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: MYSQL_PASSWORD
-            #------ Postgres DB configs ------#
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: PGSQL_HOST
-            - name: DB_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: PGSQL_PORT
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: PGSQL_DB
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PGSQL_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PGSQL_PASSWORD
-            #------ Redis configs ------#
-            - name: REDIS_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_HOST
-            - name: REDIS_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_PORT
-            - name: REDIS_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_DB
-            - name: REDIS_AUTH
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_AUTH
-            - name: REDIS_MAX_CONNECTIONS
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_MAX_CONNECTIONS
-            - name: REDIS_MAX_IDLE_TIME
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_MAX_IDLE_TIME
-            - name: REDIS_CONNECTION_TIMEOUT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: REDIS_CONNECTION_TIMEOUT
-            #------ SMS provider configs ------#
-            - name: SMS_GATEWAY_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: MY_VALUE_FIRST_USERNAME
-            - name: SMS_GATEWAY_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: MY_VALUE_FIRST_PASSWORD
-            - name: AUTO_READ_OTP_HASH
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: TRANSPORTER_OTP_HASH
-            #------ Gateway configs ------#
-            - name: BECKN_GATEWAY_HOST
-              value: beckn-gateway-$DEPLOY_VARIANT.atlas
-            - name: BECKN_GATEWAY_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: BECKN_GATEWAY_PORT
-            - name: BECKN_GATEWAY_PATH
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: BECKN_GATEWAY_PATH
-            - name: GATEWAY_SELECTOR
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: GATEWAY_SELECTOR
-            #------ Nsdl Gateway configs ------#
-            - name: NSDL_GATEWAY_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: NSDL_GATEWAY_URL
-            - name: NSDL_BPP_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: NSDL_BPP_USERNAME
-            - name: NSDL_BPP_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: NSDL_BPP_PASSWORD
-            #------ Beckn app configs ------#
-            - name: BECKN_APP_HOST
-              value: beckn-app-backend-$DEPLOY_VARIANT.atlas
-            - name: BECKN_APP_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: BECKN_APP_PORT
-            - name: BECKN_APP_PATH
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: BECKN_APP_PATH
-            #------ General configs ------#
-            - name: USE_FAKE_SMS
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: USE_FAKE_SMS
-            - name: CRON_AUTH_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: CRON_AUTH_KEY
-            - name: DEFAULT_CASE_EXPIRY
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: DEFAULT_CASE_EXPIRY
-            - name: DEFAULT_CONFIRM_EXPIRY
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-transport-configs
-                  key: DEFAULT_CONFIRM_EXPIRY
-            - name: FCM_JSON_PATH
-              value: "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
-            - name: ENCRYPTION_SERVICE_HOST
-              value: passetto-hs.atlas
-            - name: ENCRYPTION_SERVICE_PORT
-              value: "8012"
+            - name: BECKN_TRANSPORT_CONFIG_PATH
+              value: /etc/beckn/config/beckn-transport.dhall
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: beckn-transport-$DEPLOY_VARIANT
           ports:
@@ -254,6 +74,12 @@ spec:
           volumeMounts:
             - mountPath: "/var/local/beckn"
               name: fcm-key
+              readOnly: true
+            - name: dhall-configs
+              mountPath: "/tmp/dhall-configs"
+              readOnly: true
+            - name: dhall-secrets
+              mountPath: "/tmp/dhall-secrets"
               readOnly: true
           securityContext:
             privileged: false
@@ -407,6 +233,22 @@ spec:
           secret:
             optional: true
             secretName: istio.default
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+            items:
+            - key: beckn-transport.dhall
+              path: config/beckn-transport.dhall
+            - key: common.dhall
+              path: generic/common.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            items:
+            - key: beckn-transport.dhall
+              path: secrets/beckn-transport.dhall
+            - key: common.dhall
+              path: generic/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

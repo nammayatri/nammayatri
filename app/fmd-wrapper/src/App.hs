@@ -9,9 +9,9 @@ import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
-import Beckn.Types.App
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (runFlowR)
+import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -27,16 +27,10 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant.Server
-import Storage.DB.Config as Config
-import Storage.Redis.Config as Config
-import System.Environment (lookupEnv)
 
 runFMDWrapper :: IO ()
 runFMDWrapper = do
-  port <- fromMaybe 8018 . (>>= readMaybe) <$> lookupEnv "MOCK_PROVIDER_PORT"
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
-  let redisEnv = RedisEnv Config.defaultRedisConfig
-  let appEnv = AppEnv dbEnv redisEnv
+  appEnv <- readDhallConfigDefault Z "fmd-wrapper"
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
@@ -45,11 +39,11 @@ runFMDWrapper = do
           }
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
-          setPort port defaultSettings
+          setPort (port appEnv) defaultSettings
   reqHeadersKey <- V.newKey
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing Redis Connections..."
-    try (runFlowR flowRt appEnv prepareRedisConnections) >>= \case
+    try (runFlowR flowRt appEnv $ prepareRedisConnections $ redisCfg appEnv) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 

@@ -99,11 +99,10 @@ dependencies:
   - utf8-string
   - geojson
   - safe-money
-  - hspec
-  - hspec-core
+  - dhall
+  - lens-family-core
   - tasty
   - tasty-hunit
-  - tasty-hspec
 
 ghc-options:
   - -Wall

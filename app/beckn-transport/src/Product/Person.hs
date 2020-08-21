@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Product.Person where
+module Product.Person (createPerson, listPerson, updatePerson, getPerson, deletePerson, linkEntity) where
 
 import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
+import Beckn.Sms.Config
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
@@ -20,7 +20,6 @@ import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
-import System.Environment
 import Types.API.Person
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -49,7 +48,8 @@ createPerson orgId req = withFlowHandler $ do
   org <- OQ.findOrganizationById (OrganizationId orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
-      sendInviteSms (countryCode <> mobileNumber) (org ^. #_name)
+      credCfg <- credConfig . smsCfg <$> ask
+      sendInviteSms credCfg (countryCode <> mobileNumber) (org ^. #_name)
       return $ UpdatePersonRes person
     _ -> return $ UpdatePersonRes person
   where
@@ -178,29 +178,20 @@ mkPersonRes person = do
         _linkedEntity = entity
       }
 
-sendInviteSms :: Text -> Text -> Flow ()
-sendInviteSms phoneNumber orgName = do
-  username <- L.runIO $ lookupEnv "SMS_GATEWAY_USERNAME"
-  password <- L.runIO $ lookupEnv "SMS_GATEWAY_PASSWORD"
-  case (username, password) of
-    (Just user, Just passw) -> do
-      res <-
-        SF.submitSms
-          SF.defaultBaseUrl
-          SMS.SubmitSms
-            { SMS._username = T.pack user,
-              SMS._password = T.pack passw,
-              SMS._from = SMS.JUSPAY,
-              SMS._to = phoneNumber,
-              SMS._category = SMS.BULK,
-              SMS._text = SF.constructInviteSms orgName
-            }
-      whenLeft res $ \_err -> return () -- ignore error silently
-    _ -> do
-      L.logInfo @Text "CreatePerson" $
-        "Not sending invite SMS "
-          <> "since SMS gateway credentials are not available"
-      return ()
+sendInviteSms :: SmsCredConfig -> Text -> Text -> Flow ()
+sendInviteSms SmsCredConfig {..} phoneNumber orgName = do
+  res <-
+    SF.submitSms
+      SF.defaultBaseUrl
+      SMS.SubmitSms
+        { SMS._username = username,
+          SMS._password = password,
+          SMS._from = SMS.JUSPAY,
+          SMS._to = phoneNumber,
+          SMS._category = SMS.BULK,
+          SMS._text = SF.constructInviteSms orgName
+        }
+  whenLeft res $ \_err -> return () -- ignore error silently
 
 mapEntityType :: Text -> Maybe EntityType
 mapEntityType entityType = case entityType of

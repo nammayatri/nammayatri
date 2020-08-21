@@ -1,12 +1,22 @@
+{-# LANGUAGE TypeApplications #-}
+
 module App.Types where
 
+import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
 import EulerHS.Prelude
+import Servant.Client (BaseUrl, Scheme)
 
-newtype AppEnv = AppEnv
-  { dbEnv :: DbEnv
+data AppEnv = AppEnv
+  { dbCfg :: DBConfig,
+    port :: Int,
+    xGatewayUri :: BaseUrl,
+    selfId :: Maybe Text,
+    nwAddress :: Maybe Text
   }
+  deriving (Generic, FromDhall)
 
 type Env = EnvR AppEnv
 
@@ -16,5 +26,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-instance HasDbEnv Flow where
-  getDbEnv = asks dbEnv
+tyEnv :: ZL '[Scheme]
+tyEnv = z @Scheme "UrlScheme" Z

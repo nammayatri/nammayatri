@@ -11,32 +11,29 @@ import Beckn.Types.API.Track
 import Beckn.Types.Common
 import Beckn.Types.Core.Error
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
-import qualified Data.Text as T (pack)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
 import Servant (err500, errBody)
 import Servant.Client
-import System.Environment
 import Types.API.Location
 
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  mGatewaySelector <- L.runIO $ lookupEnv "GATEWAY_SELECTOR"
+  apiKey <- xGatewayApiKey <$> ask
+  mGatewaySelector <- xGatewaySelector <$> ask
   res <- case mGatewaySelector of
     Just "NSDL" -> do
-      mNsdlUrl <- L.runIO $ lookupEnv "NSDL_GATEWAY_URL"
-      let mNsdlBaseUrl = mNsdlUrl >>= parseBaseUrl
-      case mNsdlBaseUrl of
+      mNsdlUrl <- xGatewayNsdlUrl <$> ask
+      case mNsdlUrl of
         Just nsdlBaseUrl -> do
-          nsdlBapId <- L.runIO $ lookupEnv "NSDL_BAP_USERNAME"
-          nsdlBapPwd <- L.runIO $ lookupEnv "NSDL_BAP_PASSWORD"
-          callAPIWithTrail nsdlBaseUrl (API.nsdlSearch (T.pack <$> nsdlBapId) (T.pack <$> nsdlBapPwd) req) "search"
+          nsdlBapId <- nsdlUsername <$> ask
+          nsdlBapPwd <- nsdlPassword <$> ask
+          callAPIWithTrail nsdlBaseUrl (API.nsdlSearch nsdlBapId nsdlBapPwd req) "search"
         Nothing -> L.throwException $ err500 {errBody = "invalid nsdl gateway url"}
     Just "JUSPAY" -> do
-      apiKey <- L.runIO $ lookupEnv "BG_API_KEY"
-      callAPIWithTrail url (API.search (maybe "mobility-app-key" T.pack apiKey) req) "search"
+      callAPIWithTrail url (API.search (apiKey ?: "mobility-app-key") req) "search"
     _ -> L.throwException $ err500 {errBody = "gateway not configured"}
   case res of
     Left err -> do
@@ -96,19 +93,3 @@ status url req@StatusReq {context} = do
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
-
-getGatewayBaseUrl :: Flow BaseUrl
-getGatewayBaseUrl = L.runIO $ do
-  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_GATEWAY_HOST"
-  port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "BECKN_GATEWAY_PORT"
-  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_GATEWAY_PATH"
-  return $
-    BaseUrl Http host port path
-
-getProviderBaseUrl :: Flow BaseUrl
-getProviderBaseUrl = L.runIO $ do
-  host <- fromMaybe "localhost" <$> lookupEnv "BECKN_PROVIDER_HOST"
-  port <- fromMaybe 8014 . (>>= readMaybe) <$> lookupEnv "BECKN_PROVIDER_PORT"
-  path <- fromMaybe "/v1" <$> lookupEnv "BECKN_PROVIDER_PATH"
-  return $
-    BaseUrl Http host port path

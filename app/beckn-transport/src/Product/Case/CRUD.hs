@@ -31,7 +31,6 @@ import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.ProductInstance as QPI
 import Storage.Queries.Products as PQ
-import System.Environment
 import qualified Test.RandomStrings as RS
 import Types.API.Case
 import qualified Types.API.ProductInstance as CPR
@@ -146,7 +145,7 @@ notifyGateway c prodInst orgId = do
 mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis allPis orgInfo = do
   currTime <- getCurrTime
-  bppNwAddr <- L.runIO $ lookupEnv "PROVIDER_NW_ADDRESS"
+  appEnv <- ask
   let context =
         Context
           { _domain = Domain.MOBILITY,
@@ -157,7 +156,7 @@ mkOnSearchPayload c pis allPis orgInfo = do
             _domain_version = Just "0.8.0",
             _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             _message_id = c ^. #_shortId,
-            _ac_id = fromString <$> bppNwAddr,
+            _ac_id = nwAddress appEnv,
             _timestamp = currTime
           }
   service <- GT.mkServiceOffer c pis allPis (Just orgInfo)

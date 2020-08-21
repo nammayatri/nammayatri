@@ -6,8 +6,8 @@ where
 import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
-import Beckn.Types.App
 import qualified Beckn.Types.App as App
+import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -23,14 +23,10 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant.Server
-import Storage.DB.Config as Config
-import System.Environment (lookupEnv)
 
 runMockApp :: IO ()
 runMockApp = do
-  port <- fromMaybe 8016 . (>>= readMaybe) <$> lookupEnv "MOCK_APP_PORT"
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
-  let appEnv = AppEnv dbEnv
+  appEnv <- readDhallConfigDefault tyEnv "mock-app-backend"
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
@@ -39,7 +35,7 @@ runMockApp = do
           }
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
-          setPort port defaultSettings
+          setPort (port appEnv) defaultSettings
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
     runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)

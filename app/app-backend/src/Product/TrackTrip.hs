@@ -34,7 +34,7 @@ track _ req = withFlowHandler $ do
         Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
-          gatewayUrl <- Gateway.getProviderBaseUrl
+          gatewayUrl <- xProviderUri <$> ask
           Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes

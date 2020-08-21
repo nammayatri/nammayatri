@@ -2,8 +2,8 @@
 
 module Beckn.Utils.Servant.Trail.Client where
 
+import Beckn.Storage.DB.Config (HasDbCfg)
 import qualified Beckn.Storage.Queries.ExternalTrail as ExternalTrail
-import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import Beckn.Utils.Common (encodeToText', fork)
@@ -93,7 +93,7 @@ instance
 data TrailInfo
   = TrailInfo (Either ClientError LByteString) RequestInfo
 
-saveClientTrailFlow :: HasDbEnv (FlowR r) => TrailInfo -> FlowR r ()
+saveClientTrailFlow :: HasDbCfg r => TrailInfo -> FlowR r ()
 saveClientTrailFlow (TrailInfo res req) = do
   fork "save trail" do
     _id <- generateGUID
@@ -119,7 +119,7 @@ saveClientTrailFlow (TrailInfo res req) = do
     _error = show <$> leftToMaybe res
 
 callAPIWithTrail ::
-  (JSONEx a, ToJSON a, HasDbEnv (FlowR r)) =>
+  (JSONEx a, ToJSON a, HasDbCfg r) =>
   BaseUrl ->
   (RequestInfo, EulerClient a) ->
   Text ->

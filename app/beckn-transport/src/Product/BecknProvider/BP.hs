@@ -40,7 +40,6 @@ import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as ProductInstance
 import Storage.Queries.Vehicle as Vehicle
-import System.Environment
 import qualified Test.RandomStrings as RS
 import qualified Utils.Notifications as Notify
 
@@ -104,11 +103,10 @@ cancel req = withFlowHandler $ do
 -- TODO: Move this to core Utils.hs
 getValidTime :: UTCTime -> UTCTime -> Flow UTCTime
 getValidTime now startTime = do
-  caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
-  let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
-      minExpiry = 300 -- 5 minutes
+  caseExpiry_ <- fromMaybe 7200 . caseExpiry <$> ask
+  let minExpiry = 300 -- 5 minutes
       timeToRide = startTime `diffUTCTime` now
-      validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
+      validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
 mkFromStop :: SearchReq -> Text -> UTCTime -> BS.Stop -> SL.Location

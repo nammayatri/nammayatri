@@ -22,8 +22,6 @@ import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import Servant hiding (Context)
-import Servant.Client (BaseUrl (..), Scheme (..))
-import qualified System.Environment as SE
 
 data TriggerFlow
   = SimpleConfirm
@@ -51,27 +49,9 @@ instance ToHttpApiData TriggerFlow where
   toHeader = BSL.toStrict . encode
   toUrlPiece = DT.decodeUtf8 . toHeader
 
-gatewayLookup :: FlowR r (String, Int)
-gatewayLookup =
-  EL.runIO $
-    (,)
-      <$> (fromMaybe "localhost" <$> SE.lookupEnv "GATEWAY_HOST")
-      <*> (fromMaybe 8015 . (>>= readMaybe) <$> SE.lookupEnv "GATEWAY_PORT")
-
-gatewayBaseUrl :: FlowR r BaseUrl
-gatewayBaseUrl = do
-  (host, port) <- gatewayLookup
-  return
-    BaseUrl
-      { baseUrlScheme = Http,
-        baseUrlHost = host,
-        baseUrlPort = port,
-        baseUrlPath = "v1"
-      }
-
 trigger :: TriggerFlow -> FlowHandler AckResponse
 trigger flow = withFlowHandler $ do
-  baseUrl <- gatewayBaseUrl
+  baseUrl <- xGatewayUri <$> ask
   transactionId <-
     case flow of
       SimpleConfirm -> EL.generateGUID

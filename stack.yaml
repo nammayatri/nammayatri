@@ -82,6 +82,7 @@ extra-deps:
   - prometheus-proc-0.1.3.0@sha256:84f56e9c886be777d5afd14fc57fff156137a611f0db0fe080b97fc602103c23,1058
   - unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
   - time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
+  - lens-family-core-2.0.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

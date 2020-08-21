@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'echo "starting app server" && /opt/app/fmd-wrapper-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/fmd-wrapper-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,68 +39,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            #------ Postgres DB configs ------#
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: PGSQL_HOST
-            - name: DB_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: PGSQL_PORT
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: PGSQL_DB
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PGSQL_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PGSQL_PASSWORD
-            #------ Redis configs ------#
-            - name: REDIS_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_HOST
-            - name: REDIS_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_PORT
-            - name: REDIS_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_DB
-            - name: REDIS_AUTH
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_AUTH
-            - name: REDIS_MAX_CONNECTIONS
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_MAX_CONNECTIONS
-            - name: REDIS_MAX_IDLE_TIME
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_MAX_IDLE_TIME
-            - name: REDIS_CONNECTION_TIMEOUT
-              valueFrom:
-                configMapKeyRef:
-                  name: fmd-wrapper-configs
-                  key: REDIS_CONNECTION_TIMEOUT
+            - name: FMD_WRAPPER_CONFIG_PATH
+              value: /etc/beckn/config/fmd-wrapper.dhall
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: fmd-wrapper-$DEPLOY_VARIANT
           ports:
@@ -134,6 +74,12 @@ spec:
           volumeMounts:
             - mountPath: "/var/local/beckn"
               name: fcm-key
+              readOnly: true
+            - name: dhall-configs
+              mountPath: "/tmp/dhall-configs"
+              readOnly: true
+            - name: dhall-secrets
+              mountPath: "/tmp/dhall-secrets"
               readOnly: true
           securityContext:
             privileged: false
@@ -287,6 +233,22 @@ spec:
           secret:
             optional: true
             secretName: istio.default
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+            items:
+            - key: common.dhall
+              path: generic/common.dhall
+            - key: fmd-wrapper.dhall
+              path: config/fmd-wrapper.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            items:
+            - key: common.dhall
+              path: generic/secrets/common.dhall
+            - key: fmd-wrapper.dhall
+              path: secrets/fmd-wrapper.dhall
 status: {}
 ---
 apiVersion: v1

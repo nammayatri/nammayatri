@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Product.Status where
+module Product.Status (status, onStatus) where
 
 import App.Types
 import qualified Beckn.Types.API.Status as API
 import Beckn.Types.App
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -26,7 +26,7 @@ status person StatusReq {..} = withFlowHandler $ do
   case_ <- Case.findIdByPerson person (piid ^. #_caseId)
   let caseId = _getCaseId $ case_ ^. #_id
   context <- buildContext "status" caseId
-  baseUrl <- Gateway.getProviderBaseUrl
+  baseUrl <- xProviderUri <$> ask
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   Gateway.status baseUrl $ API.StatusReq context statusMessage
 

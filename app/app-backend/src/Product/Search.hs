@@ -31,7 +31,6 @@ import qualified Models.Product as Products
 import qualified Models.ProductInstance as ProductInstance
 import Servant hiding (Context)
 import qualified Storage.Queries.Location as Location
-import System.Environment
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
 import Types.Common (fromBeckn, toBeckn)
@@ -50,12 +49,11 @@ search person req = withFlowHandler $ do
   case_ <- mkCase req (_getPersonId $ person ^. #_id) fromLocation toLocation
   Case.create case_
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
-  gatewayUrl <- Gateway.getGatewayBaseUrl
-  bapNwAddr <- L.runIO $ lookupEnv "APP_NW_ADDRESS"
-  currUtcTime <- L.runIO getCurrentTime
-  let context = mkContext "search" (_getCaseId (case_ ^. #_id)) currUtcTime (fromString <$> bapNwAddr)
+  now <- L.runIO getCurrentTime
+  env <- ask
+  let context = mkContext "search" (_getCaseId (case_ ^. #_id)) now (bapNwAddress env)
       intent = mkIntent req
-  eres <- Gateway.search gatewayUrl $ Search.SearchReq context $ Search.SearchIntent intent
+  eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent intent
   let sAck =
         case eres of
           Left err -> API.Ack "Error" (show err)
@@ -109,9 +107,7 @@ searchCbService req service = do
     extendCaseExpiry :: Case.Case -> Flow ()
     extendCaseExpiry Case.Case {..} = do
       now <- getCurrTime
-      confirmExpiry <-
-        fromMaybe 1800 . (readMaybe =<<)
-          <$> L.runIO (lookupEnv "DEFAULT_CONFIRM_EXPIRY")
+      confirmExpiry <- fromMaybe 1800 . searchConfirmExpiry <$> ask
       let newValidTill = fromInteger confirmExpiry `addUTCTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
 
@@ -158,9 +154,8 @@ mkCase req userId from to = do
     getCaseExpiry :: UTCTime -> Flow UTCTime
     getCaseExpiry startTime = do
       now <- getCurrTime
-      caseExpiryEnv <- L.runIO $ lookupEnv "DEFAULT_CASE_EXPIRY"
-      let caseExpiry = fromMaybe 7200 $ readMaybe =<< caseExpiryEnv
-          minExpiry = 300 -- 5 minutes
+      caseExpiry <- fromMaybe 7200 . searchCaseExpiry <$> ask
+      let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
           validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill

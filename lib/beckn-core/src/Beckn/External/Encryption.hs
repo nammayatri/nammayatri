@@ -31,6 +31,7 @@ module Beckn.External.Encryption
   )
 where
 
+import Beckn.Types.Common (FlowR)
 import qualified Crypto.Hash as Hash
 import Crypto.Hash.Algorithms (SHA256)
 import qualified Data.Aeson as Aeson
@@ -42,11 +43,11 @@ import Database.Beam.Postgres (Postgres)
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import GHC.Records (HasField (..))
 import GHC.TypeLits (ErrorMessage (..), TypeError)
 import qualified Language.Haskell.TH as TH
 import Passetto.Client (EncryptedBase64 (..), EncryptedItem (..), PassettoContext, cliDecrypt, cliEncrypt, genericDecryptItem, genericEncryptItem, mkDefPassettoContext, throwLeft)
 import Passetto.Client.EncryptedItem (Encrypted (..))
-import System.Environment (lookupEnv)
 import Text.Hex (decodeHex, encodeHex)
 
 -- * Encrypted fields
@@ -195,40 +196,36 @@ type family EncryptedHashedField (e :: EncKind) (f :: Type -> Type) (a :: Type) 
 
 -- * Encryption methods
 
--- | Initialize context for connecting passetto server.
-preparePassettoContext :: IO PassettoContext
-preparePassettoContext = do
-  -- TODO: use proper reading from environment
-  host <- fromMaybe "localhost" <$> lookupEnv "ENCRYPTION_SERVICE_HOST"
-  port <- read . fromMaybe "8021" <$> lookupEnv "ENCRYPTION_SERVICE_PORT"
-  mkDefPassettoContext host port
+-- FIXME! Modify passetto to use BaseUrl and use it too!
+type FlowWithEnc r a = HasField "encService" r (String, Word16) => FlowR r a
 
 -- Helper which allows running passetto client operations in our monad.
-withPassettoCtx :: L.MonadFlow m => ReaderT PassettoContext IO a -> m a
-withPassettoCtx action =
-  L.runUntracedIO preparePassettoContext >>= L.runUntracedIO . runReaderT action
+withPassettoCtx :: ReaderT PassettoContext IO a -> FlowWithEnc r a
+withPassettoCtx action = do
+  (host, port) <- getField @"encService" <$> ask
+  L.runUntracedIO (mkDefPassettoContext host port) >>= L.runUntracedIO . runReaderT action
 
 -- | Encrypt given value.
 --
 -- Note: this performs not more than one call to server, so try to avoid using
 -- multiple subsequent invocations of this method in favor of passing complex
 -- structures (e.g. tuples) through it.
-encrypt :: (EncryptedItem e, L.MonadFlow m) => Unencrypted e -> m e
+encrypt :: EncryptedItem e => Unencrypted e -> FlowWithEnc r e
 encrypt payload = withPassettoCtx $ throwLeft =<< cliEncrypt payload
 
 -- | Decrypt given value.
-decrypt :: (EncryptedItem e, L.MonadFlow m) => e -> m (Unencrypted e)
+decrypt :: EncryptedItem e => e -> FlowWithEnc r (Unencrypted e)
 decrypt encrypted = withPassettoCtx $ throwLeft =<< cliDecrypt encrypted
 
 -- | Simplified version of 'encrypt'.
 --
 -- In some cases 'encrypt' requires specifying resulting type explicitly,
 -- but here it is not necessary.
-encryptOne :: (ToJSON a, FromJSON a, L.MonadFlow m) => a -> m (Encrypted a)
+encryptOne :: (ToJSON a, FromJSON a) => a -> FlowWithEnc r (Encrypted a)
 encryptOne = encrypt
 
 -- | Simplified version of 'decrypt'.
-decryptOne :: (ToJSON a, FromJSON a, L.MonadFlow m) => Encrypted a -> m a
+decryptOne :: (ToJSON a, FromJSON a) => Encrypted a -> FlowWithEnc r a
 decryptOne = decrypt
 
 -- | Derive an instance which allows running 'encrypt' and 'decrypt' on

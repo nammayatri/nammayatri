@@ -1,0 +1,32 @@
+let sec = ../secrets/fmd-wrapper.dhall
+
+let postgresConfig =
+  { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  , connectPort = 5432
+  , connectUser = sec.dbUserId
+  , connectPassword = sec.dbPassword
+  , connectDatabase = "atlas_fmd_wrapper"
+  }
+
+let pgcfg =
+  { connTag = "fmdWrapperDb"
+  , pgConfig = postgresConfig
+  , poolConfig = (../generic/common.dhall).defaultPoolConfig
+  }
+
+let rcfg =
+  { connectHost = "ec-redis-beta-002.bfw4iw.0001.apse1.cache.amazonaws.com"
+  , connectPort = 6379
+  , connectAuth = None Text
+  , connectDatabase = +1
+  , connectMaxConnections = +50
+  , connectMaxIdleTime = +30
+  , connectTimeout = Some +100
+  }
+
+in
+
+{ dbCfg = pgcfg
+, redisCfg = rcfg
+, port = +8018
+}

@@ -21,7 +21,6 @@ import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Servant.Client (BaseUrl, parseBaseUrl)
-import System.Environment (lookupEnv)
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
 
 parseOrgUrl :: Text -> Flow BaseUrl
@@ -36,10 +35,10 @@ search org req = withFlowHandler $ do
       messageId = req ^. #context . #_transaction_id
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providers <- BP.lookup $ req ^. #context
-  bgNwAddr <- L.runIO $ lookupEnv "GATEWAY_NW_ADDRESS"
+  bgNwAddr <- gwNwAddress <$> ask
   let context =
         (req ^. #context)
-          { _ac_id = fromString <$> bgNwAddr
+          { _ac_id = bgNwAddr
           }
   BA.insert messageId appUrl
   forM_ providers $ \provider -> fork "Provider search" $ do

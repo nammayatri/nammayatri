@@ -1,6 +1,6 @@
 module App.Handlers where
 
-import Beckn.Types.App
+import App.Types (FlowServer)
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.FMD.API.Cancel (CancelReq)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq)
@@ -79,7 +79,7 @@ type ProviderUpdateAPI =
     :> ReqBody '[JSON] UpdateReq
     :> Post '[JSON] AckResponse
 
-mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServerR r ProviderAPI
+mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServer ProviderAPI
 mockProviderBackendServer _key =
   pure "Mock provider backend is UP"
     :<|> searchFlow
@@ -90,23 +90,23 @@ mockProviderBackendServer _key =
     :<|> cancelFlow
     :<|> updateFlow
 
-searchFlow :: FlowServerR r ProviderSearchAPI
+searchFlow :: FlowServer ProviderSearchAPI
 searchFlow = P.search
 
-selectFlow :: FlowServerR r ProviderSelectAPI
+selectFlow :: FlowServer ProviderSelectAPI
 selectFlow = P.select
 
-initFlow :: FlowServerR r ProviderInitAPI
+initFlow :: FlowServer ProviderInitAPI
 initFlow = P.init
 
-confirmFlow :: FlowServerR r ProviderConfirmAPI
+confirmFlow :: FlowServer ProviderConfirmAPI
 confirmFlow = P.confirm
 
-statusFlow :: FlowServerR r ProviderStatusAPI
+statusFlow :: FlowServer ProviderStatusAPI
 statusFlow = P.status
 
-cancelFlow :: FlowServerR r ProviderCancelAPI
+cancelFlow :: FlowServer ProviderCancelAPI
 cancelFlow = P.cancel
 
-updateFlow :: FlowServerR r ProviderUpdateAPI
+updateFlow :: FlowServer ProviderUpdateAPI
 updateFlow = P.update

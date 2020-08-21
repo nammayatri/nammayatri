@@ -7,10 +7,10 @@ import qualified App.Server as App
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
 import Beckn.External.FCM.Utils
-import Beckn.Storage.DB.Config
-import Beckn.Types.App
+import Beckn.Storage.DB.Config (prepareDBConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
+import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -27,17 +27,14 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant
-import qualified Storage.DB.Config as Config
-import qualified System.Environment as SE
 
 runAppBackend :: IO ()
 runAppBackend = do
-  port <- fromMaybe 8013 . (>>= readMaybe) <$> SE.lookupEnv "PORT"
-  metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> SE.lookupEnv "METRICS_PORT"
-  Metrics.serve metricsPort
-  runAppBackend' port $
+  appEnv <- readDhallConfigDefault tyEnv "app-backend"
+  Metrics.serve (metricsPort appEnv)
+  runAppBackend' appEnv $
     setOnExceptionResponse appExceptionResponse $
-      setPort port defaultSettings
+      setPort (port appEnv) defaultSettings
 
 -- | Prepare common applications options
 prepareAppOptions :: Flow ()
@@ -45,10 +42,8 @@ prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
 
-runAppBackend' :: Int -> Settings -> IO ()
-runAppBackend' port settings = do
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
-  let appEnv = AppEnv dbEnv
+runAppBackend' :: AppEnv -> Settings -> IO ()
+runAppBackend' appEnv settings = do
   let loggerCfg =
         T.defaultLoggerConfig
           { T._logToFile = True,
@@ -65,7 +60,7 @@ runAppBackend' port settings = do
         try (runFlowR flowRt appEnv prepareAppOptions) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ ->
-            putStrLn @String ("Runtime created. Starting server at port " <> show port)
+            putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
         runSettings settings $ App.run (App.EnvR flowRt appEnv)
 
 appExceptionResponse :: SomeException -> Response

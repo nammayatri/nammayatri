@@ -1,0 +1,25 @@
+let common = ./generic/common.dhall
+let sec = ./secrets/beckn-gateway.dhall
+
+let postgresConfig =
+  { connectHost = "localhost"
+  , connectPort = 5435
+  , connectUser = sec.dbUserId
+  , connectPassword = sec.dbPassword
+  , connectDatabase = "atlas_gateway"
+  }
+
+let pgcfg =
+  { connTag = "gatewayDb"
+  , pgConfig = postgresConfig
+  , poolConfig = common.defaultPoolConfig
+  }
+
+in
+
+{ dbCfg = pgcfg
+, port = +8015
+, metricsPort = +9999
+, selfId = Some "JUSPAY.BG.1"
+, nwAddress = Some "https://localhost/v1/"
+}

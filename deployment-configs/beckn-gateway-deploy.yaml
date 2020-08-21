@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'echo "starting app server" && /opt/app/beckn-gateway-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/beckn-gateway-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,36 +39,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: GATEWAY_ID
-              value: JUSPAY.BG.1
-            - name: GATEWAY_NW_ADDRESS
-              value: https://api.sandbox.beckn.juspay.in/dev/gateway/v1/
-            #------ Postgres DB configs ------#
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-gateway-configs
-                  key: PGSQL_HOST
-            - name: DB_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-gateway-configs
-                  key: PGSQL_PORT
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: beckn-gateway-configs
-                  key: PGSQL_DB
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PGSQL_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PGSQL_PASSWORD
+            - name: BECKN_GATEWAY_CONFIG_PATH
+              value: /etc/beckn/config/beckn-gateway.dhall
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: beckn-gateway-$DEPLOY_VARIANT
           ports:
@@ -101,6 +73,13 @@ spec:
               memory: 1024Mi
           securityContext:
             privileged: false
+          volumeMounts:
+          - name: dhall-configs
+            mountPath: "/tmp/dhall-configs"
+            readOnly: true
+          - name: dhall-secrets
+            mountPath: "/tmp/dhall-secrets"
+            readOnly: true
         - args:
             - proxy
             - sidecar
@@ -248,6 +227,22 @@ spec:
           secret:
             optional: true
             secretName: istio.default
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+            items:
+            - key: beckn-gateway.dhall
+              path: config/beckn-gateway.dhall
+            - key: common.dhall
+              path: generic/common.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            items:
+            - key: beckn-gateway.dhall
+              path: secrets/beckn-gateway.dhall
+            - key: common.dhall
+              path: generic/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

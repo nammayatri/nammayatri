@@ -1,6 +1,5 @@
 module Beckn.Storage.Redis.Queries where
 
-import Beckn.Types.App
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as DTE
@@ -14,7 +13,6 @@ runKV = L.runKVDB "redis"
 -- KV
 setKeyRedis ::
   ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow,
     A.ToJSON a
   ) =>
   Text ->
@@ -25,7 +23,6 @@ setKeyRedis key val =
 
 setExRedis ::
   ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow,
     A.ToJSON a
   ) =>
   Text ->
@@ -39,7 +36,6 @@ setExRedis key value ttl =
 
 getKeyRedis ::
   ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow,
     A.FromJSON a
   ) =>
   Text ->
@@ -53,7 +49,6 @@ getKeyRedis key = do
 
 getKeyRedisWithError ::
   ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow,
     A.FromJSON a
   ) =>
   Text ->
@@ -70,7 +65,6 @@ getKeyRedisWithError key = do
 
 setHashRedis ::
   ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow,
     ToJSON a
   ) =>
   Text ->
@@ -86,9 +80,7 @@ setHashRedis key field value =
         (BSL.toStrict $ A.encode value)
 
 expireRedis ::
-  ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow
-  ) =>
+  L.MonadFlow mFlow =>
   Text ->
   Int ->
   mFlow ()
@@ -96,7 +88,6 @@ expireRedis key ttl = void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
 
 getHashKeyRedis ::
   ( L.MonadFlow mFlow,
-    HasRedisEnv mFlow,
     FromJSON a
   ) =>
   Text ->
@@ -110,13 +101,13 @@ getHashKeyRedis key field = do
       _ -> Nothing
 
 deleteKeyRedis ::
-  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  L.MonadFlow mFlow =>
   Text ->
   mFlow Int
 deleteKeyRedis = deleteKeysRedis . return
 
 deleteKeysRedis ::
-  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  L.MonadFlow mFlow =>
   [Text] ->
   mFlow Int
 deleteKeysRedis rKeys = do
@@ -127,7 +118,7 @@ deleteKeysRedis rKeys = do
       Left _ -> -1
 
 incrementKeyRedis ::
-  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  L.MonadFlow mFlow =>
   Text ->
   mFlow (Maybe Integer)
 incrementKeyRedis key = do
@@ -135,7 +126,7 @@ incrementKeyRedis key = do
   return $ either (const Nothing) Just val
 
 getKeyRedisText ::
-  (L.MonadFlow mFlow, HasRedisEnv mFlow) =>
+  L.MonadFlow mFlow =>
   Text ->
   mFlow (Maybe Text)
 getKeyRedisText key = do

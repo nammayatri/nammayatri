@@ -43,6 +43,7 @@ pipeline {
           changeset "stack.yaml.lock"
           changeset "**/package.yaml"
           changeset "deployment-configs/*deploy.yaml"
+          changeset "deployment-configs/**/*.dhall"
           expression {
             // build on the first run
             return (env.BUILD_NUMBER == "1")
@@ -84,6 +85,19 @@ pipeline {
               }
 
               steps {
+                sh '''
+                  (kubectl create configmap beckn-dhall-config-$DEPLOY_VARIANT \
+                    --from-file=deployment-configs/dhall/$DEPLOY_VARIANT \
+                    --from-file=deployment-configs/dhall/generic \
+                    -n atlas -o yaml --dry-run | \
+                    grep -v 'creationTimestamp' \
+                  ) > deployment-configs/beckn-dhall-config.yaml
+                '''
+                kubernetesDeploy(
+                      kubeconfigId: 'jenkins-staging-deployer',
+                      configs: 'deployment-configs/beckn-dhall-config.yaml',
+                      enableConfigSubstitution: true
+                    )
                 kubernetesDeploy(
                       kubeconfigId: 'jenkins-staging-deployer',
                       configs: 'deployment-configs/*deploy.yaml',

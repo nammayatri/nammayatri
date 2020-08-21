@@ -19,10 +19,10 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
+import GHC.Records (HasField (..))
 import Network.HTTP.Types (hContentType)
 import Servant
 import Servant.Client (BaseUrl)
-import System.Environment
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
@@ -138,23 +138,18 @@ encodeToText' s =
         then DT.decodeUtf8 $ BSL.toStrict s'
         else DT.decodeUtf8 $ BSL.toStrict $ BSL.tail $ BSL.init s'
 
-authenticate :: L.MonadFlow m => Maybe CronAuthKey -> m ()
-authenticate maybeAuth = do
-  keyM <- L.runIO $ lookupEnv "CRON_AUTH_KEY"
-  let authHeader = T.stripPrefix "Basic " =<< maybeAuth
-      decodedAuthM =
-        DT.decodeUtf8
-          <$> ( (rightToMaybe . DBB.decode . DT.encodeUtf8)
-                  =<< authHeader
-              )
-  case (decodedAuthM, keyM) of
-    (Just auth, Just key) ->
-      when (T.pack key /= auth) throw401
-    _ -> throw401
+authenticate :: HasField "cronAuthKey" r (Maybe CronAuthKey) => Maybe CronAuthKey -> FlowR r ()
+authenticate = check handleKey
   where
+    handleKey rauth = do
+      key <- check pure =<< getField @"cronAuthKey" <$> ask
+      check (flip when throw401 . (key /=)) $
+        DT.decodeUtf8 <$> (rightToMaybe . DBB.decode . DT.encodeUtf8 =<< T.stripPrefix "Basic " rauth)
+    check = maybe throw401
     throw401 =
       L.throwException $
-        err401 {errBody = "Invalid Auth"}
+        err401 {errBody = "Invalid Auth"} ::
+        FlowR r a
 
 throwJsonError :: L.MonadFlow m => ServerError -> Text -> Text -> m a
 throwJsonError err tag errMsg = do

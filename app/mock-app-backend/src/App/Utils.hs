@@ -17,10 +17,8 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Utils.Common
 import Data.Time
-import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import Servant.Client (BaseUrl, parseBaseUrl)
-import System.Environment (lookupEnv)
 
 address :: Address
 address =
@@ -110,7 +108,7 @@ buildDraftOrder itemId = do
 buildContext :: Text -> Text -> Flow Context
 buildContext act tid = do
   utcTime <- getCurrTime
-  bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
+  bapNwAddr <- nwAddress <$> ask
   return $
     Context
       { _domain = FINAL_MILE_DELIVERY,
@@ -119,7 +117,7 @@ buildContext act tid = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.7.0",
-        _ac_id = fromString <$> bapNwAddr,
+        _ac_id = bapNwAddr,
         _transaction_id = tid,
         _message_id = tid,
         _timestamp = utcTime
@@ -168,5 +166,5 @@ bppUrl context =
 
 updateCaller :: Context -> Flow Context
 updateCaller ctx = do
-  bapNwAddr <- EL.runIO $ lookupEnv "MOCK_APP_NW_ADDRESS"
-  return $ ctx {_ac_id = fromString <$> bapNwAddr}
+  bppNwAddr <- nwAddress <$> ask
+  return $ ctx {_ac_id = bppNwAddr}

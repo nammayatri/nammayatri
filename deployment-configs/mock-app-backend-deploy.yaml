@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'echo "starting app server" && /opt/app/mock-app-backend-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/mock-app-backend-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,12 +39,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: GATEWAY_HOST
-              value: beckn-gateway-$DEPLOY_VARIANT.atlas
-            - name: MOCK_APP_ID
-              value: JUSPAY.BAP.MOCK.1
-            - name: MOCK_APP_NW_ADDRESS
-              value: https://api.sandbox.beckn.juspay.in/dev/mock/app/v1/
+            - name: MOCK_APP_BACKEND_CONFIG_PATH
+              value: /etc/beckn/config/mock-app-backend.dhall
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: mock-app-backend-$DEPLOY_VARIANT
           ports:
@@ -77,6 +73,13 @@ spec:
               memory: 1024Mi
           securityContext:
             privileged: false
+          volumeMounts:
+          - name: dhall-configs
+            mountPath: "/tmp/dhall-configs"
+            readOnly: true
+          - name: dhall-secrets
+            mountPath: "/tmp/dhall-secrets"
+            readOnly: true
         - args:
             - proxy
             - sidecar
@@ -224,6 +227,22 @@ spec:
           secret:
             optional: true
             secretName: istio.default
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+            items:
+            - key: common.dhall
+              path: generic/common.dhall
+            - key: mock-app-backend.dhall
+              path: config/mock-app-backend.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            items:
+            - key: mock-app-backend.dhall
+              path: secrets/mock-app-backend.dhall
+            - key: common.dhall
+              path: generic/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

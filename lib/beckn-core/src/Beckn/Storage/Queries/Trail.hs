@@ -1,10 +1,10 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Storage.Queries.Trail where
 
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Config as DB
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
-import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Trail as Storage
 import qualified Beckn.Utils.Servant.Trail.Server as Trail
 import Data.Time.Units (Millisecond)
@@ -13,24 +13,25 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Postgres as BP
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import GHC.Records (HasField (..))
 
-getDbTable :: (HasDbEnv (FlowR r)) => FlowR r (B.DatabaseEntity be DB.TrailDb (B.TableEntity Storage.TrailT))
+getDbTable :: DB.FlowWithDb r (B.DatabaseEntity be DB.TrailDb (B.TableEntity Storage.TrailT))
 getDbTable = do
-  dbEnv <- getDbEnv
-  let schemaName = dbSchema dbEnv
-  pure $ DB._trail (DB.trailDb schemaName)
+  dbCfg <- getField @"dbCfg" <$> ask
+  pure $ DB._trail (DB.trailDb $ schemaName $ DB.pgConfig dbCfg)
+  where
+    schemaName T.PostgresConfig {..} = fromString connectDatabase
 
-create :: (HasDbEnv (FlowR r)) => Storage.Trail -> FlowR r (T.DBResult ())
+create :: Storage.Trail -> DB.FlowWithDb r (T.DBResult ())
 create session = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression session)
 
 setResponseInfo ::
-  (HasDbEnv (FlowR r)) =>
   Text ->
   Millisecond ->
   Trail.ResponseInfo ->
-  FlowR r (T.DBResult ())
+  DB.FlowWithDb r (T.DBResult ())
 setResponseInfo reqId duration resp = do
   dbTable <- getDbTable
   DB.update dbTable setClause predicate

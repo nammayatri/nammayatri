@@ -2,8 +2,8 @@
 
 module Beckn.Utils.Servant.Trail.Handler where
 
+import Beckn.Storage.DB.Config (HasDbCfg)
 import qualified Beckn.Storage.Queries.Trail as Trail
-import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Trail as Trail
 import Beckn.Utils.Common
@@ -36,7 +36,7 @@ mkTrail reqId now req =
       _processDuration = Nothing
     }
 
-traceHandler :: HasDbEnv (FlowR r) => Util.TraceHandler (FlowR r)
+traceHandler :: HasDbCfg r => Util.TraceHandler (FlowR r)
 traceHandler = Util.TraceHandler {..}
   where
     _preAction req = do

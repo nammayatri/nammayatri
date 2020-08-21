@@ -1,12 +1,38 @@
+{-# LANGUAGE TypeApplications #-}
+
 module App.Types where
 
+import Beckn.External.Exotel.Types (ExotelCfg)
+import Beckn.Sms.Config (SmsConfig)
+import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
-import Control.Monad.Reader
+import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
+import EulerHS.Prelude
+import Servant.Client (BaseUrl, Scheme)
 
-newtype AppEnv = AppEnv
-  { db :: DbEnv
+data AppEnv = AppEnv
+  { dbCfg :: DBConfig,
+    smsCfg :: SmsConfig,
+    port :: Int,
+    metricsPort :: Int,
+    xGatewayUri :: BaseUrl,
+    xGatewayApiKey :: Maybe Text,
+    xGatewaySelector :: Maybe Text,
+    xGatewayNsdlUrl :: Maybe BaseUrl,
+    nsdlUsername :: Maybe Text,
+    nsdlPassword :: Maybe Text,
+    xProviderUri :: BaseUrl,
+    bapSelfId :: Maybe Text,
+    bapNwAddress :: Maybe Text,
+    searchConfirmExpiry :: Maybe Integer,
+    searchCaseExpiry :: Maybe Integer,
+    cronAuthKey :: Maybe CronAuthKey,
+    encService :: (String, Word16),
+    fcmJsonPath :: Maybe Text,
+    exotelCfg :: Maybe ExotelCfg
   }
+  deriving (Generic, FromDhall)
 
 type Env = EnvR AppEnv
 
@@ -16,5 +42,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-instance HasDbEnv Flow where
-  getDbEnv = asks db
+tyEnv :: ZL '[Scheme, ExotelCfg]
+tyEnv = z @Scheme "UrlScheme" $ z @ExotelCfg "ExotelCfg" Z

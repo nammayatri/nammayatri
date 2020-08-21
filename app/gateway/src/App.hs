@@ -6,8 +6,8 @@ where
 import App.Server
 import App.Types
 import Beckn.Constants.APIErrorCode (internalServerErr)
-import Beckn.Types.App
 import qualified Beckn.Types.App as App
+import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -25,17 +25,11 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant.Server
-import qualified Storage.DB.Config as Config
-import System.Environment (lookupEnv)
 
 runGateway :: IO ()
 runGateway = do
-  port <- fromMaybe 8015 . (>>= readMaybe) <$> lookupEnv "PORT"
-  metricsPort <- fromMaybe 9999 . (>>= readMaybe) <$> lookupEnv "METRICS_PORT"
-  Metrics.serve metricsPort
-  cache <- C.newCache Nothing
-  let dbEnv = DbEnv Config.defaultDbConfig Config.connectionTag Config.dbSchema
-  let appEnv = AppEnv dbEnv cache
+  appCfg <- readDhallConfigDefault Z "beckn-gateway"
+  Metrics.serve (metricsPort appCfg)
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
@@ -44,10 +38,11 @@ runGateway = do
           }
   let settings =
         setOnExceptionResponse gatewayExceptionResponse $
-          setPort port defaultSettings
+          setPort (port appCfg) defaultSettings
+  cache <- C.newCache Nothing
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     reqHeadersKey <- V.newKey
-    runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
+    runSettings settings $ run reqHeadersKey (App.EnvR flowRt $ mkAppEnv appCfg cache)
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse exception = do

@@ -10,6 +10,7 @@
 
 module Beckn.External.Exotel.Types where
 
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.TH
 import Control.Lens.TH
 import Data.Aeson
@@ -18,6 +19,15 @@ import Data.Aeson.TH
 import EulerHS.Prelude
 import Web.FormUrlEncoded (ToForm, toForm)
 import Web.Internal.HttpApiData
+
+-- | Exotel Service config
+data ExotelCfg = ExotelCfg
+  { apiKey :: Text,
+    apiToken :: Text,
+    sid :: Text,
+    callerId :: Text
+  }
+  deriving (Generic, FromDhall)
 
 -- | Exotel API token
 newtype ExotelApiToken = ExotelApiToken
@@ -68,10 +78,10 @@ data ExotelRequest = ExotelRequest
   deriving (Eq, Show)
 
 instance ToForm ExotelRequest where
-  toForm exoReq =
-    [ ("From", toQueryParam (from exoReq)),
-      ("To", toQueryParam (to exoReq)),
-      ("CallerId", toQueryParam (callerId exoReq))
+  toForm ExotelRequest {..} =
+    [ ("From", toQueryParam from),
+      ("To", toQueryParam to),
+      ("CallerId", toQueryParam callerId)
     ]
 
 -- | Overall call status

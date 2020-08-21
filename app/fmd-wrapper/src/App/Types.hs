@@ -1,13 +1,18 @@
 module App.Types where
 
+import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
+import qualified EulerHS.Types as T
 
 data AppEnv = AppEnv
-  { dbEnv :: DbEnv,
-    redisEnv :: RedisEnv
+  { dbCfg :: DBConfig,
+    redisCfg :: T.RedisConfig,
+    port :: Int
   }
+  deriving (Generic, FromDhall)
 
 type Env = EnvR AppEnv
 
@@ -16,9 +21,3 @@ type Flow = FlowR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
-
-instance HasDbEnv Flow where
-  getDbEnv = asks dbEnv
-
-instance HasRedisEnv Flow where
-  getRedisEnv = asks redisEnv

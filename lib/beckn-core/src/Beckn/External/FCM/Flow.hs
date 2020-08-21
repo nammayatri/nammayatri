@@ -113,8 +113,8 @@ getTokenText = do
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
 -- | check FCM token and refresh if it is invalid
-checkAndGetToken :: L.MonadFlow m => m (Either String JWT.JWToken)
-checkAndGetToken = do
+checkAndGetToken :: L.MonadFlow m => JWT.ServiceAccount -> m (Either String JWT.JWToken)
+checkAndGetToken sa = do
   token <- L.getOption FCMTokenKey
   case token of
     Nothing -> refreshToken
@@ -140,6 +140,17 @@ checkAndGetToken = do
           refreshToken
   where
     fcm = T.pack "FCM"
+    refreshToken = do
+      L.logInfo fcm "Refreshing token"
+      t <- L.runIO $ JWT.doRefreshToken sa
+      case t of
+        Left err -> do
+          L.logInfo fcm $ T.pack err
+          pure $ Left err
+        Right token -> do
+          L.logInfo fcm $ T.pack "Success"
+          L.setOption FCMTokenKey token
+          pure $ Right token
 
 -- | Get token (do not refresh it if it is expired / invalid)
 getToken :: L.MonadFlow m => m (Either String JWT.JWToken)
@@ -153,19 +164,3 @@ getToken = do
         JWT.JWTValid _ -> Right t
         JWT.JWTExpired _ -> Left "Token expired"
         JWT.JWTInvalid -> Left "Token is invalid"
-
--- | Refresh token
-refreshToken :: L.MonadFlow m => m (Either String JWT.JWToken)
-refreshToken = do
-  L.logInfo fcm "Refreshing token"
-  t <- L.runIO JWT.refreshToken
-  case t of
-    Left err -> do
-      L.logInfo fcm $ T.pack err
-      pure $ Left err
-    Right token -> do
-      L.logInfo fcm $ T.pack "Success"
-      L.setOption FCMTokenKey token
-      pure $ Right token
-  where
-    fcm = T.pack "FCM"

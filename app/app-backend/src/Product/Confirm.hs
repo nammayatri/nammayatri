@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Product.Confirm where
+module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
 import Beckn.Types.API.Confirm
@@ -43,7 +43,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   MPI.create orderProductInstance
   context <- buildContext "confirm" caseId
-  baseUrl <- Gateway.getProviderBaseUrl
+  baseUrl <- xProviderUri <$> ask
   order <- mkOrder productInstance
   Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where

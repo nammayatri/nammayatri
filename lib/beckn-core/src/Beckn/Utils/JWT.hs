@@ -4,7 +4,6 @@
 module Beckn.Utils.JWT where
 
 import Control.Applicative
-import Control.Exception (try)
 import qualified Data.Aeson as J
 import Data.Aeson.Casing
 import Data.Aeson.TH
@@ -22,7 +21,6 @@ import EulerHS.Prelude hiding (exp, fromRight, try)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Network.HTTP.Types
-import System.Environment
 import Web.JWT
 
 -- | Google cloud service account json file format
@@ -42,7 +40,7 @@ data ServiceAccount = ServiceAccount
   }
   deriving (Show, Eq, Generic)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''ServiceAccount)
+$(deriveJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
 -- | JWT body format, is is used for retrieving JWT token
 data JWTBody = JWTBody
@@ -62,27 +60,6 @@ data JWToken = JWToken
   deriving (Show, Eq, Generic)
 
 $(deriveJSON (aesonPrefix snakeCase) ''JWToken)
-
--- | Load google service account JSON file
--- A path to the file is kept in system env variable "FCM_JSON_PATH"
-getJSON :: IO (Either String BL.ByteString)
-getJSON = do
-  saFileName <- lookupEnv "FCM_JSON_PATH"
-  case saFileName of
-    Nothing -> pure $ Left "FCM_JSON_PATH is not set, ignoring"
-    Just f -> do
-      res <- try (BL.readFile f)
-      pure $ case res of
-        Left (e :: SomeException) -> Left $ "Error on reading FCM json file [" <> f <> "]: " <> displayException e
-        Right content -> Right content
-
--- | Load and parse service account information
-getServiceAccount :: IO (Either String ServiceAccount)
-getServiceAccount = do
-  res <- getJSON
-  pure $ case res of
-    Left err -> Left err
-    Right json -> J.eitherDecode json
 
 -- | Prepare claims and assertion needed for getting JWT
 -- It is possible to add user-defined claims using the additionalClaims parameter
@@ -129,35 +106,31 @@ jwtRequest tokenUri body = do
 
 -- | Geto or refresh JWT token
 -- Note at the moment it is used with FCM service so scope is hardcoded
-refreshToken :: IO (Either String JWToken)
-refreshToken = do
-  sAccount <- getServiceAccount
-  case sAccount of
+doRefreshToken :: ServiceAccount -> IO (Either String JWToken)
+doRefreshToken sa = do
+  jwtPair <- createJWT sa [("scope", String "https://www.googleapis.com/auth/firebase.messaging")]
+  case jwtPair of
     Left err -> pure $ Left err
-    Right sa -> do
-      jwtPair <- createJWT sa [("scope", String "https://www.googleapis.com/auth/firebase.messaging")]
-      case jwtPair of
+    Right (claimPairs, assertion) -> do
+      let issuedAt = iat claimPairs
+      manager <- newManager tlsManagerSettings
+      let body =
+            JWTBody
+              { _jwtAssertion = assertion,
+                _jwtGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+              }
+      req <- jwtRequest (_saTokenUri sa) (J.encode body)
+      res <- httpLbs req manager
+      let rBody = J.eitherDecode $ responseBody res
+      case rBody of
         Left err -> pure $ Left err
-        Right (claimPairs, assertion) -> do
-          let issuedAt = iat claimPairs
-          manager <- newManager tlsManagerSettings
-          let body =
-                JWTBody
-                  { _jwtAssertion = assertion,
-                    _jwtGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
-                  }
-          req <- jwtRequest (_saTokenUri sa) (J.encode body)
-          res <- httpLbs req manager
-          let rBody = J.eitherDecode $ responseBody res
-          case rBody of
-            Left err -> pure $ Left err
-            Right respBody@JWToken {..} -> do
-              let expiry = getExpiry issuedAt _jwtExpiresIn
-              pure $
-                Right
-                  respBody
-                    { _jwtExpiresIn = expiry
-                    }
+        Right respBody@JWToken {..} -> do
+          let expiry = getExpiry issuedAt _jwtExpiresIn
+          pure $
+            Right
+              respBody
+                { _jwtExpiresIn = expiry
+                }
 
 -- | Get token expiration date
 getExpiry :: Maybe NumericDate -> Integer -> Integer

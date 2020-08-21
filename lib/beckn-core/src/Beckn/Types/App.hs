@@ -9,26 +9,7 @@ import Beckn.Types.Error
 import Beckn.Utils.TH
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import EulerHS.Types as T
 import Servant
-
-class HasDbEnv mFlow where
-  getDbEnv :: mFlow DbEnv
-
-class HasRedisEnv mFlow where
-  getRedisEnv :: mFlow RedisEnv
-
--- App Types
-
-data DbEnv = DbEnv
-  { defaultDbConfig :: T.PostgresConfig,
-    connTag :: T.ConnTag,
-    dbSchema :: Text
-  }
-
-newtype RedisEnv = RedisEnv
-  { defaultRedisConfig :: T.RedisConfig
-  }
 
 data EnvR r = EnvR
   { runTime :: R.FlowRuntime,

@@ -3,33 +3,31 @@
 
 module Product.Select where
 
+import App.Types
 import Beckn.Types.API.Callback
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import Servant.Client (parseBaseUrl)
-import System.Environment (lookupEnv)
 
-select :: Organization -> SelectReq -> FlowHandlerR r AckResponse
-select org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
-  bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
+select :: Organization -> SelectReq -> FlowHandler AckResponse
+select org req = withFlowHandler $ do
+  bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
-      context =
+  let context =
         (req ^. #context)
-          { _ac_id = fromString <$> bppNwAddr -- update caller id
+          { _ac_id = bppNwAddr
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad ac_id"
     Just appUrl ->
-      forkAsync "Select" $ do
+      fork "Select" $ do
         onSelectMessage <- mkQuote
         AckResponse {} <-
           callClient "select" appUrl $
@@ -48,7 +46,7 @@ select org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHan
         _error = Nothing
       }
 
-mkQuote :: FlowR r OnSelectMessage
+mkQuote :: Flow OnSelectMessage
 mkQuote = do
   L.runIO $ threadDelay 0.5e6
   return $ OnSelectMessage example example

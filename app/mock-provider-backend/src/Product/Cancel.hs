@@ -6,33 +6,31 @@ module Product.Cancel
   )
 where
 
+import App.Types
 import Beckn.Types.API.Callback
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Control.Monad.Reader (withReaderT)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import Servant.Client (parseBaseUrl)
-import System.Environment (lookupEnv)
 
-cancel :: Organization -> CancelReq -> FlowHandlerR r AckResponse
-cancel org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHandler $ do
-  bppNwAddr <- L.runIO $ lookupEnv "MOCK_PROVIDER_NW_ADDRESS"
+cancel :: Organization -> CancelReq -> FlowHandler AckResponse
+cancel org req = withFlowHandler $ do
+  bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
-      context =
+  let context =
         (req ^. #context)
-          { _ac_id = fromString <$> bppNwAddr -- update caller id
+          { _ac_id = bppNwAddr
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl ->
-      forkAsync "Cancel" $ do
+      fork "Cancel" $ do
         cancelMessage <- mkCancelMessage
         AckResponse {} <-
           callClient "cancel" appUrl $
@@ -51,7 +49,7 @@ cancel org req = withReaderT (\(EnvR rt e) -> EnvR rt (EnvR rt e)) . withFlowHan
         _error = Nothing
       }
 
-mkCancelMessage :: FlowR r CancelResMessage
+mkCancelMessage :: Flow CancelResMessage
 mkCancelMessage = do
   L.runIO $ threadDelay 0.5e6
   return $ CancelResMessage example example example example
