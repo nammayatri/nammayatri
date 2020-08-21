@@ -13,10 +13,10 @@ import EulerHS.Prelude
 import Servant
 import Utils.Auth
 
-run :: EnvR AppEnv -> Application
-run env =
+run :: TMVar () -> EnvR AppEnv -> Application
+run shutdown env = do
   addServantInfo gatewayAPI $
     Trail.toTraceOrNotToTrace env $
-      BU.run gatewayAPI gatewayServer context env
+      BU.run gatewayAPI (gatewayServer shutdown) context env
   where
     context = verifyAPIKeyAction :. EmptyContext

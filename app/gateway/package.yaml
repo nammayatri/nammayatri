@@ -79,6 +79,7 @@ library:
     - servant-client
     - servant-server
     - servant-client-core
+    - stm
     - text
     - time
     - time-units
