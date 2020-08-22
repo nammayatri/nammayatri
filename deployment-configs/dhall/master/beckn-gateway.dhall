@@ -37,4 +37,5 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , searchTimeout = None Integer
+, traceFlag = common.TraceFlag.TRACE_ALL
 }

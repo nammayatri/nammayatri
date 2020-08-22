@@ -17,7 +17,8 @@ data AppCfg = AppCfg
     nwAddress :: Maybe Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    searchTimeout :: Maybe Int
+    searchTimeout :: Maybe Int,
+    traceFlag :: TraceFlag
   }
   deriving (Generic, FromDhall)
 
@@ -29,7 +30,8 @@ data AppEnv = AppEnv
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    searchTimeout :: Maybe Int -- In seconds
+    searchTimeout :: Maybe Int, -- In seconds
+    traceFlag :: TraceFlag
   }
   deriving (Generic)
 

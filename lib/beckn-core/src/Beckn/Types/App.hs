@@ -5,10 +5,14 @@
 
 module Beckn.Types.App where
 
+import Beckn.Storage.DB.Config (HasDbCfg)
+import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
 import Beckn.Utils.TH
+import Dhall (FromDhall)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import GHC.Records (HasField (..))
 import Servant
 
 data EnvR r = EnvR
@@ -100,3 +104,11 @@ data ListById
   = ByApplicationId CaseId
   | ById ProductsId
   | ByCustomerId PersonId
+
+-- | Requests / responses track condiguration flag
+data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING
+  deriving (Generic, FromDhall)
+
+type HasTraceFlag r = HasField "traceFlag" r TraceFlag
+
+type FlowWithTraceFlag r a = (HasTraceFlag r, HasDbCfg r) => FlowR r a

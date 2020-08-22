@@ -34,6 +34,8 @@ let exotelCfg : ExotelCfg =
   }
 -}
 
+let TraceFlag = < TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING >
+
 in { defaultPoolConfig = defaultPoolConfig
    , smsConfig = smsConfig
    -- , exotelCfg
@@ -41,4 +43,5 @@ in { defaultPoolConfig = defaultPoolConfig
    , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
    , branchName = branchName
    , autoMigrate = False
+   , TraceFlag=TraceFlag
    }

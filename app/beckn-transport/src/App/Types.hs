@@ -33,7 +33,8 @@ data AppEnv = AppEnv
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool
+    autoMigrate :: Bool,
+    traceFlag :: TraceFlag
   }
   deriving (Generic, FromDhall)
 

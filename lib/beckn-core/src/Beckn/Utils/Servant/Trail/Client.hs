@@ -2,11 +2,11 @@
 
 module Beckn.Utils.Servant.Trail.Client where
 
-import Beckn.Storage.DB.Config (HasDbCfg)
 import qualified Beckn.Storage.Queries.ExternalTrail as ExternalTrail
+import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
-import Beckn.Utils.Common (encodeToText', fork)
+import Beckn.Utils.Common (encodeToText', fork, getTraceFlag)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Servant.Trail.Types as TT
 import qualified Data.Aeson as Aeson
@@ -93,7 +93,7 @@ instance
 data TrailInfo
   = TrailInfo (Either ClientError LByteString) RequestInfo
 
-saveClientTrailFlow :: HasDbCfg r => TrailInfo -> FlowR r ()
+saveClientTrailFlow :: TrailInfo -> FlowWithTraceFlag r ()
 saveClientTrailFlow (TrailInfo res req) = do
   fork "save trail" do
     _id <- generateGUID
@@ -108,7 +108,6 @@ saveClientTrailFlow (TrailInfo res req) = do
         L.logError @Text "client_trace" $
           "Failed to save request from gateway to " <> toText _endpointId <> show err
       Right () -> pure ()
-  pure ()
   where
     _endpointId = TT._endpointId $ _content req
     _queryParams = TT._queryString $ _content req
@@ -119,15 +118,14 @@ saveClientTrailFlow (TrailInfo res req) = do
     _error = show <$> leftToMaybe res
 
 callAPIWithTrail ::
-  (JSONEx a, ToJSON a, HasDbCfg r) =>
+  (JSONEx a, ToJSON a) =>
   BaseUrl ->
   (RequestInfo, EulerClient a) ->
   Text ->
-  FlowR r (Either ClientError a)
+  FlowWithTraceFlag r (Either ClientError a)
 callAPIWithTrail baseUrl (reqInfo, req) serviceName = do
   endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
   res <- L.callAPI baseUrl req
-  let trailInfo = TrailInfo (Aeson.encode <$> res) reqInfo
   let status = case res of
         Right _ -> "200"
         Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
@@ -136,5 +134,13 @@ callAPIWithTrail baseUrl (reqInfo, req) serviceName = do
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
   _ <- L.runUntracedIO $ endTracking status
-  _ <- saveClientTrailFlow trailInfo
-  return res
+  traceFlag <- getTraceFlag
+  case traceFlag of
+    TRACE_OUTGOING -> trace res
+    TRACE_ALL -> trace res
+    _ -> return res
+  where
+    trace res' = do
+      let trailInfo = TrailInfo (Aeson.encode <$> res') reqInfo
+      saveClientTrailFlow trailInfo
+      return res'

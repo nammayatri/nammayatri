@@ -53,4 +53,5 @@ in
 , exotelCfg = None ExotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, traceFlag = common.TraceFlag.TRACE_ALL
 }

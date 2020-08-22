@@ -3,6 +3,7 @@ module Beckn.Utils.Servant.Trail.Types where
 import qualified Data.CaseInsensitive as CI
 import EulerHS.Prelude
 import qualified Network.HTTP.Types as HTTP
+import qualified Network.Socket as Network
 
 data RequestContent = RequestContent
   { -- | URL path, this excludes host and query parameters and includes captures.
@@ -49,3 +50,40 @@ decodeQueryParam =
 decodeHeader :: HTTP.Header -> (Text, Text)
 decodeHeader =
   bimap (decodeUtf8 . CI.original) decodeUtf8
+
+-- | Request information which we ever want to record.
+--
+-- We introduce this datatype because 'Wai.Request' changes during
+-- processing of a call to an endpoint, we don't want to use it in
+-- the interface of this module.
+data ServerRequestInfo = ServerRequestInfo
+  { -- | Most of the request content.
+    _content :: RequestContent,
+    -- | Peer address.
+    _remoteHost :: Network.SockAddr,
+    -- | Whether SSL connection is used.
+    _isSecure :: Bool
+  }
+  deriving (Show)
+
+lookupRequestHeader :: Text -> ServerRequestInfo -> Maybe Text
+lookupRequestHeader name ServerRequestInfo {..} =
+  snd <$> find ((== name) . fst) (_headers _content)
+
+-- | Response information which we ever want to record.
+data ResponseInfo = ResponseInfo
+  { _statusCode :: Int,
+    _statusMessage :: Text,
+    _responseSucceeded :: Bool,
+    _responseBody :: LByteString,
+    _responseHeaders :: [(Text, Text)]
+  }
+
+-- | Status code and message put in one string.
+_responseStatus :: ResponseInfo -> LText
+_responseStatus ResponseInfo {..} =
+  show _statusCode <> " / " <> toLText _statusMessage
+
+-- | All headers put into one string.
+_responseHeadersString :: ResponseInfo -> LText
+_responseHeadersString = keyValueToString . _responseHeaders

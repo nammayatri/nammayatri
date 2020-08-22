@@ -317,3 +317,8 @@ headMaybe (x : _) = Just x
 getSchemaName :: HasDbCfg r => FlowR r Text
 getSchemaName =
   schemaName <$> getField @"dbCfg" <$> ask
+
+-- | Get trace flag from ENV var
+getTraceFlag :: HasTraceFlag r => FlowR r TraceFlag
+getTraceFlag =
+  getField @"traceFlag" <$> ask

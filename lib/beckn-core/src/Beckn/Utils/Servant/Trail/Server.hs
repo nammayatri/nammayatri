@@ -1,4 +1,5 @@
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- See [request-body-substitution] note below
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -6,42 +7,32 @@
 -- | Saving information about requests.
 module Beckn.Utils.Servant.Trail.Server where
 
+import Beckn.Storage.DB.Config (HasDbCfg)
+import qualified Beckn.Storage.Queries.Trail as Trail
+import Beckn.Types.App
+import Beckn.Types.Common hiding (id)
+import qualified Beckn.Types.Storage.Trail as Trail
+import Beckn.Utils.Common
+import Beckn.Utils.Servant.Trail.Types
 import qualified Beckn.Utils.Servant.Trail.Types as T
 import qualified Data.Binary.Builder as B
 import qualified Data.ByteString.Lazy as LBS
+import Data.Time
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import GHC.Records (HasField (..))
 import qualified Network.HTTP.Types as HTTP
-import qualified Network.Socket as Network
 import qualified Network.Wai as Wai
-
--- | Request information which we ever want to record.
---
--- We introduce this datatype because 'Wai.Request' changes during
--- processing of a call to an endpoint, we don't want to use it in
--- the interface of this module.
-data RequestInfo = RequestInfo
-  { -- | Most of the request content.
-    _content :: T.RequestContent,
-    -- | Peer address.
-    _remoteHost :: Network.SockAddr,
-    -- | Whether SSL connection is used.
-    _isSecure :: Bool
-  }
-  deriving (Show)
-
-lookupRequestHeader :: Text -> RequestInfo -> Maybe Text
-lookupRequestHeader name RequestInfo {..} =
-  snd <$> find ((== name) . fst) (T._headers _content)
 
 -- | Read information about request.
 --
 -- This depletes the original request body stream, you have to use
 -- the returned request instead.
-toRequestInfo :: Wai.Request -> IO (RequestInfo, Wai.Request)
+toRequestInfo :: Wai.Request -> IO (ServerRequestInfo, Wai.Request)
 toRequestInfo req = do
   (body, bodyStream) <- forkBytesStream (Wai.getRequestBodyChunk req)
   let reqInfo =
-        RequestInfo
+        ServerRequestInfo
           { _remoteHost = Wai.remoteHost req,
             _isSecure = Wai.isSecure req,
             _content =
@@ -82,24 +73,6 @@ forkBytesStream doRead = do
         "" -> return []
         chunk -> (chunk :) <$> readAll
 
--- | Response information which we ever want to record.
-data ResponseInfo = ResponseInfo
-  { _statusCode :: Int,
-    _statusMessage :: Text,
-    _responseSucceeded :: Bool,
-    _responseBody :: LByteString,
-    _responseHeaders :: [(Text, Text)]
-  }
-
--- | Status code and message put in one string.
-_responseStatus :: ResponseInfo -> LText
-_responseStatus ResponseInfo {..} =
-  show _statusCode <> " / " <> toLText _statusMessage
-
--- | All headers put into one string.
-_responseHeadersString :: ResponseInfo -> LText
-_responseHeadersString = T.keyValueToString . _responseHeaders
-
 -- | Read response info from raw 'Wai.Response'.
 --
 -- Note that this will read the entire response body, may be not what you want
@@ -130,7 +103,7 @@ toResponseInfo resp = do
 -- Actions provided here have to be no-throw.
 data TraceHandler m = forall v.
   TraceHandler
-  { _preAction :: RequestInfo -> m v,
+  { _preAction :: ServerRequestInfo -> m v,
     _postAction :: v -> ResponseInfo -> m ()
   }
 
@@ -159,3 +132,72 @@ traceRequests TraceHandler {..} app request respond =
           respInfo <- toResponseInfo response
           _postAction v respInfo
           return responded
+
+-- TODO: add a test on that request arguments appear in database at least
+-- for one entrypoint
+
+mkTrail :: Text -> UTCTime -> ServerRequestInfo -> Trail.Trail
+mkTrail reqId now req =
+  Trail.Trail
+    { _id = reqId,
+      --_customerId = CustomerId <$> lookupRequestHeader "customerId" req,
+      --_sessionId = SessionId <$> lookupRequestHeader "sessionId" req,
+      _endpointId = _endpointId $ _content req,
+      _headers = _headersString $ _content req,
+      _queryParams = _queryString $ _content req,
+      _requestBody = decodeUtf8 <$> _body (_content req),
+      _remoteHost = show $ _remoteHost req,
+      _isSecure = _isSecure req,
+      _succeeded = Nothing,
+      _responseBody = Nothing,
+      _responseStatus = Nothing,
+      _responseHeaders = Nothing,
+      _createdAt = now,
+      _processDuration = Nothing
+    }
+
+traceHandler :: HasDbCfg r => TraceHandler (FlowR r)
+traceHandler = TraceHandler {..}
+  where
+    _preAction req = do
+      reqId <- generateGUID
+      now <- getCurrTime
+      let endpointId = toString $ _endpointId $ _content req
+      if "v1 GET" /= endpointId && "v1/ GET" /= endpointId
+        then do
+          let trail = mkTrail reqId now req
+          pure (Just (reqId, now, trail))
+        else pure Nothing
+    _postAction Nothing _ = pass
+    _postAction (Just (reqId, reqTime, trail)) res = do
+      now <- getCurrTime
+      let duration = roundDiffTimeToUnit $ now `diffUTCTime` reqTime
+      fork "save trail" $ do
+        Trail.create trail >>= \case
+          Left err -> do
+            L.logError @Text "trace" $
+              "Saving request failed: " <> show err
+          Right () -> pass
+        dbres <- Trail.setResponseInfo reqId duration res
+        case dbres of
+          Left err ->
+            L.logError @Text "trace" $
+              "Saving response on " <> show reqId <> " failed: " <> show err
+          Right () -> pass
+      pass
+
+traceHandler' :: HasDbCfg r => EnvR r -> TraceHandler IO
+traceHandler' env =
+  hoistTraceHandler (runFlowR (runTime env) (appEnv env)) traceHandler
+
+toTraceOrNotToTrace ::
+  (HasTraceFlag r, HasDbCfg r) =>
+  EnvR r ->
+  Wai.Application ->
+  Wai.Application
+toTraceOrNotToTrace env app = case traceFlag of
+  TRACE_OUTGOING -> app
+  TRACE_NOTHING -> app
+  _ -> traceRequests (traceHandler' env) app
+  where
+    traceFlag = getField @"traceFlag" (appEnv env)

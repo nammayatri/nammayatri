@@ -31,10 +31,13 @@ let exotelCfg : ExotelCfg =
   }
 -}
 
+let TraceFlag = < TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING >
+
 in { defaultPoolConfig = defaultPoolConfig
    , smsConfig = smsConfig
    -- , exotelCfg
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = None Text
    , autoMigrate = False
+   , TraceFlag=TraceFlag
    }

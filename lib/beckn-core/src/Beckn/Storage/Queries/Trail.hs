@@ -5,7 +5,7 @@ import qualified Beckn.Storage.DB.Config as DB
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Storage.Trail as Storage
 import Beckn.Utils.Common (getSchemaName)
-import qualified Beckn.Utils.Servant.Trail.Server as Trail
+import qualified Beckn.Utils.Servant.Trail.Types as Trail
 import Data.Time.Units (Millisecond)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
@@ -42,3 +42,20 @@ setResponseInfo reqId duration resp = do
           _responseHeaders <-. B.val_ (Just $ Trail._responseHeadersString resp),
           _processDuration <-. B.val_ (Just duration)
         ]
+
+createWithResponse ::
+  Storage.Trail ->
+  Trail.ResponseInfo ->
+  Millisecond ->
+  DB.FlowWithDb r (T.DBResult ())
+createWithResponse request response duration = do
+  dbTable <- getDbTable
+  DB.createOne dbTable $
+    Storage.insertExpression $
+      request
+        { Storage._succeeded = Just $ Trail._responseSucceeded response,
+          Storage._responseBody = Just . decodeUtf8 $ Trail._responseBody response,
+          Storage._responseStatus = Just $ Trail._responseStatus response,
+          Storage._responseHeaders = Just $ Trail._responseHeadersString response,
+          Storage._processDuration = Just duration
+        }
