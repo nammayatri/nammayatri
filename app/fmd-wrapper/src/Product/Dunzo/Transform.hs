@@ -183,7 +183,7 @@ mkSearchItem itemId QuoteRes {..} =
 mkQuote :: QuoteRes -> Flow Quotation
 mkQuote QuoteRes {..} = do
   qid <- generateGUID
-  return $ Quotation {_id = qid, _price = price, _ttl = Nothing}
+  return $ Quotation {_id = qid, _price = price, _ttl = Nothing, _breakup = []}
   where
     price = mkPrice estimated_price
     mkPrice estimatedPrice =
