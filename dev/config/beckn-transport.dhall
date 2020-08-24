@@ -48,6 +48,10 @@ in
 , metricsPort = +9999
 , xGatewayUri = appUri
 , xGatewayApiKey = None Text
+, xGatewaySelector = Some "JUSPAY"
+, xGatewayNsdlUrl = None BaseUrl
+, nsdlUsername = None Text
+, nsdlPassword = None Text
 , xAppUri = appUri
 , selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
 , nwAddress = Some "https://localhost/v1/"

@@ -45,5 +45,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-tyEnv :: ZL '[Scheme, ExotelCfg]
-tyEnv = z @Scheme "UrlScheme" $ z @ExotelCfg "ExotelCfg" Z
+tyEnv :: ZL '[Scheme, ExotelCfg, BaseUrl]
+tyEnv = z @Scheme "UrlScheme" $ z @ExotelCfg "ExotelCfg" $ z @BaseUrl "BaseUrl" Z
