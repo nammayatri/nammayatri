@@ -90,6 +90,7 @@ buildDraftOrder itemId = do
                 _state = "", -- FIXME: no relevant value in spec
                 _pickup = PickupOrDrop location [] example Nothing,
                 _drop = PickupOrDrop location [] example Nothing,
+                _return = PickupOrDrop location [] example Nothing,
                 _package = example, -- FIXME: references item and price
                 _agent = example, -- FIXME: we can't fill this
                 _vehicle = example, -- FIXME: we can't fill this

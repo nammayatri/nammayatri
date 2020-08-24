@@ -38,9 +38,10 @@ data Task = Task
     _item_id :: Text,
     _next_task_id :: Maybe Text,
     _previous_task_id :: Maybe Text,
-    _state :: Text, -- "SEARCHINNG-FOR-FMD-AGENT", "ASSIGNED-AGENT", "EN-ROUTE-TO-PICKCUP", "AT-PICKUP-LOCATION", "PICKED-UP-PACKAGE", "EN-ROUTE-TO-DROP", "AT-DROP-LOCATION", "DROPPED-PACKAGE"
+    _state :: Text, -- "SEARCHINNG-FOR-FMD-AGENT", "ASSIGNED-AGENT", "EN-ROUTE-TO-PICKCUP", "AT-PICKUP-LOCATION", "PICKED-UP-PACKAGE", "EN-ROUTE-TO-DROP", "AT-DROP-LOCATION", "DROPPED-PACKAGE", "RETURN-INITIATED", "EN-ROUTE-TO-RETURN-LOCATION", "AT-RETURN-LOCATION", "RETURNED-PACKAGE"
     _pickup :: PickupOrDrop,
     _drop :: PickupOrDrop,
+    _return :: PickupOrDrop,
     _package :: Package,
     _agent :: Maybe Agent,
     _vehicle :: Maybe Vehicle,
@@ -65,6 +66,7 @@ instance Example Task where
         _state = "ASSIGNED-AGENT",
         _pickup = example,
         _drop = example,
+        _return = example,
         _package = example,
         _agent = example,
         _vehicle = example,
