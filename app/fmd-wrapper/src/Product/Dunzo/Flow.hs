@@ -4,7 +4,7 @@
 module Product.Dunzo.Flow where
 
 import App.Types
-import Beckn.Types.App (CaseId (..))
+import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.Core.Order as Core
@@ -133,7 +133,8 @@ init org req = do
     sendCb orderDetails req' baConfig (Right res) = do
       let quoteId = req' ^. (#message . #quotation_id)
           cbApiKey = baConfig ^. #bap_api_key
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+          bapNwAddr = baConfig ^. #bap_nw_address
+      cbUrl <- parseBaseUrl bapNwAddr
       -- quoteId will be used as orderId
       let onInitMessage =
             mkOnInitMessage
@@ -143,7 +144,7 @@ init org req = do
               req'
               res
       let onInitReq = mkOnInitReq req' onInitMessage
-      createCaseIfNotPresent (onInitMessage ^. #order) (orderDetails ^. #quote)
+      createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) bapNwAddr (onInitMessage ^. #order) (orderDetails ^. #quote)
       onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
@@ -159,7 +160,7 @@ init org req = do
         Nothing -> return ()
     sendCb _ _ _ _ = return ()
 
-    createCaseIfNotPresent order quote = do
+    createCaseIfNotPresent orgId bapUrl order quote = do
       now <- getCurrTime
       let caseId = CaseId $ fromJust $ order ^. #_id
       let case_ =
@@ -175,9 +176,9 @@ init org req = do
                 _startTime = now,
                 _endTime = Nothing,
                 _validTill = now,
-                _provider = Nothing,
+                _provider = Just orgId,
                 _providerType = Nothing,
-                _requestor = Nothing,
+                _requestor = Just bapUrl,
                 _requestorType = Nothing,
                 _parentCaseId = Nothing,
                 _fromLocationId = "",
