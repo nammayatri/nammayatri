@@ -17,16 +17,19 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT)
-dbTable = DB._organization DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))
+getDbTable =
+  DB._organization . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Organization -> Flow ()
-create Storage.Organization {..} =
+create Storage.Organization {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
+  dbTable <- getDbTable
   L.logInfo @Text "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
@@ -35,7 +38,8 @@ verifyToken regToken = do
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
 findOrganizationById :: OrganizationId -> Flow Storage.Organization
-findOrganizationById id =
+findOrganizationById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_ORG_ID"
@@ -48,7 +52,8 @@ listOrganizations ::
   [Storage.OrganizationType] ->
   [Storage.Status] ->
   Flow [Storage.Organization]
-listOrganizations mlimit moffset oType status =
+listOrganizations mlimit moffset oType status = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -74,6 +79,7 @@ update ::
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
+  dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
@@ -88,7 +94,8 @@ update id status = do
         ]
 
 updateOrganizationRec :: Storage.Organization -> Flow ()
-updateOrganizationRec org =
+updateOrganizationRec org = do
+  dbTable <- getDbTable
   DB.update dbTable (setClause org) (predicate $ org ^. #_id)
     >>= either DB.throwDBError pure
   where

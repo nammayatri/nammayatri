@@ -5,29 +5,34 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Location as Storage
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT)
-dbTable = DB._location DB.appDb
+getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT))
+getDbTable =
+  DB._location . DB.appDb <$> getSchemaName
 
 create :: Storage.Location -> Flow ()
-create Storage.Location {..} =
+create Storage.Location {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
     >>= either DB.throwDBError pure
 
 findLocationById ::
   LocationId -> Flow (Maybe Storage.Location)
-findLocationById id =
+findLocationById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
 findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Location]
-findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset =
+findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere
     dbTable
     predicate
@@ -56,7 +61,8 @@ complementVal l
   | otherwise = B.val_ False
 
 findAllByIds :: [Text] -> Flow [Storage.Location]
-findAllByIds locIds =
+findAllByIds locIds = do
+  dbTable <- getDbTable
   DB.findAllOrErr dbTable (predicate (LocationId <$> locIds))
   where
     predicate locationIds Storage.Location {..} =

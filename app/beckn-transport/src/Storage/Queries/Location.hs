@@ -11,17 +11,20 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT)
-dbTable = DB._location DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
+getDbTable =
+  DB._location . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Location -> Flow ()
-create Storage.Location {..} =
+create Storage.Location {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
     >>= either DB.throwDBError pure
 
 findLocationById ::
   LocationId -> Flow Storage.Location
-findLocationById id =
+findLocationById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_DATA"
@@ -30,6 +33,7 @@ findLocationById id =
 
 updateLocationRec :: LocationId -> Storage.Location -> Flow ()
 updateLocationRec locationId location = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause location now) (predicate locationId)
     >>= either DB.throwDBError pure
@@ -52,7 +56,8 @@ updateLocationRec locationId location = do
     predicate id Storage.Location {..} = _id ==. B.val_ id
 
 findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
-findAllByLocIds fromIds toIds =
+findAllByLocIds fromIds toIds = do
+  dbTable <- getDbTable
   DB.findAllOrErr dbTable (predicate (LocationId <$> fromIds) (LocationId <$> toIds))
   where
     predicate pFromIds pToIds Storage.Location {..} =

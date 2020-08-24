@@ -18,12 +18,13 @@ import GHC.Records (HasField (..))
 data DBConfig = DBConfig
   { connTag :: T.ConnTag,
     pgConfig :: T.PostgresConfig,
-    poolConfig :: T.PoolConfig
+    poolConfig :: T.PoolConfig,
+    schemaName :: Text
   }
   deriving (Generic, ToJSON, FromJSON, FromDhall)
 
 -- Make the compiler generate instances for us!
-type HasDbCfg r = HasField "dbCfg" r DBConfig
+type HasDbCfg r = (HasField "dbCfg" r DBConfig)
 
 type FlowWithDb r a = HasDbCfg r => FlowR r a
 
@@ -32,7 +33,7 @@ handleIt ::
   FlowWithDb r (T.SqlConn Pg)
 handleIt mf = ask >>= mf . repack . getField @"dbCfg" >>= either (error . show) pure
   where
-    repack (DBConfig x y z) = T.mkPostgresPoolConfig x y z
+    repack (DBConfig x y z _) = T.mkPostgresPoolConfig x y z
 
 prepareDBConnections, getOrInitConn :: FlowWithDb r (T.SqlConn Pg)
 prepareDBConnections = handleIt L.initSqlDBConnection

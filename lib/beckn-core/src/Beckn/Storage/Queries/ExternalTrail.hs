@@ -6,17 +6,14 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Config as DB
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Storage.ExternalTrail as Storage
+import Beckn.Utils.Common (getSchemaName)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import GHC.Records (HasField (..))
 
 getDbTable :: DB.FlowWithDb r (B.DatabaseEntity be DB.TrailDb (B.TableEntity Storage.ExternalTrailT))
-getDbTable = do
-  dbCfg <- getField @"dbCfg" <$> ask
-  pure $ DB._externalTrail (DB.trailDb $ schemaName $ DB.pgConfig dbCfg)
-  where
-    schemaName T.PostgresConfig {..} = fromString connectDatabase
+getDbTable =
+  DB._externalTrail . DB.trailDb <$> getSchemaName
 
 create :: Storage.ExternalTrail -> DB.FlowWithDb r (T.DBResult ())
 create session = do

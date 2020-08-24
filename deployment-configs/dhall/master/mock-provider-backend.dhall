@@ -13,6 +13,7 @@ let pgcfg =
   { connTag = "providerDb"
   , pgConfig = postgresConfig
   , poolConfig = common.defaultPoolConfig
+  , schemaName = "atlas_mock_provider_backend"
   }
 
 let gwUri =

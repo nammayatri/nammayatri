@@ -1,10 +1,6 @@
 module Storage.DB.Config where
 
-import Data.Text as T
 import qualified EulerHS.Types as T
-
-dbSchema :: Text
-dbSchema = "atlas_app"
 
 connectionTag :: T.ConnTag
 connectionTag = "providerDb"

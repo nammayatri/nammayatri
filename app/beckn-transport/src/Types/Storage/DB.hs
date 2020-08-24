@@ -13,7 +13,6 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
-import Storage.DB.Config (dbSchema)
 import qualified Types.Storage.Customer as Customer
 import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.Quotation as Quotation
@@ -37,26 +36,26 @@ data TransporterDb f = TransporterDb
   }
   deriving (Generic, B.Database be)
 
-transporterDb :: B.DatabaseSettings be TransporterDb
-transporterDb =
+transporterDb :: Text -> B.DatabaseSettings be TransporterDb
+transporterDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { _organization = setSchema <> Organization.fieldEMod,
-        _leads = setSchema <> Leads.fieldEMod,
-        _customer = setSchema <> Customer.fieldEMod,
-        _location = setSchema <> Location.fieldEMod,
-        _quotation = setSchema <> Quotation.fieldEMod,
-        _tracker = setSchema <> Tracker.fieldEMod,
-        _tripReference = setSchema <> TripReference.fieldEMod,
-        _vehicle = setSchema <> Vehicle.fieldEMod,
-        _person = setSchema <> Person.fieldEMod,
-        _case = setSchema <> Case.fieldEMod,
-        _products = setSchema <> Product.fieldEMod,
-        _productInstance = setSchema <> ProductInstance.fieldEMod,
-        _registrationToken = setSchema <> RegistrationToken.fieldEMod
+      { _organization = setSchema dbSchemaName <> Organization.fieldEMod,
+        _leads = setSchema dbSchemaName <> Leads.fieldEMod,
+        _customer = setSchema dbSchemaName <> Customer.fieldEMod,
+        _location = setSchema dbSchemaName <> Location.fieldEMod,
+        _quotation = setSchema dbSchemaName <> Quotation.fieldEMod,
+        _tracker = setSchema dbSchemaName <> Tracker.fieldEMod,
+        _tripReference = setSchema dbSchemaName <> TripReference.fieldEMod,
+        _vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,
+        _person = setSchema dbSchemaName <> Person.fieldEMod,
+        _case = setSchema dbSchemaName <> Case.fieldEMod,
+        _products = setSchema dbSchemaName <> Product.fieldEMod,
+        _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
+        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod
       }
   where
-    setSchema = setEntitySchema (Just dbSchema)
+    setSchema schema = setEntitySchema (Just schema)
     -- FIXME: this is in beam > 0.8.0.0, and can be removed when we upgrade
     -- (introduced in beam commit id 4e3539784c4a0d58eea08129edd0dc094b0e9695)
     modifyEntitySchema modSchema =

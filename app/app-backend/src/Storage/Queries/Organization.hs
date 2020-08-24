@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as Storage
-import Beckn.Utils.Common (getCurrTime)
+import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -13,17 +13,20 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT)
-dbTable = DB._organization DB.appDb
+getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT))
+getDbTable =
+  DB._organization . DB.appDb <$> getSchemaName
 
 create :: Storage.Organization -> Flow ()
-create Storage.Organization {..} =
+create Storage.Organization {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
 findOrganizationById ::
   OrganizationId -> Flow (Maybe Storage.Organization)
-findOrganizationById id =
+findOrganizationById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
@@ -35,7 +38,8 @@ listOrganizations ::
   [Storage.OrganizationType] ->
   [Storage.Status] ->
   Flow [Storage.Organization]
-listOrganizations mlimit moffset oType status =
+listOrganizations mlimit moffset oType status = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -60,6 +64,7 @@ update ::
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
+  dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable

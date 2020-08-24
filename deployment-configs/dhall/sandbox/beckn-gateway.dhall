@@ -13,6 +13,7 @@ let pgcfg =
   { connTag = "gatewayDb"
   , pgConfig = postgresConfig
   , poolConfig = common.defaultPoolConfig
+  , schemaName = "atlas_gateway"
   }
 
 in

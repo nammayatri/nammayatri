@@ -4,16 +4,19 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
 import qualified Beckn.Types.Storage.Organization as Org
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT)
-dbTable = DB._organization DB.appDb
+getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
+getDbTable =
+  DB._organization . DB.appDb <$> getSchemaName
 
 findOrgByApiKey :: App.APIKey -> Flow (Maybe Org.Organization)
-findOrgByApiKey apiKey =
+findOrgByApiKey apiKey = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
@@ -26,7 +29,8 @@ listOrganizations ::
   [Org.OrganizationType] ->
   [Org.Status] ->
   Flow [Org.Organization]
-listOrganizations mlimit moffset oType status =
+listOrganizations mlimit moffset oType status = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
     >>= either DB.throwDBError pure
   where

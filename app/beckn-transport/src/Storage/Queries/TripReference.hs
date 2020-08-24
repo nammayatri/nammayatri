@@ -13,24 +13,28 @@ import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.TripReference as Storage
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.TripReferenceT)
-dbTable = DB._tripReference DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.TripReferenceT))
+getDbTable =
+  DB._tripReference . DB.transporterDb <$> getSchemaName
 
 create :: Storage.TripReference -> Flow ()
-create Storage.TripReference {..} =
+create Storage.TripReference {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.TripReference {..})
     >>= either DB.throwDBError pure
 
 findTripReferenceById ::
   TripReferenceId -> Flow (Maybe Storage.TripReference)
-findTripReferenceById id =
+findTripReferenceById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.TripReference {..} = _id ==. B.val_ id
 
 listTripReferences :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.TripReference]
-listTripReferences mlimit moffset status =
+listTripReferences mlimit moffset status = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -54,6 +58,7 @@ update ::
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
+  dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable

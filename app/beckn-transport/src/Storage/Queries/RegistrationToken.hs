@@ -16,23 +16,27 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.DB as DB
 
-dbTable ::
-  B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT)
-dbTable = DB._registrationToken DB.transporterDb
+getDbTable ::
+  Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT))
+getDbTable =
+  DB._registrationToken . DB.transporterDb <$> getSchemaName
 
 create :: Storage.RegistrationToken -> Flow ()
-create Storage.RegistrationToken {..} =
+create Storage.RegistrationToken {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
     >>= either DB.throwDBError pure
 
 findRegistrationToken :: Text -> Flow (Maybe Storage.RegistrationToken)
-findRegistrationToken id =
+findRegistrationToken id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
 
 updateVerified :: Text -> Bool -> Flow ()
 updateVerified id verified = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause verified now) (predicate id)
     >>= either DB.throwDBError pure
@@ -50,7 +54,8 @@ verifyToken regToken = do
   findRegistrationTokenByToken regToken
 
 findRegistrationTokenByToken :: RegToken -> Flow Storage.RegistrationToken
-findRegistrationTokenByToken regToken =
+findRegistrationTokenByToken regToken = do
+  dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_TOKEN"
@@ -59,6 +64,7 @@ findRegistrationTokenByToken regToken =
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
@@ -69,7 +75,8 @@ updateAttempts attemps id = do
       mconcat [_attempts <-. B.val_ a, _updatedAt <-. B.val_ n]
 
 deleteByEntitiyId :: Text -> Flow ()
-deleteByEntitiyId id =
+deleteByEntitiyId id = do
+  dbTable <- getDbTable
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where

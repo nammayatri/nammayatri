@@ -12,7 +12,6 @@ import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
-import Storage.DB.Config (dbSchema)
 
 data AppDb f = AppDb
   { _organization :: f (B.TableEntity Organization.OrganizationT),
@@ -25,20 +24,20 @@ data AppDb f = AppDb
   }
   deriving (Generic, B.Database be)
 
-appDb :: B.DatabaseSettings be AppDb
-appDb =
+appDb :: Text -> B.DatabaseSettings be AppDb
+appDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { _organization = setSchema <> Organization.fieldEMod,
-        _location = setSchema <> Location.fieldEMod,
-        _person = setSchema <> Person.fieldEMod,
-        _case = setSchema <> Case.fieldEMod,
-        _productInstance = setSchema <> ProductInstance.fieldEMod,
-        _products = setSchema <> Products.fieldEMod,
-        _registrationToken = setSchema <> RegistrationToken.fieldEMod
+      { _organization = setSchema dbSchemaName <> Organization.fieldEMod,
+        _location = setSchema dbSchemaName <> Location.fieldEMod,
+        _person = setSchema dbSchemaName <> Person.fieldEMod,
+        _case = setSchema dbSchemaName <> Case.fieldEMod,
+        _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
+        _products = setSchema dbSchemaName <> Products.fieldEMod,
+        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod
       }
   where
-    setSchema = setEntitySchema (Just dbSchema)
+    setSchema schema = setEntitySchema (Just schema)
     -- FIXME: this is in beam > 0.8.0.0, and can be removed when we upgrade
     -- (introduced in beam commit id 4e3539784c4a0d58eea08129edd0dc094b0e9695)
     modifyEntitySchema modSchema =

@@ -16,18 +16,21 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT)
-dbTable = DB._person DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
+getDbTable =
+  DB._person . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Person -> Flow ()
 create person = do
+  dbTable <- getDbTable
   person' <- encrypt person
   DB.createOne dbTable (Storage.insertExpression person')
     >>= either DB.throwDBError pure
 
 findPersonById ::
   PersonId -> Flow Storage.Person
-findPersonById id =
+findPersonById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "PERSON_NOT_FOUND"
@@ -36,7 +39,8 @@ findPersonById id =
     predicate Storage.Person {..} = _id ==. B.val_ id
 
 findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
-findPersonByIdAndRoleAndOrgId id role orgId =
+findPersonByIdAndRoleAndOrgId id role orgId = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -47,7 +51,8 @@ findPersonByIdAndRoleAndOrgId id role orgId =
         &&. _organizationId ==. B.val_ (Just orgId)
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
-findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
+findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -65,7 +70,8 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds =
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
-findAllByOrgIds roles orgIds =
+findAllByOrgIds roles orgIds = do
+  dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
     >>= decrypt
   where
@@ -84,7 +90,8 @@ complementVal l
 
 findByMobileNumber ::
   Text -> Text -> Flow (Maybe Storage.Person)
-findByMobileNumber countryCode mobileNumber =
+findByMobileNumber countryCode mobileNumber = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -95,7 +102,8 @@ findByMobileNumber countryCode mobileNumber =
 
 findByIdentifier ::
   Text -> Flow (Maybe Storage.Person)
-findByIdentifier identifier =
+findByIdentifier identifier = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -105,7 +113,8 @@ findByIdentifier identifier =
 
 findByEmail ::
   Text -> Flow (Maybe Storage.Person)
-findByEmail email =
+findByEmail email = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -115,6 +124,7 @@ findByEmail email =
 
 updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either DB.throwDBError pure
@@ -129,6 +139,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
 
 updatePersonRec :: PersonId -> Storage.Person -> Flow ()
 updatePersonRec personId uperson = do
+  dbTable <- getDbTable
   now <- getCurrTime
   person <- encrypt uperson
   DB.update dbTable (setClause person now) (predicate personId)
@@ -157,6 +168,7 @@ updatePersonRec personId uperson = do
 
 updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
+  dbTable <- getDbTable
   now <- getCurrTime
   mobileNumber' <- encrypt mobileNumber
   DB.update
@@ -182,6 +194,7 @@ update ::
   Maybe FCM.FCMRecipientToken ->
   Flow ()
 update id status verified deviceTokenM = do
+  dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
@@ -199,7 +212,8 @@ update id status verified deviceTokenM = do
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
 deleteById :: PersonId -> Flow ()
-deleteById id =
+deleteById id = do
+  dbTable <- getDbTable
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
@@ -207,6 +221,7 @@ deleteById id =
 
 updateEntity :: PersonId -> Text -> Text -> Flow ()
 updateEntity personId entityId entityType = do
+  dbTable <- getDbTable
   let mEntityId =
         if null entityId
           then Nothing
@@ -229,7 +244,8 @@ updateEntity personId entityId entityType = do
     predicate pId Storage.Person {..} = _id ==. B.val_ pId
 
 findByEntityId :: Text -> Flow (Maybe Storage.Person)
-findByEntityId entityId =
+findByEntityId entityId = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt

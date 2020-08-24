@@ -6,6 +6,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Config as DB
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Storage.Trail as Storage
+import Beckn.Utils.Common (getSchemaName)
 import qualified Beckn.Utils.Servant.Trail.Server as Trail
 import Data.Time.Units (Millisecond)
 import Database.Beam ((<-.), (==.))
@@ -13,14 +14,10 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Postgres as BP
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import GHC.Records (HasField (..))
 
 getDbTable :: DB.FlowWithDb r (B.DatabaseEntity be DB.TrailDb (B.TableEntity Storage.TrailT))
-getDbTable = do
-  dbCfg <- getField @"dbCfg" <$> ask
-  pure $ DB._trail (DB.trailDb $ schemaName $ DB.pgConfig dbCfg)
-  where
-    schemaName T.PostgresConfig {..} = fromString connectDatabase
+getDbTable =
+  DB._trail . DB.trailDb <$> getSchemaName
 
 create :: Storage.Trail -> DB.FlowWithDb r (T.DBResult ())
 create session = do

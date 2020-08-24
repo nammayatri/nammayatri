@@ -5,22 +5,25 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Storage
-import Beckn.Utils.Common (checkDBError, getCurrTime)
+import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT)
-dbTable = DB._case DB.appDb
+getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
+getDbTable =
+  DB._case . DB.appDb <$> getSchemaName
 
 create :: Storage.Case -> Flow ()
-create Storage.Case {..} =
+create Storage.Case {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
     >>= checkDBError
 
 findById :: CaseId -> Flow (Maybe Storage.Case)
-findById caseId =
+findById caseId = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= checkDBError
   where
@@ -28,6 +31,7 @@ findById caseId =
 
 update :: CaseId -> Storage.Case -> Flow ()
 update id case_@Storage.Case {..} = do
+  dbTable <- getDbTable
   currTime <- getCurrTime
   DB.update dbTable (setClause currTime case_) (predicate id)
     >>= checkDBError

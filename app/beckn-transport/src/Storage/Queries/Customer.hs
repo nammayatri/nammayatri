@@ -4,6 +4,7 @@ import App.Types
 import Beckn.External.Encryption
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -11,18 +12,21 @@ import Types.App
 import qualified Types.Storage.Customer as Storage
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT)
-dbTable = DB._customer DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT))
+getDbTable =
+  DB._customer . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Customer -> Flow ()
 create customer = do
+  dbTable <- getDbTable
   customer' <- encrypt customer
   DB.createOne dbTable (Storage.insertExpression customer')
     >>= either DB.throwDBError pure
 
 findCustomerById ::
   CustomerId -> Flow (Maybe Storage.Customer)
-findCustomerById id =
+findCustomerById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt

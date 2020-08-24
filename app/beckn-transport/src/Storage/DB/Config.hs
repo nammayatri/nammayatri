@@ -1,11 +1,6 @@
 module Storage.DB.Config where
 
-import Data.Text as T
-import EulerHS.Types
 import qualified EulerHS.Types as T
-
-dbSchema :: Text
-dbSchema = "atlas_transporter"
 
 connectionTag :: T.ConnTag
 connectionTag = "transporterDb"

@@ -13,6 +13,7 @@ let pgcfg =
   { connTag = "transporterDb"
   , pgConfig = postgresConfig
   , poolConfig = common.defaultPoolConfig
+  , schemaName = "atlas_transporter"
   }
 
 let rcfg =

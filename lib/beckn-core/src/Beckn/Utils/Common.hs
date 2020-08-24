@@ -2,6 +2,7 @@
 
 module Beckn.Utils.Common where
 
+import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -312,3 +313,7 @@ isExpired nominal time = do
 headMaybe :: [a] -> Maybe a
 headMaybe [] = Nothing
 headMaybe (x : _) = Just x
+
+getSchemaName :: HasDbCfg r => FlowR r Text
+getSchemaName =
+  schemaName <$> getField @"dbCfg" <$> ask

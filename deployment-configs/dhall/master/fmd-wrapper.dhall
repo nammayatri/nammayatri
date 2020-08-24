@@ -13,6 +13,7 @@ let pgcfg =
   { connTag = "fmdWrapperDb"
   , pgConfig = postgresConfig
   , poolConfig = (../generic/common.dhall).defaultPoolConfig
+  , schemaName = "atlas_fmd_wrapper"
   }
 
 let rcfg =

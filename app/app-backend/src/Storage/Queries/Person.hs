@@ -8,25 +8,28 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
-import Beckn.Utils.Common (getCurrTime)
+import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT)
-dbTable = DB._person DB.appDb
+getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT))
+getDbTable =
+  DB._person . DB.appDb <$> getSchemaName
 
 create :: Storage.Person -> Flow ()
 create person = do
+  dbTable <- getDbTable
   person' <- encrypt person
   DB.createOne dbTable (Storage.insertExpression person')
     >>= either DB.throwDBError pure
 
 findById ::
   PersonId -> Flow (Maybe Storage.Person)
-findById id =
+findById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -35,7 +38,8 @@ findById id =
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
-findAllByOrgIds roles orgIds =
+findAllByOrgIds roles orgIds = do
+  dbTable <- getDbTable
   DB.findAllOrErr dbTable (predicate roles orgIds)
     >>= decrypt
   where
@@ -54,7 +58,8 @@ complementVal l
 
 findByIdentifier ::
   Storage.IdentifierType -> Text -> Flow (Maybe Storage.Person)
-findByIdentifier idType mb =
+findByIdentifier idType mb = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -65,7 +70,8 @@ findByIdentifier idType mb =
 
 findByRoleAndMobileNumber ::
   Storage.Role -> Text -> Text -> Flow (Maybe Storage.Person)
-findByRoleAndMobileNumber role countryCode mobileNumber =
+findByRoleAndMobileNumber role countryCode mobileNumber = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -77,6 +83,7 @@ findByRoleAndMobileNumber role countryCode mobileNumber =
 
 updateMultiple :: PersonId -> Storage.Person -> Flow ()
 updateMultiple personId person = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause now person) (predicate personId)
     >>= either DB.throwDBError pure
@@ -113,6 +120,7 @@ update ::
   Maybe Text ->
   Flow ()
 update id statusM nameM emailM roleM identTypeM identM = do
+  dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable
@@ -135,6 +143,7 @@ update id statusM nameM emailM roleM identTypeM identM = do
 
 updatePersonOrgId :: Text -> PersonId -> Flow ()
 updatePersonOrgId orgId personId = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either DB.throwDBError pure
@@ -144,7 +153,8 @@ updatePersonOrgId orgId personId = do
     predicate i Storage.Person {..} = _id ==. B.val_ i
 
 findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> Flow [Storage.Person]
-findAllWithLimitOffsetByRole mlimit moffset roles =
+findAllWithLimitOffsetByRole mlimit moffset roles = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -157,7 +167,8 @@ findAllWithLimitOffsetByRole mlimit moffset roles =
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
 findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [OrganizationId] -> Flow [Storage.Person]
-findAllWithLimitOffsetBy mlimit moffset roles orgIds =
+findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
     >>= either DB.throwDBError pure
     >>= decrypt
@@ -171,7 +182,8 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds =
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
 deleteById :: PersonId -> Flow ()
-deleteById id =
+deleteById id = do
+  dbTable <- getDbTable
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where

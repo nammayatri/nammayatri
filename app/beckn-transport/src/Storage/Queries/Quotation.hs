@@ -13,24 +13,28 @@ import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Quotation as Storage
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.QuotationT)
-dbTable = DB._quotation DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.QuotationT))
+getDbTable =
+  DB._quotation . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Quotation -> Flow ()
-create Storage.Quotation {..} =
+create Storage.Quotation {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Quotation {..})
     >>= either DB.throwDBError pure
 
 findQuotationById ::
   QuotationId -> Flow (Maybe Storage.Quotation)
-findQuotationById id =
+findQuotationById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
     predicate Storage.Quotation {..} = _id ==. B.val_ id
 
 listQuotations :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.Quotation]
-listQuotations mlimit moffset status =
+listQuotations mlimit moffset status = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -54,6 +58,7 @@ update ::
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
+  dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
     dbTable

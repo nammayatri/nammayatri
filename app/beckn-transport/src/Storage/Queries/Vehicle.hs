@@ -13,17 +13,20 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-dbTable :: B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT)
-dbTable = DB._vehicle DB.transporterDb
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
+getDbTable =
+  DB._vehicle . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Vehicle -> Flow ()
-create Storage.Vehicle {..} =
+create Storage.Vehicle {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Vehicle {..})
     >>= either DB.throwDBError pure
 
 findVehicleById ::
   VehicleId -> Flow (Maybe Storage.Vehicle)
-findVehicleById id =
+findVehicleById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
@@ -31,7 +34,8 @@ findVehicleById id =
 
 findByIdAndOrgId ::
   VehicleId -> Text -> Flow Storage.Vehicle
-findByIdAndOrgId id orgId =
+findByIdAndOrgId id orgId = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "INVALID_VEHICLE_ID"
@@ -39,7 +43,8 @@ findByIdAndOrgId id orgId =
     predicate Storage.Vehicle {..} = _id ==. B.val_ id &&. _organizationId ==. B.val_ orgId
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> Flow [Storage.Vehicle]
-findAllWithLimitOffsetByOrgIds mlimit moffset orgIds =
+findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -53,7 +58,8 @@ findAllWithLimitOffsetByOrgIds mlimit moffset orgIds =
         [_organizationId `B.in_` (B.val_ <$> orgIds) ||. complementVal orgIds]
 
 findAllByOrgIds :: [Text] -> Flow [Storage.Vehicle]
-findAllByOrgIds orgIds =
+findAllByOrgIds orgIds = do
+  dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
   where
     predicate Storage.Vehicle {..} =
@@ -68,7 +74,8 @@ complementVal l
   | otherwise = B.val_ False
 
 updateVehicleRec :: Storage.Vehicle -> Flow ()
-updateVehicleRec vehicle =
+updateVehicleRec vehicle = do
+  dbTable <- getDbTable
   DB.update dbTable (setClause vehicle) (predicate $ vehicle ^. #_id)
     >>= either DB.throwDBError pure
   where
@@ -88,14 +95,16 @@ updateVehicleRec vehicle =
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
 
 deleteById :: VehicleId -> Flow ()
-deleteById id =
+deleteById id = do
+  dbTable <- getDbTable
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
     predicate vid Storage.Vehicle {..} = _id ==. B.val_ vid
 
 findByAnyOf :: Maybe Text -> Maybe Text -> Flow (Maybe Storage.Vehicle)
-findByAnyOf registrationNoM vehicleIdM =
+findByAnyOf registrationNoM vehicleIdM = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
@@ -104,7 +113,8 @@ findByAnyOf registrationNoM vehicleIdM =
         &&. (B.val_ (isNothing registrationNoM) ||. _registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
 
 findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> Maybe Storage.EnergyType -> Integer -> Integer -> Text -> Flow [Storage.Vehicle]
-findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId =
+findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
+  dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
     >>= either DB.throwDBError pure
   where
@@ -116,14 +126,16 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId =
         &&. (B.val_ (isNothing energyTypeM) ||. _energyType ==. B.val_ energyTypeM)
 
 findByIds :: [VehicleId] -> Flow [Storage.Vehicle]
-findByIds ids =
+findByIds ids = do
+  dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
   where
     predicate Storage.Vehicle {..} = B.in_ _id (B.val_ <$> ids)
 
 findByRegistrationNo ::
   Text -> Flow (Maybe Storage.Vehicle)
-findByRegistrationNo registrationNo =
+findByRegistrationNo registrationNo = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where

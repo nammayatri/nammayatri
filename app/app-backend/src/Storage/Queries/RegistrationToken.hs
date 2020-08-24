@@ -6,7 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
-import Beckn.Utils.Common (getCurrTime)
+import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
@@ -14,23 +14,27 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.DB as DB
 
-dbTable ::
-  B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RegistrationTokenT)
-dbTable = DB._registrationToken DB.appDb
+getDbTable ::
+  Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RegistrationTokenT))
+getDbTable =
+  DB._registrationToken . DB.appDb <$> getSchemaName
 
 create :: Storage.RegistrationToken -> Flow ()
-create Storage.RegistrationToken {..} =
+create Storage.RegistrationToken {..} = do
+  dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
     >>= either DB.throwDBError pure
 
 findById :: Text -> Flow (Maybe Storage.RegistrationToken)
-findById id =
+findById id = do
+  dbTable <- getDbTable
   DB.findOne dbTable predicate >>= either DB.throwDBError pure
   where
     predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
 
 findByToken :: Text -> Flow (Maybe Storage.RegistrationToken)
-findByToken token =
+findByToken token = do
+  dbTable <- getDbTable
   DB.findOne dbTable (predicate token)
     >>= either DB.throwDBError pure
   where
@@ -38,6 +42,7 @@ findByToken token =
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
+  dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
@@ -48,7 +53,8 @@ updateAttempts attemps id = do
       mconcat [_attempts <-. B.val_ a, _updatedAt <-. B.val_ n]
 
 deleteByPersonId :: Text -> Flow ()
-deleteByPersonId id =
+deleteByPersonId id = do
+  dbTable <- getDbTable
   DB.delete dbTable (predicate id)
     >>= either DB.throwDBError pure
   where
