@@ -15,7 +15,8 @@ data Context = Context
     _action :: Text, -- "search", "select", "init", "confirm", "update", "status", "track", "cancel", "feedback", "support", "on_search", "on_select", "on_init", "on_confirm", "on_update", "on_status", "on_track", "on_cancel", "on_feedback", "on_support"
     _core_version :: Maybe Text,
     _domain_version :: Maybe Text,
-    _ac_id :: Maybe Text, -- Caller ID. This is the ID of the BAP, BPP or BG who is initiating the transaction
+    _bap_uri :: Maybe Text, -- URI of the BAP. Typically a URL
+    _bpp_uri :: Maybe Text, -- URI of the BPP. Typically a URL
     _transaction_id :: Text,
     _message_id :: Text,
     _timestamp :: UTCTime -- ["format": "date-time"]

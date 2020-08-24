@@ -332,7 +332,8 @@ mkContext action tId = do
         _domain_version = Just "0.8.0",
         _transaction_id = tId,
         _message_id = tId,
-        _ac_id = Nothing,
+        _bap_uri = Nothing,
+        _bpp_uri = Nothing,
         _timestamp = currTime
       }
 

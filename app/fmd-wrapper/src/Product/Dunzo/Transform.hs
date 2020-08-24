@@ -148,7 +148,7 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
         }
 
 updateContext :: Context -> Text -> Context
-updateContext Context {..} bpNwAddress = Context {_ac_id = Just bpNwAddress, ..}
+updateContext Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
 
 mkSearchItem :: Text -> QuoteRes -> Item
 mkSearchItem itemId QuoteRes {..} =

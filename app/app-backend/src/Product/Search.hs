@@ -51,7 +51,7 @@ search person req = withFlowHandler $ do
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   now <- L.runIO getCurrentTime
   env <- ask
-  let context = mkContext "search" (_getCaseId (case_ ^. #_id)) now (bapNwAddress env)
+  let context = mkContext "search" (_getCaseId (case_ ^. #_id)) now (bapNwAddress env) Nothing
       intent = mkIntent req
   eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent intent
   let sAck =

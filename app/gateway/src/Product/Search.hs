@@ -9,7 +9,6 @@ where
 
 import App.Types
 import Beckn.Types.Common (AckResponse (..), ack)
-import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (fork, fromMaybeM400, fromMaybeM500, withFlowHandler)
@@ -35,17 +34,12 @@ search org req = withFlowHandler $ do
       messageId = req ^. #context . #_transaction_id
   appUrl <- Org._callbackUrl org & fromMaybeM400 "INVALID_ORG"
   providers <- BP.lookup $ req ^. #context
-  bgNwAddr <- gwNwAddress <$> ask
-  let context =
-        (req ^. #context)
-          { _ac_id = bgNwAddr
-          }
   BA.insert messageId appUrl
   forM_ providers $ \provider -> fork "Provider search" $ do
     providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
     let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
     baseUrl <- parseOrgUrl providerUrl
-    eRes <- callAPIWithTrail baseUrl (search' providerApiKey (req & #context .~ context)) "search"
+    eRes <- callAPIWithTrail baseUrl (search' providerApiKey req) "search"
     L.logDebug @Text "gateway" $
       "request_transaction_id: " <> messageId
         <> ", search: req: "
@@ -53,8 +47,8 @@ search org req = withFlowHandler $ do
         <> ", resp: "
         <> show eRes
   if null providers
-    then return $ AckResponse context (ack "NACK") (Just $ domainError "No providers")
-    else return $ AckResponse context (ack "ACK") Nothing
+    then return $ AckResponse (req ^. #context) (ack "NACK") (Just $ domainError "No providers")
+    else return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb org req = withFlowHandler $ do

@@ -22,10 +22,10 @@ cancel :: Organization -> CancelReq -> FlowHandler AckResponse
 cancel org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_ac_id
-  let context =
+  let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_bap_uri
+      context =
         (req ^. #context)
-          { _ac_id = bppNwAddr
+          { _bpp_uri = bppNwAddr
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"

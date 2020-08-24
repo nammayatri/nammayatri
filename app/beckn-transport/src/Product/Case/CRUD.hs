@@ -156,7 +156,8 @@ mkOnSearchPayload c pis allPis orgInfo = do
             _domain_version = Just "0.8.0",
             _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             _message_id = c ^. #_shortId,
-            _ac_id = nwAddress appEnv,
+            _bap_uri = Nothing,
+            _bpp_uri = nwAddress appEnv,
             _timestamp = currTime
           }
   service <- GT.mkServiceOffer c pis allPis (Just orgInfo)

@@ -117,7 +117,8 @@ buildContext act tid = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.7.0",
-        _ac_id = bapNwAddr,
+        _bap_uri = bapNwAddr,
+        _bpp_uri = Nothing,
         _transaction_id = tid,
         _message_id = tid,
         _timestamp = utcTime
@@ -162,9 +163,9 @@ buildConfirmReq ctx =
 
 bppUrl :: Context -> Maybe BaseUrl
 bppUrl context =
-  parseBaseUrl . toString =<< context ^. #_ac_id
+  parseBaseUrl . toString =<< context ^. #_bpp_uri
 
 updateCaller :: Context -> Flow Context
 updateCaller ctx = do
   bppNwAddr <- nwAddress <$> ask
-  return $ ctx {_ac_id = bppNwAddr}
+  return $ ctx {_bap_uri = bppNwAddr}

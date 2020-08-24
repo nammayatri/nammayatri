@@ -78,10 +78,10 @@ select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
   config@DunzoConfig {..} <- getDunzoConfig org
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  let maybeBaConfig = find (\x -> req ^. #context . #_ac_id == Just (x ^. #bap_nw_address)) dzBAConfigs
+  let maybeBaConfig = find (\x -> req ^. #context . #_bap_uri == Just (x ^. #bap_nw_address)) dzBAConfigs
   baUrl <-
     fromMaybeM500 "CB_URL_NOT_CONFIGURED" $
-      (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_ac_id)
+      (maybeBaConfig ^? _Just . #bap_nw_address) <|> (req ^. #context . #_bap_uri)
   cbUrl <- parseBaseUrl baUrl
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
@@ -118,7 +118,7 @@ init org req = do
   conf@DunzoConfig {..} <- getDunzoConfig org
   let context = req ^. #context
   let quoteId = req ^. (#message . #quotation_id)
-  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
   fork "init" do
@@ -200,7 +200,7 @@ init org req = do
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
   dconf@DunzoConfig {..} <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   bapConfig <- getBAConfig bapNwAddr dconf
   let reqOrder = req ^. (#message . #order)
   let orderId = reqOrder ^. #_id
@@ -277,7 +277,7 @@ track :: Organization -> TrackReq -> Flow TrackRes
 track org req = do
   let orderId = req ^. (#message . #order_id)
   conf@DunzoConfig {..} <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   fork "track" do
@@ -296,7 +296,7 @@ status :: Organization -> StatusReq -> Flow StatusRes
 status org req = do
   conf@DunzoConfig {..} <- getDunzoConfig org
   let orderId = req ^. (#message . #order_id)
-  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   c <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = c ^. #_shortId
@@ -344,7 +344,7 @@ cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = do
   let oId = req ^. (#message . #order_id)
   conf@DunzoConfig {..} <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   bapConfig <- getBAConfig bapNwAddr conf
   case_ <- Storage.findById (CaseId oId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = case_ ^. #_shortId
@@ -392,7 +392,7 @@ cancel org req = do
 update :: Organization -> UpdateReq -> Flow UpdateRes
 update org req = do
   conf <- getDunzoConfig org
-  bapNwAddr <- req ^. (#context . #_ac_id) & fromMaybeM400 "INVALID_AC_ID"
+  bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_AC_ID"
   baConfig <- getBAConfig bapNwAddr conf
   fork "update" do
     -- TODO: Dunzo doesnt have update

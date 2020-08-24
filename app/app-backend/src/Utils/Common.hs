@@ -96,8 +96,8 @@ callAPI baseUrl req serviceName = do
   _ <- L.runUntracedIO $ endTracking status
   return res
 
-mkContext :: Text -> Text -> UTCTime -> Maybe Text -> Context
-mkContext action rtid utcTime acId =
+mkContext :: Text -> Text -> UTCTime -> Maybe Text -> Maybe Text -> Context
+mkContext action rtid utcTime bapUri bppUri =
   Context
     { _domain = MOBILITY,
       _country = Nothing,
@@ -105,7 +105,8 @@ mkContext action rtid utcTime acId =
       _action = action,
       _core_version = Just "0.8.0",
       _domain_version = Nothing,
-      _ac_id = acId,
+      _bap_uri = bapUri,
+      _bpp_uri = bppUri,
       _transaction_id = rtid,
       _message_id = rtid,
       _timestamp = utcTime

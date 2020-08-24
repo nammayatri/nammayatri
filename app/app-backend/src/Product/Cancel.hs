@@ -44,7 +44,7 @@ cancelProductInstance baseUrl person req = do
       let txnId = req ^. #transaction_id
       currTime <- L.runIO getCurrentTime
       let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrderId prodInstId)
-          context = mkContext "cancel" txnId currTime Nothing
+          context = mkContext "cancel" txnId currTime Nothing Nothing
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
@@ -61,7 +61,7 @@ cancelCase baseUrl person req = do
   if isCaseCancellable case_
     then do
       let txnId = req ^. #transaction_id
-          context = mkContext "cancel" txnId currTime Nothing
+          context = mkContext "cancel" txnId currTime Nothing Nothing
       productInstances <- MPI.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
