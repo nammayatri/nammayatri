@@ -1,6 +1,7 @@
 module Beckn.Types.FMD.Order where
 
 import Beckn.Types.Core.Billing
+import Beckn.Types.Core.Option (Option)
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.Item (Item)
@@ -23,7 +24,10 @@ data Order = Order
     -- Defines the type of order like a simple order, a return order, an internal order etc.
     -- The types of orders supported will be defined by the network ecosystem.
     _type :: Maybe Text,
-    _prev_order_id :: Maybe Text
+    _prev_order_id :: Maybe Text,
+    _return_reason_id :: Maybe Text,
+    _cancellation_reasons :: [Option],
+    _return_reasons :: [Option]
   }
   deriving (Generic, Show)
 
@@ -47,5 +51,8 @@ instance Example Order where
         _update_action = Nothing,
         _quotation = Nothing,
         _type = Nothing,
-        _prev_order_id = Nothing
+        _prev_order_id = Nothing,
+        _return_reason_id = Nothing,
+        _cancellation_reasons = [],
+        _return_reasons = []
       }

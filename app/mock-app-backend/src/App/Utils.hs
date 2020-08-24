@@ -102,7 +102,10 @@ buildDraftOrder itemId = do
         _update_action = Nothing,
         _quotation = Nothing,
         _type = Nothing,
-        _prev_order_id = Nothing
+        _prev_order_id = Nothing,
+        _return_reason_id = Nothing,
+        _cancellation_reasons = [],
+        _return_reasons = []
       }
 
 buildContext :: Text -> Text -> Flow Context
