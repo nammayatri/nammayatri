@@ -54,7 +54,8 @@ trackCb req = withFlowHandler $ do
           1 -> do
             let productInst = head confirmedProducts
                 personId = Case._requestor case_
-            mtracker <- updateTracker productInst tracking
+            orderPi <- MPI.findByParentIdType (Just $ productInst ^. #_id) (Case.RIDEORDER)
+            mtracker <- updateTracker orderPi tracking
             whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
             return $ Right ()
           _ -> return $ Left "Multiple products confirmed, ambiguous selection"

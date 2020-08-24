@@ -9,6 +9,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Trip
+import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
@@ -25,14 +26,14 @@ onUpdate req = withFlowHandler $ do
     Right msg -> do
       let trip = msg ^. #order . #_trip
           pid = ProductInstanceId $ msg ^. #order . #_id
-      prdInst <- MPI.findById pid
-      let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
+      orderPi <- MPI.findByParentIdType (Just pid) (Case.RIDEORDER)
+      let mprdInfo = decodeFromText =<< (orderPi ^. #_info)
           uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
           uPrd =
-            prdInst
+            orderPi
               { SPI._info = encodeToText <$> uInfo
               }
-      MPI.updateMultiple pid uPrd
+      MPI.updateMultiple (orderPi ^. #_id) uPrd
     Left err -> L.logError @Text "on_update req" $ "on_update error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
