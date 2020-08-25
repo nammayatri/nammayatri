@@ -2,7 +2,7 @@ let common = ../generic/common.dhall
 
 let gwUri =
   { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-gateway-:${common.branchName}.atlas"
+  , baseUrlHost = "beckn-gateway-${common.branchName}.atlas"
   , baseUrlPort = +8015
   , baseUrlPath = "/v1"
   }

@@ -27,14 +27,14 @@ let rcfg =
 
 let gwUri =
   { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-gateway-:${common.branchName}.atlas"
+  , baseUrlHost = "beckn-gateway-${common.branchName}.atlas"
   , baseUrlPort = +8015
   , baseUrlPath = "/v1"
   }
 
 let appUri =
   { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-app-backend-:${common.branchName}.atlas"
+  , baseUrlHost = "beckn-app-backend-${common.branchName}.atlas"
   , baseUrlPort = +8013
   , baseUrlPath = "/v1"
   }

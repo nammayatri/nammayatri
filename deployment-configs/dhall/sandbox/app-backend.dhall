@@ -17,14 +17,14 @@ let pgcfg =
 
 let gwUri =
   { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-gateway-:${common.branchName}.atlas"
+  , baseUrlHost = "beckn-gateway-${common.branchName}.atlas"
   , baseUrlPort = +8015
   , baseUrlPath = "/v1"
   }
 
 let providerUri =
   { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-transport-:${common.branchName}.atlas"
+  , baseUrlHost = "beckn-transport-${common.branchName}.atlas"
   , baseUrlPort = +8014
   , baseUrlPath = "/v1"
   }
