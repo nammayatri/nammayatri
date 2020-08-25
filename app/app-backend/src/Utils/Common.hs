@@ -12,9 +12,7 @@ import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (encodeToText')
 import qualified Beckn.Utils.Common as Utils
-import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Data.ByteString.Lazy as BSL
@@ -24,8 +22,6 @@ import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant hiding (Context)
-import Servant.Client.Core.ClientError
-import Servant.Client.Core.Response
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
@@ -81,20 +77,6 @@ fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
-
--- TODO: figure out a way to extract the url directly from EulerClient
-callAPI baseUrl req serviceName = do
-  endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
-  res <- L.callAPI baseUrl req
-  let status = case res of
-        Right _ -> "200"
-        Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
-        Left (DecodeFailure _ (Response code _ _ _)) -> T.pack $ show code
-        Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
-        Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
-        Left (ConnectionError _) -> "Connection error"
-  _ <- L.runUntracedIO $ endTracking status
-  return res
 
 mkContext :: Text -> Text -> UTCTime -> Maybe Text -> Maybe Text -> Context
 mkContext action rtid utcTime bapUri bppUri =

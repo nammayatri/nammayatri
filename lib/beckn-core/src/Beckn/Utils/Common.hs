@@ -8,6 +8,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Error
+import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
@@ -24,6 +25,8 @@ import GHC.Records (HasField (..))
 import Network.HTTP.Types (hContentType)
 import Servant
 import Servant.Client (BaseUrl)
+import Servant.Client.Core.ClientError
+import Servant.Client.Core.Response
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
@@ -236,12 +239,24 @@ callClient ::
   BaseUrl ->
   ET.EulerClient a ->
   m a
-callClient desc baseUrl cli =
-  L.callAPI baseUrl cli >>= \case
+callClient desc baseUrl cli = do
+  endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) desc
+  res <- L.callAPI baseUrl cli
+  _ <- L.runUntracedIO $ endTracking $ getResponseCode res
+  case res of
     Left err -> do
       L.logError @Text "cli" $ "Failure in " <> show desc <> " call to " <> show baseUrl <> ": " <> show err
       L.throwException err
     Right x -> pure x
+  where
+    getResponseCode res =
+      case res of
+        Right _ -> "200"
+        Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
+        Left (DecodeFailure _ (Response code _ _ _)) -> T.pack $ show code
+        Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
+        Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
+        Left (ConnectionError _) -> "Connection error"
 
 -- | A replacement for 'L.forkFlow' which works in 'FlowR'.
 -- It's main use case is to perform an action asynchronously without waiting for

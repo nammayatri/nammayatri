@@ -27,6 +27,7 @@ in
 
 { dbCfg = pgcfg
 , port = +8016
+, metricsPort = +9996
 , xGatewayUri = gwUri
 , selfId = Some "JUSPAY.BAP.MOCK.1"
 , nwAddress = Some "https://localhost/v1/"
