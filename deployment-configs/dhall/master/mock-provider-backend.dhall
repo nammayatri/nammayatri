@@ -27,6 +27,7 @@ in
 
 { dbCfg = pgcfg
 , port = +8017
+, metricsPort = +9999
 , xGatewayUri = gwUri
 , selfId = Some "JUSPAY.BPP.MOCK.1"
 , nwAddress = Some "Http://api.sandbox.beckn.juspay.in/dev/mock/provider/v1/"

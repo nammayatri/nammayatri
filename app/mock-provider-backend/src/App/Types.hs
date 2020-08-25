@@ -12,6 +12,7 @@ import Servant.Client (BaseUrl, Scheme)
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     port :: Int,
+    metricsPort :: Int,
     xGatewayUri :: BaseUrl,
     selfId :: Maybe Text,
     nwAddress :: Maybe Text,

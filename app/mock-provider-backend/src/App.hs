@@ -9,6 +9,7 @@ import Beckn.Constants.APIErrorCode (internalServerErr)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
@@ -28,6 +29,7 @@ import Servant.Server
 runMockProvider :: IO ()
 runMockProvider = do
   appEnv <- readDhallConfigDefault tyEnv "mock-provider-backend"
+  Metrics.serve (metricsPort appEnv)
   let loggerCfg =
         E.defaultLoggerConfig
           { E._logToFile = True,
