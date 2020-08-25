@@ -44,7 +44,7 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = Some "NSDL"
+, xGatewaySelector = Some "JUSPAY"
 , xGatewayNsdlUrl = Some nsdlUrl
 , nsdlUsername = Some sec.nsdlUsername
 , nsdlPassword = Some sec.nsdlPassword
