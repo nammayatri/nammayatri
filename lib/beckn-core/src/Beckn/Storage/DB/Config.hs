@@ -21,7 +21,7 @@ data DBConfig = DBConfig
     poolConfig :: T.PoolConfig,
     schemaName :: Text
   }
-  deriving (Generic, ToJSON, FromJSON, FromDhall)
+  deriving (Show, Generic, ToJSON, FromJSON, FromDhall)
 
 -- Make the compiler generate instances for us!
 type HasDbCfg r = (HasField "dbCfg" r DBConfig)

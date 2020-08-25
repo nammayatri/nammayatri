@@ -322,3 +322,12 @@ getSchemaName =
 getTraceFlag :: HasTraceFlag r => FlowR r TraceFlag
 getTraceFlag =
   getField @"traceFlag" <$> ask
+
+padLeft :: Int -> Char -> Text -> Text
+padLeft n c txt =
+  let prefix = replicate (max 0 $ n - length txt) c
+   in T.pack prefix <> txt
+
+-- Suits only for non-negative numbers
+padNumber :: Integral i => Int -> i -> Text
+padNumber n num = padLeft n '0' $ show (fromIntegral num :: Natural)

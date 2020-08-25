@@ -13,7 +13,6 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import qualified Crypto.Number.Generate as Cryptonite
 import Data.Aeson (encode)
-import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
@@ -113,11 +112,7 @@ makeSession SmsSessionConfig {..} req entityId fakeOtp = do
 
 generateOTPCode :: Flow Text
 generateOTPCode =
-  L.runIO $ padLeft 4 '0' . show <$> Cryptonite.generateBetween 1 9999
-  where
-    padLeft n c txt =
-      let prefix = replicate (max 0 $ n - length txt) c
-       in T.pack prefix <> txt
+  L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
 sendOTP :: SmsCredConfig -> Text -> Text -> Flow ()
 sendOTP SmsCredConfig {..} phoneNumber otpCode = do

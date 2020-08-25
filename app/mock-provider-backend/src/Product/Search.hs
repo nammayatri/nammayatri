@@ -9,11 +9,12 @@ import App.Types
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error
+import Beckn.Types.Core.FmdError
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
+import qualified Data.Map as M
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
@@ -31,8 +32,8 @@ search org req = withFlowHandler $ do
       | tId == noSearchResultId ->
         pass
     tId
-      | tId == searchPickupLocationNotServiceableId ->
-        sendResponse cbApiKey context $ Left $ domainError "FMD001"
+      | Just fmdErr <- M.lookup tId allFmdErrorFlowIds ->
+        sendResponse cbApiKey context $ Left $ fromFmdError fmdErr
     _ ->
       sendResponse cbApiKey context $ Right $ OnSearchServices example
   return

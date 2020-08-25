@@ -57,6 +57,7 @@ dependencies:
   - beam-core
   - beckn-core
   - bytestring
+  - containers
   - euler-hs
   - http-api-data
   - http-client
