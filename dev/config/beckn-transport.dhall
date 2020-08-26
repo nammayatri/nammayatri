@@ -46,7 +46,7 @@ in
 , redisCfg = rcfg
 , smsCfg = common.smsConfig
 , port = +8014
-, metricsPort = +9999
+, metricsPort = +9997
 , xGatewayUri = appUri
 , xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
