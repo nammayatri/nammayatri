@@ -3,10 +3,10 @@ let sec = ./secrets/mock-app-backend.dhall
 
 let postgresConfig =
   { connectHost = "localhost"
-  , connectPort = 5433
+  , connectPort = 5438
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_app"
+  , connectDatabase = "atlas_mock_provider_backend"
   }
 
 let pgcfg =

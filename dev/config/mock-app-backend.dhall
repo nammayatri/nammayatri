@@ -10,10 +10,10 @@ let gwUri =
 
 let postgresConfig =
   { connectHost = "localhost"
-  , connectPort = 5433
+  , connectPort = 5437
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_app"
+  , connectDatabase = "atlas_mock_app_backend"
   }
 
 let pgcfg =
