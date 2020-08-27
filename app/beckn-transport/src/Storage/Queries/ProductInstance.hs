@@ -205,8 +205,8 @@ productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
 productInstanceJoin :: Int -> Int -> [Case.CaseType] -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoin _limit _offset csTypes orgId status = do
   dbTable <- getDbTable
-  csTable <- getCsTable
   prodTable <- getProdTable
+  csTable <- getCsTable
   joinedValues <-
     DB.findAllByJoin
       limit

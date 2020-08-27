@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Storage.Queries.ExternalTrail where
 
 import qualified Beckn.Storage.Common as Storage
