@@ -17,7 +17,6 @@ import qualified Beckn.Types.Core.Location as CoreLoc
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.Operator
 import Beckn.Types.Core.Payment
-import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
@@ -225,8 +224,8 @@ mkOnSelectErrReq req Error {..} =
           _message = Just message
         }
 
-mkOnInitMessage :: Text -> Order -> PaymentPolicy -> InitReq -> QuoteRes -> InitResMessage
-mkOnInitMessage orderId order terms req QuoteRes {..} =
+mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> InitResMessage
+mkOnInitMessage orderId order conf req QuoteRes {..} =
   InitResMessage $
     order & #_id ?~ orderId & #_payment ?~ mkPayment & #_billing .~ billing
   where
@@ -235,13 +234,13 @@ mkOnInitMessage orderId order terms req QuoteRes {..} =
         { _transaction_id = Nothing,
           _type = Just "PRE-FULFILLMENT",
           _payer = Nothing,
-          _payee = Nothing,
+          _payee = Just $ conf ^. #payee,
           _method = ["RTGS"],
           _amount = price,
           _state = Nothing,
           _due_date = Nothing,
           _duration = Nothing,
-          _terms = Just terms
+          _terms = Just $ conf ^. #paymentPolicy
         }
     price =
       MonetaryValue

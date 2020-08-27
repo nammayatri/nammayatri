@@ -124,12 +124,12 @@ init org req = do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
     eres <- getQuote conf quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    sendCb orderDetails req baConfig eres
+    sendCb orderDetails req conf baConfig eres
   returnAck conf (req ^. #context)
   where
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onInitAPI cbApiKey
 
-    sendCb orderDetails req' baConfig (Right res) = do
+    sendCb orderDetails req' conf baConfig (Right res) = do
       let quoteId = req' ^. (#message . #quotation_id)
           cbApiKey = baConfig ^. #bap_api_key
           bapNwAddr = baConfig ^. #bap_nw_address
@@ -139,7 +139,7 @@ init org req = do
             mkOnInitMessage
               quoteId
               (orderDetails ^. #order)
-              (baConfig ^. #paymentPolicy)
+              conf
               req'
               res
       let onInitReq = mkOnInitReq req' onInitMessage
@@ -147,7 +147,7 @@ init org req = do
       onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
-    sendCb _ req' baConfig (Left (FailureResponse _ (Response _ _ _ body))) = do
+    sendCb _ req' _ baConfig (Left (FailureResponse _ (Response _ _ _ body))) = do
       let cbApiKey = baConfig ^. #bap_api_key
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
       case decode body of
@@ -157,7 +157,7 @@ init org req = do
           L.logInfo @Text "on_init err" $ show onInitResp
           return ()
         Nothing -> return ()
-    sendCb _ _ _ _ = return ()
+    sendCb _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId bapUrl order quote = do
       now <- getCurrTime
