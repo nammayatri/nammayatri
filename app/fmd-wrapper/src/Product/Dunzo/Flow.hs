@@ -7,7 +7,6 @@ import App.Types
 import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
-import qualified Beckn.Types.Core.Order as Core
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
@@ -203,7 +202,7 @@ confirm org req = do
   bapNwAddr <- req ^. (#context . #_bap_uri) & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   bapConfig <- getBAConfig bapNwAddr dconf
   let reqOrder = req ^. (#message . #order)
-  let orderId = reqOrder ^. #_id
+  orderId <- fromMaybeM400 "INVALID_ORDER_ID" $ reqOrder ^. #_id
   case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
   let order = orderDetails ^. #order
@@ -222,7 +221,7 @@ confirm org req = do
     sendCb case_ updatedOrderDetailsWTxn req bapConfig eres
   returnAck dconf (req ^. #context)
   where
-    verifyPayment :: Core.Order -> Order -> Flow ()
+    verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
       confirmAmount <-
         reqOrder ^? #_payment . _Just . #_amount . #_value

@@ -5,7 +5,6 @@ module Beckn.Types.FMD.API.Confirm where
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Order
 import qualified Beckn.Types.FMD.Order as FMD
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -41,7 +40,7 @@ type ConfirmRes = AckResponse
 type OnConfirmReq = CallbackReq ConfirmResMessage
 
 newtype ConfirmReqMessage = ConfirmReqMessage
-  { order :: Order
+  { order :: FMD.Order
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
