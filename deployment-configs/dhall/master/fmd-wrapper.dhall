@@ -33,6 +33,12 @@ let dunzoConfig =
   , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/dev/fmd/v1/"
   , paymentPolicy = sec.paymentPolicy
   , payee = sec.payee
+
+let gwUri =
+  { baseUrlScheme = UrlScheme.Http
+  , baseUrlHost = "beckn-gateway-${common.branchName}.atlas"
+  , baseUrlPort = +8015
+  , baseUrlPath = "/v1"
   }
 
 in
@@ -40,6 +46,8 @@ in
 { dbCfg = pgcfg
 , redisCfg = rcfg
 , port = +8018
+, xGatewayUri = gwUri
+, xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = None common.LoggerConfig

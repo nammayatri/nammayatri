@@ -11,7 +11,7 @@ import Beckn.Constants.APIErrorCode (internalServerErr)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (runFlowR)
-import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
+import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Data.Aeson as Aeson
@@ -31,7 +31,7 @@ import Servant.Server
 
 runFMDWrapper :: IO ()
 runFMDWrapper = do
-  appEnv <- readDhallConfigDefault Z "fmd-wrapper"
+  appEnv <- readDhallConfigDefault tyEnv "fmd-wrapper"
   let loggerCfg = getEulerLoggerConfig "/tmp/fmd-wrapper.log" $ loggerConfig appEnv
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $

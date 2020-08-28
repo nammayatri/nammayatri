@@ -47,8 +47,9 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
+import Types.Error
 import Types.Wrapper
-import Utils.Common (getClientConfig)
+import Utils.Common (fromMaybe400Log, getClientConfig)
 
 getDzBAPCreds :: Organization -> Flow DzBAConfig
 getDzBAPCreds = getClientConfig
@@ -357,9 +358,9 @@ mkOnCancelErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkCreateTaskReq :: Order -> Flow CreateTaskReq
-mkCreateTaskReq order = do
-  orderId <- order ^. #_id & fromMaybeM500' "ORDER_ID_MISSING"
+mkCreateTaskReq :: Context -> Order -> Flow CreateTaskReq
+mkCreateTaskReq context order = do
+  orderId <- order ^. #_id & fromMaybe400Log "ORDER_ID_MISSING" (Just CORE003) context
   let [task] = order ^. #_tasks
   let pickup = task ^. #_pickup
   let drop = task ^. #_drop
@@ -382,10 +383,10 @@ mkCreateTaskReq order = do
   where
     mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
     mkLocationDetails PickupOrDrop {..} = do
-      (CoreLoc.GPS lat lon) <- CoreLoc._gps _location & fromMaybeM500' "LAT_LON_NOT_FOUND"
+      (CoreLoc.GPS lat lon) <- CoreLoc._gps _location & fromMaybe400Log "LAT_LON_NOT_FOUND" (Just CORE003) context
       lat' <- readCoord lat
       lon' <- readCoord lon
-      address <- CoreLoc._address _location & fromMaybeM500' "ADDRESS_NOT_FOUND"
+      address <- CoreLoc._address _location & fromMaybe400Log "ADDRESS_NOT_FOUND" (Just CORE003) context
       return $
         LocationDetails
           { lat = lat',
@@ -405,7 +406,7 @@ mkCreateTaskReq order = do
 
     mkPersonDetails :: PickupOrDrop -> Flow PersonDetails
     mkPersonDetails PickupOrDrop {..} = do
-      phone <- headMaybe (_poc ^. #phones) & fromMaybeM500' "PERSON_PHONENUMBER_NOT_FOUND"
+      phone <- headMaybe (_poc ^. #phones) & fromMaybe400Log "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003) context
       return $
         PersonDetails
           { name = getName (_poc ^. #name),

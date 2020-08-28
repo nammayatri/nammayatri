@@ -21,7 +21,7 @@ import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
 import qualified Beckn.Types.FMD.Item as Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Organization (Organization)
+import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwJsonError400, throwJsonError500)
 import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
@@ -38,9 +38,11 @@ import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as Storage
+import Types.Error
 import Types.Wrapper
+import Utils.Common (fromMaybe400Log)
 
-search :: Organization -> SearchReq -> Flow SearchRes
+search :: Org.Organization -> SearchReq -> Flow SearchRes
 search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
@@ -73,7 +75,7 @@ search org req = do
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_search") $ "on_search cb err resp" <> show onSearchResp
         _ -> pass
 
-select :: Organization -> SelectReq -> Flow SelectRes
+select :: Org.Organization -> SelectReq -> Flow SelectRes
 select org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dzBPNwAddress
@@ -112,17 +114,17 @@ select org req = do
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_select") $ "on_select cb err resp" <> show onSelectResp
         _ -> pass
 
-init :: Organization -> InitReq -> Flow InitRes
+init :: Org.Organization -> InitReq -> Flow InitRes
 init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  quote <- req ^. (#message . #order . #_quotation) & fromMaybeM400 "INVALID_QUOTATION"
+  quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
   let quoteId = quote ^. #_id
   paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
-  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
+  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
   let order = orderDetails ^. #order
   validateReturn order
   dzBACreds <- getDzBAPCreds org
@@ -195,16 +197,16 @@ init org req = do
         Nothing -> Storage.create case_
         Just _ -> pass
 
-confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
+confirm :: Org.Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
   dconf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let reqOrder = req ^. (#message . #order)
-  orderId <- fromMaybeM400 "INVALID_ORDER_ID" $ reqOrder ^. #_id
-  case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
-  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) context $ reqOrder ^. #_id
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let order = orderDetails ^. #order
   verifyPayment reqOrder order
   validateReturn order
@@ -212,13 +214,13 @@ confirm org req = do
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
-      & fromMaybeM400 "TXN_ID_NOT_FOUND"
+      & fromMaybe400Log "TXN_ID_NOT_FOUND" Nothing context
   let updatedOrderDetailsWTxn =
         orderDetails & ((#order . #_payment . _Just . #_transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
   fork "confirm" do
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "Confirm") "Started"
-    createTaskReq <- mkCreateTaskReq order
+    createTaskReq <- mkCreateTaskReq context order
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "CreateTaskReq") (encodeToText createTaskReq)
     eres <- createTaskAPI dzBACreds dconf createTaskReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "CreateTaskRes") $ show eres
@@ -227,12 +229,13 @@ confirm org req = do
   where
     verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
+      let context = req ^. #context
       confirmAmount <-
         reqOrder ^? #_payment . _Just . #_amount . #_value
-          & fromMaybeM400 "INVALID_PAYMENT_AMOUNT"
+          & fromMaybe400Log "INVALID_PAYMENT_AMOUNT" (Just CORE003) context
       orderAmount <-
         order ^? #_payment . _Just . #_amount . #_value
-          & fromMaybeM500 "ORDER_AMOUNT_NOT_FOUND"
+          & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
       if confirmAmount == orderAmount
         then pass
         else throwJsonError400 "AMOUNT_VALIDATION_ERR" "INVALID_ORDER_AMOUNT"
@@ -281,14 +284,14 @@ confirm org req = do
             L.logInfo ("Order_" <> orderId) ("Price diff of amount " <> show (confirmAmount - initAmount))
         _ -> pass
 
-track :: Organization -> TrackReq -> Flow TrackRes
+track :: Org.Organization -> TrackReq -> Flow TrackRes
 track org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req ^. (#message . #order_id)
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   fork "track" do
     let taskId = case_ ^. #_shortId
     dzBACreds <- getDzBAPCreds org
@@ -305,7 +308,7 @@ track org req = do
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_track") $ show eres
   returnAck context
 
-status :: Organization -> StatusReq -> Flow StatusRes
+status :: Org.Organization -> StatusReq -> Flow StatusRes
 status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
@@ -314,7 +317,7 @@ status org req = do
   paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   let orderId = req ^. (#message . #order_id)
-  c <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  c <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let taskId = c ^. #_shortId
   (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
   dzBACreds <- getDzBAPCreds org
@@ -350,16 +353,16 @@ status org req = do
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_status err") $ show onStatusResp
         _ -> pass
 
-cancel :: Organization -> CancelReq -> Flow CancelRes
+cancel :: Org.Organization -> CancelReq -> Flow CancelRes
 cancel org req = do
   let oId = req ^. (#message . #order . #id)
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  case_ <- Storage.findById (CaseId oId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  case_ <- Storage.findById (CaseId oId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let taskId = case_ ^. #_shortId
-  orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   dzBACreds <- getDzBAPCreds org
   fork "cancel" do
     eres <- callCancelAPI dzBACreds conf (TaskId taskId)
@@ -395,7 +398,7 @@ cancel org req = do
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_cancel err") $ show onCancelResp
         _ -> pass
 
-update :: Organization -> UpdateReq -> Flow UpdateRes
+update :: Org.Organization -> UpdateReq -> Flow UpdateRes
 update org req = do
   DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
