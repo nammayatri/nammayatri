@@ -18,9 +18,8 @@ data Intent = Intent
     _item_id :: Maybe Text,
     _tags :: [Tag],
     -- Mobility specific
-    _origin :: Stop,
-    _destination :: Stop,
-    _stops :: [Stop],
+    _pickups :: [Stop],
+    _drops :: [Stop],
     _vehicle :: Vehicle,
     _payload :: Payload,
     _transfer :: Maybe TransferAttrs,

@@ -53,14 +53,17 @@ search _unit req = withFlowHandler $ do
   let intent = req ^. #message . #intent
   uuid <- L.generateGUID
   currTime <- getCurrTime
-  validity <- getValidTime currTime (intent ^. #_origin . #_departure_time . #_est)
+  let pickup = head $ intent ^. #_pickups
+      dropOff = head $ intent ^. #_drops
+      startTime = pickup ^. #_departure_time . #_est
+  validity <- getValidTime currTime startTime
   uuid1 <- L.generateGUID
-  let fromLocation = mkFromStop req uuid1 currTime $ intent ^. #_origin
+  let fromLocation = mkFromStop req uuid1 currTime pickup
   uuid2 <- L.generateGUID
-  let toLocation = mkFromStop req uuid2 currTime $ intent ^. #_destination
+  let toLocation = mkFromStop req uuid2 currTime dropOff
   Loc.create fromLocation
   Loc.create toLocation
-  let c = mkCase req uuid currTime validity fromLocation toLocation
+  let c = mkCase req uuid currTime validity startTime fromLocation toLocation
   Case.create c
   transporters <- listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
   -- TODO : Fix show
@@ -131,10 +134,9 @@ mkFromStop _req uuid now stop =
           _updatedAt = now
         }
 
-mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> SC.Case
-mkCase req uuid now validity fromLocation toLocation = do
+mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> SC.Case
+mkCase req uuid now validity startTime fromLocation toLocation = do
   let intent = req ^. #message . #intent
-  let startTime = req ^. #message . #intent . #_origin . #_departure_time . #_est
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
