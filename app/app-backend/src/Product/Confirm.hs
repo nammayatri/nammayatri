@@ -58,7 +58,10 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
             _items = [OrderItem (_getProductsId $ productInstance ^. #_productId) Nothing],
             _billing = Nothing,
             _payment = Nothing,
-            _trip = Nothing
+            _trip = Nothing,
+            _cancellation_reason_id = Nothing,
+            _cancellation_reasons = [],
+            _cancellation_policy = Nothing
           }
 
 onConfirm :: OnConfirmReq -> FlowHandler AckResponse

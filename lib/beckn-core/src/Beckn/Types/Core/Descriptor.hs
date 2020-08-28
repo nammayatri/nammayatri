@@ -8,7 +8,7 @@ import EulerHS.Prelude
 
 data Descriptor = Descriptor
   { _name :: Maybe Text,
-    _code :: Maybe Text,
+    _code :: Maybe Text, -- "SEARCHING-FOR-TRIPS", "TRIP-CONFIRMED", "EN-ROUTE-TO-PICKUP", "AT-PICKUP-LOCATION", "TRIP-STARTED", "TRIP-ENDED", "TRIP-ABORTED"
     _symbol :: Maybe Text,
     _short_desc :: Maybe Text,
     _long_desc :: Maybe Text,

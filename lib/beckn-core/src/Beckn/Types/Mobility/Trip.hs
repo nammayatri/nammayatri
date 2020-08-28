@@ -3,6 +3,7 @@
 module Beckn.Types.Mobility.Trip where
 
 import Beckn.Types.Core.Price
+import Beckn.Types.Core.State as Core
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Route
@@ -14,8 +15,9 @@ import EulerHS.Prelude
 
 data Trip = Trip
   { id :: Text,
-    origin :: Maybe Stop,
-    destination :: Maybe Stop,
+    pickup :: Maybe Stop,
+    drop :: Maybe Stop,
+    state :: Maybe Core.State,
     vehicle :: Maybe Vehicle,
     driver :: Maybe Driver,
     payload :: Payload,
@@ -28,8 +30,9 @@ instance Example Trip where
   example =
     Trip
       { id = idExample,
-        origin = example,
-        destination = example,
+        pickup = example,
+        drop = example,
+        state = example,
         vehicle = example,
         driver = example,
         payload = example,

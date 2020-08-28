@@ -448,8 +448,9 @@ mkTrip c = do
   return $
     Trip
       { id = _getCaseId $ c ^. #_id,
-        origin = Nothing,
-        destination = Nothing,
+        pickup = Nothing,
+        drop = Nothing,
+        state = Nothing,
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
@@ -496,8 +497,9 @@ mkCancelTripObj prodInstId = do
   return $
     Trip
       { id = prodInstId,
-        origin = Nothing,
-        destination = Nothing,
+        pickup = Nothing,
+        drop = Nothing,
+        state = Nothing,
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,

@@ -99,8 +99,8 @@ data Driver = Driver
 
 data Trip = Trip
   { id :: Text,
-    origin :: Maybe Stop,
-    destination :: Maybe Stop,
+    pickup :: Maybe Stop,
+    drop :: Maybe Stop,
     vehicle :: Maybe Vehicle,
     driver :: Maybe Driver,
     travellers :: [Traveller],
@@ -327,8 +327,8 @@ instance BecknSpecIso Trip.Trip Trip where
           Just p -> p ^. #_value
      in Trip
           { id = trip ^. #id,
-            origin = fromBeckn <$> trip ^. #origin,
-            destination = fromBeckn <$> trip ^. #destination,
+            pickup = fromBeckn <$> trip ^. #pickup,
+            drop = fromBeckn <$> trip ^. #drop,
             vehicle = fromBeckn <$> trip ^. #vehicle,
             driver = fromBeckn <$> trip ^. #driver,
             travellers = [],
@@ -337,8 +337,9 @@ instance BecknSpecIso Trip.Trip Trip where
   toBeckn trip =
     Trip.Trip
       { id = trip ^. #id,
-        origin = toBeckn <$> trip ^. #origin,
-        destination = toBeckn <$> trip ^. #destination,
+        pickup = toBeckn <$> trip ^. #pickup,
+        drop = toBeckn <$> trip ^. #drop,
+        state = Nothing,
         vehicle = toBeckn <$> trip ^. #vehicle,
         driver = toBeckn <$> trip ^. #driver,
         payload = toBeckn $ trip ^. #travellers,

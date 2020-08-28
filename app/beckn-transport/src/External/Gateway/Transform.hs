@@ -108,7 +108,10 @@ mkOrder _c pri trip = do
         _state = Nothing,
         _billing = Nothing,
         _payment = Nothing,
-        _trip = trip
+        _trip = trip,
+        _cancellation_reason_id = Nothing,
+        _cancellation_reasons = [],
+        _cancellation_policy = Nothing
       }
 
 baseTrackingUrl :: Text
