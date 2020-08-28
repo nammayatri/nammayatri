@@ -15,6 +15,7 @@ import Beckn.Types.FMD.API.Select (DraftOrder (..), SelectReq (..), SelectRes, o
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
 import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
+import qualified Beckn.Types.FMD.Item as Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
@@ -22,6 +23,7 @@ import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fr
 import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
+import qualified Data.List as List
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -80,6 +82,8 @@ select org req = do
   ctx <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
   bapNwAddr <- ctx ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
+  let order = req ^. #message . #order
+  validateReturn order
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
     eres <- getQuote conf quoteReq
@@ -122,6 +126,8 @@ init org req = do
   bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
+  let order = orderDetails ^. #order
+  validateReturn order
   fork "init" do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
     eres <- getQuote conf quoteReq
@@ -209,6 +215,7 @@ confirm org req = do
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
   let order = orderDetails ^. #order
   verifyPayment reqOrder order
+  validateReturn order
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
       & fromMaybeM400 "TXN_ID_NOT_FOUND"
@@ -442,3 +449,14 @@ getBAConfig bapNwAddr DunzoConfig {..} =
 
 returnAck :: Context -> Flow AckResponse
 returnAck context = return $ AckResponse context (ack "ACK") Nothing
+
+validateReturn :: Order -> Flow ()
+validateReturn currOrder =
+  when (currOrder ^. #_type == Just "RETURN") $ do
+    prevOrderId <- fromMaybeM400 "INVALID_ORDER_ID" $ currOrder ^. #_prev_order_id
+    prevOrderCase <- Storage.findById (CaseId prevOrderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+    (prevOrderDetails :: OrderDetails) <- prevOrderCase ^. #_udf1 >>= decodeFromText & fromMaybeM400 "ORDER_NOT_FOUND"
+    let prevOrder = prevOrderDetails ^. #order
+    if List.isInfixOf (Item._id <$> currOrder ^. #_items) (Item._id <$> prevOrder ^. #_items)
+      then pass
+      else throwJsonError400 "ERR" "INVALID_RETURN_ORDER"
