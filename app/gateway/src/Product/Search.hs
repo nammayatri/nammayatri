@@ -35,8 +35,8 @@ search org req = withFlowHandler $ do
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of
-    (Nothing, _) -> throwJsonError400 "Search.search" "CALLBACK_URL_NOT_CONFIGURED"
-    (_, Nothing) -> throwJsonError400 "Search.search" "CB_API_KEY_NOT_CONFIGURED"
+    (Nothing, _) -> throwJsonError500 "Search.search" "CB_URL_NOT_CONFIGURED"
+    (_, Nothing) -> throwJsonError500 "Search.search" "CB_API_KEY_NOT_CONFIGURED"
     (Just cbUrl, Just cbApiKey) -> do
       providers <- BP.lookup context
       let bgSession = BA.GwSession cbUrl cbApiKey context
