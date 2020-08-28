@@ -27,17 +27,20 @@ instance ToJSON Location where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 instance Example Location where
-  example =
-    Location
-      { _gps = example,
-        _address = Nothing,
-        _station_code = Nothing,
-        _city = Nothing,
-        _country = Nothing,
-        _circle = Nothing,
-        _polygon = Nothing,
-        _3dspace = Nothing
-      }
+  example = gpsLocation example
+
+gpsLocation :: GPS -> Location
+gpsLocation gps =
+  Location
+    { _gps = Just gps,
+      _address = Nothing,
+      _station_code = Nothing,
+      _city = Nothing,
+      _country = Nothing,
+      _circle = Nothing,
+      _polygon = Nothing,
+      _3dspace = Nothing
+    }
 
 data GPS = GPS
   { lat :: Text,

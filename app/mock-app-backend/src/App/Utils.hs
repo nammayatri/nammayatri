@@ -43,18 +43,20 @@ gps =
       lon = "77.6206631"
     }
 
-location :: Location
-location =
-  Location
-    { _gps = Just gps,
-      _address = Just address,
-      _station_code = Nothing,
-      _city = Nothing,
-      _country = Nothing,
-      _circle = Nothing,
-      _polygon = Nothing,
-      _3dspace = Nothing
+gps2 :: GPS
+gps2 =
+  GPS
+    { lat = "12.9401108",
+      lon = "77.6306631"
     }
+
+location :: Location
+location = gpsLocation gps
+
+-- In some cases (e.g. Dunzo node) it is important to have different
+-- pickup and drop locations
+location2 :: Location
+location2 = gpsLocation gps2
 
 buildIntent :: UTCTime -> SearchIntent
 buildIntent utcTime =
@@ -66,7 +68,7 @@ buildIntent utcTime =
             _category_id = Nothing,
             _item_id = Nothing,
             _pickups = [PickupDrop location utcTime],
-            _drops = [PickupDrop location utcTime],
+            _drops = [PickupDrop location2 utcTime],
             _packages = [],
             _tags = Nothing
           }
