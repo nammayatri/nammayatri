@@ -76,43 +76,42 @@ search org req = do
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
-  config@DunzoConfig {..} <- getDunzoConfig org
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  let maybeBaConfig = find (\x -> context ^. #_bap_uri == Just (x ^. #bap_nw_address)) dzBAConfigs
-  baUrl <-
-    fromMaybeM500 "CB_URL_NOT_CONFIGURED" $
-      (maybeBaConfig ^? _Just . #bap_nw_address) <|> (context ^. #_bap_uri)
-  cbUrl <- parseBaseUrl baUrl
+  conf@DunzoConfig {..} <- getDunzoConfig org
+  ctx <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  bapNwAddr <- ctx ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  baConfig <- getBAConfig bapNwAddr conf
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
-    eres <- getQuote config quoteReq
+    eres <- getQuote conf quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    sendCallback context eres cbUrl cbApiKey
-  returnAck context
+    sendCallback ctx eres baConfig
+  returnAck ctx
   where
-    sendCallback context (Right res) cbUrl cbApiKey = do
-      quote <- mkQuote res
-      let onSelectMessage = mkOnSelectMessage quote req
-      let onSelectReq = mkOnSelectReq context onSelectMessage
-      let quoteId = quote ^. #_id
-      let order = onSelectMessage ^. #order
-      let orderDetails = OrderDetails order quote
-      Storage.storeQuote quoteId orderDetails
-      L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
-      onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
-      L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
-      return ()
-    sendCallback context (Left (FailureResponse _ (Response _ _ _ body))) cbUrl cbApiKey =
-      case decode body of
-        Just err -> do
-          let onSelectReq = mkOnSelectErrReq context err
-          L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
+    sendCallback context res baConfig = do
+      let cbApiKey = baConfig ^. #bap_api_key
+          bapNwAddr = baConfig ^. #bap_nw_address
+      cbUrl <- parseBaseUrl bapNwAddr
+      case res of
+        Right quoteRes -> do
+          quote <- mkQuote quoteRes
+          let onSelectMessage = mkOnSelectMessage quote req
+          let onSelectReq = mkOnSelectReq context onSelectMessage
+          let quoteId = quote ^. #_id
+          let order = onSelectMessage ^. #order
+          let orderDetails = OrderDetails order quote
+          Storage.storeQuote quoteId orderDetails
+          L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
           onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
-          L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
-          return ()
-        Nothing -> return ()
-    sendCallback _ _ _ _ = return ()
+          L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
+        Left (FailureResponse _ (Response _ _ _ body)) ->
+          whenJust (decode body) handleError
+          where
+            handleError err = do
+              let onSelectReq = mkOnSelectErrReq context err
+              L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
+              onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+              L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
+        _ -> pass
 
 init :: Organization -> InitReq -> Flow InitRes
 init org req = do
