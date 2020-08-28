@@ -7,7 +7,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import External.Dunzo.Types
-import Servant (Capture, Get, Header, JSON, Post, QueryParam, ReqBody, (:>))
+import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)
 
 type GetTokenAPI =
@@ -102,7 +102,7 @@ type CancelTaskAPI =
     :> Header "Authorization" Token
     :> Header "client-id" ClientId
     :> ReqBody '[JSON] CancelTaskReq
-    :> Post '[JSON] ()
+    :> Post '[JSON] NoContent
 
 cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
@@ -111,9 +111,10 @@ cancelTask :: ClientId -> Token -> BaseUrl -> TaskId -> Text -> FlowR e (Either 
 cancelTask clientId token url taskId cancellationReason = L.callAPI url cancel
   where
     cancel =
-      T.client
-        cancelTaskAPI
-        taskId
-        (Just token)
-        (Just clientId)
-        (CancelTaskReq cancellationReason)
+      void $
+        T.client
+          cancelTaskAPI
+          taskId
+          (Just token)
+          (Just clientId)
+          (CancelTaskReq cancellationReason)
