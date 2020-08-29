@@ -8,7 +8,7 @@ More about beckn:
 * [spec](https://github.com/beckn/protocol-specifications/)
 * [website](https://beckn.org/)
 
-FMD module and related types conform to beckn spec [fmd-0.8.0](https://github.com/beckn/protocol-specifications/tree/fmd-0.8.0)
+FMD module and related types conform to beckn spec [fmd-0.8.2](https://github.com/beckn/protocol-specifications/tree/fmd-0.8.2)
 
 
 ## This project contains three modules

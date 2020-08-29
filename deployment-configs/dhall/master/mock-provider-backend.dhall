@@ -6,7 +6,7 @@ let postgresConfig =
   , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_app_v2"
+  , connectDatabase = "atlas_mock_provider_backend_v2"
   }
 
 let pgcfg =

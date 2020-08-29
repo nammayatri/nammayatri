@@ -96,23 +96,33 @@ checkEnd isTimeout bgSession = do
   let messageId = bgSession ^. #searchContext . #_transaction_id
   (searchReqCount, searchErrCount, onSearchReqCount) <- BA.getRequestStatus messageId
   let sentCount = searchReqCount - searchErrCount
-  if isTimeout && (searchReqCount /= searchErrCount + onSearchReqCount || sentCount == 0)
-    then do
-      L.logInfo @Text (messageId <> "_on_search/end Timeout") $
-        "Sent to " <> show sentCount <> ", "
+  let receivedCount = onSearchReqCount
+  case (isTimeout, sentCount, sentCount == receivedCount) of
+    -- isTimout == `true` only when called from timeout handler
+    -- case when no requests where sent and none received
+    -- possibly error during sending requests/no providers configured
+    (True, 0, True) -> sendCb messageId searchReqCount onSearchReqCount
+    -- case when timeout interval reached and didn't receive response for
+    -- all the requests sent
+    (True, _, False) -> sendCb messageId searchReqCount onSearchReqCount
+    -- case when received the last callback
+    (False, _, True) -> sendCb messageId searchReqCount onSearchReqCount
+    -- in any other case do nothing
+    _ -> noop messageId
+  where
+    sendCb messageId searchReqCount onSearchReqCount = do
+      let tag = messageId <> "_on_search/end" <> if isTimeout then "_timeout" else ""
+      L.logInfo @Text tag $
+        "Sent to " <> show searchReqCount <> ", "
           <> show onSearchReqCount
           <> " responded, "
-          <> show (sentCount - onSearchReqCount)
+          <> show (searchReqCount - onSearchReqCount)
           <> " failed/timedout"
       sendSearchEndCb bgSession
       BA.cleanup messageId
-    else
-      if not isTimeout && searchReqCount == searchErrCount + onSearchReqCount
-        then do
-          L.logInfo @Text (messageId <> "_on_search/end") ("Sent to " <> show sentCount <> ", all responded")
-          sendSearchEndCb bgSession
-          BA.cleanup messageId
-        else L.logInfo @Text (messageId <> "_on_search/end TimeoutHandler") "Noop"
+    noop messageId = do
+      let tag = messageId <> "_on_search/end" <> if isTimeout then "_timeout" else ""
+      L.logInfo @Text tag "Noop"
 
 sendSearchEndCb :: BA.GwSession -> Flow ()
 sendSearchEndCb bgSession = do
