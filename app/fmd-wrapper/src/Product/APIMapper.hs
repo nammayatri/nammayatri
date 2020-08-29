@@ -64,11 +64,11 @@ validateDomain context = context ^. #_domain == FINAL_MILE_DELIVERY
 
 -- TODO: get the supported core version from the config file
 validateCoreVersion :: Context -> Bool
-validateCoreVersion context = (Just "0.8.2" ==) $ context ^. #_core_version
+validateCoreVersion context = (Just "0.8.0" ==) $ context ^. #_core_version
 
 -- TODO: get the supported domain version from the config file
 validateDomainVersion :: Context -> Bool
-validateDomainVersion context = (Just "0.8.0" ==) $ context ^. #_domain_version
+validateDomainVersion context = (Just "0.8.2" ==) $ context ^. #_domain_version
 
 validateRequest :: Context -> Flow ()
 validateRequest context = do
