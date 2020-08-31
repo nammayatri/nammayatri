@@ -13,7 +13,9 @@ data AppEnv = AppEnv
     port :: Int,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    logRawSql :: Bool
+    logRawSql :: Bool,
+    coreVersion :: Text,
+    domainVersion :: Text
   }
   deriving (Generic, FromDhall)
 
