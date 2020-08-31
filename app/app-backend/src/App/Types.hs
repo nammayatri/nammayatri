@@ -33,6 +33,7 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
+    logRawSql :: Bool,
     traceFlag :: TraceFlag
   }
   deriving (Generic, FromDhall)

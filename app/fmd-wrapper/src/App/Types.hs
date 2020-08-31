@@ -12,7 +12,8 @@ data AppEnv = AppEnv
     redisCfg :: T.RedisConfig,
     port :: Int,
     migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool
+    autoMigrate :: Bool,
+    logRawSql :: Bool
   }
   deriving (Generic, FromDhall)
 

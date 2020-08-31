@@ -39,7 +39,8 @@ runGateway = do
         E.defaultLoggerConfig
           { E._logToFile = True,
             E._logFilePath = "/tmp/beckn-gateway.log",
-            E._isAsync = True
+            E._isAsync = True,
+            E._logRawSql = logRawSql
           }
   let settings =
         setOnExceptionResponse gatewayExceptionResponse $

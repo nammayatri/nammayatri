@@ -16,7 +16,8 @@ data AppEnv = AppEnv
     selfId :: Maybe Text,
     nwAddress :: Maybe Text,
     migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool
+    autoMigrate :: Bool,
+    logRawSql :: Bool
   }
   deriving (Generic, FromDhall)
 

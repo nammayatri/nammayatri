@@ -17,6 +17,7 @@ data AppCfg = AppCfg
     nwAddress :: Maybe Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
+    logRawSql :: Bool,
     searchTimeout :: Maybe Int,
     traceFlag :: TraceFlag
   }
@@ -30,6 +31,7 @@ data AppEnv = AppEnv
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
+    logRawSql :: Bool,
     searchTimeout :: Maybe Int, -- In seconds
     traceFlag :: TraceFlag
   }

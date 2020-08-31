@@ -49,7 +49,8 @@ runAppBackend' appEnv settings = do
         T.defaultLoggerConfig
           { T._logToFile = True,
             T._logFilePath = "/tmp/app-backend.log",
-            T._isAsync = True
+            T._isAsync = True,
+            T._logRawSql = logRawSql appEnv
           }
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."

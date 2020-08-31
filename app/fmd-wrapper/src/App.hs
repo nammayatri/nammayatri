@@ -36,7 +36,8 @@ runFMDWrapper = do
         E.defaultLoggerConfig
           { E._logToFile = True,
             E._logFilePath = "/tmp/fmd-wrapper.log",
-            E._isAsync = True
+            E._isAsync = True,
+            E._logRawSql = logRawSql appEnv
           }
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $

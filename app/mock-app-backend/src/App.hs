@@ -32,7 +32,8 @@ runMockApp = do
         E.defaultLoggerConfig
           { E._logToFile = True,
             E._logFilePath = "/tmp/mock-app-backend.log",
-            E._isAsync = True
+            E._isAsync = True,
+            E._logRawSql = logRawSql appEnv
           }
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
