@@ -106,7 +106,7 @@ saveClientTrailFlow (TrailInfo res req) = do
     case dbResult of
       Left err -> do
         L.logError @Text "client_trace" $
-          "Failed to save request from gateway to " <> toText _endpointId <> show err
+          "Failed to save request from gateway to " <> toText _endpointId <> ": " <> show err
       Right () -> pure ()
   where
     _endpointId = TT._endpointId $ _content req
