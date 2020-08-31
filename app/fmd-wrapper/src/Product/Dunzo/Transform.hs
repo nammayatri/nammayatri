@@ -41,6 +41,7 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
+import Product.Dunzo.ErrorMapper
 import Types.Wrapper
 import Utils.Common (getClientConfig)
 
@@ -107,21 +108,12 @@ readCoord text = do
   let mCoord = readMaybe $ T.unpack text
   maybe (throwJsonError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
 
-mkOnSearchErrReq :: Organization -> Context -> Error -> Flow OnSearchReq
-mkOnSearchErrReq _ context Error {..} = do
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_search",
-        contents = Left err
-      }
-  where
-    err =
-      Err.Error
-        { _type = "DOMAIN-ERROR",
-          _code = code,
-          _path = Nothing,
-          _message = Just message
-        }
+mkOnSearchErrReq :: Context -> Error -> OnSearchReq
+mkOnSearchErrReq context err = do
+  CallbackReq
+    { context = context & #_action .~ "on_search",
+      contents = Left $ mapError err
+    }
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
 mkOnSearchReq _ context res@QuoteRes {..} = do
@@ -210,19 +202,11 @@ mkOnSelectReq context msg =
     }
 
 mkOnSelectErrReq :: Context -> Error -> OnSelectReq
-mkOnSelectErrReq context Error {..} =
+mkOnSelectErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_select",
-      contents = Left mkError
+      contents = Left $ mapError err
     }
-  where
-    mkError =
-      Err.Error
-        { _type = "DOMAIN-ERROR",
-          _code = code,
-          _path = Nothing,
-          _message = Just message
-        }
 
 mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> InitOrder
 mkOnInitMessage orderId order conf req QuoteRes {..} =
@@ -256,21 +240,12 @@ mkOnInitReq context msg =
       contents = Right msg
     }
 
-mkOnInitErrReq :: Context -> Error -> Flow OnInitReq
-mkOnInitErrReq context Error {..} = do
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_init",
-        contents = Left mkError
-      }
-  where
-    mkError =
-      Err.Error
-        { _type = "DOMAIN-ERROR",
-          _code = code,
-          _path = Nothing,
-          _message = Just message
-        }
+mkOnInitErrReq :: Context -> Error -> OnInitReq
+mkOnInitErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_init",
+      contents = Left $ mapError err
+    }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
 mkOnStatusMessage :: Text -> Order -> TaskStatus -> Flow StatusResMessage
@@ -311,29 +286,19 @@ mkOnStatusReq context msg =
         contents = Right msg
       }
 
-mkOnStatusErrReq :: Context -> Error -> Flow OnStatusReq
-mkOnStatusErrReq context Error {..} =
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_status",
-        contents = Left mkError
-      }
-  where
-    mkError =
-      Err.Error
-        { _type = "DOMAIN-ERROR",
-          _code = code,
-          _path = Nothing,
-          _message = Just message
-        }
+mkOnStatusErrReq :: Context -> Error -> OnStatusReq
+mkOnStatusErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_status",
+      contents = Left $ mapError err
+    }
 
-mkOnTrackErrReq :: Context -> Flow OnTrackReq
+mkOnTrackErrReq :: Context -> OnTrackReq
 mkOnTrackErrReq context = do
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_track",
-        contents = Left mkError
-      }
+  CallbackReq
+    { context = context & #_action .~ "on_track",
+      contents = Left mkError
+    }
   where
     mkError =
       Err.Error
@@ -351,21 +316,12 @@ mkOnCancelReq context order = do
         contents = Right (CancelResMessage order)
       }
 
-mkOnCancelErrReq :: Context -> Error -> Flow OnCancelReq
-mkOnCancelErrReq context Error {..} = do
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_cancel",
-        contents = Left mkError
-      }
-  where
-    mkError =
-      Err.Error
-        { _type = "DOMAIN-ERROR",
-          _code = code,
-          _path = Nothing,
-          _message = Just message
-        }
+mkOnCancelErrReq :: Context -> Error -> OnCancelReq
+mkOnCancelErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_cancel",
+      contents = Left $ mapError err
+    }
 
 mkCreateTaskReq :: Order -> Flow CreateTaskReq
 mkCreateTaskReq order = do
@@ -439,29 +395,19 @@ mkOnConfirmReq context order = do
         contents = Right $ ConfirmResMessage order
       }
 
-mkOnConfirmErrReq :: Context -> Error -> Flow OnConfirmReq
-mkOnConfirmErrReq context Error {..} = do
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_confirm",
-        contents = Left mkError
-      }
-  where
-    mkError =
-      Err.Error
-        { _type = "DOMAIN-ERROR",
-          _code = code,
-          _path = Nothing,
-          _message = Just message
-        }
+mkOnConfirmErrReq :: Context -> Error -> OnConfirmReq
+mkOnConfirmErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_confirm",
+      contents = Left $ mapError err
+    }
 
-mkOnUpdateErrReq :: Context -> Flow OnUpdateReq
+mkOnUpdateErrReq :: Context -> OnUpdateReq
 mkOnUpdateErrReq context = do
-  return $
-    CallbackReq
-      { context = context & #_action .~ "on_update",
-        contents = Left mkError
-      }
+  CallbackReq
+    { context = context & #_action .~ "on_update",
+      contents = Left mkError
+    }
   where
     mkError =
       Err.Error

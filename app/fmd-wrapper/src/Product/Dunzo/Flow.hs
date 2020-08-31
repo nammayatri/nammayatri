@@ -67,7 +67,7 @@ search org req = do
         Just err -> do
           cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
           cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-          onSearchErrReq <- mkOnSearchErrReq org' context err
+          let onSearchErrReq = mkOnSearchErrReq context err
           cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
           L.logDebug @Text "cb" $
             decodeUtf8 (encode onSearchErrReq)
@@ -154,7 +154,7 @@ init org req = do
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
       case decode body of
         Just err -> do
-          onInitReq <- mkOnInitErrReq context err
+          let onInitReq = mkOnInitErrReq context err
           onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
           L.logInfo @Text "on_init err" $ show onInitResp
           return ()
@@ -270,7 +270,7 @@ confirm org req = do
           whenJust (decode body) handleError
           where
             handleError err = do
-              onConfirmReq <- mkOnConfirmErrReq context err
+              let onConfirmReq = mkOnConfirmErrReq context err
               onConfirmResp <- callCbAPI baConfig onConfirmReq
               L.logInfo @Text "on_confirm err " $ show onConfirmResp
         _ -> pass
@@ -285,7 +285,7 @@ track org req = do
   void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   fork "track" do
     -- TODO: fix this after dunzo sends tracking url in api
-    onTrackReq <- mkOnTrackErrReq context
+    let onTrackReq = mkOnTrackErrReq context
     eres <- callCbAPI baConfig onTrackReq
     L.logInfo @Text "on_track" $ show eres
   returnAck context
@@ -339,7 +339,7 @@ status org req = do
           whenJust (decode body) handleError
           where
             handleError err = do
-              onStatusReq <- mkOnStatusErrReq context err
+              let onStatusReq = mkOnStatusErrReq context err
               onStatusResp <- callCbAPI cbApiKey cbUrl onStatusReq
               L.logInfo @Text "on_status err " $ show onStatusResp
         _ -> pass
@@ -389,7 +389,7 @@ cancel org req = do
           whenJust (decode body) handleError
           where
             handleError err = do
-              onCancelReq <- mkOnCancelErrReq context err
+              let onCancelReq = mkOnCancelErrReq context err
               onCancelResp <- callCbAPI baConfig onCancelReq
               L.logInfo @Text "on_cancel err " $ show onCancelResp
         _ -> pass
@@ -402,7 +402,7 @@ update org req = do
   baConfig <- getBAConfig bapNwAddr conf
   fork "update" do
     -- TODO: Dunzo doesnt have update
-    onUpdateReq <- mkOnUpdateErrReq context
+    let onUpdateReq = mkOnUpdateErrReq context
     eres <- callCbAPI baConfig onUpdateReq
     L.logInfo @Text "on_update" $ show eres
   returnAck context
