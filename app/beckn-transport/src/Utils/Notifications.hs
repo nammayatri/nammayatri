@@ -127,3 +127,18 @@ notifyCancelReqByBP p =
             showTimeIst (ProductInstance._startTime p) <> ",",
             "has been cancelled. Check the app for more details."
           ]
+
+notifyDriver :: FCM.FCMNotificationType -> Text -> Text -> Person -> Flow ()
+notifyDriver notificationType notificationTitle message driver =
+  notifyPerson title body notificationData driver
+  where
+    notificationData =
+      FCM.FCMData
+        { _fcmNotificationType = notificationType,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityIds = show $ _getPersonId $ driver ^. #_id,
+          _fcmEntityType = FCM.Person
+        }
+    title = FCM.FCMNotificationTitle notificationTitle
+    body =
+      FCMNotificationBody message

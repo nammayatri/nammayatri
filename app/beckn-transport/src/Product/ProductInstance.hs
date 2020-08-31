@@ -3,6 +3,7 @@
 module Product.ProductInstance where
 
 import App.Types
+import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
@@ -10,7 +11,7 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
-import Beckn.Utils.Common (encodeToText, fromMaybeM400, withFlowHandler)
+import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as CQ
@@ -157,10 +158,25 @@ isAllowed prodInst req = do
 
 updateDriverDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 updateDriverDetails user piList req = case req ^. #_personId of
-  Just _ ->
+  Just driverId ->
     when (user ^. #_role == SP.ADMIN) $
-      PIQ.updateDriver (PI._id <$> piList) (PersonId <$> req ^. #_personId)
+      case piList of
+        [] -> throwJsonError400 "BAD_REQUEST" "INVALID_PRODUCT_INSTANCE_ID"
+        p : _ -> do
+          PIQ.updateDriver (PI._id <$> piList) (Just $ PersonId driverId)
+          driver <- PersQ.findPersonById (PersonId driverId)
+          Notify.notifyDriver notificationType notificationTitle (message p) driver
+          return ()
   Nothing -> return ()
+  where
+    notificationType = FCM.ASSIGNMENT_DRIVER
+    notificationTitle = "Driver has been assigned the ride!"
+    message p' =
+      unwords
+        [ "You have been assigned a ride scheduled for",
+          showTimeIst (PI._startTime p') <> ".",
+          "Check the app for more details."
+        ]
 
 updateVehicleDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 updateVehicleDetails user piList req = case req ^. #_vehicleId of

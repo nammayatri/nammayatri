@@ -69,10 +69,12 @@ data FCMNotificationType
   | CANCELLED_CASE
   | EXPIRED_CASE
   | CANCELLED_PRODUCT
+  | ASSIGNMENT_DRIVER
+  | CANCEL_DRIVER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types
-data FCMEntityType = Case | Product | Organization
+data FCMEntityType = Case | Product | Organization | Person
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Priority of a message to send to Android devices
