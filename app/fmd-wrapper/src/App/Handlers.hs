@@ -8,6 +8,7 @@ import Beckn.Types.FMD.API.Search (SearchAPI)
 import Beckn.Types.FMD.API.Select (SelectAPI)
 import Beckn.Types.FMD.API.Status (StatusAPI)
 import Beckn.Types.FMD.API.Track (TrackAPI)
+import Beckn.Types.FMD.API.Update (UpdateAPI)
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.APIMapper as API
@@ -24,6 +25,7 @@ type WrapperAPI =
            :<|> StatusAPI VerifyAPIKey
            :<|> TrackAPI VerifyAPIKey
            :<|> CancelAPI VerifyAPIKey
+           :<|> UpdateAPI VerifyAPIKey
        )
 
 wrapperAPI :: Proxy WrapperAPI
@@ -39,6 +41,7 @@ fmdWrapperBackendServer _key =
     :<|> statusFlow
     :<|> trackFlow
     :<|> cancelFlow
+    :<|> updateFlow
 
 searchFlow :: FlowServer (SearchAPI VerifyAPIKey)
 searchFlow = API.search
@@ -60,3 +63,6 @@ trackFlow = API.track
 
 cancelFlow :: FlowServer (CancelAPI VerifyAPIKey)
 cancelFlow = API.cancel
+
+updateFlow :: FlowServer (UpdateAPI VerifyAPIKey)
+updateFlow = API.update

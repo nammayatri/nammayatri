@@ -111,7 +111,7 @@ mkOnSearchErrReq :: Organization -> Context -> Error -> Flow OnSearchReq
 mkOnSearchErrReq _ context Error {..} = do
   return $
     CallbackReq
-      { context = context,
+      { context = context & #_action .~ "on_search",
         contents = Left err
       }
   where
@@ -130,7 +130,7 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
   itemid <- generateGUID
   return $
     CallbackReq
-      { context = context,
+      { context = context & #_action .~ "on_search",
         contents = Right $ OnSearchServices (catalog cid itemid now)
       }
   where
@@ -146,8 +146,8 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
           _package_categories = []
         }
 
-updateContext :: Context -> Text -> Context
-updateContext Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
+updateBppUri :: Context -> Text -> Context
+updateBppUri Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
 
 mkSearchItem :: Text -> QuoteRes -> Item
 mkSearchItem itemId QuoteRes {..} =
@@ -202,17 +202,17 @@ mkOnSelectMessage quote req = OnSelectMessage order quote
   where
     order = req ^. #message . #order
 
-mkOnSelectReq :: SelectReq -> OnSelectMessage -> OnSelectReq
-mkOnSelectReq req msg =
+mkOnSelectReq :: Context -> OnSelectMessage -> OnSelectReq
+mkOnSelectReq context msg =
   CallbackReq
-    { context = req ^. #context,
+    { context = context & #_action .~ "on_select",
       contents = Right msg
     }
 
-mkOnSelectErrReq :: SelectReq -> Error -> OnSelectReq
-mkOnSelectErrReq req Error {..} =
+mkOnSelectErrReq :: Context -> Error -> OnSelectReq
+mkOnSelectErrReq context Error {..} =
   CallbackReq
-    { context = req ^. #context,
+    { context = context & #_action .~ "on_select",
       contents = Left mkError
     }
   where
@@ -249,18 +249,18 @@ mkOnInitMessage orderId order conf req QuoteRes {..} =
         }
     billing = req ^. #message . #order . #_billing
 
-mkOnInitReq :: InitReq -> InitResMessage -> OnInitReq
-mkOnInitReq req msg =
+mkOnInitReq :: Context -> InitResMessage -> OnInitReq
+mkOnInitReq context msg =
   CallbackReq
-    { context = req ^. #context,
+    { context = context & #_action .~ "on_init",
       contents = Right msg
     }
 
-mkOnInitErrReq :: InitReq -> Error -> Flow OnInitReq
-mkOnInitErrReq req Error {..} = do
+mkOnInitErrReq :: Context -> Error -> Flow OnInitReq
+mkOnInitErrReq context Error {..} = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_init",
         contents = Left mkError
       }
   where
@@ -303,19 +303,19 @@ updateOrder orgName cTime order status =
 
     n = Nothing
 
-mkOnStatusReq :: StatusReq -> StatusResMessage -> Flow OnStatusReq
-mkOnStatusReq req msg =
+mkOnStatusReq :: Context -> StatusResMessage -> Flow OnStatusReq
+mkOnStatusReq context msg =
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_status",
         contents = Right msg
       }
 
-mkOnStatusErrReq :: StatusReq -> Error -> Flow OnStatusReq
-mkOnStatusErrReq req Error {..} =
+mkOnStatusErrReq :: Context -> Error -> Flow OnStatusReq
+mkOnStatusErrReq context Error {..} =
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_status",
         contents = Left mkError
       }
   where
@@ -327,11 +327,11 @@ mkOnStatusErrReq req Error {..} =
           _message = Just message
         }
 
-mkOnTrackErrReq :: TrackReq -> Flow OnTrackReq
-mkOnTrackErrReq req = do
+mkOnTrackErrReq :: Context -> Flow OnTrackReq
+mkOnTrackErrReq context = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_track",
         contents = Left mkError
       }
   where
@@ -343,11 +343,11 @@ mkOnTrackErrReq req = do
           _message = Just "NO_TRACKING_URL"
         }
 
-mkOnCancelReq :: CancelReq -> Order -> Flow OnCancelReq
-mkOnCancelReq req order = do
+mkOnCancelReq :: Context -> Order -> Flow OnCancelReq
+mkOnCancelReq context order = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_cancel",
         contents = Right cancel
       }
   where
@@ -359,11 +359,11 @@ mkOnCancelReq req order = do
           order = order
         }
 
-mkOnCancelErrReq :: CancelReq -> Error -> Flow OnCancelReq
-mkOnCancelErrReq req Error {..} = do
+mkOnCancelErrReq :: Context -> Error -> Flow OnCancelReq
+mkOnCancelErrReq context Error {..} = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_cancel",
         contents = Left mkError
       }
   where
@@ -439,19 +439,19 @@ mkCreateTaskReq order = do
             <> def _additional_name
             <> def _family_name
 
-mkOnConfirmReq :: ConfirmReq -> Order -> Flow OnConfirmReq
-mkOnConfirmReq req order = do
+mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
+mkOnConfirmReq context order = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_confirm",
         contents = Right $ ConfirmResMessage order
       }
 
-mkOnConfirmErrReq :: ConfirmReq -> Error -> Flow OnConfirmReq
-mkOnConfirmErrReq req Error {..} = do
+mkOnConfirmErrReq :: Context -> Error -> Flow OnConfirmReq
+mkOnConfirmErrReq context Error {..} = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_confirm",
         contents = Left mkError
       }
   where
@@ -463,11 +463,11 @@ mkOnConfirmErrReq req Error {..} = do
           _message = Just message
         }
 
-mkOnUpdateErrReq :: UpdateReq -> Flow OnUpdateReq
-mkOnUpdateErrReq req = do
+mkOnUpdateErrReq :: Context -> Flow OnUpdateReq
+mkOnUpdateErrReq context = do
   return $
     CallbackReq
-      { context = req ^. #context,
+      { context = context & #_action .~ "on_update",
         contents = Left mkError
       }
   where
