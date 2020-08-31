@@ -71,14 +71,14 @@ search org req = withFlowHandler $ do
         checkEnd True bgSession
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb _ req = withFlowHandler $ do
+searchCb org req = withFlowHandler $ do
   let onSearch = ET.client $ withClientTracing onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
   bgSession <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   baseUrl <- parseOrgUrl (bgSession ^. #cbUrl)
-  let cbApiKey = bgSession ^. #cbApiKey
-  eRes <- callAPIWithTrail baseUrl (onSearch cbApiKey req) "on_search"
+  apiKey <- org ^. #_apiKey & fromMaybeM400 "API_KEY_NOT_CONFIGURED"
+  eRes <- callAPIWithTrail baseUrl (onSearch apiKey req) "on_search"
   let resp = case eRes of
         Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
         Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing
