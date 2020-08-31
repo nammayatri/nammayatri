@@ -263,8 +263,8 @@ CREATE TABLE atlas_gateway.external_trail (
     --customer_id character(36),
     --session_id character(36),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    gateway_id character varying(16) NOT NULL,
-    endpoint_id character varying(16) NOT NULL,
+    gateway_id character varying(36) NOT NULL,
+    endpoint_id character varying(36) NOT NULL,
     headers text NOT NULL,
     query_params text NOT NULL,
     request text,  -- TODO: do we want to limit size of request somehow?
