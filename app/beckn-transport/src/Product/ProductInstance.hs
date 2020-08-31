@@ -169,7 +169,7 @@ updateDriverDetails user piList req = case req ^. #_personId of
           return ()
   Nothing -> return ()
   where
-    notificationType = FCM.ASSIGNMENT_DRIVER
+    notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
     message p' =
       unwords

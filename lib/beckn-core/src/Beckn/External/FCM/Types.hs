@@ -69,8 +69,7 @@ data FCMNotificationType
   | CANCELLED_CASE
   | EXPIRED_CASE
   | CANCELLED_PRODUCT
-  | ASSIGNMENT_DRIVER
-  | CANCEL_DRIVER
+  | DRIVER_ASSIGNMENT
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types

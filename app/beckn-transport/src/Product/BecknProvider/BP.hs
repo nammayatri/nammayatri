@@ -100,7 +100,11 @@ cancel req = withFlowHandler $ do
     [] -> pure ()
     prdInst : _ -> do
       c <- Case.findById $ ProductInstance._caseId prdInst
-      Notify.notifyTransportersOnCancel c admins
+      case prdInst ^. #_personId of
+        Just driverId -> do
+          driver <- Person.findPersonById driverId
+          Notify.notifyTransportersOnCancel c (driver : admins)
+        Nothing -> Notify.notifyTransportersOnCancel c admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
