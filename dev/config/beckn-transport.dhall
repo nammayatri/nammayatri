@@ -55,7 +55,7 @@ in
 , nsdlPassword = None Text
 , xAppUri = appUri
 , selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = Some "https://localhost/v1/"
+, nwAddress = Some "http://localhost/v1/"
 , caseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto

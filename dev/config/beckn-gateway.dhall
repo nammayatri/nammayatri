@@ -33,7 +33,7 @@ in
 , port = +8015
 , metricsPort = +9998
 , selfId = Some "JUSPAY.BG.1"
-, nwAddress = Some "https://localhost/v1/"
+, nwAddress = Some "http://localhost/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , searchTimeout = None Integer
