@@ -5,6 +5,7 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Common
+import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
 
@@ -65,3 +66,8 @@ validateStatusChange newStatus productInstance =
   case validateStatusTransition (_status productInstance) newStatus of
     Left msg -> throwDomainError $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()
+
+findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
+findAllExpiredByStatus statuses expiryTime = do
+  result <- Q.findAllExpiredByStatus statuses expiryTime
+  checkDBError result

@@ -358,3 +358,12 @@ findByParentIdType mparentId csType = do
     predicate Storage.ProductInstance {..} =
       B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
         &&. _type ==. B.val_ csType
+
+findAllExpiredByStatus :: [Storage.ProductInstanceStatus] -> UTCTime -> Flow (T.DBResult [Storage.ProductInstance])
+findAllExpiredByStatus statuses expiryTime = do
+  dbTable <- getDbTable
+  DB.findAll dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      B.in_ _status (B.val_ <$> statuses)
+        &&. _startTime B.<=. B.val_ expiryTime

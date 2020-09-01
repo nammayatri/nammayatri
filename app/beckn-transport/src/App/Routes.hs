@@ -348,11 +348,15 @@ type CronAPI =
     :> "expire_cases"
     :> Header "Authorization" CronAuthKey
     :> ReqBody '[JSON] ExpireCaseReq
-    :> Post '[JSON] ExpireCaseRes
+    :> Post '[JSON] ExpireRes
+    :<|> "expire_product_instances"
+    :> Header "Authorization" CronAuthKey
+    :> Post '[JSON] ExpireRes
 
 cronFlow :: FlowServer CronAPI
 cronFlow =
-  Cron.expire
+  Cron.expireCases
+    :<|> Cron.expireProductInstances
 
 type StatusAPI =
   "status"

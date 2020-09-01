@@ -5,25 +5,25 @@ import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as C
 import qualified Beckn.Types.Storage.Person as PS
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (authenticate, withFlowHandler)
+import Beckn.Utils.Common (authenticate, getCurrTime, withFlowHandler)
+import Data.Time
 import EulerHS.Prelude
-import qualified Models.Case as CQ
 import qualified Models.Case as MC
-import qualified Models.ProductInstance as MCP
+import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Person as PSQ
 import qualified Storage.Queries.ProductInstance as CPQ
 import Types.API.Cron
 import qualified Utils.Notifications as Notify
 
-expire :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireCaseRes
-expire maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
+expireCases :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireRes
+expireCases maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
-  cases <- CQ.findAllExpiredByStatus [C.NEW] C.RIDESEARCH from to
+  cases <- MC.findAllExpiredByStatus [C.NEW] C.RIDESEARCH from to
   productInstances <- CPQ.findAllByCaseIds (C._id <$> cases)
   MC.updateStatusByIds (C._id <$> cases) C.CLOSED
-  MCP.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
+  MPI.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
   notifyTransporters cases productInstances
-  pure $ ExpireCaseRes $ length cases
+  pure $ ExpireRes $ length cases
 
 notifyTransporters :: [C.Case] -> [PI.ProductInstance] -> Flow ()
 notifyTransporters cases =
@@ -38,3 +38,21 @@ notifyTransporters cases =
             [] -> pure ()
             x : _ -> Notify.notifyTransporterOnExpiration x admins
     )
+
+expireProductInstances :: Maybe CronAuthKey -> FlowHandler ExpireRes
+expireProductInstances maybeAuth = withFlowHandler $ do
+  authenticate maybeAuth
+  currTime <- getCurrTime
+  let timeToExpire = addUTCTime (-3 * 60 * 60) currTime
+  piList <- MPI.findAllExpiredByStatus [PI.CONFIRMED, PI.INSTOCK] timeToExpire
+  traverse_
+    ( \pI ->
+        case PI._type pI of
+          C.RIDESEARCH -> MPI.updateStatus (PI._id pI) PI.EXPIRED
+          C.RIDEORDER -> do
+            MC.updateStatus (PI._caseId pI) C.CLOSED
+            MPI.updateStatus (PI._id pI) PI.EXPIRED
+          _ -> return ()
+    )
+    piList
+  pure $ ExpireRes $ length piList

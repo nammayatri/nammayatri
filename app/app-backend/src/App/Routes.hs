@@ -240,11 +240,15 @@ type CronAPI =
     :> "expire_cases"
     :> Header "Authorization" CronAuthKey
     :> ReqBody '[JSON] Cron.ExpireCaseReq
-    :> Post '[JSON] Cron.ExpireCaseRes
+    :> Post '[JSON] Cron.ExpireRes
+    :<|> "expire_product_instances"
+    :> Header "Authorization" CronAuthKey
+    :> Post '[JSON] Cron.ExpireRes
 
 cronFlow :: FlowServer CronAPI
 cronFlow =
   Cron.updateCases
+    :<|> Cron.expireProductInstances
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =

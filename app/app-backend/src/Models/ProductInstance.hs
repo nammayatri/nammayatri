@@ -7,6 +7,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Common
+import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
 
@@ -112,4 +113,9 @@ findByParentIdType mparentId csType = do
 findAllByPerson :: PersonId -> Flow [ProductInstance]
 findAllByPerson perId = do
   result <- Q.findAllByPerson perId
+  checkDBError result
+
+findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
+findAllExpiredByStatus statuses expiryTime = do
+  result <- Q.findAllExpiredByStatus statuses expiryTime
   checkDBError result

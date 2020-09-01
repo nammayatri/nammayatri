@@ -10,7 +10,7 @@ data ExpireCaseReq = ExpireCaseReq
   }
   deriving (Generic, ToSchema, ToJSON, Show, FromJSON)
 
-newtype ExpireCaseRes = ExpireCaseRes
+newtype ExpireRes = ExpireRes
   { updated_count :: Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
