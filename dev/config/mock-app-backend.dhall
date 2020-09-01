@@ -32,4 +32,5 @@ in
 , nwAddress = Some "https://localhost/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, logRawSql = True
 }

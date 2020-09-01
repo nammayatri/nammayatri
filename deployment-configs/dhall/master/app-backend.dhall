@@ -61,4 +61,5 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , traceFlag = common.TraceFlag.TRACE_ALL
+, logRawSql = True
 }

@@ -33,4 +33,5 @@ in
 , port = +8018
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, logRawSql = True
 }

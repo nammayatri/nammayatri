@@ -15,4 +15,5 @@ in
 , nwAddress = Some "Http://api.sandbox.beckn.juspay.in/dev/mock/app/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, logRawSql = True
 }
