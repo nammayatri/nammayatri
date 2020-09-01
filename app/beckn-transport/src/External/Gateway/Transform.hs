@@ -85,14 +85,14 @@ mkPrice prodInst =
           _maximum_value = Just amt
         }
 
-mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Maybe Organization -> Flow Mobility.Service
+mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow Mobility.Service
 mkServiceOffer c pis _allPis orgInfo = do
   catalog <- mkCatalog pis
   return
     Mobility.Service
       { _id = _getCaseId $ c ^. #_id,
         _catalog = Just catalog,
-        _provider = mkProvider <$> orgInfo,
+        _provider = Just $ mkProvider orgInfo,
         _policies = []
       }
 
@@ -195,7 +195,7 @@ mkProvider orgInfo =
             _code = Nothing,
             _symbol = Nothing,
             _short_desc = Nothing,
-            _long_desc = Nothing,
+            _long_desc = orgInfo ^. #_info,
             _images = [],
             _audio = Nothing,
             _3d_render = Nothing

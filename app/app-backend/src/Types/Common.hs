@@ -111,7 +111,8 @@ data Trip = Trip
 data Provider = Provider
   { id :: Text,
     name :: Maybe Text,
-    phones :: [Text]
+    phones :: [Text],
+    info :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -361,7 +362,8 @@ instance BecknSpecIso Provider.Provider Provider where
     Provider
       { id = provider ^. #_id,
         name = provider ^. #_descriptor . #_name,
-        phones = provider ^. #_poc . _Just . #phones
+        phones = provider ^. #_poc . _Just . #phones,
+        info = provider ^. #_descriptor . #_long_desc
       }
   toBeckn provider =
     Provider.Provider
@@ -372,7 +374,7 @@ instance BecknSpecIso Provider.Provider Provider where
               _code = Nothing,
               _symbol = Nothing,
               _short_desc = Nothing,
-              _long_desc = Nothing,
+              _long_desc = provider ^. #info,
               _images = [],
               _audio = Nothing,
               _3d_render = Nothing

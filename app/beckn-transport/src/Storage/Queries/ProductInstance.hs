@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Queries.ProductInstance where
@@ -367,3 +368,13 @@ findAllExpiredByStatus statuses expiryTime = do
     predicate Storage.ProductInstance {..} =
       B.in_ _status (B.val_ <$> statuses)
         &&. _startTime B.<=. B.val_ expiryTime
+
+getCountByStatus' :: Text -> Storage.ProductInstanceType -> Flow (T.DBResult [(Storage.ProductInstanceStatus, Int)])
+getCountByStatus' orgId piType = do
+  dbTable <- getDbTable
+  DB.aggregate dbTable aggregator predicate
+  where
+    aggregator Storage.ProductInstance {..} = (B.group_ _status, B.as_ @Int B.countAll_)
+    predicate Storage.ProductInstance {..} =
+      _organizationId ==. B.val_ orgId
+        &&. _type ==. B.val_ piType

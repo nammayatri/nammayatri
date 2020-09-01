@@ -26,3 +26,16 @@ instance Example Provider where
         _descriptor = example,
         _poc = example
       }
+
+data ProviderStats = ProviderStats
+  { _completed :: Maybe Int,
+    _inprogress :: Maybe Int,
+    _confirmed :: Maybe Int
+  }
+  deriving (Generic, Show)
+
+instance FromJSON ProviderStats where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ProviderStats where
+  toJSON = genericToJSON stripAllLensPrefixOptions

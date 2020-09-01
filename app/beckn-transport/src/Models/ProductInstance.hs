@@ -71,3 +71,9 @@ findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductIns
 findAllExpiredByStatus statuses expiryTime = do
   result <- Q.findAllExpiredByStatus statuses expiryTime
   checkDBError result
+
+-- | Get ProductInstance By OrganizationId groupBy status
+getCountByStatus :: Text -> ProductInstanceType -> Flow [(ProductInstanceStatus, Int)]
+getCountByStatus orgId piType = do
+  result <- Q.getCountByStatus' orgId piType
+  checkDBError result

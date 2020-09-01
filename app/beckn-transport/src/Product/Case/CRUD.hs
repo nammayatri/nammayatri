@@ -10,6 +10,7 @@ import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
+import Beckn.Types.Core.Provider
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
@@ -18,6 +19,7 @@ import Beckn.Types.Storage.ProductInstance as ProdInst
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time
 import qualified EulerHS.Language as L
@@ -25,6 +27,7 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
+import Models.ProductInstance as MPI
 import Servant
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
@@ -160,7 +163,9 @@ mkOnSearchPayload c pis allPis orgInfo = do
             _bpp_uri = nwAddress appEnv,
             _timestamp = currTime
           }
-  service <- GT.mkServiceOffer c pis allPis (Just orgInfo)
+  piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER
+  let mStatsInfo = Just $ encodeToText $ ProviderStats (List.lookup ProdInst.COMPLETED piCount) Nothing Nothing
+  service <- GT.mkServiceOffer c pis allPis (orgInfo {Organization._info = mStatsInfo})
   return
     CallbackReq
       { context,
