@@ -16,6 +16,7 @@ import qualified Beckn.Types.Mobility.Stop as Stop
 import qualified Beckn.Types.Mobility.Traveller as Traveller
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import Control.Lens.Prism (_Just)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
@@ -399,3 +400,27 @@ instance BecknSpecIso Provider.Provider Provider where
                 phones = provider ^. #phones
               }
       }
+
+instance BecknSpecIso Text PI.ProductInstanceStatus where
+  fromBeckn piStatus =
+    case piStatus of
+      "VALID" -> PI.VALID
+      "INPROGRESS" -> PI.INPROGRESS
+      "CONFIRMED" -> PI.CONFIRMED
+      "COMPLETED" -> PI.COMPLETED
+      "INSTOCK" -> PI.INSTOCK
+      "OUTOFSTOCK" -> PI.OUTOFSTOCK
+      "CANCELLED" -> PI.CANCELLED
+      "EXPIRED" -> PI.EXPIRED
+      _ -> PI.INVALID
+  toBeckn piStatus =
+    case piStatus of
+      PI.VALID -> "VALID"
+      PI.INVALID -> "INVALID"
+      PI.INPROGRESS -> "INPROGRESS"
+      PI.CONFIRMED -> "CONFIRMED"
+      PI.COMPLETED -> "COMPLETED"
+      PI.INSTOCK -> "INSTOCK"
+      PI.OUTOFSTOCK -> "OUTOFSTOCK"
+      PI.CANCELLED -> "CANCELLED"
+      PI.EXPIRED -> "EXPIRED"

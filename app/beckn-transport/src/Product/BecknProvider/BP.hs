@@ -378,7 +378,7 @@ mkOrgCountPayload caseSid count = do
       return $
         Order
           { _id = caseSid,
-            _state = T.pack $ show ProductInstance.INVALID,
+            _state = "ORG_COUNT",
             _items = [OrderItem caseSid (Just mkItemQuantityRes)],
             _created_at = now,
             _updated_at = now,

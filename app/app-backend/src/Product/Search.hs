@@ -112,11 +112,9 @@ searchCbService req service = do
       accepted = Map.lookup PI.INSTOCK piStatusCount
       declined = Map.lookup PI.OUTOFSTOCK piStatusCount
       mCaseInfo :: (Maybe API.CaseInfo) = decodeFromText =<< (case_ ^. #_info)
-  _ <- case mCaseInfo of
-    Just info -> do
+  whenJust mCaseInfo $ \info -> do
       let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
       Case.updateInfo (case_ ^. #_id) (encodeToText uInfo)
-    Nothing -> return ()
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     extendCaseExpiry :: Case.Case -> Flow ()

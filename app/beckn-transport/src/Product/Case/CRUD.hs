@@ -167,7 +167,7 @@ mkOnSearchPayload c pis allPis orgInfo = do
             _timestamp = currTime
           }
   piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER
-  let mStatsInfo = Just $ encodeToText $ ProviderStats (List.lookup ProdInst.COMPLETED piCount) Nothing Nothing
+  let mStatsInfo = Just $ encodeToText $ ProviderStats (List.lookup PI.COMPLETED piCount) Nothing Nothing
   service <- GT.mkServiceOffer c pis allPis (orgInfo {Organization._info = mStatsInfo})
   return
     CallbackReq

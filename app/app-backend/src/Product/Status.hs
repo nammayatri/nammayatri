@@ -17,9 +17,9 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
-import Servant
 import qualified Types.API.Case as Case
 import Types.API.Status as Status
+import Types.Common
 import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
@@ -39,11 +39,10 @@ onStatus req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let prodInstId = ProductInstanceId $ msg ^. #order . #_id
-          orderState = matchStatus $ msg ^. #order . #_state
+          orderState = fromBeckn $ msg ^. #order . #_state
       case orderState of
-        Just PI.INVALID -> updateTransportersCount (msg ^. #order)
-        Just k -> updateProductInstanceStatus prodInstId k
-        Nothing -> L.throwException $ err400 {errBody = "INCORRECT STATUS"}
+        PI.INVALID -> updateTransportersCount (msg ^. #order)
+        k -> updateProductInstanceStatus prodInstId k
     Left err -> L.logError @Text "on_status req" $ "on_status error: " <> show err
   mkAckResponse txnId "status"
   where
@@ -64,18 +63,3 @@ onStatus req = withFlowHandler $ do
       orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
       QPI.updateStatus (orderPi ^. #_id) piStatus
       return ()
-
--- Utility Functions
-
-matchStatus :: Text -> Maybe PI.ProductInstanceStatus
-matchStatus piStatus = case piStatus of
-  "VALID" -> Just PI.VALID
-  "INVALID" -> Just PI.INVALID
-  "INPROGRESS" -> Just PI.INPROGRESS
-  "CONFIRMED" -> Just PI.CONFIRMED
-  "COMPLETED" -> Just PI.COMPLETED
-  "INSTOCK" -> Just PI.INSTOCK
-  "OUTOFSTOCK" -> Just PI.OUTOFSTOCK
-  "CANCELLED" -> Just PI.CANCELLED
-  "EXPIRED" -> Just PI.EXPIRED
-  _ -> Nothing
