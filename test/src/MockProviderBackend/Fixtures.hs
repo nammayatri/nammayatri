@@ -5,11 +5,13 @@ import "mock-provider-backend" App.Handlers as MockProviderRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Update
+import Beckn.Types.FMD.Order
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -67,10 +69,11 @@ initFlow :: Text -> InitReq -> ClientM Common.AckResponse
 initFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderInitAPI)
 
 buildFMDInitReq :: Context -> Text -> InitReq
-buildFMDInitReq context quoteId =
+buildFMDInitReq context quoteId = do
+  let order = example
   InitReq
     { context,
-      message = InitReqMessage quoteId example
+      message = InitOrder $ order {_quotation = Just (Quotation quoteId Nothing Nothing Nothing)}
     }
 
 confirmFlow :: Text -> ConfirmReq -> ClientM Common.AckResponse

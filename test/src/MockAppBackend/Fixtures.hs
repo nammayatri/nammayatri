@@ -75,7 +75,7 @@ buildOnInitReq :: Context -> OnInitReq
 buildOnInitReq context =
   CallbackReq
     { context,
-      contents = Right $ InitResMessage example
+      contents = Right $ InitOrder example
     }
 
 onConfirmFlow :: Text -> OnConfirmReq -> ClientM Common.AckResponse

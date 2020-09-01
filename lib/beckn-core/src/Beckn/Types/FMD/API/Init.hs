@@ -31,23 +31,17 @@ onInitAPI = Proxy
 
 data InitReq = InitReq
   { context :: Context,
-    message :: InitReqMessage
+    message :: InitOrder
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type InitRes = AckResponse
 
-type OnInitReq = CallbackReq InitResMessage
+type OnInitReq = CallbackReq InitOrder
 
-newtype InitResMessage = InitResMessage
+newtype InitOrder = InitOrder
   { order :: Order
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type OnInitRes = AckResponse
-
-data InitReqMessage = InitReqMessage
-  { quotation_id :: Text,
-    order :: Order
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)

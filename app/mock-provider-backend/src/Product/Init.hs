@@ -28,7 +28,7 @@ init org req = withFlowHandler $ do
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl ->
       fork "Init" $ do
-        msg <- mkInitResMessage
+        msg <- mkInitOrder
         AckResponse {} <-
           callClient "init" appUrl $
             client
@@ -46,7 +46,7 @@ init org req = withFlowHandler $ do
         _error = Nothing
       }
 
-mkInitResMessage :: Flow InitResMessage
-mkInitResMessage = do
+mkInitOrder :: Flow InitOrder
+mkInitOrder = do
   L.runIO $ threadDelay 0.5e6
-  return $ InitResMessage example
+  return $ InitOrder example

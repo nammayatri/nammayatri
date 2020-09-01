@@ -118,7 +118,8 @@ init :: Organization -> InitReq -> Flow InitRes
 init org req = do
   conf@DunzoConfig {..} <- getDunzoConfig org
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  let quoteId = req ^. (#message . #quotation_id)
+  quote <- req ^. (#message . #order . #_quotation) & fromMaybeM400 "INVALID_QUOTATION"
+  let quoteId = quote ^. #_id
   bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   baConfig <- getBAConfig bapNwAddr conf
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
@@ -126,14 +127,13 @@ init org req = do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
     eres <- getQuote conf quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    sendCb orderDetails context conf baConfig eres
+    sendCb orderDetails context conf baConfig quoteId eres
   returnAck context
   where
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onInitAPI cbApiKey
 
-    sendCb orderDetails context conf baConfig (Right res) = do
-      let quoteId = req ^. (#message . #quotation_id)
-          cbApiKey = baConfig ^. #bap_api_key
+    sendCb orderDetails context conf baConfig quoteId (Right res) = do
+      let cbApiKey = baConfig ^. #bap_api_key
           bapNwAddr = baConfig ^. #bap_nw_address
       cbUrl <- parseBaseUrl bapNwAddr
       -- quoteId will be used as orderId
@@ -149,7 +149,7 @@ init org req = do
       onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
-    sendCb _ context _ baConfig (Left (FailureResponse _ (Response _ _ _ body))) = do
+    sendCb _ context _ baConfig _ (Left (FailureResponse _ (Response _ _ _ body))) = do
       let cbApiKey = baConfig ^. #bap_api_key
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
       case decode body of
@@ -159,7 +159,7 @@ init org req = do
           L.logInfo @Text "on_init err" $ show onInitResp
           return ()
         Nothing -> return ()
-    sendCb _ _ _ _ _ = return ()
+    sendCb _ _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId bapUrl order quote = do
       now <- getCurrTime

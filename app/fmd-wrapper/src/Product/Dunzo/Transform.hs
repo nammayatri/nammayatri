@@ -182,7 +182,7 @@ mkSearchItem itemId QuoteRes {..} =
 mkQuote :: QuoteRes -> Flow Quotation
 mkQuote QuoteRes {..} = do
   qid <- generateGUID
-  return $ Quotation {_id = qid, _price = price, _ttl = Nothing, _breakup = []}
+  return $ Quotation {_id = qid, _price = Just price, _ttl = Nothing, _breakup = Nothing}
   where
     price = mkPrice estimated_price
     mkPrice estimatedPrice =
@@ -224,9 +224,9 @@ mkOnSelectErrReq context Error {..} =
           _message = Just message
         }
 
-mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> InitResMessage
+mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> InitOrder
 mkOnInitMessage orderId order conf req QuoteRes {..} =
-  InitResMessage $
+  InitOrder $
     order & #_id ?~ orderId & #_payment ?~ mkPayment & #_billing .~ billing
   where
     mkPayment =
@@ -249,7 +249,7 @@ mkOnInitMessage orderId order conf req QuoteRes {..} =
         }
     billing = req ^. #message . #order . #_billing
 
-mkOnInitReq :: Context -> InitResMessage -> OnInitReq
+mkOnInitReq :: Context -> InitOrder -> OnInitReq
 mkOnInitReq context msg =
   CallbackReq
     { context = context & #_action .~ "on_init",

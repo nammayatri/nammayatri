@@ -22,9 +22,9 @@ instance ToJSON BreakupItem where
 
 data Quotation = Quotation
   { _id :: Text,
-    _price :: Price,
+    _price :: Maybe Price,
     _ttl :: Maybe Duration,
-    _breakup :: [BreakupItem]
+    _breakup :: Maybe [BreakupItem]
   }
   deriving (Generic, Show)
 
@@ -40,5 +40,5 @@ instance Example Quotation where
       { _id = idExample,
         _price = example,
         _ttl = example,
-        _breakup = []
+        _breakup = Nothing
       }

@@ -16,6 +16,7 @@ import Beckn.Types.FMD.Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Utils.Common
+import Control.Lens.Prism (_Just)
 import Data.Time
 import EulerHS.Prelude
 import Servant.Client (BaseUrl, parseBaseUrl)
@@ -150,11 +151,12 @@ buildSelectReq ctx itemId = do
       }
 
 buildInitReq :: Context -> Text -> Flow InitReq
-buildInitReq ctx quotId =
+buildInitReq ctx quotId = do
+  let order = example
   return $
     InitReq
       { context = ctx {_action = "init"},
-        message = InitReqMessage quotId example
+        message = InitOrder $ order & #_quotation . _Just . #_id .~ quotId
       }
 
 buildConfirmReq :: Context -> Flow ConfirmReq
