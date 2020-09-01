@@ -161,12 +161,12 @@ buildInitReq ctx quotId = do
         message = InitOrder $ order & #_quotation . _Just . #_id .~ quotId
       }
 
-buildConfirmReq :: Context -> Flow ConfirmReq
-buildConfirmReq ctx =
+buildConfirmReq :: Context -> Order -> Flow ConfirmReq
+buildConfirmReq ctx order =
   return $
     ConfirmReq
       { context = ctx {_action = "confirm"},
-        message = ConfirmReqMessage example
+        message = ConfirmReqMessage order
       }
 
 bppUrl :: Context -> Maybe BaseUrl
