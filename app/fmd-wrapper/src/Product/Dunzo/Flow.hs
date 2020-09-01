@@ -434,6 +434,9 @@ fetchToken DunzoConfig {..} = do
 
 getBAConfig :: Text -> DunzoConfig -> Flow BAConfig
 getBAConfig bapNwAddr DunzoConfig {..} =
+  -- TODO: we have to compare not texts, but 'BaseUrl's, otherwise
+  -- e.g. "localhost:8080", "http://localhost:8080" and "http://localhost:8080/"
+  -- are all considered different
   find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
     & fromMaybeM500 "BAP_NOT_CONFIGURED"
 

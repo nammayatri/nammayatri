@@ -175,5 +175,5 @@ bppUrl context =
 
 updateCaller :: Context -> Flow Context
 updateCaller ctx = do
-  bppNwAddr <- nwAddress <$> ask
-  return $ ctx {_bap_uri = bppNwAddr}
+  bapNwAddr <- nwAddress <$> ask
+  return $ ctx {_bap_uri = bapNwAddr}
