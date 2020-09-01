@@ -28,12 +28,12 @@ searchCb org req = withFlowHandler $ do
       case msg ^? #catalog . #_items . ix 0 . #_id of
         Just itemId -> do
           selectReq <- buildSelectReq ctx itemId
-          apiKey <- org ^. #_apiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
+          cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
           case bppUrl $ req ^. #context of
             Just url ->
               void $
                 callClient "select" url $
-                  client selectAPI apiKey selectReq
+                  client selectAPI cbApiKey selectReq
             Nothing -> EL.logError @Text "mock_app_backend" "Bad ac_id"
         Nothing ->
           EL.logDebug @Text "mock_app_backend" "search_cb error: no items in the catalog."

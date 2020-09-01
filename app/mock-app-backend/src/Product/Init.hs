@@ -21,11 +21,11 @@ initCb org req = withFlowHandler $ do
   ctx <- updateCaller $ req ^. #context
   EL.logDebug @Text "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   confirmReq <- buildConfirmReq ctx
-  apiKey <- org ^. #_apiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
   case bppUrl $ req ^. #context of
     Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
     Just url ->
       void $
         callClient "confirm" url $
-          client confirmAPI apiKey confirmReq
+          client confirmAPI cbApiKey confirmReq
   return resp
