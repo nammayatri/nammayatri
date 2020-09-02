@@ -52,4 +52,4 @@ cancel org req = withFlowHandler $ do
 mkCancelMessage :: Flow CancelResMessage
 mkCancelMessage = do
   L.runIO $ threadDelay 0.5e6
-  return $ CancelResMessage example example example example
+  return $ CancelResMessage example

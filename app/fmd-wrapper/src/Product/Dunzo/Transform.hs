@@ -348,16 +348,8 @@ mkOnCancelReq context order = do
   return $
     CallbackReq
       { context = context & #_action .~ "on_cancel",
-        contents = Right cancel
+        contents = Right (CancelResMessage order)
       }
-  where
-    cancel =
-      CancelResMessage
-        { policies = [],
-          reasons = [],
-          price = Nothing,
-          order = order
-        }
 
 mkOnCancelErrReq :: Context -> Error -> Flow OnCancelReq
 mkOnCancelErrReq context Error {..} = do

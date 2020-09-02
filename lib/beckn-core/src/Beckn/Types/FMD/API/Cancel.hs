@@ -5,9 +5,6 @@ module Beckn.Types.FMD.API.Cancel where
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Option
-import Beckn.Types.Core.Policy
-import Beckn.Types.Core.Price
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -42,18 +39,20 @@ type CancelRes = AckResponse
 
 type OnCancelReq = CallbackReq CancelResMessage
 
-data CancelReqMessage = CancelReqMessage
-  { order_id :: Text,
-    reason_id :: Text
+newtype CancelReqMessage = CancelReqMessage
+  { order :: CancelOrder
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data CancelOrder = CancelOrder
+  { id :: Text,
+    cancellation_reason_id :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type OnCancelRes = AckResponse
 
-data CancelResMessage = CancelResMessage
-  { policies :: [Policy],
-    reasons :: [Option],
-    price :: Maybe Price,
-    order :: Order
+newtype CancelResMessage = CancelResMessage
+  { order :: Order
   }
   deriving (Generic, Show, ToJSON, FromJSON)

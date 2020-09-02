@@ -346,7 +346,7 @@ status org req = do
 
 cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = do
-  let oId = req ^. (#message . #order_id)
+  let oId = req ^. (#message . #order . #id)
   conf@DunzoConfig {..} <- getDunzoConfig org
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
