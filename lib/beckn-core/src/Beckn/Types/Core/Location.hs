@@ -5,6 +5,7 @@ module Beckn.Types.Core.Location where
 import Beckn.Types.Core.Address
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Common
+import Data.Default.Class (Default (..))
 import Data.Text
 import EulerHS.Prelude
 
@@ -26,8 +27,28 @@ instance FromJSON Location where
 instance ToJSON Location where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
+emptyLocation :: Location
+emptyLocation =
+  Location
+    { _gps = Nothing,
+      _address = Nothing,
+      _station_code = Nothing,
+      _city = Nothing,
+      _country = Nothing,
+      _circle = Nothing,
+      _polygon = Nothing,
+      _3dspace = Nothing
+    }
+
+instance Default Location where
+  def = emptyLocation
+
 instance Example Location where
-  example = gpsLocation example
+  example =
+    emptyLocation
+      { _gps = example,
+        _address = example
+      }
 
 gpsLocation :: GPS -> Location
 gpsLocation gps =

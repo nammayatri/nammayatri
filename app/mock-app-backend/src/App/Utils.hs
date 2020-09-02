@@ -17,6 +17,7 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Utils.Common
 import Control.Lens.Prism (_Just)
+import Data.Default.Class
 import Data.Time
 import EulerHS.Prelude
 import Servant.Client (BaseUrl, parseBaseUrl)
@@ -36,6 +37,21 @@ address =
       _ward = Nothing
     }
 
+address2 :: Address
+address2 =
+  Address
+    { _name = "Address",
+      _door = Nothing,
+      _building = Just "Fun World Amusement Park",
+      _street = Nothing,
+      _city = "Bangalore",
+      _state = "Karnataka",
+      _country = "India",
+      _area_code = "560006",
+      _locality = Nothing,
+      _ward = Nothing
+    }
+
 gps :: GPS
 gps =
   GPS
@@ -51,12 +67,20 @@ gps2 =
     }
 
 location :: Location
-location = gpsLocation gps
+location =
+  def
+    { _gps = Just gps,
+      _address = Just address
+    }
 
 -- In some cases (e.g. Dunzo node) it is important to have different
 -- pickup and drop locations
 location2 :: Location
-location2 = gpsLocation gps2
+location2 =
+  def
+    { _gps = Just gps2,
+      _address = Just address2
+    }
 
 buildIntent :: UTCTime -> SearchIntent
 buildIntent utcTime =

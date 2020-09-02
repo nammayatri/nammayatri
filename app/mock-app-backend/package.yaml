@@ -57,6 +57,7 @@ dependencies:
   - beckn-core
   - bytestring
   - containers
+  - data-default-class
   - euler-hs
   - http-api-data
   - http-client
