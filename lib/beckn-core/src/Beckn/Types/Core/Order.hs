@@ -38,7 +38,7 @@ instance Example Order where
         _billing = example,
         _payment = example,
         _update_action = Nothing,
-        _quotation = Nothing
+        _quotation = example
       }
 
 data OrderItem = OrderItem

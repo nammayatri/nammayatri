@@ -49,7 +49,7 @@ instance Example Order where
         _billing = example,
         _payment = example,
         _update_action = Nothing,
-        _quotation = Nothing,
+        _quotation = example,
         _type = Nothing,
         _prev_order_id = Nothing,
         _return_reason_id = Nothing,
