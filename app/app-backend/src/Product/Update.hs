@@ -15,7 +15,6 @@ import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
-import Types.Common (fromBeckn, toBeckn)
 import qualified Types.ProductInfo as ProdInfo
 
 onUpdate :: OnUpdateReq -> FlowHandler AckResponse

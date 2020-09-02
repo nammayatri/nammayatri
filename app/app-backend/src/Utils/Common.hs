@@ -5,6 +5,7 @@ module Utils.Common where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Mobility.Intent
@@ -29,7 +30,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
-import qualified Types.Common as API
 
 -- | Performs simple token verification.
 type TokenAuth = TokenAuth' "token" VerifyToken
@@ -120,10 +120,10 @@ mkIntent req =
       _category_id = Nothing,
       _item_id = Nothing,
       _tags = Nothing,
-      _pickups = [API.toBeckn (req ^. #origin)],
-      _drops = [API.toBeckn (req ^. #destination)],
-      _vehicle = API.toBeckn $ req ^. #vehicle,
+      _pickups = [toBeckn (req ^. #origin)],
+      _drops = [toBeckn (req ^. #destination)],
+      _vehicle = toBeckn $ req ^. #vehicle,
       _payload = Payload Nothing Nothing [] Nothing,
       _transfer = Nothing,
-      _fare = API.toBeckn $ req ^. #fare
+      _fare = toBeckn $ req ^. #fare
     }

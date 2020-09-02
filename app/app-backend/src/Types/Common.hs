@@ -2,6 +2,7 @@
 
 module Types.Common where
 
+import Beckn.Types.Common
 import qualified Beckn.Types.Core.Address as Address
 import qualified Beckn.Types.Core.Category as Category
 import qualified Beckn.Types.Core.DecimalValue as DV
@@ -17,7 +18,6 @@ import qualified Beckn.Types.Mobility.Stop as Stop
 import qualified Beckn.Types.Mobility.Traveller as Traveller
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import Control.Lens.Prism (_Just)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
@@ -118,23 +118,17 @@ data Provider = Provider
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
--- This type class is not strictly an isomorphism. We use the name 'Iso' to
--- denote that it is always expected that a type from the beckn spec should
--- have a corresponding type defined by us allowing conversion (which may be
--- lossless) between the two, when defined as an instance of this typeclass.
-class BecknSpecIso a b where
-  fromBeckn :: a -> b
-  toBeckn :: b -> a
-
-instance BecknSpecIso Location.City City where
+instance FromBeckn Location.City City where
   fromBeckn city = City $ city ^. #name
+
+instance ToBeckn Location.City City where
   toBeckn (City cityName) =
     Location.City
       { name = cityName,
         code = ""
       }
 
-instance BecknSpecIso Text VehicleCategory where
+instance FromBeckn Text VehicleCategory where
   fromBeckn category =
     case category of
       "CAR" -> CAR
@@ -143,6 +137,8 @@ instance BecknSpecIso Text VehicleCategory where
       "OTHER" -> OTHER
       "TRUCK" -> TRUCK
       _ -> OTHER
+
+instance ToBeckn Text VehicleCategory where
   toBeckn category =
     case category of
       CAR -> "CAR"
@@ -151,7 +147,7 @@ instance BecknSpecIso Text VehicleCategory where
       OTHER -> "OTHER"
       TRUCK -> "TRUCK"
 
-instance BecknSpecIso Vehicle.Vehicle Vehicle where
+instance FromBeckn Vehicle.Vehicle Vehicle where
   fromBeckn vehicle =
     Vehicle
       { category = fromBeckn <$> vehicle ^. #category,
@@ -160,6 +156,8 @@ instance BecknSpecIso Vehicle.Vehicle Vehicle where
         variant = vehicle ^. #variant,
         registrationNumber = Vehicle.number <$> (vehicle ^. #registration)
       }
+
+instance ToBeckn Vehicle.Vehicle Vehicle where
   toBeckn vehicle =
     Vehicle.Vehicle
       { category = toBeckn <$> vehicle ^. #category,
@@ -173,19 +171,21 @@ instance BecknSpecIso Vehicle.Vehicle Vehicle where
         registration = Nothing
       }
 
-instance BecknSpecIso Location.GPS GPS where
+instance FromBeckn Location.GPS GPS where
   fromBeckn gps =
     GPS
       { lat = gps ^. #lat,
         lon = gps ^. #lon
       }
+
+instance ToBeckn Location.GPS GPS where
   toBeckn gps =
     Location.GPS
       { lat = gps ^. #lat,
         lon = gps ^. #lon
       }
 
-instance BecknSpecIso Address.Address Address where
+instance FromBeckn Address.Address Address where
   fromBeckn addr =
     Address
       { door = fromMaybe "" $ addr ^. #_door,
@@ -196,6 +196,8 @@ instance BecknSpecIso Address.Address Address where
         country = addr ^. #_country,
         areaCode = addr ^. #_area_code
       }
+
+instance ToBeckn Address.Address Address where
   toBeckn addr =
     Address.Address
       { _name = "",
@@ -210,13 +212,15 @@ instance BecknSpecIso Address.Address Address where
         _area_code = addr ^. #areaCode
       }
 
-instance BecknSpecIso Location.Location Location where
+instance FromBeckn Location.Location Location where
   fromBeckn loc =
     Location
       { gps = fromBeckn <$> loc ^. #_gps,
         address = fromBeckn <$> loc ^. #_address,
         city = fromBeckn <$> loc ^. #_city
       }
+
+instance ToBeckn Location.Location Location where
   toBeckn loc =
     Location.Location
       { _gps = toBeckn <$> loc ^. #gps,
@@ -229,13 +233,15 @@ instance BecknSpecIso Location.Location Location where
         _3dspace = Nothing
       }
 
-instance BecknSpecIso Stop.Stop Stop where
+instance FromBeckn Stop.Stop Stop where
   fromBeckn stop =
     Stop
       { location = fromBeckn $ stop ^. #_location,
         arrivalTime = StopTime (stop ^. #_arrival_time . #_est) (stop ^. #_arrival_time . #_act),
         departureTime = StopTime (stop ^. #_departure_time . #_est) (stop ^. #_departure_time . #_act)
       }
+
+instance ToBeckn Stop.Stop Stop where
   toBeckn stop =
     Stop.Stop
       { _id = "",
@@ -246,20 +252,24 @@ instance BecknSpecIso Stop.Stop Stop where
         _transfers = []
       }
 
-instance BecknSpecIso DV.DecimalValue DecimalValue where
+instance FromBeckn DV.DecimalValue DecimalValue where
   fromBeckn value =
     DecimalValue
       { integral = value ^. #_integral,
         fractional = value ^. #_fractional
       }
+
+instance ToBeckn DV.DecimalValue DecimalValue where
   toBeckn value =
     DV.DecimalValue
       { _integral = value ^. #integral,
         _fractional = value ^. #fractional
       }
 
-instance BecknSpecIso Price.Price DecimalValue where
+instance FromBeckn Price.Price DecimalValue where
   fromBeckn price = DecimalValue (price ^. #_value . _Just . #_integral) (price ^. #_value . _Just . #_fractional)
+
+instance ToBeckn Price.Price DecimalValue where
   toBeckn value =
     Price.Price
       { _currency = "INR",
@@ -272,13 +282,15 @@ instance BecknSpecIso Price.Price DecimalValue where
         _maximum_value = Nothing
       }
 
-instance BecknSpecIso Driver.Driver Driver where
+instance FromBeckn Driver.Driver Driver where
   fromBeckn driver =
     Driver
       { name = driver ^. #name . #_given_name,
         gender = driver ^. #gender,
         phones = driver ^. #phones
       }
+
+instance ToBeckn Driver.Driver Driver where
   toBeckn driver =
     Driver.Driver
       { name = Person.Name Nothing Nothing (driver ^. #name) Nothing Nothing Nothing,
@@ -292,13 +304,15 @@ instance BecknSpecIso Driver.Driver Driver where
         rating = Nothing
       }
 
-instance BecknSpecIso Traveller.Traveller Traveller where
+instance FromBeckn Traveller.Traveller Traveller where
   fromBeckn traveller =
     Traveller
       { name = traveller ^. #_name . #_given_name,
         gender = traveller ^. #_gender,
         phones = traveller ^. #_phones
       }
+
+instance ToBeckn Traveller.Traveller Traveller where
   toBeckn traveller =
     Traveller.Traveller
       { _name = Person.Name Nothing Nothing (traveller ^. #name) Nothing Nothing Nothing,
@@ -312,8 +326,10 @@ instance BecknSpecIso Traveller.Traveller Traveller where
         _destination_stop_id = ""
       }
 
-instance BecknSpecIso Payload.Payload [Traveller] where
+instance FromBeckn Payload.Payload [Traveller] where
   fromBeckn payload = fromBeckn <$> payload ^. #_travellers
+
+instance ToBeckn Payload.Payload [Traveller] where
   toBeckn travellers =
     Payload.Payload
       { _luggage = Nothing,
@@ -322,7 +338,7 @@ instance BecknSpecIso Payload.Payload [Traveller] where
         _travel_group = Nothing
       }
 
-instance BecknSpecIso Trip.Trip Trip where
+instance FromBeckn Trip.Trip Trip where
   fromBeckn trip =
     let mbPrice = trip ^. #fare
         mbFare = case mbPrice of
@@ -337,6 +353,8 @@ instance BecknSpecIso Trip.Trip Trip where
             travellers = [],
             fare = fromBeckn <$> mbFare
           }
+
+instance ToBeckn Trip.Trip Trip where
   toBeckn trip =
     Trip.Trip
       { id = trip ^. #id,
@@ -350,8 +368,10 @@ instance BecknSpecIso Trip.Trip Trip where
         route = Nothing
       }
 
-instance BecknSpecIso Tracking.Tracking Tracking where
+instance FromBeckn Tracking.Tracking Tracking where
   fromBeckn tracking = Tracking {url = tracking ^. #_url}
+
+instance ToBeckn Tracking.Tracking Tracking where
   toBeckn tracking =
     Tracking.Tracking
       { _url = tracking ^. #url,
@@ -359,7 +379,7 @@ instance BecknSpecIso Tracking.Tracking Tracking where
         _metadata = Nothing
       }
 
-instance BecknSpecIso Category.Category Provider where
+instance FromBeckn Category.Category Provider where
   fromBeckn category =
     Provider
       { id = category ^. #_id,
@@ -367,12 +387,14 @@ instance BecknSpecIso Category.Category Provider where
         phones = Tag._value <$> filter (\x -> x ^. #_key == "contacts") (category ^. #_tags),
         info = Tag._value <$> find (\x -> x ^. #_key == "stats") (category ^. #_tags)
       }
-  toBeckn provider =
+
+instance ToBeckn Category.Category Provider where
+  toBeckn category =
     Category.Category
-      { _id = provider ^. #id,
+      { _id = category ^. #id,
         _descriptor =
           Descriptor.Descriptor
-            { _name = provider ^. #name,
+            { _name = category ^. #name,
               _code = Nothing,
               _symbol = Nothing,
               _short_desc = Nothing,
@@ -384,27 +406,3 @@ instance BecknSpecIso Category.Category Provider where
         _parent_category_id = Nothing,
         _tags = []
       }
-
-instance BecknSpecIso Text PI.ProductInstanceStatus where
-  fromBeckn piStatus =
-    case piStatus of
-      "VALID" -> PI.VALID
-      "INPROGRESS" -> PI.INPROGRESS
-      "CONFIRMED" -> PI.CONFIRMED
-      "COMPLETED" -> PI.COMPLETED
-      "INSTOCK" -> PI.INSTOCK
-      "OUTOFSTOCK" -> PI.OUTOFSTOCK
-      "CANCELLED" -> PI.CANCELLED
-      "EXPIRED" -> PI.EXPIRED
-      _ -> PI.INVALID
-  toBeckn piStatus =
-    case piStatus of
-      PI.VALID -> "VALID"
-      PI.INVALID -> "INVALID"
-      PI.INPROGRESS -> "INPROGRESS"
-      PI.CONFIRMED -> "CONFIRMED"
-      PI.COMPLETED -> "COMPLETED"
-      PI.INSTOCK -> "INSTOCK"
-      PI.OUTOFSTOCK -> "OUTOFSTOCK"
-      PI.CANCELLED -> "CANCELLED"
-      PI.EXPIRED -> "EXPIRED"

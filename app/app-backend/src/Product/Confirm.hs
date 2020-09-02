@@ -23,7 +23,6 @@ import qualified Models.ProductInstance as MPI
 import Servant
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
-import Types.Common (fromBeckn)
 import qualified Types.ProductInfo as Products
 import Utils.Common (generateShortId)
 import qualified Utils.Metrics as Metrics

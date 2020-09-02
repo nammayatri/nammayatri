@@ -18,7 +18,6 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
-import Types.Common (fromBeckn)
 import Types.ProductInfo as ProductInfo
 import qualified Utils.Notifications as Notify
 

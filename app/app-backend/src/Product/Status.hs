@@ -19,7 +19,6 @@ import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
 import qualified Types.API.Case as Case
 import Types.API.Status as Status
-import Types.Common
 import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes

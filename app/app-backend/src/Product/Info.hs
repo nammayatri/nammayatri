@@ -5,6 +5,7 @@ module Product.Info where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
@@ -17,7 +18,6 @@ import qualified Models.ProductInstance as MPI
 import Servant
 import Types.API.Location
 import Types.API.Product
-import Types.Common (toBeckn)
 import Types.ProductInfo as ProductInfo
 
 getProductInfo :: Person.Person -> Text -> FlowHandler GetProductInfoRes

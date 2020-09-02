@@ -4,7 +4,9 @@
 
 module External.Dunzo.Types where
 
-import Data.Aeson
+import Beckn.Types.Common
+import qualified Beckn.Types.Core.Error as Beckn
+import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -218,3 +220,28 @@ data Error = Error
     details :: Value
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+instance ToBeckn Beckn.Error Error where
+  toBeckn Error {..} =
+    Beckn.Error
+      { _type = "DOMAIN-ERROR",
+        _code = becknErrCode,
+        _path = Nothing,
+        _message = Just message
+      }
+    where
+      becknErrCode = case code of
+        "unauthorized" -> "CORE001"
+        "rate_limit_exceeded" -> "CORE002"
+        "validation_failed" -> "CORE003"
+        "bad_request" -> "CORE003"
+        "unserviceable_location_error" -> "FMD001"
+        "stock_out_error" -> "FMD009"
+        "internal_server_error" -> "CORE002"
+        "duplicate_request" -> "CORE003"
+        "rain_error" -> "FMD009"
+        "different_city_error" -> "FMD001"
+        "near_by_location_error" -> "FMD001"
+        "service_unavailable" -> "CORE002"
+        "default" -> "CORE003"
+        _ -> "CORE003"

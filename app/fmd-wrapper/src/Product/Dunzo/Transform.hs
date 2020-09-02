@@ -5,7 +5,7 @@ module Product.Dunzo.Transform where
 
 import App.Types
 import Beckn.Types.API.Callback
-import Beckn.Types.Common (generateGUID)
+import Beckn.Types.Common
 import qualified Beckn.Types.Core.Address as CoreAddr
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
@@ -41,7 +41,6 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (drop)
 import External.Dunzo.Types
-import Product.Dunzo.ErrorMapper
 import Types.Wrapper
 import Utils.Common (getClientConfig)
 
@@ -112,7 +111,7 @@ mkOnSearchErrReq :: Context -> Error -> OnSearchReq
 mkOnSearchErrReq context err = do
   CallbackReq
     { context = context & #_action .~ "on_search",
-      contents = Left $ mapError err
+      contents = Left $ toBeckn err
     }
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
@@ -205,7 +204,7 @@ mkOnSelectErrReq :: Context -> Error -> OnSelectReq
 mkOnSelectErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_select",
-      contents = Left $ mapError err
+      contents = Left $ toBeckn err
     }
 
 mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> InitOrder
@@ -244,7 +243,7 @@ mkOnInitErrReq :: Context -> Error -> OnInitReq
 mkOnInitErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_init",
-      contents = Left $ mapError err
+      contents = Left $ toBeckn err
     }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
@@ -290,7 +289,7 @@ mkOnStatusErrReq :: Context -> Error -> OnStatusReq
 mkOnStatusErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_status",
-      contents = Left $ mapError err
+      contents = Left $ toBeckn err
     }
 
 mkOnTrackErrReq :: Context -> OnTrackReq
@@ -320,7 +319,7 @@ mkOnCancelErrReq :: Context -> Error -> OnCancelReq
 mkOnCancelErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_cancel",
-      contents = Left $ mapError err
+      contents = Left $ toBeckn err
     }
 
 mkCreateTaskReq :: Order -> Flow CreateTaskReq
@@ -399,7 +398,7 @@ mkOnConfirmErrReq :: Context -> Error -> OnConfirmReq
 mkOnConfirmErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_confirm",
-      contents = Left $ mapError err
+      contents = Left $ toBeckn err
     }
 
 mkOnUpdateErrReq :: Context -> OnUpdateReq

@@ -34,7 +34,7 @@ import qualified Storage.Queries.Location as Location
 import qualified Types.API.Case as API
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
-import Types.Common (Provider, fromBeckn, toBeckn)
+import Types.Common (Provider)
 import Types.ProductInfo
 import Utils.Common
 import qualified Utils.Metrics as Metrics

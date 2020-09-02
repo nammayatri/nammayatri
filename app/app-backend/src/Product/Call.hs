@@ -8,6 +8,7 @@ import App.Types
 import Beckn.External.Exotel.Flow
 import Beckn.Types.API.Call
 import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -20,7 +21,6 @@ import EulerHS.Prelude hiding (id)
 import Models.Case as Case
 import Models.ProductInstance as ProductInstance
 import Storage.Queries.Person as Person
-import Types.Common (toBeckn)
 import Types.ProductInfo as ProductInfo
 
 -- | Try to initiate a call customer -> provider

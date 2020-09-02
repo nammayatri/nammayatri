@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Core.Amount
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
@@ -161,3 +162,29 @@ validateStatusTransition oldState newState =
     t INSTOCK _ = forbidden
     t OUTOFSTOCK _ = forbidden
     t INVALID _ = forbidden
+
+instance FromBeckn Text ProductInstanceStatus where
+  fromBeckn piStatus =
+    case piStatus of
+      "VALID" -> VALID
+      "INPROGRESS" -> INPROGRESS
+      "CONFIRMED" -> CONFIRMED
+      "COMPLETED" -> COMPLETED
+      "INSTOCK" -> INSTOCK
+      "OUTOFSTOCK" -> OUTOFSTOCK
+      "CANCELLED" -> CANCELLED
+      "EXPIRED" -> EXPIRED
+      _ -> INVALID
+
+instance ToBeckn Text ProductInstanceStatus where
+  toBeckn piStatus =
+    case piStatus of
+      VALID -> "VALID"
+      INVALID -> "INVALID"
+      INPROGRESS -> "INPROGRESS"
+      CONFIRMED -> "CONFIRMED"
+      COMPLETED -> "COMPLETED"
+      INSTOCK -> "INSTOCK"
+      OUTOFSTOCK -> "OUTOFSTOCK"
+      CANCELLED -> "CANCELLED"
+      EXPIRED -> "EXPIRED"
