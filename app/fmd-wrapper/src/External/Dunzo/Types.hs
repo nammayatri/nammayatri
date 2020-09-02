@@ -155,7 +155,7 @@ data TaskState
 data TaskStatus = TaskStatus
   { task_id :: TaskId,
     state :: TaskState,
-    eta :: Eta,
+    eta :: Maybe Eta,
     estimated_price :: Maybe Float,
     event_timestamp :: Maybe Integer,
     request_timestamp :: Maybe Integer,
