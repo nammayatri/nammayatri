@@ -1,13 +1,10 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App.Types where
 
 import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
+import Beckn.Utils.Dhall (FromDhall, ZL (..))
 import EulerHS.Prelude
-import Servant.Client (BaseUrl, Scheme)
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
@@ -15,7 +12,7 @@ data AppEnv = AppEnv
     metricsPort :: Int,
     xGatewayUri :: BaseUrl,
     selfId :: Maybe Text,
-    nwAddress :: Maybe Text,
+    nwAddress :: Maybe BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     logRawSql :: Bool
@@ -30,5 +27,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-tyEnv :: ZL '[Scheme]
-tyEnv = z @Scheme "UrlScheme" Z
+tyEnv :: ZL '[]
+tyEnv = Z

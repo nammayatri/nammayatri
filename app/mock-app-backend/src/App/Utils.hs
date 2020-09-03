@@ -3,6 +3,7 @@
 module App.Utils where
 
 import App.Types
+import Beckn.Types.App
 import Beckn.Types.Core.Address
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
@@ -20,7 +21,7 @@ import Control.Lens.Prism (_Just)
 import Data.Default.Class
 import Data.Time
 import EulerHS.Prelude
-import Servant.Client (BaseUrl, parseBaseUrl)
+import Servant.Client (parseBaseUrl)
 
 address :: Address
 address =
@@ -148,7 +149,7 @@ buildContext act tid = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.8.2",
-        _bap_uri = bapNwAddr,
+        _bap_uri = showBaseUrl <$> bapNwAddr,
         _bpp_uri = Nothing,
         _transaction_id = tid,
         _message_id = tid,
@@ -200,4 +201,4 @@ bppUrl context =
 updateCaller :: Context -> Flow Context
 updateCaller ctx = do
   bapNwAddr <- nwAddress <$> ask
-  return $ ctx {_bap_uri = bapNwAddr}
+  return $ ctx {_bap_uri = showBaseUrl <$> bapNwAddr}

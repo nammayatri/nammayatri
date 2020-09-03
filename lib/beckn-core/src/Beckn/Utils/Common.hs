@@ -24,7 +24,6 @@ import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
 import Network.HTTP.Types (hContentType)
 import Servant
-import Servant.Client (BaseUrl)
 import Servant.Client.Core.ClientError
 import Servant.Client.Core.Response
 

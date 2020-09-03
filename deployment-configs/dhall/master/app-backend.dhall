@@ -16,26 +16,11 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
-let gwUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-gateway-${common.branchName}.atlas"
-  , baseUrlPort = +8015
-  , baseUrlPath = "/v1"
-  }
+let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
-let providerUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-transport-${common.branchName}.atlas"
-  , baseUrlPort = +8014
-  , baseUrlPath = "/v1"
-  }
+let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v1"
 
-let nsdlUrl =
-  { baseUrlScheme = UrlScheme.Https
-  , baseUrlHost = "pilot-gateway-1.beckn.nsdl.co.in"
-  , baseUrlPort = +443
-  , baseUrlPath = ""
-  }
+let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 
 in
 

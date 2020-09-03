@@ -78,7 +78,7 @@ fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
 
-mkContext :: Text -> Text -> UTCTime -> Maybe Text -> Maybe Text -> Context
+mkContext :: Text -> Text -> UTCTime -> Maybe BaseUrl -> Maybe BaseUrl -> Context
 mkContext action rtid utcTime bapUri bppUri =
   Context
     { _domain = MOBILITY,
@@ -87,8 +87,8 @@ mkContext action rtid utcTime bapUri bppUri =
       _action = action,
       _core_version = Just "0.8.0",
       _domain_version = Nothing,
-      _bap_uri = bapUri,
-      _bpp_uri = bppUri,
+      _bap_uri = showBaseUrl <$> bapUri,
+      _bpp_uri = showBaseUrl <$> bppUri,
       _transaction_id = rtid,
       _message_id = rtid,
       _timestamp = utcTime

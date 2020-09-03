@@ -17,7 +17,6 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
-import Servant.Client
 import Types.API.Cancel as Cancel
 import Utils.Common (mkContext)
 import qualified Utils.Metrics as Metrics

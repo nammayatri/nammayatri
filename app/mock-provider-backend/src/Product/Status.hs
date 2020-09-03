@@ -5,6 +5,7 @@ module Product.Status where
 
 import App.Types
 import Beckn.Types.API.Callback
+import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Status
@@ -22,7 +23,7 @@ status org req = withFlowHandler $ do
   let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_bap_uri
       context =
         (req ^. #context)
-          { _bpp_uri = bppNwAddr
+          { _bpp_uri = showBaseUrl <$> bppNwAddr
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"

@@ -1,12 +1,7 @@
 let common = ./generic/common.dhall
 let sec = ./secrets/mock-app-backend.dhall
 
-let gwUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "localhost"
-  , baseUrlPort = +8015
-  , baseUrlPath = "/v1"
-  }
+let gwUri = "http://localhost:8015/v1"
 
 let postgresConfig =
   { connectHost = "localhost"

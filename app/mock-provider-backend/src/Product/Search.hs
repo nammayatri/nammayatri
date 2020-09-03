@@ -7,6 +7,7 @@ where
 
 import App.Types
 import Beckn.Types.API.Callback
+import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.FmdError
@@ -25,7 +26,7 @@ search org req = withFlowHandler $ do
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let context =
         (req ^. #context)
-          { _bpp_uri = bppNwAddr
+          { _bpp_uri = showBaseUrl <$> bppNwAddr
           }
   case context ^. #_transaction_id of
     tId

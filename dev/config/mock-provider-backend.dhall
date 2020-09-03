@@ -16,12 +16,7 @@ let pgcfg =
   , schemaName = "atlas_mock_provider_backend"
   }
 
-let gwUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "localhost"
-  , baseUrlPort = +8015
-  , baseUrlPath = "/v1"
-  }
+let gwUri = "http://localhost:8015/v1"
 
 in
 

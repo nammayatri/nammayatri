@@ -16,19 +16,9 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
-let gwUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "localhost"
-  , baseUrlPort = +8015
-  , baseUrlPath = "/v1"
-  }
+let gwUri = "http://localhost:8015/v1"
 
-let providerUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "localhost"
-  , baseUrlPort = +8014
-  , baseUrlPath = "/v1"
-  }
+let providerUri = "http://localhost:8014/v1"
 
 in
 
@@ -39,7 +29,7 @@ in
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
-, xGatewayNsdlUrl = None BaseUrl
+, xGatewayNsdlUrl = None Text
 , nsdlUsername = None Text
 , nsdlPassword = None Text
 , xProviderUri = providerUri

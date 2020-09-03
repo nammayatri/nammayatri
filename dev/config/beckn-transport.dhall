@@ -26,19 +26,9 @@ let rcfg =
   , connectTimeout = None Integer
   }
 
-let gwUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "localhost"
-  , baseUrlPort = +8015
-  , baseUrlPath = "/v1"
-  }
+let gwUri = "http://localhost:8015/v1"
 
-let appUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "localhost"
-  , baseUrlPort = +8013
-  , baseUrlPath = "/v1"
-  }
+let appUri = "http://localhost:8013/v1"
 
 in
 
@@ -50,7 +40,7 @@ in
 , xGatewayUri = appUri
 , xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
-, xGatewayNsdlUrl = None BaseUrl
+, xGatewayNsdlUrl = None Text
 , nsdlUsername = None Text
 , nsdlPassword = None Text
 , xAppUri = appUri

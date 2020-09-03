@@ -3,7 +3,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Types.App where
+module Beckn.Types.App
+  ( module Beckn.Types.App,
+    Servant.BaseUrl,
+  )
+where
 
 import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
@@ -14,6 +18,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Records (HasField (..))
 import Servant
+import qualified Servant.Client.Core as Servant
 
 data EnvR r = EnvR
   { runTime :: R.FlowRuntime,
@@ -112,3 +117,6 @@ data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING
 type HasTraceFlag r = HasField "traceFlag" r TraceFlag
 
 type FlowWithTraceFlag r a = (HasTraceFlag r, HasDbCfg r) => FlowR r a
+
+showBaseUrl :: Servant.BaseUrl -> Text
+showBaseUrl = toText . Servant.showBaseUrl

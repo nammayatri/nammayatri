@@ -21,7 +21,8 @@ import qualified Dhall.Map as DM
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import qualified Lens.Family as Lens
-import Servant.Client (BaseUrl, Scheme)
+import Servant.Client (BaseUrl, Scheme, parseBaseUrl)
+import Servant.Client.Core (InvalidBaseUrlException (..))
 import System.Environment (lookupEnv)
 
 -- Temp crutches for old Dhalls
@@ -99,10 +100,26 @@ instance FromDhall Word16 where
 
 deriving instance FromDhall Scheme
 
-deriving instance FromDhall BaseUrl
-
 deriving instance FromDhall T.PoolConfig
 
 deriving instance FromDhall T.PostgresConfig
 
 deriving instance FromDhall T.RedisConfig
+
+instance FromDhall BaseUrl where
+  autoWith = parseAddr . autoWith
+    where
+      parseAddr :: Decoder String -> Decoder BaseUrl
+      parseAddr Decoder {..} =
+        Decoder
+          { extract = \x -> fromMonadic $ do
+              txt <- toMonadic (extract x)
+              parseBaseUrl txt
+                & either (toMonadic . extractError . showBaseUrlErr) pure,
+            ..
+          }
+
+      showBaseUrlErr :: SomeException -> Text
+      showBaseUrlErr e = case fromException e of
+        Just (InvalidBaseUrlException msg) -> toText msg
+        Nothing -> "Some unknown error: " <> show e

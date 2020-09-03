@@ -9,7 +9,6 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
 import EulerHS.Prelude
-import Servant.Client (BaseUrl, Scheme)
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
@@ -24,7 +23,7 @@ data AppEnv = AppEnv
     nsdlPassword :: Maybe Text,
     xProviderUri :: BaseUrl,
     bapSelfId :: Maybe Text,
-    bapNwAddress :: Maybe Text,
+    bapNwAddress :: Maybe BaseUrl,
     searchConfirmExpiry :: Maybe Integer,
     searchCaseExpiry :: Maybe Integer,
     cronAuthKey :: Maybe CronAuthKey,
@@ -46,5 +45,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-tyEnv :: ZL '[Scheme, ExotelCfg, BaseUrl]
-tyEnv = z @Scheme "UrlScheme" $ z @ExotelCfg "ExotelCfg" $ z @BaseUrl "BaseUrl" Z
+tyEnv :: ZL '[ExotelCfg]
+tyEnv = z @ExotelCfg "ExotelCfg" Z

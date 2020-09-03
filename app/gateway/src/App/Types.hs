@@ -14,7 +14,7 @@ data AppCfg = AppCfg
     port :: Int,
     metricsPort :: Int,
     selfId :: Maybe Text,
-    nwAddress :: Maybe Text,
+    nwAddress :: Maybe BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     logRawSql :: Bool,
@@ -27,7 +27,7 @@ data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     redisCfg :: T.RedisConfig,
     gwId :: Maybe Text,
-    gwNwAddress :: Maybe Text,
+    gwNwAddress :: Maybe BaseUrl,
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
@@ -38,7 +38,13 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 mkAppEnv :: AppCfg -> C.Cache Text Text -> AppEnv
-mkAppEnv AppCfg {..} c = AppEnv {gwId = selfId, gwNwAddress = nwAddress, cache = c, ..}
+mkAppEnv AppCfg {..} c =
+  AppEnv
+    { gwId = selfId,
+      gwNwAddress = nwAddress,
+      cache = c,
+      ..
+    }
 
 type Flow = FlowR AppEnv
 
