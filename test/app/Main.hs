@@ -13,6 +13,9 @@ import Test.Tasty
 
 main :: IO ()
 main = do
+  -- We can't really spawn off multiple instances of our servers, so serialise...
+  setEnv "TASTY_NUM_THREADS" "1"
+  -- Set some config paths in environment...
   mapM_
     setConfigEnv
     [ "app-backend",
@@ -21,6 +24,7 @@ main = do
       "mock-app-backend",
       "mock-provider-backend"
     ]
+  -- ... and run
   defaultMain =<< specs
   where
     setConfigEnv app =
