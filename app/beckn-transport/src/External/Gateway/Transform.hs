@@ -4,6 +4,8 @@ module External.Gateway.Transform where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Core.Brand
+import Beckn.Types.Core.Category
 import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Item
@@ -11,31 +13,30 @@ import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
+import Beckn.Types.Core.Tag
 import qualified Beckn.Types.Core.Tracking as CoreTracking
 import Beckn.Types.Mobility.Catalog as Mobility
 import Beckn.Types.Mobility.Driver as Mobility
 import Beckn.Types.Mobility.Order as Mobility
-import Beckn.Types.Mobility.Service as Mobility
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Vehicle as Vehicle
+import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common (getCurrTime)
 import Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Types.API.Case
 
-mkCatalog :: [ProductInstance] -> Flow Mobility.Catalog
-mkCatalog prodInsts = do
-  catalogId <- L.generateGUID
+mkCatalog :: Case -> [ProductInstance] -> ProviderInfo -> Flow Mobility.Catalog
+mkCatalog c prodInsts provider =
   return
     Mobility.Catalog
-      { _id = catalogId,
-        _categories = [],
-        _brands = [],
+      { _id = _getCaseId $ c ^. #_id,
+        _categories = [mkCategory provider],
+        _brands = [mkBrand provider],
         _models = [],
         _ttl = Nothing,
         _items = mkItem <$> prodInsts,
@@ -43,8 +44,8 @@ mkCatalog prodInsts = do
         _fare_products = []
       }
 
-mkDescriptor :: ProductInstance -> Descriptor
-mkDescriptor _prodInst =
+mkItemDescriptor :: ProductInstance -> Descriptor
+mkItemDescriptor _prodInst =
   Descriptor
     { _name = Nothing,
       _code = Nothing,
@@ -56,12 +57,52 @@ mkDescriptor _prodInst =
       _3d_render = Nothing
     }
 
+mkBrand :: ProviderInfo -> Brand
+mkBrand provider =
+  Brand
+    { _id = provider ^. #_id,
+      _descriptor =
+        Descriptor
+          { _name = Just $ provider ^. #_name,
+            _code = Nothing,
+            _symbol = Nothing,
+            _short_desc = Nothing,
+            _long_desc = Nothing,
+            _images = [],
+            _audio = Nothing,
+            _3d_render = Nothing
+          },
+      _parent_brand_id = Nothing
+    }
+
+mkCategory :: ProviderInfo -> Category
+mkCategory provider =
+  Category
+    { _id = provider ^. #_id,
+      _descriptor =
+        Descriptor
+          { _name = Just $ provider ^. #_name,
+            _code = Nothing,
+            _symbol = Nothing,
+            _short_desc = Nothing,
+            _long_desc = Nothing,
+            _images = [],
+            _audio = Nothing,
+            _3d_render = Nothing
+          },
+      _parent_category_id = Nothing,
+      _tags =
+        [ Tag "contacts" (provider ^. #_contacts),
+          Tag "stats" (provider ^. #_stats)
+        ]
+    }
+
 mkItem :: ProductInstance -> Item
 mkItem prodInst =
   Item
     { _id = _getProductInstanceId $ prodInst ^. #_id,
       _parent_item_id = Nothing,
-      _descriptor = mkDescriptor prodInst,
+      _descriptor = mkItemDescriptor prodInst,
       _price = mkPrice prodInst,
       _promotional = False,
       _category_id = Nothing,
@@ -84,19 +125,6 @@ mkPrice prodInst =
           _minimum_value = Just amt,
           _maximum_value = Just amt
         }
-
-mkServiceOffer :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow Mobility.Service
-mkServiceOffer c pis _allPis orgInfo = do
-  mcatalog <- case pis of
-    [] -> return Nothing
-    _ -> Just <$> mkCatalog pis
-  return
-    Mobility.Service
-      { _id = _getCaseId $ c ^. #_id,
-        _catalog = mcatalog,
-        _provider = Just $ mkProvider orgInfo,
-        _policies = []
-      }
 
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
 mkOrder _c pri trip = do

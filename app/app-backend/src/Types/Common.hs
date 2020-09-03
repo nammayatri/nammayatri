@@ -3,12 +3,13 @@
 module Types.Common where
 
 import qualified Beckn.Types.Core.Address as Address
+import qualified Beckn.Types.Core.Category as Category
 import qualified Beckn.Types.Core.DecimalValue as DV
 import qualified Beckn.Types.Core.Descriptor as Descriptor
 import qualified Beckn.Types.Core.Location as Location
 import qualified Beckn.Types.Core.Person as Person
 import qualified Beckn.Types.Core.Price as Price
-import qualified Beckn.Types.Core.Provider as Provider
+import qualified Beckn.Types.Core.Tag as Tag
 import qualified Beckn.Types.Core.Tracking as Tracking
 import qualified Beckn.Types.Mobility.Driver as Driver
 import qualified Beckn.Types.Mobility.Payload as Payload
@@ -358,16 +359,16 @@ instance BecknSpecIso Tracking.Tracking Tracking where
         _metadata = Nothing
       }
 
-instance BecknSpecIso Provider.Provider Provider where
-  fromBeckn provider =
+instance BecknSpecIso Category.Category Provider where
+  fromBeckn category =
     Provider
-      { id = provider ^. #_id,
-        name = provider ^. #_descriptor . #_name,
-        phones = provider ^. #_poc . _Just . #phones,
-        info = provider ^. #_descriptor . #_long_desc
+      { id = category ^. #_id,
+        name = category ^. #_descriptor . #_name,
+        phones = Tag._value <$> filter (\x -> x ^. #_key == "contacts") (category ^. #_tags),
+        info = Tag._value <$> find (\x -> x ^. #_key == "stats") (category ^. #_tags)
       }
   toBeckn provider =
-    Provider.Provider
+    Category.Category
       { _id = provider ^. #id,
         _descriptor =
           Descriptor.Descriptor
@@ -375,30 +376,13 @@ instance BecknSpecIso Provider.Provider Provider where
               _code = Nothing,
               _symbol = Nothing,
               _short_desc = Nothing,
-              _long_desc = provider ^. #info,
+              _long_desc = Nothing,
               _images = [],
               _audio = Nothing,
               _3d_render = Nothing
             },
-        _poc =
-          Just $
-            Person.Person
-              { name =
-                  Person.Name
-                    { _additional_name = Nothing,
-                      _family_name = Nothing,
-                      _given_name = "",
-                      _call_sign = Nothing,
-                      _honorific_prefix = Nothing,
-                      _honorific_suffix = Nothing
-                    },
-                image = Nothing,
-                dob = Nothing,
-                organization_name = provider ^. #name,
-                gender = "",
-                email = Nothing,
-                phones = provider ^. #phones
-              }
+        _parent_category_id = Nothing,
+        _tags = []
       }
 
 instance BecknSpecIso Text PI.ProductInstanceStatus where

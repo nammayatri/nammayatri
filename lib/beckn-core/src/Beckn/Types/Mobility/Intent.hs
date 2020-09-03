@@ -16,7 +16,7 @@ data Intent = Intent
     _provider_id :: Maybe Text,
     _category_id :: Maybe Text,
     _item_id :: Maybe Text,
-    _tags :: [Tag],
+    _tags :: Maybe [Tag],
     -- Mobility specific
     _pickups :: [Stop],
     _drops :: [Stop],

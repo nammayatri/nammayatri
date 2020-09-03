@@ -9,7 +9,7 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
-import Beckn.Types.Mobility.Service as BM
+import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
@@ -70,37 +70,35 @@ search person req = withFlowHandler $ do
 
 searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _unit req = withFlowHandler $ do
-  -- TODO: Verify api key here
   case req ^. #contents of
     Right msg -> do
-      let (services :: [Service]) = msg ^. #services
-      traverse_ (searchCbService req) services
+      let catalog = msg ^. #catalog
+      _ <- searchCbService req catalog
+      return ()
     Left err -> L.logError @Text "on_search req" $ "on_search error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
-searchCbService :: Search.OnSearchReq -> BM.Service -> Flow Search.OnSearchRes
-searchCbService req service = do
-  -- TODO: Verify api key here
-  let mprovider = fromBeckn <$> (service ^. #_provider)
-      mcatalog = service ^. #_catalog
-      caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
+searchCbService req catalog = do
+  let caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
   personId <-
     maybe
       (L.throwException $ err500 {errBody = "No person linked to case"})
       (return . PersonId)
       (Case._requestor case_)
-  case (mprovider, mcatalog) of
-    (Nothing, _) -> L.throwException $ err400 {errBody = "missing provider"}
-    (Just provider, Nothing) -> do
+  case (catalog ^. #_categories, catalog ^. #_items) of
+    ([], _) -> L.throwException $ err400 {errBody = "missing provider"}
+    (category : _, []) -> do
+      let provider = fromBeckn category
       declinedPI <- mkDeclinedProductInstance case_ provider personId
       MPI.create declinedPI
       return ()
-    (Just provider, Just catalog) -> do
+    (category : _, items) -> do
       when
         (case_ ^. #_status == Case.CLOSED)
         (L.throwException $ err400 {errBody = "Case expired"})
-      let items = catalog ^. #_items
+      let provider = fromBeckn category
       products <- traverse (mkProduct case_) items
       traverse_ Products.create products
       productInstances <- traverse (mkProductInstance case_ provider personId) items

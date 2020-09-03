@@ -10,7 +10,6 @@ import Beckn.Types.App
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
-import Beckn.Types.Core.Provider
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
@@ -138,18 +137,17 @@ createProductInstance cs prod price orgId status = do
 notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Flow ()
 notifyGateway c prodInst orgId piStatus = do
   L.logInfo @Text "notifyGateway" $ show c
-  allPis <- QPI.findAllByCaseId (c ^. #_id)
   L.logInfo @Text "notifyGateway" $ show prodInst
   orgInfo <- OQ.findOrganizationById (OrganizationId orgId)
   onSearchPayload <- case piStatus of
-    PI.OUTOFSTOCK -> mkOnSearchPayload c [] allPis orgInfo
-    _ -> mkOnSearchPayload c [prodInst] allPis orgInfo
+    PI.OUTOFSTOCK -> mkOnSearchPayload c [] orgInfo
+    _ -> mkOnSearchPayload c [prodInst] orgInfo
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
   _ <- Gateway.onSearch onSearchPayload
   return ()
 
-mkOnSearchPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Organization -> Flow OnSearchReq
-mkOnSearchPayload c pis allPis orgInfo = do
+mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
+mkOnSearchPayload c pis orgInfo = do
   currTime <- getCurrTime
   appEnv <- ask
   let context =
@@ -167,10 +165,30 @@ mkOnSearchPayload c pis allPis orgInfo = do
             _timestamp = currTime
           }
   piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER
-  let mStatsInfo = Just $ encodeToText $ ProviderStats (List.lookup PI.COMPLETED piCount) Nothing Nothing
-  service <- GT.mkServiceOffer c pis allPis (orgInfo {Organization._info = mStatsInfo})
+  let stats = mkProviderStats piCount
+      provider = mkProviderInfo orgInfo stats
+  catalog <- GT.mkCatalog c pis provider
   return
     CallbackReq
       { context,
-        contents = Right $ OnSearchServices [service]
+        contents = Right $ OnSearchServices catalog
       }
+
+-- Utility Functions
+
+mkProviderInfo :: Organization -> ProviderStats -> ProviderInfo
+mkProviderInfo org stats =
+  ProviderInfo
+    { _id = _getOrganizationId $ org ^. #_id,
+      _name = org ^. #_name,
+      _stats = encodeToText stats,
+      _contacts = fromMaybe "" (org ^. #_mobileNumber)
+    }
+
+mkProviderStats :: [(PI.ProductInstanceStatus, Int)] -> ProviderStats
+mkProviderStats piCount =
+  ProviderStats
+    { _completed = List.lookup PI.COMPLETED piCount,
+      _inprogress = List.lookup PI.INPROGRESS piCount,
+      _confirmed = List.lookup PI.CONFIRMED piCount
+    }

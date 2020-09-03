@@ -32,3 +32,30 @@ instance FromJSON UpdateCaseReq where
 
 instance ToJSON UpdateCaseReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+data ProviderStats = ProviderStats
+  { _completed :: Maybe Int,
+    _inprogress :: Maybe Int,
+    _confirmed :: Maybe Int
+  }
+  deriving (Generic, Show)
+
+instance FromJSON ProviderStats where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ProviderStats where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+data ProviderInfo = ProviderInfo
+  { _id :: Text,
+    _name :: Text,
+    _stats :: Text,
+    _contacts :: Text
+  }
+  deriving (Generic, Show)
+
+instance FromJSON ProviderInfo where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ProviderInfo where
+  toJSON = genericToJSON stripAllLensPrefixOptions

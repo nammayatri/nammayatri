@@ -5,8 +5,8 @@ module Beckn.Types.API.Search where
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Mobility.Catalog
 import Beckn.Types.Mobility.Intent
-import Beckn.Types.Mobility.Service
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -62,7 +62,7 @@ type SearchRes = AckResponse
 type OnSearchReq = CallbackReq OnSearchServices
 
 newtype OnSearchServices = OnSearchServices
-  { services :: [Service]
+  { catalog :: Catalog
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -76,7 +76,7 @@ newtype SearchIntent = SearchIntent
 instance Example OnSearchServices where
   example =
     OnSearchServices
-      { services = example
+      { catalog = example
       }
 
 type OnSearchEndAPI v =
