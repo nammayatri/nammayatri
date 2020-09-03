@@ -29,7 +29,7 @@ tmux select-layout tiled
 
 if [[ $mode = "all-mocks" ]]; then
     tmux select-pane -t 0
-    tmux send-keys "Running mock-app-backend" C-m
+    tmux send-keys "# Running mock-app-backend" C-m
     tmux send-keys "stack exec mock-app-backend-exe" C-m
     tmux select-pane -t 1
     tmux send-keys "# Running gateway" C-m
