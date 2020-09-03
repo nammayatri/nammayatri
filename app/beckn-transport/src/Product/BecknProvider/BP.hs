@@ -444,7 +444,7 @@ mkOnServiceStatusPayload piId trackerPi = do
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
 trackTrip req = withFlowHandler $ do
   L.logInfo @Text "track trip API Flow" $ show req
-  let tripId = req ^. #message . #tracking . #id
+  let tripId = req ^. #message . #order_id
   case_ <- Case.findById (CaseId tripId)
   case case_ ^. #_parentCaseId of
     Just parentCaseId -> do

@@ -21,13 +21,8 @@ type OnTrackTripReq = CallbackReq OnTrackReqMessage
 type OnTrackTripRes = AckResponse
 
 data TrackReqMessage = TrackReqMessage
-  { order :: TrackReqId,
-    tracking :: TrackReqId
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-newtype TrackReqId = TrackReqId
-  { id :: Text
+  { order_id :: Text,
+    callback_url :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

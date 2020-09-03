@@ -25,7 +25,7 @@ import qualified Utils.Notifications as Notify
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track _ req = withFlowHandler $ do
   let context = req ^. #context
-      prodInstId = req ^. #message . #order . #id
+      prodInstId = req ^. #message . #order_id
   prdInst <- MPI.findById $ ProductInstanceId prodInstId
   case decodeFromText =<< (prdInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
@@ -35,7 +35,7 @@ track _ req = withFlowHandler $ do
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
           gatewayUrl <- xProviderUri <$> ask
-          Gateway.track gatewayUrl $ req & ((#message . #tracking . #id) .~ gTripId)
+          Gateway.track gatewayUrl $ req & ((#message . #order_id) .~ gTripId)
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do
