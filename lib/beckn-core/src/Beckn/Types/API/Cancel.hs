@@ -24,7 +24,7 @@ type OnCancelRes = AckResponse
 
 data CancelReqMessage = CancelReqMessage
   { cancellation :: Cancellation,
-    order :: CancellationOrderId
+    order :: CancellationOrder
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -34,8 +34,9 @@ data Cancellation = Cancellation
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-newtype CancellationOrderId = CancellationOrderId
-  { id :: Text
+data CancellationOrder = CancellationOrder
+  { id :: Text,
+    cancellation_reason_id :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
