@@ -33,7 +33,7 @@ in
 , port = +8015
 , metricsPort = +9998
 , selfId = Some "JUSPAY.BG.1"
-, nwAddress = Some "http://localhost/v1/"
+, nwAddress = Some "http://localhost:8015/v1/"  -- public address of a node
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , searchTimeout = None Integer

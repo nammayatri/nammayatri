@@ -30,7 +30,7 @@ in
 , metricsPort = +9996
 , xGatewayUri = gwUri
 , selfId = Some "JUSPAY.BAP.MOCK.1"
-, nwAddress = Some "http://localhost/v1/"
+, nwAddress = Some "http://localhost:8016/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , logRawSql = True

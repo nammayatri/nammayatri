@@ -44,7 +44,7 @@ in
 , nsdlPassword = None Text
 , xProviderUri = providerUri
 , bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
-, bapNwAddress = Some "http://localhost/v1/"
+, bapNwAddress = Some "http://localhost:8013/v1/"
 , searchConfirmExpiry = Some +7200
 , searchCaseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey
