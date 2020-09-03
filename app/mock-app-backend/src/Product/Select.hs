@@ -29,7 +29,7 @@ selectCb org req = withFlowHandler $ do
       let quoteId = msg ^. #quote . #_id
       initReq <- buildInitReq ctx quoteId
       cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
-      case bppUrl $ req ^. #context of
+      case req ^. #context . #_bpp_uri of
         Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
         Just url ->
           void $

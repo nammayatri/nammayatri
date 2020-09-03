@@ -2,11 +2,12 @@ module Product.AppLookup where
 
 import App.Types
 import Beckn.Storage.Redis.Queries
+import Beckn.Types.App
 import Beckn.Types.Core.Context
 import EulerHS.Prelude
 
 data GwSession = GwSession
-  { cbUrl :: Text,
+  { cbUrl :: BaseUrl,
     cbApiKey :: Text,
     searchContext :: Context
   }

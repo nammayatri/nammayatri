@@ -167,7 +167,7 @@ mkOnSearchPayload c pis orgInfo = do
             _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
             _message_id = c ^. #_shortId,
             _bap_uri = Nothing,
-            _bpp_uri = showBaseUrl <$> nwAddress appEnv,
+            _bpp_uri = nwAddress appEnv,
             _timestamp = currTime
           }
   piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER

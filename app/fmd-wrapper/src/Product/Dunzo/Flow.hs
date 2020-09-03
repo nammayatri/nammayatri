@@ -4,7 +4,7 @@
 module Product.Dunzo.Flow where
 
 import App.Types
-import Beckn.Types.App (CaseId (..), _getOrganizationId)
+import Beckn.Types.App (BaseUrl, CaseId (..), _getOrganizationId)
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
@@ -31,7 +31,7 @@ import qualified EulerHS.Types as ET
 import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
 import Product.Dunzo.Transform
-import Servant.Client (ClientError (..), ResponseF (..))
+import Servant.Client (ClientError (..), ResponseF (..), showBaseUrl)
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Quote as Storage
@@ -56,7 +56,7 @@ search org req = do
   where
     sendCb org' context res = do
       onSearchReq <- mkOnSearchReq org' context res
-      cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+      cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
       cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       cbres <- callCbAPI cbApiKey cbUrl onSearchReq
       L.logDebug @Text "cb" $
@@ -68,7 +68,7 @@ search org req = do
     sendErrCb org' context errbody =
       case decode errbody of
         Just err -> do
-          cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED" >>= parseBaseUrl
+          cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
           cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
           let onSearchErrReq = mkOnSearchErrReq context err
           cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
@@ -95,7 +95,6 @@ select org req = do
     sendCallback context res baConfig = do
       let cbApiKey = baConfig ^. #bap_api_key
           bapNwAddr = baConfig ^. #bap_nw_address
-      cbUrl <- parseBaseUrl bapNwAddr
       case res of
         Right quoteRes -> do
           let reqOrder = req ^. #message . #order
@@ -107,7 +106,7 @@ select org req = do
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
           L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
-          onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+          onSelectResp <- L.callAPI bapNwAddr $ ET.client onSelectAPI cbApiKey onSelectReq
           L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -115,7 +114,7 @@ select org req = do
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
               L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
-              onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+              onSelectResp <- L.callAPI bapNwAddr $ ET.client onSelectAPI cbApiKey onSelectReq
               L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
         _ -> pass
 
@@ -142,7 +141,6 @@ init org req = do
     sendCb orderDetails context conf baConfig quoteId (Right res) = do
       let cbApiKey = baConfig ^. #bap_api_key
           bapNwAddr = baConfig ^. #bap_nw_address
-      cbUrl <- parseBaseUrl bapNwAddr
       -- quoteId will be used as orderId
       onInitMessage <-
         mkOnInitMessage
@@ -153,12 +151,12 @@ init org req = do
           res
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) bapNwAddr (onInitMessage ^. #order) (orderDetails ^. #quote)
-      onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
+      onInitResp <- callCbAPI cbApiKey bapNwAddr onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
     sendCb _ context _ baConfig _ (Left (FailureResponse _ (Response _ _ _ body))) = do
       let cbApiKey = baConfig ^. #bap_api_key
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      let cbUrl = baConfig ^. #bap_nw_address
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
@@ -186,7 +184,7 @@ init org req = do
                 _validTill = now,
                 _provider = Just orgId,
                 _providerType = Nothing,
-                _requestor = Just bapUrl,
+                _requestor = Just . toText $ showBaseUrl bapUrl,
                 _requestorType = Nothing,
                 _parentCaseId = Nothing,
                 _fromLocationId = "",
@@ -255,13 +253,12 @@ confirm org req = do
       Storage.update caseId updatedCase
 
     createTaskAPI conf@DunzoConfig {..} req' = do
-      baseUrl <- parseBaseUrl dzUrl
       token <- fetchToken conf
-      API.createTask dzClientId token baseUrl req'
+      API.createTask dzClientId token dzUrl req'
 
     callCbAPI baConfig req' = do
       let cbApiKey = baConfig ^. #bap_api_key
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      let cbUrl = baConfig ^. #bap_nw_address
       L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey req'
 
     sendCb case_ orderDetails context conf bapNwAddr res = do
@@ -311,7 +308,7 @@ track org req = do
   where
     callCbAPI baConfig req' = do
       let cbApiKey = baConfig ^. #bap_api_key
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      let cbUrl = baConfig ^. #bap_nw_address
       L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey req'
 
 status :: Organization -> StatusReq -> Flow StatusRes
@@ -330,9 +327,8 @@ status org req = do
   returnAck context
   where
     getStatus conf@DunzoConfig {..} taskId = do
-      baseUrl <- parseBaseUrl dzUrl
       token <- fetchToken conf
-      API.taskStatus dzClientId token baseUrl taskId
+      API.taskStatus dzClientId token dzUrl taskId
 
     updateCase caseId orderDetails taskStatus case_ = do
       let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
@@ -344,7 +340,7 @@ status org req = do
       baConfig <- getBAConfig bapNwAddr conf
       let cbApiKey = baConfig ^. #bap_api_key
       let order = orderDetails ^. #order
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      let cbUrl = baConfig ^. #bap_nw_address
       case res of
         Right taskStatus -> do
           onStatusMessage <- mkOnStatusMessage (org ^. #_name) order conf taskStatus
@@ -380,10 +376,9 @@ cancel org req = do
   returnAck context
   where
     callCancelAPI conf@DunzoConfig {..} taskId = do
-      baseUrl <- parseBaseUrl dzUrl
       token <- fetchToken conf
       -- TODO get cancellation reason
-      API.cancelTask dzClientId token baseUrl taskId ""
+      API.cancelTask dzClientId token dzUrl taskId ""
 
     updateCase :: CaseId -> OrderDetails -> Case -> Flow ()
     updateCase caseId orderDetails case_ = do
@@ -393,7 +388,7 @@ cancel org req = do
 
     callCbAPI baConfig req' = do
       let cbApiKey = baConfig ^. #bap_api_key
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      let cbUrl = baConfig ^. #bap_nw_address
       L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey req'
 
     sendCb case_ orderDetails context baConfig res =
@@ -428,15 +423,14 @@ update org req = do
   where
     callCbAPI baConfig req' = do
       let cbApiKey = baConfig ^. #bap_api_key
-      cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
+      let cbUrl = baConfig ^. #bap_nw_address
       L.callAPI cbUrl $ ET.client onUpdateAPI cbApiKey req'
 
 -- Helpers
 getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
 getQuote conf@DunzoConfig {..} quoteReq = do
-  baseUrl <- parseBaseUrl dzUrl
   token <- fetchToken conf
-  API.getQuote dzClientId token baseUrl quoteReq
+  API.getQuote dzClientId token dzUrl quoteReq
 
 fetchToken :: DunzoConfig -> Flow Token
 fetchToken DunzoConfig {..} = do
@@ -452,11 +446,8 @@ fetchToken DunzoConfig {..} = do
           return token
     Just token -> return token
 
-getBAConfig :: Text -> DunzoConfig -> Flow BAConfig
+getBAConfig :: BaseUrl -> DunzoConfig -> Flow BAConfig
 getBAConfig bapNwAddr DunzoConfig {..} =
-  -- TODO: we have to compare not texts, but 'BaseUrl's, otherwise
-  -- e.g. "localhost:8080", "http://localhost:8080" and "http://localhost:8080/"
-  -- are all considered different
   find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
     & fromMaybeM500 "BAP_NOT_CONFIGURED"
 

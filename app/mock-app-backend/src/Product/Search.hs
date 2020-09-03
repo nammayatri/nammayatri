@@ -29,7 +29,7 @@ searchCb org req = withFlowHandler $ do
         Just itemId -> do
           selectReq <- buildSelectReq ctx itemId
           cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
-          case bppUrl $ req ^. #context of
+          case req ^. #context . #_bpp_uri of
             Just url ->
               void $
                 callClient "select" url $

@@ -5,7 +5,6 @@ module Product.Track where
 
 import App.Types
 import Beckn.Types.API.Callback
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Track
@@ -14,16 +13,15 @@ import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant.Client (parseBaseUrl)
 
 track :: Organization -> TrackReq -> FlowHandler AckResponse
 track org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  let mAppUrl = parseBaseUrl . toString =<< req ^. #context . #_bap_uri
+  let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
-          { _bpp_uri = showBaseUrl <$> bppNwAddr
+          { _bpp_uri = bppNwAddr
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"

@@ -20,14 +20,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
-import Servant.Client (BaseUrl, parseBaseUrl)
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
-
-parseOrgUrl :: Text -> Flow BaseUrl
-parseOrgUrl =
-  fromMaybeM400 "INVALID_TOKEN"
-    . parseBaseUrl
-    . toString
 
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
@@ -45,8 +38,7 @@ search org req = withFlowHandler $ do
         providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
         void $ BA.incrSearchReqCount messageId
         let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
-        baseUrl <- parseOrgUrl providerUrl
-        eRes <- callAPIWithTrail baseUrl (search' providerApiKey req) "search"
+        eRes <- callAPIWithTrail providerUrl (search' providerApiKey req) "search"
         L.logDebug @Text "gateway" $
           "request_transaction_id: " <> messageId
             <> ", search: req: "
@@ -76,7 +68,7 @@ searchCb _ req = withFlowHandler $ do
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
   bgSession <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
-  baseUrl <- parseOrgUrl (bgSession ^. #cbUrl)
+  let baseUrl = bgSession ^. #cbUrl
   let cbApiKey = bgSession ^. #cbApiKey
   eRes <- callAPIWithTrail baseUrl (onSearch cbApiKey req) "on_search"
   let resp = case eRes of
@@ -130,7 +122,7 @@ sendSearchEndCb bgSession = do
   let messageId = context ^. #_transaction_id
   let onSearchEnd = ET.client $ withClientTracing Core.onSearchEndAPI
   let onSearchEndReq = Core.OnSearchEndReq context
-  baseUrl <- parseOrgUrl (bgSession ^. #cbUrl)
+  let baseUrl = bgSession ^. #cbUrl
   let cbApiKey = bgSession ^. #cbApiKey
   eRes <- callAPIWithTrail baseUrl (onSearchEnd cbApiKey onSearchEndReq) "on_search"
   L.logDebug @Text "gateway" $

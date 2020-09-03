@@ -106,7 +106,7 @@ data OrganizationT f = Organization
     _verified :: B.C f Bool,
     _enabled :: B.C f Bool,
     _apiKey :: B.C f (Maybe Text),
-    _callbackUrl :: B.C f (Maybe Text),
+    _callbackUrl :: B.C f (Maybe BaseUrl),
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime,
     _callbackApiKey :: B.C f (Maybe Text),

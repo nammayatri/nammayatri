@@ -5,6 +5,7 @@ module Product.Dunzo.Transform where
 
 import App.Types
 import Beckn.Types.API.Callback
+import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Address as CoreAddr
 import Beckn.Types.Core.Amount
@@ -139,7 +140,7 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
           _package_categories = []
         }
 
-updateBppUri :: Context -> Text -> Context
+updateBppUri :: Context -> BaseUrl -> Context
 updateBppUri Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
 
 updateVersions :: Context -> Flow Context

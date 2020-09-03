@@ -7,7 +7,6 @@ module Product.Confirm
 where
 
 import App.Types
-import App.Utils
 import Beckn.Types.Common
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.Storage.Organization (Organization)
@@ -26,7 +25,7 @@ confirmCb _org req = withFlowHandler $ do
   -- ctx <- updateCaller $ req ^. #context
   -- quotId = req ^. #message . #order . #_order_id
   -- confirmReq <- buildConfirmReq ctx quotId
-  case bppUrl $ req ^. #context of
+  case req ^. #context . #_bpp_uri of
     Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
     Just _ -> EL.logInfo @Text "mock-app-backend" "Confirm finished successfully"
   return resp

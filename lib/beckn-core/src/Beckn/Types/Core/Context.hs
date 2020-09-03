@@ -7,6 +7,7 @@ import Data.Aeson
 import Data.Text
 import Data.Time (UTCTime)
 import EulerHS.Prelude
+import Servant.Client (BaseUrl)
 
 data Context = Context
   { _domain :: Domain,
@@ -15,8 +16,8 @@ data Context = Context
     _action :: Text, -- "search", "select", "init", "confirm", "update", "status", "track", "cancel", "feedback", "support", "on_search", "on_select", "on_init", "on_confirm", "on_update", "on_status", "on_track", "on_cancel", "on_feedback", "on_support", "ack"
     _core_version :: Maybe Text,
     _domain_version :: Maybe Text,
-    _bap_uri :: Maybe Text, -- URI of the BAP. Typically a URL
-    _bpp_uri :: Maybe Text, -- URI of the BPP. Typically a URL
+    _bap_uri :: Maybe BaseUrl, -- URL of the BAP
+    _bpp_uri :: Maybe BaseUrl, -- URL of the BPP
     _transaction_id :: Text,
     _message_id :: Text,
     _timestamp :: UTCTime -- ["format": "date-time"]

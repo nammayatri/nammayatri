@@ -1,5 +1,6 @@
 module Types.Wrapper where
 
+import Beckn.Types.App
 import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Quotation
@@ -8,7 +9,7 @@ import EulerHS.Prelude
 import External.Dunzo.Types (ClientId, ClientSecret)
 
 data BAConfig = BAConfig
-  { bap_nw_address :: Text,
+  { bap_nw_address :: BaseUrl,
     bap_id :: Text,
     bap_api_key :: Text
   }
@@ -21,10 +22,10 @@ newtype WrapperClientConfig = Dunzo DunzoConfig
 data DunzoConfig = DunzoConfig
   { dzClientId :: ClientId,
     dzClientSecret :: ClientSecret,
-    dzUrl :: Text,
+    dzUrl :: BaseUrl,
     dzBAConfigs :: [BAConfig],
     dzBPId :: Text,
-    dzBPNwAddress :: Text,
+    dzBPNwAddress :: BaseUrl,
     paymentPolicy :: PaymentPolicy,
     payee :: PaymentEndpoint
   }
