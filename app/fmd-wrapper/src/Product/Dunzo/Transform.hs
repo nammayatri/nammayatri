@@ -352,7 +352,7 @@ mkCreateTaskReq order = do
         special_instructions = "Handle with care",
         package_approx_value = -1.0,
         package_content = [Documents_or_Books], -- TODO: get this dynamically
-        reference_id = orderId
+        reference_id = order ^. #_prev_order_id
       }
   where
     mkLocationDetails :: PickupOrDrop -> Flow LocationDetails

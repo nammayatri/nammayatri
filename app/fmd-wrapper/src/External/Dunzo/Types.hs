@@ -178,7 +178,7 @@ data CreateTaskReq = CreateTaskReq
     special_instructions :: Text,
     package_approx_value :: Float,
     package_content :: [PackageContent],
-    reference_id :: Text
+    reference_id :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 

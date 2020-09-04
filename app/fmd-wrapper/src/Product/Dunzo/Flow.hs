@@ -453,10 +453,11 @@ returnAck context = return $ AckResponse context (ack "ACK") Nothing
 validateReturn :: Order -> Flow ()
 validateReturn currOrder =
   when (currOrder ^. #_type == Just "RETURN") $ do
-    prevOrderId <- fromMaybeM400 "INVALID_ORDER_ID" $ currOrder ^. #_prev_order_id
+    prevOrderId <- currOrder ^. #_prev_order_id & fromMaybeM400 "INVALID_ORDER_ID"
     prevOrderCase <- Storage.findById (CaseId prevOrderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
     (prevOrderDetails :: OrderDetails) <- prevOrderCase ^. #_udf1 >>= decodeFromText & fromMaybeM400 "ORDER_NOT_FOUND"
     let prevOrder = prevOrderDetails ^. #order
-    if List.isInfixOf (Item._id <$> currOrder ^. #_items) (Item._id <$> prevOrder ^. #_items)
-      then pass
-      else throwJsonError400 "ERR" "INVALID_RETURN_ORDER"
+    -- validating that the items which are returned should be a subset of items in the actual order.
+    -- would fail when there are duplicates in current order items
+    unless (null $ (Item._id <$> currOrder ^. #_items) List.\\ (Item._id <$> prevOrder ^. #_items)) $
+      throwJsonError400 "ERR" "INVALID_RETURN_ORDER"
