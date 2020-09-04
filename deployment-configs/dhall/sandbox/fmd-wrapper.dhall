@@ -34,4 +34,6 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , logRawSql = True
+, coreVersion = "0.8.0"
+, domainVersion = "0.8.2"
 }

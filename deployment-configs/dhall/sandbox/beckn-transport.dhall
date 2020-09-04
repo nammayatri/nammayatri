@@ -57,7 +57,7 @@ in
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
-, xGatewayNsdlUrl = Some nsdl
+, xGatewayNsdlUrl = Some nsdlUrl
 , nsdlUsername = Some sec.nsdlUsername
 , nsdlPassword = Some sec.nsdlPassword
 , xAppUri = appUri
