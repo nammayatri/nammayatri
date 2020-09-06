@@ -2,7 +2,6 @@ module Mobility.HealthCheck where
 
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
-import EulerHS.Runtime (withFlowRuntime)
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)
@@ -31,17 +30,13 @@ spec = do
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv tbeManager transporterBaseUrl
       gatewayClientEnv = mkClientEnv gatewayManager $ appBaseUrl {baseUrlPort = 8015}
-      loggerCfg = getLoggerCfg "app-backend-healthcheck-test"
-  around (withFlowRuntime (Just loggerCfg)) $
-    describe "Testing App Backend APIs" $
-      it "Testing health check API" $
-        \_flowRt ->
-          hspec $
-            it "Health Check API should return success" $
-              do
-                appResult <- runClient appClientEnv healthCheckBackendC
-                appResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
-                tbeResult <- runClient tbeClientEnv healthCheckBackendC
-                tbeResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
-                gwResult <- runClient gatewayClientEnv healthCheckBackendC
-                gwResult `shouldBe` Right (DT.decodeUtf8 "Gateway is UP")
+  describe "Testing App Backend APIs" $
+    it "Testing health check API" $
+      hspec $
+        it "Health Check API should return success" do
+          appResult <- runClient appClientEnv healthCheckBackendC
+          appResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
+          tbeResult <- runClient tbeClientEnv healthCheckBackendC
+          tbeResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
+          gwResult <- runClient gatewayClientEnv healthCheckBackendC
+          gwResult `shouldBe` Right (DT.decodeUtf8 "Gateway is UP")

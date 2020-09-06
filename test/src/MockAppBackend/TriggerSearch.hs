@@ -1,7 +1,6 @@
 module MockAppBackend.TriggerSearch where
 
 import EulerHS.Prelude
-import EulerHS.Runtime (withFlowRuntime)
 import MockAppBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -14,11 +13,7 @@ spec :: Spec
 spec = do
   mockAppManager <- runIO $ Client.newManager tlsManagerSettings
   let appClientEnv = mkClientEnv mockAppManager mockAppBaseUrl
-      loggerCfg = getLoggerCfg "mock-app-backend"
-  around (withFlowRuntime (Just loggerCfg)) $
-    describe "Mock App Backend Search Api" $
-      it "should return valid ack response" $
-        \_flowRt ->
-          do
-            initiateSearchRes <- runClient appClientEnv $ triggerSearchReq MockAppTrigger.NoSearchResult
-            initiateSearchRes `shouldSatisfy` isRight
+  describe "Mock App Backend Search Api" $
+    it "should return valid ack response" do
+      initiateSearchRes <- runClient appClientEnv $ triggerSearchReq MockAppTrigger.NoSearchResult
+      initiateSearchRes `shouldSatisfy` isRight
