@@ -51,7 +51,7 @@ in
 
 { dbCfg = pgcfg
 , redisCfg = rcfg
-, smsCfg = common.smsConfig
+, smsCfg = common.smsDevConfig
 , port = +8014
 , metricsPort = +9999
 , xGatewayUri = gwUri

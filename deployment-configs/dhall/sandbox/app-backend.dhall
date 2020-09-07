@@ -40,7 +40,7 @@ let nsdlUrl =
 in
 
 { dbCfg = pgcfg
-, smsCfg = common.smsConfig
+, smsCfg = common.smsStableConfig
 , port = +8013
 , metricsPort = +9999
 , xGatewayUri = gwUri

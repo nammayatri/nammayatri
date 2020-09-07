@@ -15,7 +15,7 @@ let smsSessionConfig =
   , tokenExpiry = +365
   }
 
-let smsConfig =
+let smsDevConfig =
   { sessionConfig = smsSessionConfig
   , credConfig = {
       username = sec.smsUserName
@@ -23,6 +23,16 @@ let smsConfig =
     , otpHash = sec.smsOtpHash
     }
   , useFakeSms = Some 7891
+  }
+
+let smsStableConfig =
+  { sessionConfig = smsSessionConfig
+  , credConfig = {
+      username = sec.smsUserName
+    , password = sec.smsPassword
+    , otpHash = sec.smsOtpHash
+    }
+  , useFakeSms = None Natural
   }
 
 {-
