@@ -106,15 +106,15 @@ buildDraftOrder itemId = do
       { _id = Just "draft-task-1",
         _state = Nothing,
         _items = [example {_id = Just itemId}],
-        _created_at = now,
-        _updated_at = now,
+        _created_at = Just now,
+        _updated_at = Just now,
         _tasks =
           [ Task
               { _id = "draft-task-1",
                 _item_id = itemId,
                 _next_task_id = Nothing,
                 _previous_task_id = Nothing,
-                _state = "", -- FIXME: no relevant value in spec
+                _state = Nothing,
                 _pickup = PickupOrDrop location [] example Nothing,
                 _drop = PickupOrDrop location2 [] example Nothing,
                 _return = PickupOrDrop location [] example Nothing,
@@ -132,8 +132,8 @@ buildDraftOrder itemId = do
         _type = Nothing,
         _prev_order_id = Nothing,
         _return_reason_id = Nothing,
-        _cancellation_reasons = [],
-        _return_reasons = []
+        _cancellation_reasons = Nothing,
+        _return_reasons = Nothing
       }
 
 buildContext :: Text -> Text -> Flow Context

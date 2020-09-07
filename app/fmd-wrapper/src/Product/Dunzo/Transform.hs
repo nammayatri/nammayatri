@@ -16,6 +16,7 @@ import Beckn.Types.Core.Item
 import qualified Beckn.Types.Core.Location as CoreLoc
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.Operator
+import Beckn.Types.Core.Option
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
@@ -30,7 +31,8 @@ import Beckn.Types.FMD.API.Track
 import Beckn.Types.FMD.API.Update
 import Beckn.Types.FMD.Catalog
 import Beckn.Types.FMD.Order
-import Beckn.Types.FMD.Task
+import Beckn.Types.FMD.Task hiding (TaskState)
+import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
 import Control.Lens ((?~))
@@ -177,7 +179,7 @@ mkSearchItem itemId QuoteRes {..} =
           _maximum_value = Nothing
         }
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
-    descriptor = Descriptor n n n n n [] n n
+    descriptor = Descriptor n n n n n n n n
     n = Nothing
 
 mkQuote :: QuoteRes -> Flow Quotation
@@ -263,14 +265,23 @@ mkOnStatusMessage orgName order status = do
   return $ StatusResMessage (updateOrder orgName now order status)
 
 updateOrder :: Text -> UTCTime -> Order -> TaskStatus -> Order
-updateOrder orgName cTime order status =
-  order & #_state ?~ show (status ^. #state)
-    & #_updated_at .~ cTime
+updateOrder orgName cTime order status = do
+  -- TODO: this assumes that there is one task per order
+  let orderState = mapTaskStateToOrderState (status ^. #state)
+  let cancellationReasonIfAny =
+        case status ^. #state of
+          CANCELLED -> Just [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
+          RUNNER_CANCELLED -> Just [Option "1" (Descriptor (Just "Agent cancelled") n n n n n n n)]
+          _ -> Nothing
+  order & #_state ?~ orderState
+    & #_updated_at ?~ cTime
+    & #_cancellation_reasons .~ (cancellationReasonIfAny <|> order ^. #_cancellation_reasons)
     & #_tasks .~ (updateTask <$> (order ^. #_tasks))
   where
-    updateTask task =
+    updateTask task = do
+      let taskState = mapTaskState (status ^. #state)
       task & #_agent .~ (getAgent <$> status ^. #runner)
-        & #_state .~ show (status ^. #state)
+        & #_state .~ (taskState <|> task ^. #_state)
         & #_updated_at ?~ cTime
 
     getAgent runner =
@@ -318,12 +329,17 @@ mkOnTrackErrReq context = do
         }
 
 mkOnCancelReq :: Context -> Order -> Flow OnCancelReq
-mkOnCancelReq context order = do
+mkOnCancelReq context o = do
+  let order =
+        o & #_state ?~ "CANCELLED"
+          & #_cancellation_reasons ?~ [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
   return $
     CallbackReq
       { context = context & #_action .~ "on_cancel",
         contents = Right (CancelResMessage order)
       }
+  where
+    n = Nothing
 
 mkOnCancelErrReq :: Context -> Error -> OnCancelReq
 mkOnCancelErrReq context err =
@@ -433,3 +449,29 @@ fromMaybeM500' errMsg m = do
     (isNothing m)
     (L.logError @Text "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg))
   fromMaybeM500 errMsg m
+
+mapTaskState :: TaskState -> Maybe Beckn.TaskState
+mapTaskState s = case s of
+  CREATED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
+  QUEUED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
+  RUNNER_ACCEPTED -> Just Beckn.ASSIGNED_AGENT
+  REACHED_FOR_PICKUP -> Just Beckn.AT_PICKUP_LOCATION
+  PICKUP_COMPLETE -> Just Beckn.PICKED_UP_PACKAGE
+  STARTED_FOR_DELIVERY -> Just Beckn.EN_ROUTE_TO_DROP
+  REACHED_FOR_DELIVERY -> Just Beckn.AT_DROP_LOCATION
+  DELIVERED -> Just Beckn.DROPPED_PACKAGE
+  CANCELLED -> Nothing
+  RUNNER_CANCELLED -> Nothing
+
+mapTaskStateToOrderState :: TaskState -> Text
+mapTaskStateToOrderState s = case s of
+  CREATED -> "ACTIVE"
+  QUEUED -> "ACTIVE"
+  RUNNER_ACCEPTED -> "ACTIVE"
+  REACHED_FOR_PICKUP -> "ACTIVE"
+  PICKUP_COMPLETE -> "ACTIVE"
+  STARTED_FOR_DELIVERY -> "ACTIVE"
+  REACHED_FOR_DELIVERY -> "ACTIVE"
+  DELIVERED -> "COMPLETED"
+  CANCELLED -> "CANCELLED"
+  RUNNER_CANCELLED -> "CANCELLED"

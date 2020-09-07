@@ -52,7 +52,7 @@ mkItemDescriptor _prodInst =
       _symbol = Nothing,
       _short_desc = Nothing,
       _long_desc = Nothing,
-      _images = [],
+      _images = Nothing,
       _audio = Nothing,
       _3d_render = Nothing
     }
@@ -68,7 +68,7 @@ mkBrand provider =
             _symbol = Nothing,
             _short_desc = Nothing,
             _long_desc = Nothing,
-            _images = [],
+            _images = Nothing,
             _audio = Nothing,
             _3d_render = Nothing
           },
@@ -86,7 +86,7 @@ mkCategory provider =
             _symbol = Nothing,
             _short_desc = Nothing,
             _long_desc = Nothing,
-            _images = [],
+            _images = Nothing,
             _audio = Nothing,
             _3d_render = Nothing
           },
@@ -226,7 +226,7 @@ mkProvider orgInfo =
             _symbol = Nothing,
             _short_desc = Nothing,
             _long_desc = orgInfo ^. #_info,
-            _images = [],
+            _images = Nothing,
             _audio = Nothing,
             _3d_render = Nothing
           },

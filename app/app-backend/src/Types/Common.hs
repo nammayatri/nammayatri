@@ -399,7 +399,7 @@ instance ToBeckn Category.Category Provider where
               _symbol = Nothing,
               _short_desc = Nothing,
               _long_desc = Nothing,
-              _images = [],
+              _images = Nothing,
               _audio = Nothing,
               _3d_render = Nothing
             },

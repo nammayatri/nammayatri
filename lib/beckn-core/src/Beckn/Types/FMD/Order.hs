@@ -14,8 +14,8 @@ data Order = Order
   { _id :: Maybe Text,
     _state :: Maybe Text,
     _items :: [Item],
-    _created_at :: UTCTime,
-    _updated_at :: UTCTime,
+    _created_at :: Maybe UTCTime,
+    _updated_at :: Maybe UTCTime,
     _tasks :: [Task],
     _billing :: Maybe Billing,
     _payment :: Maybe Payment,
@@ -26,8 +26,8 @@ data Order = Order
     _type :: Maybe Text,
     _prev_order_id :: Maybe Text,
     _return_reason_id :: Maybe Text,
-    _cancellation_reasons :: [Option],
-    _return_reasons :: [Option]
+    _cancellation_reasons :: Maybe [Option],
+    _return_reasons :: Maybe [Option]
   }
   deriving (Generic, Show)
 
@@ -53,6 +53,6 @@ instance Example Order where
         _type = Nothing,
         _prev_order_id = Nothing,
         _return_reason_id = Nothing,
-        _cancellation_reasons = [],
-        _return_reasons = []
+        _cancellation_reasons = example,
+        _return_reasons = example
       }

@@ -7,6 +7,8 @@ import Beckn.Types.FMD.Agent
 import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
+import Data.Aeson hiding (Error)
+import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -33,12 +35,39 @@ instance Example PickupOrDrop where
         _time = Nothing
       }
 
+data TaskState
+  = SEARCHING_FOR_FMD_AGENT
+  | ASSIGNED_AGENT
+  | EN_ROUTE_TO_PICKUP
+  | AT_PICKUP_LOCATION
+  | PICKED_UP_PACKAGE
+  | EN_ROUTE_TO_DROP
+  | AT_DROP_LOCATION
+  | DROPPED_PACKAGE
+  | RETURN_INITIATED
+  | EN_ROUTE_TO_RETURN_LOCATION
+  | AT_RETURN_LOCATION
+  | RETURNED_PACKAGE
+  deriving (Show, Generic)
+
+taskStateOptions :: Options
+taskStateOptions =
+  defaultOptions
+    { constructorTagModifier = T.unpack . T.replace "_" "-" . T.pack
+    }
+
+instance ToJSON TaskState where
+  toJSON = genericToJSON taskStateOptions
+
+instance FromJSON TaskState where
+  parseJSON = genericParseJSON taskStateOptions
+
 data Task = Task
   { _id :: Text,
     _item_id :: Text,
     _next_task_id :: Maybe Text,
     _previous_task_id :: Maybe Text,
-    _state :: Text, -- "SEARCHINNG-FOR-FMD-AGENT", "ASSIGNED-AGENT", "EN-ROUTE-TO-PICKCUP", "AT-PICKUP-LOCATION", "PICKED-UP-PACKAGE", "EN-ROUTE-TO-DROP", "AT-DROP-LOCATION", "DROPPED-PACKAGE", "RETURN-INITIATED", "EN-ROUTE-TO-RETURN-LOCATION", "AT-RETURN-LOCATION", "RETURNED-PACKAGE"
+    _state :: Maybe TaskState,
     _pickup :: PickupOrDrop,
     _drop :: PickupOrDrop,
     _return :: PickupOrDrop,
@@ -63,7 +92,7 @@ instance Example Task where
         _item_id = idExample,
         _next_task_id = Nothing,
         _previous_task_id = Nothing,
-        _state = "ASSIGNED-AGENT",
+        _state = Nothing,
         _pickup = example,
         _drop = example,
         _return = example,

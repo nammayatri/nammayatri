@@ -12,7 +12,7 @@ data Descriptor = Descriptor
     _symbol :: Maybe Text,
     _short_desc :: Maybe Text,
     _long_desc :: Maybe Text,
-    _images :: [Image],
+    _images :: Maybe [Image],
     _audio :: Maybe Text,
     _3d_render :: Maybe Text
   }
