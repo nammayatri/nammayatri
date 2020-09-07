@@ -9,6 +9,7 @@ import App.Types
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Beckn.Types.Core.FmdError
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.Storage.Organization (Organization)
@@ -30,8 +31,9 @@ search org req = withFlowHandler $ do
   case context ^. #_transaction_id of
     tId
       | tId == noSearchResultId ->
-        pass
-    tId
+        sendResponse cbApiKey context $ Left noServicesFoundError
+      | tId == serviceUnavailableId ->
+        sendResponse cbApiKey context $ Left serviceUnavailableError
       | Just fmdErr <- M.lookup tId allFmdErrorFlowIds ->
         sendResponse cbApiKey context $ Left $ fromFmdError fmdErr
     _ ->
@@ -57,3 +59,21 @@ search org req = withFlowHandler $ do
                   contents = contents
                 }
         pass
+
+noServicesFoundError :: Error
+noServicesFoundError =
+  Error
+    { _type = "DOMAIN-ERROR",
+      _code = "CORE001",
+      _path = Nothing,
+      _message = Just "No services found"
+    }
+
+serviceUnavailableError :: Error
+serviceUnavailableError =
+  Error
+    { _type = "DOMAIN-ERROR",
+      _code = "CORE002",
+      _path = Nothing,
+      _message = Just "Service unavailable"
+    }

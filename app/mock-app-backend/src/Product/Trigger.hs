@@ -28,6 +28,7 @@ import Servant hiding (Context)
 data TriggerFlow
   = SimpleConfirm
   | NoSearchResult
+  | ServiceUnavailable
   | SearchErrorFMD FmdError
   deriving (Eq, Show, Generic, ToJSON)
 
@@ -40,7 +41,8 @@ instance FromHttpApiData TriggerFlow where
       flows =
         mconcat
           [ [ ("simple-confirm", SimpleConfirm),
-              ("no-search-result", NoSearchResult)
+              ("no-search-result", NoSearchResult),
+              ("service-unavailable", ServiceUnavailable)
             ],
             M.toList $ SearchErrorFMD <$> allFmdErrorFlowIds
           ]
@@ -49,6 +51,7 @@ instance FromHttpApiData TriggerFlow where
 instance ToHttpApiData TriggerFlow where
   toQueryParam SimpleConfirm = "simple-confirm"
   toQueryParam NoSearchResult = "no-search-result"
+  toQueryParam ServiceUnavailable = "service-unavailable"
   toQueryParam (SearchErrorFMD err) = fmdErrorFlowId err
   toHeader = BSL.toStrict . encode
   toUrlPiece = DT.decodeUtf8 . toHeader
@@ -60,6 +63,7 @@ trigger flow = withFlowHandler $ do
     case flow of
       SimpleConfirm -> EL.generateGUID
       NoSearchResult -> pure noSearchResultId
+      ServiceUnavailable -> pure serviceUnavailableId
       SearchErrorFMD err -> pure $ fmdErrorFlowId err
   req <- buildSearchReq transactionId
   eRes <-

@@ -14,6 +14,7 @@ import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Control.Lens.At (ix)
+import Data.Aeson (encode)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
@@ -23,7 +24,7 @@ searchCb :: Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _ req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
-  EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
+  EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   case req ^. #contents of
     Right msg -> do
       case msg ^? #catalog . #_items . ix 0 . #_id of
