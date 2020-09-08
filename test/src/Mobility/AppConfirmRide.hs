@@ -20,7 +20,6 @@ import Utils
 spec :: Spec
 spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
-  tbeManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl =
         BaseUrl
           { baseUrlScheme = Http,
@@ -30,7 +29,7 @@ spec = do
           }
       transporterBaseUrl = appBaseUrl {baseUrlPort = 8014}
       appClientEnv = mkClientEnv appManager appBaseUrl
-      tbeClientEnv = mkClientEnv tbeManager transporterBaseUrl
+      tbeClientEnv = mkClientEnv appManager transporterBaseUrl
   describe "Testing App Backend APIs" $
     it "Testing API flow for App confirm ride" $
       hspec $

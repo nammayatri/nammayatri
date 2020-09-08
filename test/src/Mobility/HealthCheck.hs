@@ -17,8 +17,6 @@ healthCheckBackendC = client (Proxy :: Proxy HealthCheckAPI)
 spec :: Spec
 spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
-  tbeManager <- runIO $ Client.newManager tlsManagerSettings
-  gatewayManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl =
         BaseUrl
           { baseUrlScheme = Http,
@@ -28,8 +26,8 @@ spec = do
           }
       transporterBaseUrl = appBaseUrl {baseUrlPort = 8014}
       appClientEnv = mkClientEnv appManager appBaseUrl
-      tbeClientEnv = mkClientEnv tbeManager transporterBaseUrl
-      gatewayClientEnv = mkClientEnv gatewayManager $ appBaseUrl {baseUrlPort = 8015}
+      tbeClientEnv = mkClientEnv appManager transporterBaseUrl
+      gatewayClientEnv = mkClientEnv appManager $ appBaseUrl {baseUrlPort = 8015}
   describe "Testing App Backend APIs" $
     it "Testing health check API" $
       hspec $

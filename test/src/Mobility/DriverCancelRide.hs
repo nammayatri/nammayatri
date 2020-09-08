@@ -23,11 +23,10 @@ import Utils
 spec :: Spec
 spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
-  tbeManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl = getAppBaseUrl
       transporterBaseUrl = getTransporterBaseUrl
       appClientEnv = mkClientEnv appManager appBaseUrl
-      tbeClientEnv = mkClientEnv tbeManager transporterBaseUrl
+      tbeClientEnv = mkClientEnv appManager transporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride cancelled by Driver" do
       -- Do an App Search
