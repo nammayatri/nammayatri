@@ -45,6 +45,8 @@ list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = with
   case person ^. #_organizationId of
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
+      when (org ^. #_status /= Organization.APPROVED) $
+        throwJsonError401 "Err" "Unauthorized"
       ignoreList <-
         if ignoreOffered == Just True
           then do
@@ -83,16 +85,20 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
   c <- Case.findById $ CaseId caseId
   p <- PQ.findByName $ fromMaybe "DONT MATCH" (c ^. #_udf1)
   case SP._organizationId person of
-    Just orgId -> case _transporterChoice of
-      "ACCEPTED" -> do
-        prodInst <- createProductInstance c p _quote orgId PI.INSTOCK
-        notifyGateway c prodInst orgId PI.INSTOCK
-        return c
-      "DECLINED" -> do
-        declinedProdInst <- createProductInstance c p _quote orgId PI.OUTOFSTOCK
-        notifyGateway c declinedProdInst orgId PI.OUTOFSTOCK
-        return c
-      _ -> L.throwException $ err400 {errBody = "TRANSPORTER CHOICE INVALID"}
+    Just orgId -> do
+      org <- OQ.findOrganizationById (OrganizationId orgId)
+      when (org ^. #_status /= Organization.APPROVED) $
+        throwJsonError401 "Err" "Unauthorized"
+      case _transporterChoice of
+        "ACCEPTED" -> do
+          prodInst <- createProductInstance c p _quote orgId PI.INSTOCK
+          notifyGateway c prodInst orgId PI.INSTOCK
+          return c
+        "DECLINED" -> do
+          declinedProdInst <- createProductInstance c p _quote orgId PI.OUTOFSTOCK
+          notifyGateway c declinedProdInst orgId PI.OUTOFSTOCK
+          return c
+        _ -> L.throwException $ err400 {errBody = "TRANSPORTER CHOICE INVALID"}
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
 
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
