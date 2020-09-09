@@ -224,3 +224,8 @@ CREATE INDEX idx_16402_city ON atlas_mock_app_backend.location USING btree (city
 --
 
 CREATE INDEX idx_16402_state ON atlas_mock_app_backend.location USING btree (state);
+
+
+CREATE INDEX idx_organization_api_key ON atlas_mock_app_backend.organization USING btree (api_key);
+
+CREATE INDEX idx_organization_callback_url ON atlas_mock_app_backend.organization USING btree (callback_url);

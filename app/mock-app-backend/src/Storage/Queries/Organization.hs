@@ -22,3 +22,12 @@ findOrgByApiKey apiKey = do
   where
     predicate Org.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
+
+findOrgByCallbackUrl :: BaseUrl -> Flow (Maybe Org.Organization)
+findOrgByCallbackUrl cbUrl = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Org.Organization {..} =
+      _callbackUrl ==. B.val_ (Just cbUrl)

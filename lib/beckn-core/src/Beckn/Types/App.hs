@@ -19,6 +19,7 @@ import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend
 import Database.Beam.Postgres
+import Database.Beam.Query
 import Dhall (FromDhall)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -138,3 +139,5 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Servant.BaseUrl whe
 instance FromBackendRow Postgres Servant.BaseUrl where
   fromBackendRow =
     either (fail . show) pure . Servant.parseBaseUrl =<< fromBackendRow
+
+instance HasSqlEqualityCheck Postgres Servant.BaseUrl

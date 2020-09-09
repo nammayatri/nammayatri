@@ -17,9 +17,10 @@ import Control.Lens.At (ix)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Storage.Queries.Organization
 
 searchCb :: Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb org req = withFlowHandler $ do
+searchCb _ req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
   EL.logDebug @Text "mock_app_backend" $ "search_cb: req: " <> show (toJSON req) <> ", resp: " <> show resp
@@ -28,9 +29,10 @@ searchCb org req = withFlowHandler $ do
       case msg ^? #catalog . #_items . ix 0 . #_id of
         Just itemId -> do
           selectReq <- buildSelectReq ctx itemId
-          cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
           case req ^. #context . #_bpp_uri of
-            Just url ->
+            Just url -> do
+              bppOrg <- findOrgByCallbackUrl url >>= fromMaybeM500 "UNKNOWN_PROVIDER_URI"
+              cbApiKey <- bppOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
               void $
                 callClient "select" url $
                   client selectAPI cbApiKey selectReq
