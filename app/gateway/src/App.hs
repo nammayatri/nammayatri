@@ -77,7 +77,7 @@ runGateway = do
 
     waitForDrain :: TVar Int -> Int -> IO ()
     waitForDrain activeConnections ms = do
-      conns <- atomically $ readTVar activeConnections
+      conns <- readTVarIO activeConnections
       unless (ms == 0 || conns == 0) $ do
         -- Wait 100ms and recurse
         let sleep = 100000
