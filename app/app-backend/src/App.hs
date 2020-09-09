@@ -11,13 +11,13 @@ import Beckn.Storage.DB.Config (prepareDBConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import qualified EulerHS.Types as T
 import qualified Network.HTTP.Types as H
 import Network.Wai
 import Network.Wai.Handler.Warp
@@ -45,13 +45,7 @@ prepareAppOptions =
 
 runAppBackend' :: AppEnv -> Settings -> IO ()
 runAppBackend' appEnv settings = do
-  let loggerCfg =
-        T.defaultLoggerConfig
-          { T._logToFile = True,
-            T._logFilePath = "/tmp/app-backend.log",
-            T._isAsync = True,
-            T._logRawSql = logRawSql appEnv
-          }
+  let loggerCfg = getEulerLoggerConfig "/tmp/app-backend.log" $ loggerConfig appEnv
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections

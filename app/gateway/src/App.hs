@@ -12,6 +12,7 @@ import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (runFlowR)
 import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
+import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as Aeson
@@ -19,7 +20,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Cache as C
 import EulerHS.Prelude
 import EulerHS.Runtime as E
-import EulerHS.Types as E
 import qualified Network.HTTP.Types as H
 import Network.Wai (Response, responseLBS)
 import Network.Wai.Handler.Warp
@@ -42,13 +42,7 @@ runGateway = do
   activeConnections <- newTVarIO (0 :: Int)
   void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
-  let loggerCfg =
-        E.defaultLoggerConfig
-          { E._logToFile = True,
-            E._logFilePath = "/tmp/beckn-gateway.log",
-            E._isAsync = True,
-            E._logRawSql = logRawSql
-          }
+  let loggerCfg = getEulerLoggerConfig "/tmp/beckn-gateway.log" loggerConfig
       settings =
         setOnExceptionResponse gatewayExceptionResponse $
           setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $

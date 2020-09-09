@@ -8,6 +8,7 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
+import Beckn.Utils.Logging
 import EulerHS.Prelude
 
 data AppEnv = AppEnv
@@ -32,7 +33,7 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    logRawSql :: Bool,
+    loggerConfig :: Maybe LoggerConfig,
     traceFlag :: TraceFlag
   }
   deriving (Generic, FromDhall)

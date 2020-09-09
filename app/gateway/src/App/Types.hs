@@ -4,6 +4,7 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Logging
 import qualified Data.Cache as C
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -17,7 +18,7 @@ data AppCfg = AppCfg
     nwAddress :: Maybe BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    logRawSql :: Bool,
+    loggerConfig :: Maybe LoggerConfig,
     searchTimeout :: Maybe Int,
     traceFlag :: TraceFlag
   }
@@ -31,7 +32,7 @@ data AppEnv = AppEnv
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    logRawSql :: Bool,
+    loggerConfig :: Maybe LoggerConfig,
     searchTimeout :: Maybe Int, -- In seconds
     traceFlag :: TraceFlag
   }

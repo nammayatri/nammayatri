@@ -4,6 +4,7 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Wrapper (DunzoConfig)
@@ -14,7 +15,7 @@ data AppEnv = AppEnv
     port :: Int,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    logRawSql :: Bool,
+    loggerConfig :: Maybe LoggerConfig,
     coreVersion :: Text,
     domainVersion :: Text,
     dzConfig :: DunzoConfig

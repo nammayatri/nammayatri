@@ -42,7 +42,7 @@ in
 , port = +8018
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
-, logRawSql = True
+, loggerConfig = None common.LoggerConfig
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.2"
 , dzConfig = dunzoConfig

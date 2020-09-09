@@ -38,5 +38,5 @@ in
 , autoMigrate = common.autoMigrate
 , searchTimeout = Some +3600
 , traceFlag = common.TraceFlag.TRACE_ALL
-, logRawSql = True
+, loggerConfig = None common.LoggerConfig
 }

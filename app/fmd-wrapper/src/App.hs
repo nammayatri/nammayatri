@@ -12,13 +12,13 @@ import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common (runFlowR)
 import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
+import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime as E
-import EulerHS.Types as E
 import qualified Network.HTTP.Types as H
 import Network.Wai (Response, responseLBS)
 import Network.Wai.Handler.Warp
@@ -32,13 +32,7 @@ import Servant.Server
 runFMDWrapper :: IO ()
 runFMDWrapper = do
   appEnv <- readDhallConfigDefault Z "fmd-wrapper"
-  let loggerCfg =
-        E.defaultLoggerConfig
-          { E._logToFile = True,
-            E._logFilePath = "/tmp/fmd-wrapper.log",
-            E._isAsync = True,
-            E._logRawSql = logRawSql appEnv
-          }
+  let loggerCfg = getEulerLoggerConfig "/tmp/fmd-wrapper.log" $ loggerConfig appEnv
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
           setPort (port appEnv) defaultSettings
