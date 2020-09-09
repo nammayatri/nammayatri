@@ -35,7 +35,7 @@ searchCb _ req = withFlowHandler $ do
               bppOrg <- findOrgByCallbackUrl url >>= fromMaybeM500 "UNKNOWN_PROVIDER_URI"
               cbApiKey <- bppOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
               void $
-                callClient "select" url $
+                callClient "select" (req ^. #context) url $
                   client selectAPI cbApiKey selectReq
             Nothing -> EL.logError @Text "mock_app_backend" "Bad ac_id"
         Nothing ->

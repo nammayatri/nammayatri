@@ -32,7 +32,7 @@ confirm org req = withFlowHandler $ do
       fork "Confirm" $ do
         resp <- mkConfirmResponse
         AckResponse {} <-
-          callClient "confirm" appUrl $
+          callClient "confirm" (req ^. #context) appUrl $
             client
               onConfirmAPI
               cbApiKey

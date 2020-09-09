@@ -50,7 +50,7 @@ search org req = withFlowHandler $ do
         baseUrl <- xGatewayUri <$> ask
         L.runIO $ threadDelay 0.5e6
         AckResponse {} <-
-          callClient "search" baseUrl $
+          callClient "search" (req ^. #context) baseUrl $
             client
               onSearchAPI
               cbKey

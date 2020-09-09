@@ -4,7 +4,6 @@ module App where
 
 import qualified App.Server as App
 import App.Types
-import Beckn.Constants.APIErrorCode
 import Beckn.External.FCM.Utils
 import Beckn.Storage.DB.Config (prepareDBConnections)
 import Beckn.Storage.Redis.Config
@@ -14,11 +13,9 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Char8 as BS
+import Beckn.Utils.Servant.Server
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import qualified Network.HTTP.Types as H
 import Network.Wai
 import Network.Wai.Handler.Warp
   ( Settings,
@@ -27,7 +24,6 @@ import Network.Wai.Handler.Warp
     setOnExceptionResponse,
     setPort,
   )
-import Servant
 
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
@@ -64,16 +60,4 @@ runTransporterBackendApp' appEnv settings = do
             runSettings settings $ App.run (App.EnvR flowRt appEnv)
 
 transporterExceptionResponse :: SomeException -> Response
-transporterExceptionResponse exception = do
-  let anyException = fromException exception
-  case anyException of
-    Just ex ->
-      responseLBS
-        (H.Status (errHTTPCode ex) (BS.pack $ errReasonPhrase ex))
-        ((H.hContentType, "application/json") : errHeaders ex)
-        (errBody ex)
-    Nothing ->
-      responseLBS
-        H.internalServerError500
-        [(H.hContentType, "application/json")]
-        (Aeson.encode internalServerErr)
+transporterExceptionResponse = exceptionResponse

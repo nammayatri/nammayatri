@@ -7,9 +7,10 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Core.Error (Error (..))
 import Beckn.Types.Error
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import Data.Aeson as A
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -23,9 +24,12 @@ import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
 import Network.HTTP.Types (hContentType)
-import Servant
+import Network.HTTP.Types.Status
+import Servant (ServerError (..), err401, err500)
+import qualified Servant.Client as S
 import Servant.Client.Core.ClientError
 import Servant.Client.Core.Response
+import qualified Servant.Server.Internal as S
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
@@ -41,6 +45,30 @@ getCurrTime = L.runIO getCurrentTime
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
+
+fromClientError :: ClientError -> Error
+fromClientError err =
+  Error
+    { _type = "INTERNAL-ERROR",
+      _code = "",
+      _path = Nothing,
+      _message = Just message
+    }
+  where
+    message = case err of
+      FailureResponse _ resp -> decodeUtf8 $ responseBody resp
+      DecodeFailure _ resp -> decodeUtf8 $ responseBody resp
+      UnsupportedContentType _ resp -> decodeUtf8 $ responseBody resp
+      InvalidContentTypeHeader resp -> decodeUtf8 $ responseBody resp
+      ConnectionError exc -> show exc
+
+checkClientError :: L.MonadFlow m => Context -> Either S.ClientError a -> m a
+checkClientError context = \case
+  Right x -> pure x
+  Left cliErr -> do
+    let err = fromClientError cliErr
+    L.logError @Text "client call error" $ (err ^. #_message) ?: "Some error"
+    L.throwException $ mkErrResponse context err500 err
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError
@@ -91,10 +119,16 @@ fromMaybeM400,
   fromMaybeM500,
   fromMaybeM503 ::
     L.MonadFlow m => BSL.ByteString -> Maybe a -> m a
-fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
-fromMaybeM401 a = fromMaybeM (err401 {errBody = a})
-fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
-fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
+fromMaybeM400 a = fromMaybeM (S.err400 {errBody = a})
+fromMaybeM401 a = fromMaybeM (S.err401 {errBody = a})
+fromMaybeM500 a = fromMaybeM (S.err500 {errBody = a})
+fromMaybeM503 a = fromMaybeM (S.err503 {errBody = a})
+
+mkOkResponse :: L.MonadFlow m => Context -> m AckResponse
+mkOkResponse context = do
+  currTime <- getCurrTime
+  let context' = context {_timestamp = currTime}
+  return $ AckResponse context' (ack "ACK") Nothing
 
 mkAckResponse :: L.MonadFlow m => Text -> Text -> m AckResponse
 mkAckResponse txnId action = mkAckResponse' txnId action "ACK"
@@ -123,6 +157,22 @@ mkAckResponse' txnId action status = do
         _error = Nothing
       }
 
+mkErrResponse :: Context -> ServerError -> Error -> NackResponseError
+mkErrResponse context errBase err =
+  NackResponseError
+    { _context = context,
+      _error = err,
+      _status = mkStatus (errHTTPCode errBase) (encodeUtf8 $ errReasonPhrase errBase)
+    }
+
+compileErrResponse :: NackResponseError -> AckResponse
+compileErrResponse NackResponseError {..} =
+  AckResponse
+    { _context = _context,
+      _message = ack "NACK",
+      _error = Just _error
+    }
+
 withFlowHandler :: FlowR r a -> FlowHandlerR r a
 withFlowHandler flow = do
   (EnvR flowRt appEnv) <- ask
@@ -137,7 +187,7 @@ encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
 -- strips double quotes from encoded text
 encodeToText' :: ToJSON a => a -> Text
 encodeToText' s =
-  let s' = encode s
+  let s' = A.encode s
    in if BSL.length s' < 2
         then DT.decodeUtf8 $ BSL.toStrict s'
         else DT.decodeUtf8 $ BSL.toStrict $ BSL.tail $ BSL.init s'
@@ -169,7 +219,7 @@ throwJsonError err tag errMsg = do
         "application/json;charset=utf-8"
       )
 
-getBecknError :: ServerError -> Text -> BecknError
+getBecknError :: S.ServerError -> Text -> BecknError
 getBecknError err msg =
   BecknError
     { _errorCode = ErrorCode $ errHTTPCode err,
@@ -183,20 +233,20 @@ throwJsonError500,
   throwJsonError401,
   throwJsonError404 ::
     L.MonadFlow m => Text -> Text -> m a
-throwJsonError500 = throwJsonError err500
-throwJsonError501 = throwJsonError err501
-throwJsonError400 = throwJsonError err400
-throwJsonError401 = throwJsonError err401
-throwJsonError404 = throwJsonError err404
+throwJsonError500 = throwJsonError S.err500
+throwJsonError501 = throwJsonError S.err501
+throwJsonError400 = throwJsonError S.err400
+throwJsonError401 = throwJsonError S.err401
+throwJsonError404 = throwJsonError S.err404
 
 throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandlerR r a
 throwJsonErrorH = withFlowHandler ... throwJsonError
 
 throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandlerR r a
-throwJsonError500H = throwJsonErrorH ... err500
-throwJsonError501H = throwJsonErrorH ... err501
-throwJsonError400H = throwJsonErrorH ... err400
-throwJsonError401H = throwJsonErrorH ... err401
+throwJsonError500H = throwJsonErrorH ... S.err500
+throwJsonError501H = throwJsonErrorH ... S.err501
+throwJsonError400H = throwJsonErrorH ... S.err400
+throwJsonError401H = throwJsonErrorH ... S.err401
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format
@@ -208,26 +258,26 @@ showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addUTCTi
 throwDomainError :: L.MonadFlow m => DomainError -> m a
 throwDomainError err =
   case err of
-    UnknownDomainError msg -> t err401 msg
+    UnknownDomainError msg -> t S.err500 msg
     -- TODO get more details from db error?
-    DatabaseError (ET.DBError _ text) -> t err500 $ show text
+    DatabaseError (ET.DBError _ text) -> t S.err500 $ show text
     -- Case errors
     CaseErr suberr -> case suberr of
-      CaseNotFound -> t err404 "Case not found"
-      CaseStatusTransitionErr msg -> t err405 msg
-      CaseNotCreated -> t err404 "Case not created"
-      CaseNotUpdated -> t err404 "Case not updated"
+      CaseNotFound -> t S.err404 "Case not found"
+      CaseStatusTransitionErr msg -> t S.err405 msg
+      CaseNotCreated -> t S.err404 "Case not created"
+      CaseNotUpdated -> t S.err404 "Case not updated"
     -- Product Instance errors
     ProductInstanceErr suberr -> case suberr of
-      ProductInstanceNotFound -> t err404 "Product Instance not found"
-      ProductInstanceStatusTransitionErr msg -> t err405 msg
+      ProductInstanceNotFound -> t S.err404 "Product Instance not found"
+      ProductInstanceStatusTransitionErr msg -> t S.err405 msg
     -- Product errors
     ProductErr suberr -> case suberr of
-      ProductNotFound -> t err404 "Product not found"
-      ProductNotUpdated -> t err405 "Product not updated"
-      ProductNotCreated -> t err405 "Product not created"
-    AuthErr UnAuthorized -> t err401 "Unauthorized"
-    _ -> t err500 "Unknown error"
+      ProductNotFound -> t S.err404 "Product not found"
+      ProductNotUpdated -> t S.err405 "Product not updated"
+      ProductNotCreated -> t S.err405 "Product not created"
+    AuthErr UnAuthorized -> t S.err401 "Unauthorized"
+    _ -> t S.err500 "Unknown error"
   where
     t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg
 
@@ -235,17 +285,18 @@ throwDomainError err =
 callClient ::
   (ET.JSONEx a, L.MonadFlow m) =>
   Text ->
-  BaseUrl ->
+  Context ->
+  S.BaseUrl ->
   ET.EulerClient a ->
   m a
-callClient desc baseUrl cli = do
+callClient desc context baseUrl cli = do
   endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) desc
   res <- L.callAPI baseUrl cli
   _ <- L.runUntracedIO $ endTracking $ getResponseCode res
   case res of
     Left err -> do
-      L.logError @Text "cli" $ "Failure in " <> show desc <> " call to " <> show baseUrl <> ": " <> show err
-      L.throwException err
+      L.logError @Text "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err
+      L.throwException $ mkErrResponse context err500 (fromClientError err)
     Right x -> pure x
   where
     getResponseCode res =

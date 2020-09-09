@@ -32,7 +32,7 @@ cancel org req = withFlowHandler $ do
       fork "Cancel" $ do
         cancelMessage <- mkCancelMessage
         AckResponse {} <-
-          callClient "cancel" appUrl $
+          callClient "cancel" (req ^. #context) appUrl $
             client
               onCancelAPI
               cbApiKey

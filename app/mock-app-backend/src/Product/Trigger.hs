@@ -71,7 +71,7 @@ trigger flow = withFlowHandler $ do
       SearchErrorFMD err -> pure $ fmdErrorFlowId err
   req <- buildSearchReq transactionId
   eRes <-
-    callClient "search" baseUrl $
+    callClient "search" (req ^. #context) baseUrl $
       client searchAPI "test-app-2-key" req
   EL.logDebug @Text "mock_app_backend" $ "search context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
@@ -95,7 +95,7 @@ triggerTrack orderId = withFlowHandler $ do
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   eRes <-
-    callClient "track" cbUrl $
+    callClient "track" context cbUrl $
       client trackAPI cbApiKey req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return

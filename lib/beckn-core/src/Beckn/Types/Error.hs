@@ -2,22 +2,19 @@
 
 module Beckn.Types.Error where
 
-import Data.Text as T
 import EulerHS.Prelude
 import EulerHS.Types (DBError)
 
 data Action = ACK | NACK deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
 
-newtype ErrorCode = ErrorCode Int
+newtype ErrorCode = ErrorCode {fromErrorCode :: Int}
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-newtype ErrorMsg = ErrorMsg Text
-  -- { _getErrorText :: Text
-  -- }
+newtype ErrorMsg = ErrorMsg {fromErrorMsg :: Text}
   deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
 
 instance IsString ErrorMsg where
-  fromString = ErrorMsg . T.pack
+  fromString = ErrorMsg . fromString
 
 data DomainError
   = AuthErr AuthError
@@ -39,7 +36,7 @@ data DomainError
   | UnknownDomainError ErrorMsg
   | DatabaseError DBError
   | SystemErr SystemError
-  deriving (Generic, Eq, Show, FromJSON, ToJSON, Exception)
+  deriving (Generic, Eq, Show)
 
 data AuthError
   = UnAuthorized
@@ -132,7 +129,7 @@ data BecknError = BecknError
     _errorMessage :: ErrorMsg,
     _action :: Action
   }
-  deriving (Generic)
+  deriving (Generic, Eq, Show)
 
 instance FromJSON BecknError where
   parseJSON = genericParseJSON stripLensPrefixOptions

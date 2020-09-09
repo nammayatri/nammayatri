@@ -10,6 +10,7 @@ import Data.Generics.Labels ()
 import Data.Swagger
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Network.HTTP.Types as H
 
 type FlowR r = ReaderT r L.Flow
 
@@ -58,6 +59,15 @@ instance ToJSON AckMessage where
 
 ack :: Text -> AckMessage
 ack = AckMessage . Ack
+
+data NackResponseError = NackResponseError
+  { _context :: Context,
+    _error :: Error,
+    _status :: H.Status
+  }
+  deriving (Show)
+
+instance Exception NackResponseError
 
 newtype IdObject = IdObject
   { id :: Text

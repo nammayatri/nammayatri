@@ -3,8 +3,14 @@
 
 module Beckn.Utils.Servant.Server where
 
+import Beckn.Constants.APIErrorCode
 import Beckn.Types.App (EnvR, FlowServerR)
+import Beckn.Types.Common
+import Beckn.Utils.Common
+import qualified Data.Aeson as Aeson
 import EulerHS.Prelude
+import qualified Network.HTTP.Types as H
+import Network.Wai (Response, responseLBS)
 import Servant
 
 class HasEnvEntry r (context :: [Type]) | context -> r where
@@ -35,3 +41,30 @@ run apis server ctx env =
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
+
+serverErrorResponse :: ServerError -> Response
+serverErrorResponse ex =
+  responseLBS
+    (H.Status (errHTTPCode ex) $ encodeUtf8 $ errReasonPhrase ex)
+    ((H.hContentType, "application/json") : errHeaders ex)
+    $ errBody ex
+
+internalErrorResponse :: Response
+internalErrorResponse =
+  responseLBS
+    H.internalServerError500
+    [(H.hContentType, "application/json")]
+    (Aeson.encode internalServerErr)
+
+nackErrorResponse :: NackResponseError -> Response
+nackErrorResponse ex =
+  responseLBS
+    (_status ex)
+    [(H.hContentType, "application/json")]
+    (Aeson.encode $ compileErrResponse ex)
+
+exceptionResponse :: SomeException -> Response
+exceptionResponse exception
+  | Just ex <- fromException exception = serverErrorResponse ex
+  | Just ex <- fromException exception = nackErrorResponse ex
+  | otherwise = internalErrorResponse

@@ -27,6 +27,6 @@ initCb org req = withFlowHandler $ do
       Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
       Just url ->
         void $
-          callClient "confirm" url $
+          callClient "confirm" (req ^. #context) url $
             client confirmAPI cbApiKey confirmReq
   return resp

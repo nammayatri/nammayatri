@@ -29,7 +29,7 @@ track org req = withFlowHandler $ do
       fork "Track" $ do
         trackMessage <- mkTrackMessage
         AckResponse {} <-
-          callClient "track" appUrl $
+          callClient "track" (req ^. #context) appUrl $
             client
               onTrackAPI
               cbApiKey

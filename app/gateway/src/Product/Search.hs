@@ -8,6 +8,7 @@ module Product.Search
 where
 
 import App.Types
+import Beckn.Types.API.Callback
 import qualified Beckn.Types.API.Search as Core
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Error
@@ -63,7 +64,7 @@ search org req = withFlowHandler $ do
         checkEnd True bgSession
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb _ req = withFlowHandler $ do
+searchCb _ req@CallbackReq {context} = withFlowHandler $ do
   let onSearch = ET.client $ withClientTracing onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
@@ -71,17 +72,9 @@ searchCb _ req = withFlowHandler $ do
   let baseUrl = bgSession ^. #cbUrl
   let cbApiKey = bgSession ^. #cbApiKey
   eRes <- callAPIWithTrail baseUrl (onSearch cbApiKey req) "on_search"
-  let resp = case eRes of
-        Left err -> AckResponse (req ^. #context) (ack "NACK") (Just $ domainError $ show err)
-        Right _ -> AckResponse (req ^. #context) (ack "ACK") Nothing
-  L.logDebug @Text "gateway" $
-    "request_transaction_id: " <> messageId
-      <> ", search_cb: req: "
-      <> decodeUtf8 (encode req)
-      <> ", resp: "
-      <> show resp
   checkEnd False bgSession
-  return resp
+  AckResponse {} <- checkClientError context eRes
+  mkOkResponse (req ^. #context)
 
 checkEnd :: Bool -> BA.GwSession -> Flow ()
 checkEnd isTimeout bgSession = do

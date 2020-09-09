@@ -7,21 +7,18 @@ where
 
 import App.Server
 import App.Types
-import Beckn.Constants.APIErrorCode (internalServerErr)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
-import Beckn.Utils.Common (runFlowR)
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Char8 as BS
+import Beckn.Utils.Servant.Server (exceptionResponse)
 import qualified Data.Cache as C
 import EulerHS.Prelude
 import EulerHS.Runtime as E
-import qualified Network.HTTP.Types as H
-import Network.Wai (Response, responseLBS)
+import Network.Wai (Response)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -30,7 +27,6 @@ import Network.Wai.Handler.Warp
     setOnOpen,
     setPort,
   )
-import Servant.Server
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
 runGateway :: IO ()
@@ -79,16 +75,4 @@ runGateway = do
         waitForDrain activeConnections $ ms - sleep
 
 gatewayExceptionResponse :: SomeException -> Response
-gatewayExceptionResponse exception = do
-  let anyException = fromException exception
-  case anyException of
-    Just ex ->
-      responseLBS
-        (H.Status (errHTTPCode ex) $ BS.pack $ errReasonPhrase ex)
-        ((H.hContentType, "application/json") : errHeaders ex)
-        $ errBody ex
-    Nothing ->
-      responseLBS
-        H.internalServerError500
-        [(H.hContentType, "application/json")]
-        (Aeson.encode internalServerErr)
+gatewayExceptionResponse = exceptionResponse

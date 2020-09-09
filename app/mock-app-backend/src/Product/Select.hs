@@ -33,7 +33,7 @@ selectCb org req = withFlowHandler $ do
         Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
         Just url ->
           void $
-            callClient "init" url $
+            callClient "init" (req ^. #context) url $
               client initAPI cbApiKey initReq
     Left err -> EL.logDebug @Text "mock_app_backend" $ "select_cb error: " <> show err
   return resp

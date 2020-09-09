@@ -29,7 +29,7 @@ update org req = withFlowHandler $ do
       fork "Update" $ do
         updateMessage <- mkUpdateMessage
         AckResponse {} <-
-          callClient "update" appUrl $
+          callClient "update" (req ^. #context) appUrl $
             client
               onUpdateAPI
               cbApiKey

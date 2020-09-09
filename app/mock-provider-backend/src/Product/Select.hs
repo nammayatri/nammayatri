@@ -29,7 +29,7 @@ select org req = withFlowHandler $ do
       fork "Select" $ do
         onSelectMessage <- mkQuote
         AckResponse {} <-
-          callClient "select" appUrl $
+          callClient "select" (req ^. #context) appUrl $
             client
               onSelectAPI
               cbApiKey

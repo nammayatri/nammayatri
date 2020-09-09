@@ -9,6 +9,7 @@ import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import Beckn.Utils.Common (encodeToText', fork, getTraceFlag)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Servant.Trail.Types as TT
+import qualified Data.Aeson as A
 import qualified Data.Aeson as Aeson
 import Data.Binary.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -134,6 +135,9 @@ callAPIWithTrail baseUrl (reqInfo, req) serviceName = do
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
   _ <- L.runUntracedIO $ endTracking status
+  case res of
+    Right r -> L.logInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
+    Left err -> L.logInfo serviceName $ "Error occured during client call: " <> show err
   traceFlag <- getTraceFlag
   case traceFlag of
     TRACE_OUTGOING -> trace res

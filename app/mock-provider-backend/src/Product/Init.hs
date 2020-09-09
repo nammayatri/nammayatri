@@ -29,7 +29,7 @@ init org req = withFlowHandler $ do
       fork "Init" $ do
         msg <- mkInitOrder
         AckResponse {} <-
-          callClient "init" appUrl $
+          callClient "init" (req ^. #context) appUrl $
             client
               onInitAPI
               cbApiKey

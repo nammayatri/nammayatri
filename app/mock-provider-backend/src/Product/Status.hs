@@ -29,7 +29,7 @@ status org req = withFlowHandler $ do
       fork "Status" $ do
         statusMessage <- mkStatusMessage
         AckResponse {} <-
-          callClient "status" appUrl $
+          callClient "status" (req ^. #context) appUrl $
             client
               onStatusAPI
               cbApiKey
