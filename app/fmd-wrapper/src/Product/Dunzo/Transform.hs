@@ -200,10 +200,12 @@ mkQuote QuoteRes {..} = do
           _maximum_value = Nothing
         }
 
-mkOnSelectMessage :: Quotation -> SelectReq -> OnSelectMessage
-mkOnSelectMessage quote req = OnSelectMessage order quote
-  where
-    order = req ^. #message . #order
+mkOnSelectMessage :: Order -> QuoteRes -> Flow OnSelectMessage
+mkOnSelectMessage order res@QuoteRes {..} = do
+  quote <- mkQuote res
+  task <- updateTaskEta (head $ order ^. #_tasks) eta
+  let order' = order & #_tasks .~ [task]
+  return $ OnSelectMessage order' quote
 
 mkOnSelectReq :: Context -> OnSelectMessage -> OnSelectReq
 mkOnSelectReq context msg =
@@ -219,29 +221,16 @@ mkOnSelectErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> InitOrder
-mkOnInitMessage orderId order conf req QuoteRes {..} =
-  InitOrder $
-    order & #_id ?~ orderId & #_payment ?~ mkPayment & #_billing .~ billing
+mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> Flow InitOrder
+mkOnInitMessage orderId order conf req QuoteRes {..} = do
+  task <- updateTaskEta (head $ order ^. #_tasks) eta
+  return $
+    InitOrder $
+      order & #_id ?~ orderId
+        & #_payment ?~ mkPayment conf estimated_price
+        & #_billing .~ billing
+        & #_tasks .~ [task]
   where
-    mkPayment =
-      Payment
-        { _transaction_id = Nothing,
-          _type = Just "PRE-FULFILLMENT",
-          _payer = Nothing,
-          _payee = Just $ conf ^. #payee,
-          _method = ["RTGS"],
-          _amount = price,
-          _state = Nothing,
-          _due_date = Nothing,
-          _duration = Nothing,
-          _terms = Just $ conf ^. #paymentPolicy
-        }
-    price =
-      MonetaryValue
-        { _currency = "INR",
-          _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
-        }
     billing = req ^. #message . #order . #_billing
 
 mkOnInitReq :: Context -> InitOrder -> OnInitReq
@@ -259,13 +248,13 @@ mkOnInitErrReq context err =
     }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
-mkOnStatusMessage :: Text -> Order -> TaskStatus -> Flow StatusResMessage
-mkOnStatusMessage orgName order status = do
+mkOnStatusMessage :: Text -> Order -> DunzoConfig -> TaskStatus -> Flow StatusResMessage
+mkOnStatusMessage orgName order conf status = do
   now <- getCurrTime
-  return $ StatusResMessage (updateOrder orgName now order status)
+  return $ StatusResMessage (updateOrder orgName now order conf status)
 
-updateOrder :: Text -> UTCTime -> Order -> TaskStatus -> Order
-updateOrder orgName cTime order status = do
+updateOrder :: Text -> UTCTime -> Order -> DunzoConfig -> TaskStatus -> Order
+updateOrder orgName cTime order conf status = do
   -- TODO: this assumes that there is one task per order
   let orderState = mapTaskStateToOrderState (status ^. #state)
   let cancellationReasonIfAny =
@@ -273,16 +262,29 @@ updateOrder orgName cTime order status = do
           CANCELLED -> Just [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
           RUNNER_CANCELLED -> Just [Option "1" (Descriptor (Just "Agent cancelled") n n n n n n n)]
           _ -> Nothing
+  let payment = mkPayment conf <$> status ^. #estimated_price
   order & #_state ?~ orderState
     & #_updated_at ?~ cTime
+    & #_payment .~ (payment <|> order ^. #_payment)
     & #_cancellation_reasons .~ (cancellationReasonIfAny <|> order ^. #_cancellation_reasons)
     & #_tasks .~ (updateTask <$> (order ^. #_tasks))
   where
     updateTask task = do
       let taskState = mapTaskState (status ^. #state)
+      let eta = status ^. #eta
+      let pickup = task ^. #_pickup
+      let drop = task ^. #_drop
+
+      let pickupEta = addEta . (^. #pickup) <$> eta
+      let dropEta = addEta . (^. #dropoff) <$> eta
+      let pickup' = pickup & #_time .~ (pickupEta <|> pickup ^. #_time)
+      let drop' = drop & #_time .~ (dropEta <|> drop ^. #_time)
+
       task & #_agent .~ (getAgent <$> status ^. #runner)
         & #_state .~ (taskState <|> task ^. #_state)
         & #_updated_at ?~ cTime
+        & #_pickup .~ pickup'
+        & #_drop .~ drop'
 
     getAgent runner =
       Operator
@@ -297,6 +299,8 @@ updateOrder orgName cTime order status = do
         }
 
     n = Nothing
+
+    addEta duration = addUTCTime (fromInteger $ duration * 60 :: NominalDiffTime) cTime
 
 mkOnStatusReq :: Context -> StatusResMessage -> Flow OnStatusReq
 mkOnStatusReq context msg =
@@ -475,3 +479,38 @@ mapTaskStateToOrderState s = case s of
   DELIVERED -> "COMPLETED"
   CANCELLED -> "CANCELLED"
   RUNNER_CANCELLED -> "CANCELLED"
+
+updateTaskEta :: Task -> Eta -> Flow Task
+updateTaskEta task eta = do
+  now <- getCurrTime
+  let pickup = task ^. #_pickup
+  let drop = task ^. #_drop
+
+  let pickupEta = addUTCTime (fromInteger $ (eta ^. #pickup) * 60 :: NominalDiffTime) now
+  let dropEta = addUTCTime (fromInteger $ (eta ^. #dropoff) * 60 :: NominalDiffTime) now
+  let pickup' = pickup & #_time ?~ pickupEta
+  let drop' = drop & #_time ?~ dropEta
+  return $
+    task & #_pickup .~ pickup'
+      & #_drop .~ drop'
+
+mkPayment :: DunzoConfig -> Float -> Payment
+mkPayment conf estimated_price =
+  Payment
+    { _transaction_id = Nothing,
+      _type = Just "PRE-FULFILLMENT",
+      _payer = Nothing,
+      _payee = Just $ conf ^. #payee,
+      _method = ["RTGS"],
+      _amount = price,
+      _state = Nothing,
+      _due_date = Nothing,
+      _duration = Nothing,
+      _terms = Just $ conf ^. #paymentPolicy
+    }
+  where
+    price =
+      MonetaryValue
+        { _currency = "INR",
+          _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
+        }

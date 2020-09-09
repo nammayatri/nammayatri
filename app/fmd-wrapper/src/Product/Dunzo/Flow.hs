@@ -7,6 +7,7 @@ import App.Types
 import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
@@ -97,11 +98,12 @@ select org req = do
       cbUrl <- parseBaseUrl bapNwAddr
       case res of
         Right quoteRes -> do
-          quote <- mkQuote quoteRes
-          let onSelectMessage = mkOnSelectMessage quote req
+          let reqOrder = req ^. #message . #order
+          onSelectMessage <- mkOnSelectMessage reqOrder quoteRes
           let onSelectReq = mkOnSelectReq context onSelectMessage
-          let quoteId = quote ^. #_id
           let order = onSelectMessage ^. #order
+          let quote = onSelectMessage ^. #quote
+          let quoteId = quote ^. #_id
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
           L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
@@ -142,13 +144,13 @@ init org req = do
           bapNwAddr = baConfig ^. #bap_nw_address
       cbUrl <- parseBaseUrl bapNwAddr
       -- quoteId will be used as orderId
-      let onInitMessage =
-            mkOnInitMessage
-              quoteId
-              (orderDetails ^. #order)
-              conf
-              req
-              res
+      onInitMessage <-
+        mkOnInitMessage
+          quoteId
+          (orderDetails ^. #order)
+          conf
+          req
+          res
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) bapNwAddr (onInitMessage ^. #order) (orderDetails ^. #quote)
       onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
@@ -208,7 +210,6 @@ confirm org req = do
   dconf@DunzoConfig {..} <- getDunzoConfig org
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
   bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  bapConfig <- getBAConfig bapNwAddr dconf
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybeM400 "INVALID_ORDER_ID" $ reqOrder ^. #_id
   case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
@@ -227,7 +228,7 @@ confirm org req = do
     L.logInfo @Text "CreateTaskReq" (encodeToText createTaskReq)
     eres <- createTaskAPI dconf createTaskReq
     L.logInfo @Text "CreateTaskRes" $ show eres
-    sendCb case_ updatedOrderDetailsWTxn context bapConfig eres
+    sendCb case_ updatedOrderDetailsWTxn context dconf bapNwAddr eres
   returnAck context
   where
     verifyPayment :: Order -> Order -> Flow ()
@@ -263,11 +264,13 @@ confirm org req = do
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
       L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey req'
 
-    sendCb case_ orderDetails context baConfig res =
+    sendCb case_ orderDetails context conf bapNwAddr res = do
+      baConfig <- getBAConfig bapNwAddr conf
       case res of
         Right taskStatus -> do
           currTime <- getCurrTime
-          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) taskStatus
+          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) conf taskStatus
+          checkAndLogPriceDiff (orderDetails ^. #order) uOrder
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
           onConfirmReq <- mkOnConfirmReq context uOrder
           eres <- callCbAPI baConfig onConfirmReq
@@ -279,6 +282,16 @@ confirm org req = do
               let onConfirmReq = mkOnConfirmErrReq context err
               onConfirmResp <- callCbAPI baConfig onConfirmReq
               L.logInfo @Text "on_confirm err " $ show onConfirmResp
+        _ -> pass
+
+    checkAndLogPriceDiff initOrder confirmOrder = do
+      let orderId = fromMaybe "" $ initOrder ^. #_id
+      let initPrice = convertDecimalValueToAmount . (^. #_amount . #_value) =<< initOrder ^. #_payment
+      let confirmPrice = convertDecimalValueToAmount . (^. #_amount . #_value) =<< confirmOrder ^. #_payment
+      case (initPrice, confirmPrice) of
+        (Just initAmount, Just confirmAmount) -> do
+          when (initAmount /= confirmAmount) $
+            L.logInfo ("Order_" <> orderId) ("Price diff of amount " <> show (confirmAmount - initAmount))
         _ -> pass
 
 track :: Organization -> TrackReq -> Flow TrackRes
@@ -307,14 +320,13 @@ status org req = do
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
   let orderId = req ^. (#message . #order_id)
   bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  baConfig <- getBAConfig bapNwAddr conf
   c <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = c ^. #_shortId
   (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
   fork "status" do
     eres <- getStatus conf (TaskId taskId)
     L.logInfo @Text "StatusRes" $ show eres
-    sendCb c orderDetails context baConfig eres
+    sendCb c orderDetails context conf bapNwAddr eres
   returnAck context
   where
     getStatus conf@DunzoConfig {..} taskId = do
@@ -328,13 +340,14 @@ status org req = do
 
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onStatusAPI cbApiKey
 
-    sendCb case_ orderDetails context baConfig res = do
+    sendCb case_ orderDetails context conf bapNwAddr res = do
+      baConfig <- getBAConfig bapNwAddr conf
       let cbApiKey = baConfig ^. #bap_api_key
       let order = orderDetails ^. #order
       cbUrl <- parseBaseUrl $ baConfig ^. #bap_nw_address
       case res of
         Right taskStatus -> do
-          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order taskStatus
+          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order conf taskStatus
           onStatusReq <- mkOnStatusReq context onStatusMessage
           let updatedOrder = onStatusMessage ^. #order
           let updatedOrderDetails = orderDetails & #order .~ updatedOrder
