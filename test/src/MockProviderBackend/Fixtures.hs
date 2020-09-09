@@ -1,7 +1,6 @@
 module MockProviderBackend.Fixtures where
 
 import qualified "mock-provider-backend" App as MockProviderBE
-import "mock-provider-backend" App.Handlers as MockProviderRoutes
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
@@ -46,7 +45,7 @@ startServer :: IO ThreadId
 startServer = forkIO MockProviderBE.runMockProvider
 
 searchFlow :: Text -> SearchReq -> ClientM Common.AckResponse
-searchFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderSearchAPI)
+searchFlow = client searchAPI
 
 buildFMDSearchReq :: Context -> SearchReq
 buildFMDSearchReq context =
@@ -56,7 +55,7 @@ buildFMDSearchReq context =
     }
 
 selectFlow :: Text -> SelectReq -> ClientM Common.AckResponse
-selectFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderSelectAPI)
+selectFlow = client selectAPI
 
 buildFMDSelectReq :: Context -> SelectReq
 buildFMDSelectReq context =
@@ -66,7 +65,7 @@ buildFMDSelectReq context =
     }
 
 initFlow :: Text -> InitReq -> ClientM Common.AckResponse
-initFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderInitAPI)
+initFlow = client initAPI
 
 buildFMDInitReq :: Context -> Text -> InitReq
 buildFMDInitReq context quoteId = do
@@ -77,7 +76,7 @@ buildFMDInitReq context quoteId = do
     }
 
 confirmFlow :: Text -> ConfirmReq -> ClientM Common.AckResponse
-confirmFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderConfirmAPI)
+confirmFlow = client confirmAPI
 
 buildFMDConfirmReq :: Context -> ConfirmReq
 buildFMDConfirmReq context =
@@ -87,7 +86,7 @@ buildFMDConfirmReq context =
     }
 
 updateFlow :: Text -> UpdateReq -> ClientM Common.AckResponse
-updateFlow = client (Proxy :: Proxy MockProviderRoutes.ProviderUpdateAPI)
+updateFlow = client updateAPI
 
 buildFMDUpdateReq :: Context -> UpdateReq
 buildFMDUpdateReq context =

@@ -1,15 +1,13 @@
 module App.Handlers where
 
 import App.Types (FlowServer)
-import Beckn.Types.Common (AckResponse (..))
-import Beckn.Types.FMD.API.Cancel (CancelReq)
-import Beckn.Types.FMD.API.Confirm (ConfirmReq)
-import Beckn.Types.FMD.API.Init (InitReq)
-import Beckn.Types.FMD.API.Search (SearchReq)
-import Beckn.Types.FMD.API.Select (SelectReq)
-import Beckn.Types.FMD.API.Status (StatusReq)
-import Beckn.Types.FMD.API.Update (UpdateReq)
-import Beckn.Utils.Servant.HeaderAuth
+import Beckn.Types.FMD.API.Cancel
+import Beckn.Types.FMD.API.Confirm
+import Beckn.Types.FMD.API.Init
+import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
+import Beckn.Types.FMD.API.Status
+import Beckn.Types.FMD.API.Update
 import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Cancel as P
@@ -25,59 +23,17 @@ import Utils.Auth
 type ProviderAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> ProviderSearchAPI
-           :<|> ProviderSelectAPI
-           :<|> ProviderInitAPI
-           :<|> ProviderConfirmAPI
-           :<|> ProviderStatusAPI
-           :<|> ProviderCancelAPI
-           :<|> ProviderUpdateAPI
+           :<|> SearchAPI VerifyAPIKey
+           :<|> SelectAPI VerifyAPIKey
+           :<|> InitAPI VerifyAPIKey
+           :<|> ConfirmAPI VerifyAPIKey
+           :<|> StatusAPI VerifyAPIKey
+           :<|> CancelAPI VerifyAPIKey
+           :<|> UpdateAPI VerifyAPIKey
        )
 
 providerAPI :: Proxy ProviderAPI
 providerAPI = Proxy
-
-type ProviderSearchAPI =
-  "search"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] SearchReq
-    :> Post '[JSON] AckResponse
-
-type ProviderSelectAPI =
-  "select"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] SelectReq
-    :> Post '[JSON] AckResponse
-
-type ProviderInitAPI =
-  "init"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] InitReq
-    :> Post '[JSON] AckResponse
-
-type ProviderConfirmAPI =
-  "confirm"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] ConfirmReq
-    :> Post '[JSON] AckResponse
-
-type ProviderStatusAPI =
-  "status"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] StatusReq
-    :> Post '[JSON] AckResponse
-
-type ProviderCancelAPI =
-  "cancel"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] CancelReq
-    :> Post '[JSON] AckResponse
-
-type ProviderUpdateAPI =
-  "update"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] UpdateReq
-    :> Post '[JSON] AckResponse
 
 mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServer ProviderAPI
 mockProviderBackendServer _key =
@@ -90,23 +46,23 @@ mockProviderBackendServer _key =
     :<|> cancelFlow
     :<|> updateFlow
 
-searchFlow :: FlowServer ProviderSearchAPI
+searchFlow :: FlowServer (SearchAPI VerifyAPIKey)
 searchFlow = P.search
 
-selectFlow :: FlowServer ProviderSelectAPI
+selectFlow :: FlowServer (SelectAPI VerifyAPIKey)
 selectFlow = P.select
 
-initFlow :: FlowServer ProviderInitAPI
+initFlow :: FlowServer (InitAPI VerifyAPIKey)
 initFlow = P.init
 
-confirmFlow :: FlowServer ProviderConfirmAPI
+confirmFlow :: FlowServer (ConfirmAPI VerifyAPIKey)
 confirmFlow = P.confirm
 
-statusFlow :: FlowServer ProviderStatusAPI
+statusFlow :: FlowServer (StatusAPI VerifyAPIKey)
 statusFlow = P.status
 
-cancelFlow :: FlowServer ProviderCancelAPI
+cancelFlow :: FlowServer (CancelAPI VerifyAPIKey)
 cancelFlow = P.cancel
 
-updateFlow :: FlowServer ProviderUpdateAPI
+updateFlow :: FlowServer (UpdateAPI VerifyAPIKey)
 updateFlow = P.update
