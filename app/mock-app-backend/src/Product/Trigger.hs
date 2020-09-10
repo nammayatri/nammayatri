@@ -4,6 +4,8 @@
 module Product.Trigger
   ( TriggerFlow (..),
     trigger,
+    triggerTrack,
+    triggerTrackForLast,
   )
 where
 
@@ -12,6 +14,7 @@ import App.Utils
 import Beckn.Types.Common
 import Beckn.Types.Core.FmdError
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Track
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
 import Data.Aeson
@@ -23,6 +26,7 @@ import qualified Data.Text.Encoding as DT
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Product.CallsTrack
 import Servant hiding (Context)
 
 data TriggerFlow
@@ -69,10 +73,41 @@ trigger flow = withFlowHandler $ do
   eRes <-
     callClient "search" baseUrl $
       client searchAPI "test-app-2-key" req
-  EL.logDebug @Text "mock_app_backend" $ "context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  EL.logDebug @Text "mock_app_backend" $ "search context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
       { _context = req ^. #context,
         _message = ack "ACK",
         _error = Nothing
       }
+
+triggerTrack :: Text -> FlowHandler AckResponse
+triggerTrack orderId = withFlowHandler $ do
+  tid <- EL.generateGUID
+  context <- buildContext "track" tid
+  let reqMsg =
+        TrackReqMessage
+          { order_id = orderId,
+            callback_url = Nothing
+          }
+  let req = TrackReq context reqMsg
+  org <- readingCallsTrack (#orderConfirms . at orderId) >>= fromMaybeM500 "UNKNOWN_ORDER_ID"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  eRes <-
+    callClient "track" cbUrl $
+      client trackAPI cbApiKey req
+  EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  return
+    AckResponse
+      { _context = context,
+        _message = ack "ACK",
+        _error = Nothing
+      }
+
+triggerTrackForLast :: FlowHandler AckResponse
+triggerTrackForLast = do
+  lastOrderId <-
+    withFlowHandler $
+      readingCallsTrack #lastOrderId >>= fromMaybeM400 "NO_ORDERS_REGISTERED"
+  triggerTrack lastOrderId

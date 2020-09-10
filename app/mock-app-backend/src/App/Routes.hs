@@ -1,6 +1,7 @@
 module App.Routes where
 
 import App.Types
+import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.FMD.API.Cancel (OnCancelReq)
 import Beckn.Types.FMD.API.Confirm (OnConfirmReq)
@@ -57,11 +58,25 @@ mockAppBackendServer _key =
 
 type TriggerAPI =
   "trigger"
-    :> QueryParam' '[Required, String] "flow" T.TriggerFlow
-    :> Get '[JSON] AckResponse
+    :> ( MandatoryQueryParam "flow" T.TriggerFlow
+           :> Get '[JSON] AckResponse
+           :<|> "search"
+             :> MandatoryQueryParam "flow" T.TriggerFlow
+             :> Get '[JSON] AckResponse
+           :<|> "track"
+             :> "last"
+             :> Get '[JSON] AckResponse
+           :<|> "track"
+             :> Capture "order_id" Text
+             :> Get '[JSON] AckResponse
+       )
 
 triggerFlow :: FlowServer TriggerAPI
-triggerFlow = T.trigger
+triggerFlow =
+  T.trigger
+    :<|> T.trigger
+    :<|> T.triggerTrackForLast
+    :<|> T.triggerTrack
 
 type OnSearchAPI =
   "on_search"

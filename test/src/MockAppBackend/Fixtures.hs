@@ -15,6 +15,7 @@ import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 import qualified "mock-app-backend" Product.Trigger as MockAppTrigger
+import Servant.API
 import Servant.Client
 
 buildContext :: Text -> Text -> UTCTime -> Context
@@ -46,7 +47,12 @@ startServer :: IO ThreadId
 startServer = forkIO MockAppBE.runMockApp
 
 triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
-triggerSearchReq = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
+triggerTrack :: Text -> ClientM Common.AckResponse
+triggerTrackForLast :: ClientM Common.AckResponse
+triggerSearchReq
+  :<|> _
+  :<|> triggerTrackForLast
+  :<|> triggerTrack = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
 
 onSearchFlow :: Text -> OnSearchReq -> ClientM Common.AckResponse
 onSearchFlow = client (Proxy :: Proxy MockAppRoutes.OnSearchAPI)
