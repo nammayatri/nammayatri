@@ -46,36 +46,27 @@ search org req = do
   fork "Search" $ do
     eres <- getQuote config quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    case eres of
-      Left err ->
-        case err of
-          FailureResponse _ (Response _ _ _ body) -> sendErrCb org context body
-          _ -> L.logDebug @Text "getQuoteErr" (show err)
-      Right res -> sendCb org context res
+    sendCb org context eres
   returnAck context
   where
     sendCb org' context res = do
-      onSearchReq <- mkOnSearchReq org' context res
       cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
       cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-      cbres <- callCbAPI cbApiKey cbUrl onSearchReq
-      L.logDebug @Text "cb" $
-        decodeUtf8 (encode onSearchReq)
-          <> show cbres
-
-    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onSearchAPI cbApiKey
-
-    sendErrCb org' context errbody =
-      case decode errbody of
-        Just err -> do
-          cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-          cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-          let onSearchErrReq = mkOnSearchErrReq context err
-          cbres <- callCbAPI cbApiKey cbUrl onSearchErrReq
-          L.logDebug @Text "cb" $
-            decodeUtf8 (encode onSearchErrReq)
-              <> show cbres
-        Nothing -> L.logDebug @Text "getQuoteErr" "UNABLE_TO_DECODE_ERR"
+      case res of
+        Right quoteRes -> do
+          onSearchReq <- mkOnSearchReq org' context quoteRes
+          L.logInfo @Text "on_search" $ "on_search cb req" <> show onSearchReq
+          onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchReq
+          L.logInfo @Text "on_search" $ "on_search cb resp" <> show onSearchResp
+        Left (FailureResponse _ (Response _ _ _ body)) ->
+          whenJust (decode body) handleError
+          where
+            handleError err = do
+              let onSearchErrReq = mkOnSearchErrReq context err
+              L.logInfo @Text "on_search" $ "on_search cb err req" <> show onSearchErrReq
+              onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchErrReq
+              L.logInfo @Text "on_search" $ "on_search cb err resp" <> show onSearchResp
+        _ -> pass
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
