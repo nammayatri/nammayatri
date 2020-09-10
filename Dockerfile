@@ -13,7 +13,7 @@ RUN ssh-keyscan -H "bitbucket.org" >> ~/.ssh/known_hosts
 # Make sure we haven't added any hlint warnings
 RUN hlint_count=$(hlint -g -j --json | jq '.|length') && \
   echo "Found ${hlint_count} warnings" && \
-  test ${hlint_count} -le 1
+  test ${hlint_count} -le 0
 # And that we're ormolu-clean
 RUN ormolu_files=`for i in $(git ls-files | grep '\.hs$'); do ormolu -m check $i || echo $i; done` && \
   echo "Unformatted files: ${ormolu_files}" && \
