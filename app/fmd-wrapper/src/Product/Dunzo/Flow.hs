@@ -50,7 +50,7 @@ search org req = do
   dzBACreds <- getDzBAPCreds bap
   fork "Search" $ do
     eres <- getQuote dzBACreds config quoteReq
-    L.logInfo @Text "QuoteRes" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "QuoteRes") $ show eres
     sendCb context eres
   returnAck context
   where
@@ -60,17 +60,17 @@ search org req = do
       case res of
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
-          L.logInfo @Text "on_search" $ "on_search cb req" <> show onSearchReq
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_search") $ "on_search cb req" <> show onSearchReq
           onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchReq
-          L.logInfo @Text "on_search" $ "on_search cb resp" <> show onSearchResp
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_search") $ "on_search cb resp" <> show onSearchResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onSearchErrReq = mkOnSearchErrReq context err
-              L.logInfo @Text "on_search" $ "on_search cb err req" <> show onSearchErrReq
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_search") $ "on_search cb err req" <> show onSearchErrReq
               onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchErrReq
-              L.logInfo @Text "on_search" $ "on_search cb err resp" <> show onSearchResp
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_search") $ "on_search cb err resp" <> show onSearchResp
         _ -> pass
 
 select :: Organization -> SelectReq -> Flow SelectRes
@@ -84,7 +84,7 @@ select org req = do
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
     eres <- getQuote dzBACreds conf quoteReq
-    L.logInfo @Text "QuoteRes" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "QuoteRes") $ show eres
     sendCallback ctx cbUrl cbApiKey eres
   returnAck ctx
   where
@@ -99,17 +99,17 @@ select org req = do
           let quoteId = quote ^. #_id
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
-          L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_select") $ "on_select cb req" <> show onSelectReq
           onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
-          L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_select") $ "on_select cb resp" <> show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
-              L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_select") $ "on_select cb err req" <> show onSelectReq
               onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
-              L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_select") $ "on_select cb err resp" <> show onSelectResp
         _ -> pass
 
 init :: Organization -> InitReq -> Flow InitRes
@@ -129,7 +129,7 @@ init org req = do
   fork "init" do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
     eres <- getQuote dzBACreds conf quoteReq
-    L.logInfo @Text "QuoteRes" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "QuoteRes") $ show eres
     sendCb orderDetails context cbApiKey cbUrl paymentTerms payeeDetails quoteId eres
   returnAck context
   where
@@ -146,14 +146,14 @@ init org req = do
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
       onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
-      L.logInfo @Text "on_init" $ show onInitResp
+      L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_init") $ show onInitResp
       return ()
     sendCb _ context cbApiKey cbUrl _ _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
           onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
-          L.logInfo @Text "on_init err" $ show onInitResp
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_init err") $ show onInitResp
           return ()
         Nothing -> return ()
     sendCb _ _ _ _ _ _ _ _ = return ()
@@ -217,11 +217,11 @@ confirm org req = do
         orderDetails & ((#order . #_payment . _Just . #_transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
   fork "confirm" do
-    L.logInfo @Text "Confirm" "Started"
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "Confirm") "Started"
     createTaskReq <- mkCreateTaskReq order
-    L.logInfo @Text "CreateTaskReq" (encodeToText createTaskReq)
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "CreateTaskReq") (encodeToText createTaskReq)
     eres <- createTaskAPI dzBACreds dconf createTaskReq
-    L.logInfo @Text "CreateTaskRes" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "CreateTaskRes") $ show eres
     sendCb case_ updatedOrderDetailsWTxn context cbApiKey cbUrl paymentTerms payeeDetails eres
   returnAck context
   where
@@ -261,14 +261,14 @@ confirm org req = do
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
           onConfirmReq <- mkOnConfirmReq context uOrder
           eres <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
-          L.logInfo @Text "on_confirm" $ show eres
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_confirm") $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
               onConfirmResp <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
-              L.logInfo @Text "on_confirm err " $ show onConfirmResp
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_confirm err") $ show onConfirmResp
         _ -> pass
 
     checkAndLogPriceDiff initOrder confirmOrder = do
@@ -293,7 +293,7 @@ track org req = do
     -- TODO: fix this after dunzo sends tracking url in api
     let onTrackReq = mkOnTrackErrReq context
     eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackReq
-    L.logInfo @Text "on_track" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_track") $ show eres
   returnAck context
 
 status :: Organization -> StatusReq -> Flow StatusRes
@@ -311,7 +311,7 @@ status org req = do
   dzBACreds <- getDzBAPCreds org
   fork "status" do
     eres <- getStatus dzBACreds conf (TaskId taskId)
-    L.logInfo @Text "StatusRes" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "StatusRes") $ show eres
     sendCb c orderDetails context cbApiKey cbUrl paymentTerms payeeDetails eres
   returnAck context
   where
@@ -335,14 +335,14 @@ status org req = do
           let updatedOrderDetails = orderDetails & #order .~ updatedOrder
           updateCase (case_ ^. #_id) updatedOrderDetails taskStatus case_
           onStatusRes <- callCbAPI cbApiKey cbUrl onStatusReq
-          L.logInfo @Text "on_status " $ show onStatusRes
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_status") $ show onStatusRes
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onStatusReq = mkOnStatusErrReq context err
               onStatusResp <- callCbAPI cbApiKey cbUrl onStatusReq
-              L.logInfo @Text "on_status err " $ show onStatusResp
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_status err") $ show onStatusResp
         _ -> pass
 
 cancel :: Organization -> CancelReq -> Flow CancelRes
@@ -358,7 +358,7 @@ cancel org req = do
   dzBACreds <- getDzBAPCreds org
   fork "cancel" do
     eres <- callCancelAPI dzBACreds conf (TaskId taskId)
-    L.logInfo @Text "CancelRes" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "CancelRes") $ show eres
     sendCb case_ orderDetails context cbApiKey cbUrl eres
   returnAck context
   where
@@ -380,14 +380,14 @@ cancel org req = do
           onCancelReq <- mkOnCancelReq context order
           updateCase (case_ ^. #_id) orderDetails case_
           onCancelRes <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
-          L.logInfo @Text "on_cancel " $ show onCancelRes
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_cancel") $ show onCancelRes
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onCancelReq = mkOnCancelErrReq context err
               onCancelResp <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
-              L.logInfo @Text "on_cancel err " $ show onCancelResp
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_cancel err") $ show onCancelResp
         _ -> pass
 
 update :: Organization -> UpdateReq -> Flow UpdateRes
@@ -400,7 +400,7 @@ update org req = do
     -- TODO: Dunzo doesnt have update
     let onUpdateReq = mkOnUpdateErrReq context
     eres <- L.callAPI cbUrl $ ET.client onUpdateAPI cbApiKey onUpdateReq
-    L.logInfo @Text "on_update" $ show eres
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_update") $ show eres
   returnAck context
 
 -- Helpers
