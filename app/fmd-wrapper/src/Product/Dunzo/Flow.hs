@@ -283,17 +283,26 @@ confirm org req = do
 
 track :: Organization -> TrackReq -> Flow TrackRes
 track org req = do
-  DunzoConfig {..} <- dzConfig <$> ask
+  conf@DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req ^. (#message . #order_id)
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   fork "track" do
-    -- TODO: fix this after dunzo sends tracking url in api
-    let onTrackReq = mkOnTrackErrReq context
-    eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackReq
-    L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_track") $ show eres
+    let taskId = case_ ^. #_shortId
+    dzBACreds <- getDzBAPCreds org
+    eStatusRes <- getStatus dzBACreds conf (TaskId taskId)
+    L.logInfo @Text "StatusRes" $ show eStatusRes
+    case eStatusRes of
+      Left _ -> do
+        let onTrackErrReq = mkOnTrackErrReq context "Failed to fetch tracking URL"
+        eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackErrReq
+        L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_track") $ show eres
+      Right statusRes -> do
+        let onTrackReq = mkOnTrackReq context (statusRes ^. #tracking_url)
+        eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackReq
+        L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_track") $ show eres
   returnAck context
 
 status :: Organization -> StatusReq -> Flow StatusRes
@@ -315,10 +324,6 @@ status org req = do
     sendCb c orderDetails context cbApiKey cbUrl paymentTerms payeeDetails eres
   returnAck context
   where
-    getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
-      token <- fetchToken dzBACreds conf
-      API.taskStatus dzClientId token dzUrl taskId
-
     updateCase caseId orderDetails taskStatus case_ = do
       let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
       Storage.update caseId updatedCase
@@ -408,6 +413,11 @@ getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow (Either ClientError Qu
 getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
   token <- fetchToken ba conf
   API.getQuote dzClientId token dzUrl quoteReq
+
+getStatus :: DzBAConfig -> DunzoConfig -> TaskId -> Flow (Either ClientError TaskStatus)
+getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
+  token <- fetchToken dzBACreds conf
+  API.taskStatus dzClientId token dzUrl taskId
 
 fetchToken :: DzBAConfig -> DunzoConfig -> Flow Token
 fetchToken DzBAConfig {..} DunzoConfig {..} = do

@@ -24,6 +24,7 @@ import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
+import Beckn.Types.Core.Tracking
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
@@ -292,6 +293,20 @@ updateOrder orgName cTime order paymentPolicy payee status = do
 
     addEta duration = addUTCTime (fromInteger $ duration * 60 :: NominalDiffTime) cTime
 
+mkOnTrackReq :: Context -> Maybe Text -> OnTrackReq
+mkOnTrackReq context trackingUrl = do
+  CallbackReq
+    { context = context & #_action .~ "on_track",
+      contents = Right $ TrackResMessage tracking
+    }
+  where
+    tracking =
+      Tracking
+        { _url = trackingUrl,
+          _required_params = Nothing,
+          _metadata = Nothing
+        }
+
 mkOnStatusReq :: Context -> StatusResMessage -> Flow OnStatusReq
 mkOnStatusReq context msg =
   return $
@@ -307,8 +322,8 @@ mkOnStatusErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkOnTrackErrReq :: Context -> OnTrackReq
-mkOnTrackErrReq context = do
+mkOnTrackErrReq :: Context -> Text -> OnTrackReq
+mkOnTrackErrReq context message = do
   CallbackReq
     { context = context & #_action .~ "on_track",
       contents = Left mkError
@@ -319,7 +334,7 @@ mkOnTrackErrReq context = do
         { _type = "DOMAIN-ERROR",
           _code = "FMD000",
           _path = Nothing,
-          _message = Just "NO_TRACKING_URL"
+          _message = Just message
         }
 
 mkOnCancelReq :: Context -> Order -> Flow OnCancelReq

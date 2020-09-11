@@ -161,6 +161,7 @@ data TaskStatus = TaskStatus
     estimated_price :: Maybe Float,
     event_timestamp :: Maybe Integer,
     request_timestamp :: Maybe Integer,
+    tracking_url :: Maybe Text,
     runner :: Maybe RunnerDetails,
     price :: Maybe Float,
     total_time :: Maybe Integer, -- minutes
