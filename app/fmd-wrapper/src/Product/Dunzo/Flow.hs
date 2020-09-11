@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# HLINT ignore "Reduce duplication" #-}
+
 module Product.Dunzo.Flow where
 
 import App.Types
-import Beckn.Types.App (BaseUrl, CaseId (..), _getOrganizationId)
+import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
@@ -31,30 +33,33 @@ import qualified EulerHS.Types as ET
 import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
 import Product.Dunzo.Transform
-import Servant.Client (ClientError (..), ResponseF (..), showBaseUrl)
+import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
+import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as Storage
 import Types.Wrapper
-import Utils.Common (parseBaseUrl)
 
 search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do
-  config@DunzoConfig {..} <- getDunzoConfig org
+  config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  bapUrl <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_URI"
+  bap <- Org.findByBapUrl bapUrl >>= fromMaybeM400 "BAP_NOT_CONFIGURED"
+  dzBACreds <- getDzBAPCreds bap
   fork "Search" $ do
-    eres <- getQuote config quoteReq
+    eres <- getQuote dzBACreds config quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    sendCb org context eres
+    sendCb context eres
   returnAck context
   where
-    sendCb org' context res = do
-      cbUrl <- org' ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-      cbApiKey <- org' ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+    sendCb context res = do
+      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+      cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       case res of
         Right quoteRes -> do
-          onSearchReq <- mkOnSearchReq org' context quoteRes
+          onSearchReq <- mkOnSearchReq org context quoteRes
           L.logInfo @Text "on_search" $ "on_search cb req" <> show onSearchReq
           onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchReq
           L.logInfo @Text "on_search" $ "on_search cb resp" <> show onSearchResp
@@ -70,22 +75,20 @@ search org req = do
 
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
-  conf@DunzoConfig {..} <- getDunzoConfig org
+  conf@DunzoConfig {..} <- dzConfig <$> ask
   ctx <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
-  bapNwAddr <- ctx ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  baConfig <- getBAConfig bapNwAddr conf
-  let order = req ^. #message . #order
-  validateReturn order
+  validateReturn $ req ^. #message . #order
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  dzBACreds <- getDzBAPCreds org
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
-    eres <- getQuote conf quoteReq
+    eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    sendCallback ctx eres baConfig
+    sendCallback ctx cbUrl cbApiKey eres
   returnAck ctx
   where
-    sendCallback context res baConfig = do
-      let cbApiKey = baConfig ^. #bap_api_key
-          bapNwAddr = baConfig ^. #bap_nw_address
+    sendCallback context cbUrl cbApiKey res =
       case res of
         Right quoteRes -> do
           let reqOrder = req ^. #message . #order
@@ -97,7 +100,7 @@ select org req = do
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
           L.logInfo @Text "on_select" $ "on_select cb req" <> show onSelectReq
-          onSelectResp <- L.callAPI bapNwAddr $ ET.client onSelectAPI cbApiKey onSelectReq
+          onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
           L.logInfo @Text "on_select" $ "on_select cb resp" <> show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -105,59 +108,57 @@ select org req = do
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
               L.logInfo @Text "on_select" $ "on_select cb err req" <> show onSelectReq
-              onSelectResp <- L.callAPI bapNwAddr $ ET.client onSelectAPI cbApiKey onSelectReq
+              onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
               L.logInfo @Text "on_select" $ "on_select cb err resp" <> show onSelectResp
         _ -> pass
 
 init :: Organization -> InitReq -> Flow InitRes
 init org req = do
-  conf@DunzoConfig {..} <- getDunzoConfig org
+  conf@DunzoConfig {..} <- dzConfig <$> ask
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   quote <- req ^. (#message . #order . #_quotation) & fromMaybeM400 "INVALID_QUOTATION"
   let quoteId = quote ^. #_id
-  bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  baConfig <- getBAConfig bapNwAddr conf
+  paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
+  payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeM400 "INVALID_QUOTATION_ID"
   let order = orderDetails ^. #order
   validateReturn order
+  dzBACreds <- getDzBAPCreds org
   fork "init" do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
-    eres <- getQuote conf quoteReq
+    eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text "QuoteRes" $ show eres
-    sendCb orderDetails context conf baConfig quoteId eres
+    sendCb orderDetails context cbApiKey cbUrl paymentTerms payeeDetails quoteId eres
   returnAck context
   where
-    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onInitAPI cbApiKey
-
-    sendCb orderDetails context conf baConfig quoteId (Right res) = do
-      let cbApiKey = baConfig ^. #bap_api_key
-          bapNwAddr = baConfig ^. #bap_nw_address
+    sendCb orderDetails context cbApiKey cbUrl paymentTerms payeeDetails quoteId (Right res) = do
       -- quoteId will be used as orderId
       onInitMessage <-
         mkOnInitMessage
           quoteId
           (orderDetails ^. #order)
-          conf
+          paymentTerms
+          payeeDetails
           req
           res
       let onInitReq = mkOnInitReq context onInitMessage
-      createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) bapNwAddr (onInitMessage ^. #order) (orderDetails ^. #quote)
-      onInitResp <- callCbAPI cbApiKey bapNwAddr onInitReq
+      createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
+      onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
       L.logInfo @Text "on_init" $ show onInitResp
       return ()
-    sendCb _ context _ baConfig _ (Left (FailureResponse _ (Response _ _ _ body))) = do
-      let cbApiKey = baConfig ^. #bap_api_key
-      let cbUrl = baConfig ^. #bap_nw_address
+    sendCb _ context cbApiKey cbUrl _ _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
-          onInitResp <- callCbAPI cbApiKey cbUrl onInitReq
+          onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
           L.logInfo @Text "on_init err" $ show onInitResp
           return ()
         Nothing -> return ()
-    sendCb _ _ _ _ _ _ = return ()
+    sendCb _ _ _ _ _ _ _ _ = return ()
 
-    createCaseIfNotPresent orgId bapUrl order quote = do
+    createCaseIfNotPresent orgId order quote = do
       now <- getCurrTime
       let caseId = CaseId $ fromJust $ order ^. #_id
       let case_ =
@@ -173,9 +174,9 @@ init org req = do
                 _startTime = now,
                 _endTime = Nothing,
                 _validTill = now,
-                _provider = Just orgId,
+                _provider = Just "Dunzo",
                 _providerType = Nothing,
-                _requestor = Just . toText $ showBaseUrl bapUrl,
+                _requestor = Just orgId,
                 _requestorType = Nothing,
                 _parentCaseId = Nothing,
                 _fromLocationId = "",
@@ -196,9 +197,10 @@ init org req = do
 
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
-  dconf@DunzoConfig {..} <- getDunzoConfig org
+  dconf@DunzoConfig {..} <- dzConfig <$> ask
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
-  bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybeM400 "INVALID_ORDER_ID" $ reqOrder ^. #_id
   case_ <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
@@ -206,18 +208,21 @@ confirm org req = do
   let order = orderDetails ^. #order
   verifyPayment reqOrder order
   validateReturn order
+  paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
+  payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
       & fromMaybeM400 "TXN_ID_NOT_FOUND"
   let updatedOrderDetailsWTxn =
         orderDetails & ((#order . #_payment . _Just . #_transaction_id) .~ txnId)
+  dzBACreds <- getDzBAPCreds org
   fork "confirm" do
     L.logInfo @Text "Confirm" "Started"
     createTaskReq <- mkCreateTaskReq order
     L.logInfo @Text "CreateTaskReq" (encodeToText createTaskReq)
-    eres <- createTaskAPI dconf createTaskReq
+    eres <- createTaskAPI dzBACreds dconf createTaskReq
     L.logInfo @Text "CreateTaskRes" $ show eres
-    sendCb case_ updatedOrderDetailsWTxn context dconf bapNwAddr eres
+    sendCb case_ updatedOrderDetailsWTxn context cbApiKey cbUrl paymentTerms payeeDetails eres
   returnAck context
   where
     verifyPayment :: Order -> Order -> Flow ()
@@ -243,32 +248,26 @@ confirm org req = do
               }
       Storage.update caseId updatedCase
 
-    createTaskAPI conf@DunzoConfig {..} req' = do
-      token <- fetchToken conf
+    createTaskAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} req' = do
+      token <- fetchToken dzBACreds conf
       API.createTask dzClientId token dzUrl req'
 
-    callCbAPI baConfig req' = do
-      let cbApiKey = baConfig ^. #bap_api_key
-      let cbUrl = baConfig ^. #bap_nw_address
-      L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey req'
-
-    sendCb case_ orderDetails context conf bapNwAddr res = do
-      baConfig <- getBAConfig bapNwAddr conf
+    sendCb case_ orderDetails context cbApiKey cbUrl paymentTerms payeeDetails res = do
       case res of
         Right taskStatus -> do
           currTime <- getCurrTime
-          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) conf taskStatus
+          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) paymentTerms payeeDetails taskStatus
           checkAndLogPriceDiff (orderDetails ^. #order) uOrder
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
           onConfirmReq <- mkOnConfirmReq context uOrder
-          eres <- callCbAPI baConfig onConfirmReq
+          eres <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
           L.logInfo @Text "on_confirm" $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
-              onConfirmResp <- callCbAPI baConfig onConfirmReq
+              onConfirmResp <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
               L.logInfo @Text "on_confirm err " $ show onConfirmResp
         _ -> pass
 
@@ -284,41 +283,40 @@ confirm org req = do
 
 track :: Organization -> TrackReq -> Flow TrackRes
 track org req = do
-  conf@DunzoConfig {..} <- getDunzoConfig org
+  DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req ^. (#message . #order_id)
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
-  bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  baConfig <- getBAConfig bapNwAddr conf
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   fork "track" do
     -- TODO: fix this after dunzo sends tracking url in api
     let onTrackReq = mkOnTrackErrReq context
-    eres <- callCbAPI baConfig onTrackReq
+    eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackReq
     L.logInfo @Text "on_track" $ show eres
   returnAck context
-  where
-    callCbAPI baConfig req' = do
-      let cbApiKey = baConfig ^. #bap_api_key
-      let cbUrl = baConfig ^. #bap_nw_address
-      L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey req'
 
 status :: Organization -> StatusReq -> Flow StatusRes
 status org req = do
-  conf@DunzoConfig {..} <- getDunzoConfig org
+  conf@DunzoConfig {..} <- dzConfig <$> ask
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
+  payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   let orderId = req ^. (#message . #order_id)
-  bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
   c <- Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = c ^. #_shortId
   (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  dzBACreds <- getDzBAPCreds org
   fork "status" do
-    eres <- getStatus conf (TaskId taskId)
+    eres <- getStatus dzBACreds conf (TaskId taskId)
     L.logInfo @Text "StatusRes" $ show eres
-    sendCb c orderDetails context conf bapNwAddr eres
+    sendCb c orderDetails context cbApiKey cbUrl paymentTerms payeeDetails eres
   returnAck context
   where
-    getStatus conf@DunzoConfig {..} taskId = do
-      token <- fetchToken conf
+    getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
+      token <- fetchToken dzBACreds conf
       API.taskStatus dzClientId token dzUrl taskId
 
     updateCase caseId orderDetails taskStatus case_ = do
@@ -327,14 +325,11 @@ status org req = do
 
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onStatusAPI cbApiKey
 
-    sendCb case_ orderDetails context conf bapNwAddr res = do
-      baConfig <- getBAConfig bapNwAddr conf
-      let cbApiKey = baConfig ^. #bap_api_key
+    sendCb case_ orderDetails context cbApiKey cbUrl paymentTerms payeeDetails res = do
       let order = orderDetails ^. #order
-      let cbUrl = baConfig ^. #bap_nw_address
       case res of
         Right taskStatus -> do
-          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order conf taskStatus
+          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order paymentTerms payeeDetails taskStatus
           onStatusReq <- mkOnStatusReq context onStatusMessage
           let updatedOrder = onStatusMessage ^. #order
           let updatedOrderDetails = orderDetails & #order .~ updatedOrder
@@ -353,21 +348,22 @@ status org req = do
 cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = do
   let oId = req ^. (#message . #order . #id)
-  conf@DunzoConfig {..} <- getDunzoConfig org
+  conf@DunzoConfig {..} <- dzConfig <$> ask
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
-  bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_NW_ADDR"
-  bapConfig <- getBAConfig bapNwAddr conf
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   case_ <- Storage.findById (CaseId oId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
   let taskId = case_ ^. #_shortId
   orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  dzBACreds <- getDzBAPCreds org
   fork "cancel" do
-    eres <- callCancelAPI conf (TaskId taskId)
+    eres <- callCancelAPI dzBACreds conf (TaskId taskId)
     L.logInfo @Text "CancelRes" $ show eres
-    sendCb case_ orderDetails context bapConfig eres
+    sendCb case_ orderDetails context cbApiKey cbUrl eres
   returnAck context
   where
-    callCancelAPI conf@DunzoConfig {..} taskId = do
-      token <- fetchToken conf
+    callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
+      token <- fetchToken dzBACreds conf
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl taskId ""
 
@@ -377,70 +373,54 @@ cancel org req = do
           updatedCase = case_ {_udf1 = Just $ encodeToText updatedOrderDetails}
       Storage.update caseId updatedCase
 
-    callCbAPI baConfig req' = do
-      let cbApiKey = baConfig ^. #bap_api_key
-      let cbUrl = baConfig ^. #bap_nw_address
-      L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey req'
-
-    sendCb case_ orderDetails context baConfig res =
+    sendCb case_ orderDetails context cbApiKey cbUrl res =
       case res of
         Right () -> do
           let order = orderDetails ^. #order
           onCancelReq <- mkOnCancelReq context order
           updateCase (case_ ^. #_id) orderDetails case_
-          onCancelRes <- callCbAPI baConfig onCancelReq
+          onCancelRes <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
           L.logInfo @Text "on_cancel " $ show onCancelRes
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onCancelReq = mkOnCancelErrReq context err
-              onCancelResp <- callCbAPI baConfig onCancelReq
+              onCancelResp <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
               L.logInfo @Text "on_cancel err " $ show onCancelResp
         _ -> pass
 
 update :: Organization -> UpdateReq -> Flow UpdateRes
 update org req = do
-  conf@DunzoConfig {..} <- getDunzoConfig org
+  DunzoConfig {..} <- dzConfig <$> ask
   context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
-  bapNwAddr <- context ^. #_bap_uri & fromMaybeM400 "INVALID_AC_ID"
-  baConfig <- getBAConfig bapNwAddr conf
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   fork "update" do
     -- TODO: Dunzo doesnt have update
     let onUpdateReq = mkOnUpdateErrReq context
-    eres <- callCbAPI baConfig onUpdateReq
+    eres <- L.callAPI cbUrl $ ET.client onUpdateAPI cbApiKey onUpdateReq
     L.logInfo @Text "on_update" $ show eres
   returnAck context
-  where
-    callCbAPI baConfig req' = do
-      let cbApiKey = baConfig ^. #bap_api_key
-      let cbUrl = baConfig ^. #bap_nw_address
-      L.callAPI cbUrl $ ET.client onUpdateAPI cbApiKey req'
 
 -- Helpers
-getQuote :: DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
-getQuote conf@DunzoConfig {..} quoteReq = do
-  token <- fetchToken conf
+getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
+getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
+  token <- fetchToken ba conf
   API.getQuote dzClientId token dzUrl quoteReq
 
-fetchToken :: DunzoConfig -> Flow Token
-fetchToken DunzoConfig {..} = do
-  tokenUrl <- parseBaseUrl "http://d4b.dunzodev.in:9016" -- TODO: Fix this, should not be hardcoded
-  mToken <- Dz.getToken
+fetchToken :: DzBAConfig -> DunzoConfig -> Flow Token
+fetchToken DzBAConfig {..} DunzoConfig {..} = do
+  mToken <- Dz.getToken dzClientId
   case mToken of
     Nothing -> do
-      eres <- API.getToken tokenUrl (TokenReq dzClientId dzClientSecret)
+      eres <- API.getToken dzTokenUrl (TokenReq dzClientId dzClientSecret)
       case eres of
         Left err -> throwJsonError500 "TOKEN_ERR" (show err)
         Right (TokenRes token) -> do
-          Dz.insertToken token
+          Dz.insertToken dzClientId token
           return token
     Just token -> return token
-
-getBAConfig :: BaseUrl -> DunzoConfig -> Flow BAConfig
-getBAConfig bapNwAddr DunzoConfig {..} =
-  find (\c -> c ^. #bap_nw_address == bapNwAddr) dzBAConfigs
-    & fromMaybeM500 "BAP_NOT_CONFIGURED"
 
 returnAck :: Context -> Flow AckResponse
 returnAck context = return $ AckResponse context (ack "ACK") Nothing

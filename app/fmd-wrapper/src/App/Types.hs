@@ -6,6 +6,7 @@ import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Types.Wrapper (DunzoConfig)
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
@@ -15,7 +16,8 @@ data AppEnv = AppEnv
     autoMigrate :: Bool,
     logRawSql :: Bool,
     coreVersion :: Text,
-    domainVersion :: Text
+    domainVersion :: Text,
+    dzConfig :: DunzoConfig
   }
   deriving (Generic, FromDhall)
 

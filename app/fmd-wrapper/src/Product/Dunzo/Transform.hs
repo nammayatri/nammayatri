@@ -19,6 +19,8 @@ import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.Operator
 import Beckn.Types.Core.Option
 import Beckn.Types.Core.Payment
+import Beckn.Types.Core.PaymentEndpoint
+import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
@@ -47,11 +49,8 @@ import External.Dunzo.Types
 import Types.Wrapper
 import Utils.Common (getClientConfig)
 
-getDunzoConfig :: Organization -> Flow DunzoConfig
-getDunzoConfig org = do
-  config <- getClientConfig org
-  case config of
-    Dunzo dzConfig -> return dzConfig
+getDzBAPCreds :: Organization -> Flow DzBAConfig
+getDzBAPCreds = getClientConfig
 
 mkQuoteReqFromSearch :: SearchReq -> Flow QuoteReq
 mkQuoteReqFromSearch SearchReq {..} = do
@@ -222,13 +221,13 @@ mkOnSelectErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkOnInitMessage :: Text -> Order -> DunzoConfig -> InitReq -> QuoteRes -> Flow InitOrder
-mkOnInitMessage orderId order conf req QuoteRes {..} = do
+mkOnInitMessage :: Text -> Order -> PaymentPolicy -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
+mkOnInitMessage orderId order paymentPolicy payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
   return $
     InitOrder $
       order & #_id ?~ orderId
-        & #_payment ?~ mkPayment conf estimated_price
+        & #_payment ?~ mkPayment paymentPolicy payee estimated_price
         & #_billing .~ billing
         & #_tasks .~ [task]
   where
@@ -249,13 +248,13 @@ mkOnInitErrReq context err =
     }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
-mkOnStatusMessage :: Text -> Order -> DunzoConfig -> TaskStatus -> Flow StatusResMessage
-mkOnStatusMessage orgName order conf status = do
+mkOnStatusMessage :: Text -> Order -> PaymentPolicy -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
+mkOnStatusMessage orgName order paymentPolicy payee status = do
   now <- getCurrTime
-  return $ StatusResMessage (updateOrder orgName now order conf status)
+  return $ StatusResMessage (updateOrder orgName now order paymentPolicy payee status)
 
-updateOrder :: Text -> UTCTime -> Order -> DunzoConfig -> TaskStatus -> Order
-updateOrder orgName cTime order conf status = do
+updateOrder :: Text -> UTCTime -> Order -> PaymentPolicy -> PaymentEndpoint -> TaskStatus -> Order
+updateOrder orgName cTime order paymentPolicy payee status = do
   -- TODO: this assumes that there is one task per order
   let orderState = mapTaskStateToOrderState (status ^. #state)
   let cancellationReasonIfAny =
@@ -263,7 +262,7 @@ updateOrder orgName cTime order conf status = do
           CANCELLED -> Just [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
           RUNNER_CANCELLED -> Just [Option "1" (Descriptor (Just "Agent cancelled") n n n n n n n)]
           _ -> Nothing
-  let payment = mkPayment conf <$> status ^. #estimated_price
+  let payment = mkPayment paymentPolicy payee <$> status ^. #estimated_price
   order & #_state ?~ orderState
     & #_updated_at ?~ cTime
     & #_payment .~ (payment <|> order ^. #_payment)
@@ -495,19 +494,19 @@ updateTaskEta task eta = do
     task & #_pickup .~ pickup'
       & #_drop .~ drop'
 
-mkPayment :: DunzoConfig -> Float -> Payment
-mkPayment conf estimated_price =
+mkPayment :: PaymentPolicy -> PaymentEndpoint -> Float -> Payment
+mkPayment paymentPolicy payee estimated_price =
   Payment
     { _transaction_id = Nothing,
       _type = Just "PRE-FULFILLMENT",
       _payer = Nothing,
-      _payee = Just $ conf ^. #payee,
+      _payee = Just payee,
       _method = ["RTGS"],
       _amount = price,
       _state = Nothing,
       _due_date = Nothing,
       _duration = Nothing,
-      _terms = Just $ conf ^. #paymentPolicy
+      _terms = Just paymentPolicy
     }
   where
     price =

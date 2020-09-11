@@ -27,36 +27,43 @@ search org req = withFlowHandler $ do
 select :: Organization -> SelectReq -> FlowHandler SelectRes
 select org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
 init org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
 confirm org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
 track org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
 status org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
 cancel org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.cancel org req
 
 update :: Organization -> UpdateReq -> FlowHandler UpdateRes
 update org req = withFlowHandler $ do
   validateRequest $ req ^. #context
+  validateBapUrl org $ req ^. #context
   DZ.update org req
 
 validateDomain :: Context -> Bool
@@ -80,3 +87,11 @@ validateRequest context = do
     throwJsonError400 "ApiMapper.validateRequest" "UNSUPPORTED_CORE_VERSION"
   unlessM (validateDomainVersion context) $
     throwJsonError400 "ApiMapper.validateRequest" "UNSUPPORTED_DOMAIN_VERSION"
+
+validateBapUrl :: Organization -> Context -> Flow ()
+validateBapUrl org context = do
+  let satisfied = case context ^. #_bap_uri of
+        Nothing -> False
+        Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
+  unless satisfied $
+    throwJsonError400 "ApiMapper.validateRequest" "INVALID_BAP_URI"

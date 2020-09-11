@@ -47,3 +47,14 @@ listOrganizations mlimit moffset oType status = do
         [ _status `B.in_` (B.val_ <$> pstatus) ||. complementVal pstatus,
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]
+
+findByBapUrl :: BaseUrl -> Flow (Maybe Org.Organization)
+findByBapUrl bapUrl = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Org.Organization {..} =
+      _callbackUrl ==. B.val_ (Just bapUrl)
+        &&. _verified ==. B.val_ True
+        &&. _enabled ==. B.val_ True
