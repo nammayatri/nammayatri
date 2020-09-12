@@ -25,7 +25,7 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , selfId = Some "JUSPAY.BAP.MOCK.1"
-, nwAddress = Some "Http://api.sandbox.beckn.juspay.in/dev/mock/app/v1/"
+, nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/mock/app/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , logRawSql = True

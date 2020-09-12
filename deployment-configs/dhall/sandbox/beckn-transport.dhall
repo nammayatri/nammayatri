@@ -47,7 +47,7 @@ in
 , nsdlPassword = Some sec.nsdlPassword
 , xAppUri = appUri
 , selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = Some "Http://api.sandbox.beckn.juspay.in/dev/transport/v1/"
+, nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/transport/v1/"
 , caseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
