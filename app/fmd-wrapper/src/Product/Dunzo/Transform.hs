@@ -142,16 +142,6 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
 updateBppUri :: Context -> BaseUrl -> Context
 updateBppUri Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
 
-updateVersions :: Context -> Flow Context
-updateVersions Context {..} = do
-  env <- ask
-  return $
-    Context
-      { _core_version = Just $ coreVersion env,
-        _domain_version = Just $ domainVersion env,
-        ..
-      }
-
 mkSearchItem :: Text -> QuoteRes -> Item
 mkSearchItem itemId QuoteRes {..} =
   Item

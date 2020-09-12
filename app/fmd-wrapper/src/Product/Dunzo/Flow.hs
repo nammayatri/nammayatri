@@ -44,7 +44,7 @@ search :: Organization -> SearchReq -> Flow SearchRes
 search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   bapUrl <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_URI"
   bap <- Org.findByBapUrl bapUrl >>= fromMaybeM400 "BAP_NOT_CONFIGURED"
   dzBACreds <- getDzBAPCreds bap
@@ -76,7 +76,7 @@ search org req = do
 select :: Organization -> SelectReq -> Flow SelectRes
 select org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  ctx <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let ctx = updateBppUri (req ^. #context) dzBPNwAddress
   validateReturn $ req ^. #message . #order
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -115,7 +115,7 @@ select org req = do
 init :: Organization -> InitReq -> Flow InitRes
 init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   quote <- req ^. (#message . #order . #_quotation) & fromMaybeM400 "INVALID_QUOTATION"
@@ -198,7 +198,7 @@ init org req = do
 confirm :: Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
   dconf@DunzoConfig {..} <- dzConfig <$> ask
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let reqOrder = req ^. (#message . #order)
@@ -285,7 +285,7 @@ track :: Organization -> TrackReq -> Flow TrackRes
 track org req = do
   DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req ^. (#message . #order_id)
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   void $ Storage.findById (CaseId orderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
@@ -299,7 +299,7 @@ track org req = do
 status :: Organization -> StatusReq -> Flow StatusRes
 status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
@@ -349,7 +349,7 @@ cancel :: Organization -> CancelReq -> Flow CancelRes
 cancel org req = do
   let oId = req ^. (#message . #order . #id)
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   case_ <- Storage.findById (CaseId oId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
@@ -393,7 +393,7 @@ cancel org req = do
 update :: Organization -> UpdateReq -> Flow UpdateRes
 update org req = do
   DunzoConfig {..} <- dzConfig <$> ask
-  context <- updateVersions $ updateBppUri (req ^. #context) dzBPNwAddress
+  let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   fork "update" do

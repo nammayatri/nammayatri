@@ -30,7 +30,7 @@ let dunzoConfig =
   { dzUrl = "apis-staging.dunzo.in"
   , dzTokenUrl = "http://d4b.dunzodev.in:9016"
   , dzBPId = "fmd-wrapper.dunzo"
-  , dzBPNwAddress = "http://localhost:8018/v1"
+  , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/dev/fmd/v1/"
   , paymentPolicy = sec.paymentPolicy
   , payee = sec.payee
   }
