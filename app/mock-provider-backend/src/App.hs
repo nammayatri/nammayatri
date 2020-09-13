@@ -24,7 +24,7 @@ import Network.Wai.Handler.Warp
 
 runMockProvider :: IO ()
 runMockProvider = do
-  appEnv <- readDhallConfigDefault tyEnv "mock-provider-backend"
+  appEnv <- readDhallConfigDefault "mock-provider-backend"
   Metrics.serve (metricsPort appEnv)
   let loggerCfg = getEulerLoggerConfig "/tmp/mock-provider-backend.log" $ loggerConfig appEnv
   let settings =

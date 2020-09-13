@@ -27,7 +27,7 @@ import Network.Wai.Handler.Warp
 
 runTransporterBackendApp :: IO ()
 runTransporterBackendApp = do
-  appEnv <- readDhallConfigDefault tyEnv "beckn-transport"
+  appEnv <- readDhallConfigDefault "beckn-transport"
   Metrics.serve (metricsPort appEnv)
   runTransporterBackendApp' appEnv $
     setOnExceptionResponse transporterExceptionResponse $

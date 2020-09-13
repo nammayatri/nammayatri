@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App.Types where
 
 import Beckn.External.Exotel.Types (ExotelCfg)
@@ -7,7 +5,7 @@ import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -46,6 +44,3 @@ type Flow = FlowR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
-
-tyEnv :: ZL '[ExotelCfg]
-tyEnv = z @ExotelCfg "ExotelCfg" Z

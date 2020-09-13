@@ -10,7 +10,7 @@ import App.Types
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (ZL (Z), readDhallConfigDefault)
+import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
@@ -31,7 +31,7 @@ import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
 runGateway :: IO ()
 runGateway = do
-  appCfg@AppCfg {..} <- readDhallConfigDefault Z "beckn-gateway"
+  appCfg@AppCfg {..} <- readDhallConfigDefault "beckn-gateway"
   Metrics.serve metricsPort
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
   shutdown <- newEmptyTMVarIO

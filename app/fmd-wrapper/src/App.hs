@@ -31,7 +31,7 @@ import Servant.Server
 
 runFMDWrapper :: IO ()
 runFMDWrapper = do
-  appEnv <- readDhallConfigDefault tyEnv "fmd-wrapper"
+  appEnv <- readDhallConfigDefault "fmd-wrapper"
   let loggerCfg = getEulerLoggerConfig "/tmp/fmd-wrapper.log" $ loggerConfig appEnv
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $

@@ -27,7 +27,7 @@ import Network.Wai.Handler.Warp
 
 runAppBackend :: IO ()
 runAppBackend = do
-  appEnv <- readDhallConfigDefault tyEnv "app-backend"
+  appEnv <- readDhallConfigDefault "app-backend"
   Metrics.serve (metricsPort appEnv)
   runAppBackend' appEnv $
     setOnExceptionResponse appExceptionResponse $

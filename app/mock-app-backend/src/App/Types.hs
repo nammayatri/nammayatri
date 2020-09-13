@@ -3,7 +3,7 @@ module App.Types where
 import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall, ZL (..))
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
 import EulerHS.Prelude
 
@@ -27,6 +27,3 @@ type Flow = FlowR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
-
-tyEnv :: ZL '[]
-tyEnv = Z

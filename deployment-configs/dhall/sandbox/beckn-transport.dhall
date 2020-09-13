@@ -62,7 +62,7 @@ in
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
-, exotelCfg = None ExotelCfg
+, exotelCfg = None common.ExotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , traceFlag = common.TraceFlag.TRACE_ALL
