@@ -7,7 +7,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import Types.Wrapper (DunzoConfig)
+import Types.Wrapper (DelhiveryConfig, DunzoConfig)
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
@@ -20,7 +20,8 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     coreVersion :: Text,
     domainVersion :: Text,
-    dzConfig :: DunzoConfig
+    dzConfig :: DunzoConfig,
+    dlConfig :: DelhiveryConfig
   }
   deriving (Generic, FromDhall)
 

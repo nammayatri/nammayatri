@@ -5,7 +5,7 @@ import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
-import External.Dunzo.Types (ClientId, ClientSecret)
+import Types.Common
 
 -- BAP with Dunzo account will have these details
 -- in `organization.info`
@@ -32,3 +32,20 @@ data OrderDetails = OrderDetails
     quote :: Quotation
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+data DlBAConfig = DlBAConfig
+  { bapId :: Text,
+    dlClientId :: ClientId,
+    dlClientSecret :: ClientSecret
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+data DelhiveryConfig = DelhiveryConfig
+  { dlUrl :: BaseUrl,
+    dlTokenUrl :: BaseUrl,
+    dlBPId :: Text,
+    dzBPNwAddress :: BaseUrl,
+    paymentPolicy :: Text,
+    payee :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, FromDhall)

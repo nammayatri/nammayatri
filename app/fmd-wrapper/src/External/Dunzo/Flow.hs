@@ -9,6 +9,7 @@ import qualified EulerHS.Types as T
 import External.Dunzo.Types
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)
+import Types.Common
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"

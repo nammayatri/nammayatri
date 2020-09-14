@@ -10,28 +10,7 @@ import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude
 import Servant (FromHttpApiData, ToHttpApiData)
-
-newtype ClientId = ClientId {getClientId :: Text}
-  deriving (Generic, Show)
-
-deriving newtype instance ToJSON ClientId
-
-deriving newtype instance FromJSON ClientId
-
-deriving newtype instance ToHttpApiData ClientId
-
-deriving newtype instance FromHttpApiData ClientId
-
-newtype ClientSecret = ClientSecret {getClientSecret :: Text}
-  deriving (Generic, Show)
-
-deriving newtype instance ToJSON ClientSecret
-
-deriving newtype instance FromJSON ClientSecret
-
-deriving newtype instance ToHttpApiData ClientSecret
-
-deriving newtype instance FromHttpApiData ClientSecret
+import Types.Common
 
 newtype TaskId = TaskId {getTaskId :: Text}
   deriving (Generic, Show)
@@ -43,17 +22,6 @@ deriving newtype instance FromJSON TaskId
 deriving newtype instance ToHttpApiData TaskId
 
 deriving newtype instance FromHttpApiData TaskId
-
-newtype Token = Token {getToken :: Text}
-  deriving (Generic, Show)
-
-deriving newtype instance ToJSON Token
-
-deriving newtype instance FromJSON Token
-
-deriving newtype instance ToHttpApiData Token
-
-deriving newtype instance FromHttpApiData Token
 
 data TokenReq = TokenReq
   { client_id :: ClientId,

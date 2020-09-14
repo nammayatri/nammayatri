@@ -36,7 +36,17 @@ let dunzoConfig =
   , dzQuotationTTLinMin = +5
   }
 
+
 let gwUri = "http://localhost:8015/v1"
+
+let delhiveryConfig =
+  { dlUrl = "https://pelorus.delhivery.com"
+  , dlTokenUrl = "https://key-cloak.delhivery.com"
+  , dlBPId = "fmd-wrapper.delhivery"
+  , dzBPNwAddress = "http://localhost:8018/v1"
+  , paymentPolicy = sec.paymentPolicy
+  , payee = sec.payee
+  }
 
 in
 
@@ -51,4 +61,5 @@ in
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.3"
 , dzConfig = dunzoConfig
+, dlConfig = delhiveryConfig
 }

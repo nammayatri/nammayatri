@@ -40,6 +40,7 @@ import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as Storage
 import Types.Error
+import Types.Common
 import Types.Wrapper
 import Utils.Common (fromMaybe400Log)
 
