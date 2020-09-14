@@ -12,16 +12,6 @@ let smsSessionConfig =
   , tokenExpiry = +365
   }
 
-let smsConfig =
-  { sessionConfig = smsSessionConfig
-  , credConfig = {
-      username = sec.smsUserName
-    , password = sec.smsPassword
-    , otpHash = sec.smsOtpHash
-    }
-  , useFakeSms = Some 7891
-  }
-
 {-
 let exotelCfg : ExotelCfg =
   { apiKey = ""
@@ -45,7 +35,9 @@ let LoggerConfig =
   }  
 
 in { defaultPoolConfig = defaultPoolConfig
-   , smsConfig = smsConfig
+   , smsUserName = sec.smsUserName
+   , smsPassword = sec.smsPassword
+   , smsSessionConfig = smsSessionConfig
    -- , exotelCfg
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = None Text

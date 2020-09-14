@@ -16,6 +16,16 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
+let smsConfig =
+  { sessionConfig = common.smsSessionConfig
+  , credConfig = {
+      username = common.smsUserName
+    , password = common.smsPassword
+    , otpHash = sec.smsOtpHash
+    }
+  , useFakeSms = None Natural
+  }
+
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
 let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v1"
@@ -25,7 +35,7 @@ let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 in
 
 { dbCfg = pgcfg
-, smsCfg = common.smsStableConfig
+, smsCfg = smsConfig
 , port = +8013
 , metricsPort = +9999
 , xGatewayUri = gwUri

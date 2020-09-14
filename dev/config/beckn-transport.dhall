@@ -26,6 +26,16 @@ let rcfg =
   , connectTimeout = None Integer
   }
 
+let smsConfig =
+  { sessionConfig = common.smsSessionConfig
+  , credConfig = {
+      username = common.smsUserName
+    , password = common.smsPassword
+    , otpHash = sec.smsOtpHash
+    }
+  , useFakeSms = Some 7891
+  }
+
 let gwUri = "http://localhost:8015/v1"
 
 let appUri = "http://localhost:8013/v1"
@@ -34,7 +44,7 @@ in
 
 { dbCfg = pgcfg
 , redisCfg = rcfg
-, smsCfg = common.smsConfig
+, smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9997
 , xGatewayUri = appUri

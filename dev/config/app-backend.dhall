@@ -16,6 +16,16 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
+let smsConfig =
+  { sessionConfig = common.smsSessionConfig
+  , credConfig = {
+      username = common.smsUserName
+    , password = common.smsPassword
+    , otpHash = sec.smsOtpHash
+    }
+  , useFakeSms = Some 7891
+  }
+
 let gwUri = "http://localhost:8015/v1"
 
 let providerUri = "http://localhost:8014/v1"
@@ -23,7 +33,7 @@ let providerUri = "http://localhost:8014/v1"
 in
 
 { dbCfg = pgcfg
-, smsCfg = common.smsConfig
+, smsCfg = smsConfig
 , port = +8013
 , metricsPort = +9999
 , xGatewayUri = gwUri

@@ -3,4 +3,5 @@
 , cronAutKey = "zzzzzz"
 , nsdlUsername = "username"
 , nsdlPassword = "password"
+, smsOtpHash = "xxxxxxx"
 }

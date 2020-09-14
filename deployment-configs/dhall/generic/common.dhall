@@ -15,26 +15,6 @@ let smsSessionConfig =
   , tokenExpiry = +365
   }
 
-let smsDevConfig =
-  { sessionConfig = smsSessionConfig
-  , credConfig = {
-      username = sec.smsUserName
-    , password = sec.smsPassword
-    , otpHash = sec.smsOtpHash
-    }
-  , useFakeSms = Some 7891
-  }
-
-let smsStableConfig =
-  { sessionConfig = smsSessionConfig
-  , credConfig = {
-      username = sec.smsUserName
-    , password = sec.smsPassword
-    , otpHash = sec.smsOtpHash
-    }
-  , useFakeSms = None Natural
-  }
-
 {-
 let exotelCfg : ExotelCfg =
   { apiKey = ""
@@ -58,8 +38,9 @@ let LoggerConfig =
   }  
 
 in { defaultPoolConfig = defaultPoolConfig
-   , smsStableConfig = smsStableConfig
-   , smsDevConfig = smsDevConfig
+   , smsUserName = sec.smsUserName
+   , smsPassword = sec.smsPassword
+   , smsSessionConfig = smsSessionConfig
    -- , exotelCfg
    , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
    , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"

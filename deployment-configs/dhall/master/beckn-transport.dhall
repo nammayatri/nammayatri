@@ -26,6 +26,16 @@ let rcfg =
   , connectTimeout = Some +100
   }
 
+let smsConfig =
+  { sessionConfig = common.smsSessionConfig
+  , credConfig = {
+      username = common.smsUserName
+    , password = common.smsPassword
+    , otpHash = sec.smsOtpHash
+    }
+  , useFakeSms = Some 7891
+  }
+
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
 let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
@@ -36,7 +46,7 @@ in
 
 { dbCfg = pgcfg
 , redisCfg = rcfg
-, smsCfg = common.smsDevConfig
+, smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9999
 , xGatewayUri = gwUri
