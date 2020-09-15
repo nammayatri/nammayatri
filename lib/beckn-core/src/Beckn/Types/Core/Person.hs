@@ -11,7 +11,7 @@ data Person = Person
     image :: Maybe Image,
     dob :: Maybe Text,
     organization_name :: Maybe Text,
-    gender :: Text, -- male, female
+    gender :: Maybe Text, -- male, female
     email :: Maybe Text,
     phones :: [Text] -- Phone numer in E.164 format (ITUT recommendation
   }
@@ -24,7 +24,7 @@ instance Example Person where
         image = example,
         dob = Just "28-11-1990",
         organization_name = Nothing,
-        gender = "male",
+        gender = Nothing,
         email = Just "john.smith@email.com",
         phones = ["+919999999999"]
       }

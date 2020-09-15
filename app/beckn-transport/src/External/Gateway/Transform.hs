@@ -163,7 +163,7 @@ mkDriverObj person =
           image = bPerson ^. #image,
           dob = bPerson ^. #dob,
           organization_name = bPerson ^. #organization_name,
-          gender = bPerson ^. #gender,
+          gender = fromMaybe "" $ bPerson ^. #gender,
           email = bPerson ^. #email,
           phones = bPerson ^. #phones,
           experience = Nothing,
@@ -185,7 +185,7 @@ mkPerson person =
       image = Nothing,
       dob = Nothing,
       organization_name = Nothing,
-      gender = show $ person ^. #_gender,
+      gender = Just $ show $ person ^. #_gender,
       email = person ^. #_email,
       phones = maybeToList getPhone
     }
@@ -245,7 +245,7 @@ mkProvider orgInfo =
               image = Nothing,
               dob = Nothing,
               organization_name = Just $ orgInfo ^. #_name,
-              gender = "",
+              gender = Nothing,
               email = Nothing,
               phones = maybeToList $ orgInfo ^. #_mobileNumber
             }
