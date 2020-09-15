@@ -26,7 +26,7 @@ getToken url req = L.callAPI url tokenReq
     clientSecret = Just $ getClientSecret $ req ^. #client_secret
     tokenReq = T.client getTokenAPI clientId clientSecret
 
-type QouteAPI =
+type QuoteAPI =
   "api" :> "v1" :> "quote"
     :> Header "Authorization" Token
     :> Header "client-id" ClientId
@@ -37,7 +37,7 @@ type QouteAPI =
     :> QueryParam "category_id" Text
     :> Get '[JSON] QuoteRes
 
-quoteAPI :: Proxy QouteAPI
+quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
 getQuote :: ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
