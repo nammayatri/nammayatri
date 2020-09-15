@@ -34,6 +34,9 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       when (isJust $ SP._organizationId person) $
         L.throwException $
           err400 {errBody = "user already registered an organization"}
+      when (SP._role person /= SP.ADMIN) $
+        L.throwException $
+          err401 {errBody = "unauthorized"}
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
         L.throwException $ err400 {errBody = "missing mandatory fields"}
