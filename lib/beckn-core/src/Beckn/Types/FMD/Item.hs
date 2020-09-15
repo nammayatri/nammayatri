@@ -1,6 +1,7 @@
 module Beckn.Types.FMD.Item where
 
 import Beckn.Types.Core.Descriptor
+import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
 import Beckn.Utils.Common
@@ -15,7 +16,7 @@ data Item = Item
     _category_id :: Maybe Text,
     _brand_id :: Maybe Text,
     _promotional :: Maybe Bool,
-    _ttl :: Maybe Integer,
+    _ttl :: Maybe Duration,
     _tags :: Maybe [Tag],
     _fragile :: Maybe Bool
   }
