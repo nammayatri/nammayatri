@@ -18,6 +18,7 @@ import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
 import Servant
 import Storage.Queries.Location as LQ
+import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.Vehicle as VQ
@@ -263,8 +264,11 @@ notifyStatusUpdateReq searchPi status =
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
+        org <- OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
         admins <-
-          PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
+          if org ^. #_enabled
+            then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
+            else return []
         BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id)
         Notify.notifyCancelReqByBP searchPi admins
       _ -> do

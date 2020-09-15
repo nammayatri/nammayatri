@@ -66,7 +66,8 @@ listOrganizations mlimit moffset oType status = do
         (B.val_ True)
         [ _status `B.in_` (B.val_ <$> status) ||. complementVal status,
           _domain ==. B.val_ (Just Storage.MOBILITY),
-          _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
+          _type `B.in_` (B.val_ <$> oType) ||. complementVal oType,
+          _enabled ==. B.val_ True
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p

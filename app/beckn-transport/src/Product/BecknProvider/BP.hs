@@ -95,9 +95,12 @@ cancel req = withFlowHandler $ do
       _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
+  org <- Org.findOrganizationById $ OrganizationId $ ProductInstance._organizationId prodInst
   notifyCancelToGateway prodInstId
   admins <-
-    Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
+    if org ^. #_enabled
+      then Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
+      else return []
   case piList of
     [] -> pure ()
     prdInst : _ -> do
@@ -194,8 +197,11 @@ confirm req = withFlowHandler $ do
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
   notifyGateway searchCase productInstance trackerCase
+  org <- Org.findOrganizationById $ OrganizationId $ productInstance ^. #_organizationId
   admins <-
-    Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
+    if org ^. #_enabled
+      then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
+      else return []
   Notify.notifyTransportersOnConfirm searchCase productInstance admins
   mkAckResponse uuid "confirm"
 
