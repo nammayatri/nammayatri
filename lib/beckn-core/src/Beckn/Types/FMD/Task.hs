@@ -14,7 +14,7 @@ import EulerHS.Prelude
 
 data PickupOrDrop = PickupOrDrop
   { _location :: Location,
-    _instructions :: [Descriptor],
+    _instructions :: Maybe [Descriptor],
     _poc :: Person,
     _time :: Maybe UTCTime
   }
