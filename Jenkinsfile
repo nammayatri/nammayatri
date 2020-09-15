@@ -19,6 +19,9 @@ pipeline {
             // build dep on the first run
             return (env.BUILD_NUMBER == "1")
           }
+          not {
+            changeRequest()
+          }
         }
       }
 

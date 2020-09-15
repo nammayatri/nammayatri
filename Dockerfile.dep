@@ -19,7 +19,9 @@ COPY ./.ssh/id_rsa /root/.ssh/id_rsa
 RUN chmod 400 /root/.ssh/id_rsa
 RUN ssh-keyscan -H "bitbucket.org" >> ~/.ssh/known_hosts
 
-RUN stack build --system-ghc --dependencies-only
+ARG BUILD_ARGS
+
+RUN stack build --system-ghc --dependencies-only ${BUILD_ARGS}
 
 # Remove src code to avoid caching it
 RUN ls | grep -vE ".stack|libgmp.deb" | xargs rm -rf

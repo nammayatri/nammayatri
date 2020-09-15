@@ -19,9 +19,11 @@ RUN ormolu_files=`for i in $(git ls-files | grep '\.hs$'); do ormolu -m check $i
   echo "Unformatted files: ${ormolu_files}" && \
   test -z ${ormolu_files}
 
-RUN stack build --system-ghc
+ARG BUILD_ARGS
 
-RUN stack test beckn-core
+RUN stack build --system-ghc ${BUILD_ARGS}
+
+RUN stack test ${BUILD_ARGS} beckn-core
 
 RUN mv "$(stack path --local-install-root --system-ghc)/bin" /opt/build/bin
 

@@ -9,12 +9,20 @@ DEP_IMAGE ?= beckn
 
 DEP_LABEL ?= master
 
+# If this is a PR build, use --fast and ignore optimisations
+CHANGE_ID ?= undefined
+ifeq ($(CHANGE_ID), undefined)
+  BUILD_ARGS :=
+else
+  BUILD_ARGS := --fast
+endif
+
 .PHONY: build-dep push-dep build push
 
 build-dep: Dockerfile.dep
 	$(info Building $(NS)/$(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))
 	rm -rf .ssh && cp -R ~/.ssh .
-	docker build -t $(NS)/$(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep .
+	docker build -t $(NS)/$(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
 
 push-dep: Dockerfile.dep
 	docker push $(NS)/$(DEP_IMAGE):$(DEP_LABEL)
@@ -22,7 +30,7 @@ push-dep: Dockerfile.dep
 build: Dockerfile
 	$(info Building $(NS)/$(IMAGE_NAME):$(VERSION) / git-head: $(SOURCE_COMMIT))
 	rm -rf .ssh && cp -R ~/.ssh .
-	docker build -t $(NS)/$(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE=$(DEP_IMAGE)" .
+	docker build -t $(NS)/$(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE=$(DEP_IMAGE)" --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
 
 push:
 	docker push $(NS)/$(IMAGE_NAME):$(VERSION)
