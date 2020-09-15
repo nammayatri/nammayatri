@@ -155,7 +155,7 @@ mkSearchItem itemId QuoteRes {..} =
       _category_id = Just category_id,
       _brand_id = Nothing,
       _promotional = False,
-      _ttl = Just $ eta ^. #pickup + eta ^. #dropoff, -- FIX this
+      _ttl = Nothing, -- FIX this
       _tags = []
     }
   where
@@ -267,8 +267,8 @@ updateOrder orgName cTime order paymentPolicy payee status = do
       let pickup = task ^. #_pickup
       let drop = task ^. #_drop
 
-      let pickupEta = addEta . (^. #pickup) <$> eta
-      let dropEta = addEta . (^. #dropoff) <$> eta
+      let pickupEta = calcEta cTime <$> ((^. #pickup) =<< eta)
+      let dropEta = calcEta cTime . (^. #dropoff) <$> eta
       let pickup' = pickup & #_time .~ (pickupEta <|> pickup ^. #_time)
       let drop' = drop & #_time .~ (dropEta <|> drop ^. #_time)
 
@@ -291,8 +291,6 @@ updateOrder orgName cTime order paymentPolicy payee status = do
         }
 
     n = Nothing
-
-    addEta duration = addUTCTime (fromInteger $ duration * 60 :: NominalDiffTime) cTime
 
 mkOnTrackReq :: Context -> Maybe Text -> OnTrackReq
 mkOnTrackReq context trackingUrl = do
@@ -492,9 +490,9 @@ updateTaskEta task eta = do
   let pickup = task ^. #_pickup
   let drop = task ^. #_drop
 
-  let pickupEta = addUTCTime (fromInteger $ (eta ^. #pickup) * 60 :: NominalDiffTime) now
-  let dropEta = addUTCTime (fromInteger $ (eta ^. #dropoff) * 60 :: NominalDiffTime) now
-  let pickup' = pickup & #_time ?~ pickupEta
+  let pickupEta = calcEta now <$> (eta ^. #pickup) <|> (task ^. #_pickup . #_time)
+  let dropEta = calcEta now (eta ^. #dropoff)
+  let pickup' = pickup & #_time .~ pickupEta
   let drop' = drop & #_time ?~ dropEta
   return $
     task & #_pickup .~ pickup'
@@ -520,3 +518,6 @@ mkPayment paymentPolicy payee estimated_price =
         { _currency = "INR",
           _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
         }
+
+calcEta :: UTCTime -> Integer -> UTCTime
+calcEta now diffInMinutes = addUTCTime (fromInteger (diffInMinutes * 60)) now

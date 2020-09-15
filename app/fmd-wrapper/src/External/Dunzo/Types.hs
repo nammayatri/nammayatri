@@ -90,7 +90,7 @@ data QuoteRes = QuoteRes
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data Eta = Eta
-  { pickup :: Integer, -- minutes
+  { pickup :: Maybe Integer, -- minutes
     dropoff :: Integer -- minutes
   }
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -164,7 +164,7 @@ data TaskStatus = TaskStatus
     tracking_url :: Maybe Text,
     runner :: Maybe RunnerDetails,
     price :: Maybe Float,
-    total_time :: Maybe Integer, -- minutes
+    total_time :: Maybe Float, -- minutes
     cancelled_by :: Maybe Text,
     cancellation_reason :: Maybe Text
   }
