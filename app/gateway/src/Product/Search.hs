@@ -111,7 +111,7 @@ checkEnd isTimeout bgSession = do
 
 sendSearchEndCb :: BA.GwSession -> Flow ()
 sendSearchEndCb bgSession = do
-  let context = bgSession ^. #searchContext
+  let context = bgSession ^. #searchContext & #_action .~ "on_search"
   let messageId = context ^. #_transaction_id
   let onSearchEnd = ET.client $ withClientTracing Core.onSearchEndAPI
   let onSearchEndReq = Core.OnSearchEndReq context
