@@ -23,7 +23,6 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwJsonError400, throwJsonError500)
-import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified Data.List as List
@@ -377,16 +376,16 @@ cancel org req = do
 
     updateCase :: CaseId -> OrderDetails -> Case -> Flow ()
     updateCase caseId orderDetails case_ = do
-      let updatedOrderDetails = orderDetails & (#order . #_state) ?~ "CANCELLED"
-          updatedCase = case_ {_udf1 = Just $ encodeToText updatedOrderDetails}
+      let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase
 
     sendCb case_ orderDetails context cbApiKey cbUrl res =
       case res of
         Right () -> do
-          let order = orderDetails ^. #order
-          onCancelReq <- mkOnCancelReq context order
-          updateCase (case_ ^. #_id) orderDetails case_
+          let updatedOrder = cancelOrder (orderDetails ^. #order)
+          onCancelReq <- mkOnCancelReq context updatedOrder
+          let updatedOrderDetails = orderDetails & #order .~ updatedOrder
+          updateCase (case_ ^. #_id) updatedOrderDetails case_
           onCancelRes <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "on_cancel") $ show onCancelRes
         Left (FailureResponse _ (Response _ _ _ body)) ->

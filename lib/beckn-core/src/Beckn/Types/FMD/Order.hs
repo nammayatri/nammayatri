@@ -4,15 +4,16 @@ import Beckn.Types.Core.Billing
 import Beckn.Types.Core.Option (Option)
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Quotation
+import Beckn.Types.Core.State
 import Beckn.Types.FMD.Item (Item)
 import Beckn.Types.FMD.Task (Task)
 import Beckn.Utils.Common
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (State)
 
 data Order = Order
   { _id :: Maybe Text,
-    _state :: Maybe Text,
+    _state :: Maybe State,
     _items :: [Item],
     _created_at :: Maybe UTCTime,
     _updated_at :: Maybe UTCTime,
@@ -41,7 +42,7 @@ instance Example Order where
   example =
     Order
       { _id = Just idExample,
-        _state = Just "READY",
+        _state = example,
         _items = example,
         _created_at = example,
         _updated_at = example,

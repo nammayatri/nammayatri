@@ -24,6 +24,7 @@ import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
+import Beckn.Types.Core.State
 import Beckn.Types.Core.Tracking
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Confirm
@@ -46,7 +47,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (drop)
+import EulerHS.Prelude hiding (State, drop)
 import External.Dunzo.Types
 import Types.Error
 import Types.Wrapper
@@ -338,15 +339,17 @@ mkOnTrackErrReq context message = do
         }
 
 mkOnCancelReq :: Context -> Order -> Flow OnCancelReq
-mkOnCancelReq context o = do
-  let order =
-        o & #_state ?~ "CANCELLED"
-          & #_cancellation_reasons ?~ [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
+mkOnCancelReq context order =
   return $
     CallbackReq
       { context = context & #_action .~ "on_cancel",
         contents = Right (CancelResMessage order)
       }
+
+cancelOrder :: Order -> Order
+cancelOrder o =
+  o & #_state ?~ State (Descriptor n (Just "CANCELLED") n n n n n n) n n n
+    & #_cancellation_reasons ?~ [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
   where
     n = Nothing
 
@@ -485,18 +488,22 @@ mapTaskState s = case s of
   CANCELLED -> Nothing
   RUNNER_CANCELLED -> Nothing
 
-mapTaskStateToOrderState :: TaskState -> Text
-mapTaskStateToOrderState s = case s of
-  CREATED -> "ACTIVE"
-  QUEUED -> "ACTIVE"
-  RUNNER_ACCEPTED -> "ACTIVE"
-  REACHED_FOR_PICKUP -> "ACTIVE"
-  PICKUP_COMPLETE -> "ACTIVE"
-  STARTED_FOR_DELIVERY -> "ACTIVE"
-  REACHED_FOR_DELIVERY -> "ACTIVE"
-  DELIVERED -> "COMPLETED"
-  CANCELLED -> "CANCELLED"
-  RUNNER_CANCELLED -> "CANCELLED"
+mapTaskStateToOrderState :: TaskState -> State
+mapTaskStateToOrderState s = do
+  let code = case s of
+        CREATED -> "ACTIVE"
+        QUEUED -> "ACTIVE"
+        RUNNER_ACCEPTED -> "ACTIVE"
+        REACHED_FOR_PICKUP -> "ACTIVE"
+        PICKUP_COMPLETE -> "ACTIVE"
+        STARTED_FOR_DELIVERY -> "ACTIVE"
+        REACHED_FOR_DELIVERY -> "ACTIVE"
+        DELIVERED -> "COMPLETED"
+        CANCELLED -> "CANCELLED"
+        RUNNER_CANCELLED -> "CANCELLED"
+  State (Descriptor n (Just code) n n n n n n) n n n
+  where
+    n = Nothing
 
 updateTaskEta :: Task -> Eta -> Flow Task
 updateTaskEta task eta = do
