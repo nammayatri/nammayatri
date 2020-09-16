@@ -21,10 +21,12 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
+import Product.Validation
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
 
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
+  validateContext "search" (req ^. #context)
   let search' = ET.client $ withClientTracing searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
@@ -65,6 +67,7 @@ search org req = withFlowHandler $ do
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _ req@CallbackReq {context} = withFlowHandler $ do
+  validateContext "on_search" context
   let onSearch = ET.client $ withClientTracing onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId

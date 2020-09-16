@@ -20,7 +20,9 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     loggerConfig :: Maybe LoggerConfig,
     searchTimeout :: Maybe Int,
-    traceFlag :: TraceFlag
+    traceFlag :: TraceFlag,
+    coreVersion :: Text,
+    domainVersion :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -34,7 +36,9 @@ data AppEnv = AppEnv
     autoMigrate :: Bool,
     loggerConfig :: Maybe LoggerConfig,
     searchTimeout :: Maybe Int, -- In seconds
-    traceFlag :: TraceFlag
+    traceFlag :: TraceFlag,
+    coreVersion :: Text,
+    domainVersion :: Text
   }
   deriving (Generic)
 

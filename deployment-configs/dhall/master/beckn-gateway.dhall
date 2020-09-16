@@ -39,4 +39,6 @@ in
 , searchTimeout = Some +3600
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = None common.LoggerConfig
+, coreVersion = "0.8.0"
+, domainVersion = "0.8.2"
 }
