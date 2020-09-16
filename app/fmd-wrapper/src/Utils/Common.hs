@@ -33,7 +33,7 @@ fromMaybe400Log msg errCode ctx Nothing = do
   let logCtx =
         Context
           { _domain = FINAL_MILE_DELIVERY,
-            _country = Nothing,
+            _country = Just "IND",
             _city = Nothing,
             _action = "log",
             _core_version = Just "0.8.0",

@@ -3,6 +3,7 @@
 module Product.APIMapper where
 
 import App.Types
+import Beckn.Product.Validation.Context
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
@@ -21,72 +22,55 @@ import qualified Product.Dunzo.Flow as DZ
 -- TODO: add switching logic to figure out the client instance
 search :: Organization -> SearchReq -> FlowHandler SearchRes
 search org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "search" $ req ^. #context
   DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
 select org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "select" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
 init org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "init" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
 confirm org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "confirm" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
 track org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "track" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
 status org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "status" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
 cancel org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "cancel" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.cancel org req
 
 update :: Organization -> UpdateReq -> FlowHandler UpdateRes
 update org req = withFlowHandler $ do
-  validateRequest $ req ^. #context
+  validateContext "update" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.update org req
 
-validateDomain :: Context -> Bool
-validateDomain context = context ^. #_domain == FINAL_MILE_DELIVERY
-
-validateCoreVersion :: Context -> Flow Bool
-validateCoreVersion context = do
-  env <- ask
-  return $ (Just (coreVersion env) ==) $ context ^. #_core_version
-
-validateDomainVersion :: Context -> Flow Bool
-validateDomainVersion context = do
-  env <- ask
-  return $ (Just (domainVersion env) ==) $ context ^. #_domain_version
-
-validateRequest :: Context -> Flow ()
-validateRequest context = do
-  unless (validateDomain context) $
-    throwJsonError400 "ApiMapper.validateRequest" "INVALID_DOMAIN"
-  unlessM (validateCoreVersion context) $
-    throwJsonError400 "ApiMapper.validateRequest" "UNSUPPORTED_CORE_VERSION"
-  unlessM (validateDomainVersion context) $
-    throwJsonError400 "ApiMapper.validateRequest" "UNSUPPORTED_DOMAIN_VERSION"
+validateContext :: Text -> Context -> Flow ()
+validateContext action context = do
+  validateDomain FINAL_MILE_DELIVERY context
+  validateContextCommons action context
 
 validateBapUrl :: Organization -> Context -> Flow ()
 validateBapUrl org context = do
@@ -94,4 +78,4 @@ validateBapUrl org context = do
         Nothing -> False
         Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
   unless satisfied $
-    throwJsonError400 "ApiMapper.validateRequest" "INVALID_BAP_URI"
+    throwJsonError400 "ApiMapper.validateContext" "INVALID_BAP_URI"

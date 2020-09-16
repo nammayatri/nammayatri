@@ -82,7 +82,7 @@ mkContext :: Text -> Text -> UTCTime -> Maybe BaseUrl -> Maybe BaseUrl -> Contex
 mkContext action rtid utcTime bapUri bppUri =
   Context
     { _domain = MOBILITY,
-      _country = Nothing,
+      _country = Just "IND",
       _city = Nothing,
       _action = action,
       _core_version = Just "0.8.0",

@@ -143,7 +143,7 @@ buildContext act tid = do
     Context
       { _domain = FINAL_MILE_DELIVERY,
         _action = act,
-        _country = Nothing,
+        _country = Just "IND",
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.8.2",

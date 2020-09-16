@@ -12,7 +12,7 @@ buildContext action tId = do
   return $
     Context
       { _domain = MOBILITY,
-        _country = Nothing,
+        _country = Just "IND",
         _city = Nothing,
         _action = action,
         _core_version = Nothing,

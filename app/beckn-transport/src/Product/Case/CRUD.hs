@@ -159,7 +159,7 @@ mkOnSearchPayload c pis orgInfo = do
   let context =
         Context
           { _domain = Domain.MOBILITY,
-            _country = Nothing,
+            _country = Just "IND",
             _city = Nothing,
             _action = "on_search",
             _core_version = Just "0.8.0",

@@ -13,6 +13,7 @@ import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Generics.Labels as GL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -23,6 +24,7 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
+import GHC.TypeLits (Symbol)
 import Network.HTTP.Types (hContentType)
 import Network.HTTP.Types.Status
 import Servant (ServerError (..), err401, err500)
@@ -141,7 +143,7 @@ mkAckResponse' txnId action status = do
       { _context =
           Context
             { _domain = MOBILITY,
-              _country = Nothing,
+              _country = Just "IND",
               _city = Nothing,
               _action = action,
               _core_version = Nothing,
@@ -401,3 +403,25 @@ padLeft n c txt =
 -- Suits only for non-negative numbers
 padNumber :: Integral i => Int -> i -> Text
 padNumber n num = padLeft n '0' $ show (fromIntegral num :: Natural)
+
+-- | An alias for type-level pair of name and type.
+type (name :: Symbol) ::: (ty :: Type) = '(name, ty)
+
+-- | Version of 'HasField' which complies with both record-dot-preprocessor
+-- and @^. #field@ syntax supported by generics-lens.
+--
+-- Re-evaluate this once we decide on a uniform way to access fields.
+type HasFieldSuper name r ty = (HasField name r ty, GL.Field name r r ty ty)
+
+-- | Bulk version of @HasField@.
+type family HasFields (r :: Type) (fields :: [(Symbol, Type)]) :: Constraint where
+  HasFields r '[] = () :: Constraint
+  HasFields r ('(name, ty) ': fields) =
+    (HasFieldSuper name r ty, HasFields r fields)
+
+-- | Require monad to be Flow-based and have specified fields in Reader env.
+type HasFlowEnv m r fields =
+  ( L.MonadFlow m,
+    MonadReader r m,
+    HasFields r fields
+  )

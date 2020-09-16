@@ -342,7 +342,7 @@ mkContext action tId = do
     Context
       { _domain = Domain.MOBILITY,
         _action = action,
-        _country = Nothing,
+        _country = Just "IND",
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.8.2",
