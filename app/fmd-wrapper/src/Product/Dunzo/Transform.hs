@@ -34,6 +34,7 @@ import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Track
 import Beckn.Types.FMD.API.Update
 import Beckn.Types.FMD.Catalog
+import qualified Beckn.Types.FMD.Item as FMD
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
@@ -366,6 +367,9 @@ mkCreateTaskReq context order = do
   dropDet <- mkLocationDetails drop
   senderDet <- mkPersonDetails pickup
   receiverDet <- mkPersonDetails drop
+  let pickupIntructions = ("pickup - " <>) . (T.intercalate ", " . mapMaybe (^. #_name)) <$> pickup ^. #_instructions
+  let dropIntructions = ("drop - " <>) . (T.intercalate ", " . mapMaybe (^. #_name)) <$> drop ^. #_instructions
+  let (Amount totalValue) = fromMaybe (Amount (-1.0)) $ getItemsValue $ order ^. #_items
   return $
     CreateTaskReq
       { request_id = orderId,
@@ -373,8 +377,8 @@ mkCreateTaskReq context order = do
         drop_details = dropDet,
         sender_details = senderDet,
         receiver_details = receiverDet,
-        special_instructions = "Handle with care",
-        package_approx_value = -1.0,
+        special_instructions = maybe "" (<> "\n ") pickupIntructions <> fromMaybe "" dropIntructions,
+        package_approx_value = fromRational totalValue,
         package_content = [Documents_or_Books], -- TODO: get this dynamically
         reference_id = order ^. #_prev_order_id
       }
@@ -419,6 +423,16 @@ mkCreateTaskReq context order = do
             <> _given_name
             <> def _additional_name
             <> def _family_name
+
+    getItemsValue :: [FMD.Item] -> Maybe Amount
+    getItemsValue items = do
+      let prices = mapMaybe (^. #_price) items
+      if null prices
+        then Nothing
+        else
+          Just $
+            foldl (+) (Amount 0.0) $
+              mapMaybe (convertDecimalValueToAmount <=< (^. #_value)) prices
 
 mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
 mkOnConfirmReq context order = do
