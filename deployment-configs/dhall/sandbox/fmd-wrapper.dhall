@@ -33,13 +33,9 @@ let dunzoConfig =
   , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/fmd/v1/"
   , paymentPolicy = sec.paymentPolicy
   , payee = sec.payee
-
-let gwUri =
-  { baseUrlScheme = UrlScheme.Http
-  , baseUrlHost = "beckn-gateway-${common.branchName}.atlas"
-  , baseUrlPort = +8015
-  , baseUrlPath = "/v1"
   }
+
+let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
 in
 

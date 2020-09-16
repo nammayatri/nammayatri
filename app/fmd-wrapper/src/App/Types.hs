@@ -1,15 +1,12 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App.Types where
 
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall, ZL (..), z)
+import Beckn.Utils.Dhall (FromDhall, ZL (..))
 import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import Servant.Client (Scheme)
 import Types.Wrapper (DunzoConfig)
 
 data AppEnv = AppEnv
@@ -35,5 +32,5 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
-tyEnv :: ZL '[Scheme]
-tyEnv = z @Scheme "UrlScheme" Z
+tyEnv :: ZL '[]
+tyEnv = Z
