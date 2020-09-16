@@ -45,7 +45,7 @@ select org req = withFlowHandler $ do
         _error = Nothing
       }
 
-mkQuote :: Flow OnSelectMessage
+mkQuote :: Flow SelectOrder
 mkQuote = do
   L.runIO $ threadDelay 0.5e6
-  return $ OnSelectMessage example example
+  return $ SelectOrder example

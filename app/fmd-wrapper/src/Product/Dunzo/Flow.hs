@@ -14,7 +14,7 @@ import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
-import Beckn.Types.FMD.API.Select (DraftOrder (..), SelectReq (..), SelectRes, onSelectAPI)
+import Beckn.Types.FMD.API.Select (SelectOrder (..), SelectReq (..), SelectRes, onSelectAPI)
 import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
 import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
 import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
@@ -93,10 +93,11 @@ select org req = do
       case res of
         Right quoteRes -> do
           let reqOrder = req ^. #message . #order
-          onSelectMessage <- mkOnSelectMessage reqOrder quoteRes
+          onSelectMessage <- mkOnSelectOrder reqOrder quoteRes
           let onSelectReq = mkOnSelectReq context onSelectMessage
           let order = onSelectMessage ^. #order
-          let quote = onSelectMessage ^. #quote
+          -- onSelectMessage has quotation
+          let quote = fromJust $ onSelectMessage ^. #order . #_quotation
           let quoteId = quote ^. #_id
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
@@ -128,7 +129,7 @@ init org req = do
   validateReturn order
   dzBACreds <- getDzBAPCreds org
   fork "init" do
-    quoteReq <- mkQuoteReqFromSelect $ SelectReq context (DraftOrder (orderDetails ^. #order))
+    quoteReq <- mkQuoteReqFromSelect $ SelectReq context (SelectOrder (orderDetails ^. #order))
     eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_" <> "QuoteRes") $ show eres
     sendCb orderDetails context cbApiKey cbUrl paymentTerms payeeDetails quoteId eres

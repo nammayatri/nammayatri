@@ -26,7 +26,8 @@ selectCb org req = withFlowHandler $ do
       <> show resp
   case req ^. #contents of
     Right msg -> do
-      let quoteId = msg ^. #quote . #_id
+      quote <- (msg ^. #order . #_quotation) & fromMaybeM400 "INVALID_QUOTE"
+      let quoteId = quote ^. #_id
       initReq <- buildInitReq ctx quoteId
       cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
       case req ^. #context . #_bpp_uri of

@@ -61,7 +61,7 @@ buildFMDSelectReq :: Context -> SelectReq
 buildFMDSelectReq context =
   SelectReq
     { context,
-      message = DraftOrder example
+      message = SelectOrder example
     }
 
 initFlow :: Text -> InitReq -> ClientM Common.AckResponse

@@ -194,14 +194,16 @@ mkQuote QuoteRes {..} = do
           _maximum_value = Nothing
         }
 
-mkOnSelectMessage :: Order -> QuoteRes -> Flow OnSelectMessage
-mkOnSelectMessage order res@QuoteRes {..} = do
+mkOnSelectOrder :: Order -> QuoteRes -> Flow SelectOrder
+mkOnSelectOrder order res@QuoteRes {..} = do
   quote <- mkQuote res
   task <- updateTaskEta (head $ order ^. #_tasks) eta
-  let order' = order & #_tasks .~ [task]
-  return $ OnSelectMessage order' quote
+  let order' =
+        order & #_tasks .~ [task]
+          & #_quotation ?~ quote
+  return $ SelectOrder order'
 
-mkOnSelectReq :: Context -> OnSelectMessage -> OnSelectReq
+mkOnSelectReq :: Context -> SelectOrder -> OnSelectReq
 mkOnSelectReq context msg =
   CallbackReq
     { context = context & #_action .~ "on_select",

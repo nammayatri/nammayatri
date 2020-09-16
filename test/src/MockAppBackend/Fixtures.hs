@@ -71,7 +71,7 @@ buildOnSelectReq :: Context -> OnSelectReq
 buildOnSelectReq context =
   CallbackReq
     { context,
-      contents = Right $ OnSelectMessage example example
+      contents = Right $ SelectOrder example
     }
 
 onInitFlow :: Text -> OnInitReq -> ClientM Common.AckResponse

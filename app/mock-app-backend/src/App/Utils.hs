@@ -172,7 +172,7 @@ buildSelectReq ctx itemId = do
   return $
     SelectReq
       { context = ctx {_action = "select"},
-        message = DraftOrder order
+        message = SelectOrder order
       }
 
 buildInitReq :: Context -> Text -> Flow InitReq

@@ -5,7 +5,6 @@ module Beckn.Types.FMD.API.Select where
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
@@ -32,23 +31,17 @@ onSelectAPI = Proxy
 
 data SelectReq = SelectReq
   { context :: Context,
-    message :: DraftOrder
+    message :: SelectOrder
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-newtype DraftOrder = DraftOrder
+newtype SelectOrder = SelectOrder
   { order :: Order
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type SelectRes = AckResponse
 
-type OnSelectReq = CallbackReq OnSelectMessage
-
-data OnSelectMessage = OnSelectMessage
-  { order :: Order,
-    quote :: Quotation
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
+type OnSelectReq = CallbackReq SelectOrder
 
 type OnSelectRes = AckResponse
