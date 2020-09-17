@@ -126,7 +126,7 @@ onCancel req = withFlowHandler $ do
       MPI.updateStatus prodInstId PI.CANCELLED
       let caseId = productInstance ^. #_caseId
       -- notify customer
-      Notify.notifyOnProductCancelCb productInstance
+      Notify.notifyOnStatusUpdate productInstance PI.CANCELLED
       --
       arrPICase <- MPI.findAllByCaseId caseId
       let arrTerminalPI =

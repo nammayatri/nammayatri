@@ -19,6 +19,7 @@ import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
 import qualified Types.API.Case as Case
 import Types.API.Status as Status
+import qualified Utils.Notifications as Notify
 import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
@@ -61,4 +62,5 @@ onStatus req = withFlowHandler $ do
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
       QPI.updateStatus (orderPi ^. #_id) piStatus
+      Notify.notifyOnStatusUpdate orderPi piStatus
       return ()

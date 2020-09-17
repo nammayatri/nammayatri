@@ -34,33 +34,62 @@ import Types.ProductInfo as ProductInfo
 -- If the case with product is being cancelled, you have to send notification
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
-notifyOnProductCancelCb :: ProductInstance -> Flow ()
-notifyOnProductCancelCb prodInst = do
-  c <- Case.findById $ prodInst ^. #_caseId
-  let mpersonId = Case._requestor c
-      productInstanceId = prodInst ^. #_id
-      minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst ^. #_info
-  case (mpersonId, minfo) of
-    (Just personId, Just info) -> do
-      person <- Person.findById $ PersonId personId
-      case person of
-        Just p -> do
-          let notificationData =
-                FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-                  show (_getProductInstanceId productInstanceId)
-              title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-              providerName = info ^. #_provider . _Just . #name . _Just
-              body =
-                FCMNotificationBody $
-                  unwords
-                    [ providerName,
-                      "had to cancel your ride scehduled for",
-                      showTimeIst (Case._startTime c) <> ".",
-                      "Check the app for more details."
-                    ]
-          notifyPerson title body notificationData p
-        _ -> pure ()
-    _ -> pure ()
+notifyOnStatusUpdate :: ProductInstance -> ProductInstanceStatus -> Flow ()
+notifyOnStatusUpdate prodInst piStatus =
+  when (prodInst ^. #_status /= piStatus) $ do
+    c <- Case.findById $ prodInst ^. #_caseId
+    let mpersonId = Case._requestor c
+        productInstanceId = prodInst ^. #_id
+        minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst ^. #_info
+    case (mpersonId, minfo) of
+      (Just personId, Just info) -> do
+        person <- Person.findById $ PersonId personId
+        case person of
+          Just p -> case piStatus of
+            ProductInstance.CANCELLED -> do
+              let notificationData =
+                    FCMData CANCELLED_PRODUCT SHOW FCM.Product $
+                      show (_getProductInstanceId productInstanceId)
+                  title = FCMNotificationTitle $ T.pack "Ride cancelled!"
+                  providerName = info ^. #_provider . _Just . #name . _Just
+                  body =
+                    FCMNotificationBody $
+                      unwords
+                        [ providerName,
+                          "had to cancel your ride scehduled for",
+                          showTimeIst (Case._startTime c) <> ".",
+                          "Check the app for more details."
+                        ]
+              notifyPerson title body notificationData p
+            ProductInstance.INPROGRESS -> do
+              let notificationData =
+                    FCMData TRIP_STARTED SHOW FCM.Product $
+                      show (_getProductInstanceId productInstanceId)
+                  title = FCMNotificationTitle $ T.pack "Trip started!"
+                  driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
+                  body =
+                    FCMNotificationBody $
+                      unwords
+                        [ driverName,
+                          "has started your trip. Please enjoy the ride!"
+                        ]
+              notifyPerson title body notificationData p
+            ProductInstance.COMPLETED -> do
+              let notificationData =
+                    FCMData TRIP_FINISHED SHOW FCM.Product $
+                      show (_getProductInstanceId productInstanceId)
+                  title = FCMNotificationTitle $ T.pack "Trip finished!"
+                  driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
+                  body =
+                    FCMNotificationBody $
+                      unwords
+                        [ "Hope you enjoyed your trip with",
+                          driverName
+                        ]
+              notifyPerson title body notificationData p
+            _ -> pure ()
+          _ -> pure ()
+      _ -> pure ()
 
 notifyOnExpiration :: Case -> Flow ()
 notifyOnExpiration caseObj = do
