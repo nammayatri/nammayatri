@@ -17,6 +17,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Order
+import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop as BS
@@ -146,6 +147,7 @@ mkFromStop _req uuid now stop =
 mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> SC.Case
 mkCase req uuid now validity startTime fromLocation toLocation = do
   let intent = req ^. #message . #intent
+  let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
@@ -169,7 +171,7 @@ mkCase req uuid now validity startTime fromLocation toLocation = do
       _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
       _udf3 = Nothing,
       _udf4 = Nothing,
-      _udf5 = Nothing,
+      _udf5 = distance,
       _info = Nothing, --Just $ show $ req ^. #message
       _createdAt = now,
       _updatedAt = now
