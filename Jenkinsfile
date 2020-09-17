@@ -37,20 +37,7 @@ pipeline {
         anyOf {
           branch "master"
           branch "sandbox"
-          changeset "Jenkinsfile"
-          changeset "Dockerfile*"
-          changeset "Makefile"
-          changeset "lib/**/*"
-          changeset "app/**/*"
-          changeset "stack.yaml"
-          changeset "stack.yaml.lock"
-          changeset "**/package.yaml"
-          changeset "deployment-configs/*deploy.yaml"
-          changeset "deployment-configs/**/*.dhall"
-          expression {
-            // build on the first run
-            return (env.BUILD_NUMBER == "1")
-          }
+          changeRequest()
         }
       }
 
