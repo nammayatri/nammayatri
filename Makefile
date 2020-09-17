@@ -7,8 +7,6 @@ SOURCE_COMMIT := $(shell git rev-parse HEAD)
 
 DEP_IMAGE ?= beckn
 
-DEP_LABEL ?= master
-
 # If this is a PR build, use --fast and ignore optimisations
 CHANGE_ID ?= undefined
 ifeq ($(CHANGE_ID), undefined)
@@ -17,12 +15,20 @@ else
   BUILD_ARGS := --fast
 endif
 
+# For PR builds, take the branch target as the dep image, for branches, it's
+# the branch name itself
+ifeq ($(CHANGE_ID), undefined)
+  DEP_LABEL := $(BRANCH_NAME)
+else
+  DEP_LABEL := $(CHANGE_TARGET)
+endif
+
 .PHONY: build-dep push-dep build push
 
 build-dep: Dockerfile.dep
 	$(info Building $(NS)/$(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))
 	rm -rf .ssh && cp -R ~/.ssh .
-	docker build -t $(NS)/$(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
+	docker build -t $(NS)/$(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep --build-arg .
 
 push-dep: Dockerfile.dep
 	docker push $(NS)/$(DEP_IMAGE):$(DEP_LABEL)

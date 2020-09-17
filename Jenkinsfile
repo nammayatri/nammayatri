@@ -1,33 +1,28 @@
 pipeline {
   agent any
 
-  environment {
-    DEP_LABEL = "${sh(script: 'echo $JOB_BASE_NAME | sed -e \'s/\\//_/g\' -e \'s/%2F/_/g\' ', returnStdout: true)}"
-  }
-
   stages {
     stage('Build & push dependency') {
       when {
-        anyOf {
-          changeset "Jenkinsfile"
-          changeset "Dockerfile*"
-          changeset "Makefile"
-          changeset "stack.yaml"
-          changeset "stack.yaml.lock"
-          changeset "**/package.yaml"
-          expression {
-            // build dep on the first run
-            return (env.BUILD_NUMBER == "1")
+        allOf {
+          anyOf {
+            branch "master"
+            branch "sandbox"
           }
-          not {
-            changeRequest()
+          anyOf {
+            changeset "Jenkinsfile"
+            changeset "Dockerfile*"
+            changeset "Makefile"
+            changeset "stack.yaml"
+            changeset "stack.yaml.lock"
+            changeset "**/package.yaml"
           }
         }
       }
 
       steps {
-        sh 'make build-dep -e DEP_LABEL=$DEP_LABEL'
-        sh 'make push-dep -e DEP_LABEL=$DEP_LABEL'
+        sh 'make build-dep'
+        sh 'make push-dep'
       }
     }
 
@@ -41,10 +36,9 @@ pipeline {
       }
 
       stages {
-
         stage('Docker build') {
           steps {
-            sh 'make build -e VERSION=$(git rev-parse --short HEAD) -e DEP_LABEL=$DEP_LABEL'
+            sh 'make build -e VERSION=$(git rev-parse --short HEAD)'
           }
         }
 
