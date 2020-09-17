@@ -4,11 +4,14 @@
 module Product.Search where
 
 import App.Types
+import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
+import Beckn.Types.Core.Tag
+import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
@@ -34,9 +37,9 @@ import qualified Storage.Queries.Location as Location
 import qualified Types.API.Case as API
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
-import Types.Common (Provider)
+import qualified Types.Common as Common
 import Types.ProductInfo
-import Utils.Common
+import Utils.Common (generateShortId, mkContext, mkIntent)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
@@ -54,7 +57,8 @@ search person req = withFlowHandler $ do
   env <- ask
   let context = mkContext "search" (_getCaseId (case_ ^. #_id)) now (bapNwAddress env) Nothing
       intent = mkIntent req
-  eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent intent
+      tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
+  eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
   let sAck =
         case eres of
           Left err -> API.Ack "Error" (show err)
@@ -126,6 +130,7 @@ mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flo
 mkCase req userId from to = do
   now <- getCurrTime
   cid <- generateGUID
+  distance <- getDistance req
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
   -- If the insert fails, maybe retry automatically as there
@@ -156,7 +161,7 @@ mkCase req userId from to = do
         _udf2 = Just $ show $ length $ req ^. #travellers,
         _udf3 = Nothing,
         _udf4 = Just $ req ^. #transaction_id,
-        _udf5 = Nothing,
+        _udf5 = show <$> distance,
         _info = Nothing,
         _createdAt = now,
         _updatedAt = now
@@ -227,7 +232,7 @@ mkProduct case_ item = do
         _updatedAt = now
       }
 
-mkProductInstance :: Case.Case -> Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
+mkProductInstance :: Case.Case -> Common.Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
 mkProductInstance case_ provider personId item = do
   now <- getCurrTime
   let info = ProductInfo (Just provider) Nothing
@@ -259,7 +264,7 @@ mkProductInstance case_ provider personId item = do
         _udf2 = Nothing,
         _udf3 = Nothing,
         _udf4 = Nothing,
-        _udf5 = Nothing,
+        _udf5 = case_ ^. #_udf5,
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
@@ -268,7 +273,7 @@ mkProductInstance case_ provider personId item = do
         _updatedAt = now
       }
 
-mkDeclinedProductInstance :: Case.Case -> Provider -> PersonId -> Flow PI.ProductInstance
+mkDeclinedProductInstance :: Case.Case -> Common.Provider -> PersonId -> Flow PI.ProductInstance
 mkDeclinedProductInstance case_ provider personId = do
   now <- getCurrTime
   piId <- generateGUID
@@ -302,3 +307,38 @@ mkDeclinedProductInstance case_ provider personId = do
         _createdAt = now,
         _updatedAt = now
       }
+
+getDistance :: API.SearchReq -> Flow (Maybe Float)
+getDistance req = do
+  routeReq <- mkRouteRequest (req ^. #origin . #location) (req ^. #destination . #location)
+  distRes <- MapSearch.getRoute routeReq
+  case distRes of
+    Left _ -> return Nothing
+    Right MapSearch.Response {..} ->
+      return $ MapSearch.distanceInM <$> headMaybe routes
+
+mkRouteRequest :: Common.Location -> Common.Location -> Flow MapSearch.Request
+mkRouteRequest pickupLoc dropLoc = do
+  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeM400 "LAT_LON_NOT_FOUND"
+  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeM400 "LAT_LON_NOT_FOUND"
+  pickupMapPoint <- mkMapPoint pickupLat pickupLon
+  dropMapPoint <- mkMapPoint dropLat dropLon
+  return $
+    MapSearch.Request
+      { waypoints = [pickupMapPoint, dropMapPoint],
+        mode = Just MapSearch.CAR,
+        departureTime = Nothing,
+        arrivalTime = Nothing,
+        calcPoints = Just False
+      }
+
+mkMapPoint :: Text -> Text -> Flow MapSearch.MapPoint
+mkMapPoint lat' lon' = do
+  lat <- readLatLng lat'
+  lon <- readLatLng lon'
+  return $ MapSearch.LatLong $ MapSearch.PointXY lat lon
+
+readLatLng :: Text -> Flow Double
+readLatLng text = do
+  let mCoord = readMaybe $ T.unpack text
+  maybe (throwJsonError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
