@@ -69,14 +69,32 @@ type TriggerAPI =
            :<|> "track"
              :> Capture "order_id" Text
              :> Get '[JSON] AckResponse
+           :<|> "cancel"
+             :> "last"
+             :> Get '[JSON] AckResponse
+           :<|> "cancel"
+             :> Capture "order_id" Text
+             :> Get '[JSON] AckResponse
+           :<|> "update"
+             :> "last"
+             :> MandatoryQueryParam "mode" T.TriggerUpdateMode
+             :> Get '[JSON] AckResponse
+           :<|> "update"
+             :> Capture "order_id" Text
+             :> MandatoryQueryParam "mode" T.TriggerUpdateMode
+             :> Get '[JSON] AckResponse
        )
 
 triggerFlow :: FlowServer TriggerAPI
 triggerFlow =
-  T.trigger
-    :<|> T.trigger
+  T.triggerSearch
+    :<|> T.triggerSearch
     :<|> T.triggerTrackForLast
     :<|> T.triggerTrack
+    :<|> T.triggerCancelForLast
+    :<|> T.triggerCancel
+    :<|> T.triggerUpdateForLast
+    :<|> T.triggerUpdate
 
 type OnSearchAPI =
   "on_search"

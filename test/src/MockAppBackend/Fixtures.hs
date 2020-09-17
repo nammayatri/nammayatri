@@ -27,10 +27,18 @@ mockAppBaseUrl =
 triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
 triggerTrack :: Text -> ClientM Common.AckResponse
 triggerTrackForLast :: ClientM Common.AckResponse
+triggerCancel :: Text -> ClientM Common.AckResponse
+triggerCancelLast :: ClientM Common.AckResponse
+triggerUpdate :: Text -> MockAppTrigger.TriggerUpdateMode -> ClientM Common.AckResponse
+triggerUpdateLast :: MockAppTrigger.TriggerUpdateMode -> ClientM Common.AckResponse
 triggerSearchReq
   :<|> _
   :<|> triggerTrackForLast
-  :<|> triggerTrack = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
+  :<|> triggerTrack
+  :<|> triggerCancelLast
+  :<|> triggerCancel
+  :<|> triggerUpdateLast
+  :<|> triggerUpdate = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
 
 onSearchFlow :: Text -> OnSearchReq -> ClientM Common.AckResponse
 onSearchFlow = client (Proxy :: Proxy MockAppRoutes.OnSearchAPI)

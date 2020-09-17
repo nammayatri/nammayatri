@@ -9,8 +9,13 @@ import GHC.IO.Unsafe (unsafePerformIO)
 
 -- Solely for testing purposes
 data CallsTrack = CallsTrack
-  { orderConfirms :: Map Text Org.Organization,
+  { orderConfirms :: Map Text OrderInfo,
     lastOrderId :: Maybe Text
+  }
+  deriving (Generic)
+
+newtype OrderInfo = OrderInfo
+  { bppOrg :: Org.Organization
   }
   deriving (Generic)
 

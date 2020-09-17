@@ -7,9 +7,13 @@ import App.Types
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
+import Beckn.Types.Core.FmdError
 import Beckn.Types.FMD.API.Update
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import Beckn.Utils.Mock
+import qualified Data.Map as M
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
@@ -25,9 +29,24 @@ update org req = withFlowHandler $ do
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
-    Just appUrl ->
+    Just appUrl -> case context ^. #_transaction_id of
+      tId
+        | tId == locationTooFarId ->
+          sendResponse appUrl cbApiKey context $ Left locationTooFarError
+        | Just fmdErr <- M.lookup tId allFmdErrorFlowIds ->
+          sendResponse appUrl cbApiKey context $ Left $ fromFmdError fmdErr
+        | otherwise -> do
+          updateMessage <- mkUpdateMessage
+          sendResponse appUrl cbApiKey context $ Right updateMessage
+  return
+    AckResponse
+      { _context = context,
+        _message = ack "ACK",
+        _error = Nothing
+      }
+  where
+    sendResponse appUrl cbApiKey context contents =
       fork "Update" $ do
-        updateMessage <- mkUpdateMessage
         AckResponse {} <-
           callClient "update" (req ^. #context) appUrl $
             client
@@ -35,17 +54,20 @@ update org req = withFlowHandler $ do
               cbApiKey
               CallbackReq
                 { context = context {_action = "on_update"},
-                  contents = Right updateMessage
+                  contents = contents
                 }
         pass
-  return
-    AckResponse
-      { _context = context,
-        _message = ack "ACK",
-        _error = Nothing
-      }
 
 mkUpdateMessage :: FlowR r UpdateResMessage
 mkUpdateMessage = do
   L.runIO $ threadDelay 0.5e6
   return $ UpdateResMessage example
+
+locationTooFarError :: Error
+locationTooFarError =
+  Error
+    { _type = "DOMAIN-ERROR",
+      _code = "CORE003",
+      _path = Nothing,
+      _message = Just "Location too far from last location"
+    }

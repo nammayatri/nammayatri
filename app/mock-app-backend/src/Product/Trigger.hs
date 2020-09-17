@@ -3,18 +3,27 @@
 
 module Product.Trigger
   ( TriggerFlow (..),
-    trigger,
+    triggerSearch,
     triggerTrack,
     triggerTrackForLast,
+    TriggerUpdateMode (..),
+    triggerUpdate,
+    triggerUpdateForLast,
+    triggerCancel,
+    triggerCancelForLast,
   )
 where
 
 import App.Types
 import App.Utils
+import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.FmdError
+import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Track
+import Beckn.Types.FMD.API.Update
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
 import Data.Aeson
@@ -60,8 +69,8 @@ instance ToHttpApiData TriggerFlow where
   toHeader = BSL.toStrict . encode
   toUrlPiece = DT.decodeUtf8 . toHeader
 
-trigger :: TriggerFlow -> FlowHandler AckResponse
-trigger flow = withFlowHandler $ do
+triggerSearch :: TriggerFlow -> FlowHandler AckResponse
+triggerSearch flow = withFlowHandler $ do
   baseUrl <- xGatewayUri <$> ask
   transactionId <-
     case flow of
@@ -91,9 +100,7 @@ triggerTrack orderId = withFlowHandler $ do
             callback_url = Nothing
           }
   let req = TrackReq context reqMsg
-  org <- readingCallsTrack (#orderConfirms . at orderId) >>= fromMaybeM500 "UNKNOWN_ORDER_ID"
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
   eRes <-
     callClient "track" context cbUrl $
       client trackAPI cbApiKey req
@@ -106,8 +113,98 @@ triggerTrack orderId = withFlowHandler $ do
       }
 
 triggerTrackForLast :: FlowHandler AckResponse
-triggerTrackForLast = do
-  lastOrderId <-
-    withFlowHandler $
-      readingCallsTrack #lastOrderId >>= fromMaybeM400 "NO_ORDERS_REGISTERED"
-  triggerTrack lastOrderId
+triggerTrackForLast = getLastOrderId >>= triggerTrack
+
+triggerCancel :: Text -> FlowHandler AckResponse
+triggerCancel orderId = withFlowHandler $ do
+  tid <- EL.generateGUID
+  context <- buildContext "cancel" tid
+  let reqMsg =
+        CancelReqMessage $
+          CancelOrder
+            { id = orderId,
+              cancellation_reason_id = "Test cancel triggered"
+            }
+  let req = CancelReq context reqMsg
+  (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
+  eRes <-
+    callClient "cancel" context cbUrl $
+      client cancelAPI cbApiKey req
+  EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  return
+    AckResponse
+      { _context = context,
+        _message = ack "ACK",
+        _error = Nothing
+      }
+
+triggerCancelForLast :: FlowHandler AckResponse
+triggerCancelForLast = getLastOrderId >>= triggerCancel
+
+data TriggerUpdateMode
+  = LeaveIntact
+  | SetFarDropLocation
+
+instance FromHttpApiData TriggerUpdateMode where
+  parseQueryParam mode =
+    maybeToRight noMatch $
+      lookup mode modes
+    where
+      modes =
+        [ ("set-far-drop-location", SetFarDropLocation),
+          ("leave-intact", SetFarDropLocation)
+        ]
+      noMatch = "Invalid mode. Specify one of: " <> T.intercalate ", " (fst <$> modes)
+
+instance ToHttpApiData TriggerUpdateMode where
+  toQueryParam = \case
+    SetFarDropLocation -> "set-far-drop-location"
+    LeaveIntact -> "leave-intact"
+
+triggerUpdate :: Text -> TriggerUpdateMode -> FlowHandler AckResponse
+triggerUpdate orderId mode = withFlowHandler $ do
+  tid <- EL.generateGUID
+  context <- buildContext "update" tid
+  let req = case mode of
+        LeaveIntact ->
+          UpdateReq
+            context
+            UpdateReqMessage
+              { order = example,
+                update_action = "update_drop_instructions"
+              }
+        SetFarDropLocation ->
+          UpdateReq
+            context {_transaction_id = locationTooFarId}
+            UpdateReqMessage
+              { order = example,
+                update_action = "update_drop_location"
+              }
+  (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
+  eRes <-
+    callClient "update" context cbUrl $
+      client updateAPI cbApiKey req
+  EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  return
+    AckResponse
+      { _context = context,
+        _message = ack "ACK",
+        _error = Nothing
+      }
+
+triggerUpdateForLast :: TriggerUpdateMode -> FlowHandler AckResponse
+triggerUpdateForLast mode = do
+  orderId <- getLastOrderId
+  triggerUpdate orderId mode
+
+getOrderCallbackCoords :: Text -> Flow (BaseUrl, Text)
+getOrderCallbackCoords orderId = do
+  OrderInfo {bppOrg = org} <- readingCallsTrack (#orderConfirms . at orderId) >>= fromMaybeM500 "UNKNOWN_ORDER_ID"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  return (cbUrl, cbApiKey)
+
+getLastOrderId :: FlowHandler Text
+getLastOrderId =
+  withFlowHandler $
+    readingCallsTrack #lastOrderId >>= fromMaybeM400 "NO_ORDERS_REGISTERED"

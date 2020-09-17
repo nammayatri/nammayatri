@@ -33,6 +33,6 @@ confirmCb org req = withFlowHandler $ do
   whenRight (req ^. #contents) $ \contents ->
     whenJust (contents ^. #order . #_id) $ \orderId ->
       updateCallsTrack $ do
-        #orderConfirms . at orderId ?= org
+        #orderConfirms . at orderId ?= OrderInfo org
         #lastOrderId ?= orderId
   return resp
