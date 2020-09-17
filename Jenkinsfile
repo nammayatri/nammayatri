@@ -6,7 +6,7 @@ pipeline {
   }
 
   stages {
-    stage('Build & push dependancy') {
+    stage('Build & push dependency') {
       when {
         anyOf {
           changeset "Jenkinsfile"
@@ -32,7 +32,6 @@ pipeline {
     }
 
     stage('Pipeline') {
-
       when {
         anyOf {
           branch "master"
@@ -58,7 +57,6 @@ pipeline {
           }
 
           stages {
-
             stage('Docker push') {
               steps {
                 sh 'make push -e VERSION=$(git rev-parse --short HEAD)'
