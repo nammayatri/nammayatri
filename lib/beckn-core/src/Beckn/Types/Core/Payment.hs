@@ -14,7 +14,7 @@ data Payment = Payment
     _type :: Maybe Text, -- ON-ORDER, PRE-FULFILLMENT, ON-FULFILLMENT, POST-FULFILLMENT
     _payer :: Maybe PaymentEndpoint,
     _payee :: Maybe PaymentEndpoint,
-    _method :: [Text], -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
+    _methods :: [Text], -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
     _amount :: MonetaryValue,
     _state :: Maybe State,
     _due_date :: Maybe UTCTime,
@@ -36,7 +36,7 @@ instance Example Payment where
         _type = Just "ON-ORDER",
         _payer = example,
         _payee = example,
-        _method = ["CASH"],
+        _methods = ["CASH"],
         _amount = example,
         _state = Nothing,
         _due_date = Just example,
