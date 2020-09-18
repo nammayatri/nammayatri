@@ -19,7 +19,7 @@ validateCountry context =
 validateCity :: L.MonadFlow m => Context -> m ()
 validateCity context =
   -- just for testing purposes, to be rewritten later as well as country check
-  unless (context ^. #_country /= Nothing) $
+  unless (isJust $ context ^. #_country) $
     throwJsonError400 "validation" "INVALID_CITY"
 
 validateAction :: L.MonadFlow m => Text -> Context -> m ()
