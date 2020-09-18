@@ -34,7 +34,7 @@ init org req = withFlowHandler $ do
               onInitAPI
               cbApiKey
               CallbackReq
-                { context = context,
+                { context = context {_action = "on_init"},
                   contents = Right msg
                 }
         pass
