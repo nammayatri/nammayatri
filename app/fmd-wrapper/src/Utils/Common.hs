@@ -6,6 +6,7 @@ import App.Types
 import Beckn.Types.API.Log
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Core.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified Data.Text as T
@@ -66,4 +67,13 @@ fromMaybe400Log msg errCode ctx Nothing = do
                       _context = ctx
                     }
               }
-  L.throwException $ err400 {errBody = show msg}
+  L.throwException $
+    mkErrResponse
+      ctx
+      err400
+      Error
+        { _type = "DOMAIN-ERROR",
+          _code = show errCode,
+          _path = Nothing,
+          _message = Just msg
+        }
