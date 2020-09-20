@@ -45,10 +45,10 @@ address =
       areaCode = "560047"
     }
 
-location :: AppCommon.Location
-location =
+location :: AppCommon.GPS -> AppCommon.Location
+location gps =
   AppCommon.Location
-    { gps = Nothing,
+    { gps = Just gps,
       address = Just address,
       city = Nothing
     }
@@ -86,10 +86,10 @@ price =
           _maximum_value = Just amt
         }
 
-getStop :: UTCTime -> AppCommon.Stop
-getStop stopTime =
+getStop :: UTCTime -> AppCommon.GPS -> AppCommon.Stop
+getStop stopTime gps =
   AppCommon.Stop
-    { location = location,
+    { location = location gps,
       arrivalTime = AppCommon.StopTime stopTime (Just stopTime),
       departureTime = AppCommon.StopTime stopTime (Just stopTime)
     }
@@ -99,8 +99,8 @@ searchReq tid utcTime futureTime =
   AppBESearch.SearchReq
     { transaction_id = tid,
       startTime = utcTime,
-      origin = getStop futureTime,
-      destination = getStop futureTime,
+      origin = getStop futureTime $ AppCommon.GPS "12.9401108" "77.6206631",
+      destination = getStop futureTime $ AppCommon.GPS "12.9401108" "77.6306631",
       vehicle = vehicle,
       travellers = [],
       fare = AppCommon.DecimalValue "360" $ Just "50"
