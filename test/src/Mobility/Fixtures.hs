@@ -1,8 +1,5 @@
 module Mobility.Fixtures where
 
-import qualified "app-backend" App as AppBE
-import qualified "beckn-gateway" App as GatewayBE
-import qualified "beckn-transport" App as TransporterBE
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
@@ -22,7 +19,6 @@ import Data.Time
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
-import System.Environment (setEnv)
 import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
@@ -274,15 +270,6 @@ initiateLoginReq = appInitiateLogin buildInitiateLoginReq
 
 verifyLoginReq :: Text -> ClientM Reg.LoginRes
 verifyLoginReq tokenId = appVerifyLogin tokenId buildLoginReq
-
-startServers :: IO (ThreadId, ThreadId, ThreadId)
-startServers = do
-  setEnv "USE_FAKE_SMS" "7891"
-  setEnv "GATEWAY_SELECTOR" "JUSPAY"
-  appTid <- forkIO $ AppBE.runAppBackend True
-  tbeTid <- forkIO $ TransporterBE.runTransporterBackendApp True
-  gatewayTid <- forkIO $ GatewayBE.runGateway True
-  return (appTid, tbeTid, gatewayTid)
 
 getAppBaseUrl :: BaseUrl
 getAppBaseUrl =

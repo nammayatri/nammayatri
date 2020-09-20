@@ -157,6 +157,7 @@ test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	FINAL_
 mobility-provider                   	mobility	\N	APPROVED	PROVIDER	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	mobility-provider-key	\N
 provider-wrapper                   	fmd-wrapper	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	fmd-wrapper-key0	http://localhost:8018/v1	\N	2020-08-01 18:37:00+00	2020-08-01 18:37:00+00	test-bpp-key0	\N
 test-app-2                          	Test App 2	\N	APPROVED	APP	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	test-app-2-key	\N
+fmd-test-app                          	FMD Test App	\N	APPROVED	APP	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	fmd-test-app-key	http://localhost:8019/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	gateway-key	\N
 mobility-app                        	mobility	\N	APPROVED	APP	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8013/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	mobility-app-key	\N
 \.
 

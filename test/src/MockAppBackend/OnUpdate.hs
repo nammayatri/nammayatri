@@ -1,7 +1,7 @@
 module MockAppBackend.OnUpdate where
 
-import Data.Time
 import EulerHS.Prelude
+import Fmd
 import MockAppBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -15,8 +15,7 @@ spec = do
   let appClientEnv = mkClientEnv mockAppManager mockAppBaseUrl
   describe "Mock App Backend OnUpdate Api" $
     it "should return valid ack response" do
-      now <- getCurrentTime
-      let ctx = buildContext "on_update" "dummy-txn-id" now
-          onUpdateReq = buildOnUpdateReq ctx
+      ctx <- buildContext "on_update" "dummy-txn-id" Nothing Nothing
+      let onUpdateReq = buildOnUpdateReq ctx
       eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow mockAppApiKey onUpdateReq
       eitherUpdateCbRes `shouldSatisfy` isRight

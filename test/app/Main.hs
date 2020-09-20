@@ -1,12 +1,16 @@
 module Main where
 
+import qualified "app-backend" App as AppBackend
+import qualified "beckn-gateway" App as Gateway
+import qualified "beckn-transport" App as TransporterBackend
+import qualified "fmd-wrapper" App as FmdWrapper
+import qualified "mock-app-backend" App as MockAppBackend
+import qualified "mock-provider-backend" App as MockProviderBackend
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
-import qualified Mobility.Fixtures as Mobility
+import qualified FmdWrapper.Spec as FmdWrapper
 import qualified Mobility.Spec as Mobility
-import qualified MockAppBackend.Fixtures as MockAppBackend
 import qualified MockAppBackend.Spec as MockAppBackend
-import qualified MockProviderBackend.Fixtures as MockProviderBackend
 import qualified MockProviderBackend.Spec as MockProviderBackend
 import System.Environment (setEnv)
 import Test.Tasty
@@ -22,7 +26,8 @@ main = do
       "beckn-transport",
       "beckn-gateway",
       "mock-app-backend",
-      "mock-provider-backend"
+      "mock-provider-backend",
+      "fmd-wrapper"
     ]
   -- ... and run
   defaultMain =<< specs
@@ -38,24 +43,35 @@ specs = do
   mobilityTests <- Mobility.mkTestTree
   mockAppBackendTests <- MockAppBackend.mkTestTree
   mockProviderBackendTests <- MockProviderBackend.mkTestTree
+  fmdTests <- FmdWrapper.mkTestTree
+
   return $
     withResource
-      startServers
+      (startServers allServers)
       cleanupServers
       ( \_ ->
           testGroup
             "all"
-            [ mockAppBackendTests,
+            [ mobilityTests,
+              mockAppBackendTests,
               mockProviderBackendTests,
-              mobilityTests
+              fmdTests
             ]
       )
   where
-    startServers = do
-      (appTid, tbeTid, gatewayTid) <- Mobility.startServers
-      mockAppTid <- MockAppBackend.startServer
-      mockProviderTid <- MockProviderBackend.startServer
+    allServers =
+      [ Gateway.runGateway True,
+        AppBackend.runAppBackend True,
+        TransporterBackend.runTransporterBackendApp True,
+        FmdWrapper.runFMDWrapper True,
+        MockAppBackend.runMockApp True,
+        MockProviderBackend.runMockProvider True
+      ]
+
+    startServers servers = do
+      threadIds <- traverse forkIO servers
       -- Wait for servers to start up
       threadDelay 0.1e6
-      return [appTid, tbeTid, gatewayTid, mockAppTid, mockProviderTid]
+      return threadIds
+
     cleanupServers = traverse_ killThread

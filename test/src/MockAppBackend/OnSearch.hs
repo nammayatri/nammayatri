@@ -1,7 +1,7 @@
 module MockAppBackend.OnSearch where
 
-import Data.Time
 import EulerHS.Prelude
+import Fmd
 import MockAppBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -15,8 +15,7 @@ spec = do
   let appClientEnv = mkClientEnv mockAppManager mockAppBaseUrl
   describe "Mock App Backend OnSearch Api" $
     it "should return valid ack response" do
-      now <- getCurrentTime
-      let ctx = buildContext "on_search" "dummy-txn-id" now
-          onSearchReq = buildOnSearchReq ctx
+      ctx <- buildContext "on_search" "dummy-txn-id" Nothing Nothing
+      let onSearchReq = buildOnSearchReq ctx
       eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow mockAppApiKey onSearchReq
       eitherSearchCbRes `shouldSatisfy` isRight

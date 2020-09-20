@@ -1,38 +1,19 @@
 module MockAppBackend.Fixtures where
 
-import qualified "mock-app-backend" App as MockAppBE
 import "mock-app-backend" App.Routes as MockAppRoutes
 import Beckn.Types.API.Callback
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Domain
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Update
 import Beckn.Utils.Common
-import Data.Time
 import EulerHS.Prelude
 import qualified "mock-app-backend" Product.Trigger as MockAppTrigger
 import Servant.API
 import Servant.Client
-
-buildContext :: Text -> Text -> UTCTime -> Context
-buildContext act tid utcTime =
-  Context
-    { _domain = FINAL_MILE_DELIVERY,
-      _action = act,
-      _country = Just "IND",
-      _city = Nothing,
-      _core_version = Just "0.8.0",
-      _domain_version = Just "0.8.2",
-      _bap_uri = Nothing,
-      _bpp_uri = Nothing,
-      _transaction_id = tid,
-      _message_id = tid,
-      _timestamp = utcTime
-    }
 
 mockAppBaseUrl :: BaseUrl
 mockAppBaseUrl =
@@ -42,9 +23,6 @@ mockAppBaseUrl =
       baseUrlPort = 8016,
       baseUrlPath = "/v1"
     }
-
-startServer :: IO ThreadId
-startServer = forkIO $ MockAppBE.runMockApp True
 
 triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
 triggerTrack :: Text -> ClientM Common.AckResponse

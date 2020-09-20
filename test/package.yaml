@@ -55,11 +55,13 @@ dependencies:
   - app-backend
   - beckn-transport
   - beckn-gateway
+  - fmd-wrapper
   - mock-app-backend
   - mock-provider-backend
   - beckn-core
   - aeson
   - base >= 4.7 && < 5
+  - async
   - data-default-class
   - euler-hs
   - http-client
@@ -72,6 +74,7 @@ dependencies:
   - uuid
   - vault
   - warp
+  - wai
   - hspec
   - hspec-core
   - tasty

@@ -1,7 +1,7 @@
 module MockAppBackend.OnSelect where
 
-import Data.Time
 import EulerHS.Prelude
+import Fmd
 import MockAppBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -15,8 +15,7 @@ spec = do
   let appClientEnv = mkClientEnv mockAppManager mockAppBaseUrl
   describe "Mock App Backend OnSelect Api" $
     it "should return valid ack response" do
-      now <- getCurrentTime
-      let ctx = buildContext "on_select" "dummy-txn-id" now
-          onSelectReq = buildOnSelectReq ctx
+      ctx <- buildContext "on_select" "dummy-txn-id" Nothing Nothing
+      let onSelectReq = buildOnSelectReq ctx
       eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow mockAppApiKey onSelectReq
       eitherSelectCbRes `shouldSatisfy` isRight

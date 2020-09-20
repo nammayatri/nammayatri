@@ -1,7 +1,7 @@
 module MockProviderBackend.Update where
 
-import Data.Time
 import EulerHS.Prelude
+import Fmd
 import MockProviderBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -15,8 +15,7 @@ spec = do
   let providerClientEnv = mkClientEnv mockProviderManager mockProviderBaseUrl
   describe "Mock Provider Backend Update Api" $
     it "should return valid ack response" do
-      now <- getCurrentTime
-      let ctx = buildContext "update" "dummy-txn-id" now
-          updateReq = buildFMDUpdateReq ctx
+      ctx <- buildContext "update" "dummy-txn-id" Nothing Nothing
+      let updateReq = buildFMDUpdateReq ctx
       initiateUpdateRes <- runClient providerClientEnv $ updateFlow mockProviderApiKey updateReq
       initiateUpdateRes `shouldSatisfy` isRight

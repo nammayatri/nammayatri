@@ -1,7 +1,7 @@
 module MockAppBackend.OnConfirm where
 
-import Data.Time
 import EulerHS.Prelude
+import Fmd
 import MockAppBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -15,8 +15,7 @@ spec = do
   let appClientEnv = mkClientEnv mockAppManager mockAppBaseUrl
   describe "Mock App Backend OnConfirm Api" $
     it "should return valid ack response" do
-      now <- getCurrentTime
-      let ctx = buildContext "on_confirm" "dummy-txn-id" now
-          onConfirmReq = buildOnConfirmReq ctx
+      ctx <- buildContext "on_confirm" "dummy-txn-id" Nothing Nothing
+      let onConfirmReq = buildOnConfirmReq ctx
       eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow mockAppApiKey onConfirmReq
       eitherConfirmCbRes `shouldSatisfy` isRight

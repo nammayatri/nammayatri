@@ -1,7 +1,7 @@
 module MockProviderBackend.Search where
 
-import Data.Time
 import EulerHS.Prelude
+import Fmd
 import MockProviderBackend.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -16,8 +16,7 @@ spec = do
 
   describe "Mock Provider Backend Search Api" $
     it "should return valid ack response" do
-      now <- getCurrentTime
-      let ctx = buildContext "search" "dummy-txn-id" now
-          searchReq = buildFMDSearchReq ctx
+      ctx <- buildContext "search" "dummy-txn-id" Nothing Nothing
+      let searchReq = buildFMDSearchReq ctx
       initiateSearchRes <- runClient providerClientEnv $ searchFlow mockProviderApiKey searchReq
       initiateSearchRes `shouldSatisfy` isRight
