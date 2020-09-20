@@ -22,11 +22,15 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 
-runMockProvider :: IO ()
-runMockProvider = do
+runMockProvider :: Bool -> IO ()
+runMockProvider isTest = do
   appEnv <- readDhallConfigDefault "mock-provider-backend"
   Metrics.serve (metricsPort appEnv)
-  let loggerCfg = getEulerLoggerConfig "/tmp/mock-provider-backend.log" $ loggerConfig appEnv
+  let loggerCfg =
+        getEulerLoggerConfig
+          isTest
+          "/tmp/mock-provider-backend.log"
+          $ loggerConfig appEnv
   let settings =
         setOnExceptionResponse mockProviderExceptionResponse $
           setPort (port appEnv) defaultSettings

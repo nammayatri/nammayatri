@@ -49,6 +49,14 @@ defaultEulerLoggerConfig filePath =
       T._logRawSql = True
     }
 
-getEulerLoggerConfig :: FilePath -> Maybe LoggerConfig -> T.LoggerConfig
-getEulerLoggerConfig filePath =
-  maybe (defaultEulerLoggerConfig filePath) toEulerLoggerConfig
+getEulerLoggerConfig :: Bool -> FilePath -> Maybe LoggerConfig -> T.LoggerConfig
+getEulerLoggerConfig isTest filePath loggerConfig =
+  if isTest
+    then config {T._logToConsole = False}
+    else config
+  where
+    config =
+      maybe
+        (defaultEulerLoggerConfig filePath)
+        toEulerLoggerConfig
+        loggerConfig

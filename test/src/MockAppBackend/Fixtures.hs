@@ -44,7 +44,7 @@ mockAppBaseUrl =
     }
 
 startServer :: IO ThreadId
-startServer = forkIO MockAppBE.runMockApp
+startServer = forkIO $ MockAppBE.runMockApp True
 
 triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
 triggerTrack :: Text -> ClientM Common.AckResponse

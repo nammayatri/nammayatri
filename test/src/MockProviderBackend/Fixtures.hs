@@ -42,7 +42,7 @@ mockProviderBaseUrl =
     }
 
 startServer :: IO ThreadId
-startServer = forkIO MockProviderBE.runMockProvider
+startServer = forkIO $ MockProviderBE.runMockProvider True
 
 searchFlow :: Text -> SearchReq -> ClientM Common.AckResponse
 searchFlow = client searchAPI

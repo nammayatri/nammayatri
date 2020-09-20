@@ -4,4 +4,4 @@ import "mock-provider-backend" App (runMockProvider)
 import EulerHS.Prelude
 
 main :: IO ()
-main = runMockProvider
+main = runMockProvider False
