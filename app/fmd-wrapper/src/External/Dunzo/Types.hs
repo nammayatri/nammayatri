@@ -176,12 +176,18 @@ data CreateTaskReq = CreateTaskReq
     drop_details :: LocationDetails,
     sender_details :: PersonDetails,
     receiver_details :: PersonDetails,
-    special_instructions :: Text,
-    package_approx_value :: Float,
+    special_instructions :: Maybe Text,
+    package_approx_value :: Maybe Float,
     package_content :: [PackageContent],
     reference_id :: Maybe Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
+
+instance ToJSON CreateTaskReq where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromJSON CreateTaskReq where
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
 type CreateTaskRes = TaskStatus
 

@@ -372,9 +372,9 @@ mkCreateTaskReq context order = do
   dropDet <- mkLocationDetails drop
   senderDet <- mkPersonDetails pickup
   receiverDet <- mkPersonDetails drop
-  let pickupIntructions = ("pickup - " <>) . (T.intercalate ", " . mapMaybe (^. #_name)) <$> pickup ^. #_instructions
-  let dropIntructions = ("drop - " <>) . (T.intercalate ", " . mapMaybe (^. #_name)) <$> drop ^. #_instructions
-  let (Amount totalValue) = fromMaybe (Amount (-1.0)) $ getItemsValue $ order ^. #_items
+  let pickupIntructions = formatInstructions "pickup" =<< pickup ^. #_instructions
+  let dropIntructions = formatInstructions "drop" =<< drop ^. #_instructions
+  let mTotalValue = (\(Amount a) -> fromRational a) <$> getItemsValue (order ^. #_items)
   return $
     CreateTaskReq
       { request_id = orderId,
@@ -382,8 +382,8 @@ mkCreateTaskReq context order = do
         drop_details = dropDet,
         sender_details = senderDet,
         receiver_details = receiverDet,
-        special_instructions = maybe "" (<> "\n ") pickupIntructions <> fromMaybe "" dropIntructions,
-        package_approx_value = fromRational totalValue,
+        special_instructions = joinInstructions pickupIntructions dropIntructions,
+        package_approx_value = mTotalValue,
         package_content = [Documents_or_Books], -- TODO: get this dynamically
         reference_id = order ^. #_prev_order_id
       }
@@ -438,6 +438,19 @@ mkCreateTaskReq context order = do
           Just $
             foldl (+) (Amount 0.0) $
               mapMaybe (convertDecimalValueToAmount <=< (^. #_value)) prices
+
+    formatInstructions tag descriptors = do
+      let insts = mapMaybe (^. #_name) descriptors
+      if null insts
+        then Nothing
+        else Just $ tag <> ": " <> T.intercalate ", " insts
+
+    joinInstructions pickupInstructions dropInstructions =
+      case (pickupInstructions, dropInstructions) of
+        (Just pickupInst, Just dropInst) -> Just $ pickupInst <> " and " <> dropInst
+        (Nothing, Just dropInst) -> Just dropInst
+        (Just pickupInst, Nothing) -> Just pickupInst
+        _ -> Nothing
 
 mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
 mkOnConfirmReq context order = do
