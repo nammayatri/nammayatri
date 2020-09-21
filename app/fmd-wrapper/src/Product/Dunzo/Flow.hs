@@ -26,6 +26,7 @@ import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fr
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified Data.List as List
+import Data.Time (addUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -210,6 +211,7 @@ confirm org req = do
   case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let order = orderDetails ^. #order
+  validateDelayFromInit case_
   verifyPayment reqOrder order
   validateReturn order
   paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
@@ -286,6 +288,14 @@ confirm org req = do
           when (initAmount /= confirmAmount) $
             L.logInfo ("Order_" <> orderId) ("Price diff of amount " <> show (confirmAmount - initAmount))
         _ -> pass
+
+    validateDelayFromInit case_ = do
+      now <- getCurrTime
+      let thresholdDuration = 1 -- in minutes -- TODO: make this configurable from env
+      let orderCreatedAt = case_ ^. #_createdAt
+      let thresholdTime = addUTCTime (fromInteger (thresholdDuration * 60)) orderCreatedAt
+      when (thresholdTime < now) $
+        throwJsonError400 "ORDER_AMOUNT_VALIDATION" "TOOK_TOO_LONG_TO_CONFIRM"
 
 track :: Org.Organization -> TrackReq -> Flow TrackRes
 track org req = do
