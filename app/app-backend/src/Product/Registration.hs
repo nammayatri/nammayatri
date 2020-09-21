@@ -34,7 +34,7 @@ initiateFlow req smsCfg = do
       countryCode = req ^. #_mobileCountryCode
   person <-
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
-      >>= maybe (createPerson req) pure
+      >>= maybe (createPerson req) clearOldRegToken
   let entityId = _getPersonId . SP._id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -189,3 +189,8 @@ reInitiateLogin tokenId req =
         _ <- RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}
+
+clearOldRegToken :: SP.Person -> Flow SP.Person
+clearOldRegToken person = do
+  RegistrationToken.deleteByPersonId $ _getPersonId $ person ^. #_id
+  pure person
