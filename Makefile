@@ -28,7 +28,7 @@ endif
 build-dep: Dockerfile.dep
 	$(info Building $(NS)/$(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))
 	rm -rf .ssh && cp -R ~/.ssh .
-	docker build -t $(NS)/$(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep --build-arg .
+	docker build -t $(NS)/$(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep .
 
 push-dep: Dockerfile.dep
 	docker push $(NS)/$(DEP_IMAGE):$(DEP_LABEL)
