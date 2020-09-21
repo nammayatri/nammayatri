@@ -183,12 +183,12 @@ buildAppConfirmReq cid pid =
       productInstanceId = pid
     }
 
-listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> ClientM [TbeCase.CaseRes]
+listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> ClientM [TbeCase.CaseRes]
 acceptOrDeclineRide :: Text -> Text -> TbeCase.UpdateCaseReq -> ClientM Case.Case
 listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
 buildListLeads :: ClientM [TbeCase.CaseRes]
-buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing (Just True)
+buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing
 
 listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
 listDriverRides :: Text -> Text -> ClientM TbePI.RideListRes

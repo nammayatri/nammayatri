@@ -35,11 +35,10 @@ import Storage.Queries.ProductInstance as QPI
 import Storage.Queries.Products as PQ
 import qualified Test.RandomStrings as RS
 import Types.API.Case
-import qualified Types.API.ProductInstance as CPR
 import qualified Utils.Defaults as Default
 
-list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes
-list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = withFlowHandler $ do
+list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
+list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ do
   person <- QP.findPersonById (PersonId _EntityId)
   now <- getCurrTime
   case person ^. #_organizationId of
@@ -47,17 +46,10 @@ list SR.RegistrationToken {..} status csType limitM offsetM ignoreOffered = with
       org <- OQ.findOrganizationById (OrganizationId orgId)
       when (org ^. #_status /= Organization.APPROVED) $
         throwJsonError401 "Err" "Unauthorized"
-      ignoreList <-
-        if ignoreOffered == Just True
-          then do
-            resList <- QPI.productInstanceJoinWithoutLimits csType orgId []
-            let csIgnoreList = Case._id <$> (CPR._case <$> resList)
-            return csIgnoreList
-          else return []
       caseList <-
         if not (org ^. #_enabled)
-          then Case.findAllByTypeStatusTime limit offset csType status ignoreList now $ fromMaybe now (org ^. #_fromTime)
-          else Case.findAllByTypeStatuses limit offset csType status ignoreList now
+          then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #_fromTime)
+          else Case.findAllByTypeStatuses limit offset csType status orgId now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
@@ -93,10 +85,12 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
         "ACCEPTED" -> do
           prodInst <- createProductInstance c p _quote orgId PI.INSTOCK
           notifyGateway c prodInst orgId PI.INSTOCK
+          Case.updateStatus (c ^. #_id) Case.CONFIRMED
           return c
         "DECLINED" -> do
           declinedProdInst <- createProductInstance c p _quote orgId PI.OUTOFSTOCK
           notifyGateway c declinedProdInst orgId PI.OUTOFSTOCK
+          Case.updateStatus (c ^. #_id) Case.CLOSED
           return c
         _ -> L.throwException $ err400 {errBody = "TRANSPORTER CHOICE INVALID"}
     Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}

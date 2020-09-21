@@ -194,7 +194,6 @@ type CaseAPI =
            :> MandatoryQueryParam "type" CaseType
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
-           :> QueryParam "ignoreOffered" Bool
            :> Get '[JSON] CaseListRes
            :<|> TokenAuth
            :> Capture "caseId" Text
@@ -203,7 +202,7 @@ type CaseAPI =
        )
 
 caseFlow ::
-  (RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> Maybe Bool -> FlowHandler CaseListRes)
+  (RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes)
     :<|> (RegistrationToken -> Text -> UpdateCaseReq -> FlowHandler Case)
 caseFlow =
   Case.list

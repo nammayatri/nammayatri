@@ -83,11 +83,11 @@ findAllByTypeStatuses ::
   Integer ->
   CaseType ->
   [CaseStatus] ->
-  [CaseId] ->
+  Text ->
   UTCTime ->
   Flow [Case]
-findAllByTypeStatuses limit offset csType statuses ignoreIds now = do
-  result <- Q.findAllByTypeStatuses limit offset csType statuses ignoreIds now
+findAllByTypeStatuses limit offset csType statuses orgId now = do
+  result <- Q.findAllByTypeStatuses limit offset csType statuses orgId now
   checkDBError result
 
 -- | Find Cases
@@ -96,12 +96,12 @@ findAllByTypeStatusTime ::
   Integer ->
   CaseType ->
   [CaseStatus] ->
-  [CaseId] ->
+  Text ->
   UTCTime ->
   UTCTime ->
   Flow [Case]
-findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime = do
-  result <- Q.findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime
+findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
+  result <- Q.findAllByTypeStatusTime limit offset csType statuses orgId now fromTime
   checkDBError result
 
 -- | Find Cases by status and expirtaion date

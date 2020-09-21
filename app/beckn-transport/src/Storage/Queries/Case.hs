@@ -110,28 +110,28 @@ findAllByIdType ids type_ = do
       _type ==. B.val_ type_
         &&. B.in_ _id (B.val_ <$> ids)
 
-findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> UTCTime -> Flow (T.DBResult [Storage.Case])
-findAllByTypeStatuses limit offset csType statuses ignoreIds now = do
+findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Text -> UTCTime -> Flow (T.DBResult [Storage.Case])
+findAllByTypeStatuses limit offset csType statuses orgId now = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate Storage.Case {..} =
       _type ==. B.val_ csType
+        &&. _provider ==. B.val_ (Just orgId)
         &&. B.in_ _status (B.val_ <$> statuses)
-        &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
         &&. _validTill B.>. B.val_ now
 
-findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> [CaseId] -> UTCTime -> UTCTime -> Flow (T.DBResult [Storage.Case])
-findAllByTypeStatusTime limit offset csType statuses ignoreIds now fromTime = do
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Text -> UTCTime -> UTCTime -> Flow (T.DBResult [Storage.Case])
+findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate Storage.Case {..} =
       _type ==. B.val_ csType
+        &&. _provider ==. B.val_ (Just orgId)
         &&. B.in_ _status (B.val_ <$> statuses)
-        &&. B.not_ (B.in_ _id (B.val_ <$> ignoreIds))
         &&. _validTill B.>. B.val_ now
         &&. _createdAt B.<. B.val_ fromTime
 
