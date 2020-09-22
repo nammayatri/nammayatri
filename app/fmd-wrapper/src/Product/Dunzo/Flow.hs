@@ -28,7 +28,7 @@ import Data.Aeson
 import qualified Data.List as List
 import Data.Time (addUTCTime)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (drop)
 import qualified EulerHS.Types as ET
 import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
@@ -79,6 +79,7 @@ select :: Org.Organization -> SelectReq -> Flow SelectRes
 select org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dzBPNwAddress
+  validateOrderRequest $ req ^. #message . #order
   validateReturn $ req ^. #message . #order
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -114,6 +115,15 @@ select org req = do
               onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
         _ -> pass
+
+    validateOrderRequest order = do
+      let tasks = order ^. #_tasks
+      when (length tasks /= 1) $ throwJsonError400 "INVALID_ORDER" "CURRENTLY_PROCESSING_ONLY_ONE_TASK_PER_ORDER"
+      let task = head tasks
+      let pickup = task ^. #_pickup
+      let drop = task ^. #_drop
+      when (isJust $ pickup ^. #_time) $ throwJsonError400 "INVALID_ORDER" "SCHEDULED_PICKUP_NOT_SUPPORTED"
+      when (isJust $ drop ^. #_time) $ throwJsonError400 "INVALID_ORDER" "SCHEDULED_DROP_NOT_SUPPORTED"
 
 init :: Org.Organization -> InitReq -> Flow InitRes
 init org req = do
