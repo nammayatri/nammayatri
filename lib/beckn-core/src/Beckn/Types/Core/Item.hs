@@ -15,6 +15,7 @@ data Item = Item
     _price :: Price,
     _model_id :: Maybe Text,
     _category_id :: Maybe Text,
+    _package_category_id :: Maybe Text,
     _brand_id :: Maybe Text,
     _promotional :: Bool,
     _ttl :: Maybe Duration,
@@ -38,6 +39,7 @@ instance Example Item where
         _model_id = Just idExample,
         _brand_id = Just idExample,
         _category_id = Just idExample,
+        _package_category_id = Just idExample,
         _tags = example,
         _promotional = False,
         _ttl = Nothing

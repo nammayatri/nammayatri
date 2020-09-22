@@ -425,3 +425,6 @@ type HasFlowEnv m r fields =
     MonadReader r m,
     HasFields r fields
   )
+
+foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
+foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p

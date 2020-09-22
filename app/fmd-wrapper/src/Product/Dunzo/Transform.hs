@@ -9,6 +9,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Address as CoreAddr
 import Beckn.Types.Core.Amount
+import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Descriptor
@@ -40,7 +41,7 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
+import Beckn.Utils.Common (encodeToText, foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
 import Control.Lens ((?~))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -124,37 +125,47 @@ mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
 mkOnSearchReq _ context res@QuoteRes {..} = do
   now <- getCurrTime
   cid <- generateGUID
-  itemid <- generateGUID
   return $
     CallbackReq
       { context = context & #_action .~ "on_search",
-        contents = Right $ OnSearchServices (catalog cid itemid now)
+        contents = Right $ OnSearchServices (catalog cid now)
       }
   where
-    catalog cid itemid now =
+    catalog cid now =
       Catalog
         { _id = cid,
           _categories = [],
           _brands = [],
           _models = [],
           _ttl = now,
-          _items = [mkSearchItem itemid res],
+          _items = foldWIndex (\index acc _ -> acc <> [mkSearchItem (index + 1) res]) [] dzPackageContentList,
           _offers = [],
-          _package_categories = []
+          _package_categories = foldWIndex (\index acc category -> acc <> [mkCategory (index + 1) category]) [] dzPackageContentList
         }
+
+    mkCategory idx category =
+      Category
+        { _id = show idx,
+          _parent_category_id = Nothing,
+          _descriptor = Descriptor (Just $ encodeToText category) n n n n n n n,
+          _tags = []
+        }
+
+    n = Nothing
 
 updateBppUri :: Context -> BaseUrl -> Context
 updateBppUri Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
 
-mkSearchItem :: Text -> QuoteRes -> Item
-mkSearchItem itemId QuoteRes {..} =
+mkSearchItem :: Integer -> QuoteRes -> Item
+mkSearchItem index QuoteRes {..} =
   Item
-    { _id = itemId,
+    { _id = show index,
       _parent_item_id = Nothing,
       _descriptor = descriptor,
       _price = price,
       _model_id = Nothing,
-      _category_id = Just category_id,
+      _category_id = Nothing,
+      _package_category_id = Just $ show index,
       _brand_id = Nothing,
       _promotional = False,
       _ttl = Nothing, -- FIX this

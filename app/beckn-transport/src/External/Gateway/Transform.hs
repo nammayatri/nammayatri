@@ -106,6 +106,7 @@ mkItem prodInst =
       _price = mkPrice prodInst,
       _promotional = False,
       _category_id = Nothing,
+      _package_category_id = Nothing,
       _model_id = Nothing,
       _brand_id = Nothing,
       _tags = [],
