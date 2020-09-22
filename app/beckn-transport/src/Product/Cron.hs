@@ -18,7 +18,7 @@ import qualified Utils.Notifications as Notify
 expireCases :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireRes
 expireCases maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
   authenticate maybeAuth
-  cases <- MC.findAllExpiredByStatus [C.NEW] C.RIDESEARCH from to
+  cases <- MC.findAllExpiredByStatus [C.NEW, C.CONFIRMED] C.RIDESEARCH from to
   productInstances <- CPQ.findAllByCaseIds (C._id <$> cases)
   MC.updateStatusByIds (C._id <$> cases) C.CLOSED
   MPI.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
