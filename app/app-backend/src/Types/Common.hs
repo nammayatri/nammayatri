@@ -188,9 +188,9 @@ instance ToBeckn Location.GPS GPS where
 instance FromBeckn Address.Address Address where
   fromBeckn addr =
     Address
-      { door = fromMaybe "" $ addr ^. #_door,
+      { door = addr ^. #_door,
         building = fromMaybe "" $ addr ^. #_building,
-        street = fromMaybe "" $ addr ^. #_street,
+        street = addr ^. #_street,
         area = fromMaybe "" $ addr ^. #_locality,
         city = addr ^. #_city,
         country = addr ^. #_country,
@@ -200,10 +200,10 @@ instance FromBeckn Address.Address Address where
 instance ToBeckn Address.Address Address where
   toBeckn addr =
     Address.Address
-      { _name = "",
-        _door = Just $ addr ^. #door,
+      { _name = Nothing,
+        _door = addr ^. #door,
         _building = Just $ addr ^. #building,
-        _street = Just $ addr ^. #street,
+        _street = addr ^. #street,
         _locality = Just $ addr ^. #area,
         _ward = Nothing,
         _city = addr ^. #city,

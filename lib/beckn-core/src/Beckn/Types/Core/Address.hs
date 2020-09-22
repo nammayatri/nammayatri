@@ -5,10 +5,10 @@ import Data.Text
 import EulerHS.Prelude
 
 data Address = Address
-  { _name :: Text,
-    _door :: Maybe Text,
+  { _name :: Maybe Text,
+    _door :: Text,
     _building :: Maybe Text,
-    _street :: Maybe Text,
+    _street :: Text,
     _locality :: Maybe Text,
     _ward :: Maybe Text,
     _city :: Text,
@@ -27,10 +27,10 @@ instance ToJSON Address where
 instance Example Address where
   example =
     Address
-      { _name = "Address",
-        _door = Just "#817",
+      { _name = Just "Address",
+        _door = "#817",
         _building = Just "Juspay Apartments",
-        _street = Just "27th Main",
+        _street = "27th Main",
         _city = "Bangalore",
         _state = "Karnataka",
         _country = "India",

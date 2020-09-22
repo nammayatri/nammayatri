@@ -24,10 +24,10 @@ import EulerHS.Prelude
 address :: Address
 address =
   Address
-    { _name = "Address",
-      _door = Just "#817",
+    { _name = Nothing,
+      _door = "#817",
       _building = Just "Juspay Apartments",
-      _street = Just "27th Main",
+      _street = "27th Main",
       _city = "Bangalore",
       _state = "Karnataka",
       _country = "India",
@@ -39,10 +39,10 @@ address =
 address2 :: Address
 address2 =
   Address
-    { _name = "Address",
-      _door = Nothing,
+    { _name = Nothing,
+      _door = "444",
       _building = Just "Fun World Amusement Park",
-      _street = Nothing,
+      _street = "",
       _city = "Bangalore",
       _state = "Karnataka",
       _country = "India",

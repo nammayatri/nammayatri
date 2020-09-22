@@ -400,8 +400,8 @@ mkCreateTaskReq context order = do
             lng = lon',
             address =
               Address
-                { apartment_address = Just (fromMaybe "" (CoreAddr._door address) <> " " <> CoreAddr._name address <> " " <> fromMaybe "" (CoreAddr._building address)),
-                  street_address_1 = fromMaybe "" (CoreAddr._street address),
+                { apartment_address = Just (CoreAddr._door address <> maybe "" (" " <>) (CoreAddr._name address) <> maybe "" (" " <>) (CoreAddr._building address)),
+                  street_address_1 = CoreAddr._street address,
                   street_address_2 = "",
                   landmark = Nothing,
                   city = Just $ CoreAddr._city address,

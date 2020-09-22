@@ -291,7 +291,7 @@ confirm org req = do
 
     validateDelayFromInit case_ = do
       now <- getCurrTime
-      let thresholdDuration = 1 -- in minutes -- TODO: make this configurable from env
+      let thresholdDuration = 5 -- in minutes -- TODO: make this configurable from env
       let orderCreatedAt = case_ ^. #_createdAt
       let thresholdTime = addUTCTime (fromInteger (thresholdDuration * 60)) orderCreatedAt
       when (thresholdTime < now) $
