@@ -193,9 +193,10 @@ confirm req = withFlowHandler $ do
   L.logInfo @Text "confirm API Flow" "Reached"
   validateContext "confirm" $ req ^. #context
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
-  let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
-  searchCase <- Case.findBySid caseShortId
   productInstance <- ProductInstance.findById prodInstId
+  org <- Org.findOrganizationById $ OrganizationId $ productInstance ^. #_organizationId
+  let caseShortId = (_getOrganizationId $ org ^. #_id) <> "_" <> req ^. #context . #_transaction_id
+  searchCase <- Case.findBySid caseShortId
   orderCase <- mkOrderCase searchCase
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -211,7 +212,6 @@ confirm req = withFlowHandler $ do
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
   notifyGateway searchCase productInstance trackerCase
-  org <- Org.findOrganizationById $ OrganizationId $ productInstance ^. #_organizationId
   admins <-
     if org ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
