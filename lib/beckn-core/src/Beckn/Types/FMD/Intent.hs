@@ -14,7 +14,7 @@ data Intent = Intent
     _item_id :: Maybe Text,
     _pickups :: [PickupDrop],
     _drops :: [PickupDrop],
-    _packages :: [Package],
+    _packages :: Maybe [Package],
     -- FIXME: tags field name clashes with the one from Core.Intent
     -- We have assumed the domain one here takes precedence
     _tags :: Maybe [Tag]
@@ -42,7 +42,7 @@ instance Example Intent where
 
 data PickupDrop = PickupDrop
   { _location :: Location,
-    _time :: UTCTime
+    _time :: Maybe UTCTime
   }
   deriving (Generic, Show)
 

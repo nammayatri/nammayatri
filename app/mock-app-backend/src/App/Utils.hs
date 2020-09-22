@@ -90,9 +90,9 @@ buildIntent utcTime =
             _provider_id = Nothing,
             _category_id = Nothing,
             _item_id = Nothing,
-            _pickups = [PickupDrop location utcTime],
-            _drops = [PickupDrop location2 utcTime],
-            _packages = [],
+            _pickups = [PickupDrop location (Just utcTime)],
+            _drops = [PickupDrop location2 (Just utcTime)],
+            _packages = Nothing,
             _tags = Nothing
           }
     }

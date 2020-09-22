@@ -12,9 +12,9 @@ data Package = Package
   { _id :: Maybe Text,
     _parent_package_id :: Maybe Text,
     _descriptor :: Maybe Descriptor,
-    _contents :: [Item],
+    _contents :: Maybe [Item],
     _price :: Maybe Price,
-    _weight :: Scalar,
+    _weight :: Maybe Scalar,
     _dimensions :: Maybe Dimensions
   }
   deriving (Generic, Show)
