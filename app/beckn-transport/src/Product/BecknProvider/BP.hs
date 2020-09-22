@@ -50,33 +50,32 @@ import qualified Utils.Notifications as Notify
 -- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
-search :: () -> SearchReq -> FlowHandler AckResponse
-search _unit req = withFlowHandler $ do
+search :: Organization -> SearchReq -> FlowHandler AckResponse
+search organization req = withFlowHandler $ do
   --TODO: Need to add authenticator
   validateContext "search" $ req ^. #context
-  let intent = req ^. #message . #intent
   uuid <- L.generateGUID
-  currTime <- getCurrTime
-  let pickup = head $ intent ^. #_pickups
-      dropOff = head $ intent ^. #_drops
-      startTime = pickup ^. #_departure_time . #_est
-  validity <- getValidTime currTime startTime
-  uuid1 <- L.generateGUID
-  let fromLocation = mkFromStop req uuid1 currTime pickup
-  uuid2 <- L.generateGUID
-  let toLocation = mkFromStop req uuid2 currTime dropOff
-  Loc.create fromLocation
-  Loc.create toLocation
-  let c = mkCase req uuid currTime validity startTime fromLocation toLocation
-  Case.create c
-  transporters <- listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
-  -- TODO : Fix show
-  admins <-
-    Person.findAllByOrgIds
-      [Person.ADMIN]
-      (_getOrganizationId . Org._id <$> transporters)
-  notifyOrgCountToGateway (c ^. #_shortId) (toInteger $ length transporters)
-  Notify.notifyTransportersOnSearch c intent admins
+  when (organization ^. #_enabled) $ do
+    let intent = req ^. #message . #intent
+    currTime <- getCurrTime
+    let pickup = head $ intent ^. #_pickups
+        dropOff = head $ intent ^. #_drops
+        startTime = pickup ^. #_departure_time . #_est
+    validity <- getValidTime currTime startTime
+    uuid1 <- L.generateGUID
+    let fromLocation = mkFromStop req uuid1 currTime pickup
+    uuid2 <- L.generateGUID
+    let toLocation = mkFromStop req uuid2 currTime dropOff
+    Loc.create fromLocation
+    Loc.create toLocation
+    let c = mkCase req uuid currTime validity startTime fromLocation toLocation organization
+    Case.create c
+    -- TODO : Fix show
+    admins <-
+      Person.findAllByOrgIds
+        [Person.ADMIN]
+        [_getOrganizationId $ organization ^. #_id]
+    Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
 cancel :: CancelReq -> FlowHandler AckResponse
@@ -155,15 +154,16 @@ mkFromStop _req uuid now stop =
           _updatedAt = now
         }
 
-mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> SC.Case
-mkCase req uuid now validity startTime fromLocation toLocation = do
+mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> Organization -> SC.Case
+mkCase req uuid now validity startTime fromLocation toLocation org = do
   let intent = req ^. #message . #intent
   let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
+  let orgId = _getOrganizationId $ org ^. #_id
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = req ^. #context . #_transaction_id,
+      _shortId = orgId <> "_" <> req ^. #context . #_transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
@@ -171,7 +171,7 @@ mkCase req uuid now validity startTime fromLocation toLocation = do
       _startTime = startTime,
       _endTime = Nothing,
       _validTill = validity,
-      _provider = Nothing,
+      _provider = Just orgId,
       _providerType = Nothing,
       _requestor = Nothing,
       _requestorType = Just CONSUMER,

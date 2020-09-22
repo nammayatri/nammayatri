@@ -164,7 +164,7 @@ mkOnSearchPayload c pis orgInfo = do
             _action = "on_search",
             _core_version = Just "0.8.0",
             _domain_version = Just "0.8.2",
-            _transaction_id = c ^. #_shortId, -- TODO : What should be the txnId
+            _transaction_id = last $ T.split (== '_') $ c ^. #_shortId,
             _message_id = c ^. #_shortId,
             _bap_uri = Nothing,
             _bpp_uri = nwAddress appEnv,
