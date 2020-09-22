@@ -40,7 +40,7 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
 import Control.Lens ((?~))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -490,18 +490,22 @@ fromMaybeM500' errMsg m = do
     (L.logError @Text "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg))
   fromMaybeM500 errMsg m
 
-mapTaskState :: TaskState -> Maybe Beckn.TaskState
-mapTaskState s = case s of
-  CREATED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
-  QUEUED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
-  RUNNER_ACCEPTED -> Just Beckn.ASSIGNED_AGENT
-  REACHED_FOR_PICKUP -> Just Beckn.AT_PICKUP_LOCATION
-  PICKUP_COMPLETE -> Just Beckn.PICKED_UP_PACKAGE
-  STARTED_FOR_DELIVERY -> Just Beckn.EN_ROUTE_TO_DROP
-  REACHED_FOR_DELIVERY -> Just Beckn.AT_DROP_LOCATION
-  DELIVERED -> Just Beckn.DROPPED_PACKAGE
-  CANCELLED -> Nothing
-  RUNNER_CANCELLED -> Nothing
+mapTaskState :: TaskState -> Maybe State
+mapTaskState s =
+  let mstate = case s of
+        CREATED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
+        QUEUED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
+        RUNNER_ACCEPTED -> Just Beckn.ASSIGNED_AGENT
+        REACHED_FOR_PICKUP -> Just Beckn.AT_PICKUP_LOCATION
+        PICKUP_COMPLETE -> Just Beckn.PICKED_UP_PACKAGE
+        STARTED_FOR_DELIVERY -> Just Beckn.EN_ROUTE_TO_DROP
+        REACHED_FOR_DELIVERY -> Just Beckn.AT_DROP_LOCATION
+        DELIVERED -> Just Beckn.DROPPED_PACKAGE
+        CANCELLED -> Nothing
+        RUNNER_CANCELLED -> Nothing
+   in (\st -> State (Descriptor n (Just $ encodeToText st) n n n n n n) n n n) <$> mstate
+  where
+    n = Nothing
 
 mapTaskStateToOrderState :: TaskState -> State
 mapTaskStateToOrderState s = do

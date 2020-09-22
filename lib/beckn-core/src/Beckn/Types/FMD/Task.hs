@@ -3,6 +3,7 @@ module Beckn.Types.FMD.Task where
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Types.Core.Person
+import Beckn.Types.Core.State
 import Beckn.Types.FMD.Agent
 import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
@@ -10,7 +11,7 @@ import Beckn.Utils.Common
 import Data.Aeson hiding (Error)
 import qualified Data.Text as T
 import Data.Time (UTCTime)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (State)
 
 data PickupOrDrop = PickupOrDrop
   { _location :: Location,
@@ -35,6 +36,7 @@ instance Example PickupOrDrop where
         _time = Nothing
       }
 
+-- To be used as State._descriptor._code
 data TaskState
   = SEARCHING_FOR_FMD_AGENT
   | ASSIGNED_AGENT
@@ -67,7 +69,7 @@ data Task = Task
     _item_id :: Text,
     _next_task_id :: Maybe Text,
     _previous_task_id :: Maybe Text,
-    _state :: Maybe TaskState,
+    _state :: Maybe State,
     _pickup :: PickupOrDrop,
     _drop :: PickupOrDrop,
     _return :: PickupOrDrop,
