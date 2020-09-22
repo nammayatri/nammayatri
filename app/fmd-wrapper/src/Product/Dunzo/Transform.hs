@@ -42,8 +42,9 @@ import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (encodeToText, foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
-import Control.Lens ((?~))
+import Control.Lens (element, (?~))
 import qualified Data.ByteString.Lazy as BSL
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -379,13 +380,24 @@ mkCreateTaskReq context order = do
   let [task] = order ^. #_tasks
   let pickup = task ^. #_pickup
   let drop = task ^. #_drop
+  let items = order ^. #_items
   pickupDet <- mkLocationDetails pickup
   dropDet <- mkLocationDetails drop
   senderDet <- mkPersonDetails pickup
   receiverDet <- mkPersonDetails drop
   let pickupIntructions = formatInstructions "pickup" =<< pickup ^. #_instructions
   let dropIntructions = formatInstructions "drop" =<< drop ^. #_instructions
-  let mTotalValue = (\(Amount a) -> fromRational a) <$> getItemsValue (order ^. #_items)
+  let mTotalValue = (\(Amount a) -> fromRational a) <$> getItemsValue items
+  packageContents <-
+    nub
+      <$> traverse
+        ( \item -> do
+            (categoryId :: Int) <- fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context ((readMaybe . T.unpack) =<< item ^. #_package_category_id)
+            -- Category id is the index value of dzPackageContentList
+            dzPackageContentList ^? element (categoryId - 1)
+              & fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context
+        )
+        items
   return $
     CreateTaskReq
       { request_id = orderId,
@@ -395,7 +407,7 @@ mkCreateTaskReq context order = do
         receiver_details = receiverDet,
         special_instructions = joinInstructions pickupIntructions dropIntructions,
         package_approx_value = mTotalValue,
-        package_content = [Documents_or_Books], -- TODO: get this dynamically
+        package_content = packageContents,
         reference_id = order ^. #_prev_order_id
       }
   where

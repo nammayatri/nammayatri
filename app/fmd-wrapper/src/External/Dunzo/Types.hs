@@ -139,7 +139,7 @@ data PackageContent
   | Household_Items
   | Sports_and_Other_Equipment
   | Electronic_Items
-  deriving (Show, Generic)
+  deriving (Eq, Show, Generic)
 
 dzPackageContentList :: [PackageContent]
 dzPackageContentList = [Documents_or_Books, Clothes_or_Accessories, Food_or_Flowers, Household_Items, Sports_and_Other_Equipment, Electronic_Items]
