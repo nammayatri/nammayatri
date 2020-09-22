@@ -45,7 +45,7 @@ type TransportAPI =
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
-           :<|> SearchAPI VerifyAPIKey
+           :<|> MultiBPPSearchAPI VerifyAPIKey
            :<|> ConfirmAPI
            :<|> CancelAPI
            :<|> StatusAPI
@@ -322,7 +322,7 @@ transporterServer =
     :<|> callFlow
     :<|> routeApiFlow
 
-searchApiFlow :: FlowServer (SearchAPI VerifyAPIKey)
+searchApiFlow :: FlowServer (MultiBPPSearchAPI VerifyAPIKey)
 searchApiFlow = BP.search
 
 type ConfirmAPI =

@@ -3,6 +3,7 @@
 module Beckn.Types.API.Search where
 
 import Beckn.Types.API.Callback
+import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Catalog
@@ -11,7 +12,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
-import Servant (Header, JSON, Post, ReqBody, (:>))
+import Servant (Capture, Header, JSON, Post, ReqBody, (:>))
 
 type SearchAPI v =
   "search"
@@ -50,6 +51,20 @@ type NSDLOnSearchAPI =
 
 nsdlOnSearchAPI :: Proxy NSDLOnSearchAPI
 nsdlOnSearchAPI = Proxy
+
+type MultiBPPSearchAPI v =
+  APIKeyAuth v
+    :> Capture "orgId" OrganizationId
+    :> "search"
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
+
+type MultiBPPOnSearchAPI v =
+  APIKeyAuth v
+    :> Capture "orgId" OrganizationId
+    :> "on_search"
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] OnSearchRes
 
 data SearchReq = SearchReq
   { context :: Context,

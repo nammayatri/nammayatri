@@ -37,7 +37,7 @@ CREATE TABLE atlas_transporter.case (
     id character(36) NOT NULL,
     name character varying(255),
     description character varying(1024),
-    short_id character varying(36) NOT NULL,
+    short_id character varying(255) NOT NULL,
     industry character varying(1024) NOT NULL,
     type character varying(255) NOT NULL,
     exchange_type character varying(255) NOT NULL,
