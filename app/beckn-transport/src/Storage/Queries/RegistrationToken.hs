@@ -58,7 +58,7 @@ findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_TOKEN"
+    >>= fromMaybeM401 "INVALID_TOKEN"
   where
     predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
 

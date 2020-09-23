@@ -157,7 +157,7 @@ login tokenId req =
 
 checkRegistrationTokenExists :: Text -> Flow SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
-  QR.findRegistrationToken tokenId >>= fromMaybeM400 "INVALID_TOKEN"
+  QR.findRegistrationToken tokenId >>= fromMaybeM401 "INVALID_TOKEN"
 
 createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do

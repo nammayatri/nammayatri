@@ -163,7 +163,7 @@ login tokenId req =
 
 getRegistrationTokenE :: Text -> Flow SR.RegistrationToken
 getRegistrationTokenE tokenId =
-  RegistrationToken.findById tokenId >>= fromMaybeM400 "INVALID_TOKEN"
+  RegistrationToken.findById tokenId >>= fromMaybeM401 "INVALID_TOKEN"
 
 createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do

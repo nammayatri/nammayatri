@@ -56,7 +56,7 @@ verifyPersonAction = VerificationAction Utils.Common.verifyPerson
 verifyToken :: RegToken -> Flow SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
-    >>= fromMaybeM400 "INVALID_TOKEN"
+    >>= fromMaybeM401 "INVALID_TOKEN"
     >>= validateToken
 
 validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
@@ -70,8 +70,9 @@ fromMaybeM :: ServerError -> Maybe a -> Flow a
 fromMaybeM err Nothing = L.throwException err
 fromMaybeM _ (Just a) = return a
 
-fromMaybeM400, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> Flow a
+fromMaybeM400, fromMaybeM401, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> Flow a
 fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
+fromMaybeM401 a = fromMaybeM (err401 {errBody = a})
 fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
