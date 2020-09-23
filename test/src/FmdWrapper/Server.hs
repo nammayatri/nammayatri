@@ -10,12 +10,6 @@ import FmdWrapper.Common
 import Runner
 import Servant
 
-data CallbackResult a = CallbackResult
-  { apiKey :: Maybe Text,
-    result :: a
-  }
-  deriving (Show)
-
 data CallbackData = CallbackData
   { onSearchTVar :: TVar [CallbackResult OnSearchReq],
     onSearchEndMVar :: MVar (CallbackResult OnSearchEndReq)

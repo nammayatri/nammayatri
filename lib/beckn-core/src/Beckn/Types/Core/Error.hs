@@ -8,7 +8,7 @@ data Error = Error
     _path :: Maybe Text,
     _message :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 domainError :: Text -> Error
 domainError err = Error "DOMAIN-ERROR" err Nothing Nothing

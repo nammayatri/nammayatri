@@ -61,6 +61,8 @@ dependencies:
   - beckn-core
   - aeson
   - base >= 4.7 && < 5
+  - generic-lens
+  - lens
   - async
   - data-default-class
   - euler-hs
