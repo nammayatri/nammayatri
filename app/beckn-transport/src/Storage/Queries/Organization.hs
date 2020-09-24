@@ -110,3 +110,13 @@ updateOrganizationRec org = do
           _fromTime <-. B.val_ (Storage._fromTime sOrg)
         ]
     predicate id Storage.Organization {..} = _id ==. B.val_ id
+
+findOrgByApiKey :: APIKey -> Flow (Maybe Storage.Organization)
+findOrgByApiKey apiKey = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Organization {..} =
+      _enabled ==. B.val_ True
+        &&. _apiKey ==. B.val_ (Just apiKey)

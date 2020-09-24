@@ -4,7 +4,7 @@ import App.Types
 import qualified Beckn.Types.API.Call as Call
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
-import Beckn.Types.API.Search
+import qualified Beckn.Types.API.Search as API
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.App
@@ -45,7 +45,7 @@ type TransportAPI =
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
-           :<|> MultiBPPSearchAPI VerifyAPIKey
+           :<|> SearchAPI
            :<|> ConfirmAPI
            :<|> CancelAPI
            :<|> StatusAPI
@@ -321,8 +321,11 @@ transporterServer =
     :<|> callFlow
     :<|> routeApiFlow
 
-searchApiFlow :: FlowServer (MultiBPPSearchAPI VerifyAPIKey)
-searchApiFlow = BP.search
+type SearchAPI =
+  Capture "orgId" OrganizationId :> API.SearchAPI VerifyAPIKey
+
+searchApiFlow :: FlowServer SearchAPI
+searchApiFlow = BP.verifyOrg BP.search
 
 type ConfirmAPI =
   "confirm"
