@@ -7,7 +7,15 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
 import Beckn.Types.Mobility.Trip
+import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
+import Servant (JSON, Post, ReqBody, (:>))
+
+type CancelAPI v =
+  "cancel"
+    :> APIKeyAuth v
+    :> ReqBody '[JSON] CancelReq
+    :> Post '[JSON] AckResponse
 
 data CancelReq = CancelReq
   { context :: Context,

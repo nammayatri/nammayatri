@@ -6,7 +6,15 @@ import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Tracking
+import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
+import Servant (JSON, Post, ReqBody, (:>))
+
+type TrackAPI v =
+  "track"
+    :> APIKeyAuth v
+    :> ReqBody '[JSON] TrackTripReq
+    :> Post '[JSON] TrackTripRes
 
 data TrackTripReq = TrackTripReq
   { context :: Context,

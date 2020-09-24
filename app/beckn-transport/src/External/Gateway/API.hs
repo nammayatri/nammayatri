@@ -19,45 +19,45 @@ onSearch = ET.client $ withClientTracing onSearchAPI
 nsdlOnSearch :: Maybe Text -> Maybe Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI
 
-type TrackAPI =
+type OnTrackAPI =
   "on_track"
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
-trackTripAPI :: Proxy TrackAPI
-trackTripAPI = Proxy
+onTrackTripAPI :: Proxy OnTrackAPI
+onTrackTripAPI = Proxy
 
 onTrackTrip :: OnTrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
-onTrackTrip = ET.client $ withClientTracing trackTripAPI
+onTrackTrip = ET.client $ withClientTracing onTrackTripAPI
 
-type ConfirmAPI =
+type OnConfirmAPI =
   "on_confirm"
     :> ReqBody '[JSON] OnConfirmReq
     :> Post '[JSON] OnConfirmRes
 
-confirmAPI :: Proxy ConfirmAPI
-confirmAPI = Proxy
+onConfirmAPI :: Proxy OnConfirmAPI
+onConfirmAPI = Proxy
 
 onConfirm :: OnConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
-onConfirm = ET.client $ withClientTracing confirmAPI
+onConfirm = ET.client $ withClientTracing onConfirmAPI
 
-type CancelAPI =
+type OnCancelAPI =
   "on_cancel"
     :> ReqBody '[JSON] OnCancelReq
     :> Post '[JSON] OnCancelRes
 
-cancelAPI :: Proxy CancelAPI
+cancelAPI :: Proxy OnCancelAPI
 cancelAPI = Proxy
 
 onCancel :: OnCancelReq -> (RequestInfo, ET.EulerClient AckResponse)
 onCancel = ET.client $ withClientTracing cancelAPI
 
-type StatusAPI =
+type OnStatusAPI =
   "on_status"
     :> ReqBody '[JSON] OnStatusReq
     :> Post '[JSON] OnStatusRes
 
-statusAPI :: Proxy StatusAPI
+statusAPI :: Proxy OnStatusAPI
 statusAPI = Proxy
 
 onStatus :: OnStatusReq -> (RequestInfo, ET.EulerClient AckResponse)

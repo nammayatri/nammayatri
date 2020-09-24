@@ -6,7 +6,15 @@ import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Order
+import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
+import Servant (JSON, Post, ReqBody, (:>))
+
+type StatusAPI v =
+  "status"
+    :> APIKeyAuth v
+    :> ReqBody '[JSON] StatusReq
+    :> Post '[JSON] StatusRes
 
 data StatusReq = StatusReq
   { context :: Context,

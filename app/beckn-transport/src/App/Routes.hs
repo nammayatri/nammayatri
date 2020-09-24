@@ -2,14 +2,14 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.Types.API.Call as Call
-import Beckn.Types.API.Cancel
-import Beckn.Types.API.Confirm
+import qualified Beckn.Types.API.Cancel as API
+import qualified Beckn.Types.API.Confirm as API
 import qualified Beckn.Types.API.Search as API
-import Beckn.Types.API.Status
-import Beckn.Types.API.Track
+import qualified Beckn.Types.API.Status as API
+import qualified Beckn.Types.API.Track as API
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
@@ -45,11 +45,7 @@ type TransportAPI =
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
-           :<|> SearchAPI
-           :<|> ConfirmAPI
-           :<|> CancelAPI
-           :<|> StatusAPI
-           :<|> TrackAPI
+           :<|> OrgBecknAPI
            :<|> CaseAPI
            :<|> CronAPI
            :<|> ProductInstanceAPI
@@ -307,11 +303,7 @@ transporterServer =
     :<|> registrationFlow
     :<|> personFlow
     :<|> organizationFlow
-    :<|> searchApiFlow
-    :<|> confirmApiFlow
-    :<|> cancelApiFlow
-    :<|> statusApiFlow
-    :<|> trackApiFlow
+    :<|> orgBecknApiFlow
     :<|> caseFlow
     :<|> cronFlow
     :<|> productInstanceFlow
@@ -321,29 +313,25 @@ transporterServer =
     :<|> callFlow
     :<|> routeApiFlow
 
-type SearchAPI =
-  Capture "orgId" OrganizationId :> API.SearchAPI VerifyAPIKey
-
-searchApiFlow :: FlowServer SearchAPI
-searchApiFlow = BP.verifyOrg BP.search
-
-type ConfirmAPI =
-  "confirm"
-    :> ( ReqBody '[JSON] ConfirmReq
-           :> Post '[JSON] AckResponse
+type OrgBecknAPI =
+  Capture "orgId" OrganizationId
+    :> ( API.SearchAPI VerifyAPIKey
+           :<|> API.ConfirmAPI VerifyAPIKey
+           :<|> API.CancelAPI VerifyAPIKey
+           :<|> API.StatusAPI VerifyAPIKey
+           :<|> API.TrackAPI VerifyAPIKey
        )
 
-confirmApiFlow :: FlowServer ConfirmAPI
-confirmApiFlow = BP.confirm
-
-type CancelAPI =
-  "cancel"
-    :> ( ReqBody '[JSON] CancelReq
-           :> Post '[JSON] AckResponse
-       )
-
-cancelApiFlow :: FlowServer CancelAPI
-cancelApiFlow = BP.cancel
+orgBecknApiFlow :: FlowServer OrgBecknAPI
+orgBecknApiFlow orgId =
+  verifyAndRun BP.search
+    :<|> verifyAndRun BP.confirm
+    :<|> verifyAndRun BP.cancel
+    :<|> verifyAndRun BP.serviceStatus
+    :<|> verifyAndRun BP.trackTrip
+  where
+    verifyAndRun :: (Org.Organization -> a -> Flow b) -> Org.Organization -> a -> FlowHandler b
+    verifyAndRun = BP.verifyAndHandle orgId
 
 type CronAPI =
   "cron"
@@ -359,24 +347,6 @@ cronFlow :: FlowServer CronAPI
 cronFlow =
   Cron.expireCases
     :<|> Cron.expireProductInstances
-
-type StatusAPI =
-  "status"
-    :> ( ReqBody '[JSON] StatusReq
-           :> Post '[JSON] StatusRes
-       )
-
-statusApiFlow :: FlowServer StatusAPI
-statusApiFlow = BP.serviceStatus
-
-type TrackAPI =
-  "track"
-    :> ( ReqBody '[JSON] TrackTripReq
-           :> Post '[JSON] TrackTripRes
-       )
-
-trackApiFlow :: FlowServer TrackAPI
-trackApiFlow = BP.trackTrip
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
