@@ -61,7 +61,7 @@ cancelCase baseUrl person req = do
     then do
       let txnId = req ^. #transaction_id
           context = mkContext "cancel" txnId currTime Nothing Nothing
-      productInstances <- MPI.findAllByCaseId (CaseId caseId)
+      productInstances <- filter (\p -> PI._status p /= PI.OUTOFSTOCK) <$> MPI.findAllByCaseId (CaseId caseId)
       if null productInstances
         then do
           Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
