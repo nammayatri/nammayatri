@@ -9,16 +9,13 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (encodeToText, fromMaybeM500, mkAckResponse, withFlowHandler)
-import Control.Lens.Prism (_Just)
+import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
 import qualified Storage.Queries.Organization as OQ
-import qualified Types.API.Case as Case
 import Types.API.Status as Status
 import qualified Utils.Notifications as Notify
 import Utils.Routes
@@ -44,25 +41,10 @@ onStatus req = withFlowHandler $ do
     Right msg -> do
       let prodInstId = ProductInstanceId $ msg ^. #order . #_id
           orderState = fromBeckn $ msg ^. #order . #_state
-      case orderState of
-        PI.INVALID -> updateTransportersCount (msg ^. #order)
-        k -> updateProductInstanceStatus prodInstId k
+      updateProductInstanceStatus prodInstId orderState
     Left err -> L.logError @Text "on_status req" $ "on_status error: " <> show err
   mkAckResponse txnId "status"
   where
-    updateTransportersCount order =
-      let items = order ^. #_items
-       in case items of
-            [] -> pure ()
-            item : _ -> do
-              let caseId = item ^. #_id
-                  qty = item ^? #_quantity . _Just . #_available . _Just
-                  count = case qty of
-                    Just val -> val ^. #_count
-                    Nothing -> 1
-                  info = encodeToText $ Case.CaseInfo (Just count) (Just 0) (Just 0)
-              Case.updateInfo (CaseId caseId) info
-              return ()
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
       QPI.updateStatus (orderPi ^. #_id) piStatus

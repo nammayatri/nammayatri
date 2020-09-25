@@ -16,7 +16,6 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
-import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Order
 import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Mobility.Driver
@@ -379,46 +378,6 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
       { context,
         contents = Right $ ConfirmOrder order
       }
-
-notifyOrgCountToGateway :: Text -> Integer -> Flow ()
-notifyOrgCountToGateway caseSid count = do
-  onStatusOrgCountPayload <- mkOrgCountPayload caseSid count
-  _ <- Gateway.onStatus onStatusOrgCountPayload
-  return ()
-
-mkOrgCountPayload :: Text -> Integer -> Flow OnStatusReq
-mkOrgCountPayload caseSid count = do
-  context <- mkContext "on_status" caseSid
-  order <- mkOrgCountRes
-  let onStatusMessage = OnStatusReqMessage order
-  return $
-    CallbackReq
-      { context = context,
-        contents = Right onStatusMessage
-      }
-  where
-    mkOrgCountRes = do
-      now <- getCurrTime
-      return $
-        Order
-          { _id = caseSid,
-            _state = "ORG_COUNT",
-            _items = [OrderItem caseSid (Just mkItemQuantityRes)],
-            _created_at = now,
-            _updated_at = now,
-            _billing = Nothing,
-            _payment = Nothing,
-            _update_action = Nothing,
-            _quotation = Nothing
-          }
-    mkItemQuantityRes =
-      ItemQuantity
-        { _allocated = Nothing,
-          _available = Just $ Quantity count example,
-          _maximum = Nothing,
-          _minimum = Nothing,
-          _selected = Nothing
-        }
 
 serviceStatus :: Organization -> StatusReq -> Flow StatusRes
 serviceStatus _org req = do

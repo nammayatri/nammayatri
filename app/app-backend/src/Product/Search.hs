@@ -16,6 +16,7 @@ import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
@@ -34,6 +35,7 @@ import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
 import Servant
 import qualified Storage.Queries.Location as Location
+import qualified Storage.Queries.Organization as Org
 import qualified Types.API.Case as API
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
@@ -132,6 +134,8 @@ mkCase req userId from to = do
   now <- getCurrTime
   cid <- generateGUID
   distance <- getDistance req
+  orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
+  let info = encodeToText $ API.CaseInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
   -- If the insert fails, maybe retry automatically as there
@@ -163,7 +167,7 @@ mkCase req userId from to = do
         _udf3 = Nothing,
         _udf4 = Just $ req ^. #transaction_id,
         _udf5 = show <$> distance,
-        _info = Nothing,
+        _info = Just info,
         _createdAt = now,
         _updatedAt = now
       }
