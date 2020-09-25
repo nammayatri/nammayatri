@@ -31,7 +31,6 @@ let dunzoConfig =
   , dzTokenUrl = "http://d4b.dunzodev.in:9016"
   , dzBPId = "fmd-wrapper.dunzo"
   , dzBPNwAddress = "http://localhost:8018/v1"
-  , paymentPolicy = sec.paymentPolicy
   , payee = sec.payee
   }
 

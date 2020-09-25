@@ -21,7 +21,6 @@ import Beckn.Types.Core.Operator
 import Beckn.Types.Core.Option
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.PaymentEndpoint
-import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
@@ -229,13 +228,13 @@ mkOnSelectErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkOnInitMessage :: Text -> Order -> PaymentPolicy -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
-mkOnInitMessage orderId order paymentPolicy payee req QuoteRes {..} = do
+mkOnInitMessage :: Text -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
+mkOnInitMessage orderId order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
   return $
     InitOrder $
       order & #_id ?~ orderId
-        & #_payment ?~ mkPayment paymentPolicy payee estimated_price
+        & #_payment ?~ mkPayment payee estimated_price
         & #_billing .~ billing
         & #_tasks .~ [task]
   where
@@ -256,13 +255,13 @@ mkOnInitErrReq context err =
     }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
-mkOnStatusMessage :: Text -> Order -> PaymentPolicy -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
-mkOnStatusMessage orgName order paymentPolicy payee status = do
+mkOnStatusMessage :: Text -> Order -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
+mkOnStatusMessage orgName order payee status = do
   now <- getCurrTime
-  return $ StatusResMessage (updateOrder orgName now order paymentPolicy payee status)
+  return $ StatusResMessage (updateOrder orgName now order payee status)
 
-updateOrder :: Text -> UTCTime -> Order -> PaymentPolicy -> PaymentEndpoint -> TaskStatus -> Order
-updateOrder orgName cTime order paymentPolicy payee status = do
+updateOrder :: Text -> UTCTime -> Order -> PaymentEndpoint -> TaskStatus -> Order
+updateOrder orgName cTime order payee status = do
   -- TODO: this assumes that there is one task per order
   let orderState = mapTaskStateToOrderState (status ^. #state)
   let cancellationReasonIfAny =
@@ -270,7 +269,7 @@ updateOrder orgName cTime order paymentPolicy payee status = do
           CANCELLED -> Just [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
           RUNNER_CANCELLED -> Just [Option "1" (Descriptor (Just "Agent cancelled") n n n n n n n)]
           _ -> Nothing
-  let payment = mkPayment paymentPolicy payee <$> status ^. #estimated_price
+  let payment = mkPayment payee <$> status ^. #estimated_price
   order & #_state ?~ orderState
     & #_updated_at ?~ cTime
     & #_payment .~ (payment <|> order ^. #_payment)
@@ -561,8 +560,8 @@ updateTaskEta task eta = do
     task & #_pickup .~ pickup'
       & #_drop .~ drop'
 
-mkPayment :: PaymentPolicy -> PaymentEndpoint -> Float -> Payment
-mkPayment paymentPolicy payee estimated_price =
+mkPayment :: PaymentEndpoint -> Float -> Payment
+mkPayment payee estimated_price =
   Payment
     { _transaction_id = Nothing,
       _type = Just "PRE-FULFILLMENT",
@@ -572,8 +571,7 @@ mkPayment paymentPolicy payee estimated_price =
       _amount = price,
       _state = Nothing,
       _due_date = Nothing,
-      _duration = Nothing,
-      _terms = Just paymentPolicy
+      _duration = Nothing
     }
   where
     price =

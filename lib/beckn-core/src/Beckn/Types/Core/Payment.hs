@@ -3,7 +3,6 @@ module Beckn.Types.Core.Payment where
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.PaymentEndpoint
-import Beckn.Types.Core.PaymentPolicy
 import Beckn.Types.Core.State
 import Beckn.Utils.Common
 import Data.Time
@@ -18,8 +17,7 @@ data Payment = Payment
     _amount :: MonetaryValue,
     _state :: Maybe State,
     _due_date :: Maybe UTCTime,
-    _duration :: Maybe Duration,
-    _terms :: Maybe PaymentPolicy
+    _duration :: Maybe Duration
   }
   deriving (Generic, Show)
 
@@ -40,6 +38,5 @@ instance Example Payment where
         _amount = example,
         _state = Nothing,
         _due_date = Just example,
-        _duration = Nothing,
-        _terms = example
+        _duration = Nothing
       }

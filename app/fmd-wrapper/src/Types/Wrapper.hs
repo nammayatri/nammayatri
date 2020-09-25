@@ -21,7 +21,6 @@ data DunzoConfig = DunzoConfig
     dzTokenUrl :: BaseUrl,
     dzBPId :: Text,
     dzBPNwAddress :: BaseUrl,
-    paymentPolicy :: Text,
     payee :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, FromDhall)

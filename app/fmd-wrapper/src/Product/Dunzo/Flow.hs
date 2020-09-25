@@ -146,7 +146,6 @@ init org req = do
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
   let quoteId = quote ^. #_id
-  paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
   let order = orderDetails ^. #order
@@ -156,16 +155,15 @@ init org req = do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (SelectOrder (orderDetails ^. #order))
     eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
-    sendCb orderDetails context cbApiKey cbUrl paymentTerms payeeDetails quoteId eres
+    sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId eres
   returnAck context
   where
-    sendCb orderDetails context cbApiKey cbUrl paymentTerms payeeDetails quoteId (Right res) = do
+    sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId (Right res) = do
       -- quoteId will be used as orderId
       onInitMessage <-
         mkOnInitMessage
           quoteId
           (orderDetails ^. #order)
-          paymentTerms
           payeeDetails
           req
           res
@@ -175,7 +173,7 @@ init org req = do
       onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
       L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
       return ()
-    sendCb _ context cbApiKey cbUrl _ _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
+    sendCb _ context cbApiKey cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
@@ -184,7 +182,7 @@ init org req = do
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
           return ()
         Nothing -> return ()
-    sendCb _ _ _ _ _ _ _ _ = return ()
+    sendCb _ _ _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId order quote = do
       now <- getCurrTime
@@ -237,7 +235,6 @@ confirm org req = do
   validateDelayFromInit case_
   verifyPayment reqOrder order
   validateReturn order
-  paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
@@ -250,7 +247,7 @@ confirm org req = do
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createTaskReq)
     eres <- createTaskAPI dzBACreds dconf createTaskReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
-    sendCb case_ updatedOrderDetailsWTxn context cbApiKey cbUrl paymentTerms payeeDetails eres
+    sendCb case_ updatedOrderDetailsWTxn context cbApiKey cbUrl payeeDetails eres
   returnAck context
   where
     verifyPayment :: Order -> Order -> Flow ()
@@ -281,11 +278,11 @@ confirm org req = do
       token <- fetchToken dzBACreds conf
       API.createTask dzClientId token dzUrl req'
 
-    sendCb case_ orderDetails context cbApiKey cbUrl paymentTerms payeeDetails res = do
+    sendCb case_ orderDetails context cbApiKey cbUrl payeeDetails res = do
       case res of
         Right taskStatus -> do
           currTime <- getCurrTime
-          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) paymentTerms payeeDetails taskStatus
+          let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) payeeDetails taskStatus
           checkAndLogPriceDiff (orderDetails ^. #order) uOrder
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
           onConfirmReq <- mkOnConfirmReq context uOrder
@@ -352,7 +349,6 @@ status org req = do
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  paymentTerms <- paymentPolicy & decodeFromText & fromMaybeM500 "PAYMENT_POLICY_DECODE_ERROR"
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   let orderId = req ^. (#message . #order_id)
   c <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
@@ -362,7 +358,7 @@ status org req = do
   fork "status" do
     eres <- getStatus dzBACreds conf (TaskId taskId)
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_StatusRes") $ show eres
-    sendCb c orderDetails context cbApiKey cbUrl paymentTerms payeeDetails eres
+    sendCb c orderDetails context cbApiKey cbUrl payeeDetails eres
   returnAck context
   where
     updateCase caseId orderDetails taskStatus case_ = do
@@ -371,11 +367,11 @@ status org req = do
 
     callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onStatusAPI cbApiKey
 
-    sendCb case_ orderDetails context cbApiKey cbUrl paymentTerms payeeDetails res = do
+    sendCb case_ orderDetails context cbApiKey cbUrl payeeDetails res = do
       let order = orderDetails ^. #order
       case res of
         Right taskStatus -> do
-          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order paymentTerms payeeDetails taskStatus
+          onStatusMessage <- mkOnStatusMessage (org ^. #_name) order payeeDetails taskStatus
           onStatusReq <- mkOnStatusReq context onStatusMessage
           let updatedOrder = onStatusMessage ^. #order
           let updatedOrderDetails = orderDetails & #order .~ updatedOrder
