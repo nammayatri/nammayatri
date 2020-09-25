@@ -118,5 +118,4 @@ findOrgByApiKey apiKey = do
     >>= either DB.throwDBError pure
   where
     predicate Storage.Organization {..} =
-      _enabled ==. B.val_ True
-        &&. _apiKey ==. B.val_ (Just apiKey)
+      _apiKey ==. B.val_ (Just apiKey)

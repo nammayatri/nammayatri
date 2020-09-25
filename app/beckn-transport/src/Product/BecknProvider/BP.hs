@@ -59,26 +59,26 @@ search :: Organization -> SearchReq -> Flow AckResponse
 search organization req = do
   validateContext "search" $ req ^. #context
   uuid <- L.generateGUID
-  let intent = req ^. #message . #intent
-  currTime <- getCurrTime
-  let pickup = head $ intent ^. #_pickups
-      dropOff = head $ intent ^. #_drops
-      startTime = pickup ^. #_departure_time . #_est
-  validity <- getValidTime currTime startTime
-  uuid1 <- L.generateGUID
-  let fromLocation = mkFromStop req uuid1 currTime pickup
-  uuid2 <- L.generateGUID
-  let toLocation = mkFromStop req uuid2 currTime dropOff
-  Loc.create fromLocation
-  Loc.create toLocation
-  let c = mkCase req uuid currTime validity startTime fromLocation toLocation organization
-  Case.create c
-  -- TODO : Fix show
-  admins <-
-    Person.findAllByOrgIds
-      [Person.ADMIN]
-      [_getOrganizationId $ organization ^. #_id]
-  Notify.notifyTransportersOnSearch c intent admins
+  when (organization ^. #_enabled) $ do
+    let intent = req ^. #message . #intent
+    currTime <- getCurrTime
+    let pickup = head $ intent ^. #_pickups
+        dropOff = head $ intent ^. #_drops
+        startTime = pickup ^. #_departure_time . #_est
+    validity <- getValidTime currTime startTime
+    uuid1 <- L.generateGUID
+    let fromLocation = mkFromStop req uuid1 currTime pickup
+    uuid2 <- L.generateGUID
+    let toLocation = mkFromStop req uuid2 currTime dropOff
+    Loc.create fromLocation
+    Loc.create toLocation
+    let c = mkCase req uuid currTime validity startTime fromLocation toLocation organization
+    Case.create c
+    admins <-
+      Person.findAllByOrgIds
+        [Person.ADMIN]
+        [_getOrganizationId $ organization ^. #_id]
+    Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
 cancel :: Organization -> CancelReq -> Flow AckResponse
