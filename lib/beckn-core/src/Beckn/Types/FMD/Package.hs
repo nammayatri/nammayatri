@@ -15,7 +15,8 @@ data Package = Package
     _contents :: Maybe [Item],
     _price :: Maybe Price,
     _weight :: Maybe Scalar,
-    _dimensions :: Maybe Dimensions
+    _dimensions :: Maybe Dimensions,
+    _package_category_id :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -34,5 +35,6 @@ instance Example Package where
         _contents = example,
         _price = example,
         _weight = example,
-        _dimensions = example
+        _dimensions = example,
+        _package_category_id = Nothing
       }

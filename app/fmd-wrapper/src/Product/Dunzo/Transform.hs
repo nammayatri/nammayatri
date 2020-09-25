@@ -35,15 +35,14 @@ import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Track
 import Beckn.Types.FMD.API.Update
 import Beckn.Types.FMD.Catalog
-import qualified Beckn.Types.FMD.Item as FMD
 import Beckn.Types.FMD.Order
+import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (encodeToText, foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
 import Control.Lens (element, (?~))
 import qualified Data.ByteString.Lazy as BSL
-import Data.List (nub)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -379,24 +378,19 @@ mkCreateTaskReq context order = do
   let [task] = order ^. #_tasks
   let pickup = task ^. #_pickup
   let drop = task ^. #_drop
-  let items = order ^. #_items
+  let package = task ^. #_package
   pickupDet <- mkLocationDetails pickup
   dropDet <- mkLocationDetails drop
   senderDet <- mkPersonDetails pickup
   receiverDet <- mkPersonDetails drop
   let pickupIntructions = formatInstructions "pickup" =<< pickup ^. #_instructions
   let dropIntructions = formatInstructions "drop" =<< drop ^. #_instructions
-  let mTotalValue = (\(Amount a) -> fromRational a) <$> getItemsValue items
-  packageContents <-
-    nub
-      <$> traverse
-        ( \item -> do
-            (categoryId :: Int) <- fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context ((readMaybe . T.unpack) =<< item ^. #_package_category_id)
-            -- Category id is the index value of dzPackageContentList
-            dzPackageContentList ^? element (categoryId - 1)
-              & fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context
-        )
-        items
+  let mTotalValue = (\(Amount a) -> fromRational a) <$> getPackageValue package
+  packageContent <- do
+    (categoryId :: Int) <- fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context ((readMaybe . T.unpack) =<< package ^. #_package_category_id)
+    -- Category id is the index value of dzPackageContentList
+    dzPackageContentList ^? element (categoryId - 1)
+      & fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context
   return $
     CreateTaskReq
       { request_id = orderId,
@@ -406,7 +400,7 @@ mkCreateTaskReq context order = do
         receiver_details = receiverDet,
         special_instructions = joinInstructions pickupIntructions dropIntructions,
         package_approx_value = mTotalValue,
-        package_content = packageContents,
+        package_content = [packageContent],
         reference_id = order ^. #_prev_order_id
       }
   where
@@ -451,15 +445,12 @@ mkCreateTaskReq context order = do
             <> def _additional_name
             <> def _family_name
 
-    getItemsValue :: [FMD.Item] -> Maybe Amount
-    getItemsValue items = do
-      let prices = mapMaybe (^. #_price) items
-      if null prices
-        then Nothing
-        else
-          Just $
-            foldl (+) (Amount 0.0) $
-              mapMaybe (convertDecimalValueToAmount <=< (^. #_value)) prices
+    getPackageValue :: Package -> Maybe Amount
+    getPackageValue package = do
+      let mprice = package ^. #_price
+      case mprice of
+        Nothing -> Nothing
+        Just price -> convertDecimalValueToAmount =<< (price ^. #_value)
 
     formatInstructions tag descriptors = do
       let insts = mapMaybe (^. #_name) descriptors

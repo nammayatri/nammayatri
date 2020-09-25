@@ -119,24 +119,17 @@ select org req = do
 
     validateOrderRequest order = do
       let tasks = order ^. #_tasks
-      let items = order ^. #_items
       when (length tasks /= 1) $ throwJsonError400 "INVALID_ORDER" "CURRENTLY_PROCESSING_ONLY_ONE_TASK_PER_ORDER"
       let task = head tasks
+      let package = task ^. #_package
       let pickup = task ^. #_pickup
       let drop = task ^. #_drop
       when (isJust $ pickup ^. #_time) $ throwJsonError400 "INVALID_ORDER" "SCHEDULED_PICKUP_NOT_SUPPORTED"
       when (isJust $ drop ^. #_time) $ throwJsonError400 "INVALID_ORDER" "SCHEDULED_DROP_NOT_SUPPORTED"
-      let categoryIds = map (^. #_package_category_id) items
-      traverse_
-        ( \case
-            Nothing -> throwJsonError400 "INVALID_ORDER" "PACKAGE_CATEGORY_ID_NOT_FOUND"
-            Just cid' -> do
-              case readMaybe (T.unpack cid') of
-                Nothing -> throwJsonError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
-                -- Category id is the index value of dzPackageContentList
-                Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwJsonError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
-        )
-        categoryIds
+      void $ case readMaybe . T.unpack =<< (package ^. #_package_category_id) of
+        Nothing -> throwJsonError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
+        -- Category id is the index value of dzPackageContentList
+        Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwJsonError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
 
 init :: Org.Organization -> InitReq -> Flow InitRes
 init org req = do

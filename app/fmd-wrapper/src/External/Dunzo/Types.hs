@@ -141,6 +141,7 @@ data PackageContent
   | Electronic_Items
   deriving (Eq, Show, Generic)
 
+-- TODO: Is there any way we can derive this list from the sum type?
 dzPackageContentList :: [PackageContent]
 dzPackageContentList = [Documents_or_Books, Clothes_or_Accessories, Food_or_Flowers, Household_Items, Sports_and_Other_Equipment, Electronic_Items]
 
