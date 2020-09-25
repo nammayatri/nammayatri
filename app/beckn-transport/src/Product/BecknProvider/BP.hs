@@ -503,7 +503,7 @@ notifyCancelToGateway prodInstId = do
 
 mkOnTrackTripPayload :: Case -> Case -> Flow OnTrackTripReq
 mkOnTrackTripPayload trackerCase parentCase = do
-  context <- mkContext "on_track" $ parentCase ^. #_shortId
+  context <- mkContext "on_track" $ last $ T.split (== '_') $ parentCase ^. #_shortId
   let data_url = GT.baseTrackingUrl <> "/" <> _getCaseId (trackerCase ^. #_id)
   let tracking = GT.mkTracking "PULL" data_url
   return

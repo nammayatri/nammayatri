@@ -12,7 +12,7 @@ import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import Beckn.Utils.Common (decodeFromText, encodeToText, getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM500, getCurrTime, withFlowHandler)
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -21,6 +21,7 @@ import qualified Models.Case as MC
 import qualified Models.Case as QCase
 import qualified Models.ProductInstance as MPI
 import Servant
+import qualified Storage.Queries.Organization as OQ
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import qualified Types.ProductInfo as Products
@@ -36,15 +37,18 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
     L.throwException $
       err400 {errBody = "Case has expired"}
   orderCase_ <- mkOrderCase case_
+  productInstance <- MPI.findById (ProductInstanceId productInstanceId)
+  organization <-
+    OQ.findOrganizationById (OrganizationId $ productInstance ^. #_organizationId)
+      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   QCase.create orderCase_
-  productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   MPI.create orderProductInstance
   context <- buildContext "confirm" caseId
-  baseUrl <- xProviderUri <$> ask
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   order <- mkOrder productInstance
-  Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
+  Gateway.confirm baseUrl organization $ ConfirmReq context $ ConfirmOrder order
   where
     mkOrder productInstance = do
       now <- getCurrTime

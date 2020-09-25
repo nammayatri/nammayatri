@@ -12,12 +12,13 @@ import Beckn.Types.Core.Tracking
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM500, withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Organization as OQ
 import Types.ProductInfo as ProductInfo
 import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
@@ -27,6 +28,9 @@ track _ req = withFlowHandler $ do
   let context = req ^. #context
       prodInstId = req ^. #message . #order_id
   prdInst <- MPI.findById $ ProductInstanceId prodInstId
+  organization <-
+    OQ.findOrganizationById (OrganizationId $ prdInst ^. #_organizationId)
+      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   case decodeFromText =<< (prdInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
     Just (info :: ProductInfo) ->
@@ -34,8 +38,8 @@ track _ req = withFlowHandler $ do
         Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
-          gatewayUrl <- xProviderUri <$> ask
-          Gateway.track gatewayUrl $ req & ((#message . #order_id) .~ gTripId)
+          gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+          Gateway.track gatewayUrl organization $ req & ((#message . #order_id) .~ gTripId)
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do

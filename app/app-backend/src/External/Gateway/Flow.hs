@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module External.Gateway.Flow where
@@ -10,6 +11,8 @@ import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.Common
 import Beckn.Types.Core.Error
+import Beckn.Types.Storage.Organization (Organization)
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -43,9 +46,10 @@ search url req = do
       L.logInfo @Text "Search" "Search successfully delivered"
       return $ Right ()
 
-confirm :: BaseUrl -> ConfirmReq -> Flow AckResponse
-confirm url req@ConfirmReq {context} = do
-  res <- callAPIWithTrail url (API.confirm req) "confirm"
+confirm :: BaseUrl -> Organization -> ConfirmReq -> Flow AckResponse
+confirm url org req@ConfirmReq {context} = do
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  res <- callAPIWithTrail url (API.confirm cbApiKey req) "confirm"
   whenLeft res $ \err ->
     L.logError @Text "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
@@ -63,9 +67,10 @@ location url req = do
     L.logError @Text "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
-track :: BaseUrl -> TrackTripReq -> Flow AckResponse
-track url req@TrackTripReq {context} = do
-  res <- callAPIWithTrail url (API.trackTrip req) "track"
+track :: BaseUrl -> Organization -> TrackTripReq -> Flow AckResponse
+track url org req@TrackTripReq {context} = do
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  res <- callAPIWithTrail url (API.trackTrip cbApiKey req) "track"
   case res of
     Left err -> L.logError @Text "error occurred while track trip: " (show err)
     Right _ -> L.logInfo @Text "Track" "Track successfully delivered"
@@ -73,9 +78,10 @@ track url req@TrackTripReq {context} = do
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
 
-cancel :: BaseUrl -> CancelReq -> Flow (Either Text ())
-cancel url req = do
-  res <- callAPIWithTrail url (API.cancel req) "cancel"
+cancel :: BaseUrl -> Organization -> CancelReq -> Flow (Either Text ())
+cancel url org req = do
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  res <- callAPIWithTrail url (API.cancel cbApiKey req) "cancel"
   case res of
     Left err -> do
       L.logError @Text "error occurred while cancel trip: " (show err)
@@ -84,9 +90,10 @@ cancel url req = do
       L.logInfo @Text "Cancel" "Cancel successfully delivered"
       return $ Right ()
 
-status :: BaseUrl -> StatusReq -> Flow AckResponse
-status url req@StatusReq {context} = do
-  res <- callAPIWithTrail url (API.status req) "status"
+status :: BaseUrl -> Organization -> StatusReq -> Flow AckResponse
+status url org req@StatusReq {context} = do
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  res <- callAPIWithTrail url (API.status cbApiKey req) "status"
   case res of
     Left err -> L.logError @Text "error occurred while getting status: " (show err)
     Right _ -> L.logInfo @Text "Status" "Status successfully delivered"

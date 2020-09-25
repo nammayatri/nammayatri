@@ -10,13 +10,14 @@ import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (encodeToText, mkAckResponse, withFlowHandler)
+import Beckn.Utils.Common (encodeToText, fromMaybeM500, mkAckResponse, withFlowHandler)
 import Control.Lens.Prism (_Just)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
+import qualified Storage.Queries.Organization as OQ
 import qualified Types.API.Case as Case
 import Types.API.Status as Status
 import qualified Utils.Notifications as Notify
@@ -24,13 +25,16 @@ import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandler $ do
-  piid <- QPI.findById (ProductInstanceId productInstanceId)
-  case_ <- Case.findIdByPerson person (piid ^. #_caseId)
+  prodInst <- QPI.findById (ProductInstanceId productInstanceId)
+  case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
   let caseId = _getCaseId $ case_ ^. #_id
   context <- buildContext "status" caseId
-  baseUrl <- xProviderUri <$> ask
+  organization <-
+    OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
+      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
-  Gateway.status baseUrl $ API.StatusReq context statusMessage
+  Gateway.status baseUrl organization $ API.StatusReq context statusMessage
 
 onStatus :: API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus req = withFlowHandler $ do
