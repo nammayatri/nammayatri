@@ -190,6 +190,9 @@ updateStatus :: SP.Person -> ProductInstanceId -> ProdInstUpdateReq -> Flow ()
 updateStatus user piId req = do
   prodInst <- PIQ.findById piId
   _ <- case (req ^. #_status, prodInst ^. #_entityId, prodInst ^. #_personId) of
+    (Just PI.CANCELLED, _, _) ->
+      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
+        updateTrip (prodInst ^. #_id) PI.CANCELLED
     (Just c, Just _, Just _) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) c
@@ -208,17 +211,16 @@ notifyTripDetailsToGateway prodInst = do
 updateInfo :: ProductInstanceId -> Flow ()
 updateInfo piId = do
   prodInst <- PIQ.findById piId
-  driverInfo <- case prodInst ^. #_personId of
-    Just driverId -> PersQ.findPersonById driverId
-    Nothing -> L.throwException $ err400 {errBody = "DRIVER_ID MISSING"}
-  vehicleInfo <- case prodInst ^. #_entityId of
-    Just vehicleId ->
-      VQ.findVehicleById (VehicleId vehicleId)
-        >>= fromMaybeM400 "VEHICLE NOT FOUND"
-    Nothing -> L.throwException $ err400 {errBody = "VEHICLE_ID MISSING"}
-  let info = Just $ encodeToText (mkInfoObj driverInfo vehicleInfo)
-  PIQ.updateInfo piId info
-  return ()
+  case (prodInst ^. #_personId, prodInst ^. #_entityId) of
+    (Just driverId, Just vehicleId) -> do
+      driver <- PersQ.findPersonById driverId
+      vehicle <-
+        VQ.findVehicleById (VehicleId vehicleId)
+          >>= fromMaybeM400 "VEHICLE NOT FOUND"
+      let info = Just $ encodeToText (mkInfoObj driver vehicle)
+      PIQ.updateInfo piId info
+      return ()
+    (_, _) -> return ()
   where
     mkInfoObj drivInfo vehiInfo =
       DriverVehicleInfo
