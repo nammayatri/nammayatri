@@ -19,6 +19,7 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import Types.ProductInfo as ProductInfo
+import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
@@ -38,7 +39,7 @@ track _ req = withFlowHandler $ do
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do
-  -- TODO: verify api key
+  validateContext "on_track" $ req ^. #context
   let context = req ^. #context
   case req ^. #contents of
     Right msg -> do

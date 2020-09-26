@@ -24,7 +24,7 @@ import Servant
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import qualified Types.ProductInfo as Products
-import Utils.Common (generateShortId)
+import Utils.Common (generateShortId, validateContext)
 import qualified Utils.Metrics as Metrics
 import Utils.Routes
 
@@ -67,6 +67,7 @@ onConfirm :: OnConfirmReq -> FlowHandler AckResponse
 onConfirm req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_confirm req" (show req)
+  validateContext "on_confirm" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
       let trip = fromBeckn <$> msg ^. #order . #_trip

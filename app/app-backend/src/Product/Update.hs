@@ -16,11 +16,13 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
 import qualified Types.ProductInfo as ProdInfo
+import Utils.Common (validateContext)
 
 onUpdate :: OnUpdateReq -> FlowHandler AckResponse
 onUpdate req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_update req" (show req)
+  validateContext "on_update" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
       let trip = msg ^. #order . #_trip

@@ -39,7 +39,7 @@ import qualified Types.API.Common as API
 import qualified Types.API.Search as API
 import qualified Types.Common as Common
 import Types.ProductInfo
-import Utils.Common (generateShortId, mkContext, mkIntent)
+import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
@@ -74,6 +74,7 @@ search person req = withFlowHandler $ do
 
 searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _unit req = withFlowHandler $ do
+  validateContext "on_search" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
       let catalog = msg ^. #catalog

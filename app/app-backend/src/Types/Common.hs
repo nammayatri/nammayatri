@@ -62,7 +62,7 @@ data Stop = Stop
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-data VehicleCategory = CAR | MOTORCYCLE | BICYCLE | TRUCK | OTHER
+data VehicleCategory = CAR | MOTORCYCLE | BICYCLE | TRUCK | AUTO_RICKSHAW | OTHER
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data Vehicle = Vehicle
@@ -136,6 +136,7 @@ instance FromBeckn Text VehicleCategory where
       "BICYCLE" -> BICYCLE
       "OTHER" -> OTHER
       "TRUCK" -> TRUCK
+      "AUTO-RICKSHAW" -> AUTO_RICKSHAW
       _ -> OTHER
 
 instance ToBeckn Text VehicleCategory where
@@ -146,6 +147,7 @@ instance ToBeckn Text VehicleCategory where
       BICYCLE -> "BICYCLE"
       OTHER -> "OTHER"
       TRUCK -> "TRUCK"
+      AUTO_RICKSHAW -> "AUTO-RICKSHAW"
 
 instance FromBeckn Vehicle.Vehicle Vehicle where
   fromBeckn vehicle =

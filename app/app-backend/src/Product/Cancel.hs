@@ -18,7 +18,7 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import Types.API.Cancel as Cancel
-import Utils.Common (mkContext)
+import Utils.Common (mkContext, validateContext)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
@@ -104,6 +104,7 @@ isCaseCancellable case_ =
 
 onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
 onCancel req = withFlowHandler $ do
+  validateContext "on_cancel" $ req ^. #context
   let context = req ^. #context
   let txnId = context ^. #_transaction_id
   case req ^. #contents of

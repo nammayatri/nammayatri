@@ -4,6 +4,7 @@
 module Utils.Common where
 
 import App.Types
+import Beckn.Product.Validation.Context
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -110,3 +111,8 @@ mkIntent req =
       _transfer = Nothing,
       _fare = toBeckn $ req ^. #fare
     }
+
+validateContext :: Text -> Context -> Flow ()
+validateContext action context = do
+  validateDomain MOBILITY context
+  validateContextCommons action context

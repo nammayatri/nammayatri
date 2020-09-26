@@ -4,6 +4,7 @@
 module Product.BecknProvider.BP where
 
 import App.Types
+import Beckn.Product.Validation.Context
 import Beckn.Types.API.Callback
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
@@ -52,6 +53,7 @@ import qualified Utils.Notifications as Notify
 search :: () -> SearchReq -> FlowHandler AckResponse
 search _unit req = withFlowHandler $ do
   --TODO: Need to add authenticator
+  validateContext "search" $ req ^. #context
   let intent = req ^. #message . #intent
   uuid <- L.generateGUID
   currTime <- getCurrTime
@@ -80,6 +82,7 @@ search _unit req = withFlowHandler $ do
 cancel :: CancelReq -> FlowHandler AckResponse
 cancel req = withFlowHandler $ do
   --TODO: Need to add authenticator
+  validateContext "cancel" $ req ^. #context
   uuid <- L.generateGUID
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
   prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
@@ -180,6 +183,7 @@ mkCase req uuid now validity startTime fromLocation toLocation = do
 confirm :: ConfirmReq -> FlowHandler AckResponse
 confirm req = withFlowHandler $ do
   L.logInfo @Text "confirm API Flow" "Reached"
+  validateContext "confirm" $ req ^. #context
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
   let caseShortId = req ^. #context . #_transaction_id -- change to message.transactionId
   searchCase <- Case.findBySid caseShortId
@@ -355,7 +359,7 @@ mkContext action tId = do
 
 mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> Flow OnConfirmReq
 mkOnConfirmPayload c pis _allPis trackerCase = do
-  context <- mkContext "confirm" $ c ^. #_shortId -- TODO : What should be the txnId
+  context <- mkContext "on_confirm" $ c ^. #_shortId -- TODO : What should be the txnId
   trip <- mkTrip trackerCase
   order <- GT.mkOrder c (head pis) (Just trip)
   return
@@ -452,6 +456,7 @@ mkOnServiceStatusPayload piId trackerPi = do
 trackTrip :: TrackTripReq -> FlowHandler TrackTripRes
 trackTrip req = withFlowHandler $ do
   L.logInfo @Text "track trip API Flow" $ show req
+  validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id
   case_ <- Case.findById (CaseId tripId)
   case case_ ^. #_parentCaseId of
@@ -569,3 +574,8 @@ getIdShortIdAndTime = do
   guid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return (now, guid, shortId)
+
+validateContext :: Text -> Context -> Flow ()
+validateContext action context = do
+  validateDomain Domain.MOBILITY context
+  validateContextCommons action context

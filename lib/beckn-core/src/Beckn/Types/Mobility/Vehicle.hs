@@ -7,7 +7,7 @@ import Data.Text
 import EulerHS.Prelude
 
 data Vehicle = Vehicle
-  { category :: Maybe Text, -- "CAR", "MOTORCYCLE", "BICYCLE", "TRUCK", "OTHER"
+  { category :: Maybe Text, -- "CAR", "MOTORCYCLE", "BICYCLE", "TRUCK", "AUTO-RICKSHAW"
     capacity :: Maybe Int,
     make :: Maybe Text,
     model :: Maybe Text,

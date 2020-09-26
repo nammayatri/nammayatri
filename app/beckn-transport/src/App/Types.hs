@@ -32,6 +32,8 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
+    coreVersion :: Text,
+    domainVersion :: Text,
     loggerConfig :: Maybe LoggerConfig,
     traceFlag :: TraceFlag
   }
