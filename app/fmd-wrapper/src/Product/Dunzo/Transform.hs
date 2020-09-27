@@ -40,7 +40,8 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (encodeToText, foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
+import Beckn.Utils.Common (foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
+import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -146,7 +147,7 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
       Category
         { _id = show idx,
           _parent_category_id = Nothing,
-          _descriptor = Descriptor (Just $ encodeToText category) n n n n n n n,
+          _descriptor = Descriptor (Just (replaceUnderscores (show category))) n n n n n n n,
           _tags = []
         }
 
@@ -516,7 +517,7 @@ mapTaskState s =
         DELIVERED -> Just Beckn.DROPPED_PACKAGE
         CANCELLED -> Nothing
         RUNNER_CANCELLED -> Nothing
-   in (\st -> State (Descriptor n (Just $ encodeToText st) n n n n n n) n n n) <$> mstate
+   in (\st -> State (Descriptor n (Just (replaceUnderscores (show st))) n n n n n n) n n n) <$> mstate
   where
     n = Nothing
 

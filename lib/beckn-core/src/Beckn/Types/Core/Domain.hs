@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Domain where
 
+import Beckn.Utils.JSON
 import Data.Aeson
-import qualified Data.Text as T
 import EulerHS.Prelude
 
 data Domain
@@ -14,7 +14,7 @@ data Domain
 domainOptions :: Options
 domainOptions =
   defaultOptions
-    { constructorTagModifier = T.unpack . T.replace "_" "-" . T.pack
+    { constructorTagModifier = replaceUnderscoresString
     }
 
 instance ToJSON Domain where

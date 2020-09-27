@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Organization where
 
 import Beckn.Types.App
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -65,7 +66,7 @@ data OrganizationDomain
 orgDomainOptions :: Options
 orgDomainOptions =
   defaultOptions
-    { constructorTagModifier = T.unpack . T.replace "_" "-" . T.pack
+    { constructorTagModifier = replaceUnderscoresString
     }
 
 instance ToJSON OrganizationDomain where

@@ -8,8 +8,8 @@ import Beckn.Types.FMD.Agent
 import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Common
+import Beckn.Utils.JSON
 import Data.Aeson hiding (Error)
-import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State)
 
@@ -55,7 +55,7 @@ data TaskState
 taskStateOptions :: Options
 taskStateOptions =
   defaultOptions
-    { constructorTagModifier = T.unpack . T.replace "_" "-" . T.pack
+    { constructorTagModifier = replaceUnderscoresString
     }
 
 instance ToJSON TaskState where

@@ -8,7 +8,6 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.Error as Beckn
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
-import qualified Data.Text as T
 import EulerHS.Prelude
 import Servant (FromHttpApiData, ToHttpApiData)
 
@@ -130,20 +129,19 @@ data RunnerDetails = RunnerDetails
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
--- FIXME: Rewrite packageContentOptions and drop this
-{-# HLINT ignore PackageContent #-}
-data PackageContent
-  = Documents_or_Books
-  | Clothes_or_Accessories
-  | Food_or_Flowers
-  | Household_Items
-  | Sports_and_Other_Equipment
-  | Electronic_Items
-  deriving (Eq, Show, Generic)
+newtype PackageContent = PackageContent {content :: Text}
+  deriving stock (Eq, Show, Generic)
+  deriving newtype (IsString, ToJSON, FromJSON)
 
--- TODO: Is there any way we can derive this list from the sum type?
 dzPackageContentList :: [PackageContent]
-dzPackageContentList = [Documents_or_Books, Clothes_or_Accessories, Food_or_Flowers, Household_Items, Sports_and_Other_Equipment, Electronic_Items]
+dzPackageContentList =
+  [ "Documents or Books",
+    "Clothes or Accessories",
+    "Food or Flowers",
+    "Household Items",
+    "Sports and Other Equipment",
+    "Electronic Items"
+  ]
 
 data TaskState
   = CREATED
@@ -204,20 +202,8 @@ instance ToJSON CancelTaskReq where
 instance FromJSON CancelTaskReq where
   parseJSON = genericParseJSON defaultOptions
 
-packageContentOptions :: Options
-packageContentOptions =
-  defaultOptions
-    { constructorTagModifier = T.unpack . T.replace "_" " " . T.replace "_and_" " & " . T.replace "_or_" " | " . T.pack
-    }
-
 taskStateOptions :: Options
 taskStateOptions = defaultOptions {constructorTagModifier = map toLower}
-
-instance ToJSON PackageContent where
-  toJSON = genericToJSON packageContentOptions
-
-instance FromJSON PackageContent where
-  parseJSON = genericParseJSON packageContentOptions
 
 instance ToJSON TaskState where
   toJSON = genericToJSON taskStateOptions
