@@ -42,7 +42,7 @@ cancelProductInstance baseUrl person req = do
     sendCancelReq prodInstId = do
       let txnId = req ^. #transaction_id
       currTime <- L.runIO getCurrentTime
-      let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrder prodInstId Nothing)
+      let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
           context = mkContext "cancel" txnId currTime Nothing Nothing
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
@@ -82,9 +82,8 @@ cancelCase baseUrl person req = do
       PI.ProductInstance ->
       Flow (Either Text ())
     callCancelApi context prodInst = do
-      let txnId = context ^. #_transaction_id
       let prodInstId = _getProductInstanceId $ prodInst ^. #_id
-      let cancelReqMessage = API.CancelReqMessage (API.Cancellation txnId Nothing) (API.CancellationOrder prodInstId Nothing)
+      let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
       Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool

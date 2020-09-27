@@ -5,7 +5,6 @@ module Beckn.Types.API.Cancel where
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Descriptor
 import Beckn.Types.Mobility.Order
 import Beckn.Types.Mobility.Trip
 import EulerHS.Prelude
@@ -22,21 +21,14 @@ type OnCancelReq = CallbackReq Trip
 
 type OnCancelRes = AckResponse
 
-data CancelReqMessage = CancelReqMessage
-  { cancellation :: Cancellation,
-    order :: CancellationOrder
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-data Cancellation = Cancellation
-  { id :: Text,
-    reason :: Maybe Descriptor
+newtype CancelReqMessage = CancelReqMessage
+  { order :: CancellationOrder
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data CancellationOrder = CancellationOrder
   { id :: Text,
-    cancellation_reason_id :: Maybe Text
+    cancellation_reason_id :: Maybe Text -- "CASE", "PRODUCT_INSTANCE"
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
