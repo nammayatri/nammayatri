@@ -62,11 +62,15 @@ cancelCase baseUrl person req = do
       let txnId = req ^. #transaction_id
           context = mkContext "cancel" txnId currTime Nothing Nothing
       productInstances <- filter (\p -> PI._status p /= PI.OUTOFSTOCK) <$> MPI.findAllByCaseId (CaseId caseId)
+      Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
       if null productInstances
         then do
-          Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
-          MC.updateStatus (CaseId caseId) Case.CLOSED
-          mkAckResponse txnId "cancel"
+          eres <- callCancelApiByCase context caseId
+          case eres of
+            Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
+            Right _ -> do
+              MC.updateStatus (CaseId caseId) Case.CLOSED
+              mkAckResponse txnId "cancel"
         else do
           let cancelPIs = filter isProductInstanceCancellable productInstances
           eres <- traverse (callCancelApi context) cancelPIs
@@ -84,6 +88,9 @@ cancelCase baseUrl person req = do
     callCancelApi context prodInst = do
       let prodInstId = _getProductInstanceId $ prodInst ^. #_id
       let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
+      Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
+    callCancelApiByCase context caseId = do
+      let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder caseId (Just "CASE"))
       Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool

@@ -84,36 +84,44 @@ cancel req = withFlowHandler $ do
   --TODO: Need to add authenticator
   validateContext "cancel" $ req ^. #context
   uuid <- L.generateGUID
-  let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
-  prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
-  piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
-  -- TODO: Should we check if all case's products were cancelled
-  -- before cancelling a case?
-  Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
-  case piList of
-    [] -> return ()
+  let cancelType = req ^. #message . #order . #cancellation_reason_id
+  case cancelType of
+    Just "CASE" -> do
+      let caseShortId = req ^. #message . #order . #id --  transporter search productInstId
+      searchCase <- Case.findBySid caseShortId
+      Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
     _ -> do
-      trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
-      orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
-      _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
-      _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
-      return ()
-  _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
-  org <- Org.findOrganizationById $ OrganizationId $ ProductInstance._organizationId prodInst
-  notifyCancelToGateway prodInstId
-  admins <-
-    if org ^. #_enabled
-      then Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
-      else return []
-  case piList of
-    [] -> pure ()
-    prdInst : _ -> do
-      c <- Case.findById $ ProductInstance._caseId prdInst
-      case prdInst ^. #_personId of
-        Just driverId -> do
-          driver <- Person.findPersonById driverId
-          Notify.notifyTransportersOnCancel c (driver : admins)
-        Nothing -> Notify.notifyTransportersOnCancel c admins
+      let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
+      prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
+      piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
+      -- TODO: Should we check if all case's products were cancelled
+      -- before cancelling a case?
+      Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
+      Case.updateStatus (prodInst ^. #_caseId) SC.COMPLETED
+      case piList of
+        [] -> return ()
+        _ -> do
+          trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+          orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
+          _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
+          _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+          return ()
+      _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
+      org <- Org.findOrganizationById $ OrganizationId $ ProductInstance._organizationId prodInst
+      notifyCancelToGateway prodInstId
+      admins <-
+        if org ^. #_enabled
+          then Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
+          else return []
+      case piList of
+        [] -> pure ()
+        prdInst : _ -> do
+          c <- Case.findById $ ProductInstance._caseId prdInst
+          case prdInst ^. #_personId of
+            Just driverId -> do
+              driver <- Person.findPersonById driverId
+              Notify.notifyTransportersOnCancel c (driver : admins)
+            Nothing -> Notify.notifyTransportersOnCancel c admins
   mkAckResponse uuid "cancel"
 
 -- TODO: Move this to core Utils.hs
