@@ -32,6 +32,17 @@ findOrganizationById id = do
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
+findOrganizationByCallbackUri ::
+  Maybe BaseUrl -> Storage.OrganizationType -> Flow (Maybe Storage.Organization)
+findOrganizationByCallbackUri url oType = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.Organization {..} =
+      _callbackUrl ==. B.val_ url
+        &&. _type ==. B.val_ oType
+
 listOrganizations ::
   Maybe Int ->
   Maybe Int ->

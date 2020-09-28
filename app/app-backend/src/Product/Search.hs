@@ -88,6 +88,9 @@ searchCb _unit req = withFlowHandler $ do
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do
   let caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+  bpp <-
+    Org.findOrganizationByCallbackUri (req ^. #context . #_bpp_uri) Org.PROVIDER
+      >>= fromMaybeM400 "INVALID_PROVIDER_URI"
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
   personId <-
     maybe
@@ -98,7 +101,7 @@ searchCbService req catalog = do
     ([], _) -> L.throwException $ err400 {errBody = "missing provider"}
     (category : _, []) -> do
       let provider = fromBeckn category
-      declinedPI <- mkDeclinedProductInstance case_ provider personId
+      declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
       MPI.create declinedPI
       return ()
     (category : _, items) -> do
@@ -108,7 +111,7 @@ searchCbService req catalog = do
       let provider = fromBeckn category
       products <- traverse (mkProduct case_) items
       traverse_ Products.create products
-      productInstances <- traverse (mkProductInstance case_ provider personId) items
+      productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
       traverse_ MPI.create productInstances
       extendCaseExpiry case_
       Notify.notifyOnSearchCb personId case_ productInstances
@@ -237,8 +240,9 @@ mkProduct case_ item = do
         _updatedAt = now
       }
 
-mkProductInstance :: Case.Case -> Common.Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
-mkProductInstance case_ provider personId item = do
+mkProductInstance ::
+  Case.Case -> Org.Organization -> Common.Provider -> PersonId -> Core.Item -> Flow PI.ProductInstance
+mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrTime
   let info = ProductInfo (Just provider) Nothing
   price <-
@@ -273,13 +277,13 @@ mkProductInstance case_ provider personId item = do
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _organizationId = provider ^. #id,
+        _organizationId = _getOrganizationId $ bppOrg ^. #_id,
         _createdAt = now,
         _updatedAt = now
       }
 
-mkDeclinedProductInstance :: Case.Case -> Common.Provider -> PersonId -> Flow PI.ProductInstance
-mkDeclinedProductInstance case_ provider personId = do
+mkDeclinedProductInstance :: Case.Case -> Org.Organization -> Common.Provider -> PersonId -> Flow PI.ProductInstance
+mkDeclinedProductInstance case_ bppOrg provider personId = do
   now <- getCurrTime
   piId <- generateGUID
   let info = ProductInfo (Just provider) Nothing
@@ -308,7 +312,7 @@ mkDeclinedProductInstance case_ provider personId = do
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _organizationId = provider ^. #id,
+        _organizationId = _getOrganizationId $ bppOrg ^. #_id,
         _createdAt = now,
         _updatedAt = now
       }
