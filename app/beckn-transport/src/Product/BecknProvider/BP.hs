@@ -198,7 +198,7 @@ confirm _org req = do
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
   org <- Org.findOrganizationById $ OrganizationId $ productInstance ^. #_organizationId
-  let caseShortId = (_getOrganizationId $ org ^. #_id) <> "_" <> req ^. #context . #_transaction_id
+  let caseShortId = _getOrganizationId (org ^. #_id) <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
   orderCase <- mkOrderCase searchCase
   Case.create orderCase

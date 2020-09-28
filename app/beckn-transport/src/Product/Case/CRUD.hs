@@ -28,6 +28,7 @@ import External.Gateway.Transform as GT
 import Models.Case as Case
 import Models.ProductInstance as MPI
 import Servant
+import Servant.Client (BaseUrl (..))
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
@@ -161,7 +162,7 @@ mkOnSearchPayload c pis orgInfo = do
             _transaction_id = last $ T.split (== '_') $ c ^. #_shortId,
             _message_id = c ^. #_shortId,
             _bap_uri = Nothing,
-            _bpp_uri = nwAddress appEnv,
+            _bpp_uri = makeBppUrl <$> nwAddress appEnv,
             _timestamp = currTime
           }
   piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER
@@ -173,6 +174,11 @@ mkOnSearchPayload c pis orgInfo = do
       { context,
         contents = Right $ OnSearchServices catalog
       }
+  where
+    makeBppUrl url =
+      let orgId = _getOrganizationId $ orgInfo ^. #_id
+          newPath = baseUrlPath url <> "/" <> T.unpack orgId
+       in url {baseUrlPath = newPath}
 
 -- Utility Functions
 
