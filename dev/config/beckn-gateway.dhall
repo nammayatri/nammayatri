@@ -34,8 +34,8 @@ in
 , metricsPort = +9998
 , selfId = Some "JUSPAY.BG.1"
 , nwAddress = Some "http://localhost:8015/v1/"  -- public address of a node
-, migrationPath = None Text
-, autoMigrate = common.autoMigrate
+, migrationPath = Some (env:BECKN_GATEWAY_MIGRATION_PATH as Text ? "dev/migrations/beckn-gateway")
+, autoMigrate = True
 , searchTimeout = None Integer
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = None common.LoggerConfig

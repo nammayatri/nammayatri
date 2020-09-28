@@ -61,8 +61,8 @@ in
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = None common.ExotelCfg
-, migrationPath = None Text
-, autoMigrate = common.autoMigrate
+, migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/beckn-transport")
+, autoMigrate = True
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.2"
 , traceFlag = common.TraceFlag.TRACE_ALL
