@@ -16,19 +16,19 @@ connect T.PostgresConfig {..} = PS.connect PS.ConnectInfo {..}
 
 migrateIfNeeded :: Maybe FilePath -> DBConfig -> Bool -> IO (Either String ())
 migrateIfNeeded mPath dbCfg autoMigrate =
-  if isJust mPath && autoMigrate
-    then fmap resultToEither $ do
-      let path = fromJust mPath
-      putStrLn @String $ "Running migrations (" <> path <> ") ..."
-      conn <- connect $ pgConfig dbCfg
-      PS.withTransaction conn $
-        runMigrations
-          True
-          conn
-          [ MigrationInitialization,
-            MigrationDirectory path
-          ]
-    else do
+  case mPath of
+    Just path | autoMigrate ->
+      fmap resultToEither $ do
+        putStrLn @String $ "Running migrations (" <> path <> ") ..."
+        conn <- connect $ pgConfig dbCfg
+        PS.withTransaction conn $
+          runMigrations
+            True
+            conn
+            [ MigrationInitialization,
+              MigrationDirectory path
+            ]
+    _ ->
       pure $ Right ()
   where
     resultToEither MigrationSuccess = Right ()
