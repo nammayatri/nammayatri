@@ -68,10 +68,13 @@ dependencies:
   - euler-hs
   - http-client
   - http-client-tls
+  - http-types
   - servant
   - servant-client
   - servant-server
   - text
+  - bytestring
+  - utf8-string
   - time
   - uuid
   - vault

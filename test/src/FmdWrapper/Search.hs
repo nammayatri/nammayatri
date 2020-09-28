@@ -171,6 +171,78 @@ dunzoDifferentCity =
     Error.Error "DOMAIN-ERROR" "FMD001" Nothing $
       Just "Apologies, our services are limited to serviceable areas with in the city only."
 
+incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
+incorrectApiKey clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "some-key" searchReq
+  verifyGatewayError 400 "INVALID_API_KEY" gatewayResponse
+
+incorrectAction :: ClientEnv -> CallbackData -> IO ()
+incorrectAction clientEnv _ = do
+  ctx <- buildContext "" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "INVALID_ACTION" gatewayResponse
+
+incorrectCountry :: ClientEnv -> CallbackData -> IO ()
+incorrectCountry clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_country = Just ""}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "INVALID_COUNTRY" gatewayResponse
+
+incorrectDomainVersion :: ClientEnv -> CallbackData -> IO ()
+incorrectDomainVersion clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_domain_version = Just "0.7.0"}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
+
+incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
+incorrectCoreVersion clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_core_version = Just "0.7.0"}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
+
+missingBapUri :: ClientEnv -> CallbackData -> IO ()
+missingBapUri clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" Nothing Nothing
+  let searchReq = buildFMDSearchReq ctx
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "INVALID_BAP_URI" gatewayResponse
+
+missingCountry :: ClientEnv -> CallbackData -> IO ()
+missingCountry clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_country = Nothing}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "INVALID_COUNTRY" gatewayResponse
+
+missingDomainVersion :: ClientEnv -> CallbackData -> IO ()
+missingDomainVersion clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_domain_version = Nothing}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
+
+missingCoreVersion :: ClientEnv -> CallbackData -> IO ()
+missingCoreVersion clientEnv _ = do
+  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
+
+  gatewayResponse <- runClient clientEnv $ client Search.searchAPI "fmd-test-app-key" searchReq
+  verifyGatewayError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
+
 spec :: Spec
 spec = do
   around withCallbackApp $ do
@@ -181,3 +253,12 @@ spec = do
       it "Dunzo: unserviceable location" $ dunzoUnserviceableLocation appClientEnv
       it "Dunzo: nearby location" $ dunzoNearByLocation appClientEnv
       it "Dunzo: different city" $ dunzoDifferentCity appClientEnv
+      it "Incorrect API key" $ incorrectApiKey appClientEnv
+      it "Incorrect action" $ incorrectAction appClientEnv
+      it "Incorrect country" $ incorrectCountry appClientEnv
+      it "Incorrect core version" $ incorrectCoreVersion appClientEnv
+      it "Incorrect domain version" $ incorrectDomainVersion appClientEnv
+      it "Missing BAP uri" $ missingBapUri appClientEnv
+      it "Missing country" $ missingCountry appClientEnv
+      it "Missing core version" $ missingCoreVersion appClientEnv
+      it "Missing domain version" $ missingDomainVersion appClientEnv
