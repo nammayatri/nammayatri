@@ -27,6 +27,8 @@ import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
   validateContext "search" (req ^. #context)
+  unless (isJust (req ^. #context . #_bap_uri)) $
+    throwJsonError400 "Search.search" "INVALID_BAP_URI"
   let search' = ET.client $ withClientTracing searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
