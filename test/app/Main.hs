@@ -32,10 +32,14 @@ main = do
   -- ... and run
   defaultMain =<< specs
   where
-    setConfigEnv app =
+    setConfigEnv app = do
       setEnv
         (T.unpack $ toEnvVar app <> "_CONFIG_PATH")
         (T.unpack $ "../dev/config/" <> app <> ".dhall")
+      setEnv
+        (T.unpack $ toEnvVar app <> "_MIGRATION_PATH")
+        (T.unpack $ "../dev/migrations/" <> app)
+
     toEnvVar = T.toUpper . T.replace "-" "_"
 
 specs :: IO TestTree
