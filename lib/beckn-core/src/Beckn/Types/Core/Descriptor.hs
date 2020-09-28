@@ -36,3 +36,24 @@ instance Example Descriptor where
         _audio = Nothing,
         _3d_render = Nothing
       }
+
+emptyDescriptor :: Descriptor
+emptyDescriptor =
+  Descriptor
+    { _name = Nothing,
+      _code = Nothing,
+      _symbol = Nothing,
+      _short_desc = Nothing,
+      _long_desc = Nothing,
+      _images = Nothing,
+      _audio = Nothing,
+      _3d_render = Nothing
+    }
+
+withName :: Text -> Descriptor
+withName name =
+  emptyDescriptor {_name = Just name}
+
+withCode :: Text -> Descriptor
+withCode code =
+  emptyDescriptor {_code = Just code}

@@ -28,3 +28,12 @@ instance Example State where
         _updated_by = Nothing,
         _update_metadata = Nothing
       }
+
+withDescriptor :: Descriptor -> State
+withDescriptor descriptor =
+  State
+    { _descriptor = descriptor,
+      _updated_at = Nothing,
+      _updated_by = Nothing,
+      _update_metadata = Nothing
+    }

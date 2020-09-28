@@ -78,3 +78,14 @@ instance Example Name where
         _honorific_prefix = Just "Mr",
         _honorific_suffix = Nothing
       }
+
+withGivenName :: Text -> Name
+withGivenName givenName =
+  Name
+    { _additional_name = Nothing,
+      _family_name = Nothing,
+      _given_name = givenName,
+      _call_sign = Nothing,
+      _honorific_prefix = Nothing,
+      _honorific_suffix = Nothing
+    }

@@ -147,11 +147,9 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
       Category
         { _id = show idx,
           _parent_category_id = Nothing,
-          _descriptor = Descriptor (Just (replaceUnderscores (show category))) n n n n n n n,
+          _descriptor = withName $ replaceUnderscores $ show category,
           _tags = []
         }
-
-    n = Nothing
 
 updateBppUri :: Context -> BaseUrl -> Context
 updateBppUri Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
@@ -161,7 +159,7 @@ mkSearchItem index QuoteRes {..} =
   Item
     { _id = show index,
       _parent_item_id = Nothing,
-      _descriptor = descriptor,
+      _descriptor = emptyDescriptor,
       _price = price,
       _model_id = Nothing,
       _category_id = Nothing,
@@ -184,8 +182,6 @@ mkSearchItem index QuoteRes {..} =
           _maximum_value = Nothing
         }
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
-    descriptor = Descriptor n n n n n n n n
-    n = Nothing
 
 mkQuote :: QuoteRes -> Flow Quotation
 mkQuote QuoteRes {..} = do
@@ -266,8 +262,8 @@ updateOrder orgName cTime order payee status = do
   let orderState = mapTaskStateToOrderState (status ^. #state)
   let cancellationReasonIfAny =
         case status ^. #state of
-          CANCELLED -> Just [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
-          RUNNER_CANCELLED -> Just [Option "1" (Descriptor (Just "Agent cancelled") n n n n n n n)]
+          CANCELLED -> Just [Option "1" (withName "User cancelled")]
+          RUNNER_CANCELLED -> Just [Option "1" (withName "Agent cancelled")]
           _ -> Nothing
   let payment = mkPayment payee <$> status ^. #estimated_price
   order & #_state ?~ orderState
@@ -295,7 +291,7 @@ updateOrder orgName cTime order payee status = do
 
     getAgent runner =
       Operator
-        { _name = Name n n (runner ^. #name) n n n,
+        { _name = withGivenName $ runner ^. #name,
           _image = n,
           _dob = n,
           _organization_name = Just orgName,
@@ -361,10 +357,8 @@ mkOnCancelReq context order =
 
 cancelOrder :: Order -> Order
 cancelOrder o =
-  o & #_state ?~ State (Descriptor n (Just "CANCELLED") n n n n n n) n n n
-    & #_cancellation_reasons ?~ [Option "1" (Descriptor (Just "User cancelled") n n n n n n n)]
-  where
-    n = Nothing
+  o & #_state ?~ withDescriptor (withCode "CANCELLED")
+    & #_cancellation_reasons ?~ [Option "1" (withName "User cancelled")]
 
 mkOnCancelErrReq :: Context -> Error -> OnCancelReq
 mkOnCancelErrReq context err =
@@ -517,9 +511,10 @@ mapTaskState s =
         DELIVERED -> Just Beckn.DROPPED_PACKAGE
         CANCELLED -> Nothing
         RUNNER_CANCELLED -> Nothing
-   in (\st -> State (Descriptor n (Just (replaceUnderscores (show st))) n n n n n n) n n n) <$> mstate
+   in toState <$> mstate
   where
-    n = Nothing
+    toState taskState =
+      withDescriptor $ withCode $ replaceUnderscores $ show taskState
 
 mapTaskStateToOrderState :: TaskState -> State
 mapTaskStateToOrderState s = do
@@ -534,9 +529,7 @@ mapTaskStateToOrderState s = do
         DELIVERED -> "COMPLETED"
         CANCELLED -> "CANCELLED"
         RUNNER_CANCELLED -> "CANCELLED"
-  State (Descriptor n (Just code) n n n n n n) n n n
-  where
-    n = Nothing
+  withDescriptor $ withCode code
 
 updateTaskEta :: Task -> Eta -> Flow Task
 updateTaskEta task eta = do
