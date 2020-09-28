@@ -5,6 +5,7 @@ module Mobility.AppCancelRide where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import Data.Text (isSuffixOf)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -43,7 +44,10 @@ spec = do
         caseReqResult `shouldSatisfy` isRight
         -- If we reach here, the 'Right' pattern match will always succeed
         let Right caseListRes = caseReqResult
-            caseList = filter (\caseRes -> (Case._shortId . TbeCase._case) caseRes == appCaseid) caseListRes
+            caseList =
+              filter
+                (\caseRes -> appCaseid `isSuffixOf` Case._shortId (TbeCase._case caseRes))
+                caseListRes
         return $ nonEmpty caseList
       let transporterCurrCaseid = (_getCaseId . Case._id . TbeCase._case) theCase
       -- Transporter accepts the ride

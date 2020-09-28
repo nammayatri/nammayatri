@@ -1,11 +1,12 @@
 -- The transporter now gets its own Beckn BPP endpoint
 UPDATE atlas_gateway.organization
   SET
+    id = 'a30193df-4f7c-440f-bada-4d46c396d7d0',
     name = '[G] Transporter #1',
     callback_url = 'http://localhost:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f',
     callback_api_key = 'bpp-1-key'
   WHERE
-    id = 'mobility-provider1';
+    id = 'mobility-provider';
 
 -- Add a second transporter
 INSERT INTO atlas_gateway.organization
