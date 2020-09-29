@@ -36,5 +36,5 @@ instance Example Package where
         _price = example,
         _weight = example,
         _dimensions = example,
-        _package_category_id = Nothing
+        _package_category_id = Just "1"
       }
