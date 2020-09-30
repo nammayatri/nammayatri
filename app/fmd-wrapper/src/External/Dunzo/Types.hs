@@ -135,11 +135,11 @@ newtype PackageContent = PackageContent {content :: Text}
 
 dzPackageContentList :: [PackageContent]
 dzPackageContentList =
-  [ "Documents or Books",
-    "Clothes or Accessories",
-    "Food or Flowers",
+  [ "Documents | Books",
+    "Clothes | Accessories",
+    "Food | Flowers",
     "Household Items",
-    "Sports and Other Equipment",
+    "Sports & Other Equipment",
     "Electronic Items"
   ]
 
