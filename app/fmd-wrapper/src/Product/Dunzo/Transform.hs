@@ -147,7 +147,7 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
       Category
         { _id = show idx,
           _parent_category_id = Nothing,
-          _descriptor = withName $ replaceUnderscores $ show category,
+          _descriptor = withName $ content category,
           _tags = []
         }
 
