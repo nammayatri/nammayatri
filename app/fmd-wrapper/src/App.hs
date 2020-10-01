@@ -34,7 +34,7 @@ runFMDWrapper isTest = do
           "/tmp/fmd-wrapper.log"
           $ loggerConfig appEnv
   let settings =
-        setOnExceptionResponse mockAppExceptionResponse $
+        setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings
   reqHeadersKey <- V.newKey
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
@@ -45,5 +45,5 @@ runFMDWrapper isTest = do
         _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
         runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
 
-mockAppExceptionResponse :: SomeException -> Response
-mockAppExceptionResponse = exceptionResponse
+fmdWrapperExceptionResponse :: SomeException -> Response
+fmdWrapperExceptionResponse = exceptionResponse
