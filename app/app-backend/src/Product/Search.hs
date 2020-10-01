@@ -88,41 +88,42 @@ searchCb _unit req = withFlowHandler $ do
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do
   let caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
-  bpp <-
-    Org.findOrganizationByCallbackUri (req ^. #context . #_bpp_uri) Org.PROVIDER
-      >>= fromMaybeM400 "INVALID_PROVIDER_URI"
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
-  personId <-
-    maybe
-      (L.throwException $ err500 {errBody = "No person linked to case"})
-      (return . PersonId)
-      (Case._requestor case_)
-  case (catalog ^. #_categories, catalog ^. #_items) of
-    ([], _) -> L.throwException $ err400 {errBody = "missing provider"}
-    (category : _, []) -> do
-      let provider = fromBeckn category
-      declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
-      MPI.create declinedPI
-      return ()
-    (category : _, items) -> do
-      when
-        (case_ ^. #_status == Case.CLOSED)
-        (L.throwException $ err400 {errBody = "Case expired"})
-      let provider = fromBeckn category
-      products <- traverse (mkProduct case_) items
-      traverse_ Products.create products
-      productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
-      traverse_ MPI.create productInstances
-      extendCaseExpiry case_
-      Notify.notifyOnSearchCb personId case_ productInstances
-  piList <- MPI.findAllByCaseId (case_ ^. #_id)
-  let piStatusCount = Map.fromListWith (+) $ zip (PI._status <$> piList) $ repeat (1 :: Integer)
-      accepted = Map.lookup PI.INSTOCK piStatusCount
-      declined = Map.lookup PI.OUTOFSTOCK piStatusCount
-      mCaseInfo :: (Maybe API.CaseInfo) = decodeFromText =<< (case_ ^. #_info)
-  whenJust mCaseInfo $ \info -> do
-    let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
-    Case.updateInfo (case_ ^. #_id) (encodeToText uInfo)
+  when (case_ ^. #_status /= Case.CLOSED) $ do
+    bpp <-
+      Org.findOrganizationByCallbackUri (req ^. #context . #_bpp_uri) Org.PROVIDER
+        >>= fromMaybeM400 "INVALID_PROVIDER_URI"
+    personId <-
+      maybe
+        (L.throwException $ err500 {errBody = "No person linked to case"})
+        (return . PersonId)
+        (Case._requestor case_)
+    case (catalog ^. #_categories, catalog ^. #_items) of
+      ([], _) -> L.throwException $ err400 {errBody = "missing provider"}
+      (category : _, []) -> do
+        let provider = fromBeckn category
+        declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
+        MPI.create declinedPI
+        return ()
+      (category : _, items) -> do
+        when
+          (case_ ^. #_status == Case.CLOSED)
+          (L.throwException $ err400 {errBody = "Case expired"})
+        let provider = fromBeckn category
+        products <- traverse (mkProduct case_) items
+        traverse_ Products.create products
+        productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
+        traverse_ MPI.create productInstances
+        extendCaseExpiry case_
+        Notify.notifyOnSearchCb personId case_ productInstances
+    piList <- MPI.findAllByCaseId (case_ ^. #_id)
+    let piStatusCount = Map.fromListWith (+) $ zip (PI._status <$> piList) $ repeat (1 :: Integer)
+        accepted = Map.lookup PI.INSTOCK piStatusCount
+        declined = Map.lookup PI.OUTOFSTOCK piStatusCount
+        mCaseInfo :: (Maybe API.CaseInfo) = decodeFromText =<< (case_ ^. #_info)
+    whenJust mCaseInfo $ \info -> do
+      let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
+      Case.updateInfo (case_ ^. #_id) (encodeToText uInfo)
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     extendCaseExpiry :: Case.Case -> Flow ()

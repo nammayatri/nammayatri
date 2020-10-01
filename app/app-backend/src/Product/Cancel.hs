@@ -6,7 +6,6 @@ module Product.Cancel (cancel, onCancel) where
 import App.Types
 import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
-import Beckn.Types.Core.Context
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -27,7 +26,7 @@ cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
 cancel person req = withFlowHandler $ do
   let entityType = req ^. #message . #entityType
   case entityType of
-    Cancel.CASE -> cancelCase person req
+    Cancel.CASE -> searchCancel person req
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
 cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
@@ -57,57 +56,20 @@ cancelProductInstance person req = do
       let txnId = req ^. #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
-cancelCase :: Person.Person -> CancelReq -> Flow CancelRes
-cancelCase person req = do
+searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
+searchCancel person req = do
   let caseId = req ^. #message . #entityId
+  let txnId = req ^. #transaction_id
   case_ <- MC.findIdByPerson person (CaseId caseId)
-  currTime <- L.runIO getCurrentTime
   if isCaseCancellable case_
     then do
-      let txnId = req ^. #transaction_id
-          context = mkContext "cancel" txnId currTime Nothing Nothing
-      productInstances <- filter (\p -> PI._status p /= PI.OUTOFSTOCK) <$> MPI.findAllByCaseId (CaseId caseId)
       Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
-      if null productInstances
-        then do
-          -- TODO: needs fix, send cancel to all BPPs
-          eres <- callCancelApiByCase context case_
-          case eres of
-            Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
-            Right _ -> do
-              MC.updateStatus (CaseId caseId) Case.CLOSED
-              mkAckResponse txnId "cancel"
-        else do
-          let cancelPIs = filter isProductInstanceCancellable productInstances
-          eres <- traverse (callCancelApi context) cancelPIs
-          case sequence eres of
-            Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
-            Right _ -> mkAckResponse txnId "cancel"
+      piList <- MPI.findAllByCaseId (case_ ^. #_id)
+      traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> piList)
+      MC.updateStatus (case_ ^. #_id) Case.CLOSED
+      mkAckResponse txnId "cancel"
     else do
-      let txnId = req ^. #transaction_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL case in " <> show (case_ ^. #_status) <> " status")
-  where
-    callCancelApi ::
-      Context ->
-      PI.ProductInstance ->
-      Flow (Either Text ())
-    callCancelApi context prodInst = do
-      let prodInstId = _getProductInstanceId $ prodInst ^. #_id
-      let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
-      organization <-
-        OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
-          >>= fromMaybeM500 "INVALID_PROVIDER_ID"
-      baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-      Gateway.cancel baseUrl organization (API.CancelReq context cancelReqMessage)
-    callCancelApiByCase context cs = do
-      let caseId = _getCaseId $ cs ^. #_id
-      let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder caseId (Just "CASE"))
-      orgId <- cs ^. #_provider & fromMaybeM500 "MISSING_PROVIDER_ID"
-      organization <-
-        OQ.findOrganizationById (OrganizationId orgId)
-          >>= fromMaybeM500 "INVALID_PROVIDER_ID"
-      baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-      Gateway.cancel baseUrl organization (API.CancelReq context cancelReqMessage)
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =
