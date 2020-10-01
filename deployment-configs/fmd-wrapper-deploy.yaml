@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fmd-wrapper-$DEPLOY_VARIANT
+  name: beckn-fmd-wrapper-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: fmd-wrapper-$DEPLOY_VARIANT
+      app: beckn-fmd-wrapper-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: fmd-wrapper-$DEPLOY_VARIANT
+        app: beckn-fmd-wrapper-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -42,7 +42,7 @@ spec:
             - name: FMD_WRAPPER_CONFIG_PATH
               value: /etc/beckn/config/fmd-wrapper.dhall
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
-          name: fmd-wrapper-$DEPLOY_VARIANT
+          name: beckn-fmd-wrapper-$DEPLOY_VARIANT
           ports:
             - containerPort: 8018
               name: transport-http
@@ -93,7 +93,7 @@ spec:
             - --binaryPath
             - /usr/local/bin/envoy
             - --serviceCluster
-            - fmd-wrapper-$DEPLOY_VARIANT.$(POD_NAMESPACE)
+            - beckn-fmd-wrapper-$DEPLOY_VARIANT.$(POD_NAMESPACE)
             - --drainDuration
             - 45s
             - --parentShutdownDuration
@@ -146,7 +146,7 @@ spec:
                 {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
             - name: ISTIO_METAJSON_LABELS
               value: |
-                {"app":"fmd-wrapper-$DEPLOY_VARIANT","version":"latest"}
+                {"app":"beckn-fmd-wrapper-$DEPLOY_VARIANT","version":"latest"}
           image: docker.io/istio/proxyv2:1.2.2
           imagePullPolicy: IfNotPresent
           lifecycle:
@@ -255,13 +255,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: fmd-wrapper-$DEPLOY_VARIANT
+  name: beckn-fmd-wrapper-$DEPLOY_VARIANT
   labels:
-    app: fmd-wrapper-$DEPLOY_VARIANT
+    app: beckn-fmd-wrapper-$DEPLOY_VARIANT
 spec:
   ports:
     - port: 8018
       targetPort: 8018
       name: transport-http
   selector:
-    app: fmd-wrapper-$DEPLOY_VARIANT
+    app: beckn-fmd-wrapper-$DEPLOY_VARIANT

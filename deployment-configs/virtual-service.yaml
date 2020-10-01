@@ -84,7 +84,7 @@ spec:
         uri: /
       route:
         - destination:
-            host: fmd-wrapper-sandbox
+            host: beckn-fmd-wrapper-sandbox
             port:
               number: 8018
       timeout: 40s
@@ -116,7 +116,7 @@ spec:
         uri: /
       route:
         - destination:
-            host: mock-app-backend-master
+            host: beckn-mock-app-backend-master
             port:
               number: 8016
       timeout: 40s
@@ -127,7 +127,7 @@ spec:
         uri: /
       route:
         - destination:
-            host: mock-provider-backend-master
+            host: beckn-mock-provider-backend-master
             port:
               number: 8017
       timeout: 40s
@@ -160,7 +160,7 @@ spec:
         uri: /
       route:
         - destination:
-            host: fmd-wrapper-master
+            host: beckn-fmd-wrapper-master
             port:
               number: 8018
       timeout: 40s
