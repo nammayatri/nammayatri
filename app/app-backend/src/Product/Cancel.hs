@@ -33,17 +33,18 @@ cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
   prodInst <- MPI.findById (ProductInstanceId prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
-  _ <- MC.findIdByPerson person (prodInst ^. #_caseId)
+  cs <- MC.findIdByPerson person (prodInst ^. #_caseId)
   if isProductInstanceCancellable prodInst
-    then sendCancelReq prodInst
-    else errResp (show (prodInst ^. #_status))
+    then sendCancelReq prodInst cs
+    else errResp (show (prodInst ^. #_status)) cs
   where
-    sendCancelReq prodInst = do
-      let txnId = req ^. #transaction_id
+    sendCancelReq prodInst cs = do
+      let txnId = _getCaseId $ cs ^. #_id
       let prodInstId = _getProductInstanceId $ prodInst ^. #_id
       currTime <- L.runIO getCurrentTime
+      msgId <- L.generateGUID
       let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
-          context = mkContext "cancel" txnId currTime Nothing Nothing
+          context = mkContext "cancel" txnId msgId currTime Nothing Nothing
       organization <-
         OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
           >>= fromMaybeM500 "INVALID_PROVIDER_ID"
@@ -52,14 +53,14 @@ cancelProductInstance person req = do
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
-    errResp pStatus = do
-      let txnId = req ^. #transaction_id
+    errResp pStatus cs = do
+      let txnId = _getCaseId $ cs ^. #_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
 searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
 searchCancel person req = do
   let caseId = req ^. #message . #entityId
-  let txnId = req ^. #transaction_id
+  let txnId = caseId
   case_ <- MC.findIdByPerson person (CaseId caseId)
   if isCaseCancellable case_
     then do

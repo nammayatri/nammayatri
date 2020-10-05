@@ -24,14 +24,17 @@ import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
-track _ req = withFlowHandler $ do
-  let context = req ^. #context
-      prodInstId = req ^. #message . #order_id
-  prdInst <- MPI.findById $ ProductInstanceId prodInstId
+track person req = withFlowHandler $ do
+  let prodInstId = req ^. #message . #order_id
+  prodInst <- MPI.findById $ ProductInstanceId prodInstId
+  case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
+  msgId <- L.generateGUID
+  let txnId = _getCaseId $ case_ ^. #_id
+  let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
   organization <-
-    OQ.findOrganizationById (OrganizationId $ prdInst ^. #_organizationId)
+    OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
-  case decodeFromText =<< (prdInst ^. #_info) of
+  case decodeFromText =<< (prodInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
     Just (info :: ProductInfo) ->
       case ProductInfo._tracker info of
@@ -39,7 +42,7 @@ track _ req = withFlowHandler $ do
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
           gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-          Gateway.track gatewayUrl organization $ req & ((#message . #order_id) .~ gTripId)
+          Gateway.track gatewayUrl organization $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
 
 trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb req = withFlowHandler $ do

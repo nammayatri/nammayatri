@@ -45,7 +45,8 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   QCase.create orderCase_
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   MPI.create orderProductInstance
-  context <- buildContext "confirm" caseId
+  msgId <- L.generateGUID
+  context <- buildContext "confirm" caseId msgId
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   order <- mkOrder productInstance
   Gateway.confirm baseUrl organization $ ConfirmReq context $ ConfirmOrder order

@@ -25,7 +25,8 @@ status person StatusReq {..} = withFlowHandler $ do
   prodInst <- QPI.findById (ProductInstanceId productInstanceId)
   case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
   let caseId = _getCaseId $ case_ ^. #_id
-  context <- buildContext "status" caseId
+  msgId <- L.generateGUID
+  context <- buildContext "status" caseId msgId
   organization <-
     OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"

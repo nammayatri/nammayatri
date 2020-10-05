@@ -6,8 +6,8 @@ import Beckn.Types.Core.Domain
 import Beckn.Utils.Common (getCurrTime)
 import EulerHS.Prelude
 
-buildContext :: Text -> Text -> Flow Context
-buildContext action tId = do
+buildContext :: Text -> Text -> Text -> Flow Context
+buildContext action txnId msgId = do
   now <- getCurrTime
   return $
     Context
@@ -17,8 +17,8 @@ buildContext action tId = do
         _action = action,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.8.2",
-        _transaction_id = tId,
-        _message_id = tId,
+        _transaction_id = txnId,
+        _message_id = msgId,
         _bap_uri = Nothing,
         _bpp_uri = Nothing,
         _timestamp = now
