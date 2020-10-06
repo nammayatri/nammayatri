@@ -44,8 +44,7 @@ data DelhiveryConfig = DelhiveryConfig
   { dlUrl :: BaseUrl,
     dlTokenUrl :: BaseUrl,
     dlBPId :: Text,
-    dzBPNwAddress :: BaseUrl,
-    paymentPolicy :: Text,
-    payee :: Text
+    dlBPNwAddress :: BaseUrl,
+    dlPayee :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, FromDhall)

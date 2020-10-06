@@ -43,8 +43,7 @@ let delhiveryConfig =
   , dlTokenUrl = "https://key-cloak.delhivery.com"
   , dlBPId = "fmd-wrapper.delhivery"
   , dlBPNwAddress = "http://localhost:8018/v1"
-  , paymentPolicy = sec.paymentPolicy
-  , payee = sec.payee
+  , dlPayee = sec.dlPayee
   }
 
 in
