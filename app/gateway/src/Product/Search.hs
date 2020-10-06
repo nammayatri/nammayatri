@@ -16,12 +16,14 @@ import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, withClientTracing)
 import Data.Aeson (encode)
+import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
+import Servant.Client (showBaseUrl)
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
 
 search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
@@ -44,9 +46,11 @@ search org req = withFlowHandler $ do
         void $ BA.incrSearchReqCount messageId
         let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
         eRes <- callAPIWithTrail providerUrl (search' providerApiKey req) "search"
-        L.logDebug @Text "gateway" $
-          "request_transaction_id: " <> messageId
-            <> ", search: req: "
+        L.logDebug @Text "gateway_transaction" $
+          messageId
+            <> ", search_req: "
+            <> T.pack (showBaseUrl providerUrl)
+            <> ", req: "
             <> decodeUtf8 (encode req)
             <> ", resp: "
             <> show eRes
@@ -68,7 +72,7 @@ search org req = withFlowHandler $ do
         checkEnd True bgSession
 
 searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb _ req@CallbackReq {context} = withFlowHandler $ do
+searchCb provider req@CallbackReq {context} = withFlowHandler $ do
   validateContext "on_search" context
   let onSearch = ET.client $ withClientTracing onSearchAPI
       messageId = req ^. #context . #_transaction_id
@@ -77,6 +81,15 @@ searchCb _ req@CallbackReq {context} = withFlowHandler $ do
   let baseUrl = bgSession ^. #cbUrl
   let cbApiKey = bgSession ^. #cbApiKey
   eRes <- callAPIWithTrail baseUrl (onSearch cbApiKey req) "on_search"
+  providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
+  L.logDebug @Text "gateway_transaction" $
+    messageId
+      <> ", search_cb: "
+      <> T.pack (showBaseUrl providerUrl)
+      <> ", req: "
+      <> decodeUtf8 (encode req)
+      <> ", resp: "
+      <> show eRes
   checkEnd False bgSession
   AckResponse {} <- checkClientError context eRes
   mkOkResponse (req ^. #context)
@@ -123,9 +136,11 @@ sendSearchEndCb bgSession = do
   let baseUrl = bgSession ^. #cbUrl
   let cbApiKey = bgSession ^. #cbApiKey
   eRes <- callAPIWithTrail baseUrl (onSearchEnd cbApiKey onSearchEndReq) "on_search"
-  L.logDebug @Text "gateway" $
-    "request_transaction_id: " <> messageId
-      <> ", on_search/end: req: "
+  L.logDebug @Text "gateway_transaction" $
+    messageId
+      <> ", on_search/end: "
+      <> T.pack (showBaseUrl baseUrl)
+      <> ", req: "
       <> decodeUtf8 (encode onSearchEndReq)
       <> ", resp: "
       <> show eRes
