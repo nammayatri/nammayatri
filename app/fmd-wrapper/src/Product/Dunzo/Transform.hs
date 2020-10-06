@@ -54,6 +54,9 @@ import Types.Error
 import Types.Wrapper
 import Utils.Common (fromMaybe400Log, getClientConfig)
 
+dunzoServiceCategoryId :: Text
+dunzoServiceCategoryId = "1"
+
 getDzBAPCreds :: Organization -> Flow DzBAConfig
 getDzBAPCreds = getClientConfig
 
@@ -134,7 +137,14 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
     catalog cid now =
       Catalog
         { _id = cid,
-          _categories = [],
+          _categories =
+            [ Category
+                { _id = dunzoServiceCategoryId,
+                  _parent_category_id = Nothing,
+                  _descriptor = withName "single pickup single drop",
+                  _tags = []
+                }
+            ],
           _brands = [],
           _models = [],
           _ttl = now,
@@ -162,7 +172,7 @@ mkSearchItem index QuoteRes {..} =
       _descriptor = emptyDescriptor,
       _price = price,
       _model_id = Nothing,
-      _category_id = Nothing,
+      _category_id = Just dunzoServiceCategoryId,
       _package_category_id = Just $ show index,
       _brand_id = Nothing,
       _promotional = False,
