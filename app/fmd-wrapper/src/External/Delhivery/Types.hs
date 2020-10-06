@@ -25,3 +25,40 @@ data TokenRes = TokenRes
     scope :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+data CreateOrderReq = CreateOrderReq
+  { inv :: Maybe Integer,
+    itm :: [ItemDetails],
+    oid :: Maybe Text,
+    cod :: Maybe Integer,
+    src :: LocationDetails,
+    ret :: LocationDetails,
+    tar :: LocationDetails
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+data ItemDetails = ItemDetails
+  { prd :: Text,
+    qty :: Integer,
+    inv :: Maybe Integer,
+    cod :: Maybe Integer
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+data LocationDetails = LocationDetails
+  { pho :: Text,
+    nam :: Text,
+    eml :: Maybe Text,
+    det :: Address
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+data Address = Address
+  { add :: Text,
+    cty :: Text,
+    reg :: Text,
+    crd :: Text,
+    cnt :: Maybe Text,
+    zip :: Maybe Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
