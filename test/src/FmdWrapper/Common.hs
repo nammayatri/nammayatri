@@ -1,18 +1,20 @@
+{-# LANGUAGE TypeApplications #-}
+
 module FmdWrapper.Common where
 
 import Beckn.Types.Common hiding (_status)
 import Beckn.Types.Core.Ack
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.UTF8 as B
 import Data.Text
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
+import Network.HTTP.Types.Status
 import Network.Wai.Handler.Warp
 import Servant.Client
 import Test.Hspec hiding (context)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.UTF8 as B
-import qualified Data.ByteString.Lazy as BL
-import Network.HTTP.Types.Status
 
 data CallbackResult a = CallbackResult
   { apiKey :: Maybe Text,
@@ -37,12 +39,12 @@ verifyApiKey apiKey = apiKey `shouldBe` Just "gateway-key"
 
 verifyGatewayError :: (Show a) => Int -> B.ByteString -> Either ClientError a -> IO ()
 verifyGatewayError expectedCode expectedMessage gatewayResponse = do
-  putStrLn @String $ show gatewayResponse
+  putStrLn @String $ show gatewayResponse
   case gatewayResponse of
     Left (FailureResponse _ response) -> do
       statusCode (responseStatusCode response) `shouldBe` expectedCode
-      BL.toStrict (responseBody response) `shouldSatisfy` 
-        (expectedMessage `B.isInfixOf`)
+      BL.toStrict (responseBody response)
+        `shouldSatisfy` (expectedMessage `B.isInfixOf`)
     _ -> expectationFailure ("Expected " <> B.toString expectedMessage <> " error.")
 
 assertAck :: Either ClientError AckResponse -> IO ()
