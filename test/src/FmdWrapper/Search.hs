@@ -83,10 +83,20 @@ verifyDunzoCatalog onSearchServices = do
     maybeStringNumbers = map Just stringNumbers
     numbers = [1 ..] :: [Int]
 
-verifyContexts :: Text -> [Search.OnSearchReq] -> IO ()
-verifyContexts transactionId searchResults =
-  forM_ searchResults \searchResult ->
-    verifyCallbackContext True transactionId $ searchResult ^. #context
+processResults :: Text -> CallbackData -> IO [Search.OnSearchReq]
+processResults transactionId callbackData = do
+  callbackResults <- readTVarIO (onSearchTVar callbackData)
+  let apiKeys = map apiKey callbackResults
+  let searchResults = map result callbackResults
+
+  traverse_ verifyApiKey apiKeys
+  verifyContexts searchResults
+
+  return searchResults
+  where
+    verifyContexts searchResults =
+      forM_ searchResults \searchResult ->
+        verifyCallbackContext True transactionId $ searchResult ^. #context
 
 dunzoLocationError ::
   Location.GPS ->
@@ -108,12 +118,7 @@ dunzoLocationError pickupGps dropGps expectedError clientEnv callbackData =
     assertAck gatewayResponse
 
     _ <- waitForCallback (onSearchEndMVar callbackData)
-    callbackResults <- readTVarIO (onSearchTVar callbackData)
-    let apiKeys = map apiKey callbackResults
-    let searchResults = map result callbackResults
-
-    traverse_ verifyApiKey apiKeys
-    verifyContexts transactionId searchResults
+    searchResults <- processResults transactionId callbackData
 
     let errorResults = filter isLeft $ map contents searchResults
     case errorResults of
@@ -141,12 +146,7 @@ successfulSearch clientEnv callbackData =
         verifyCallbackContext False transactionId $ result res ^. #context
       Nothing -> expectationFailure "No search end callback received."
 
-    callbackResults <- readTVarIO (onSearchTVar callbackData)
-    let apiKeys = map apiKey callbackResults
-    let searchResults = map result callbackResults
-
-    traverse_ verifyApiKey apiKeys
-    verifyContexts transactionId searchResults
+    searchResults <- processResults transactionId callbackData
 
     let dunzoResults = filter isDunzoResult searchResults
 
