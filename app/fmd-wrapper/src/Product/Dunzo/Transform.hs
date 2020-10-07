@@ -575,5 +575,5 @@ mkPayment payee estimated_price =
           _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
         }
 
-calcEta :: UTCTime -> Integer -> UTCTime
-calcEta now diffInMinutes = addUTCTime (fromInteger (diffInMinutes * 60)) now
+calcEta :: UTCTime -> Float -> UTCTime
+calcEta now diffInMinutes = addUTCTime (fromRational $ toRational (diffInMinutes * 60.0)) now

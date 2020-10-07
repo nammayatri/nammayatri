@@ -32,6 +32,7 @@ let dunzoConfig =
   , dzBPId = "fmd-wrapper.dunzo"
   , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/dev/fmd/v1/"
   , payee = sec.payee
+  , dzTestMode = True
   }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"

@@ -269,7 +269,7 @@ confirm org req = do
 
     createTaskAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} req' = do
       token <- fetchToken dzBACreds conf
-      API.createTask dzClientId token dzUrl req'
+      API.createTask dzClientId token dzUrl dzTestMode req'
 
     sendCb case_ orderDetails context cbApiKey cbUrl payeeDetails res = do
       case res of
@@ -402,7 +402,7 @@ cancel org req = do
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
       token <- fetchToken dzBACreds conf
       -- TODO get cancellation reason
-      API.cancelTask dzClientId token dzUrl taskId ""
+      API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
     updateCase :: CaseId -> OrderDetails -> Case -> Flow ()
     updateCase caseId orderDetails case_ = do
@@ -452,7 +452,7 @@ getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
 getStatus :: DzBAConfig -> DunzoConfig -> TaskId -> Flow (Either ClientError TaskStatus)
 getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
   token <- fetchToken dzBACreds conf
-  API.taskStatus dzClientId token dzUrl taskId
+  API.taskStatus dzClientId token dzUrl dzTestMode taskId
 
 fetchToken :: DzBAConfig -> DunzoConfig -> Flow Token
 fetchToken DzBAConfig {..} DunzoConfig {..} = do

@@ -89,8 +89,8 @@ data QuoteRes = QuoteRes
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data Eta = Eta
-  { pickup :: Maybe Integer, -- minutes
-    dropoff :: Integer -- minutes
+  { pickup :: Maybe Float, -- minutes
+    dropoff :: Float -- minutes
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 

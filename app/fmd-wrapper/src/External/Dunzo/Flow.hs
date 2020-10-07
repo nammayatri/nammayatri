@@ -58,20 +58,22 @@ type CreateTaskAPI =
   "api" :> "v1" :> "tasks"
     :> Header "Authorization" Token
     :> Header "client-id" ClientId
+    :> QueryParam "test" Bool
     :> ReqBody '[JSON] CreateTaskReq
     :> Post '[JSON] CreateTaskRes
 
 createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
-createTask :: ClientId -> Token -> BaseUrl -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
-createTask clientId token url req = L.callAPI url task
+createTask :: ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
+createTask clientId token url isTestMode req = L.callAPI url task
   where
     task =
       T.client
         createTaskAPI
         (Just token)
         (Just clientId)
+        (setTestQueryParam isTestMode)
         req
 
 type TaskStatusAPI =
@@ -80,13 +82,14 @@ type TaskStatusAPI =
     :> "status"
     :> Header "Authorization" Token
     :> Header "client-id" ClientId
+    :> QueryParam "test" Bool
     :> Get '[JSON] TaskStatus
 
 taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
-taskStatus :: ClientId -> Token -> BaseUrl -> TaskId -> FlowR e (Either ClientError TaskStatus)
-taskStatus clientId token url taskId = L.callAPI url status
+taskStatus :: ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
+taskStatus clientId token url isTestMode taskId = L.callAPI url status
   where
     status =
       T.client
@@ -94,6 +97,7 @@ taskStatus clientId token url taskId = L.callAPI url status
         taskId
         (Just token)
         (Just clientId)
+        (setTestQueryParam isTestMode)
 
 type CancelTaskAPI =
   "api" :> "v1" :> "tasks"
@@ -101,14 +105,15 @@ type CancelTaskAPI =
     :> "_cancel"
     :> Header "Authorization" Token
     :> Header "client-id" ClientId
+    :> QueryParam "test" Bool
     :> ReqBody '[JSON] CancelTaskReq
     :> Post '[JSON] NoContent
 
 cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
-cancelTask :: ClientId -> Token -> BaseUrl -> TaskId -> Text -> FlowR e (Either ClientError ())
-cancelTask clientId token url taskId cancellationReason = L.callAPI url cancel
+cancelTask :: ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
+cancelTask clientId token url isTestMode taskId cancellationReason = L.callAPI url cancel
   where
     cancel =
       void $
@@ -117,4 +122,8 @@ cancelTask clientId token url taskId cancellationReason = L.callAPI url cancel
           taskId
           (Just token)
           (Just clientId)
+          (setTestQueryParam isTestMode)
           (CancelTaskReq cancellationReason)
+
+setTestQueryParam :: Bool -> Maybe Bool
+setTestQueryParam isTestMode = if isTestMode then Just True else Nothing
