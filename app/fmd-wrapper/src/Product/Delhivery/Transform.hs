@@ -12,18 +12,24 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Error as CoreErr
-import Beckn.Types.Core.Item
+import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Location as CoreLoc
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
+import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.Tag
 import Beckn.Types.FMD.API.Search
+import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.Catalog
+import qualified Beckn.Types.FMD.Item as FMD
+import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (fromMaybeM500, getCurrTime, headMaybe, throwError400)
+import Control.Lens ((?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
+import Data.Time
 import EulerHS.Prelude hiding (drop)
 import External.Delhivery.Types
 import Types.Wrapper
@@ -85,9 +91,80 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
           _package_categories = []
         }
 
-mkItemDetails :: Item -> ItemDetails
+mkOnSearchErrReq :: Context -> Error -> OnSearchReq
+mkOnSearchErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_search",
+      contents = Left errResp
+    }
+  where
+    errResp =
+      CoreErr.Error
+        { _type = "DOMAIN-ERROR",
+          _code = "",
+          _path = Nothing,
+          _message = Just $ err ^. #message
+        }
+
+mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
+mkQuoteReqFromSelect SelectReq {..} = do
+  let order = message ^. #order
+      task = head $ order ^. #_tasks
+  pickupDet <- mkLocationDetails (task ^. #_pickup)
+  dropDet <- mkLocationDetails (task ^. #_drop)
+  return $
+    QuoteReq
+      { inv = Nothing,
+        itm = mkItemDetails <$> (order ^. #_items),
+        oid = order ^. #_id,
+        cod = Nothing,
+        src = pickupDet,
+        tar = dropDet
+      }
+
+mkOnSelectOrder :: Order -> QuoteRes -> Flow SelectOrder
+mkOnSelectOrder order res@QuoteRes {..} = do
+  quote <- mkQuote res
+  task <- updateTaskEta (head $ order ^. #_tasks) eta
+  let order' =
+        order & #_tasks .~ [task]
+          & #_quotation ?~ quote
+  return $ SelectOrder order'
+
+mkOnSelectReq :: Context -> SelectOrder -> OnSelectReq
+mkOnSelectReq context msg =
+  CallbackReq
+    { context = context & #_action .~ "on_select",
+      contents = Right msg
+    }
+
+updateTaskEta :: Task -> Integer -> Flow Task
+updateTaskEta task eta = do
+  now <- getCurrTime
+  let pickup = task ^. #_pickup
+  let pickupEta = addUTCTime (fromInteger eta) now
+  let pickup' = pickup & #_time ?~ pickupEta
+  return $
+    task & #_pickup .~ pickup'
+
+mkOnSelectErrReq :: Context -> Error -> OnSelectReq
+mkOnSelectErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_search",
+      contents = Left errResp
+    }
+  where
+    errResp =
+      CoreErr.Error
+        { _type = "DOMAIN-ERROR",
+          _code = "",
+          _path = Nothing,
+          _message = Just $ err ^. #message
+        }
+
+mkItemDetails :: FMD.Item -> ItemDetails
 mkItemDetails item =
-  let prdDesc = item ^. #_descriptor . #_short_desc . _Just
+  let prdDesc = fromMaybe "" (item ^? #_descriptor . _Just . #_short_desc . _Just)
    in ItemDetails
         { prd = prdDesc,
           qty = 1,
@@ -135,9 +212,9 @@ mkAddress location = do
         zip = Just $ CoreAddr._area_code address
       }
 
-mkSearchItem :: Text -> QuoteRes -> Item
+mkSearchItem :: Text -> QuoteRes -> Core.Item
 mkSearchItem itemId QuoteRes {..} =
-  Item
+  Core.Item
     { _id = itemId,
       _parent_item_id = Nothing,
       _descriptor = emptyDescriptor,
@@ -164,19 +241,22 @@ mkSearchItem itemId QuoteRes {..} =
         }
     value = convertAmountToDecimalValue (Amount $ toRational pricing)
 
-mkOnSearchErrReq :: Context -> Error -> OnSearchReq
-mkOnSearchErrReq context err =
-  CallbackReq
-    { context = context & #_action .~ "on_search",
-      contents = Left errResp
-    }
+mkQuote :: QuoteRes -> Flow Quotation
+mkQuote QuoteRes {..} = do
+  qid <- generateGUID
+  return $ Quotation {_id = qid, _price = Just price, _ttl = Nothing, _breakup = Nothing}
   where
-    errResp =
-      CoreErr.Error
-        { _type = "DOMAIN-ERROR",
-          _code = "",
-          _path = Nothing,
-          _message = Just $ err ^. #message
+    price = mkPrice pricing
+    mkPrice estimatedPrice =
+      Price
+        { _currency = "INR",
+          _value = Nothing,
+          _estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
+          _computed_value = Nothing,
+          _listed_value = Nothing,
+          _offered_value = Nothing,
+          _minimum_value = Nothing,
+          _maximum_value = Nothing
         }
 
 updateBppUri :: Context -> BaseUrl -> Context
