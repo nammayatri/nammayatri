@@ -62,3 +62,40 @@ data Address = Address
     zip :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype Error = Error
+  { message :: Text
+  }
+  deriving (Show, Generic)
+
+errMessageOptions :: Options
+errMessageOptions =
+  defaultOptions
+    { fieldLabelModifier =
+        let f "message" = "Message"
+            f other = other
+         in f
+    }
+
+instance FromJSON Error where
+  parseJSON = genericParseJSON errMessageOptions
+
+instance ToJSON Error where
+  toJSON = genericToJSON errMessageOptions
+
+data QuoteReq = QuoteReq
+  { inv :: Maybe Integer,
+    itm :: [ItemDetails],
+    oid :: Maybe Text,
+    cod :: Maybe Integer,
+    src :: LocationDetails,
+    tar :: LocationDetails
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+data QuoteRes = QuoteRes
+  { eta :: Integer,
+    pricing :: Float,
+    success :: Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)

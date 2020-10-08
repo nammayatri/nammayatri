@@ -7,8 +7,9 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import External.Delhivery.Types
-import Servant (FormUrlEncoded, JSON, Post, ReqBody, (:>))
+import Servant (FormUrlEncoded, Header, JSON, Post, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)
+import Types.Common
 
 type TokenAPI =
   "auth" :> "realms" :> "HLD-Test" :> "protocol" :> "openid-connect" :> "token"
@@ -22,3 +23,17 @@ getToken :: BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
 getToken url req = L.callAPI url tokenReq
   where
     tokenReq = T.client tokenAPI req
+
+type QuoteAPI =
+  "api" :> "mileage"
+    :> Header "Authorization" Token
+    :> ReqBody '[JSON] QuoteReq
+    :> Post '[JSON] QuoteRes
+
+quoteAPI :: Proxy QuoteAPI
+quoteAPI = Proxy
+
+getQuote :: Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
+getQuote token url req = L.callAPI url quoteReq
+  where
+    quoteReq = T.client quoteAPI (Just token) req

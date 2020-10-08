@@ -5,7 +5,7 @@
 module Types.Common where
 
 import EulerHS.Prelude
-import Servant (FromHttpApiData, ToHttpApiData)
+import Servant
 
 newtype ClientId = ClientId {getClientId :: Text}
   deriving (Generic, Show)
