@@ -23,7 +23,7 @@ let smsConfig =
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
-  , useFakeSms = None Natural
+  , useFakeSms = Some 7891
   }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
