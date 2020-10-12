@@ -20,7 +20,7 @@ cabal.sandbox.config
 *.aux
 *.hp
 *.eventlog
-.stack-work/
+.vscode/
 cabal.project.local
 cabal.project.local~
 .HTF/
