@@ -13,37 +13,40 @@ data GwSession = GwSession
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
+cacheNamespace :: Text
+cacheNamespace = "beckn_gateway:"
+
 insert :: Text -> GwSession -> Flow ()
 insert messageId appUrl =
-  setExRedis messageId appUrl 1800 -- seconds
+  setExRedis (cacheNamespace <> messageId) appUrl 1800 -- seconds
 
 lookup :: Text -> Flow (Maybe GwSession)
-lookup = getKeyRedis
+lookup messageId = getKeyRedis (cacheNamespace <> messageId)
 
 incrSearchReqCount :: Text -> Flow (Maybe Integer)
 incrSearchReqCount messageId =
-  incrementKeyRedis (messageId <> "_search_count")
+  incrementKeyRedis (cacheNamespace <> messageId <> "_search_count")
 
 incrSearchErrCount :: Text -> Flow (Maybe Integer)
 incrSearchErrCount messageId =
-  incrementKeyRedis (messageId <> "_search_error")
+  incrementKeyRedis (cacheNamespace <> messageId <> "_search_error")
 
 incrOnSearchReqCount :: Text -> Flow (Maybe Integer)
 incrOnSearchReqCount messageId =
-  incrementKeyRedis (messageId <> "_onsearch_count")
+  incrementKeyRedis (cacheNamespace <> messageId <> "_onsearch_count")
 
 getRequestStatus :: Text -> Flow (Integer, Integer, Integer)
 getRequestStatus messageId = do
-  searchReqCount <- getKeyRedis (messageId <> "_search_count")
-  searchErrCount <- getKeyRedis (messageId <> "_search_error")
-  onSearchReqCount <- getKeyRedis (messageId <> "_onsearch_count")
+  searchReqCount <- getKeyRedis (cacheNamespace <> messageId <> "_search_count")
+  searchErrCount <- getKeyRedis (cacheNamespace <> messageId <> "_search_error")
+  onSearchReqCount <- getKeyRedis (cacheNamespace <> messageId <> "_onsearch_count")
   return (fromMaybe 0 searchReqCount, fromMaybe 0 searchErrCount, fromMaybe 0 onSearchReqCount)
 
 cleanup :: Text -> Flow ()
 cleanup messageId =
   void $
     deleteKeysRedis
-      [ messageId <> "_search_count",
-        messageId <> "_search_error",
-        messageId <> "_onsearch_count"
+      [ cacheNamespace <> messageId <> "_search_count",
+        cacheNamespace <> messageId <> "_search_error",
+        cacheNamespace <> messageId <> "_onsearch_count"
       ]
