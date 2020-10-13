@@ -21,8 +21,10 @@ data AppCfg = AppCfg
     loggerConfig :: Maybe LoggerConfig,
     searchTimeout :: Maybe Int,
     traceFlag :: TraceFlag,
-    coreVersion :: Text,
-    domainVersion :: Text
+    mobilityCoreVersion :: Text,
+    mobilityDomainVersion :: Text,
+    fmdCoreVersion :: Text,
+    fmdDomainVersion :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -37,8 +39,10 @@ data AppEnv = AppEnv
     loggerConfig :: Maybe LoggerConfig,
     searchTimeout :: Maybe Int, -- In seconds
     traceFlag :: TraceFlag,
-    coreVersion :: Text,
-    domainVersion :: Text
+    mobilityCoreVersion :: Text,
+    mobilityDomainVersion :: Text,
+    fmdCoreVersion :: Text,
+    fmdDomainVersion :: Text
   }
   deriving (Generic)
 
