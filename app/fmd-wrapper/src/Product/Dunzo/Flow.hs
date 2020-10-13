@@ -330,7 +330,7 @@ track org req = do
         eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackErrReq
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track err res") $ show eres
       Right statusRes -> do
-        let onTrackReq = mkOnTrackReq context (statusRes ^. #tracking_url)
+        let onTrackReq = mkOnTrackReq context orderId (statusRes ^. #tracking_url)
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track req") $ encodeToText onTrackReq
         eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackReq
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track res") $ show eres

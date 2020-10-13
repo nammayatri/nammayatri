@@ -58,7 +58,7 @@ verifyCallbackContext expectBppUri transactionId context = do
   _action context `shouldBe` "on_search"
   _message_id context `shouldBe` transactionId
   _bap_uri context `shouldSatisfy` isJust
-  _domain_version context `shouldBe` Just "0.8.2"
+  _domain_version context `shouldBe` Just "0.8.3"
   _core_version context `shouldBe` Just "0.8.0"
 
 verifyDunzoCatalog :: Search.OnSearchServices -> IO ()

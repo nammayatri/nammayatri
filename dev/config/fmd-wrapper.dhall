@@ -48,6 +48,6 @@ in
 , autoMigrate = common.autoMigrate
 , loggerConfig = None common.LoggerConfig
 , coreVersion = "0.8.0"
-, domainVersion = "0.8.2"
+, domainVersion = "0.8.3"
 , dzConfig = dunzoConfig
 }

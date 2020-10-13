@@ -313,11 +313,11 @@ updateOrder orgName cTime order payee status = do
 
     n = Nothing
 
-mkOnTrackReq :: Context -> Maybe Text -> OnTrackReq
-mkOnTrackReq context trackingUrl = do
+mkOnTrackReq :: Context -> Text -> Maybe Text -> OnTrackReq
+mkOnTrackReq context orderId trackingUrl = do
   CallbackReq
     { context = context & #_action .~ "on_track",
-      contents = Right $ TrackResMessage tracking
+      contents = Right $ TrackResMessage tracking orderId
     }
   where
     tracking =

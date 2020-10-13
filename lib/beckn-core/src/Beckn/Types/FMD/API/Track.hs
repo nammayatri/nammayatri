@@ -47,7 +47,8 @@ data TrackReqMessage = TrackReqMessage
 
 type OnTrackRes = AckResponse
 
-newtype TrackResMessage = TrackResMessage
-  { tracking :: Tracking
+data TrackResMessage = TrackResMessage
+  { tracking :: Tracking,
+    order_id :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)

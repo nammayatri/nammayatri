@@ -17,6 +17,7 @@ import EulerHS.Types (client)
 track :: Organization -> TrackReq -> FlowHandler AckResponse
 track org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
+  let orderId = req ^. (#message . #order_id)
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
@@ -27,7 +28,7 @@ track org req = withFlowHandler $ do
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl ->
       fork "Track" $ do
-        trackMessage <- mkTrackMessage
+        trackMessage <- mkTrackMessage orderId
         AckResponse {} <-
           callClient "track" (req ^. #context) appUrl $
             client
@@ -45,7 +46,7 @@ track org req = withFlowHandler $ do
         _error = Nothing
       }
 
-mkTrackMessage :: Flow TrackResMessage
-mkTrackMessage = do
+mkTrackMessage :: Text -> Flow TrackResMessage
+mkTrackMessage orderId = do
   L.runIO $ threadDelay 0.5e6
-  return $ TrackResMessage example
+  return $ TrackResMessage example orderId
