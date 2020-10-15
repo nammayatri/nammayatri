@@ -245,11 +245,7 @@ updateTrip piId k = do
     PI.CANCELLED -> do
       trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
-      searchPi <- case prodInst ^. #_parentId of
-        Just pid -> PIQ.findById pid
-        Nothing ->
-          L.throwException $
-            err400 {errBody = "INVALID FLOW"}
+      searchPi <- tryGetSearchProductInstance prodInst
       _ <- PIQ.updateStatus (PI._id trackerPi) PI.COMPLETED
       _ <- PIQ.updateStatus (PI._id orderPi) PI.CANCELLED
       _ <- PIQ.updateStatus (PI._id searchPi) PI.CANCELLED
@@ -268,12 +264,21 @@ updateTrip piId k = do
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) k
+      searchPi <- tryGetSearchProductInstance prodInst
+      _ <- PIQ.updateStatus (PI._id searchPi) PI.TRIP_ASSIGNED
       pure ()
     PI.TRIP_REASSIGNMENT -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) k
       -- Clean Driver and Vehicle id?
+      searchPi <- tryGetSearchProductInstance prodInst
+      _ <- PIQ.updateStatus (PI._id searchPi) PI.TRIP_REASSIGNMENT
       pure ()
     _ -> return ()
+  where
+    tryGetSearchProductInstance productInstance =
+      case productInstance ^. #_parentId of
+        Just pid -> PIQ.findById pid
+        Nothing -> L.throwException $ err400 {errBody = "INVALID FLOW"} -- TODO make proper error reporting
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
 notifyStatusUpdateReq searchPi status =
