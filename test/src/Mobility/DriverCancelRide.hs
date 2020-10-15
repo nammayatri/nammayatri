@@ -88,21 +88,43 @@ spec = do
       assignDriverVehicleResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId buildUpdatePIReq)
+          ( rideUpdate appRegistrationToken transporterOrderPiId $
+              buildUpdatePIReq & #_status .~ Just PI.TRIP_ASSIGNED
+          )
       assignDriverVehicleResult `shouldSatisfy` isRight
 
-      -- Driver updates RIDEORDER PI to CANCELLED
+      -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT so the RIDE can be reassigned to other driver
+      reassignedStatusResult <-
+        runClient
+          tbeClientEnv
+          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.TRIP_REASSIGNMENT))
+      reassignedStatusResult `shouldSatisfy` isRight
+
+      piListResultWithReAssignment <- runClient appClientEnv (buildListPIs PI.TRIP_REASSIGNMENT)
+      piListResultWithReAssignment `shouldSatisfy` isRight
+
+      -- Check if app RIDEORDER PI got updated to status TRIP_REASSIGNMENT
+      checkPiInResult piListResultWithReAssignment productInstanceId
+
+      -- Re-assign to another driver and vehicle (it's the same driver)
+      reAssignDriverVehicleResult <-
+        runClient
+          tbeClientEnv
+          ( rideUpdate appRegistrationToken transporterOrderPiId $
+              buildUpdatePIReq
+                & #_status .~ Just PI.TRIP_ASSIGNED
+          )
+      reAssignDriverVehicleResult `shouldSatisfy` isRight
+
+      -- Cancel Ride
       cancelStatusResult <-
         runClient
           tbeClientEnv
           (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED Nothing))
       cancelStatusResult `shouldSatisfy` isRight
 
-      piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)
-      piListResult `shouldSatisfy` isRight
-
-      -- Check if app RIDEORDER PI got updated to status CANCELLED
-      checkPiInResult piListResult productInstanceId
+      piListResultWithCancelled <- runClient appClientEnv (buildListPIs PI.CANCELLED)
+      piListResultWithCancelled `shouldSatisfy` isRight
   where
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance

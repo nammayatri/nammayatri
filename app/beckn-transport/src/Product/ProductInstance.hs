@@ -266,6 +266,13 @@ updateTrip piId k = do
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       return ()
+    PI.TRIP_ASSIGNED -> do
+      _ <- PIQ.updateStatusByIds (PI._id <$> piList) k
+      pure ()
+    PI.TRIP_REASSIGNMENT -> do
+      _ <- PIQ.updateStatusByIds (PI._id <$> piList) k
+      -- Clean Driver and Vehicle id?
+      pure ()
     _ -> return ()
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()

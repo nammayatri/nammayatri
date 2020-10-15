@@ -20,7 +20,18 @@ import EulerHS.Prelude
 import Servant.API
 
 -- TODO: INVALID status seems to be unused
-data ProductInstanceStatus = VALID | INVALID | INPROGRESS | CONFIRMED | COMPLETED | INSTOCK | OUTOFSTOCK | CANCELLED | EXPIRED
+data ProductInstanceStatus
+  = VALID
+  | INVALID
+  | INPROGRESS
+  | CONFIRMED
+  | COMPLETED
+  | INSTOCK
+  | OUTOFSTOCK
+  | CANCELLED
+  | EXPIRED
+  | TRIP_ASSIGNED
+  | TRIP_REASSIGNMENT
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceStatus where
@@ -148,20 +159,30 @@ validateStatusTransition oldState newState =
     t CONFIRMED INPROGRESS = allowed
     t CONFIRMED CANCELLED = allowed
     t CONFIRMED EXPIRED = allowed
+    t CONFIRMED TRIP_ASSIGNED = allowed
     t CONFIRMED _ = forbidden
     t INPROGRESS COMPLETED = allowed
     t INPROGRESS CANCELLED = allowed
+    t INPROGRESS TRIP_REASSIGNMENT = allowed
     t INPROGRESS _ = forbidden
     t COMPLETED _ = forbidden
     t INSTOCK CONFIRMED = allowed
     t INSTOCK INPROGRESS = allowed
     t INSTOCK CANCELLED = allowed
     t INSTOCK EXPIRED = allowed
+    t INSTOCK TRIP_ASSIGNED = allowed
+    t TRIP_ASSIGNED INPROGRESS = allowed
+    t TRIP_ASSIGNED CANCELLED = allowed
+    t TRIP_ASSIGNED TRIP_REASSIGNMENT = allowed
+    t TRIP_REASSIGNMENT CANCELLED = allowed
+    t TRIP_REASSIGNMENT TRIP_ASSIGNED = allowed
     t CANCELLED _ = forbidden
     t EXPIRED _ = forbidden
     t INSTOCK _ = forbidden
     t OUTOFSTOCK _ = forbidden
     t INVALID _ = forbidden
+    t TRIP_ASSIGNED _ = forbidden
+    t TRIP_REASSIGNMENT _ = forbidden
 
 instance FromBeckn Text ProductInstanceStatus where
   fromBeckn piStatus =
@@ -174,6 +195,8 @@ instance FromBeckn Text ProductInstanceStatus where
       "OUTOFSTOCK" -> OUTOFSTOCK
       "CANCELLED" -> CANCELLED
       "EXPIRED" -> EXPIRED
+      "TRIP_ASSIGNED" -> TRIP_ASSIGNED
+      "TRIP_REASSIGNMENT" -> TRIP_REASSIGNMENT
       _ -> INVALID
 
 instance ToBeckn Text ProductInstanceStatus where
@@ -188,3 +211,5 @@ instance ToBeckn Text ProductInstanceStatus where
       OUTOFSTOCK -> "OUTOFSTOCK"
       CANCELLED -> "CANCELLED"
       EXPIRED -> "EXPIRED"
+      TRIP_ASSIGNED -> "TRIP_ASSIGNED"
+      TRIP_REASSIGNMENT -> "TRIP_REASSIGNMENT"
