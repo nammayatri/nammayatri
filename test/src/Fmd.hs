@@ -43,7 +43,8 @@ buildContext act tid bapBaseUrl bppBaseUrl = do
         _bpp_uri = bppBaseUrl,
         _transaction_id = tid,
         _message_id = tid,
-        _timestamp = now
+        _timestamp = now,
+        _ttl = Nothing
       }
 
 buildFMDSearchReq :: Context -> SearchReq

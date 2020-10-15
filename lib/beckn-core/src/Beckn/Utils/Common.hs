@@ -152,7 +152,8 @@ mkAckResponse' txnId action status = do
               _bpp_uri = Nothing,
               _transaction_id = txnId,
               _message_id = txnId,
-              _timestamp = currTime
+              _timestamp = currTime,
+              _ttl = Nothing
             },
         _message =
           ack status,

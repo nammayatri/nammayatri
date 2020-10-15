@@ -20,7 +20,8 @@ data Context = Context
     _bpp_uri :: Maybe BaseUrl, -- URL of the BPP
     _transaction_id :: Text,
     _message_id :: Text,
-    _timestamp :: UTCTime -- ["format": "date-time"]
+    _timestamp :: UTCTime, -- ["format": "date-time"]
+    _ttl :: Maybe Text
   }
   deriving (Generic, Show)
 

@@ -151,7 +151,8 @@ buildContext act tid = do
         _bpp_uri = Nothing,
         _transaction_id = tid,
         _message_id = tid,
-        _timestamp = utcTime
+        _timestamp = utcTime,
+        _ttl = Nothing
       }
 
 getFutureTime :: Flow UTCTime

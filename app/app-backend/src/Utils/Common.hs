@@ -93,7 +93,8 @@ mkContext action txnId msgId utcTime bapUri bppUri =
       _bpp_uri = bppUri,
       _transaction_id = txnId,
       _message_id = msgId,
-      _timestamp = utcTime
+      _timestamp = utcTime,
+      _ttl = Nothing
     }
 
 mkIntent :: API.SearchReq -> Intent

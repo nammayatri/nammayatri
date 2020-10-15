@@ -163,7 +163,8 @@ mkOnSearchPayload c pis orgInfo = do
             _message_id = c ^. #_shortId,
             _bap_uri = Nothing,
             _bpp_uri = makeBppUrl <$> nwAddress appEnv,
-            _timestamp = currTime
+            _timestamp = currTime,
+            _ttl = Nothing
           }
   piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER
   let stats = mkProviderStats piCount

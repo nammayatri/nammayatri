@@ -21,5 +21,6 @@ buildContext action txnId msgId = do
         _message_id = msgId,
         _bap_uri = Nothing,
         _bpp_uri = Nothing,
-        _timestamp = now
+        _timestamp = now,
+        _ttl = Nothing
       }

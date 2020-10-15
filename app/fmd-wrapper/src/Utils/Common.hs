@@ -43,7 +43,8 @@ fromMaybe400Log msg errCode ctx Nothing = do
             _bpp_uri = Nothing,
             _transaction_id = ctx ^. #_transaction_id,
             _message_id = ctx ^. #_message_id,
-            _timestamp = currTime
+            _timestamp = currTime,
+            _ttl = Nothing
           }
   gatewayBaseUrl <- xGatewayUri <$> ask
   mGatewayApiKey <- xGatewayApiKey <$> ask

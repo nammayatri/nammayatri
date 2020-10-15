@@ -353,7 +353,8 @@ mkContext action tId = do
         _message_id = tId,
         _bap_uri = Nothing,
         _bpp_uri = Nothing,
-        _timestamp = currTime
+        _timestamp = currTime,
+        _ttl = Nothing
       }
 
 mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> Flow OnConfirmReq
