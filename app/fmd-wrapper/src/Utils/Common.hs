@@ -61,7 +61,7 @@ fromMaybe400Log msg errCode ctx Nothing = do
                   Log
                     { _type = "ERROR",
                       _message = msg,
-                      _errorCode = show errCode,
+                      _errorCode = maybe "" show errCode,
                       _debug = Nothing,
                       _trace = Nothing,
                       _context = ctx
@@ -73,7 +73,7 @@ fromMaybe400Log msg errCode ctx Nothing = do
       err400
       Error
         { _type = "DOMAIN-ERROR",
-          _code = show errCode,
+          _code = maybe "" show errCode,
           _path = Nothing,
           _message = Just msg
         }
