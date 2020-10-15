@@ -53,7 +53,7 @@ in
 , exotelCfg = None common.ExotelCfg
 , migrationPath = Some (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
 , autoMigrate = True
-, coreVersion = "0.8.0"
+, coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = None common.LoggerConfig

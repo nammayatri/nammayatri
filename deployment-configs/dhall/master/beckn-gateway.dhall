@@ -39,7 +39,7 @@ in
 , searchTimeout = Some +3600
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = None common.LoggerConfig
-, mobilityCoreVersion = "0.8.0"
+, mobilityCoreVersion = "0.8.2"
 , mobilityDomainVersion = "0.8.2"
 , fmdCoreVersion = "0.8.0"
 , fmdDomainVersion = "0.8.3"

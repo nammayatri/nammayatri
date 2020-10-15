@@ -65,7 +65,7 @@ in
 , exotelCfg = None common.ExotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
-, coreVersion = "0.8.0"
+, coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = None common.LoggerConfig
