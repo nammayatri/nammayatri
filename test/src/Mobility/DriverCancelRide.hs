@@ -5,6 +5,7 @@ module Mobility.DriverCancelRide where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import Control.Lens ((?~))
 import Data.Text (isSuffixOf)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
@@ -89,7 +90,7 @@ spec = do
         runClient
           tbeClientEnv
           ( rideUpdate appRegistrationToken transporterOrderPiId $
-              buildUpdatePIReq & #_status .~ Just PI.TRIP_ASSIGNED
+              buildUpdatePIReq & #_status ?~ PI.TRIP_ASSIGNED
           )
       assignDriverVehicleResult `shouldSatisfy` isRight
 
@@ -112,7 +113,7 @@ spec = do
           tbeClientEnv
           ( rideUpdate appRegistrationToken transporterOrderPiId $
               buildUpdatePIReq
-                & #_status .~ Just PI.TRIP_ASSIGNED
+                & #_status ?~ PI.TRIP_ASSIGNED
           )
       reAssignDriverVehicleResult `shouldSatisfy` isRight
 
