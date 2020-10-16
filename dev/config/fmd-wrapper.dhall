@@ -54,7 +54,7 @@ in
 , port = +8018
 , xGatewayUri = gwUri
 , xGatewayApiKey = Some "fmd-wrapper-key"
-, migrationPath = None Text
+, migrationPath = Some (env:FMD_WRAPPER_MIGRATION_PATH as Text ? "dev/migrations/fmd-wrapper")
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.8.0"

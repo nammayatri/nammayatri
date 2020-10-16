@@ -116,9 +116,6 @@ INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verif
 INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
   ('747a711c-9537-4f42-8e04-33ded42a9d89', 'FMD Test App', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY',true, true, 'fmd-test-app-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8019/v1', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"fmd-test-app"}');
 
-INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain, verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd01', 'Delhivery App', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, 'test-bpp2-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key', '{"dlClientId":"HLD-TEST","dlClientSecret":"6ed812df-1926-4bb3-a258-bdc5ce75024d","bapId":"beckn-mock-app-backend"}');
-
 --
 -- TOC entry 2852 (class 2606 OID 16468)
 -- Name: organization idx_16410_primary; Type: CONSTRAINT; Schema: atlas_fmd_wrapper; Owner: atlas
