@@ -14,10 +14,14 @@ import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Error as CoreErr
 import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Location as CoreLoc
+import Beckn.Types.Core.MonetaryValue
+import Beckn.Types.Core.Payment
+import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.Tag
+import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.Catalog
@@ -162,6 +166,40 @@ mkOnSelectErrReq context err =
           _message = Just $ err ^. #message
         }
 
+mkOnInitMessage :: Text -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
+mkOnInitMessage orderId order payee req QuoteRes {..} = do
+  task <- updateTaskEta (head $ order ^. #_tasks) eta
+  return $
+    InitOrder $
+      order & #_id ?~ orderId
+        & #_payment ?~ mkPayment payee pricing
+        & #_billing .~ billing
+        & #_tasks .~ [task]
+  where
+    billing = req ^. #message . #order . #_billing
+
+mkOnInitReq :: Context -> InitOrder -> OnInitReq
+mkOnInitReq context msg =
+  CallbackReq
+    { context = context & #_action .~ "on_init",
+      contents = Right msg
+    }
+
+mkOnInitErrReq :: Context -> Error -> OnInitReq
+mkOnInitErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_init",
+      contents = Left errResp
+    }
+  where
+    errResp =
+      CoreErr.Error
+        { _type = "DOMAIN-ERROR",
+          _code = "",
+          _path = Nothing,
+          _message = Just $ err ^. #message
+        }
+
 mkItemDetails :: FMD.Item -> ItemDetails
 mkItemDetails item =
   let prdDesc = fromMaybe "" (item ^? #_descriptor . _Just . #_short_desc . _Just)
@@ -257,6 +295,26 @@ mkQuote QuoteRes {..} = do
           _offered_value = Nothing,
           _minimum_value = Nothing,
           _maximum_value = Nothing
+        }
+
+mkPayment :: PaymentEndpoint -> Float -> Payment
+mkPayment payee estimated_price =
+  Payment
+    { _transaction_id = Nothing,
+      _type = Just "PRE-FULFILLMENT",
+      _payer = Nothing,
+      _payee = Just payee,
+      _methods = ["RTGS"],
+      _amount = price,
+      _state = Nothing,
+      _due_date = Nothing,
+      _duration = Nothing
+    }
+  where
+    price =
+      MonetaryValue
+        { _currency = "INR",
+          _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
         }
 
 updateBppUri :: Context -> BaseUrl -> Context
