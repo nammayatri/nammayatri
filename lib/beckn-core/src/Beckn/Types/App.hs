@@ -94,6 +94,13 @@ newtype InventoryId = InventoryId
 
 deriveIdentifierInstances ''InventoryId
 
+newtype IssueId = IssueId
+  { _getIssueId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''IssueId
+
 type Limit = Int
 
 type Offset = Int

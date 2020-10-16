@@ -1,6 +1,7 @@
 module App.Types where
 
 import Beckn.External.Exotel.Types (ExotelCfg)
+import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
@@ -12,6 +13,7 @@ import EulerHS.Prelude
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     smsCfg :: SmsConfig,
+    sesCfg :: SesConfig,
     port :: Int,
     metricsPort :: Int,
     xGatewayUri :: BaseUrl,

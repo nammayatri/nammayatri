@@ -26,6 +26,13 @@ let smsConfig =
   , useFakeSms = Some 7891
   }
 
+let sesConfig =
+  { issuesConfig = {
+      from = sec.sesIssuesFrom
+    , to = sec.sesIssuesTo
+    }
+  }
+
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
 let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v1"
@@ -36,6 +43,7 @@ in
 
 { dbCfg = pgcfg
 , smsCfg = smsConfig
+, sesCfg = sesConfig
 , port = +8013
 , metricsPort = +9999
 , xGatewayUri = gwUri

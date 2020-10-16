@@ -28,6 +28,7 @@ import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.Status as Status
+import qualified Product.Support as Support
 import qualified Product.TrackTrip as TrackTrip
 import qualified Product.Update as Update
 import Servant
@@ -41,6 +42,7 @@ import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import qualified Types.API.Search as Search'
 import Types.API.Status
+import qualified Types.API.Support as Support
 import Utils.Auth (VerifyAPIKey)
 import Utils.Common (TokenAuth)
 
@@ -60,6 +62,7 @@ type AppAPI =
            :<|> CallAPIs
            :<|> RouteAPI
            :<|> StatusAPI
+           :<|> SupportAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -81,6 +84,7 @@ appServer =
     :<|> callFlow
     :<|> routeApiFlow
     :<|> statusFlow
+    :<|> supportFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -295,3 +299,15 @@ statusFlow ::
 statusFlow =
   Status.status
     :<|> Status.onStatus
+
+-------- Support Flow----------
+type SupportAPI =
+  "support"
+    :> ( "sendIssue"
+           :> TokenAuth
+           :> ReqBody '[JSON] Support.SendIssueReq
+           :> Post '[JSON] Support.SendIssueRes
+       )
+
+supportFlow :: FlowServer SupportAPI
+supportFlow = Support.sendIssue

@@ -51,6 +51,8 @@ default-extensions:
 
 dependencies:
   - aeson
+  - amazonka
+  - amazonka-ses
   - base >= 4.7 && < 5
   - base64-bytestring
   - beam-core
@@ -67,6 +69,7 @@ dependencies:
   - prometheus-client
   - wai-middleware-prometheus
   - prometheus-metrics-ghc
+  - unliftio-core
   - servant
   - servant-client
   - servant-client-core

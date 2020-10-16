@@ -3,6 +3,7 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Issue as Issue
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -15,6 +16,7 @@ import EulerHS.Prelude hiding (id)
 
 data AppDb f = AppDb
   { _organization :: f (B.TableEntity Organization.OrganizationT),
+    _issues :: f (B.TableEntity Issue.IssueT),
     _location :: f (B.TableEntity Location.LocationT),
     _person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
@@ -29,6 +31,7 @@ appDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
       { _organization = setSchema dbSchemaName <> Organization.fieldEMod,
+        _issues = setSchema dbSchemaName <> Issue.fieldEMod,
         _location = setSchema dbSchemaName <> Location.fieldEMod,
         _person = setSchema dbSchemaName <> Person.fieldEMod,
         _case = setSchema dbSchemaName <> Case.fieldEMod,
