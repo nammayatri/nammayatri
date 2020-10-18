@@ -108,10 +108,10 @@ ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas;
 --
 
 INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Dunzo', 'APPROVED', 'GATEWAY', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key0', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key0', NULL);
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Gateway', 'APPROVED', 'GATEWAY', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key0', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key0', NULL);
 
 INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('12c38d90-11f7-4d42-af14-2e0498af2441', 'Dunzo Local', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8016/v1', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"mock-app-backend"}');
+  ('12c38d90-11f7-4d42-af14-2e0498af2441', 'Mock app backend', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8016/v1', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"mock-app-backend"}');
 
 INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
   ('747a711c-9537-4f42-8e04-33ded42a9d89', 'FMD Test App', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY',true, true, 'fmd-test-app-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8019/v1', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"fmd-test-app"}');
