@@ -12,7 +12,7 @@ data Category = Category
     _descriptor :: Descriptor,
     _tags :: [Tag]
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 instance FromJSON Category where
   parseJSON = genericParseJSON stripLensPrefixOptions

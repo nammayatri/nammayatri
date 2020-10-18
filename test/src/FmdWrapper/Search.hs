@@ -4,7 +4,9 @@ module FmdWrapper.Search where
 
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
+import Beckn.Types.Core.Category
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Descriptor
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Error
 import Beckn.Types.Core.Item
@@ -65,6 +67,12 @@ verifyDunzoCatalog :: Search.OnSearchServices -> IO ()
 verifyDunzoCatalog onSearchServices = do
   let catalog = Search.catalog onSearchServices
   let items = _items catalog
+  let categories = _categories catalog
+  case categories of
+    [category] ->
+      category
+        `shouldBe` Category "1" Nothing (withName "single pickup single drop") []
+    _ -> expectationFailure "Exactly one category expected."
   let packageCategories = _package_categories catalog
   map extractIndices items `shouldBe` expectedItemIndices
   map extractCategoryData packageCategories `shouldBe` expectedCategoryData
@@ -72,6 +80,7 @@ verifyDunzoCatalog onSearchServices = do
     let price = _price item
     _currency price `shouldBe` "INR"
     _estimated_value price `shouldSatisfy` isJust
+    _category_id item `shouldBe` Just "1"
   where
     extractCategoryData category = (category ^. #_id, category ^. #_descriptor . #_name)
     extractIndices item = (item ^. #_id, item ^. #_package_category_id)

@@ -16,7 +16,7 @@ data Descriptor = Descriptor
     _audio :: Maybe Text,
     _3d_render :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 instance FromJSON Descriptor where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

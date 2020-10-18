@@ -10,7 +10,7 @@ data Image = Image
     _url :: Maybe Text,
     _data :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 instance FromJSON Image where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

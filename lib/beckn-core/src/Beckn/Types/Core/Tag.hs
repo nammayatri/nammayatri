@@ -8,7 +8,7 @@ data Tag = Tag
   { _key :: Text,
     _value :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 instance FromJSON Tag where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
