@@ -199,7 +199,7 @@ updateStatus user piId req = do
         tripOtpCode <- req ^. #_otpCode & fromMaybeM400 "TRIP_OTP_MISSING"
         if inAppOtpCode == tripOtpCode
           then updateTrip (prodInst ^. #_id) PI.INPROGRESS
-          else throwJsonError401 "UNAUTHORIZED" "INCORRECT_TRIP_OTP"
+          else throwJsonError400 "ERR" "INCORRECT_TRIP_OTP"
     (Just c, Just _, Just _) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) c
