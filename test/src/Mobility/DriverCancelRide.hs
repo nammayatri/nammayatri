@@ -95,7 +95,7 @@ spec = do
       cancelStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED))
+          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED Nothing))
       cancelStatusResult `shouldSatisfy` isRight
 
       piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)

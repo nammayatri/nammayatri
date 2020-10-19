@@ -219,13 +219,13 @@ buildUpdatePIReq =
       _otpCode = Nothing
     }
 
-buildUpdateStatusReq :: PI.ProductInstanceStatus -> TbePI.ProdInstUpdateReq
-buildUpdateStatusReq status =
+buildUpdateStatusReq :: PI.ProductInstanceStatus -> Maybe Text -> TbePI.ProdInstUpdateReq
+buildUpdateStatusReq status otp =
   TbePI.ProdInstUpdateReq
     { _status = Just status,
       _personId = Nothing,
       _vehicleId = Nothing,
-      _otpCode = Nothing
+      _otpCode = otp
     }
 
 buildOrgRideReq :: PI.ProductInstanceStatus -> Case.CaseType -> ClientM TbePI.ProductInstanceList

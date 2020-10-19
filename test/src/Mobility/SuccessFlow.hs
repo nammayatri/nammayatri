@@ -94,7 +94,7 @@ spec = do
       inProgressStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.INPROGRESS))
+          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.INPROGRESS (transporterOrderPi ^. #_udf4)))
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)
@@ -107,7 +107,7 @@ spec = do
       completedStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.COMPLETED))
+          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.COMPLETED Nothing))
       completedStatusResult `shouldSatisfy` isRight
 
       completedPiListResult <- runClient appClientEnv (buildListPIs PI.COMPLETED)
