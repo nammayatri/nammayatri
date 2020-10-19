@@ -103,7 +103,6 @@ dependencies:
   - geojson
   - safe-money
   - dhall
-  - lens-family-core
   - tasty
   - tasty-hunit
   - either

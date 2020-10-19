@@ -52,14 +52,14 @@ extra-deps:
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
     subdirs:
-    - core
-    - client
+      - core
+      - client
   - git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 6d921eeec1e6d2d17b69fd579be38bce345ea72d
+    commit: 5603de3f3f148850be4ef21e03a9623f3b7f8d73
   - git: https://github.com/juspay/hedis
-    commit: 4ea54f16c0057acc99a9f0e9b63ea51ea4bf420e
+    commit: 46ea0ea78e6d8d1a2b1a66e6f08078a37864ad80
   - git: https://github.com/juspay/beam-mysql
-    commit: 65bb65b51e290e34586a98b0fe195509fafeafd7
+    commit: c1fe205aa411d9d73cbc2037710399649a2f5c77
   - git: https://github.com/juspay/mysql-haskell
     commit: 788022d65538db422b02ecc0be138b862d2e5cee
   - git: https://github.com/juspay/bytestring-lexing
@@ -72,9 +72,8 @@ extra-deps:
       - beam-sqlite
       - beam-postgres
   - git: git@bitbucket.org:juspay/haskell-sequelize.git
-    commit: c80165809e79b3961717b66b90e533673c284866
+    commit: bcbf4481372d77491896a5d2051ddb2eb90640ca
   - generic-lens-1.1.0.0 # Random breakage without this
-  - lens-family-core-2.0.0
 
   # Needed for sequelize
   - named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
@@ -98,6 +97,8 @@ extra-deps:
   - time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
   - wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
   - unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
+  - mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+  - record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

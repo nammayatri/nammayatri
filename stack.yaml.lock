@@ -32,37 +32,37 @@ packages:
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
 - completed:
     name: euler-hs
-    version: 2.0.1.0
+    version: 2.0.1.1
     git: git@bitbucket.org:juspay/euler-hs.git
     pantry-tree:
-      size: 8000
-      sha256: c8b00923ded707803bd4bf1d96b65951459db5025567a1fbfa61a513daf9b190
-    commit: 6d921eeec1e6d2d17b69fd579be38bce345ea72d
+      size: 7889
+      sha256: 5593b0fbb1e8bf75b7288bc04e893e17629210fce3c3b7eddee91a854d65b810
+    commit: 5603de3f3f148850be4ef21e03a9623f3b7f8d73
   original:
     git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 6d921eeec1e6d2d17b69fd579be38bce345ea72d
+    commit: 5603de3f3f148850be4ef21e03a9623f3b7f8d73
 - completed:
     name: hedis
     version: 0.12.8.1
     git: https://github.com/juspay/hedis
     pantry-tree:
       size: 2570
-      sha256: 11c0fb0068a34b685bbd0b5d8daa90bf7dbaaae84a6094fd04d9c6697bb1952e
-    commit: 4ea54f16c0057acc99a9f0e9b63ea51ea4bf420e
+      sha256: efe83ea607d47d7d8200c61a0dddabc5e7f292a2f451a98dec1326eb0903ef71
+    commit: 46ea0ea78e6d8d1a2b1a66e6f08078a37864ad80
   original:
     git: https://github.com/juspay/hedis
-    commit: 4ea54f16c0057acc99a9f0e9b63ea51ea4bf420e
+    commit: 46ea0ea78e6d8d1a2b1a66e6f08078a37864ad80
 - completed:
     name: beam-mysql
-    version: 1.0.0.0
+    version: 1.2.0.0
     git: https://github.com/juspay/beam-mysql
     pantry-tree:
-      size: 1044
-      sha256: 65507c25ede5c0503a1a71ae8b2f523497d5242b893bb3841f1adf227ae78ea2
-    commit: 65bb65b51e290e34586a98b0fe195509fafeafd7
+      size: 2683
+      sha256: 04a54665c45bdb7b3e8ad4e94908d4e90231831deee1127c22b3c1d36d4b74f0
+    commit: c1fe205aa411d9d73cbc2037710399649a2f5c77
   original:
     git: https://github.com/juspay/beam-mysql
-    commit: 65bb65b51e290e34586a98b0fe195509fafeafd7
+    commit: c1fe205aa411d9d73cbc2037710399649a2f5c77
 - completed:
     name: mysql-haskell
     version: 0.8.4.2
@@ -142,12 +142,12 @@ packages:
     version: 1.1.0.0
     git: git@bitbucket.org:juspay/haskell-sequelize.git
     pantry-tree:
-      size: 597
-      sha256: 90e08e08c1a479a77a7b032e4d79dbe8fb4c8e2f5d1d759986568ff93859d2b2
-    commit: c80165809e79b3961717b66b90e533673c284866
+      size: 719
+      sha256: d3f8956a4c8e471a14912a5b62c542ae42bdf34305ab518b3f72a0ef42c41c1f
+    commit: bcbf4481372d77491896a5d2051ddb2eb90640ca
   original:
     git: git@bitbucket.org:juspay/haskell-sequelize.git
-    commit: c80165809e79b3961717b66b90e533673c284866
+    commit: bcbf4481372d77491896a5d2051ddb2eb90640ca
 - completed:
     hackage: generic-lens-1.1.0.0@sha256:caaab13ae4f2a68e43671d25fb56746ba14bc9d5d787d594a66c7f56eba3fa66,6412
     pantry-tree:
@@ -155,13 +155,6 @@ packages:
       sha256: 33e1509b7d786d816a0974f08cfb6208a7d02c7d45937bec2c91586523b14440
   original:
     hackage: generic-lens-1.1.0.0
-- completed:
-    hackage: lens-family-core-2.0.0@sha256:645b0553e16a3857b08fa44f11f0664296e1db5d6494a83634711c7f4f1707a7,2290
-    pantry-tree:
-      size: 880
-      sha256: 67fda41cf1ae034c7b7d7246550d6f906b3eeae1bbb438fd47a328bf44b6a46e
-  original:
-    hackage: lens-family-core-2.0.0
 - completed:
     hackage: named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
     pantry-tree:
@@ -288,6 +281,20 @@ packages:
       sha256: 50912d2ac162c8fab4243c9d73b8a2adb3bb609fbe13853bb8396c7e7b3b87e2
   original:
     hackage: unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
+- completed:
+    hackage: mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+    pantry-tree:
+      size: 574
+      sha256: 4147c0fd201f849d018f9408e82b75b0313294bb9fff290673dd30729eedf948
+  original:
+    hackage: mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+- completed:
+    hackage: record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
+    pantry-tree:
+      size: 1003
+      sha256: 8e86a73101e570ce238522f45ffb906811116c752d1f08418a2abd078697488e
+  original:
+    hackage: record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
 snapshots:
 - completed:
     size: 496112
