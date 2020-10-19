@@ -37,3 +37,17 @@ getQuote :: Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes
 getQuote token url req = L.callAPI url quoteReq
   where
     quoteReq = T.client quoteAPI (Just token) req
+
+type CreateOrderAPI =
+  "api" :> "createOrderRequest"
+    :> Header "Authorization" Token
+    :> ReqBody '[JSON] CreateOrderReq
+    :> Post '[JSON] CreateOrderRes
+
+createOrderAPI :: Proxy CreateOrderAPI
+createOrderAPI = Proxy
+
+createOrder :: Token -> BaseUrl -> CreateOrderReq -> FlowR e (Either ClientError CreateOrderRes)
+createOrder token url req = L.callAPI url createOrderReq
+  where
+    createOrderReq = T.client createOrderAPI (Just token) req

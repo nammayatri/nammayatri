@@ -99,3 +99,8 @@ data QuoteRes = QuoteRes
     success :: Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype CreateOrderRes = CreateOrderRes
+  { idx :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)

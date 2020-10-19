@@ -7,12 +7,15 @@ import App.Types
 import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Context
+import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
 import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
 import Beckn.Types.FMD.API.Select (SelectOrder (..), SelectReq (..), SelectRes, onSelectAPI)
+import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
+import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -182,6 +185,61 @@ init org req = do
       case mcase of
         Nothing -> Storage.create case_
         Just _ -> pass
+
+confirm :: Org.Organization -> ConfirmReq -> Flow ConfirmRes
+confirm org req = do
+  dconf@DelhiveryConfig {..} <- dlConfig <$> ask
+  let context = updateBppUri (req ^. #context) dlBPNwAddress
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  let reqOrder = req ^. (#message . #order)
+  orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) context $ reqOrder ^. #_id
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  let order = orderDetails ^. #order
+  verifyPayment reqOrder order
+  dlBACreds <- getDlBAPCreds org
+  fork "confirm" $ do
+    createOrderReq <- mkCreateOrderReq order
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createOrderReq)
+    eres <- createOrderAPI dlBACreds dconf createOrderReq
+    L.logInfo @Text (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
+    sendCb order context cbApiKey cbUrl eres
+  returnAck context
+  where
+    createOrderAPI dlBACreds@DlBAConfig {..} conf@DelhiveryConfig {..} req' = do
+      token <- getBearerToken <$> fetchToken dlBACreds conf
+      API.createOrder token dlUrl req'
+
+    verifyPayment :: Order -> Order -> Flow ()
+    verifyPayment reqOrder order = do
+      let context = req ^. #context
+      confirmAmount <-
+        reqOrder ^? #_payment . _Just . #_amount . #_value
+          & fromMaybe400Log "INVALID_PAYMENT_AMOUNT" (Just CORE003) context
+      orderAmount <-
+        order ^? #_payment . _Just . #_amount . #_value
+          & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
+      if confirmAmount == orderAmount
+        then pass
+        else throwError400 "INVALID_ORDER_AMOUNT"
+
+    sendCb order context cbApiKey cbUrl res =
+      case res of
+        Right _ -> do
+          onConfirmReq <- mkOnConfirmReq context order
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
+          eres <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
+          L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
+        Left (FailureResponse _ (Response _ _ _ body)) ->
+          whenJust (decode body) handleError
+          where
+            handleError err = do
+              let onConfirmReq = mkOnConfirmErrReq context err
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
+              onConfirmResp <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
+              L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
+        _ -> pass
 
 fetchToken :: DlBAConfig -> DelhiveryConfig -> Flow Token
 fetchToken DlBAConfig {..} DelhiveryConfig {..} = do

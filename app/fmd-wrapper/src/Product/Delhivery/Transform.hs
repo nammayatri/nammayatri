@@ -21,6 +21,7 @@ import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.Tag
+import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
@@ -189,6 +190,46 @@ mkOnInitErrReq :: Context -> Error -> OnInitReq
 mkOnInitErrReq context err =
   CallbackReq
     { context = context & #_action .~ "on_init",
+      contents = Left errResp
+    }
+  where
+    errResp =
+      CoreErr.Error
+        { _type = "DOMAIN-ERROR",
+          _code = "",
+          _path = Nothing,
+          _message = Just $ err ^. #message
+        }
+
+mkCreateOrderReq :: Order -> Flow CreateOrderReq
+mkCreateOrderReq order = do
+  let task = head $ order ^. #_tasks
+  pickupDet <- mkLocationDetails (task ^. #_pickup)
+  dropDet <- mkLocationDetails (task ^. #_drop)
+  returnDet <- mkLocationDetails (task ^. #_return)
+  return $
+    CreateOrderReq
+      { inv = Nothing,
+        itm = mkItemDetails <$> (order ^. #_items),
+        oid = order ^. #_id,
+        cod = Nothing,
+        src = pickupDet,
+        ret = returnDet,
+        tar = dropDet
+      }
+
+mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
+mkOnConfirmReq context order =
+  return $
+    CallbackReq
+      { context = context & #_action .~ "on_confirm",
+        contents = Right $ ConfirmResMessage order
+      }
+
+mkOnConfirmErrReq :: Context -> Error -> OnConfirmReq
+mkOnConfirmErrReq context err =
+  CallbackReq
+    { context = context & #_action .~ "on_confirm",
       contents = Left errResp
     }
   where
