@@ -70,6 +70,7 @@ data FCMNotificationType
   | EXPIRED_CASE
   | CANCELLED_PRODUCT
   | DRIVER_ASSIGNMENT
+  | DRIVER_UNASSIGNED
   | TRIP_STARTED
   | TRIP_FINISHED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

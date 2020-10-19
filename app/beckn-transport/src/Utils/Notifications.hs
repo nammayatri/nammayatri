@@ -128,6 +128,25 @@ notifyCancelReqByBP p =
             "has been cancelled. Check the app for more details."
           ]
 
+notifyDriverCancelledRideRequest :: ProductInstance -> [Person] -> Flow ()
+notifyDriverCancelledRideRequest p = traverse_ (notifyPerson title body notificationData)
+  where
+    notificationData =
+      FCM.FCMData
+        { _fcmNotificationType = FCM.DRIVER_UNASSIGNED,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityIds = show $ _getProductInstanceId $ p ^. #_id,
+          _fcmEntityType = FCM.Organization
+        }
+    title = FCM.FCMNotificationTitle $ T.pack "Driver has refused the ride!"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "The ride scheduled for",
+            showTimeIst (ProductInstance._startTime p) <> ",",
+            "has been refused by driver. Check the app for more details."
+          ]
+
 notifyDriver :: FCM.FCMNotificationType -> Text -> Text -> Person -> Flow ()
 notifyDriver notificationType notificationTitle message driver =
   notifyPerson title body notificationData driver

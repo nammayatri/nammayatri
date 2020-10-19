@@ -5,7 +5,6 @@ module Mobility.DriverCancelRide where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Control.Lens ((?~))
 import Data.Text (isSuffixOf)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
@@ -89,43 +88,21 @@ spec = do
       assignDriverVehicleResult <-
         runClient
           tbeClientEnv
-          ( rideUpdate appRegistrationToken transporterOrderPiId $
-              buildUpdatePIReq & #_status ?~ PI.TRIP_ASSIGNED
-          )
+          (rideUpdate appRegistrationToken transporterOrderPiId buildUpdatePIReq)
       assignDriverVehicleResult `shouldSatisfy` isRight
 
-      -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT so the RIDE can be reassigned to other driver
-      reassignedStatusResult <-
-        runClient
-          tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.TRIP_REASSIGNMENT))
-      reassignedStatusResult `shouldSatisfy` isRight
-
-      piListResultWithReAssignment <- runClient appClientEnv (buildListPIs PI.TRIP_REASSIGNMENT)
-      piListResultWithReAssignment `shouldSatisfy` isRight
-
-      -- Check if app RIDEORDER PI got updated to status TRIP_REASSIGNMENT
-      checkPiInResult piListResultWithReAssignment productInstanceId
-
-      -- Re-assign to another driver and vehicle (it's the same driver)
-      reAssignDriverVehicleResult <-
-        runClient
-          tbeClientEnv
-          ( rideUpdate appRegistrationToken transporterOrderPiId $
-              buildUpdatePIReq
-                & #_status ?~ PI.TRIP_ASSIGNED
-          )
-      reAssignDriverVehicleResult `shouldSatisfy` isRight
-
-      -- Cancel Ride
+      -- Driver updates RIDEORDER PI to CANCELLED
       cancelStatusResult <-
         runClient
           tbeClientEnv
           (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED Nothing))
       cancelStatusResult `shouldSatisfy` isRight
 
-      piListResultWithCancelled <- runClient appClientEnv (buildListPIs PI.CANCELLED)
-      piListResultWithCancelled `shouldSatisfy` isRight
+      piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)
+      piListResult `shouldSatisfy` isRight
+
+      -- Check if app RIDEORDER PI is not CANCELLED. Only Customer can cancel the order.
+      checkPiInResult piListResult productInstanceId
   where
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance
@@ -135,4 +112,4 @@ spec = do
       let Right piListRes = piListResult
           appPiList = AppPI._productInstance <$> piListRes
           appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) appPiList
-       in length appOrderPI `shouldBe` 1
+       in length appOrderPI `shouldBe` 0
