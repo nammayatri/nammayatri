@@ -161,7 +161,8 @@ updateMultiple id prdInst@Storage.ProductInstance {..} = do
           --_personId <-. B.val_ (Storage._personId prd),
           _fromLocation <-. B.val_ (Storage._fromLocation prodInst),
           _toLocation <-. B.val_ (Storage._toLocation prodInst),
-          _info <-. B.val_ (Storage._info prodInst)
+          _info <-. B.val_ (Storage._info prodInst),
+          _udf4 <-. B.val_ (Storage._udf4 prodInst)
         ]
 
 findByParentIdType :: Maybe ProductInstanceId -> Case.CaseType -> Flow (T.DBResult (Maybe Storage.ProductInstance))

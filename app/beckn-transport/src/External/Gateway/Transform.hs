@@ -25,7 +25,7 @@ import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common (getCurrTime)
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime)
 import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
@@ -130,9 +130,10 @@ mkPrice prodInst =
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
 mkOrder _c pri trip = do
   now <- getCurrTime
+  searchPiId <- pri ^. #_parentId & fromMaybeM500 "PARENT_ID_MISSING"
   return
     Mobility.Order
-      { _id = _getProductInstanceId $ pri ^. #_id,
+      { _id = _getProductInstanceId searchPiId,
         _items = [OrderItem (_getProductsId $ pri ^. #_productId) Nothing],
         _created_at = now,
         _updated_at = now,

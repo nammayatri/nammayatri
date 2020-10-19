@@ -27,7 +27,8 @@ type ProductInstanceList = [ProductInstanceRes]
 data ProdInstUpdateReq = ProdInstUpdateReq
   { _status :: Maybe ProductInstanceStatus,
     _personId :: Maybe Text,
-    _vehicleId :: Maybe Text
+    _vehicleId :: Maybe Text,
+    _otpCode :: Maybe Text
   }
   deriving (Show, Generic, ToSchema)
 

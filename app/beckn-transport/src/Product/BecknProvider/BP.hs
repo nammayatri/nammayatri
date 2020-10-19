@@ -43,6 +43,7 @@ import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as ProductInstance
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
+import Utils.Common
 import qualified Utils.Notifications as Notify
 
 -- 1) Create Parent Case with Customer Request Details
@@ -202,7 +203,7 @@ confirm _org req = do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
-  notifyGateway searchCase productInstance trackerCase
+  notifyGateway searchCase orderProductInstance trackerCase
   admins <-
     if org ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
@@ -233,6 +234,7 @@ mkOrderCase SC.Case {..} = do
 mkOrderProductInstance :: CaseId -> ProductInstance -> Flow ProductInstance.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   (now, pid, shortId) <- getIdShortIdAndTime
+  inAppOtpCode <- generateOTPCode
   return $
     ProductInstance.ProductInstance
       { _id = ProductInstanceId pid,
@@ -259,7 +261,7 @@ mkOrderProductInstance caseId prodInst = do
         _udf1 = prodInst ^. #_udf1,
         _udf2 = prodInst ^. #_udf2,
         _udf3 = prodInst ^. #_udf3,
-        _udf4 = prodInst ^. #_udf4,
+        _udf4 = Just inAppOtpCode,
         _udf5 = prodInst ^. #_udf5
       }
 
@@ -330,10 +332,10 @@ mkTrackerCase case_ uuid now shortId =
     }
 
 notifyGateway :: Case -> ProductInstance -> Case -> Flow ()
-notifyGateway c prodInst trackerCase = do
+notifyGateway c orderPi trackerCase = do
   L.logInfo @Text "notifyGateway" $ show c
   allPis <- ProductInstance.findAllByCaseId (c ^. #_id)
-  onConfirmPayload <- mkOnConfirmPayload c [prodInst] allPis trackerCase
+  onConfirmPayload <- mkOnConfirmPayload c [orderPi] allPis trackerCase
   L.logInfo @Text "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
   _ <- Gateway.onConfirm onConfirmPayload
   return ()
@@ -360,7 +362,7 @@ mkContext action tId = do
 mkOnConfirmPayload :: Case -> [ProductInstance] -> [ProductInstance] -> Case -> Flow OnConfirmReq
 mkOnConfirmPayload c pis _allPis trackerCase = do
   context <- mkContext "on_confirm" $ c ^. #_shortId -- TODO : What should be the txnId
-  trip <- mkTrip trackerCase
+  trip <- mkTrip trackerCase (head pis)
   order <- GT.mkOrder c (head pis) (Just trip)
   return
     CallbackReq
@@ -460,15 +462,16 @@ mkOnTrackTripPayload trackerCase parentCase = do
         contents = Right $ OnTrackReqMessage (Just tracking)
       }
 
-mkTrip :: Case -> Flow Trip
-mkTrip c = do
+mkTrip :: Case -> ProductInstance -> Flow Trip
+mkTrip c orderPi = do
   prodInst <- ProductInstance.findByCaseId $ c ^. #_id
   driver <- mapM mkDriverInfo $ prodInst ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (prodInst ^. #_entityId)
+  tripCode <- orderPi ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
   L.logInfo @Text "vehicle" $ show vehicle
   return $
     Trip
-      { id = _getCaseId $ c ^. #_id,
+      { id = tripCode,
         pickup = Nothing,
         drop = Nothing,
         state = Nothing,
@@ -482,7 +485,7 @@ mkTrip c = do
 mkOnUpdatePayload :: ProductInstance -> Case -> Case -> Flow OnUpdateReq
 mkOnUpdatePayload prodInst case_ pCase = do
   context <- mkContext "on_update" $ _getProductInstanceId $ prodInst ^. #_id
-  trip <- mkTrip case_
+  trip <- mkTrip case_ prodInst
   order <- GT.mkOrder pCase prodInst (Just trip)
   return
     CallbackReq

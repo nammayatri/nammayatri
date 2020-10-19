@@ -215,7 +215,8 @@ buildUpdatePIReq =
   TbePI.ProdInstUpdateReq
     { _status = Nothing,
       _personId = Just testDriverId,
-      _vehicleId = Just testVehicleId
+      _vehicleId = Just testVehicleId,
+      _otpCode = Nothing
     }
 
 buildUpdateStatusReq :: PI.ProductInstanceStatus -> TbePI.ProdInstUpdateReq
@@ -223,7 +224,8 @@ buildUpdateStatusReq status =
   TbePI.ProdInstUpdateReq
     { _status = Just status,
       _personId = Nothing,
-      _vehicleId = Nothing
+      _vehicleId = Nothing,
+      _otpCode = Nothing
     }
 
 buildOrgRideReq :: PI.ProductInstanceStatus -> Case.CaseType -> ClientM TbePI.ProductInstanceList

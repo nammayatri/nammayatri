@@ -11,7 +11,6 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import qualified Crypto.Number.Generate as Cryptonite
 import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -19,6 +18,7 @@ import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
+import Utils.Common
 import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
@@ -109,10 +109,6 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
         _updatedAt = now,
         _info = Nothing
       }
-
-generateOTPCode :: Flow Text
-generateOTPCode =
-  L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
 sendOTP :: SmsCredConfig -> Text -> Text -> Flow ()
 sendOTP SmsCredConfig {..} phoneNumber otpCode = do

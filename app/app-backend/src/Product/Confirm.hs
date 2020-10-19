@@ -84,9 +84,10 @@ onConfirm req = withFlowHandler $ do
       let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
       let uPrd =
             prdInst
-              { SPI._info = encodeToText <$> uInfo
+              { SPI._info = encodeToText <$> uInfo,
+                SPI._udf4 = (^. #id) <$> trip
               }
-      productInstance <- MPI.findById pid -- TODO: can have multiple cases linked, fix this
+      productInstance <- MPI.findById pid
       Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
       MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
       MPI.updateMultiple pid uPrd

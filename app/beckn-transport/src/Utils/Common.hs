@@ -8,8 +8,10 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Crypto.Number.Generate as Cryptonite
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -127,3 +129,7 @@ validateAdminAction = VerificationAction validateAdmin
 
 validateDriverAction :: VerificationAction DriverVerifyToken AppEnv
 validateDriverAction = VerificationAction validateAdmin
+
+generateOTPCode :: Flow Text
+generateOTPCode =
+  L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999

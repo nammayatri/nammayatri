@@ -65,7 +65,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  notifyTripDetailsToGateway searchPi
+  notifyTripDetailsToGateway searchPi ordPi
   notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
 
@@ -193,6 +193,13 @@ updateStatus user piId req = do
     (Just PI.CANCELLED, _, _) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) PI.CANCELLED
+    (Just PI.INPROGRESS, Just _, Just _) ->
+      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
+        inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
+        tripOtpCode <- req ^. #_otpCode & fromMaybeM400 "TRIP_OTP_MISSING"
+        if inAppOtpCode == tripOtpCode
+          then updateTrip (prodInst ^. #_id) PI.INPROGRESS
+          else throwJsonError401 "UNAUTHORIZED" "INCORRECT_TRIP_OTP"
     (Just c, Just _, Just _) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) c
@@ -200,12 +207,12 @@ updateStatus user piId req = do
     _ -> L.throwException $ err400 {errBody = "DRIVER_VEHICLE_UNASSIGNED"}
   return ()
 
-notifyTripDetailsToGateway :: PI.ProductInstance -> Flow ()
-notifyTripDetailsToGateway prodInst = do
-  trackerCase <- CQ.findByParentCaseIdAndType (prodInst ^. #_caseId) Case.LOCATIONTRACKER
-  parentCase <- CQ.findById (prodInst ^. #_caseId)
+notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> Flow ()
+notifyTripDetailsToGateway searchPi orderPi = do
+  trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
+  parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripInfoToGateway prodInst x y
+    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()
