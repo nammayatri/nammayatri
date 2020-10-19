@@ -74,13 +74,17 @@ checkClientError context = \case
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError
-checkDBError :: L.MonadFlow m => ET.DBResult a -> m a
+checkDBError :: (HasCallStack, L.MonadFlow m) => ET.DBResult a -> m a
 checkDBError dbres = checkDBError' dbres DatabaseError
 
 -- | Get rid of database error
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-checkDBError' :: L.MonadFlow m => ET.DBResult a -> (ET.DBError -> DomainError) -> m a
+checkDBError' ::
+  (HasCallStack, L.MonadFlow m) =>
+  ET.DBResult a ->
+  (ET.DBError -> DomainError) ->
+  m a
 checkDBError' dbres f =
   case dbres of
     Left err -> throwDomainError $ f err
@@ -88,13 +92,22 @@ checkDBError' dbres f =
 
 -- | Get rid of database error and empty result
 -- convert it into UnknownDomainError
-checkDBErrorOrEmpty :: L.MonadFlow m => ET.DBResult (Maybe a) -> DomainError -> m a
+checkDBErrorOrEmpty ::
+  (HasCallStack, L.MonadFlow m) =>
+  ET.DBResult (Maybe a) ->
+  DomainError ->
+  m a
 checkDBErrorOrEmpty dbres = checkDBErrorOrEmpty' dbres DatabaseError
 
 -- | Get rid of database error and empty result
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
-checkDBErrorOrEmpty' :: L.MonadFlow m => ET.DBResult (Maybe a) -> (ET.DBError -> DomainError) -> DomainError -> m a
+checkDBErrorOrEmpty' ::
+  (HasCallStack, L.MonadFlow m) =>
+  ET.DBResult (Maybe a) ->
+  (ET.DBError -> DomainError) ->
+  DomainError ->
+  m a
 checkDBErrorOrEmpty' dbres f domainErrOnEmpty =
   case dbres of
     Left err -> throwDomainError $ f err
@@ -103,16 +116,21 @@ checkDBErrorOrEmpty' dbres f domainErrOnEmpty =
       Just x -> pure x
 
 -- | Throw DomainError if DBError occurs
-throwOnDBError :: L.MonadFlow m => ET.DBResult a -> DomainError -> m a
+throwOnDBError :: (HasCallStack, L.MonadFlow m) => ET.DBResult a -> DomainError -> m a
 throwOnDBError dbres domainError =
   checkDBError' dbres $ const domainError
 
 -- Throw DomainErrors if DBError occurs or the result is empty
-throwOnDBErrorOrEmpty :: L.MonadFlow m => ET.DBResult (Maybe a) -> DomainError -> DomainError -> m a
+throwOnDBErrorOrEmpty ::
+  (HasCallStack, L.MonadFlow m) =>
+  ET.DBResult (Maybe a) ->
+  DomainError ->
+  DomainError ->
+  m a
 throwOnDBErrorOrEmpty dbres domainErrorOnDbError =
   checkDBErrorOrEmpty' dbres (const domainErrorOnDbError)
 
-fromMaybeM :: L.MonadFlow m => ServerError -> Maybe a -> m a
+fromMaybeM :: (HasCallStack, L.MonadFlow m) => ServerError -> Maybe a -> m a
 fromMaybeM err Nothing = L.throwException err
 fromMaybeM _ (Just a) = return a
 
@@ -120,7 +138,7 @@ fromMaybeM400,
   fromMaybeM401,
   fromMaybeM500,
   fromMaybeM503 ::
-    L.MonadFlow m => BSL.ByteString -> Maybe a -> m a
+    (HasCallStack, L.MonadFlow m) => BSL.ByteString -> Maybe a -> m a
 fromMaybeM400 a = fromMaybeM (S.err400 {errBody = a})
 fromMaybeM401 a = fromMaybeM (S.err401 {errBody = a})
 fromMaybeM500 a = fromMaybeM (S.err500 {errBody = a})
@@ -208,7 +226,7 @@ authenticate = check handleKey
         err401 {errBody = "Invalid Auth"} ::
         FlowR r a
 
-throwJsonError :: L.MonadFlow m => ServerError -> Text -> Text -> m a
+throwJsonError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> Text -> m a
 throwJsonError err tag errMsg = do
   L.logError tag errMsg
   L.throwException
@@ -235,21 +253,12 @@ throwJsonError500,
   throwJsonError400,
   throwJsonError401,
   throwJsonError404 ::
-    L.MonadFlow m => Text -> Text -> m a
+    (HasCallStack, L.MonadFlow m) => Text -> Text -> m a
 throwJsonError500 = throwJsonError S.err500
 throwJsonError501 = throwJsonError S.err501
 throwJsonError400 = throwJsonError S.err400
 throwJsonError401 = throwJsonError S.err401
 throwJsonError404 = throwJsonError S.err404
-
-throwJsonErrorH :: ServerError -> Text -> Text -> FlowHandlerR r a
-throwJsonErrorH = withFlowHandler ... throwJsonError
-
-throwJsonError500H, throwJsonError501H, throwJsonError400H, throwJsonError401H :: Text -> Text -> FlowHandlerR r a
-throwJsonError500H = throwJsonErrorH ... S.err500
-throwJsonError501H = throwJsonErrorH ... S.err501
-throwJsonError400H = throwJsonErrorH ... S.err400
-throwJsonError401H = throwJsonErrorH ... S.err401
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format
@@ -258,7 +267,7 @@ throwJsonError401H = throwJsonErrorH ... S.err401
 showTimeIst :: UTCTime -> Text
 showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addUTCTime (60 * 330)
 
-throwDomainError :: L.MonadFlow m => DomainError -> m a
+throwDomainError :: (HasCallStack, L.MonadFlow m) => DomainError -> m a
 throwDomainError err =
   case err of
     UnknownDomainError msg -> t S.err500 msg
