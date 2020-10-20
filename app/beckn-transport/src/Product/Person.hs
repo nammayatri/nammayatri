@@ -71,7 +71,7 @@ listPerson :: Text -> [SP.Role] -> Maybe Bool -> Maybe UTCTime -> Maybe Integer 
 listPerson orgId roles availability pickupTime limitM offsetM = withFlowHandler $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
   respList <-
-    if fromMaybe False availability
+    if Just True == availability
       then do
         startTime <- pickupTime & fromMaybeM500 "MISSING_PICKUPTIME"
         rideBuffer <- MPI.findByStartTimeBuffer Case.RIDEORDER startTime 1
