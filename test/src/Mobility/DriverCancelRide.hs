@@ -91,11 +91,11 @@ spec = do
           (rideUpdate appRegistrationToken transporterOrderPiId buildUpdatePIReq)
       assignDriverVehicleResult `shouldSatisfy` isRight
 
-      -- Driver updates RIDEORDER PI to CANCELLED
+      -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT
       cancelStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED Nothing))
+          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.TRIP_REASSIGNMENT Nothing))
       cancelStatusResult `shouldSatisfy` isRight
 
       piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)

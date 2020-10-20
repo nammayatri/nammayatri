@@ -267,13 +267,29 @@ updateTrip piId newStatus request = do
   trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
   case newStatus of
+    -- Only admin can send CANCELLED status to cancel ride
     PI.CANCELLED -> do
+      trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
+      orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
+      searchPi <- case prodInst ^. #_parentId of
+        Just pid -> PIQ.findById pid
+        Nothing ->
+          L.throwException $
+            err400 {errBody = "INVALID FLOW"}
+      _ <- PIQ.updateStatus (PI._id trackerPi) PI.COMPLETED
+      _ <- PIQ.updateStatus (PI._id orderPi) PI.CANCELLED
+      _ <- PIQ.updateStatus (PI._id searchPi) PI.CANCELLED
+      CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
+      CQ.updateStatus (Case._id orderCase_) Case.CLOSED
+      pure ()
+    -- Sent by Driver for order reassignment
+    PI.TRIP_REASSIGNMENT -> do
       trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       _ <- PIQ.updateStatus (PI._id trackerPi) PI.TRIP_REASSIGNMENT
       _ <- PIQ.updateStatus (PI._id orderPi) PI.TRIP_REASSIGNMENT
       _ <- unAssignDriverInfo piList request
-      return ()
+      pure ()
     PI.INPROGRESS -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) newStatus
       CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
@@ -294,13 +310,19 @@ notifyStatusUpdateReq searchPi status =
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
-        org <- OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
-        admins <-
-          if org ^. #_enabled
-            then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
-            else return []
+        admins <- getAdmins
+        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id)
+        Notify.notifyCancelReqByBP searchPi admins
+      PI.TRIP_REASSIGNMENT -> do
+        admins <- getAdmins
         Notify.notifyDriverCancelledRideRequest searchPi admins
       _ -> do
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi
     Nothing -> return ()
+  where
+    getAdmins = do
+      org <- OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
+      if org ^. #_enabled
+        then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
+        else pure []
