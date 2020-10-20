@@ -14,6 +14,7 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
+import Data.Time
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import qualified Product.Call as Call
@@ -86,6 +87,8 @@ type PersonAPI =
            :<|> "list"
              :> AdminTokenAuth
              :> QueryParams "roles" SP.Role
+             :> QueryParam "availability" Bool
+             :> QueryParam "time" UTCTime
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes

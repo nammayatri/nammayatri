@@ -8,13 +8,17 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
+import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as SP
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
+import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.ProductInstance as MPI
 import Servant
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
@@ -63,11 +67,20 @@ createPerson orgId req = withFlowHandler $ do
                 err400 {errBody = "DRIVER_ALREADY_CREATED"}
           _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
 
-listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson orgId roles limitM offsetM = withFlowHandler $ do
+listPerson :: Text -> [SP.Role] -> Maybe Bool -> Maybe UTCTime -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
+listPerson orgId roles availability pickupTime limitM offsetM = withFlowHandler $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
-  respList <- traverse mkPersonRes personList
+  respList <-
+    if fromMaybe False availability
+      then do
+        startTime <- pickupTime & fromMaybeM500 "MISSING_PICKUPTIME"
+        rideBuffer <- MPI.findByStartTimeBuffer Case.RIDEORDER startTime 1
+        let unavailablePersonIds = catMaybes $ PI._personId <$> rideBuffer
+        traverse mkPersonRes $ filter (personNotIn unavailablePersonIds) personList
+      else traverse mkPersonRes personList
   return $ ListPersonRes respList
+  where
+    personNotIn unavailablePersonIds person = not (any (\x -> x == person ^. #_id) unavailablePersonIds)
 
 getPerson ::
   SR.RegistrationToken ->

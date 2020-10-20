@@ -378,3 +378,15 @@ getCountByStatus' orgId piType = do
     predicate Storage.ProductInstance {..} =
       _organizationId ==. B.val_ orgId
         &&. _type ==. B.val_ piType
+
+findByStartTimeBuffer :: Storage.ProductInstanceType -> UTCTime -> NominalDiffTime -> Flow (T.DBResult [Storage.ProductInstance])
+findByStartTimeBuffer piType startTime buffer = do
+  dbTable <- getDbTable
+  let fromTime = addUTCTime (- buffer * 60 * 60) startTime
+  let toTime = addUTCTime (buffer * 60 * 60) startTime
+  DB.findAll dbTable (predicate fromTime toTime)
+  where
+    predicate fromTime toTime Storage.ProductInstance {..} =
+      _type ==. B.val_ piType
+        &&. _startTime B.<=. B.val_ toTime
+        &&. _startTime B.>=. B.val_ fromTime
