@@ -3,6 +3,7 @@
 module Types.Storage.DB where
 
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Geometry as Geometry
 import qualified Beckn.Types.Storage.Issue as Issue
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -22,7 +23,8 @@ data AppDb f = AppDb
     _case :: f (B.TableEntity Case.CaseT),
     _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     _products :: f (B.TableEntity Products.ProductsT),
-    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
+    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
+    _geometry :: f (B.TableEntity Geometry.GeometryT)
   }
   deriving (Generic, B.Database be)
 
@@ -37,7 +39,8 @@ appDb dbSchemaName =
         _case = setSchema dbSchemaName <> Case.fieldEMod,
         _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
         _products = setSchema dbSchemaName <> Products.fieldEMod,
-        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod
+        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
+        _geometry = setSchema dbSchemaName <> Geometry.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

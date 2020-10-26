@@ -1,6 +1,8 @@
 let common = ../generic/common.dhall
 let sec = ../secrets/app-backend.dhall
 
+let GeoRestriction = < Unrestricted | Region : Text>
+
 let postgresConfig =
   { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
   , connectPort = 5432
@@ -34,6 +36,10 @@ let sesConfig =
     , region = "eu-west-1"
     }
   }
+let geofencingConfig =
+{ origin = GeoRestriction.Unrestricted
+, destination = GeoRestriction.Unrestricted
+}
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
@@ -67,6 +73,7 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
+, geofencingConfig = geofencingConfig
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 }

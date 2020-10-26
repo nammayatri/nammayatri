@@ -33,11 +33,13 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
+import Product.Serviceability
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Organization as Org
 import qualified Types.API.Case as API
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
+import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.ProductInfo
 import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
@@ -47,6 +49,7 @@ import qualified Utils.Notifications as Notify
 search :: Person.Person -> API.SearchReq -> FlowHandler API.AckResponse
 search person req = withFlowHandler $ do
   validateDateTime req
+  validateServiceability req
   fromLocation <- mkLocation $ toBeckn $ req ^. #origin
   toLocation <- mkLocation $ toBeckn $ req ^. #destination
   Location.create fromLocation
@@ -72,6 +75,16 @@ search person req = withFlowHandler $ do
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
         throwError400 "Invalid start time"
+    validateServiceability sreq = do
+      originGps <-
+        sreq ^. #origin . #location . #gps
+          & fromMaybeM400 "GPS coordinates required for the origin location"
+      destinationGps <-
+        req ^. #destination . #location . #gps
+          & fromMaybeM400 "GPS coordinates required for the destination location"
+      let serviceabilityReq = RideServiceabilityReq originGps destinationGps
+      unlessM (rideServiceable serviceabilityReq) $
+        throwError400 "Ride not serviceable due to georestrictions"
 
 searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _unit req = withFlowHandler $ do

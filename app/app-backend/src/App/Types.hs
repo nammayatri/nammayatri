@@ -9,6 +9,7 @@ import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
 import EulerHS.Prelude
+import Types.Geofencing
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
@@ -36,6 +37,7 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
+    geofencingConfig :: GeofencingConfig,
     traceFlag :: TraceFlag
   }
   deriving (Generic, FromDhall)

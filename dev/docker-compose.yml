@@ -1,7 +1,7 @@
 version: "3"
 services:
   app-db:
-    image: "postgres:12.3"
+    image: "postgis/postgis:12-3.0"
     container_name: "atlas-app"
     ports:
       - "5433:5432"
@@ -14,7 +14,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   transporter-db:
-    image: "postgres:12.3"
+    image: "postgis/postgis:12-3.0"
     container_name: "atlas-transporter"
     ports:
       - "5434:5432"
@@ -27,7 +27,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   gateway-db:
-    image: "postgres:12.3"
+    image: "postgis/postgis:12-3.0"
     container_name: "atlas-gateway"
     ports:
       - "5435:5432"
@@ -40,7 +40,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   fmd-wrapper-db:
-    image: "postgres:12.3"
+    image: "postgis/postgis:12-3.0"
     container_name: "atlas-fmd-wrapper"
     ports:
       - "5436:5432"
@@ -53,7 +53,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   mock-app-db:
-    image: "postgres:12.3"
+    image: "postgis/postgis:12-3.0"
     container_name: "atlas-mock-app"
     ports:
       - "5437:5432"
@@ -66,7 +66,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   mock-provider-db:
-    image: "postgres:12.3"
+    image: "postgis/postgis:12-3.0"
     container_name: "atlas-mock-provider"
     ports:
       - "5438:5432"
@@ -98,7 +98,7 @@ services:
   passetto-server:
     image: "juspayin/passetto-hs:0b18530"
     container_name: "passetto-enc-server"
-    command: demo  # for DEV only
+    command: demo # for DEV only
     ports:
       - "8021:8012"
     environment:

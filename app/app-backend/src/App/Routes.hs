@@ -27,6 +27,7 @@ import qualified Product.Location as Location
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
+import qualified Product.Serviceability as Serviceability
 import qualified Product.Status as Status
 import qualified Product.Support as Support
 import qualified Product.TrackTrip as TrackTrip
@@ -41,8 +42,10 @@ import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import qualified Types.API.Search as Search'
+import qualified Types.API.Serviceability as Serviceability
 import Types.API.Status
 import qualified Types.API.Support as Support
+import Types.Geofencing
 import Utils.Auth (VerifyAPIKey)
 import Utils.Common (TokenAuth)
 
@@ -63,6 +66,7 @@ type AppAPI =
            :<|> RouteAPI
            :<|> StatusAPI
            :<|> SupportAPI
+           :<|> ServiceabilityAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -85,6 +89,7 @@ appServer =
     :<|> routeApiFlow
     :<|> statusFlow
     :<|> supportFlow
+    :<|> serviceabilityFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -311,3 +316,24 @@ type SupportAPI =
 
 supportFlow :: FlowServer SupportAPI
 supportFlow = Support.sendIssue
+
+-------- Serviceability----------
+type ServiceabilityAPI =
+  "serviceability"
+    :> TokenAuth
+    :> ( "origin"
+           :> ReqBody '[JSON] Serviceability.ServiceabilityReq
+           :> Post '[JSON] Serviceability.ServiceabilityRes
+           :<|> "destination"
+             :> ReqBody '[JSON] Serviceability.ServiceabilityReq
+             :> Post '[JSON] Serviceability.ServiceabilityRes
+           :<|> "ride"
+             :> ReqBody '[JSON] Serviceability.RideServiceabilityReq
+             :> Post '[JSON] Serviceability.RideServiceabilityRes
+       )
+
+serviceabilityFlow :: FlowServer ServiceabilityAPI
+serviceabilityFlow regToken =
+  Serviceability.checkServiceability origin regToken
+    :<|> Serviceability.checkServiceability destination regToken
+    :<|> Serviceability.checkRideServiceability regToken

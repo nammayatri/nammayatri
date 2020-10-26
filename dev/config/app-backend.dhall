@@ -1,6 +1,8 @@
 let common = ./generic/common.dhall
 let sec = ./secrets/app-backend.dhall
 
+let GeoRestriction = < Unrestricted | Region : Text>
+
 let postgresConfig =
   { connectHost = "localhost"
   , connectPort = 5433
@@ -35,6 +37,11 @@ let sesConfig =
     }
   }
 
+let geofencingConfig =
+{ origin = GeoRestriction.Unrestricted
+, destination = GeoRestriction.Unrestricted
+}
+
 let gwUri = "http://localhost:8015/v1"
 
 let providerUri = "http://localhost:8014/v1"
@@ -65,6 +72,7 @@ in
 , autoMigrate = True
 , coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
+, geofencingConfig = geofencingConfig
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 }
