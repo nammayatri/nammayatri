@@ -7,12 +7,13 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as T
 
-runKV :: L.MonadFlow mFlow => L.KVDB a -> mFlow (T.KVDBAnswer a)
+runKV :: (HasCallStack, L.MonadFlow mFlow) => L.KVDB a -> mFlow (T.KVDBAnswer a)
 runKV = L.runKVDB "redis"
 
 -- KV
 setKeyRedis ::
-  ( L.MonadFlow mFlow,
+  ( HasCallStack,
+    L.MonadFlow mFlow,
     A.ToJSON a
   ) =>
   Text ->
@@ -22,7 +23,8 @@ setKeyRedis key val =
   void $ runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
 
 setExRedis ::
-  ( L.MonadFlow mFlow,
+  ( HasCallStack,
+    L.MonadFlow mFlow,
     A.ToJSON a
   ) =>
   Text ->
@@ -35,7 +37,8 @@ setExRedis key value ttl =
       L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
 
 getKeyRedis ::
-  ( L.MonadFlow mFlow,
+  ( HasCallStack,
+    L.MonadFlow mFlow,
     A.FromJSON a
   ) =>
   Text ->
@@ -48,7 +51,8 @@ getKeyRedis key = do
       _ -> Nothing
 
 getKeyRedisWithError ::
-  ( L.MonadFlow mFlow,
+  ( HasCallStack,
+    L.MonadFlow mFlow,
     A.FromJSON a
   ) =>
   Text ->
@@ -64,7 +68,8 @@ getKeyRedisWithError key = do
       Left err -> Left $ show err
 
 setHashRedis ::
-  ( L.MonadFlow mFlow,
+  ( HasCallStack,
+    L.MonadFlow mFlow,
     ToJSON a
   ) =>
   Text ->
@@ -80,14 +85,17 @@ setHashRedis key field value =
         (BSL.toStrict $ A.encode value)
 
 expireRedis ::
-  L.MonadFlow mFlow =>
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
   Text ->
   Int ->
   mFlow ()
 expireRedis key ttl = void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
 
 getHashKeyRedis ::
-  ( L.MonadFlow mFlow,
+  ( HasCallStack,
+    L.MonadFlow mFlow,
     FromJSON a
   ) =>
   Text ->
@@ -101,13 +109,17 @@ getHashKeyRedis key field = do
       _ -> Nothing
 
 deleteKeyRedis ::
-  L.MonadFlow mFlow =>
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
   Text ->
   mFlow Int
 deleteKeyRedis = deleteKeysRedis . return
 
 deleteKeysRedis ::
-  L.MonadFlow mFlow =>
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
   [Text] ->
   mFlow Int
 deleteKeysRedis rKeys = do
@@ -118,7 +130,9 @@ deleteKeysRedis rKeys = do
       Left _ -> -1
 
 incrementKeyRedis ::
-  L.MonadFlow mFlow =>
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
   Text ->
   mFlow (Maybe Integer)
 incrementKeyRedis key = do
@@ -126,7 +140,9 @@ incrementKeyRedis key = do
   return $ either (const Nothing) Just val
 
 getKeyRedisText ::
-  L.MonadFlow mFlow =>
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
   Text ->
   mFlow (Maybe Text)
 getKeyRedisText key = do

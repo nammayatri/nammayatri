@@ -35,13 +35,15 @@ type RunReadablePgTable table db =
 
 type Table table db = B.DatabaseEntity Postgres db (B.TableEntity table)
 
-run :: T.JSONEx a => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
+run :: (HasCallStack, T.JSONEx a) => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
 run query = do
   connection <- DB.getOrInitConn
   L.runDB connection query
 
 findOneWithErr ::
-  RunReadablePgTable table db =>
+  ( HasCallStack,
+    RunReadablePgTable table db
+  ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (table Identity)
@@ -53,14 +55,18 @@ findOneWithErr dbTable predicate = do
     Left err -> throwError500 $ "DBError: " <> show err
 
 findOne ::
-  RunReadablePgTable table db =>
+  ( HasCallStack,
+    RunReadablePgTable table db
+  ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
 findOne dbTable predicate = run $ findOne' dbTable predicate
 
 findOne' ::
-  ReadablePgTable table db =>
+  ( HasCallStack,
+    ReadablePgTable table db
+  ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.SqlDB Pg (Maybe (table Identity))
@@ -68,7 +74,9 @@ findOne' dbTable predicate =
   L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAllOrErr ::
-  RunReadablePgTable table db =>
+  ( HasCallStack,
+    RunReadablePgTable table db
+  ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r [table Identity]
@@ -79,14 +87,16 @@ findAllOrErr dbTable predicate = do
     Left err -> throwError500 $ "DBError: " <> show err
 
 findAll ::
-  RunReadablePgTable table db =>
+  ( HasCallStack,
+    RunReadablePgTable table db
+  ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (T.DBResult [table Identity])
 findAll dbTable predicate = run $ findAll' dbTable predicate
 
 findAll' ::
-  ReadablePgTable table db =>
+  (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   L.SqlDB Pg [table Identity]
@@ -95,28 +105,28 @@ findAll' dbTable predicate =
 
 -- TODO: protect from multiple inserts
 createOne ::
-  RunPgTable table db =>
+  (HasCallStack, RunPgTable table db) =>
   Table table db -> -- dbTable
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   DB.FlowWithDb r (T.DBResult ())
 createOne = bulkInsert
 
 createOne' ::
-  PgTable table db =>
+  (HasCallStack, PgTable table db) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
 createOne' = bulkInsert'
 
 bulkInsert ::
-  RunPgTable table db =>
+  (HasCallStack, RunPgTable table db) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   DB.FlowWithDb r (T.DBResult ())
 bulkInsert dbTable = run . bulkInsert' dbTable
 
 bulkInsert' ::
-  PgTable table db =>
+  (HasCallStack, PgTable table db) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   L.SqlDB Pg ()
@@ -124,7 +134,7 @@ bulkInsert' dbTable =
   L.insertRows . B.insert dbTable
 
 findOrCreateOne ::
-  RunReadablePgTable table db =>
+  (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
@@ -133,7 +143,7 @@ findOrCreateOne dbTable findPredicate insertExpression =
   run $ findOrCreateOne' dbTable findPredicate insertExpression
 
 findOrCreateOne' ::
-  ReadablePgTable table db =>
+  (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
@@ -149,19 +159,19 @@ findOrCreateOne' dbTable findPredicate insertExpression =
         else error "multiple rows found"
 
 findAllRows ::
-  RunReadablePgTable table db =>
+  (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   DB.FlowWithDb r (T.DBResult [table Identity])
 findAllRows dbTable = run $ findAllRows' dbTable
 
 findAllRows' ::
-  ReadablePgTable table db =>
+  (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   L.SqlDB Pg [table Identity]
 findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
 
 update ::
-  RunReadablePgTable table db =>
+  (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
@@ -169,7 +179,7 @@ update ::
 update dbTable setClause predicate = run $ update' dbTable setClause predicate
 
 update' ::
-  ReadablePgTable table db =>
+  (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
@@ -177,20 +187,23 @@ update' ::
 update' dbTable setClause predicate = L.updateRows $ B.update dbTable setClause predicate
 
 delete ::
-  RunReadablePgTable table db =>
+  (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   DB.FlowWithDb r (T.DBResult ())
 delete dbTable predicate = run $ delete' dbTable predicate
 
 delete' ::
-  ReadablePgTable table db =>
+  (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
 delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
 
-throwDBError :: L.MonadFlow mFlow => T.DBError -> mFlow a
+throwDBError ::
+  (HasCallStack, L.MonadFlow mFlow) =>
+  T.DBError ->
+  mFlow a
 throwDBError err =
   L.logError @Text "DB error: " (show err)
     >> L.throwException err500
@@ -200,7 +213,7 @@ type Scope2 = BI.QNested (BI.QNested B.QBaseScope)
 type Scope3 = BI.QNested (BI.QNested (BI.QNested B.QBaseScope))
 
 findAllWithLimitOffset ::
-  RunReadablePgTable table db =>
+  (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   Integer ->
   Integer ->
@@ -210,7 +223,7 @@ findAllWithLimitOffset dbTable limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.orderBy_ orderBy $ B.all_ dbTable
 
 findAllWithLimitOffsetWhere ::
-  RunReadablePgTable table db =>
+  (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   (table (BI.QGenExpr BI.QValueContext Postgres Scope2) -> BI.QExpr Postgres Scope2 Bool) ->
   Integer ->
@@ -221,7 +234,8 @@ findAllWithLimitOffsetWhere dbTable predicate limit offset orderBy =
   run $ L.findRows $ B.select $ B.limit_ limit $ B.offset_ offset $ B.filter_ predicate $ B.orderBy_ orderBy $ B.all_ dbTable
 
 aggregate ::
-  ( RunReadablePgTable table db,
+  ( HasCallStack,
+    RunReadablePgTable table db,
     _
   ) =>
   Table table db ->
@@ -231,7 +245,7 @@ aggregate ::
 aggregate dbTable aggregator predicate = run $ L.findRows $ B.select $ B.aggregate_ aggregator $ B.filter_ predicate $ B.all_ dbTable
 
 findAllByJoin ::
-  _ =>
+  (HasCallStack, _) =>
   Integer ->
   Integer ->
   _orderBy ->
@@ -241,7 +255,7 @@ findAllByJoin limit offset orderBy =
   run . L.findRows . B.select . B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy
 
 findAllByJoinWithoutLimits ::
-  _ =>
+  (HasCallStack, _) =>
   _orderBy ->
   _query ->
   DB.FlowWithDb r (T.DBResult [_result])
