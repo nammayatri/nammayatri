@@ -226,9 +226,9 @@ authenticate = check handleKey
         err401 {errBody = "Invalid Auth"} ::
         FlowR r a
 
-throwBecknError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> Text -> m a
-throwBecknError err tag errMsg = do
-  L.logError tag errMsg
+throwBecknError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> m a
+throwBecknError err errMsg = do
+  L.logError @Text "Beckn error" errMsg
   L.throwException
     err
       { errBody = A.encode $ getBecknError err errMsg,
@@ -253,7 +253,7 @@ throwBecknError500,
   throwBecknError400,
   throwBecknError401,
   throwBecknError404 ::
-    (HasCallStack, L.MonadFlow m) => Text -> Text -> m a
+    (HasCallStack, L.MonadFlow m) => Text -> m a
 throwBecknError500 = throwBecknError S.err500
 throwBecknError501 = throwBecknError S.err501
 throwBecknError400 = throwBecknError S.err400
@@ -291,7 +291,7 @@ throwDomainError err =
     AuthErr UnAuthorized -> t S.err401 "Unauthorized"
     _ -> t S.err500 "Unknown error"
   where
-    t errCode (ErrorMsg errMsg) = throwBecknError errCode "error" errMsg
+    t errCode (ErrorMsg errMsg) = throwBecknError errCode errMsg
 
 -- TODO: the @desc@ argument should become part of monadic context
 callClient ::

@@ -86,10 +86,10 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> oneDropLocationExpected
     _ -> onePickupLocationExpected
   where
-    onePickupLocationExpected = throwBecknError400 "ERR" "ONE_PICKUP_LOCATION_EXPECTED"
-    oneDropLocationExpected = throwBecknError400 "ERR" "ONE_DROP_LOCATION_EXPECTED"
-    pickupLocationNotFound = throwBecknError400 "ERR" "PICKUP_LOCATION_NOT_FOUND"
-    dropLocationNotFound = throwBecknError400 "ERR" "DROP_LOCATION_NOT_FOUND"
+    onePickupLocationExpected = throwBecknError400 "ONE_PICKUP_LOCATION_EXPECTED"
+    oneDropLocationExpected = throwBecknError400 "ONE_DROP_LOCATION_EXPECTED"
+    pickupLocationNotFound = throwBecknError400 "PICKUP_LOCATION_NOT_FOUND"
+    dropLocationNotFound = throwBecknError400 "DROP_LOCATION_NOT_FOUND"
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
@@ -115,7 +115,7 @@ mkQuoteReqFromSelect SelectReq {..} = do
 readCoord :: Text -> Flow Double
 readCoord text = do
   let mCoord = readMaybe $ T.unpack text
-  maybe (throwBecknError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
+  maybe (throwBecknError400 "LOCATION_READ_ERROR") pure mCoord
 
 mkOnSearchErrReq :: Context -> Error -> OnSearchReq
 mkOnSearchErrReq context err = do
