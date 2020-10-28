@@ -46,7 +46,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
       when (org ^. #_status /= Organization.APPROVED) $
-        throwJsonError401 "Err" "Unauthorized"
+        throwBecknError401 "Err" "Unauthorized"
       caseList <-
         if not (org ^. #_enabled)
           then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #_fromTime)
@@ -81,7 +81,7 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
     Just orgId -> do
       org <- OQ.findOrganizationById (OrganizationId orgId)
       when (org ^. #_status /= Organization.APPROVED) $
-        throwJsonError401 "Err" "Unauthorized"
+        throwBecknError401 "Err" "Unauthorized"
       case _transporterChoice of
         "ACCEPTED" -> do
           prodInst <- createProductInstance c p _quote orgId PI.INSTOCK

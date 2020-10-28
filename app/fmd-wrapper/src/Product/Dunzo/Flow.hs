@@ -22,7 +22,7 @@ import qualified Beckn.Types.FMD.Item as Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwJsonError400, throwJsonError500)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwBecknError400, throwBecknError500)
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified Data.List as List
@@ -119,17 +119,17 @@ select org req = do
 
     validateOrderRequest order = do
       let tasks = order ^. #_tasks
-      when (length tasks /= 1) $ throwJsonError400 "INVALID_ORDER" "CURRENTLY_PROCESSING_ONLY_ONE_TASK_PER_ORDER"
+      when (length tasks /= 1) $ throwBecknError400 "INVALID_ORDER" "CURRENTLY_PROCESSING_ONLY_ONE_TASK_PER_ORDER"
       let task = head tasks
       let package = task ^. #_package
       let pickup = task ^. #_pickup
       let drop = task ^. #_drop
-      when (isJust $ pickup ^. #_time) $ throwJsonError400 "INVALID_ORDER" "SCHEDULED_PICKUP_NOT_SUPPORTED"
-      when (isJust $ drop ^. #_time) $ throwJsonError400 "INVALID_ORDER" "SCHEDULED_DROP_NOT_SUPPORTED"
+      when (isJust $ pickup ^. #_time) $ throwBecknError400 "INVALID_ORDER" "SCHEDULED_PICKUP_NOT_SUPPORTED"
+      when (isJust $ drop ^. #_time) $ throwBecknError400 "INVALID_ORDER" "SCHEDULED_DROP_NOT_SUPPORTED"
       void $ case readMaybe . T.unpack =<< (package ^. #_package_category_id) of
-        Nothing -> throwJsonError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
+        Nothing -> throwBecknError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
         -- Category id is the index value of dzPackageContentList
-        Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwJsonError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
+        Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwBecknError400 "INVALID_ORDER" "INVALID_PACKAGE_CATEGORY_ID"
 
 init :: Org.Organization -> InitReq -> Flow InitRes
 init org req = do
@@ -254,7 +254,7 @@ confirm org req = do
           & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
       if confirmAmount == orderAmount
         then pass
-        else throwJsonError400 "AMOUNT_VALIDATION_ERR" "INVALID_ORDER_AMOUNT"
+        else throwBecknError400 "AMOUNT_VALIDATION_ERR" "INVALID_ORDER_AMOUNT"
 
     updateCase case_ orderDetails taskStatus = do
       let caseId = case_ ^. #_id
@@ -308,7 +308,7 @@ confirm org req = do
       let orderCreatedAt = case_ ^. #_createdAt
       let thresholdTime = addUTCTime (fromInteger (thresholdDuration * 60)) orderCreatedAt
       when (thresholdTime < now) $
-        throwJsonError400 "ORDER_AMOUNT_VALIDATION" "TOOK_TOO_LONG_TO_CONFIRM"
+        throwBecknError400 "ORDER_AMOUNT_VALIDATION" "TOOK_TOO_LONG_TO_CONFIRM"
 
 track :: Org.Organization -> TrackReq -> Flow TrackRes
 track org req = do
@@ -461,7 +461,7 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
     Nothing -> do
       eres <- API.getToken dzTokenUrl (TokenReq dzClientId dzClientSecret)
       case eres of
-        Left err -> throwJsonError500 "TOKEN_ERR" (show err)
+        Left err -> throwBecknError500 "TOKEN_ERR" (show err)
         Right (TokenRes token) -> do
           Dz.insertToken dzClientId token
           return token
@@ -480,4 +480,4 @@ validateReturn currOrder =
     -- validating that the items which are returned should be a subset of items in the actual order.
     -- would fail when there are duplicates in current order items
     unless (null $ (Item._id <$> currOrder ^. #_items) List.\\ (Item._id <$> prevOrder ^. #_items)) $
-      throwJsonError400 "ERR" "INVALID_RETURN_ORDER"
+      throwBecknError400 "ERR" "INVALID_RETURN_ORDER"

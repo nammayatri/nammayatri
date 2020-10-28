@@ -226,8 +226,8 @@ authenticate = check handleKey
         err401 {errBody = "Invalid Auth"} ::
         FlowR r a
 
-throwJsonError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> Text -> m a
-throwJsonError err tag errMsg = do
+throwBecknError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> Text -> m a
+throwBecknError err tag errMsg = do
   L.logError tag errMsg
   L.throwException
     err
@@ -248,17 +248,17 @@ getBecknError err msg =
       _action = NACK
     }
 
-throwJsonError500,
-  throwJsonError501,
-  throwJsonError400,
-  throwJsonError401,
-  throwJsonError404 ::
+throwBecknError500,
+  throwBecknError501,
+  throwBecknError400,
+  throwBecknError401,
+  throwBecknError404 ::
     (HasCallStack, L.MonadFlow m) => Text -> Text -> m a
-throwJsonError500 = throwJsonError S.err500
-throwJsonError501 = throwJsonError S.err501
-throwJsonError400 = throwJsonError S.err400
-throwJsonError401 = throwJsonError S.err401
-throwJsonError404 = throwJsonError S.err404
+throwBecknError500 = throwBecknError S.err500
+throwBecknError501 = throwBecknError S.err501
+throwBecknError400 = throwBecknError S.err400
+throwBecknError401 = throwBecknError S.err401
+throwBecknError404 = throwBecknError S.err404
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format
@@ -291,7 +291,7 @@ throwDomainError err =
     AuthErr UnAuthorized -> t S.err401 "Unauthorized"
     _ -> t S.err500 "Unknown error"
   where
-    t errCode (ErrorMsg errMsg) = throwJsonError errCode "error" errMsg
+    t errCode (ErrorMsg errMsg) = throwBecknError errCode "error" errMsg
 
 -- TODO: the @desc@ argument should become part of monadic context
 callClient ::

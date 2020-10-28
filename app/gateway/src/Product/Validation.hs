@@ -31,6 +31,6 @@ validateVersion context = do
       FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)
   unless (context ^. #_core_version == desiredCoreVersion) $
-    throwJsonError400 "validation" "UNSUPPORTED_CORE_VERSION"
+    throwBecknError400 "validation" "UNSUPPORTED_CORE_VERSION"
   unless (context ^. #_domain_version == desiredDomainVersion) $
-    throwJsonError400 "validation" "UNSUPPORTED_DOMAIN_VERSION"
+    throwBecknError400 "validation" "UNSUPPORTED_DOMAIN_VERSION"

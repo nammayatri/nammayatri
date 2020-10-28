@@ -78,4 +78,4 @@ validateBapUrl org context = do
         Nothing -> False
         Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
   unless satisfied $
-    throwJsonError400 "ApiMapper.validateContext" "INVALID_BAP_URI"
+    throwBecknError400 "ApiMapper.validateContext" "INVALID_BAP_URI"

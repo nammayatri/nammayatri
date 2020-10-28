@@ -40,7 +40,7 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwJsonError400)
+import Beckn.Utils.Common (foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwBecknError400)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import qualified Data.ByteString.Lazy as BSL
@@ -86,10 +86,10 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> oneDropLocationExpected
     _ -> onePickupLocationExpected
   where
-    onePickupLocationExpected = throwJsonError400 "ERR" "ONE_PICKUP_LOCATION_EXPECTED"
-    oneDropLocationExpected = throwJsonError400 "ERR" "ONE_DROP_LOCATION_EXPECTED"
-    pickupLocationNotFound = throwJsonError400 "ERR" "PICKUP_LOCATION_NOT_FOUND"
-    dropLocationNotFound = throwJsonError400 "ERR" "DROP_LOCATION_NOT_FOUND"
+    onePickupLocationExpected = throwBecknError400 "ERR" "ONE_PICKUP_LOCATION_EXPECTED"
+    oneDropLocationExpected = throwBecknError400 "ERR" "ONE_DROP_LOCATION_EXPECTED"
+    pickupLocationNotFound = throwBecknError400 "ERR" "PICKUP_LOCATION_NOT_FOUND"
+    dropLocationNotFound = throwBecknError400 "ERR" "DROP_LOCATION_NOT_FOUND"
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
@@ -115,7 +115,7 @@ mkQuoteReqFromSelect SelectReq {..} = do
 readCoord :: Text -> Flow Double
 readCoord text = do
   let mCoord = readMaybe $ T.unpack text
-  maybe (throwJsonError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
+  maybe (throwBecknError400 "ERR" "LOCATION_READ_ERROR") pure mCoord
 
 mkOnSearchErrReq :: Context -> Error -> OnSearchReq
 mkOnSearchErrReq context err = do

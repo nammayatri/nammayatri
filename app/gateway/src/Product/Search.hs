@@ -30,13 +30,13 @@ search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
-    throwJsonError400 "Search.search" "INVALID_BAP_URI"
+    throwBecknError400 "Search.search" "INVALID_BAP_URI"
   let search' = ET.client $ withClientTracing searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of
-    (Nothing, _) -> throwJsonError500 "Search.search" "CB_URL_NOT_CONFIGURED"
-    (_, Nothing) -> throwJsonError500 "Search.search" "CB_API_KEY_NOT_CONFIGURED"
+    (Nothing, _) -> throwBecknError500 "Search.search" "CB_URL_NOT_CONFIGURED"
+    (_, Nothing) -> throwBecknError500 "Search.search" "CB_API_KEY_NOT_CONFIGURED"
     (Just cbUrl, Just cbApiKey) -> do
       providers <- BP.lookup context
       let bgSession = BA.GwSession cbUrl cbApiKey context

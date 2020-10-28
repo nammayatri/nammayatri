@@ -100,4 +100,4 @@ getProductAndCustomerPhones piId = do
         (Left err, _) -> reportError err
         (_, Left err) -> reportError err
   where
-    reportError = throwJsonError404 "call" . T.pack
+    reportError = throwBecknError404 "call" . T.pack

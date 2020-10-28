@@ -163,7 +163,7 @@ updateDriverDetails user piList req = case req ^. #_personId of
   Just driverId ->
     when (user ^. #_role == SP.ADMIN) $
       case piList of
-        [] -> throwJsonError400 "BAD_REQUEST" "INVALID_PRODUCT_INSTANCE_ID"
+        [] -> throwBecknError400 "BAD_REQUEST" "INVALID_PRODUCT_INSTANCE_ID"
         p : _ -> do
           PIQ.updateDriver (PI._id <$> piList) (Just $ PersonId driverId)
           driver <- PersQ.findPersonById (PersonId driverId)
@@ -200,7 +200,7 @@ updateStatus user piId req = do
         tripOtpCode <- req ^. #_otpCode & fromMaybeM400 "TRIP_OTP_MISSING"
         if inAppOtpCode == tripOtpCode
           then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
-          else throwJsonError400 "ERR" "INCORRECT_TRIP_OTP"
+          else throwBecknError400 "ERR" "INCORRECT_TRIP_OTP"
     (Just c, Just _, Just _) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) c req
@@ -243,7 +243,7 @@ unAssignDriverInfo productInstances request = do
       L.logError @Text
         "unAssignDriverInfo"
         "Can't unassign driver info for null ProductInstance."
-      throwJsonError400 "BAD_REQUEST" "INVALID_PRODUCT_INSTANCE_ID"
+      throwBecknError400 "BAD_REQUEST" "INVALID_PRODUCT_INSTANCE_ID"
   _ <- PIQ.updateVehicle (PI._id <$> productInstances) Nothing
   _ <- PIQ.updateDriver (PI._id <$> productInstances) Nothing
   notifyDriver (request ^. #_personId)
