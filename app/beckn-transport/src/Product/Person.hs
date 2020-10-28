@@ -69,7 +69,12 @@ listPerson orgId roles availability pickupTime limitM offsetM = withFlowHandler 
     if Just True == availability
       then do
         startTime <- pickupTime & fromMaybeM500 "MISSING_PICKUPTIME"
-        rideBuffer <- MPI.findByStartTimeBuffer Case.RIDEORDER startTime 1 [PI.CONFIRMED, PI.INPROGRESS]
+        rideBuffer <-
+          MPI.findByStartTimeBuffer
+            Case.RIDEORDER
+            startTime
+            1
+            [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
         let unavailablePersonIds = catMaybes $ PI._personId <$> rideBuffer
         traverse mkPersonRes $ filter (personNotIn unavailablePersonIds) personList
       else traverse mkPersonRes personList
