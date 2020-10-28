@@ -9,9 +9,7 @@ import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Types.API.Transporter
@@ -29,17 +27,14 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   where
     validate person = do
       unless (SP._verified person) $
-        L.throwException $
-          err400 {errBody = "user not verified"}
+        throwError400 "user not verified"
       when (isJust $ SP._organizationId person) $
-        L.throwException $
-          err400 {errBody = "user already registered an organization"}
+        throwError400 "user already registered an organization"
       when (SP._role person /= SP.ADMIN) $
-        L.throwException $
-          err401 {errBody = "unauthorized"}
+        throwError401 "unauthorized"
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
-        L.throwException $ err400 {errBody = "missing mandatory fields"}
+        throwError400 "missing mandatory fields"
 
 createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes
 createGateway _ req = withFlowHandler $ do
@@ -61,10 +56,10 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
           else modifyTransform req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
-    Nothing -> L.throwException $ err400 {errBody = "user not eligible"}
+    Nothing -> throwError400 "user not eligible"
   where
     validate person =
-      unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+      unless (SP._verified person) $ throwError400 "user not verified"
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
@@ -74,10 +69,10 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (OrganizationId orgId)
-    Nothing -> L.throwException $ err400 {errBody = "user not registered an organization"}
+    Nothing -> throwError400 "user not registered an organization"
   where
     validate person =
-      unless (SP._verified person) $ L.throwException $ err400 {errBody = "user not verified"}
+      unless (SP._verified person) $ throwError400 "user not verified"
 
 transporterMandatoryFields :: TransporterReq -> [Maybe Text]
 transporterMandatoryFields req =

@@ -11,10 +11,8 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
-import Data.Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
@@ -26,7 +24,7 @@ initiateLogin req =
   withFlowHandler $
     case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
-      _ -> L.throwException $ err400 {errBody = "UNSUPPORTED_MEDIUM_TYPE"}
+      _ -> throwError400 "UNSUPPORTED_MEDIUM_TYPE"
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
@@ -123,13 +121,13 @@ sendOTP SmsCredConfig {..} phoneNumber otpCode = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructOtpSms otpCode otpHash
         }
-  whenLeft res $ \err -> L.throwException err503 {errBody = encode err}
+  whenLeft res $ \err -> throwError503 $ encodeToText err
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandler $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-    when _verified $ L.throwException $ err400 {errBody = "ALREADY_VERIFIED"}
+    when _verified $ throwError400 "ALREADY_VERIFIED"
     checkForExpiry _authExpiry _updatedAt
     let isValid =
           _authMedium == req ^. #_medium && _authType == req ^. #__type
@@ -144,12 +142,11 @@ login tokenId req =
         QP.update (SP._id person) SP.ACTIVE True deviceToken
         updatedPerson <- QP.findPersonById (SP._id person)
         return $ LoginRes _token (Just $ SP.maskPerson updatedPerson)
-      else L.throwException $ err400 {errBody = "AUTH_VALUE_MISMATCH"}
+      else throwError400 "AUTH_VALUE_MISMATCH"
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
-        L.throwException $
-          err400 {errBody = "AUTH_EXPIRED"}
+        throwError400 "AUTH_EXPIRED"
 
 checkRegistrationTokenExists :: Text -> Flow SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
@@ -178,7 +175,7 @@ reInitiateLogin tokenId req =
         sendOTP credCfg (countryCode <> mobileNumber) _authValueHash
         _ <- QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
-      else L.throwException $ err400 {errBody = "LIMIT_EXCEEDED"}
+      else throwError400 "LIMIT_EXCEEDED"
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do

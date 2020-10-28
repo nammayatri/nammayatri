@@ -27,7 +27,7 @@ import GHC.Records (HasField (..))
 import GHC.TypeLits (Symbol)
 import Network.HTTP.Types (hContentType)
 import Network.HTTP.Types.Status
-import Servant (ServerError (..), err401, err500)
+import Servant (ServerError (..), err500)
 import qualified Servant.Client as S
 import Servant.Client.Core.ClientError
 import Servant.Client.Core.Response
@@ -222,9 +222,11 @@ authenticate = check handleKey
         DT.decodeUtf8 <$> (rightToMaybe . DBB.decode . DT.encodeUtf8 =<< T.stripPrefix "Basic " rauth)
     check = maybe throw401
     throw401 =
-      L.throwException $
-        err401 {errBody = "Invalid Auth"} ::
-        FlowR r a
+      throwError401 "Invalid Auth" :: FlowR r a
+
+throwHttpError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> m a
+throwHttpError err errMsg =
+  L.throwException err {errBody = BSL.fromStrict (DT.encodeUtf8 errMsg)}
 
 throwBecknError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> m a
 throwBecknError err errMsg = do
@@ -247,6 +249,20 @@ getBecknError err msg =
       _errorMessage = ErrorMsg msg,
       _action = NACK
     }
+
+throwError500,
+  throwError501,
+  throwError503,
+  throwError400,
+  throwError401,
+  throwError404 ::
+    (HasCallStack, L.MonadFlow m) => Text -> m a
+throwError500 = throwHttpError S.err500
+throwError501 = throwHttpError S.err501
+throwError503 = throwHttpError S.err503
+throwError400 = throwHttpError S.err400
+throwError401 = throwHttpError S.err401
+throwError404 = throwHttpError S.err404
 
 throwBecknError500,
   throwBecknError501,

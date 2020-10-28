@@ -17,7 +17,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
-import Servant
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
@@ -37,7 +36,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
-      L.throwException $ err400 {errBody = "organisation id is missing"}
+      throwError400 "organisation id is missing"
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM
@@ -57,9 +56,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
     Just pid -> PIQ.findById pid
-    Nothing ->
-      L.throwException $
-        err400 {errBody = "INVALID FLOW"}
+    Nothing -> throwError400 "INVALID FLOW"
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   isAllowed ordPi req
   updateVehicleDetails user piList req
@@ -84,8 +81,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ L.throwException $
-          err401 {errBody = "Unauthorized"}
+        $ throwError401 "Unauthorized"
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
         >>= buildResponse
@@ -112,8 +108,7 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
         ( isNothing (SP._organizationId user)
             || (SP._organizationId user /= (V._organizationId <$> vehicle))
         )
-        $ L.throwException $
-          err401 {errBody = "Unauthorized"}
+        $ throwError401 "Unauthorized"
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
         >>= buildResponse
@@ -156,7 +151,7 @@ isAllowed prodInst req = do
   unless (null piList) $
     case (req ^. #_personId, req ^. #_vehicleId) of
       (Nothing, Nothing) -> return ()
-      _ -> L.throwException $ err400 {errBody = "INVALID UPDATE OPERATION"}
+      _ -> throwError400 "INVALID UPDATE OPERATION"
 
 updateDriverDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 updateDriverDetails user piList req = case req ^. #_personId of
@@ -205,7 +200,7 @@ updateStatus user piId req = do
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) c req
     (Nothing, Just _, Just _) -> return ()
-    _ -> L.throwException $ err400 {errBody = "DRIVER_VEHICLE_UNASSIGNED"}
+    _ -> throwError400 "DRIVER_VEHICLE_UNASSIGNED"
   return ()
 
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> Flow ()
@@ -273,9 +268,7 @@ updateTrip piId newStatus request = do
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       searchPi <- case prodInst ^. #_parentId of
         Just pid -> PIQ.findById pid
-        Nothing ->
-          L.throwException $
-            err400 {errBody = "INVALID FLOW"}
+        Nothing -> throwError400 "INVALID FLOW"
       _ <- PIQ.updateStatus (PI._id trackerPi) PI.COMPLETED
       _ <- PIQ.updateStatus (PI._id orderPi) PI.CANCELLED
       _ <- PIQ.updateStatus (PI._id searchPi) PI.CANCELLED

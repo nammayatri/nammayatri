@@ -16,7 +16,6 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import qualified Models.Case as Case
-import Servant
 import qualified Storage.Queries.Location as Location
 import Types.API.Location as Location
 
@@ -52,8 +51,8 @@ data CachedLocationInfo = CachedLocationInfo
 updateLocation :: SR.RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation _ caseId req = withFlowHandler $ do
   -- TODO: Add a driver and case check
-  driverLat <- maybe (L.throwException $ err400 {errBody = "Lat not specified"}) return $ req ^. #lat
-  driverLon <- maybe (L.throwException $ err400 {errBody = "Long not specified"}) return $ req ^. #long
+  driverLat <- req ^. #lat & fromMaybeM400 "Lat not specified"
+  driverLon <- req ^. #long & fromMaybeM400 "Long not specified"
   cacheM <- Redis.getKeyRedis caseId
   case cacheM of
     Nothing -> do
@@ -214,7 +213,7 @@ getRoute _ Location.Request {..} =
   withFlowHandler $
     MapSearch.getRoute getRouteRequest
       >>= either
-        (\err -> L.throwException $ err400 {errBody = show err})
+        (throwError400 . show)
         return
   where
     mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long

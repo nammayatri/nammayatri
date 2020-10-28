@@ -6,12 +6,10 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
-import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Servant
 import qualified Types.Storage.DB as DB
 
 getDbTable ::
@@ -46,7 +44,7 @@ updateAttempts attemps id = do
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
-  findById id >>= maybe (L.throwException err500) pure
+  findById id >>= fromMaybeM500 "token not found"
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =

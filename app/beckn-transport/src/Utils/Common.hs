@@ -97,20 +97,18 @@ instance VerificationMethod DriverVerifyToken where
 verifyAdmin :: SP.Person -> Flow Text
 verifyAdmin user = do
   when (user ^. #_role /= SP.ADMIN) $
-    L.throwException $
-      err400 {errBody = "NEED_ADMIN_ACCESS"}
+    throwError400 "NEED_ADMIN_ACCESS"
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
+    Nothing -> throwError400 "NO_ORGANIZATION_FOR_THIS_USER"
 
 verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
   unless ((user ^. #_role) `elem` [SP.ADMIN, SP.DRIVER]) $
-    L.throwException $
-      err400 {errBody = "NEED_ADMIN_OR_DRIVER_ACCESS"}
+    throwError400 "NEED_ADMIN_OR_DRIVER_ACCESS"
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> L.throwException $ err400 {errBody = "NO_ORGANIZATION_FOR_THIS_USER"}
+    Nothing -> throwError400 "NO_ORGANIZATION_FOR_THIS_USER"
 
 validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do

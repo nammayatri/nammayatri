@@ -33,7 +33,6 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
-import Servant
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Organization as Org
 import qualified Types.API.Case as API
@@ -72,8 +71,7 @@ search person req = withFlowHandler $ do
       currTime <- getCurrTime
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
-        L.throwException $
-          err400 {errBody = "Invalid start time"}
+        throwError400 "Invalid start time"
 
 searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _unit req = withFlowHandler $ do
@@ -96,11 +94,11 @@ searchCbService req catalog = do
         >>= fromMaybeM400 "INVALID_PROVIDER_URI"
     personId <-
       maybe
-        (L.throwException $ err500 {errBody = "No person linked to case"})
+        (throwError500 "No person linked to case")
         (return . PersonId)
         (Case._requestor case_)
     case (catalog ^. #_categories, catalog ^. #_items) of
-      ([], _) -> L.throwException $ err400 {errBody = "missing provider"}
+      ([], _) -> throwError400 "missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
         declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
@@ -109,7 +107,7 @@ searchCbService req catalog = do
       (category : _, items) -> do
         when
           (case_ ^. #_status == Case.CLOSED)
-          (L.throwException $ err400 {errBody = "Case expired"})
+          (throwError400 "Case expired")
         let provider = fromBeckn category
         products <- traverse (mkProduct case_) items
         traverse_ Products.create products
@@ -215,7 +213,7 @@ mkProduct case_ item = do
   now <- getCurrTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
+      Nothing -> throwError400 "Invalid price"
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -249,7 +247,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   let info = ProductInfo (Just provider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> L.throwException $ err400 {errBody = "Invalid price"}
+      Nothing -> throwError400 "Invalid price"
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend

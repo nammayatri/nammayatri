@@ -12,7 +12,7 @@ import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -20,7 +20,6 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.Case as QCase
 import qualified Models.ProductInstance as MPI
-import Servant
 import qualified Storage.Queries.Organization as OQ
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
@@ -34,8 +33,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrTime
   case_ <- QCase.findIdByPerson person $ CaseId caseId
   when ((case_ ^. #_validTill) < lt) $
-    L.throwException $
-      err400 {errBody = "Case has expired"}
+    throwError400 "Case has expired"
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (ProductInstanceId productInstanceId)
   organization <-

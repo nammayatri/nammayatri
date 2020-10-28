@@ -17,7 +17,6 @@ import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
-import Servant (err500, errBody)
 import Servant.Client
 import Types.API.Location
 
@@ -34,10 +33,10 @@ search url req = do
           nsdlBapId <- nsdlUsername <$> ask
           nsdlBapPwd <- nsdlPassword <$> ask
           callAPIWithTrail nsdlBaseUrl (API.nsdlSearch nsdlBapId nsdlBapPwd req) "search"
-        Nothing -> L.throwException $ err500 {errBody = "invalid nsdl gateway url"}
+        Nothing -> throwError500 "invalid nsdl gateway url"
     Just "JUSPAY" -> do
       callAPIWithTrail url (API.search (apiKey ?: "mobility-app-key") req) "search"
-    _ -> L.throwException $ err500 {errBody = "gateway not configured"}
+    _ -> throwError500 "gateway not configured"
   case res of
     Left err -> do
       L.logError @Text "Search" ("error occurred while search: " <> show err)

@@ -36,7 +36,6 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
-import Servant hiding (Context)
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -53,7 +52,7 @@ import qualified Utils.Notifications as Notify
 verifyAndHandle :: OrganizationId -> (Organization -> a -> Flow b) -> Organization -> a -> FlowHandler b
 verifyAndHandle urlOrgId handler org a = withFlowHandler $ do
   unless (urlOrgId == org ^. #_id) $
-    L.throwException $ err401 {errBody = "INVALID_API_KEY"}
+    throwError401 "INVALID_API_KEY"
   handler org a
 
 search :: Organization -> SearchReq -> Flow AckResponse
@@ -428,7 +427,7 @@ trackTrip _org req = do
       notifyTripUrlToGateway case_ parentCase
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
-    Nothing -> L.throwException $ err400 {errBody = "Case does not have an associated parent case"}
+    Nothing -> throwError400 "Case does not have an associated parent case"
 
 notifyTripUrlToGateway :: Case -> Case -> Flow ()
 notifyTripUrlToGateway case_ parentCase = do

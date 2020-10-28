@@ -6,13 +6,14 @@
 module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.DB.Config as DB
+import Beckn.Utils.Common
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Servant (err500, errBody)
+import Servant (err500)
 
 type PgTable table db =
   ( B.Beamable table,
@@ -48,8 +49,8 @@ findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
-    Right Nothing -> L.throwException err500 {errBody = "No rec found"}
-    Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
+    Right Nothing -> throwError500 "No rec found"
+    Left err -> throwError500 $ "DBError: " <> show err
 
 findOne ::
   RunReadablePgTable table db =>
@@ -75,7 +76,7 @@ findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
     Right val -> return val
-    Left err -> L.throwException err500 {errBody = "DBError: " <> show err}
+    Left err -> throwError500 $ "DBError: " <> show err
 
 findAll ::
   RunReadablePgTable table db =>

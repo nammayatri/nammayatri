@@ -9,9 +9,7 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
@@ -27,8 +25,7 @@ createVehicle orgId req = withFlowHandler $ do
     validateVehicle = do
       mVehicle <- QV.findByRegistrationNo $ req ^. #_registrationNo
       when (isJust mVehicle) $
-        L.throwException $
-          err400 {errBody = "RegistrationNo already exists"}
+        throwError400 "RegistrationNo already exists"
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
 listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $ do
@@ -56,13 +53,13 @@ deleteVehicle orgId vehicleId = withFlowHandler $ do
     then do
       QV.deleteById (VehicleId vehicleId)
       return $ DeleteVehicleRes vehicleId
-    else L.throwException $ err401 {errBody = "Unauthorized"}
+    else throwError401 "Unauthorized"
 
 getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
   user <- QP.findPersonById (PersonId _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
-    (Nothing, Nothing) -> L.throwException $ err400 {errBody = "Invalid Request"}
+    (Nothing, Nothing) -> throwError400 "Invalid Request"
     _ ->
       QV.findByAnyOf registrationNoM vehicleIdM
         >>= fromMaybeM400 "VEHICLE NOT FOUND"
@@ -72,8 +69,7 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
     hasAccess :: SP.Person -> SV.Vehicle -> Flow ()
     hasAccess user vehicle =
       when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
-        L.throwException $
-          err401 {errBody = "Unauthorized"}
+        throwError401 "Unauthorized"
 
 addOrgId :: Text -> SV.Vehicle -> Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}

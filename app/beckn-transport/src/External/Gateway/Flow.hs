@@ -12,10 +12,8 @@ import Beckn.Types.API.Update
 import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
-import Servant (err500, errBody)
 
 onSearch :: OnSearchReq -> Flow AckResponse
 onSearch req@CallbackReq {context} = do
@@ -26,11 +24,11 @@ onSearch req@CallbackReq {context} = do
       case mNsdlBaseUrl of
         Just nsdlBaseUrl -> do
           callAPIWithTrail nsdlBaseUrl (API.nsdlOnSearch (nsdlUsername env) (nsdlPassword env) req) "on_search"
-        Nothing -> L.throwException $ err500 {errBody = "invalid nsdl gateway url"}
+        Nothing -> throwError500 "invalid nsdl gateway url"
     Just "JUSPAY" -> do
       let url = xGatewayUri env
       callAPIWithTrail url (API.onSearch (xGatewayApiKey env ?: "mobility-provider-key") req) "on_search"
-    _ -> L.throwException $ err500 {errBody = "gateway not configured"}
+    _ -> throwError500 "gateway not configured"
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 

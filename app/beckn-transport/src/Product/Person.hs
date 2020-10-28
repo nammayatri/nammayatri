@@ -16,10 +16,8 @@ import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
-import Servant
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -37,12 +35,10 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   where
     verifyPerson entityId =
       when (personId /= entityId) $
-        L.throwException $
-          err400 {errBody = "PERSON_ID_MISMATCH"}
+        throwError400 "PERSON_ID_MISMATCH"
     isValidUpdate person =
       when (isJust (req ^. #_role) && person ^. #_role /= SP.ADMIN) $
-        L.throwException $
-          err401 {errBody = "ADMIN ACCESS REQUIRED"}
+        throwError401 "ADMIN ACCESS REQUIRED"
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
@@ -63,9 +59,8 @@ createPerson orgId req = withFlowHandler $ do
         case (preq ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
-              L.throwException $
-                err400 {errBody = "DRIVER_ALREADY_CREATED"}
-          _ -> L.throwException $ err400 {errBody = "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"}
+              throwError400 "DRIVER_ALREADY_CREATED"
+          _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
 
 listPerson :: Text -> [SP.Role] -> Maybe Bool -> Maybe UTCTime -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles availability pickupTime limitM offsetM = withFlowHandler $ do
@@ -121,8 +116,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ L.throwException $
-          err401 {errBody = "Unauthorized"}
+        $ throwError401 "Unauthorized"
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do
@@ -132,7 +126,7 @@ deletePerson orgId personId = withFlowHandler $ do
       QP.deleteById (PersonId personId)
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
-    else L.throwException $ err401 {errBody = "Unauthorized"}
+    else throwError401 "Unauthorized"
 
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
@@ -141,10 +135,10 @@ linkEntity orgId personId req = withFlowHandler $ do
     VEHICLE ->
       QV.findVehicleById (VehicleId (req ^. #_entityId))
         >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
-    _ -> L.throwException $ err400 {errBody = "UNSUPPORTED ENTITY TYPE"}
+    _ -> throwError400 "UNSUPPORTED ENTITY TYPE"
   when
     (person ^. #_organizationId /= Just orgId)
-    (L.throwException $ err401 {errBody = "Unauthorized"})
+    (throwError401 "Unauthorized")
   prevPerson <- QP.findByEntityId (req ^. #_entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
   QP.updateEntity (PersonId personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)

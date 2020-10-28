@@ -27,7 +27,6 @@ import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
 import Models.ProductInstance as MPI
-import Servant
 import Servant.Client (BaseUrl (..))
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
@@ -53,7 +52,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
           else Case.findAllByTypeStatuses limit offset csType status orgId now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
-    Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
+    Nothing -> throwError400 "ORG_ID MISSING"
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
@@ -93,8 +92,8 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
           notifyGateway c declinedProdInst orgId PI.OUTOFSTOCK
           Case.updateStatus (c ^. #_id) Case.CLOSED
           return c
-        _ -> L.throwException $ err400 {errBody = "TRANSPORTER CHOICE INVALID"}
-    Nothing -> L.throwException $ err400 {errBody = "ORG_ID MISSING"}
+        _ -> throwError400 "TRANSPORTER CHOICE INVALID"
+    Nothing -> throwError400 "ORG_ID MISSING"
 
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do
