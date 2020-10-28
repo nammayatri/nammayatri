@@ -78,7 +78,7 @@ getCountByStatus orgId piType = do
   result <- Q.getCountByStatus' orgId piType
   checkDBError result
 
-findByStartTimeBuffer :: ProductInstanceType -> UTCTime -> NominalDiffTime -> Flow [ProductInstance]
-findByStartTimeBuffer piType startTime buffer = do
-  result <- Q.findByStartTimeBuffer piType startTime buffer
+findByStartTimeBuffer :: ProductInstanceType -> UTCTime -> NominalDiffTime -> [ProductInstanceStatus] -> Flow [ProductInstance]
+findByStartTimeBuffer piType startTime buffer statuses = do
+  result <- Q.findByStartTimeBuffer piType startTime buffer statuses
   checkDBError result
