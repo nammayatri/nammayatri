@@ -11,18 +11,20 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
+import qualified Beckn.Types.Storage.Organization as SOrganization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Data.ByteString.Lazy as BSL
 import Data.Text as DT
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant hiding (Context)
+import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
@@ -64,8 +66,38 @@ validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ _tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal _updatedAt
-  when expired $ throwError400 "TOKEN_EXPIRED"
+  when expired $ Utils.throwError400 "TOKEN_EXPIRED"
   return sr
+
+-- | Verifies org's token
+type OrgTokenAuth = HeaderAuth "token" OrgVerifyToken
+
+data OrgVerifyToken = OrgVerifyToken
+
+instance
+  SanitizedUrl (sub :: Type) =>
+  SanitizedUrl (OrgTokenAuth :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance VerificationMethod OrgVerifyToken where
+  type VerificationResult OrgVerifyToken = SOrganization.Organization
+  verificationDescription =
+    "Checks whether token is registered.\
+    \If you don't have a token, use registration endpoints."
+
+verifyOrgAction :: VerificationAction OrgVerifyToken AppEnv
+verifyOrgAction = VerificationAction QOrganization.verifyCallbackToken
+
+fromMaybeM :: ServerError -> Maybe a -> Flow a
+fromMaybeM err Nothing = L.throwException err
+fromMaybeM _ (Just a) = return a
+
+fromMaybeM400, fromMaybeM401, fromMaybeM500, fromMaybeM503 :: BSL.ByteString -> Maybe a -> Flow a
+fromMaybeM400 a = fromMaybeM (err400 {errBody = a})
+fromMaybeM401 a = fromMaybeM (err401 {errBody = a})
+fromMaybeM500 a = fromMaybeM (err500 {errBody = a})
+fromMaybeM503 a = fromMaybeM (err503 {errBody = a})
 
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)

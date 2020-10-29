@@ -16,4 +16,8 @@ run env =
     Trail.toTraceOrNotToTrace env $
       BU.run appAPI appServer context env
   where
-    context = verifyApiKey :. verifyPersonAction :. EmptyContext
+    context =
+      verifyApiKey
+        :. verifyPersonAction
+        :. verifyOrgAction
+        :. EmptyContext

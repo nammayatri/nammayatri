@@ -47,7 +47,7 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import Types.Geofencing
 import Utils.Auth (VerifyAPIKey)
-import Utils.Common (TokenAuth)
+import Utils.Common (OrgTokenAuth, TokenAuth)
 
 type AppAPI =
   "v1"
@@ -132,6 +132,7 @@ type ConfirmAPI =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
+      :> OrgTokenAuth
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )

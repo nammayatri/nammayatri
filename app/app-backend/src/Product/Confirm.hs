@@ -10,6 +10,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Order (OrderItem (..))
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common
@@ -66,8 +67,8 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
             _cancellation_policy = Nothing
           }
 
-onConfirm :: OnConfirmReq -> FlowHandler AckResponse
-onConfirm req = withFlowHandler $ do
+onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
+onConfirm _ req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_confirm req" (show req)
   validateContext "on_confirm" $ req ^. #context

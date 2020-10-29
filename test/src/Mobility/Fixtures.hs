@@ -175,7 +175,7 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
-appOnConfirmRide :: Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
+appOnConfirmRide :: Text -> Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
 appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 buildAppConfirmReq :: Text -> Text -> ConfirmAPI.ConfirmReq

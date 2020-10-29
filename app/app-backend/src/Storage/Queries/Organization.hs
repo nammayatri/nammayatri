@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Organization as Storage
-import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -22,6 +22,15 @@ create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
+
+verifyCallbackToken :: RegToken -> Flow Storage.Organization
+verifyCallbackToken regToken = do
+  dbTable <- getDbTable
+  DB.findOne dbTable (predicate regToken)
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "UNAUTHENTICATED_USER"
+  where
+    predicate token Storage.Organization {..} = _callbackApiKey ==. B.val_ (Just token)
 
 findOrganizationById ::
   OrganizationId -> Flow (Maybe Storage.Organization)
