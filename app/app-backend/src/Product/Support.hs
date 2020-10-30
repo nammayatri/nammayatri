@@ -11,11 +11,12 @@ import qualified Beckn.SesConfig as SesConfig
 import Beckn.Types.App (IssueId (..), _getPersonId)
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common (getCurrTime, mkAckResponse, mkAckResponse', withFlowHandler)
+import Beckn.Utils.Common (getCurrTime, withFlowHandler)
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
 import qualified Storage.Queries.Issues as Queries
+import qualified Types.API.Common as API
 import Types.API.Support as Support
 import qualified Utils.SES as SES
 
@@ -30,8 +31,8 @@ sendIssue person request@SendIssueReq {..} = withFlowHandler $ do
   let mailBody = mkMailBody issueId personId request utcNow
   responseError <- L.runIO $ SES.sendEmail issuesConfig mailSubject mailBody
   case responseError of
-    Just resError -> mkAckResponse' "" "support" ("Err: " <> resError)
-    Nothing -> mkAckResponse "" "support"
+    Just resError -> pure $ API.Ack {_action = "Error", _message = resError}
+    Nothing -> pure $ API.Ack {_action = "Successful", _message = ""}
 
 mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> SIssue.Issue
 mkDBIssue issueId customerId SendIssueReq {..} time =
