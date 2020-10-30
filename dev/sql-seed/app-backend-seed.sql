@@ -690,7 +690,7 @@ CREATE TABLE atlas_app.issues (
     product_instance_id character varying(36) DEFAULT NULL,
     contact_email character varying(100) NOT NULL,
     reason character varying(500) NOT NULL,
-    description mediumtext DEFAULT NULL,
+    description character varying(1000) DEFAULT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
