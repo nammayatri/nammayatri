@@ -33,7 +33,7 @@ verifyToken regToken = do
   L.logInfo @Text "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "UNAUTHENTICATED_USER"
+    >>= fromMaybeM400 "UNAUTHENTICATED_ORGANIZATION"
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 

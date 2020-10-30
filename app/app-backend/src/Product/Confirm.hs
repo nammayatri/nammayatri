@@ -68,7 +68,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
           }
 
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
-onConfirm _ req = withFlowHandler $ do
+onConfirm _org req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_confirm req" (show req)
   validateContext "on_confirm" $ req ^. #context
