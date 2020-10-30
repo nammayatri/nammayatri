@@ -110,6 +110,7 @@ createProductInstance cs prod price orgId status = do
           _caseId = Case._id cs,
           _productId = Product._id prod,
           _personId = Nothing,
+          _personUpdatedAt = Nothing,
           _shortId = T.pack shortId,
           _entityType = PI.VEHICLE,
           _entityId = Nothing,

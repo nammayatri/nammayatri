@@ -128,6 +128,7 @@ mkOrderProductInstance caseId prodInst = do
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = prodInst ^. #_personId,
+        _personUpdatedAt = prodInst ^. #_personUpdatedAt,
         _entityType = SPI.VEHICLE,
         _entityId = Nothing,
         _shortId = shortId,

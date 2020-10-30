@@ -284,6 +284,7 @@ updateDriver ids driverId = do
     setClause sDriverId currTime Storage.ProductInstance {..} =
       mconcat
         [ _personId <-. B.val_ sDriverId,
+          _personUpdatedAt <-. B.val_ (Just currTime),
           _updatedAt <-. B.val_ currTime
         ]
 

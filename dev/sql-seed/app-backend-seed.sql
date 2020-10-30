@@ -74,6 +74,7 @@ CREATE TABLE atlas_app.product_instance (
     case_id character varying(255) NOT NULL,
     product_id character varying(255) NOT NULL,
     person_id character varying(255),
+    person_updated_at timestamp with time zone,
     short_id character varying(36) NOT NULL,
     entity_id character varying(255),
     entity_type character varying(255) NOT NULL,
