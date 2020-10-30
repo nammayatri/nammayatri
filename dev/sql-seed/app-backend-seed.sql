@@ -678,3 +678,22 @@ CREATE TABLE atlas_app.external_trail (
 
 ALTER TABLE ONLY atlas_app."external_trail"
     ADD CONSTRAINT idx_external_trail_primary PRIMARY KEY (id);
+
+
+--
+-- Name: issues; Type: TABLE; Schema: atlas_app; Owner: atlas
+--
+
+CREATE TABLE atlas_app.issues (
+    id character(36) NOT NULL,
+    customer_id character(36) NOT NULL,
+    product_instance_id character varying(36) DEFAULT NULL,
+    contact_email character varying(100) NOT NULL,
+    reason character varying(500) NOT NULL,
+    description mediumtext DEFAULT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE atlas_app.issues OWNER TO atlas;
