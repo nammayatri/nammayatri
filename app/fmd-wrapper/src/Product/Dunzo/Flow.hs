@@ -89,14 +89,14 @@ select org req = do
     quoteReq <- mkQuoteReqFromSelect req
     eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
-    sendCallback ctx cbUrl cbApiKey eres
+    sendCallback ctx dzQuotationTTLinMin cbUrl cbApiKey eres
   returnAck ctx
   where
-    sendCallback context cbUrl cbApiKey res =
+    sendCallback context quotationTTLinMin cbUrl cbApiKey res =
       case res of
         Right quoteRes -> do
           let reqOrder = req ^. #message . #order
-          onSelectMessage <- mkOnSelectOrder reqOrder quoteRes
+          onSelectMessage <- mkOnSelectOrder reqOrder quotationTTLinMin quoteRes
           let onSelectReq = mkOnSelectReq context onSelectMessage
           let order = onSelectMessage ^. #order
           -- onSelectMessage has quotation
@@ -148,14 +148,15 @@ init org req = do
     quoteReq <- mkQuoteReqFromSelect $ SelectReq context (SelectOrder (orderDetails ^. #order))
     eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
-    sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId eres
+    sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId dzQuotationTTLinMin eres
   returnAck context
   where
-    sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId (Right res) = do
+    sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId quotationTTLinMin (Right res) = do
       -- quoteId will be used as orderId
       onInitMessage <-
         mkOnInitMessage
           quoteId
+          quotationTTLinMin
           (orderDetails ^. #order)
           payeeDetails
           req
@@ -166,7 +167,7 @@ init org req = do
       onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
       L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
       return ()
-    sendCb _ context cbApiKey cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
+    sendCb _ context cbApiKey cbUrl _ _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
@@ -175,7 +176,7 @@ init org req = do
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
           return ()
         Nothing -> return ()
-    sendCb _ _ _ _ _ _ _ = return ()
+    sendCb _ _ _ _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId order quote = do
       now <- getCurrTime
@@ -225,7 +226,7 @@ confirm org req = do
   case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let order = orderDetails ^. #order
-  validateDelayFromInit case_
+  validateDelayFromInit dzQuotationTTLinMin case_
   verifyPayment reqOrder order
   validateReturn order
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
@@ -302,11 +303,10 @@ confirm org req = do
             L.logInfo ("Order_" <> orderId) ("Price diff of amount " <> show (confirmAmount - initAmount))
         _ -> pass
 
-    validateDelayFromInit case_ = do
+    validateDelayFromInit dzQuotationTTLinMin case_ = do
       now <- getCurrTime
-      let thresholdDuration = 5 -- in minutes -- TODO: make this configurable from env
       let orderCreatedAt = case_ ^. #_createdAt
-      let thresholdTime = addUTCTime (fromInteger (thresholdDuration * 60)) orderCreatedAt
+      let thresholdTime = addUTCTime (fromInteger (dzQuotationTTLinMin * 60)) orderCreatedAt
       when (thresholdTime < now) $
         throwBecknError400 "TOOK_TOO_LONG_TO_CONFIRM"
 

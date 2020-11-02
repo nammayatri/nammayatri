@@ -33,6 +33,7 @@ let dunzoConfig =
   , dzBPNwAddress = "http://localhost:8018/v1"
   , payee = sec.payee
   , dzTestMode = True
+  , dzQuotationTTLinMin = +5
   }
 
 let gwUri = "http://localhost:8015/v1"

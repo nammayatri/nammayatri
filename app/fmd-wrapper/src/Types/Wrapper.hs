@@ -22,7 +22,8 @@ data DunzoConfig = DunzoConfig
     dzBPId :: Text,
     dzBPNwAddress :: BaseUrl,
     payee :: Text,
-    dzTestMode :: Bool
+    dzTestMode :: Bool,
+    dzQuotationTTLinMin :: Integer
   }
   deriving (Show, Generic, ToJSON, FromJSON, FromDhall)
 

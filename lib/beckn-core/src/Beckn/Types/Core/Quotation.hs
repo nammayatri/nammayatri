@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Quotation where
 
-import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Price
 import Beckn.Utils.Common
 import Data.Text
+import Data.Time
 import EulerHS.Prelude
 
 data BreakupItem = BreakupItem
@@ -23,7 +23,7 @@ instance ToJSON BreakupItem where
 data Quotation = Quotation
   { _id :: Text,
     _price :: Maybe Price,
-    _ttl :: Maybe Duration,
+    _ttl :: Maybe UTCTime,
     _breakup :: Maybe [BreakupItem]
   }
   deriving (Generic, Show)

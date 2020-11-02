@@ -193,10 +193,12 @@ mkSearchItem index QuoteRes {..} =
         }
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
 
-mkQuote :: QuoteRes -> Flow Quotation
-mkQuote QuoteRes {..} = do
+mkQuote :: Integer -> QuoteRes -> Flow Quotation
+mkQuote quotationTTLinMin QuoteRes {..} = do
   qid <- generateGUID
-  return $ Quotation {_id = qid, _price = Just price, _ttl = Nothing, _breakup = Nothing}
+  now <- getCurrTime
+  let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
+  return $ Quotation {_id = qid, _price = Just price, _ttl = Just validTill, _breakup = Nothing}
   where
     price = mkPrice estimated_price
     mkPrice estimatedPrice =
@@ -211,9 +213,9 @@ mkQuote QuoteRes {..} = do
           _maximum_value = Nothing
         }
 
-mkOnSelectOrder :: Order -> QuoteRes -> Flow SelectOrder
-mkOnSelectOrder order res@QuoteRes {..} = do
-  quote <- mkQuote res
+mkOnSelectOrder :: Order -> Integer -> QuoteRes -> Flow SelectOrder
+mkOnSelectOrder order quotationTTLinMin res@QuoteRes {..} = do
+  quote <- mkQuote quotationTTLinMin res
   task <- updateTaskEta (head $ order ^. #_tasks) eta
   let order' =
         order & #_tasks .~ [task]
@@ -234,12 +236,16 @@ mkOnSelectErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkOnInitMessage :: Text -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
-mkOnInitMessage orderId order payee req QuoteRes {..} = do
+mkOnInitMessage :: Text -> Integer -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
+mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
+  now <- getCurrTime
+  let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
+  quotation <- fromMaybeM500' "INVALID_ORDER_NO_QUOTATION" $ order ^. #_quotation
   return $
     InitOrder $
       order & #_id ?~ orderId
+        & #_quotation ?~ (quotation & #_ttl ?~ validTill)
         & #_payment ?~ mkPayment payee estimated_price
         & #_billing .~ billing
         & #_tasks .~ [task]
