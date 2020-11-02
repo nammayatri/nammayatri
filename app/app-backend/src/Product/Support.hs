@@ -52,19 +52,19 @@ mkMailSubject issueId reason = "Issue " <> issueId <> ". " <> reason
 
 mkMailBody :: Text -> Text -> Support.SendIssueReq -> UTCTime -> Text
 mkMailBody issueId personId SendIssueReq {..} time =
-  let issueInfo =
-        "Issue id: " <> issueId
-          <> "\nPerson id: "
-          <> personId
-          <> "\nConcact email: "
-          <> contactEmail
-          <> "\nCreation time: "
-          <> show time
-          <> "\n\nReason: "
-          <> issue ^. #_reason
-      description = case issue ^. #_description of
-        Nothing -> issueInfo <> "\n\n" <> "No details provided by user."
-        Just details -> issueInfo <> "\n\n" <> "Details: " <> details
-   in case productInstanceId of
-        Nothing -> issueInfo <> description
-        Just orderId -> issueInfo <> "Order id: " <> orderId <> description
+  "Issue id: " <> issueId
+    <> "\nPerson id: "
+    <> personId
+    <> "\nOrder id: "
+    <> orderId
+    <> "\nContact email: "
+    <> contactEmail
+    <> "\nCreation time: "
+    <> show time
+    <> "\n\nReason: "
+    <> issue ^. #_reason
+    <> "\n\nDetails: "
+    <> description
+  where
+    orderId = fromMaybe "issue does not belong to specific order." productInstanceId
+    description = fromMaybe "no details provided by user." (issue ^. #_description)
