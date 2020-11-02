@@ -4,4 +4,4 @@ import App (runGateway)
 import EulerHS.Prelude
 
 main :: IO ()
-main = runGateway False
+main = runGateway id

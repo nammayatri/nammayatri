@@ -18,7 +18,7 @@ data AppCfg = AppCfg
     nwAddress :: Maybe BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    loggerConfig :: Maybe LoggerConfig,
+    loggerConfig :: LoggerConfig,
     searchTimeout :: Maybe Int,
     traceFlag :: TraceFlag,
     mobilityCoreVersion :: Text,
@@ -36,7 +36,7 @@ data AppEnv = AppEnv
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    loggerConfig :: Maybe LoggerConfig,
+    loggerConfig :: LoggerConfig,
     searchTimeout :: Maybe Int, -- In seconds
     traceFlag :: TraceFlag,
     mobilityCoreVersion :: Text,

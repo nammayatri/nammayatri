@@ -25,11 +25,11 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 
-runTransporterBackendApp :: Bool -> IO ()
-runTransporterBackendApp isTest = do
-  appEnv <- readDhallConfigDefault "beckn-transport"
+runTransporterBackendApp :: (AppEnv -> AppEnv) -> IO ()
+runTransporterBackendApp configModifier = do
+  appEnv <- configModifier <$> readDhallConfigDefault "beckn-transport"
   Metrics.serve (metricsPort appEnv)
-  runTransporterBackendApp' isTest appEnv $
+  runTransporterBackendApp' appEnv $
     setOnExceptionResponse transporterExceptionResponse $
       setPort (port appEnv) defaultSettings
 
@@ -39,13 +39,9 @@ prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
 
-runTransporterBackendApp' :: Bool -> AppEnv -> Settings -> IO ()
-runTransporterBackendApp' isTest appEnv settings = do
-  let loggerCfg =
-        getEulerLoggerConfig
-          isTest
-          "/tmp/beckn-transport.log"
-          $ loggerConfig appEnv
+runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
+runTransporterBackendApp' appEnv settings = do
+  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
     try (runFlowR flowRt appEnv prepareDBConnections) >>= \case

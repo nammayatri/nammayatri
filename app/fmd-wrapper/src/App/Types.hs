@@ -17,7 +17,7 @@ data AppEnv = AppEnv
     xGatewayApiKey :: Maybe Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    loggerConfig :: Maybe LoggerConfig,
+    loggerConfig :: LoggerConfig,
     coreVersion :: Text,
     domainVersion :: Text,
     dzConfig :: DunzoConfig

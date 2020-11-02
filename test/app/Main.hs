@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Main where
 
 import qualified "app-backend" App as AppBackend
@@ -64,12 +66,12 @@ specs = do
       )
   where
     allServers =
-      [ Gateway.runGateway True,
-        AppBackend.runAppBackend True,
-        TransporterBackend.runTransporterBackendApp True,
-        FmdWrapper.runFMDWrapper True,
-        MockAppBackend.runMockApp True,
-        MockProviderBackend.runMockProvider True
+      [ Gateway.runGateway $ #loggerConfig . #logToConsole .~ False,
+        AppBackend.runAppBackend $ #loggerConfig . #logToConsole .~ False,
+        TransporterBackend.runTransporterBackendApp $ #loggerConfig . #logToConsole .~ False,
+        FmdWrapper.runFMDWrapper $ #loggerConfig . #logToConsole .~ False,
+        MockAppBackend.runMockApp $ #loggerConfig . #logToConsole .~ False,
+        MockProviderBackend.runMockProvider $ #loggerConfig . #logToConsole .~ False
       ]
 
     startServers servers = do

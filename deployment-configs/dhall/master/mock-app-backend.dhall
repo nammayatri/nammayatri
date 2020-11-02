@@ -28,5 +28,5 @@ in
 , nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/mock/app/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
-, loggerConfig = None common.LoggerConfig
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-app-backend.log"}
 }

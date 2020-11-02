@@ -4,4 +4,4 @@ import App (runMockApp)
 import EulerHS.Prelude
 
 main :: IO ()
-main = runMockApp False
+main = runMockApp id

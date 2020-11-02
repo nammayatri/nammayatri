@@ -68,5 +68,5 @@ in
 , coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
 , traceFlag = common.TraceFlag.TRACE_ALL
-, loggerConfig = None common.LoggerConfig
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 }

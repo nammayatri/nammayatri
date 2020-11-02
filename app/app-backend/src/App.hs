@@ -25,11 +25,11 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 
-runAppBackend :: Bool -> IO ()
-runAppBackend isTest = do
-  appEnv <- readDhallConfigDefault "app-backend"
+runAppBackend :: (AppEnv -> AppEnv) -> IO ()
+runAppBackend configModifier = do
+  appEnv <- configModifier <$> readDhallConfigDefault "app-backend"
   Metrics.serve (metricsPort appEnv)
-  runAppBackend' isTest appEnv $
+  runAppBackend' appEnv $
     setOnExceptionResponse appExceptionResponse $
       setPort (port appEnv) defaultSettings
 
@@ -39,13 +39,9 @@ prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
   createFCMTokenRefreshThread
 
-runAppBackend' :: Bool -> AppEnv -> Settings -> IO ()
-runAppBackend' isTest appEnv settings = do
-  let loggerCfg =
-        getEulerLoggerConfig
-          isTest
-          "/tmp/app-backend.log"
-          $ loggerConfig appEnv
+runAppBackend' :: AppEnv -> Settings -> IO ()
+runAppBackend' appEnv settings = do
+  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections

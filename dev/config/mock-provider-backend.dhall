@@ -28,5 +28,5 @@ in
 , nwAddress = Some "http://localhost:8017/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
-, loggerConfig = None common.LoggerConfig
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-provider-backend.log"}
 }

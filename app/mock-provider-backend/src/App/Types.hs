@@ -16,7 +16,7 @@ data AppEnv = AppEnv
     nwAddress :: Maybe BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    loggerConfig :: Maybe LoggerConfig
+    loggerConfig :: LoggerConfig
   }
   deriving (Generic, FromDhall)
 

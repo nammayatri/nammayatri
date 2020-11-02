@@ -34,7 +34,7 @@ data AppEnv = AppEnv
     autoMigrate :: Bool,
     coreVersion :: Text,
     domainVersion :: Text,
-    loggerConfig :: Maybe LoggerConfig,
+    loggerConfig :: LoggerConfig,
     traceFlag :: TraceFlag
   }
   deriving (Generic, FromDhall)

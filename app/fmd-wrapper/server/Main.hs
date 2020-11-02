@@ -4,4 +4,4 @@ import App (runFMDWrapper)
 import EulerHS.Prelude
 
 main :: IO ()
-main = runFMDWrapper False
+main = runFMDWrapper id

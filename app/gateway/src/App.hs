@@ -29,16 +29,16 @@ import Network.Wai.Handler.Warp
   )
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
-runGateway :: Bool -> IO ()
-runGateway isTest = do
-  appCfg@AppCfg {..} <- readDhallConfigDefault "beckn-gateway"
+runGateway :: (AppCfg -> AppCfg) -> IO ()
+runGateway configModifier = do
+  appCfg@AppCfg {..} <- configModifier <$> readDhallConfigDefault "beckn-gateway"
   Metrics.serve metricsPort
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
   shutdown <- newEmptyTMVarIO
   activeConnections <- newTVarIO (0 :: Int)
   void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
-  let loggerCfg = getEulerLoggerConfig isTest "/tmp/beckn-gateway.log" loggerConfig
+  let loggerCfg = getEulerLoggerConfig loggerConfig
       settings =
         setOnExceptionResponse gatewayExceptionResponse $
           setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $

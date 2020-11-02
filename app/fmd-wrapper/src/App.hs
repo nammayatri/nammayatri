@@ -25,14 +25,10 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 
-runFMDWrapper :: Bool -> IO ()
-runFMDWrapper isTest = do
-  appEnv <- readDhallConfigDefault "fmd-wrapper"
-  let loggerCfg =
-        getEulerLoggerConfig
-          isTest
-          "/tmp/fmd-wrapper.log"
-          $ loggerConfig appEnv
+runFMDWrapper :: (AppEnv -> AppEnv) -> IO ()
+runFMDWrapper configModifier = do
+  appEnv <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
+  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
   let settings =
         setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings

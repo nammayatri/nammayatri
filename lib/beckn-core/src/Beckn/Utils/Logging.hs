@@ -22,8 +22,8 @@ data LoggerConfig = LoggerConfig
   }
   deriving (Generic, FromDhall)
 
-toEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
-toEulerLoggerConfig loggerConfig =
+getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
+getEulerLoggerConfig loggerConfig =
   T.defaultLoggerConfig
     { T._isAsync = isAsync loggerConfig,
       T._level = logLevel,
@@ -38,25 +38,3 @@ toEulerLoggerConfig loggerConfig =
       INFO -> T.Info
       WARNING -> T.Warning
       ERROR -> T.Error
-
-defaultEulerLoggerConfig :: FilePath -> T.LoggerConfig
-defaultEulerLoggerConfig filePath =
-  T.defaultLoggerConfig
-    { T._isAsync = True,
-      T._logToFile = True,
-      T._logFilePath = filePath,
-      T._logToConsole = True,
-      T._logRawSql = True
-    }
-
-getEulerLoggerConfig :: Bool -> FilePath -> Maybe LoggerConfig -> T.LoggerConfig
-getEulerLoggerConfig isTest filePath loggerConfig =
-  if isTest
-    then config {T._logToConsole = False}
-    else config
-  where
-    config =
-      maybe
-        (defaultEulerLoggerConfig filePath)
-        toEulerLoggerConfig
-        loggerConfig

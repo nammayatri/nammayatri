@@ -4,15 +4,6 @@ let TraceFlag = < TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING >
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
-let LoggerConfig = 
-  { level : LogLevel
-  , isAsync : Bool
-  , logToFile : Bool
-  , logFilePath : Text
-  , logToConsole : Bool
-  , logRawSql : Bool
-  }  
-
 let ExotelCfg = 
   { apiKey : Text
   , apiToken : Text
@@ -35,6 +26,14 @@ let smsSessionConfig =
   , tokenExpiry = +365
   }
 
+let loggerConfig = 
+  { level = LogLevel.DEBUG
+  , isAsync = True
+  , logToFile = True
+  , logToConsole = True
+  , logRawSql = True
+  }
+  
 in { defaultPoolConfig = defaultPoolConfig
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
@@ -43,8 +42,8 @@ in { defaultPoolConfig = defaultPoolConfig
    , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
    , branchName = branchName
    , autoMigrate = False
+   , loggerConfig = loggerConfig
    , TraceFlag = TraceFlag
    , LogLevel = LogLevel
-   , LoggerConfig = LoggerConfig
    , ExotelCfg = ExotelCfg
    }

@@ -47,7 +47,7 @@ in
 , xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
-, loggerConfig = None common.LoggerConfig
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.3"
 , dzConfig = dunzoConfig
