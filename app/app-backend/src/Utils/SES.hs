@@ -6,6 +6,7 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Data.Text
 import EulerHS.Prelude
 import qualified Network.AWS as AWS
+import qualified Network.AWS.Data.Text as AWS
 import qualified Network.AWS.SES.SendEmail as AWS
 import qualified Network.AWS.SES.Types as AWS
 
@@ -33,6 +34,6 @@ mkSendEmailQuery SesConfig.EmailRequestConfig {..} subject body =
 mkSesEnv :: (MonadIO m, MonadCatch m) => Text -> m AWS.Env
 mkSesEnv region = do
   env <- AWS.newEnv AWS.Discover
-  case region of
-    "eu-west-1" -> pure $ AWS.envRegion .~ AWS.Ireland $ env
-    _ -> pure env
+  case AWS.fromText region of
+    Right r -> pure $ AWS.envRegion .~ r $ env
+    Left _err -> pure env
