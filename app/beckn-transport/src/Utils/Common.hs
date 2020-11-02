@@ -45,7 +45,7 @@ instance
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 -- | Performs simple token verification.
-type TokenAuth = TokenAuth' "token" VerifyToken
+type TokenAuth = HeaderAuth "token" VerifyToken
 
 data VerifyToken = VerifyToken
 
@@ -59,7 +59,7 @@ verifyTokenAction :: VerificationAction VerifyToken AppEnv
 verifyTokenAction = VerificationAction QR.verifyToken
 
 -- | Verifies org's token
-type OrgTokenAuth = TokenAuth' "token" OrgVerifyToken
+type OrgTokenAuth = HeaderAuth "token" OrgVerifyToken
 
 data OrgVerifyToken = OrgVerifyToken
 
@@ -73,7 +73,7 @@ verifyOrgAction :: VerificationAction OrgVerifyToken AppEnv
 verifyOrgAction = VerificationAction QO.verifyToken
 
 -- | Verifies admin's token.
-type AdminTokenAuth = TokenAuth' "token" AdminVerifyToken
+type AdminTokenAuth = HeaderAuth "token" AdminVerifyToken
 
 data AdminVerifyToken
 
@@ -83,7 +83,7 @@ instance VerificationMethod AdminVerifyToken where
     "Checks whether token is registered and belongs to a person with admin role."
 
 -- | Verifies admin or driver's token.
-type DriverTokenAuth = TokenAuth' "token" DriverVerifyToken
+type DriverTokenAuth = HeaderAuth "token" DriverVerifyToken
 
 data DriverVerifyToken
 

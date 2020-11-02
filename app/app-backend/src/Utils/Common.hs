@@ -29,7 +29,7 @@ import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
 
 -- | Performs simple token verification.
-type TokenAuth = TokenAuth' "token" VerifyToken
+type TokenAuth = HeaderAuth "token" VerifyToken
 
 data VerifyToken = VerifyToken
 

@@ -24,17 +24,15 @@ import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withReque
 import qualified Servant.Swagger as S
 import qualified Servant.Swagger.Internal as S
 
--- | Adds authentication with token to API.
+-- | Adds authentication via a header to API
 --
 -- Type argument defines what verification logic is supposed to do.
 -- Normally you should define a type alias for this which fixes the
 -- verification method.
---
--- TODO: rename to 'HeaderAuth' once dependent PR is merged?
-data TokenAuth' (header :: Symbol) (verify :: Type)
+data HeaderAuth (header :: Symbol) (verify :: Type)
 
 -- | TODO: Perform some API key verification.
-type APIKeyAuth verify = TokenAuth' "X-API-Key" verify
+type APIKeyAuth verify = HeaderAuth "X-API-Key" verify
 
 -- | How token verification is performed.
 class VerificationMethod verify where
@@ -62,10 +60,10 @@ instance
     VerificationMethod verify,
     KnownSymbol header
   ) =>
-  HasServer (TokenAuth' header verify :> api) ctx
+  HasServer (HeaderAuth header verify :> api) ctx
   where
   type
-    ServerT (TokenAuth' header verify :> api) m =
+    ServerT (HeaderAuth header verify :> api) m =
       VerificationResult verify -> ServerT api m
 
   route _ ctx subserver =
@@ -95,9 +93,9 @@ instance
 -- the call.
 instance
   (HasClient m api, KnownSymbol header) =>
-  HasClient m (TokenAuth' header verify :> api)
+  HasClient m (HeaderAuth header verify :> api)
   where
-  type Client m (TokenAuth' header verify :> api) = RegToken -> Client m api
+  type Client m (HeaderAuth header verify :> api) = RegToken -> Client m api
 
   clientWithRoute mp _ req =
     clientWithRoute
@@ -114,7 +112,7 @@ instance
     Typeable verify,
     KnownSymbol header
   ) =>
-  S.HasSwagger (TokenAuth' header verify :> api)
+  S.HasSwagger (HeaderAuth header verify :> api)
   where
   toSwagger _ =
     S.toSwagger (Proxy @api)
