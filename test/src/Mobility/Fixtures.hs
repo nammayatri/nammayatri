@@ -38,7 +38,8 @@ address =
       area = "8th Block Koramangala",
       city = "Bangalore",
       country = "India",
-      areaCode = "560047"
+      areaCode = "560047",
+      state = "Karnataka"
     }
 
 location :: AppCommon.GPS -> AppCommon.Location

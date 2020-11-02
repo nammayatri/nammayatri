@@ -35,7 +35,8 @@ data Address = Address
     area :: Text,
     city :: Text,
     country :: Text,
-    areaCode :: Text
+    areaCode :: Text,
+    state :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -196,7 +197,8 @@ instance FromBeckn Address.Address Address where
         area = fromMaybe "" $ addr ^. #_locality,
         city = addr ^. #_city,
         country = addr ^. #_country,
-        areaCode = addr ^. #_area_code
+        areaCode = addr ^. #_area_code,
+        state = addr ^. #_state
       }
 
 instance ToBeckn Address.Address Address where
@@ -209,7 +211,7 @@ instance ToBeckn Address.Address Address where
         _locality = Just $ addr ^. #area,
         _ward = Nothing,
         _city = addr ^. #city,
-        _state = "",
+        _state = addr ^. #state,
         _country = addr ^. #country,
         _area_code = addr ^. #areaCode
       }
