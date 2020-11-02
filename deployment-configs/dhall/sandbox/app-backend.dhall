@@ -28,7 +28,7 @@ let smsConfig =
 
 let sesConfig =
   { issuesConfig = {
-      from = "no-reply@juspay.in"
+      from = "support@juspay.in"
     , to = "beckn_mobility@juspay.in"
     , replyTo = "beckn_mobility@juspay.in"
     , region = "eu-west-1"
