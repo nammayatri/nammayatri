@@ -10,15 +10,10 @@ import qualified Network.AWS.SES.SendEmail as AWS
 import qualified Network.AWS.SES.Types as AWS
 
 sendEmail :: (Monad m, MonadIO m, MonadCatch m, MonadUnliftIO m) => SesConfig.EmailRequestConfig -> Text -> Text -> m (Maybe Text)
-sendEmail SesConfig.EmailRequestConfig {..} subject body = do
-  let dest = AWS.dToAddresses .~ [to] $ AWS.destination
-  let msg =
-        AWS.message
-          (AWS.content subject)
-          (AWS.bText ?~ AWS.content body $ AWS.body)
-  let sendEmailRequest = AWS.sendEmail from dest msg
-  env <- AWS.newEnv AWS.Discover
-  result <- AWS.runResourceT $ AWS.runAWS env (AWS.send sendEmailRequest)
+sendEmail sesConfig@SesConfig.EmailRequestConfig {..} subject body = do
+  let sesQuery = mkSendEmailQuery sesConfig subject body
+  env <- mkSesEnv region
+  result <- AWS.runResourceT $ AWS.runAWS env (AWS.send sesQuery)
   let responseStatusCode = result ^. AWS.sersResponseStatus
   let responseError =
         case responseStatusCode of
@@ -28,3 +23,16 @@ sendEmail SesConfig.EmailRequestConfig {..} subject body = do
               "Issue email sending error: status " <> show errorStatusCode <> " - "
                 <> result ^. AWS.sersMessageId
   return responseError
+
+mkSendEmailQuery :: SesConfig.EmailRequestConfig -> Text -> Text -> AWS.SendEmail
+mkSendEmailQuery SesConfig.EmailRequestConfig {..} subject body =
+  let dest = AWS.dToAddresses .~ [to] $ AWS.destination
+      msg = AWS.message (AWS.content subject) (AWS.bText ?~ AWS.content body $ AWS.body)
+   in AWS.seReplyToAddresses .~ [replyTo] $ AWS.sendEmail from dest msg
+
+mkSesEnv :: (MonadIO m, MonadCatch m) => Text -> m AWS.Env
+mkSesEnv region = do
+  env <- AWS.newEnv AWS.Discover
+  case region of
+    "eu-west-1" -> pure $ AWS.envRegion .~ AWS.Ireland $ env
+    _ -> pure env

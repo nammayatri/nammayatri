@@ -30,6 +30,8 @@ let sesConfig =
   { issuesConfig = {
       from = sec.sesIssuesFrom
     , to = sec.sesIssuesTo
+    , replyTo = sec.sesIssuesReplyTo
+    , region = sec.sesIssuesRegion
     }
   }
 

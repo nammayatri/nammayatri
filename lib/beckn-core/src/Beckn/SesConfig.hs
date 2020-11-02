@@ -10,6 +10,8 @@ newtype SesConfig = SesConfig
 
 data EmailRequestConfig = EmailRequestConfig
   { from :: Text,
-    to :: Text
+    to :: Text,
+    replyTo :: Text,
+    region :: Text
   }
   deriving (Generic, FromDhall)
