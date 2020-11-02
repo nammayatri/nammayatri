@@ -28,10 +28,10 @@ let smsConfig =
 
 let sesConfig =
   { issuesConfig = {
-      from = sec.sesIssuesFrom
-    , to = sec.sesIssuesTo
-    , replyTo = sec.sesIssuesReplyTo
-    , region = sec.sesIssuesRegion
+      from = "aaa@aaa.com"
+    , to = "aaa@aaa.com"
+    , replyTo = "aaa@aaa.com"
+    , region = "eu-west-1"
     }
   }
 
