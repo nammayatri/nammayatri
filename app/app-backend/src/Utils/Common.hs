@@ -87,7 +87,7 @@ instance VerificationMethod OrgVerifyToken where
     \If you don't have a token, use registration endpoints."
 
 verifyOrgAction :: VerificationAction OrgVerifyToken AppEnv
-verifyOrgAction = VerificationAction QOrganization.verifyCallbackToken
+verifyOrgAction = VerificationAction QOrganization.verifyApiKey
 
 fromMaybeM :: ServerError -> Maybe a -> Flow a
 fromMaybeM err Nothing = L.throwException err

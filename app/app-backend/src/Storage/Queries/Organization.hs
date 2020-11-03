@@ -23,14 +23,14 @@ create Storage.Organization {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
     >>= either DB.throwDBError pure
 
-verifyCallbackToken :: RegToken -> Flow Storage.Organization
-verifyCallbackToken regToken = do
+verifyApiKey :: RegToken -> Flow Storage.Organization
+verifyApiKey regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "UNAUTHENTICATED_USER"
+    >>= fromMaybeM400 "UNAUTHENTICATED_ORGANIZATION"
   where
-    predicate token Storage.Organization {..} = _callbackApiKey ==. B.val_ (Just token)
+    predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
 findOrganizationById ::
   OrganizationId -> Flow (Maybe Storage.Organization)
