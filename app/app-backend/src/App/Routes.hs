@@ -184,6 +184,7 @@ type TrackTripAPI =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
+    :> OrgTokenAuth
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -195,6 +196,7 @@ trackTripFlow =
 ------- Update Flow -------
 type UpdateAPI =
   "on_update"
+    :> OrgTokenAuth
     :> ReqBody '[JSON] Update.OnUpdateReq
     :> Post '[JSON] Update.OnUpdateRes
 

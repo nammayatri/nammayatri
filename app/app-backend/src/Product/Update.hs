@@ -10,6 +10,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Trip
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
 import qualified EulerHS.Language as L
@@ -18,8 +19,8 @@ import qualified Models.ProductInstance as MPI
 import qualified Types.ProductInfo as ProdInfo
 import Utils.Common (validateContext)
 
-onUpdate :: OnUpdateReq -> FlowHandler AckResponse
-onUpdate req = withFlowHandler $ do
+onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
+onUpdate _org req = withFlowHandler $ do
   -- TODO: Verify api key here
   L.logInfo @Text "on_update req" (show req)
   validateContext "on_update" $ req ^. #context

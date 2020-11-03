@@ -10,6 +10,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM500, withFlowHandler)
@@ -44,8 +45,8 @@ track person req = withFlowHandler $ do
           gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
           Gateway.track gatewayUrl organization $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
 
-trackCb :: OnTrackTripReq -> FlowHandler OnTrackTripRes
-trackCb req = withFlowHandler $ do
+trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes
+trackCb _org req = withFlowHandler $ do
   validateContext "on_track" $ req ^. #context
   let context = req ^. #context
   case req ^. #contents of
