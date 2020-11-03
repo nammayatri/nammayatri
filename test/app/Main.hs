@@ -16,6 +16,7 @@ import qualified MockAppBackend.Spec as MockAppBackend
 import qualified MockProviderBackend.Spec as MockProviderBackend
 import System.Environment (setEnv)
 import Test.Tasty
+import "app-backend" Types.Geofencing
 
 main :: IO ()
 main = do
@@ -67,7 +68,11 @@ specs = do
   where
     allServers =
       [ Gateway.runGateway $ #loggerConfig . #logToConsole .~ False,
-        AppBackend.runAppBackend $ #loggerConfig . #logToConsole .~ False,
+        AppBackend.runAppBackend $
+          \cfg ->
+            cfg & #loggerConfig . #logToConsole .~ False
+              & #geofencingConfig . #origin .~ Region "Ernakulam"
+              & #geofencingConfig . #destination .~ Region "Kerala",
         TransporterBackend.runTransporterBackendApp $ #loggerConfig . #logToConsole .~ False,
         FmdWrapper.runFMDWrapper $ #loggerConfig . #logToConsole .~ False,
         MockAppBackend.runMockApp $ #loggerConfig . #logToConsole .~ False,

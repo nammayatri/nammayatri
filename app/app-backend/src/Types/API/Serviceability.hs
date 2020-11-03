@@ -11,7 +11,7 @@ newtype ServiceabilityReq = ServiceabilityReq
 newtype ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 data RideServiceabilityReq = RideServiceabilityReq
   { origin :: GPS,
@@ -22,4 +22,4 @@ data RideServiceabilityReq = RideServiceabilityReq
 newtype RideServiceabilityRes = RideServiceabilityRes
   { serviceable :: Bool
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)

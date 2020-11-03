@@ -191,7 +191,7 @@ incorrectApiKey clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "some-key" searchReq
-  verifyGatewayError 400 "INVALID_API_KEY" gatewayResponse
+  verifyError 400 "INVALID_API_KEY" gatewayResponse
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
@@ -199,7 +199,7 @@ incorrectAction clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "INVALID_ACTION" gatewayResponse
+  verifyError 400 "INVALID_ACTION" gatewayResponse
 
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
 incorrectCountry clientEnv _ = do
@@ -207,7 +207,7 @@ incorrectCountry clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_country = Just ""}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "INVALID_COUNTRY" gatewayResponse
+  verifyError 400 "INVALID_COUNTRY" gatewayResponse
 
 incorrectDomainVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectDomainVersion clientEnv _ = do
@@ -215,7 +215,7 @@ incorrectDomainVersion clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_domain_version = Just "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
+  verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
 
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectCoreVersion clientEnv _ = do
@@ -223,7 +223,7 @@ incorrectCoreVersion clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_core_version = Just "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
+  verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
 
 missingBapUri :: ClientEnv -> CallbackData -> IO ()
 missingBapUri clientEnv _ = do
@@ -231,7 +231,7 @@ missingBapUri clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "INVALID_BAP_URI" gatewayResponse
+  verifyError 400 "INVALID_BAP_URI" gatewayResponse
 
 missingCountry :: ClientEnv -> CallbackData -> IO ()
 missingCountry clientEnv _ = do
@@ -239,7 +239,7 @@ missingCountry clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_country = Nothing}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "INVALID_COUNTRY" gatewayResponse
+  verifyError 400 "INVALID_COUNTRY" gatewayResponse
 
 missingDomainVersion :: ClientEnv -> CallbackData -> IO ()
 missingDomainVersion clientEnv _ = do
@@ -247,7 +247,7 @@ missingDomainVersion clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_domain_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
+  verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
 
 missingCoreVersion :: ClientEnv -> CallbackData -> IO ()
 missingCoreVersion clientEnv _ = do
@@ -255,7 +255,7 @@ missingCoreVersion clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
-  verifyGatewayError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
+  verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
 
 spec :: Spec
 spec = do

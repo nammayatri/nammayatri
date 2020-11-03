@@ -5,6 +5,7 @@ import Mobility.AppCancelRide as CR
 import Mobility.AppCaseList as CL
 import Mobility.DriverCancelRide as DCR
 import Mobility.HealthCheck as HC
+import Mobility.Serviceability as SRV
 import Mobility.SuccessFlow as SF
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
@@ -16,10 +17,11 @@ mkTestTree = do
   sfSpec <- testSpec "SuccessFlow" SF.spec
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
+  srvSpec <- testSpec "Serviceability" SRV.spec
   return $
     testGroup
       "Mobility"
       [ hcSpec,
         after AllSucceed "HealthCheck" $
-          testGroup "APIs" [clSpec, sfSpec, crSpec, dcrSpec]
+          testGroup "APIs" [clSpec, sfSpec, crSpec, dcrSpec, srvSpec]
       ]

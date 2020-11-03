@@ -27,6 +27,7 @@ import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "app-backend" Types.API.Search as AppBESearch
+import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Common as AppCommon
 
 address :: AppCommon.Address
@@ -96,8 +97,8 @@ searchReq tid utcTime futureTime =
   AppBESearch.SearchReq
     { transaction_id = tid,
       startTime = utcTime,
-      origin = getStop futureTime $ AppCommon.GPS "12.9401108" "77.6206631",
-      destination = getStop futureTime $ AppCommon.GPS "12.9401108" "77.6306631",
+      origin = getStop futureTime $ AppCommon.GPS "10.0739" "76.2733",
+      destination = getStop futureTime $ AppCommon.GPS "10.5449" "76.4356",
       vehicle = vehicle,
       travellers = [],
       fare = AppCommon.DecimalValue "360" $ Just "50"
@@ -228,6 +229,21 @@ buildUpdateStatusReq status otp =
       _vehicleId = Nothing,
       _otpCode = otp
     }
+
+originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
+originServiceability regToken = origin
+  where
+    origin :<|> _ :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+
+destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
+destinationServiceability regToken = destination
+  where
+    _ :<|> destination :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+
+rideServiceability :: RegToken -> AppServ.RideServiceabilityReq -> ClientM AppServ.RideServiceabilityRes
+rideServiceability regToken = ride
+  where
+    _ :<|> _ :<|> ride = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
 buildOrgRideReq :: PI.ProductInstanceStatus -> Case.CaseType -> ClientM TbePI.ProductInstanceList
 buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
