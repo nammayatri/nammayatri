@@ -78,8 +78,9 @@ dependencies:
   - jwt
   - lens
   - memory
-  - passetto-client
   - network
+  - parsec
+  - passetto-client
   - pureMD5
   - random-strings
   - servant
