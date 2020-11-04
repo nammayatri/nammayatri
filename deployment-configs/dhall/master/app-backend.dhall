@@ -39,8 +39,8 @@ let sesConfig =
 
 
 let geofencingConfig =
-{ origin = GeoRestriction.Unrestricted
-, destination = GeoRestriction.Unrestricted
+{ origin = GeoRestriction.Region "Ernakulam"
+, destination = GeoRestriction.Region "Kerala"
 }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
