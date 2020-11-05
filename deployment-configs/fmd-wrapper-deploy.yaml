@@ -147,7 +147,7 @@ spec:
             - name: ISTIO_METAJSON_LABELS
               value: |
                 {"app":"beckn-fmd-wrapper-$DEPLOY_VARIANT","version":"latest"}
-          image: docker.io/istio/proxyv2:1.2.2
+          image: asia.gcr.io/jp-k8s-internal/proxyv2:1.2.2
           imagePullPolicy: IfNotPresent
           lifecycle:
             preStop:
@@ -205,7 +205,7 @@ spec:
             - "8018"
             - -d
             - "15020"
-          image: docker.io/istio/proxy_init:1.2.2
+          image: asia.gcr.io/jp-k8s-internal/proxy_init:1.2.2
           imagePullPolicy: IfNotPresent
           name: istio-init
           resources:
