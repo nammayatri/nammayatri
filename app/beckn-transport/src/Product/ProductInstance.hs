@@ -63,9 +63,14 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  notifyTripDetailsToGateway searchPi ordPi
+  apiKey <- fetchOrgApiKey (ordPi ^. #_organizationId)
+  notifyTripDetailsToGateway searchPi ordPi apiKey
   notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
+  where
+    fetchOrgApiKey orgId = do
+      org <- OQ.findOrganizationById $ OrganizationId orgId
+      return $ fromMaybe "" (org ^. #_callbackApiKey)
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
@@ -203,12 +208,12 @@ updateStatus user piId req = do
     _ -> throwError400 "DRIVER_VEHICLE_UNASSIGNED"
   return ()
 
-notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> Flow ()
-notifyTripDetailsToGateway searchPi orderPi = do
+notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> Text -> Flow ()
+notifyTripDetailsToGateway searchPi orderPi apiKey = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y
+    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y apiKey
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()

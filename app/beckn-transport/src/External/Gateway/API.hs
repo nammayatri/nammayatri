@@ -77,11 +77,12 @@ initiateCall = ET.client $ withClientTracing callsAPI
 
 type UpdateAPI =
   "on_update"
+    :> Header "X-API-Key" Text
     :> ReqBody '[JSON] OnUpdateReq
     :> Post '[JSON] OnUpdateRes
 
 updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
 
-onUpdate :: OnUpdateReq -> (RequestInfo, ET.EulerClient AckResponse)
-onUpdate = ET.client $ withClientTracing updateAPI
+onUpdate :: Text -> OnUpdateReq -> (RequestInfo, ET.EulerClient AckResponse)
+onUpdate token = ET.client (withClientTracing updateAPI) (Just token)

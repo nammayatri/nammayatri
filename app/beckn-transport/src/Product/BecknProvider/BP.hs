@@ -438,11 +438,11 @@ notifyTripUrlToGateway case_ parentCase = do
   _ <- Gateway.onTrackTrip onTrackTripPayload
   return ()
 
-notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> Flow ()
-notifyTripInfoToGateway prodInst trackerCase parentCase = do
+notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> Text -> Flow ()
+notifyTripInfoToGateway prodInst trackerCase parentCase apiKey = do
   onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
   L.logInfo @Text "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  _ <- Gateway.onUpdate onUpdatePayload
+  _ <- Gateway.onUpdate apiKey onUpdatePayload
   return ()
 
 notifyCancelToGateway :: Text -> Flow ()

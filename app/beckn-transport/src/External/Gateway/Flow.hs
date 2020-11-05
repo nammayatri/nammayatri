@@ -41,10 +41,10 @@ onTrackTrip req@CallbackReq {context} = do
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
-onUpdate :: OnUpdateReq -> Flow AckResponse
-onUpdate req@CallbackReq {context} = do
+onUpdate :: Text -> OnUpdateReq -> Flow AckResponse
+onUpdate apiKey req@CallbackReq {context} = do
   url <- xAppUri <$> ask
-  res <- callAPIWithTrail url (API.onUpdate req) "on_update"
+  res <- callAPIWithTrail url (API.onUpdate apiKey req) "on_update"
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
