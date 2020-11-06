@@ -3,7 +3,7 @@ module External.Gateway.API where
 import Beckn.Types.API.Call
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
-import Beckn.Types.API.Search
+import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, nsdlOnSearchAPI)
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.API.Update
@@ -13,8 +13,17 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
 
+type OnSearchAPI =
+  "on_search"
+    :> Header "X-API-Key" Text
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] OnSearchRes
+
+onSearchAPI :: Proxy OnSearchAPI
+onSearchAPI = Proxy
+
 onSearch :: Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
-onSearch = ET.client $ withClientTracing onSearchAPI
+onSearch callbackApiKey = ET.client (withClientTracing onSearchAPI) (Just callbackApiKey)
 
 nsdlOnSearch :: Maybe Text -> Maybe Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI

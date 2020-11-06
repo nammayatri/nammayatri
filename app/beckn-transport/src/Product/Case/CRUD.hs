@@ -144,7 +144,8 @@ notifyGateway c prodInst orgId piStatus = do
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] orgInfo
     _ -> mkOnSearchPayload c [prodInst] orgInfo
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
-  _ <- Gateway.onSearch onSearchPayload
+  let callbackApiKey = fromMaybe "" (orgInfo ^. #_callbackApiKey)
+  _ <- Gateway.onSearch callbackApiKey onSearchPayload
   return ()
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
