@@ -32,26 +32,26 @@ onSearch req@CallbackReq {context} = do
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
-onTrackTrip :: OnTrackTripReq -> Flow AckResponse
-onTrackTrip req@CallbackReq {context} = do
+onTrackTrip :: Text -> OnTrackTripReq -> Flow AckResponse
+onTrackTrip callbackApiKey req@CallbackReq {context} = do
   url <- xAppUri <$> ask
-  res <- callAPIWithTrail url (API.onTrackTrip req) "on_track"
+  res <- callAPIWithTrail url (API.onTrackTrip callbackApiKey req) "on_track"
   -- TODO: can we just return AckResponse returned by client call?
   -- Will it have the same context?
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
 onUpdate :: Text -> OnUpdateReq -> Flow AckResponse
-onUpdate apiKey req@CallbackReq {context} = do
+onUpdate callbackApiKey req@CallbackReq {context} = do
   url <- xAppUri <$> ask
-  res <- callAPIWithTrail url (API.onUpdate apiKey req) "on_update"
+  res <- callAPIWithTrail url (API.onUpdate callbackApiKey req) "on_update"
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
-onConfirm :: OnConfirmReq -> Flow AckResponse
-onConfirm req@CallbackReq {context} = do
+onConfirm :: Text -> OnConfirmReq -> Flow AckResponse
+onConfirm callbackApiKey req@CallbackReq {context} = do
   url <- xAppUri <$> ask
-  res <- callAPIWithTrail url (API.onConfirm req) "on_confirm"
+  res <- callAPIWithTrail url (API.onConfirm callbackApiKey req) "on_confirm"
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 

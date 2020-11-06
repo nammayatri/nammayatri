@@ -21,25 +21,27 @@ nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI
 
 type OnTrackAPI =
   "on_track"
+    :> Header "X-API-Key" Text
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
 onTrackTripAPI :: Proxy OnTrackAPI
 onTrackTripAPI = Proxy
 
-onTrackTrip :: OnTrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
-onTrackTrip = ET.client $ withClientTracing onTrackTripAPI
+onTrackTrip :: Text -> OnTrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
+onTrackTrip callbackApiKey = ET.client (withClientTracing onTrackTripAPI) (Just callbackApiKey)
 
 type OnConfirmAPI =
   "on_confirm"
+    :> Header "X-API-Key" Text
     :> ReqBody '[JSON] OnConfirmReq
     :> Post '[JSON] OnConfirmRes
 
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy
 
-onConfirm :: OnConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
-onConfirm = ET.client $ withClientTracing onConfirmAPI
+onConfirm :: Text -> OnConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
+onConfirm callbackApiKey = ET.client (withClientTracing onConfirmAPI) (Just callbackApiKey)
 
 type OnCancelAPI =
   "on_cancel"
@@ -85,4 +87,4 @@ updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
 
 onUpdate :: Text -> OnUpdateReq -> (RequestInfo, ET.EulerClient AckResponse)
-onUpdate token = ET.client (withClientTracing updateAPI) (Just token)
+onUpdate callbackApiKey = ET.client (withClientTracing updateAPI) (Just callbackApiKey)

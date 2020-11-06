@@ -63,8 +63,8 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  apiKey <- fetchOrgApiKey (ordPi ^. #_organizationId)
-  notifyTripDetailsToGateway searchPi ordPi apiKey
+  callbackApiKey <- fetchOrgApiKey (ordPi ^. #_organizationId)
+  notifyTripDetailsToGateway searchPi ordPi callbackApiKey
   notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
   where

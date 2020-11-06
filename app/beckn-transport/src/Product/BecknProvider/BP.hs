@@ -202,7 +202,8 @@ confirm _org req = do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
-  notifyGateway searchCase orderProductInstance trackerCase
+  let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+  notifyGateway searchCase orderProductInstance trackerCase callbackApiKey
   admins <-
     if org ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
@@ -332,13 +333,13 @@ mkTrackerCase case_ uuid now shortId =
       _updatedAt = now
     }
 
-notifyGateway :: Case -> ProductInstance -> Case -> Flow ()
-notifyGateway c orderPi trackerCase = do
+notifyGateway :: Case -> ProductInstance -> Case -> Text -> Flow ()
+notifyGateway c orderPi trackerCase callbackApiKey = do
   L.logInfo @Text "notifyGateway" $ show c
   allPis <- ProductInstance.findAllByCaseId (c ^. #_id)
   onConfirmPayload <- mkOnConfirmPayload c [orderPi] allPis trackerCase
   L.logInfo @Text "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
-  _ <- Gateway.onConfirm onConfirmPayload
+  _ <- Gateway.onConfirm callbackApiKey onConfirmPayload
   return ()
 
 mkContext :: Text -> Text -> Flow Context
@@ -417,7 +418,7 @@ mkOnServiceStatusPayload piId trackerPi = do
           }
 
 trackTrip :: Organization -> TrackTripReq -> Flow TrackTripRes
-trackTrip _org req = do
+trackTrip org req = do
   L.logInfo @Text "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id
@@ -426,23 +427,25 @@ trackTrip _org req = do
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
-      notifyTripUrlToGateway case_ parentCase
+      notifyTripUrlToGateway case_ parentCase callbackApiKey
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
     Nothing -> throwError400 "Case does not have an associated parent case"
+  where
+    callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
 
-notifyTripUrlToGateway :: Case -> Case -> Flow ()
-notifyTripUrlToGateway case_ parentCase = do
+notifyTripUrlToGateway :: Case -> Case -> Text -> Flow ()
+notifyTripUrlToGateway case_ parentCase callbackApiKey = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
   L.logInfo @Text "notifyTripUrlToGateway Request" $ show onTrackTripPayload
-  _ <- Gateway.onTrackTrip onTrackTripPayload
+  _ <- Gateway.onTrackTrip callbackApiKey onTrackTripPayload
   return ()
 
 notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> Text -> Flow ()
-notifyTripInfoToGateway prodInst trackerCase parentCase apiKey = do
+notifyTripInfoToGateway prodInst trackerCase parentCase callbackApiKey = do
   onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
   L.logInfo @Text "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  _ <- Gateway.onUpdate apiKey onUpdatePayload
+  _ <- Gateway.onUpdate callbackApiKey onUpdatePayload
   return ()
 
 notifyCancelToGateway :: Text -> Flow ()
