@@ -6,6 +6,7 @@ module External.Gateway.Flow where
 import App.Types
 import Beckn.Types.API.Cancel
 import Beckn.Types.API.Confirm
+import Beckn.Types.API.Feedback
 import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
@@ -99,3 +100,16 @@ status url org req@StatusReq {context} = do
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
+
+feedback :: BaseUrl -> Organization -> FeedbackReq -> Flow AckResponse
+feedback url org req = do
+  let context = req ^. #context
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  res <- callAPIWithTrail url (API.feedback cbApiKey req) "feedback"
+  case res of
+    Left err -> do
+      L.logError @Text "Gateway" $ "Error occurred when sending feedback: " <> show err
+      pure $ AckResponse context (ack "ACK") $ Just (domainError $ show err)
+    Right _ -> do
+      L.logInfo @Text "Gateway" $ "Feedback successfully sent."
+      pure $ AckResponse context (ack "ACK") Nothing

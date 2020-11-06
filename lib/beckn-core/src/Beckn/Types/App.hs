@@ -108,6 +108,13 @@ newtype IssueId = IssueId
 
 deriveIdentifierInstances ''IssueId
 
+newtype RatingId = RatingId
+  { _getRatingId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''RatingId
+
 type Limit = Int
 
 type Offset = Int

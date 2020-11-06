@@ -5,6 +5,7 @@ module External.Gateway.Types where
 
 import qualified Beckn.Types.API.Cancel as Cancel
 import qualified Beckn.Types.API.Confirm as Confirm
+import qualified Beckn.Types.API.Feedback as Feedback
 import qualified Beckn.Types.API.Search as Search
 import qualified Beckn.Types.API.Status as Status
 import qualified Beckn.Types.API.Track as Track
@@ -56,3 +57,9 @@ statusAPI = Proxy
 
 status :: Text -> Status.StatusReq -> (RequestInfo, ET.EulerClient AckResponse)
 status = client $ withClientTracing statusAPI
+
+feedbackAPI :: Proxy (Feedback.FeedbackAPI v)
+feedbackAPI = Proxy
+
+feedback :: Text -> Feedback.FeedbackReq -> (RequestInfo, ET.EulerClient AckResponse)
+feedback = client $ withClientTracing feedbackAPI

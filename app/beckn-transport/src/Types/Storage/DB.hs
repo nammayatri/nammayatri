@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
+import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Database.Beam as B
@@ -32,7 +33,8 @@ data TransporterDb f = TransporterDb
     _case :: f (B.TableEntity Case.CaseT),
     _products :: f (B.TableEntity Product.ProductsT),
     _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
-    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT)
+    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
+    _rating :: f (B.TableEntity Rating.RatingT)
   }
   deriving (Generic, B.Database be)
 
@@ -52,7 +54,8 @@ transporterDb dbSchemaName =
         _case = setSchema dbSchemaName <> Case.fieldEMod,
         _products = setSchema dbSchemaName <> Product.fieldEMod,
         _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
-        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod
+        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
+        _rating = setSchema dbSchemaName <> Rating.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

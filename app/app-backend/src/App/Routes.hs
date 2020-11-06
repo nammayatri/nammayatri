@@ -23,6 +23,7 @@ import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
+import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
 import qualified Product.Location as Location
 import qualified Product.ProductInstance as ProductInstance
@@ -38,6 +39,7 @@ import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.Cron as Cron
+import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
@@ -342,3 +344,13 @@ serviceabilityFlow regToken =
   Serviceability.checkServiceability origin regToken
     :<|> Serviceability.checkServiceability destination regToken
     :<|> Serviceability.checkRideServiceability regToken
+
+-------- Feedback Flow ----------
+type FeedbackAPI =
+  "feedback"
+    :> TokenAuth
+    :> ReqBody '[JSON] Feedback.FeedbackReq
+    :> Post '[JSON] Feedback.FeedbackRes
+
+feedbackFlow :: FlowServer FeedbackAPI
+feedbackFlow = Feedback.feedback

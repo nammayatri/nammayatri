@@ -4,6 +4,7 @@ import App.Types
 import qualified Beckn.Types.API.Call as Call
 import qualified Beckn.Types.API.Cancel as API
 import qualified Beckn.Types.API.Confirm as API
+import qualified Beckn.Types.API.Feedback as API
 import qualified Beckn.Types.API.Search as API
 import qualified Beckn.Types.API.Status as API
 import qualified Beckn.Types.API.Track as API
@@ -17,6 +18,7 @@ import Beckn.Types.Storage.Vehicle
 import Data.Time
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
+import Product.BecknProvider.Feedback as BP
 import qualified Product.Call as Call
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron
@@ -323,6 +325,7 @@ type OrgBecknAPI =
            :<|> API.CancelAPI VerifyAPIKey
            :<|> API.StatusAPI VerifyAPIKey
            :<|> API.TrackAPI VerifyAPIKey
+           :<|> API.FeedbackAPI VerifyAPIKey
        )
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
@@ -332,6 +335,7 @@ orgBecknApiFlow orgId =
     :<|> verifyAndRun BP.cancel
     :<|> verifyAndRun BP.serviceStatus
     :<|> verifyAndRun BP.trackTrip
+    :<|> verifyAndRun BP.feedback
   where
     verifyAndRun :: (Org.Organization -> a -> Flow b) -> Org.Organization -> a -> FlowHandler b
     verifyAndRun = BP.verifyAndHandle orgId
