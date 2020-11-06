@@ -1,12 +1,12 @@
 module Storage.Queries.Rating where
 
-import App.Types
+import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Query
-import Beckn.Types.App
+import Beckn.Types.App (ProductInstanceId, RatingId)
 import qualified Beckn.Types.Storage.Rating as Storage
-import Beckn.Utils.Common
-import Database.Beam
+import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Database.Beam (SqlEq ((==.)), (<-.))
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import qualified Types.Storage.DB as DB
@@ -24,11 +24,13 @@ create rating = do
 updateRatingValue :: RatingId -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
+  now <- getCurrTime
   Query.update
     dbTable
     ( \Storage.Rating {..} ->
         mconcat
-          [ _ratingValue <-. B.val_ newRatingValue
+          [ _ratingValue <-. B.val_ newRatingValue,
+            _updatedAt <-. B.val_ now
           ]
     )
     (\Storage.Rating {..} -> _id ==. B.val_ ratingId)
