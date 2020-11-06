@@ -14,6 +14,7 @@ import qualified Beckn.Types.API.Update as Update
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
 import EulerHS.Prelude
@@ -231,8 +232,8 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    -- on cancel
     :<|> "on_cancel"
+    :> OrgApiKey
     :> ReqBody '[JSON] Cancel.OnCancelReq
     :> Post '[JSON] Cancel.OnCancelRes
 
@@ -241,7 +242,7 @@ cancelFlow ::
     Cancel.CancelReq ->
     FlowHandler Cancel.CancelRes
   )
-    :<|> (Cancel.OnCancelReq -> FlowHandler Cancel.OnCancelRes)
+    :<|> (Organization.Organization -> Cancel.OnCancelReq -> FlowHandler Cancel.OnCancelRes)
 cancelFlow =
   Cancel.cancel
     :<|> Cancel.onCancel

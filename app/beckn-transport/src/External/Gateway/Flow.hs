@@ -55,10 +55,10 @@ onConfirm callbackApiKey req@CallbackReq {context} = do
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
-onCancel :: OnCancelReq -> Flow AckResponse
-onCancel req@CallbackReq {context} = do
+onCancel :: Text -> OnCancelReq -> Flow AckResponse
+onCancel callbackApiKey req@CallbackReq {context} = do
   url <- xAppUri <$> ask
-  res <- callAPIWithTrail url (API.onCancel req) "on_cancel"
+  res <- callAPIWithTrail url (API.onCancel callbackApiKey req) "on_cancel"
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 

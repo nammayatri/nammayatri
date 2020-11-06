@@ -7,6 +7,7 @@ import App.Types
 import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, mkAckResponse', withFlowHandler)
@@ -87,8 +88,8 @@ isCaseCancellable case_ =
     Case.CONFIRMED -> True
     _ -> False
 
-onCancel :: API.OnCancelReq -> FlowHandler API.OnCancelRes
-onCancel req = withFlowHandler $ do
+onCancel :: Organization.Organization -> API.OnCancelReq -> FlowHandler API.OnCancelRes
+onCancel _org req = withFlowHandler $ do
   validateContext "on_cancel" $ req ^. #context
   let context = req ^. #context
   let txnId = context ^. #_transaction_id

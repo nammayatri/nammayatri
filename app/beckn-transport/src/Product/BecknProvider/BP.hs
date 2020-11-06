@@ -98,7 +98,8 @@ cancel org req = do
       _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
-  notifyCancelToGateway prodInstId
+  let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+  notifyCancelToGateway prodInstId callbackApiKey
   admins <-
     if org ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
@@ -448,11 +449,11 @@ notifyTripInfoToGateway prodInst trackerCase parentCase callbackApiKey = do
   _ <- Gateway.onUpdate callbackApiKey onUpdatePayload
   return ()
 
-notifyCancelToGateway :: Text -> Flow ()
-notifyCancelToGateway prodInstId = do
+notifyCancelToGateway :: Text -> Text -> Flow ()
+notifyCancelToGateway prodInstId callbackApiKey = do
   onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
   L.logInfo @Text "notifyGateway Request" $ show onCancelPayload
-  _ <- Gateway.onCancel onCancelPayload
+  _ <- Gateway.onCancel callbackApiKey onCancelPayload
   return ()
 
 mkOnTrackTripPayload :: Case -> Case -> Flow OnTrackTripReq

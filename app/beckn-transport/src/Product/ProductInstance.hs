@@ -304,23 +304,26 @@ updateTrip piId newStatus request = do
     _ -> return ()
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
-notifyStatusUpdateReq searchPi status =
+notifyStatusUpdateReq searchPi status = do
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
-        admins <- getAdmins
-        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id)
+        org <- findOrganization
+        admins <- getAdmins org
+        let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackApiKey
         Notify.notifyCancelReqByBP searchPi admins
       PI.TRIP_REASSIGNMENT -> do
-        admins <- getAdmins
+        org <- findOrganization
+        admins <- getAdmins org
         Notify.notifyDriverCancelledRideRequest searchPi admins
       _ -> do
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi
     Nothing -> return ()
   where
-    getAdmins = do
-      org <- OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
+    findOrganization = OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
+    getAdmins org = do
       if org ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
         else pure []

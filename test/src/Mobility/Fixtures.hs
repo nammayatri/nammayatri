@@ -126,7 +126,7 @@ buildSearchReq guid = do
   pure $ searchReq guid utcTime futureTime
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
-onCancelRide :: Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes
+onCancelRide :: Text -> Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes
 cancelRide :<|> onCancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
