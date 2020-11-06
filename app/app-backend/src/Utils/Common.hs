@@ -69,24 +69,18 @@ validateToken sr@SR.RegistrationToken {..} = do
   when expired $ Utils.throwError400 "TOKEN_EXPIRED"
   return sr
 
--- | Verifies org's token
-type OrgTokenAuth = HeaderAuth "token" OrgVerifyToken
+-- | Verifies org's API key
+type OrgApiKey = APIKeyAuth VerifyOrganization
 
-data OrgVerifyToken = OrgVerifyToken
+data VerifyOrganization = VerifyOrganization
 
-instance
-  SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (OrgTokenAuth :> sub)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
-
-instance VerificationMethod OrgVerifyToken where
-  type VerificationResult OrgVerifyToken = SOrganization.Organization
+instance VerificationMethod VerifyOrganization where
+  type VerificationResult VerifyOrganization = SOrganization.Organization
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyOrgAction :: VerificationAction OrgVerifyToken AppEnv
+verifyOrgAction :: VerificationAction VerifyOrganization AppEnv
 verifyOrgAction = VerificationAction QOrganization.verifyApiKey
 
 fromMaybeM :: ServerError -> Maybe a -> Flow a

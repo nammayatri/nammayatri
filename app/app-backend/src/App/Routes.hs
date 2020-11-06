@@ -47,7 +47,7 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import Types.Geofencing
 import Utils.Auth (VerifyAPIKey)
-import Utils.Common (OrgTokenAuth, TokenAuth)
+import Utils.Common (OrgApiKey, TokenAuth)
 
 type AppAPI =
   "v1"
@@ -132,7 +132,7 @@ type ConfirmAPI =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
-      :> OrgTokenAuth
+      :> OrgApiKey
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
@@ -184,7 +184,7 @@ type TrackTripAPI =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
-    :> OrgTokenAuth
+    :> OrgApiKey
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -196,7 +196,7 @@ trackTripFlow =
 ------- Update Flow -------
 type UpdateAPI =
   "on_update"
-    :> OrgTokenAuth
+    :> OrgApiKey
     :> ReqBody '[JSON] Update.OnUpdateReq
     :> Post '[JSON] Update.OnUpdateRes
 
