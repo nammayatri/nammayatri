@@ -12,15 +12,13 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
-  ( Maybe (Just, Nothing),
-    Monad ((>>=)),
-    ($),
-    (&),
-    (^.),
+import Beckn.Utils.Common
+  ( fromMaybeM500,
+    throwBecknError401,
+    withFlowHandler,
   )
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (product)
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as ProductInstance
@@ -30,7 +28,8 @@ import Utils.Routes (buildContext)
 
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback person request = withFlowHandler $ do
-  -- TODO validate the rating input?
+  let ratingValue = request ^. #rating
+  unless (ratingValue `elem` [1 .. 5]) $ throwBecknError401 "RATING_VALUE_INVALID"
   let prodInstId = request ^. #productInstanceId
   product <- ProductInstance.findById $ ProductInstanceId prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
@@ -45,7 +44,7 @@ feedback person request = withFlowHandler $ do
           { order_id = prodInstId,
             rating =
               Beckn.Rating
-                { _value = request ^. #rating,
+                { _value = show ratingValue,
                   _unit = "",
                   _max_value = Nothing, -- TODO should make it configurable?
                   _direction = Just "UP"

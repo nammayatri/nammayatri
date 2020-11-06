@@ -70,6 +70,7 @@ type AppAPI =
            :<|> StatusAPI
            :<|> SupportAPI
            :<|> ServiceabilityAPI
+           :<|> FeedbackAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -93,6 +94,7 @@ appServer =
     :<|> statusFlow
     :<|> supportFlow
     :<|> serviceabilityFlow
+    :<|> feedbackFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -348,9 +350,11 @@ serviceabilityFlow regToken =
 -------- Feedback Flow ----------
 type FeedbackAPI =
   "feedback"
-    :> TokenAuth
-    :> ReqBody '[JSON] Feedback.FeedbackReq
-    :> Post '[JSON] Feedback.FeedbackRes
+    :> ( "rateRide"
+           :> TokenAuth
+           :> ReqBody '[JSON] Feedback.FeedbackReq
+           :> Post '[JSON] Feedback.FeedbackRes
+       )
 
 feedbackFlow :: FlowServer FeedbackAPI
 feedbackFlow = Feedback.feedback

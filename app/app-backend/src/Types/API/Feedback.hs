@@ -1,5 +1,5 @@
 module Types.API.Feedback
-  ( FeedbackReq,
+  ( FeedbackReq (..),
     FeedbackRes,
   )
 where
@@ -10,7 +10,7 @@ import EulerHS.Prelude
 data FeedbackReq = FeedbackReq
   { caseId :: Text,
     productInstanceId :: Text,
-    rating :: Text -- ENUM maybe?
+    rating :: Int
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 

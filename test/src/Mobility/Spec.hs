@@ -1,12 +1,13 @@
 module Mobility.Spec where
 
 import EulerHS.Prelude
-import Mobility.AppCancelRide as CR
-import Mobility.AppCaseList as CL
-import Mobility.DriverCancelRide as DCR
-import Mobility.HealthCheck as HC
-import Mobility.Serviceability as SRV
-import Mobility.SuccessFlow as SF
+import qualified Mobility.AppCancelRide as CR
+import qualified Mobility.AppCaseList as CL
+import qualified Mobility.AppRateRide as RateRide
+import qualified Mobility.DriverCancelRide as DCR
+import qualified Mobility.HealthCheck as HC
+import qualified Mobility.Serviceability as SRV
+import qualified Mobility.SuccessFlow as SF
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 
@@ -18,10 +19,11 @@ mkTestTree = do
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   srvSpec <- testSpec "Serviceability" SRV.spec
+  feedbackSpec <- testSpec "RateRide" RateRide.spec
   return $
     testGroup
       "Mobility"
       [ hcSpec,
         after AllSucceed "HealthCheck" $
-          testGroup "APIs" [clSpec, sfSpec, crSpec, dcrSpec, srvSpec]
+          testGroup "APIs" [clSpec, sfSpec, crSpec, dcrSpec, srvSpec, feedbackSpec]
       ]

@@ -23,6 +23,7 @@ import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
+import qualified "app-backend" Types.API.Feedback as AppFeedback
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "app-backend" Types.API.Registration as Reg
@@ -177,6 +178,19 @@ buildCaseStatusRes caseId = do
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
 appOnConfirmRide :: Text -> Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
 appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
+
+appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM AckResponse
+appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
+
+callAppFeedback :: Int -> ProductInstanceId -> CaseId -> ClientM AckResponse
+callAppFeedback ratingValue productInstanceId caseId =
+  let request =
+        AppFeedback.FeedbackReq
+          { caseId = _getCaseId caseId,
+            productInstanceId = _getProductInstanceId productInstanceId,
+            rating = ratingValue
+          }
+   in appFeedback appRegistrationToken request
 
 buildAppConfirmReq :: Text -> Text -> ConfirmAPI.ConfirmReq
 buildAppConfirmReq cid pid =
