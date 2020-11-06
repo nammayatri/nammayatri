@@ -8,6 +8,7 @@ import qualified Beckn.Types.API.Status as API
 import Beckn.Types.App
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, withFlowHandler)
 import qualified EulerHS.Language as L
@@ -34,8 +35,8 @@ status person StatusReq {..} = withFlowHandler $ do
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   Gateway.status baseUrl organization $ API.StatusReq context statusMessage
 
-onStatus :: API.OnStatusReq -> FlowHandler API.OnStatusRes
-onStatus req = withFlowHandler $ do
+onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
+onStatus _org req = withFlowHandler $ do
   let context = req ^. #context
       txnId = context ^. #_transaction_id
   case req ^. #contents of

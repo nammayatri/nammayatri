@@ -374,22 +374,23 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
       }
 
 serviceStatus :: Organization -> StatusReq -> Flow StatusRes
-serviceStatus _org req = do
+serviceStatus org req = do
   L.logInfo @Text "serviceStatus API Flow" $ show req
   --  let caseSid = req ^. #message . #service . #id
   --  c <- Case.findBySid caseSid
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  notifyServiceStatusToGateway piId trackerPi
+  let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+  notifyServiceStatusToGateway piId trackerPi callbackApiKey
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
 
-notifyServiceStatusToGateway :: Text -> ProductInstance -> Flow ()
-notifyServiceStatusToGateway piId trackerPi = do
+notifyServiceStatusToGateway :: Text -> ProductInstance -> Text -> Flow ()
+notifyServiceStatusToGateway piId trackerPi callbackApiKey = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
   L.logInfo @Text "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
-  _ <- Gateway.onStatus onServiceStatusPayload
+  _ <- Gateway.onStatus callbackApiKey onServiceStatusPayload
   return ()
 
 mkOnServiceStatusPayload :: Text -> ProductInstance -> Flow OnStatusReq

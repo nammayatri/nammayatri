@@ -57,14 +57,15 @@ onCancel callbackApiKey = ET.client (withClientTracing cancelAPI) (Just callback
 
 type OnStatusAPI =
   "on_status"
+    :> Header "X-API-Key" Text
     :> ReqBody '[JSON] OnStatusReq
     :> Post '[JSON] OnStatusRes
 
 statusAPI :: Proxy OnStatusAPI
 statusAPI = Proxy
 
-onStatus :: OnStatusReq -> (RequestInfo, ET.EulerClient AckResponse)
-onStatus = ET.client $ withClientTracing statusAPI
+onStatus :: Text -> OnStatusReq -> (RequestInfo, ET.EulerClient AckResponse)
+onStatus callbackApiKey = ET.client (withClientTracing statusAPI) (Just callbackApiKey)
 
 type CallAPI =
   "call"

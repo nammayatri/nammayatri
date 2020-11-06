@@ -318,8 +318,10 @@ notifyStatusUpdateReq searchPi status = do
         admins <- getAdmins org
         Notify.notifyDriverCancelledRideRequest searchPi admins
       _ -> do
+        org <- findOrganization
+        let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
-        BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi
+        BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackApiKey
     Nothing -> return ()
   where
     findOrganization = OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId

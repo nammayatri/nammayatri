@@ -296,6 +296,7 @@ type StatusAPI =
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
     :<|> "on_status"
+    :> OrgApiKey
     :> ReqBody '[JSON] Status.OnStatusReq
     :> Post '[JSON] Status.OnStatusRes
 
@@ -304,7 +305,7 @@ statusFlow ::
     StatusReq ->
     FlowHandler StatusRes
   )
-    :<|> (Status.OnStatusReq -> FlowHandler Status.OnStatusRes)
+    :<|> (Organization.Organization -> Status.OnStatusReq -> FlowHandler Status.OnStatusRes)
 statusFlow =
   Status.status
     :<|> Status.onStatus
