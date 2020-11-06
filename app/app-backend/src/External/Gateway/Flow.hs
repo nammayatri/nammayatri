@@ -111,5 +111,5 @@ feedback url org req = do
       L.logError @Text "Gateway" $ "Error occurred when sending feedback: " <> show err
       pure $ AckResponse context (ack "ACK") $ Just (domainError $ show err)
     Right _ -> do
-      L.logInfo @Text "Gateway" $ "Feedback successfully sent."
+      L.logInfo @Text "Gateway" "Feedback successfully sent."
       pure $ AckResponse context (ack "ACK") Nothing
