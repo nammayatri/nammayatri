@@ -47,8 +47,8 @@ import qualified Types.API.Serviceability as Serviceability
 import Types.API.Status
 import qualified Types.API.Support as Support
 import Types.Geofencing
-import Utils.Auth (VerifyAPIKey)
-import Utils.Common (OrgApiKey, TokenAuth)
+import Utils.Auth (VerificationAPIKey, VerifyAPIKey)
+import Utils.Common (TokenAuth)
 
 type AppAPI =
   "v1"
@@ -133,7 +133,7 @@ type ConfirmAPI =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> "on_confirm"
-      :> OrgApiKey
+      :> VerificationAPIKey
       :> ReqBody '[JSON] Confirm.OnConfirmReq
       :> Post '[JSON] Confirm.OnConfirmRes
   )
@@ -185,7 +185,7 @@ type TrackTripAPI =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> "on_track"
-    :> OrgApiKey
+    :> VerificationAPIKey
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -197,7 +197,7 @@ trackTripFlow =
 ------- Update Flow -------
 type UpdateAPI =
   "on_update"
-    :> OrgApiKey
+    :> VerificationAPIKey
     :> ReqBody '[JSON] Update.OnUpdateReq
     :> Post '[JSON] Update.OnUpdateRes
 
@@ -233,7 +233,7 @@ type CancelAPI =
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     :<|> "on_cancel"
-    :> OrgApiKey
+    :> VerificationAPIKey
     :> ReqBody '[JSON] Cancel.OnCancelReq
     :> Post '[JSON] Cancel.OnCancelRes
 
@@ -296,7 +296,7 @@ type StatusAPI =
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
     :<|> "on_status"
-    :> OrgApiKey
+    :> VerificationAPIKey
     :> ReqBody '[JSON] Status.OnStatusReq
     :> Post '[JSON] Status.OnStatusRes
 

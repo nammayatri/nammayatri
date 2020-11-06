@@ -86,8 +86,8 @@ search person req = withFlowHandler $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError400 "Ride not serviceable due to georestrictions"
 
-searchCb :: () -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCb _unit req = withFlowHandler $ do
+searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
+searchCb _org req = withFlowHandler $ do
   validateContext "on_search" $ req ^. #context
   case req ^. #contents of
     Right msg -> do

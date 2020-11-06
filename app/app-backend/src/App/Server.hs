@@ -19,5 +19,4 @@ run env =
     context =
       verifyApiKey
         :. verifyPersonAction
-        :. verifyOrgAction
         :. EmptyContext
