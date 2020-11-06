@@ -4,7 +4,7 @@ module Mobility.AppRateRide where
 
 import Beckn.Types.App
   ( CaseId (CaseId, _getCaseId),
-    ProductInstanceId (ProductInstanceId, _getProductInstanceId),
+    ProductInstanceId (_getProductInstanceId),
   )
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -50,7 +50,7 @@ spec = do
       searchACK `shouldSatisfy` isRight
 
       let Right searchResponse = searchACK
-      let appCaseId = searchResponse ^. #message . #_message
+      let appCaseId = CaseId $ searchResponse ^. #message . #_message
 
       theCase :| [] <- poll $ do
         caseRequestResult <- runClient transporterClient F.buildListLeads
@@ -58,7 +58,7 @@ spec = do
         let Right caseListResponse = caseRequestResult
         let caseList =
               caseListResponse
-                & filter \response -> appCaseId `elem` Text.splitOn "_" (response ^. #_case . #_shortId)
+                & filter \response -> _getCaseId appCaseId `elem` Text.splitOn "_" (response ^. #_case . #_shortId)
         pure $ nonEmpty caseList
 
       let transporterCaseId = _getCaseId $ theCase ^. #_case . #_id
@@ -68,24 +68,25 @@ spec = do
       acceptedRideResult `shouldSatisfy` isRight
 
       productInstance :| [] <- poll $ do
-        statusResult <- runClient appClient $ F.buildCaseStatusRes appCaseId
+        statusResult <- runClient appClient $ F.buildCaseStatusRes (_getCaseId appCaseId)
         statusResult `shouldSatisfy` isRight
         let Right statusResponse = statusResult
         pure . nonEmpty $ statusResponse ^. #_productInstance
 
-      let productInstanceId = _getProductInstanceId $ productInstance ^. #_id
-      confirmResult <- runClient appClient $ F.appConfirmRide F.appRegistrationToken (F.buildAppConfirmReq appCaseId productInstanceId)
+      let appProductInstanceId = productInstance ^. #_id
+      confirmResult <-
+        runClient appClient
+          . F.appConfirmRide F.appRegistrationToken
+          $ F.buildAppConfirmReq (_getCaseId appCaseId) (_getProductInstanceId appProductInstanceId)
       confirmResult `shouldSatisfy` isRight
 
-      -- assign driver
       transporterOrder :| [] <- poll $ do
         rideRequestResponse <- runClient transporterClient $ F.buildOrgRideReq PI.CONFIRMED Case.RIDEORDER
         rideRequestResponse `shouldSatisfy` isRight
         let Right rideResponse = rideRequestResponse
         let orders =
               rideResponse ^.. traverse . #_productInstance
-                & filter
-                  \pi -> pi ^. #_parentId == Just (ProductInstanceId productInstanceId)
+                & filter \pi -> pi ^. #_parentId == Just appProductInstanceId
         pure $ nonEmpty orders
 
       let transporterOrderId = transporterOrder ^. #_id
@@ -112,5 +113,7 @@ spec = do
 
       appFeedbackResult <-
         runClient appClient $
-          F.callAppFeedback 5 (ProductInstanceId productInstanceId) (CaseId appCaseId)
+          F.callAppFeedback 5 appProductInstanceId appCaseId
       appFeedbackResult `shouldSatisfy` isRight
+      let Right appFeedbackResponse = appFeedbackResult
+      appFeedbackResponse ^. #_error `shouldSatisfy` isNothing

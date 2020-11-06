@@ -21,7 +21,7 @@ create rating = do
   Query.createOne dbTable (Storage.insertExpression rating)
     >>= either Query.throwDBError pure
 
-updateRatingValue :: RatingId -> Text -> Flow ()
+updateRatingValue :: RatingId -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
   Query.update

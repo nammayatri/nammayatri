@@ -10,6 +10,7 @@ import Beckn.Types.App
     ProductInstanceId (ProductInstanceId),
     RatingId (RatingId),
   )
+import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Rating as Rating
@@ -17,7 +18,9 @@ import Beckn.Types.Storage.Rating as Rating
     RatingT (..),
   )
 import Beckn.Utils.Common
-  ( fromMaybeM500,
+  ( decodeFromText,
+    fromMaybeM400,
+    fromMaybeM500,
     getCurrTime,
     mkAckResponse,
     throwBecknError401,
@@ -31,13 +34,16 @@ import qualified Storage.Queries.Rating as Rating
 feedback :: Organization -> API.FeedbackReq -> Flow API.FeedbackRes
 feedback _organization request = do
   L.logInfo @Text "FeedbackAPI" "Received feedback API call."
-  BP.validateContext "search" $ request ^. #context
+  BP.validateContext "feedback" $ request ^. #context
   let productInstanceId = ProductInstanceId $ request ^. #message . #order_id
-  productInstance <- ProductInstance.findById productInstanceId
-  unless (productInstance ^. #_status == ProductInstance.COMPLETED) $
+  productInstances <- ProductInstance.findAllByParentId $ Just productInstanceId
+  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
+  unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
     throwBecknError401 "ORDER_NOT_READY_FOR_RATING"
-  personId <- productInstance ^. #_personId & fromMaybeM500 "NO_DRIVER_FOR_RATE"
-  let ratingValue = request ^. #message . #rating . #_value
+  personId <- orderPi ^. #_personId & fromMaybeM500 "NO_DRIVER_FOR_RATE"
+  ratingValue :: Int <-
+    decodeFromText (request ^. #message . #rating . #_value)
+      & fromMaybeM400 "INVALID_RATING_TYPE"
   mbRating <- Rating.findByProductInstanceId productInstanceId
   case mbRating of
     Nothing -> do
@@ -52,7 +58,7 @@ feedback _organization request = do
   uuid <- L.generateGUID
   mkAckResponse uuid "feedback"
 
-mkRating :: ProductInstanceId -> PersonId -> Text -> Flow Rating.Rating
+mkRating :: ProductInstanceId -> PersonId -> Int -> Flow Rating.Rating
 mkRating productInstanceId personId ratingValue = do
   _id <- RatingId <$> L.generateGUID
   let _productInstanceId = productInstanceId

@@ -8,25 +8,12 @@ import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
-  ( Eq,
-    FromJSON (..),
-    Generic,
-    Identity,
-    Semigroup ((<>)),
-    Show,
-    Text,
-    ToJSON (..),
-    genericParseJSON,
-    genericToJSON,
-    stripAllLensPrefixOptions,
-    (.),
-  )
 
 data RatingT f = Rating
   { _id :: B.C f RatingId,
     _productInstanceId :: B.C f ProductInstanceId,
     _personId :: B.C f PersonId,
-    _ratingValue :: B.C f Text,
+    _ratingValue :: B.C f Int,
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }
