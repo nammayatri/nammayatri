@@ -14,7 +14,7 @@ import qualified Beckn.Types.Core.Rating as Beckn
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
   ( fromMaybeM500,
-    throwBecknError401,
+    throwBecknError400,
     withFlowHandler,
   )
 import qualified EulerHS.Language as L
@@ -29,7 +29,7 @@ import Utils.Routes (buildContext)
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback person request = withFlowHandler $ do
   let ratingValue = request ^. #rating
-  unless (ratingValue `elem` [1 .. 5]) $ throwBecknError401 "RATING_VALUE_INVALID"
+  unless (ratingValue `elem` [1 .. 5]) $ throwBecknError400 "RATING_VALUE_INVALID"
   let prodInstId = request ^. #productInstanceId
   product <- ProductInstance.findById $ ProductInstanceId prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
@@ -45,8 +45,8 @@ feedback person request = withFlowHandler $ do
             rating =
               Beckn.Rating
                 { _value = show ratingValue,
-                  _unit = "",
-                  _max_value = Nothing, -- TODO should make it configurable?
+                  _unit = "U+2B50",
+                  _max_value = Just "5",
                   _direction = Just "UP"
                 },
             description =
