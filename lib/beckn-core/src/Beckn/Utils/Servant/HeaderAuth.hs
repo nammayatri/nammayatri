@@ -34,6 +34,8 @@ data HeaderAuth (header :: Symbol) (verify :: Type)
 -- | TODO: Perform some API key verification.
 type APIKeyAuth verify = HeaderAuth "X-API-Key" verify
 
+type HeaderAuthKey = Header "X-API-Key" Text
+
 -- | How token verification is performed.
 class VerificationMethod verify where
   -- | Verification result, what is passed to the endpoint implementation.

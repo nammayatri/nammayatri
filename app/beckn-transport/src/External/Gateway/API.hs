@@ -8,6 +8,7 @@ import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.API.Update
 import Beckn.Types.Common (AckResponse)
+import Beckn.Utils.Servant.HeaderAuth (HeaderAuthKey)
 import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -15,7 +16,7 @@ import Servant
 
 type OnSearchAPI =
   "on_search"
-    :> Header "X-API-Key" Text
+    :> HeaderAuthKey
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 
@@ -30,7 +31,7 @@ nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI
 
 type OnTrackAPI =
   "on_track"
-    :> Header "X-API-Key" Text
+    :> HeaderAuthKey
     :> ReqBody '[JSON] OnTrackTripReq
     :> Post '[JSON] OnTrackTripRes
 
@@ -42,7 +43,7 @@ onTrackTrip callbackApiKey = ET.client (withClientTracing onTrackTripAPI) (Just 
 
 type OnConfirmAPI =
   "on_confirm"
-    :> Header "X-API-Key" Text
+    :> HeaderAuthKey
     :> ReqBody '[JSON] OnConfirmReq
     :> Post '[JSON] OnConfirmRes
 
@@ -54,7 +55,7 @@ onConfirm callbackApiKey = ET.client (withClientTracing onConfirmAPI) (Just call
 
 type OnCancelAPI =
   "on_cancel"
-    :> Header "X-API-Key" Text
+    :> HeaderAuthKey
     :> ReqBody '[JSON] OnCancelReq
     :> Post '[JSON] OnCancelRes
 
@@ -66,7 +67,7 @@ onCancel callbackApiKey = ET.client (withClientTracing cancelAPI) (Just callback
 
 type OnStatusAPI =
   "on_status"
-    :> Header "X-API-Key" Text
+    :> HeaderAuthKey
     :> ReqBody '[JSON] OnStatusReq
     :> Post '[JSON] OnStatusRes
 
@@ -90,7 +91,7 @@ initiateCall = ET.client $ withClientTracing callsAPI
 
 type UpdateAPI =
   "on_update"
-    :> Header "X-API-Key" Text
+    :> HeaderAuthKey
     :> ReqBody '[JSON] OnUpdateReq
     :> Post '[JSON] OnUpdateRes
 
