@@ -6,8 +6,7 @@ module Product.BecknProvider.Feedback where
 import App.Types (Flow)
 import qualified Beckn.Types.API.Feedback as API
 import Beckn.Types.App
-  ( PersonId,
-    ProductInstanceId (ProductInstanceId),
+  ( ProductInstanceId (ProductInstanceId),
     RatingId (RatingId),
   )
 import qualified Beckn.Types.Storage.Case as Case
@@ -20,7 +19,6 @@ import Beckn.Types.Storage.Rating as Rating
 import Beckn.Utils.Common
   ( decodeFromText,
     fromMaybeM400,
-    fromMaybeM500,
     getCurrTime,
     mkAckResponse,
     throwBecknError401,
@@ -40,7 +38,6 @@ feedback _organization request = do
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
   unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
     throwBecknError401 "ORDER_NOT_READY_FOR_RATING"
-  personId <- orderPi ^. #_personId & fromMaybeM500 "NO_DRIVER_FOR_RATE"
   ratingValue :: Int <-
     decodeFromText (request ^. #message . #rating . #_value)
       & fromMaybeM400 "INVALID_RATING_TYPE"
@@ -49,7 +46,7 @@ feedback _organization request = do
     Nothing -> do
       L.logInfo @Text "FeedbackAPI" $
         "Creating a new record for " +|| productInstanceId ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- mkRating productInstanceId personId ratingValue
+      newRating <- mkRating productInstanceId ratingValue
       Rating.create newRating
     Just rating -> do
       L.logInfo @Text "FeedbackAPI" $
@@ -58,11 +55,10 @@ feedback _organization request = do
   uuid <- L.generateGUID
   mkAckResponse uuid "feedback"
 
-mkRating :: ProductInstanceId -> PersonId -> Int -> Flow Rating.Rating
-mkRating productInstanceId personId ratingValue = do
+mkRating :: ProductInstanceId -> Int -> Flow Rating.Rating
+mkRating productInstanceId ratingValue = do
   _id <- RatingId <$> L.generateGUID
   let _productInstanceId = productInstanceId
-  let _personId = personId
   now <- getCurrTime
   let _createdAt = now
   let _updatedAt = now
