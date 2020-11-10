@@ -98,7 +98,7 @@ cancel org req = do
       _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
-  let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
   notifyCancelToGateway prodInstId callbackApiKey
   admins <-
     if org ^. #_enabled
@@ -203,7 +203,7 @@ confirm _org req = do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
-  let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
   notifyGateway searchCase orderProductInstance trackerCase callbackApiKey
   admins <-
     if org ^. #_enabled
@@ -381,7 +381,7 @@ serviceStatus org req = do
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
   notifyServiceStatusToGateway piId trackerPi callbackApiKey
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
@@ -429,12 +429,11 @@ trackTrip org req = do
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
+      callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
       notifyTripUrlToGateway case_ parentCase callbackApiKey
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
     Nothing -> throwError400 "Case does not have an associated parent case"
-  where
-    callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
 
 notifyTripUrlToGateway :: Case -> Case -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackApiKey = do

@@ -70,7 +70,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   where
     fetchOrgApiKey orgId = do
       org <- OQ.findOrganizationById $ OrganizationId orgId
-      return $ fromMaybe "" (org ^. #_callbackApiKey)
+      fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
@@ -310,7 +310,7 @@ notifyStatusUpdateReq searchPi status = do
       PI.CANCELLED -> do
         org <- findOrganization
         admins <- getAdmins org
-        let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+        callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
         BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackApiKey
         Notify.notifyCancelReqByBP searchPi admins
       PI.TRIP_REASSIGNMENT -> do
@@ -319,7 +319,7 @@ notifyStatusUpdateReq searchPi status = do
         Notify.notifyDriverCancelledRideRequest searchPi admins
       _ -> do
         org <- findOrganization
-        let callbackApiKey = fromMaybe "" (org ^. #_callbackApiKey)
+        callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackApiKey
     Nothing -> return ()

@@ -144,7 +144,7 @@ notifyGateway c prodInst orgId piStatus = do
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] orgInfo
     _ -> mkOnSearchPayload c [prodInst] orgInfo
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
-  let callbackApiKey = fromMaybe "" (orgInfo ^. #_callbackApiKey)
+  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ orgInfo ^. #_callbackApiKey
   _ <- Gateway.onSearch callbackApiKey onSearchPayload
   return ()
 
