@@ -72,7 +72,6 @@ dependencies:
   - wai-extra
   - warp
   - time
-  - vault
 
 ghc-options:
   - -fwrite-ide-info

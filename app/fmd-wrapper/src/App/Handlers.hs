@@ -9,7 +9,6 @@ import Beckn.Types.FMD.API.Select (SelectAPI)
 import Beckn.Types.FMD.API.Status (StatusAPI)
 import Beckn.Types.FMD.API.Track (TrackAPI)
 import Beckn.Types.FMD.API.Update (UpdateAPI)
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.APIMapper as API
 import Servant
@@ -31,8 +30,8 @@ type WrapperAPI =
 wrapperAPI :: Proxy WrapperAPI
 wrapperAPI = Proxy
 
-fmdWrapperBackendServer :: V.Key (HashMap Text Text) -> FlowServer WrapperAPI
-fmdWrapperBackendServer _key =
+fmdWrapperBackendServer :: FlowServer WrapperAPI
+fmdWrapperBackendServer =
   pure "FMD wrapper backend is UP"
     :<|> searchFlow
     :<|> selectFlow

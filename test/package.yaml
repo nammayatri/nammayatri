@@ -77,7 +77,6 @@ dependencies:
   - utf8-string
   - time
   - uuid
-  - vault
   - warp
   - wai
   - hspec

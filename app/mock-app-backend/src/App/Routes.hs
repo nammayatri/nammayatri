@@ -12,7 +12,6 @@ import Beckn.Types.FMD.API.Status (OnStatusReq)
 import Beckn.Types.FMD.API.Track (OnTrackReq)
 import Beckn.Types.FMD.API.Update (OnUpdateReq)
 import Beckn.Utils.Servant.HeaderAuth
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Cancel as P
 import qualified Product.Confirm as P
@@ -43,8 +42,8 @@ type MockAppBackendAPI =
 mockAppBackendAPI :: Proxy MockAppBackendAPI
 mockAppBackendAPI = Proxy
 
-mockAppBackendServer :: V.Key (HashMap Text Text) -> FlowServer MockAppBackendAPI
-mockAppBackendServer _key =
+mockAppBackendServer :: FlowServer MockAppBackendAPI
+mockAppBackendServer =
   pure "Mock app backend is UP"
     :<|> triggerFlow
     :<|> onSearchFlow

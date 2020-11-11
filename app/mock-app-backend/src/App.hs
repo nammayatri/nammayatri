@@ -11,7 +11,6 @@ import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.Server (exceptionResponse)
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import EulerHS.Runtime as E
 import Network.Wai (Response)
@@ -31,9 +30,8 @@ runMockApp configModifier = do
         setOnExceptionResponse mockAppExceptionResponse $
           setPort (port appEnv) defaultSettings
   E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
-    reqHeadersKey <- V.newKey
     _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-    runSettings settings $ run reqHeadersKey (App.EnvR flowRt appEnv)
+    runSettings settings $ run $ App.EnvR flowRt appEnv
 
 mockAppExceptionResponse :: SomeException -> Response
 mockAppExceptionResponse = exceptionResponse

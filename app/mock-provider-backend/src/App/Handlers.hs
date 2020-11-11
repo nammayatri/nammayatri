@@ -8,7 +8,6 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Update
-import qualified Data.Vault.Lazy as V
 import EulerHS.Prelude
 import qualified Product.Cancel as P
 import qualified Product.Confirm as P
@@ -35,8 +34,8 @@ type ProviderAPI =
 providerAPI :: Proxy ProviderAPI
 providerAPI = Proxy
 
-mockProviderBackendServer :: V.Key (HashMap Text Text) -> FlowServer ProviderAPI
-mockProviderBackendServer _key =
+mockProviderBackendServer :: FlowServer ProviderAPI
+mockProviderBackendServer =
   pure "Mock provider backend is UP"
     :<|> searchFlow
     :<|> selectFlow
