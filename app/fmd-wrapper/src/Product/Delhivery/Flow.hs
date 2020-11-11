@@ -109,8 +109,8 @@ init :: Org.Organization -> InitReq -> Flow InitRes
 init org req = do
   conf@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
   let quoteId = quote ^. #_id
   payeeDetails <- dlPayee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
@@ -189,13 +189,13 @@ init org req = do
 confirm :: Org.Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
   dconf@DelhiveryConfig {..} <- dlConfig <$> ask
-  let context = updateBppUri (req ^. #context) dlBPNwAddress
+  let ctx = updateBppUri (req ^. #context) dlBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let reqOrder = req ^. (#message . #order)
-  orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) context $ reqOrder ^. #_id
-  case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
-  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) ctx $ reqOrder ^. #_id
+  case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
   let order = orderDetails ^. #order
   verifyPayment reqOrder order
   dlBACreds <- getDlBAPCreds org
@@ -204,8 +204,8 @@ confirm org req = do
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createOrderReq)
     eres <- createOrderAPI dlBACreds dconf createOrderReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
-    sendCb order context cbApiKey cbUrl eres
-  returnAck context
+    sendCb order ctx cbApiKey cbUrl eres
+  returnAck ctx
   where
     createOrderAPI dlBACreds@DlBAConfig {..} conf@DelhiveryConfig {..} req' = do
       token <- getBearerToken <$> fetchToken dlBACreds conf
