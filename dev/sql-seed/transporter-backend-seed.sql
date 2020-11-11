@@ -133,6 +133,7 @@ ALTER TABLE atlas_transporter.location OWNER TO atlas;
 CREATE TABLE atlas_transporter.organization (
     id character(36) NOT NULL,
     name character varying(255),
+    short_id character varying(255) NOT NULL,
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
@@ -288,20 +289,23 @@ ALTER TABLE atlas_transporter.inventory OWNER TO atlas;
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-INSERT INTO atlas_transporter.organization (id, name, status, type, domain, verified, enabled, api_key, created_at, updated_at, info) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'juspay', 'APPROVED', 'GATEWAY',NULL, true, true, 'iamfromjuspay', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL);
-
-INSERT INTO atlas_transporter.organization (id, name, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'Test Cabs', NULL, 'APPROVED', 'PROVIDER','MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES 
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Gateway', 'gateway', NULL, 'APPROVED', 'GATEWAY', NULL, true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'iamfromjuspay', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL);
+INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES 
+  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'Test Cabs', 'test-cabs', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, 'bpp-1-key', NULL, 'TestCabsKey1', NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES 
+  ('e1f37274-f0aa-4bb3-93a0-2476349487b7', 'Another Test Cabs', 'another-test-cabs', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9777777777', '+91', NULL, NULL, 'bpp-2-key', NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
 
 --
 -- Data for Name: person; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
-INSERT INTO atlas_transporter.person(id, role, gender, identifier_type, mobile_country_code, identifier, verified, status, organization_id, created_at, updated_at) values
-  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', '91', '+919999999999', true, 'INACTIVE', '1926d40f-1223-4eb2-ba5d-7983bde2fd02', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
-INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
+INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES 
   ('6bc4bc84-2c43-425d-8853-22f47bd06691', 'Suresh', 'aka', 'Dhinesh', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+91', NULL, NULL, false, '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '8a2a4bb2-e159-4dfa-9f68-ca30fce2a668', NULL, '2020-07-28 16:06:47.042159+00', '2020-07-28 16:06:47.042159+00');
+INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES 
+  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw==', '\x0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', '91', '+919999999999', NULL, true, NULL, NULL, 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
+INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES 
+  ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
@@ -395,6 +399,10 @@ ALTER TABLE ONLY atlas_transporter.person
 
 ALTER TABLE ONLY atlas_transporter.organization
   ADD CONSTRAINT unique_api_key UNIQUE (api_key);
+
+ALTER TABLE ONLY atlas_transporter.organization
+  ADD CONSTRAINT unique_short_id UNIQUE (short_id);
+
 --
 -- Name: product idx_16427_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
 --
@@ -557,6 +565,9 @@ CREATE INDEX idx_16435_entity_type ON atlas_transporter.registration_token USING
 --
 
 CREATE INDEX idx_16451_organization_id ON atlas_transporter.vehicle USING btree (organization_id);
+
+
+CREATE INDEX idx_organization_short_id ON atlas_transporter.organization USING btree (short_id);
 
 
 UPDATE atlas_transporter.person SET

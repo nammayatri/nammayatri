@@ -102,6 +102,7 @@ ALTER TABLE atlas_mock_app_backend.location OWNER TO atlas;
 CREATE TABLE atlas_mock_app_backend.organization (
     id character(36) NOT NULL,
     name character varying(255),
+    short_id character varying(255) NOT NULL,
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
@@ -132,18 +133,12 @@ ALTER TABLE atlas_mock_app_backend.organization OWNER TO atlas;
 -- Data for Name: case; Type: TABLE DATA; Schema: atlas_mock_app_backend; Owner: atlas
 --
 
-COPY atlas_mock_app_backend."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, gateway, gateway_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-\.
-
 
 --
 -- TOC entry 2999 (class 0 OID 16402)
 -- Dependencies: 205
 -- Data for Name: location; Type: TABLE DATA; Schema: atlas_mock_app_backend; Owner: atlas
 --
-
-COPY atlas_mock_app_backend.location (id, location_type, lat, long, ward, district, city, state, country, pincode, address, bound, created_at, updated_at) FROM stdin;
-\.
 
 
 --
@@ -152,13 +147,17 @@ COPY atlas_mock_app_backend.location (id, location_type, lat, long, ward, distri
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_mock_app_backend; Owner: atlas
 --
 
-COPY atlas_mock_app_backend.organization (id, name, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) FROM stdin;
-test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	test-provider-cb-2-key	\N
-mobility-provider                   	mobility	\N	APPROVED	PROVIDER	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-provider-wrapper                   	fmd-wrapper	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	fmd-wrapper-key	http://localhost:8018/v1	\N	2020-08-01 18:37:00+00	2020-08-01 18:37:00+00	test-bpp-key	\N
-test-app-2                          	Test App 2	\N	APPROVED	APP	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	test-app-cb-2-key	\N
-mobility-app                        	mobility	\N	APPROVED	APP	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8013/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	\N	\N
-\.
+INSERT INTO atlas_mock_app_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('test-provider-2                     ', 'Test provider 2', 'test-provider-2', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-provider-2-key', 'http://localhost:8017/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'test-provider-cb-2-key', NULL);
+INSERT INTO atlas_mock_app_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('mobility-provider                   ', 'Mobility provider', 'mobility-provider', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-provider-key', 'http://localhost:8014/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL, NULL);
+INSERT INTO atlas_mock_app_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('provider-wrapper                    ', 'Fmd wrapper', 'fmd-wrapper', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'fmd-wrapper-key', 'http://localhost:8018/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'test-bpp-key', NULL);
+INSERT INTO atlas_mock_app_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('test-app-2                          ', 'Test App 2', 'test-app-2', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-app-2-key', 'http://localhost:8016/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'test-app-cb-2-key', NULL);
+INSERT INTO atlas_mock_app_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('mobility-app                        ', 'Mobility app', 'mobility-app', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-app-key', 'http://localhost:8013/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL, NULL);
+
 
 --
 -- TOC entry 2837 (class 2606 OID 16460)
@@ -185,6 +184,10 @@ ALTER TABLE ONLY atlas_mock_app_backend.location
 
 ALTER TABLE ONLY atlas_mock_app_backend.organization
     ADD CONSTRAINT idx_16410_primary PRIMARY KEY (id);
+
+
+ALTER TABLE ONLY atlas_mock_app_backend.organization
+  ADD CONSTRAINT unique_short_id UNIQUE (short_id);
 
 
 --
@@ -228,4 +231,8 @@ CREATE INDEX idx_16402_state ON atlas_mock_app_backend.location USING btree (sta
 
 CREATE INDEX idx_organization_api_key ON atlas_mock_app_backend.organization USING btree (api_key);
 
+
 CREATE INDEX idx_organization_callback_url ON atlas_mock_app_backend.organization USING btree (callback_url);
+
+
+CREATE INDEX idx_organization_short_id ON atlas_mock_app_backend.organization USING btree (short_id);

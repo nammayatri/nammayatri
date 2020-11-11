@@ -102,6 +102,7 @@ ALTER TABLE atlas_gateway.location OWNER TO atlas;
 CREATE TABLE atlas_gateway.organization (
     id character(36) NOT NULL,
     name character varying(255),
+    short_id character varying(255) NOT NULL,
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
@@ -132,8 +133,6 @@ ALTER TABLE atlas_gateway.organization OWNER TO atlas;
 -- Data for Name: case; Type: TABLE DATA; Schema: atlas_gateway; Owner: atlas
 --
 
-COPY atlas_gateway."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, gateway, gateway_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) FROM stdin;
-\.
 
 
 --
@@ -142,8 +141,6 @@ COPY atlas_gateway."case" (id, name, description, short_id, industry, type, exch
 -- Data for Name: location; Type: TABLE DATA; Schema: atlas_gateway; Owner: atlas
 --
 
-COPY atlas_gateway.location (id, location_type, lat, long, ward, district, city, state, country, pincode, address, bound, created_at, updated_at) FROM stdin;
-\.
 
 
 --
@@ -152,14 +149,20 @@ COPY atlas_gateway.location (id, location_type, lat, long, ward, district, city,
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_gateway; Owner: atlas
 --
 
-COPY atlas_gateway.organization (id, name, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) FROM stdin;
-test-provider-2                     	Test provider 2	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-provider-2-key	http://localhost:8017/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	test-provider-2-key	\N
-mobility-provider                   	mobility	\N	APPROVED	PROVIDER	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-provider-key	http://localhost:8014/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	mobility-provider-key	\N
-provider-wrapper                   	fmd-wrapper	\N	APPROVED	PROVIDER	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	fmd-wrapper-key0	http://localhost:8018/v1	\N	2020-08-01 18:37:00+00	2020-08-01 18:37:00+00	test-bpp-key0	\N
-test-app-2                          	Test App 2	\N	APPROVED	APP	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	test-app-2-key	http://localhost:8016/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	test-app-2-key	\N
-fmd-test-app                          	FMD Test App	\N	APPROVED	APP	FINAL_MILE_DELIVERY	t	t	\N	\N	\N	\N	\N	\N	fmd-test-app-key	http://localhost:8019/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	gateway-key	\N
-mobility-app                        	mobility	\N	APPROVED	APP	MOBILITY	t	t	\N	\N	\N	\N	\N	\N	mobility-app-key	http://localhost:8013/v1	\N	2020-06-08 18:37:00+00	2020-06-08 18:37:00+00	mobility-app-key	\N
-\.
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('test-provider-2                     ', 'Test provider 2', 'test-provider-2', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-provider-2-key', 'http://localhost:8017/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'test-provider-2-key', NULL);
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('provider-wrapper                    ', 'Fmd wrapper', 'fmd-wrapper', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'fmd-wrapper-key0', 'http://localhost:8018/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'test-bpp-key0', NULL);
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('test-app-2                          ', 'Test App 2', 'test-app-2', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-app-2-key', 'http://localhost:8016/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'test-app-2-key', NULL);
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('fmd-test-app                        ', 'FMD Test App', 'fmd-test-app', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'fmd-test-app-key', 'http://localhost:8019/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'gateway-key', NULL);
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('mobility-app                        ', 'Mobility app', 'mobility-app', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-app-key', 'http://localhost:8013/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'mobility-app-key', NULL);
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('a30193df-4f7c-440f-bada-4d46c396d7d0', '[G] Transporter #1', 'transporter1', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-provider-key', 'http://localhost:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'bpp-1-key', NULL);
+INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+    ('83dde90a-81d2-404b-ada5-20aac58005e6', '[G] Transporter #2', 'transporter2', NULL, 'APPROVED', 'PROVIDER', NULL, true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8014/v1/e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00', 'bpp-2-key', NULL);
 
 --
 -- TOC entry 2837 (class 2606 OID 16460)
@@ -190,6 +193,10 @@ ALTER TABLE ONLY atlas_gateway.organization
 
 ALTER TABLE ONLY atlas_gateway.organization
   ADD CONSTRAINT unique_api_key UNIQUE (api_key);
+
+
+ALTER TABLE ONLY atlas_gateway.organization
+  ADD CONSTRAINT unique_short_id UNIQUE (short_id);
 
 --
 -- TOC entry 2838 (class 1259 OID 16481)
@@ -228,6 +235,10 @@ CREATE INDEX idx_16402_city ON atlas_gateway.location USING btree (city);
 --
 
 CREATE INDEX idx_16402_state ON atlas_gateway.location USING btree (state);
+
+
+CREATE INDEX idx_organization_short_id ON atlas_gateway.organization USING btree (short_id);
+
 
 -- Completed on 2020-07-20 19:25:37 IST
 

@@ -17,6 +17,7 @@ import qualified Storage.Queries.Location as QL
 
 data TransporterReq = TransporterReq
   { _name :: Text,
+    _shortId :: ShortOrganizationId,
     _description :: Maybe Text,
     _mobileNumber :: Maybe Text,
     _mobileCountryCode :: Maybe Text,
@@ -53,6 +54,7 @@ instance CreateTransform TransporterReq SO.Organization Flow where
       SO.Organization
         { SO._id = oid,
           SO._name = req ^. #_name,
+          SO._shortId = req ^. #_shortId,
           SO._description = req ^. #_description,
           SO._mobileNumber = req ^. #_mobileNumber,
           SO._mobileCountryCode = req ^. #_mobileCountryCode,

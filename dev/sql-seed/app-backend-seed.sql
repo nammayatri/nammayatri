@@ -214,6 +214,7 @@ ALTER TABLE atlas_app.location OWNER TO atlas;
 CREATE TABLE atlas_app.organization (
     id character(36) NOT NULL,
     name character varying(255),
+    short_id character varying(255) NOT NULL,
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
@@ -424,6 +425,9 @@ ALTER TABLE ONLY atlas_app.person
 
 ALTER TABLE ONLY atlas_app.organization
   ADD CONSTRAINT unique_api_key UNIQUE (api_key);
+
+ALTER TABLE ONLY atlas_app.organization
+  ADD CONSTRAINT unique_short_id UNIQUE (short_id);
 --
 -- Name: product idx_16459_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas
 --
@@ -622,15 +626,28 @@ CREATE INDEX idx_16475_tag ON atlas_app.tag USING btree (tag);
 CREATE INDEX idx_16475_tag_type ON atlas_app.tag USING btree (tag_type);
 
 
+CREATE INDEX idx_organization_short_id ON atlas_app.organization USING btree (short_id);
+
+
 INSERT INTO atlas_app.person(id, role, gender, identifier_type, mobile_country_code, identifier, verified, status, created_at, updated_at) values
   ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', '91', '+919999999999', false, 'INACTIVE', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
 
 INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', false, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
 
+
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES 
+  ('70c76e36-f035-46fd-98a7-572dc8934323', '[A] Transporter #1', 'transporter1', NULL, 'APPROVED', 'PROVIDER', NULL, true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'bpp-1-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES 
+  ('1257a139-6039-40b8-8752-96a77311f645', '[A] Transporter #2', 'transporter2', NULL, 'APPROVED', 'PROVIDER', NULL, true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8014/v1/e1f37274-f0aa-4bb3-93a0-2476349487b7', 'bpp-2-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
+  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'Test Cabs', 'test-cabs', NULL, 'APPROVED', 'PROVIDER','MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, 'TestCabsKey1', NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+
+
 UPDATE atlas_app.person SET
     mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='
   , mobile_number_hash = decode('0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', 'hex') where id = 'ec34eede-5a3e-4a41-89d4-7290a0d7a629';
+
 
 -- PostgreSQL database dump complete
 --

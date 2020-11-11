@@ -94,6 +94,7 @@ data OrganizationT f = Organization
   { _id :: B.C f OrganizationId,
     _name :: B.C f Text,
     _description :: B.C f (Maybe Text),
+    _shortId :: B.C f ShortOrganizationId,
     _mobileNumber :: B.C f (Maybe Text),
     _mobileCountryCode :: B.C f (Maybe Text),
     _gstin :: B.C f (Maybe Text),
@@ -141,7 +142,8 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _createdAt = "created_at",
+      { _shortId = "short_id",
+        _createdAt = "created_at",
         _updatedAt = "updated_at",
         _locationId = "location_id",
         _mobileNumber = "mobile_number",

@@ -66,6 +66,13 @@ newtype OrganizationId = OrganizationId
 
 deriveIdentifierInstances ''OrganizationId
 
+newtype ShortOrganizationId = ShortOrganizationId
+  { _getShortOrganizationId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''ShortOrganizationId
+
 newtype LocationId = LocationId
   { _getLocationId :: Text
   }

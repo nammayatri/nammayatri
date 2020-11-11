@@ -77,6 +77,7 @@ ALTER TABLE atlas_fmd_wrapper."case" OWNER TO atlas;
 CREATE TABLE atlas_fmd_wrapper.organization (
     id character(36) NOT NULL,
     name character varying(255),
+    short_id character varying(255) NOT NULL,
     gstin character varying(255),
     status character varying(255),
     type character varying(255),
@@ -107,14 +108,14 @@ ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas;
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_fmd_wrapper; Owner: atlas
 --
 
-INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Gateway', 'APPROVED', 'GATEWAY', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key0', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8015/v1', 'fmd-wrapper-key0', NULL);
-
-INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('12c38d90-11f7-4d42-af14-2e0498af2441', 'Mock app backend', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY',true, true, 'test-bpp-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8016/v1', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"mock-app-backend"}');
-
-INSERT INTO atlas_fmd_wrapper.organization (id, name, status, type, domain,verified, enabled, api_key, created_at, updated_at, callback_url, callback_api_key, info) values
-  ('747a711c-9537-4f42-8e04-33ded42a9d89', 'FMD Test App', 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY',true, true, 'fmd-test-app-key', '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'http://localhost:8019/v1', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"fmd-test-app"}');
+INSERT INTO atlas_fmd_wrapper.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Gateway', 'gateway', NULL, 'APPROVED', 'GATEWAY', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-bpp-key0', 'http://localhost:8015/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'fmd-wrapper-key0', NULL);
+INSERT INTO atlas_fmd_wrapper.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+  ('12c38d90-11f7-4d42-af14-2e0498af2441', 'Mock app backend', 'mock-app-backend', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-bpp-key', 'http://localhost:8016/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"mock-app-backend"}');
+INSERT INTO atlas_fmd_wrapper.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+  ('747a711c-9537-4f42-8e04-33ded42a9d89', 'FMD Test App', 'fmd-test-app', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'fmd-test-app-key', 'http://localhost:8019/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'fmd-wrapper-key', '{"dzClientId":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79","dzClientSecret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f","bapId":"fmd-test-app"}');
+INSERT INTO atlas_fmd_wrapper.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd01', 'Delhivery App', 'delhivery-app', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-bpp2-key', 'http://localhost:8014/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'fmd-wrapper-key', '{"dlClientId":"HLD-TEST","dlClientSecret":"6ed812df-1926-4bb3-a258-bdc5ce75024d","bapId":"beckn-mock-app-backend"}');
 
 --
 -- TOC entry 2852 (class 2606 OID 16468)
@@ -129,6 +130,12 @@ ALTER TABLE ONLY atlas_fmd_wrapper.organization
 
 ALTER TABLE ONLY atlas_fmd_wrapper.organization
   ADD CONSTRAINT unique_callback_url UNIQUE (callback_url);
+
+ALTER TABLE ONLY atlas_fmd_wrapper.organization
+  ADD CONSTRAINT unique_short_id UNIQUE (short_id);
+
+
+CREATE INDEX idx_organization_short_id ON atlas_fmd_wrapper.organization USING btree (short_id);
 
 -- Completed on 2020-07-20 19:25:37 IST
 
