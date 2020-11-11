@@ -10,7 +10,6 @@ import qualified Beckn.Types.API.Status as API
 import qualified Beckn.Types.API.Track as API
 import Beckn.Types.App
 import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
@@ -319,26 +318,21 @@ transporterServer =
     :<|> routeApiFlow
 
 type OrgBecknAPI =
-  Capture "orgId" OrganizationId
-    :> ( API.SearchAPI VerifyAPIKey
-           :<|> API.ConfirmAPI VerifyAPIKey
-           :<|> API.CancelAPI VerifyAPIKey
-           :<|> API.StatusAPI VerifyAPIKey
-           :<|> API.TrackAPI VerifyAPIKey
-           :<|> API.FeedbackAPI VerifyAPIKey
-       )
+  Capture "orgId" OrganizationId :> API.SearchAPI VerifyAPIKey
+    :<|> Capture "orgId" OrganizationId :> API.ConfirmAPI VerifyAPIKey
+    :<|> Capture "orgId" OrganizationId :> API.CancelAPI VerifyAPIKey
+    :<|> Capture "orgId" OrganizationId :> API.StatusAPI VerifyAPIKey
+    :<|> Capture "orgId" OrganizationId :> API.TrackAPI VerifyAPIKey
+    :<|> Capture "orgId" OrganizationId :> API.FeedbackAPI VerifyAPIKey
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
-orgBecknApiFlow orgId =
-  verifyAndRun BP.search
-    :<|> verifyAndRun BP.confirm
-    :<|> verifyAndRun BP.cancel
-    :<|> verifyAndRun BP.serviceStatus
-    :<|> verifyAndRun BP.trackTrip
-    :<|> verifyAndRun BP.feedback
-  where
-    verifyAndRun :: (Org.Organization -> a -> Flow b) -> Org.Organization -> a -> FlowHandler b
-    verifyAndRun = BP.verifyAndHandle orgId
+orgBecknApiFlow =
+  BP.search
+    :<|> BP.confirm
+    :<|> BP.cancel
+    :<|> BP.serviceStatus
+    :<|> BP.trackTrip
+    :<|> BP.feedback
 
 type CronAPI =
   "cron"

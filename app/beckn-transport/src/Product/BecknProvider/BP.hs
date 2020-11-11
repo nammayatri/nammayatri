@@ -49,14 +49,8 @@ import qualified Utils.Notifications as Notify
 -- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
-verifyAndHandle :: OrganizationId -> (Organization -> a -> Flow b) -> Organization -> a -> FlowHandler b
-verifyAndHandle urlOrgId handler org a = withFlowHandler $ do
-  unless (urlOrgId == org ^. #_id) $
-    throwError401 "INVALID_API_KEY"
-  handler org a
-
-search :: Organization -> SearchReq -> Flow AckResponse
-search organization req = do
+search :: OrganizationId -> Organization -> SearchReq -> FlowHandler AckResponse
+search _transporterId organization req = withFlowHandler $ do
   validateContext "search" $ req ^. #context
   uuid <- L.generateGUID
   when (organization ^. #_enabled) $ do
@@ -81,8 +75,8 @@ search organization req = do
     Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
-cancel :: Organization -> CancelReq -> Flow AckResponse
-cancel org req = do
+cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
+cancel _transporterId org req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   uuid <- L.generateGUID
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
@@ -180,8 +174,8 @@ mkCase req uuid now validity startTime fromLocation toLocation org = do
       _updatedAt = now
     }
 
-confirm :: Organization -> ConfirmReq -> Flow AckResponse
-confirm _org req = do
+confirm :: OrganizationId -> Organization -> ConfirmReq -> FlowHandler AckResponse
+confirm _transporterId _org req = withFlowHandler $ do
   L.logInfo @Text "confirm API Flow" "Reached"
   validateContext "confirm" $ req ^. #context
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
@@ -373,8 +367,8 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
         contents = Right $ ConfirmOrder order
       }
 
-serviceStatus :: Organization -> StatusReq -> Flow StatusRes
-serviceStatus org req = do
+serviceStatus :: OrganizationId -> Organization -> StatusReq -> FlowHandler StatusRes
+serviceStatus _transporterId org req = withFlowHandler $ do
   L.logInfo @Text "serviceStatus API Flow" $ show req
   --  let caseSid = req ^. #message . #service . #id
   --  c <- Case.findBySid caseSid
@@ -419,8 +413,8 @@ mkOnServiceStatusPayload piId trackerPi = do
             _quotation = Nothing
           }
 
-trackTrip :: Organization -> TrackTripReq -> Flow TrackTripRes
-trackTrip org req = do
+trackTrip :: OrganizationId -> Organization -> TrackTripReq -> FlowHandler TrackTripRes
+trackTrip _transporterId org req = withFlowHandler $ do
   L.logInfo @Text "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id

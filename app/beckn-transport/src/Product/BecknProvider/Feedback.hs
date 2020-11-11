@@ -3,10 +3,11 @@
 
 module Product.BecknProvider.Feedback where
 
-import App.Types (Flow)
+import App.Types (Flow, FlowHandler)
 import qualified Beckn.Types.API.Feedback as API
 import Beckn.Types.App
-  ( ProductInstanceId (ProductInstanceId),
+  ( OrganizationId,
+    ProductInstanceId (ProductInstanceId),
     RatingId (RatingId),
   )
 import qualified Beckn.Types.Storage.Case as Case
@@ -23,6 +24,7 @@ import Beckn.Utils.Common
     getCurrTime,
     mkAckResponse,
     throwBecknError401,
+    withFlowHandler,
   )
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -31,8 +33,8 @@ import qualified Product.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 
-feedback :: Organization -> API.FeedbackReq -> Flow API.FeedbackRes
-feedback _organization request = do
+feedback :: OrganizationId -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
+feedback _transporterId _organization request = withFlowHandler $ do
   L.logInfo @Text "FeedbackAPI" "Received feedback API call."
   BP.validateContext "feedback" $ request ^. #context
   let productInstanceId = ProductInstanceId $ request ^. #message . #order_id
