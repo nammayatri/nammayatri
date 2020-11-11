@@ -50,10 +50,11 @@ import qualified Utils.Notifications as Notify
 -- 3) Respond with Ack
 
 search :: OrganizationId -> Organization -> SearchReq -> FlowHandler AckResponse
-search _transporterId organization req = withFlowHandler $ do
+search transporterId _organization req = withFlowHandler $ do
   validateContext "search" $ req ^. #context
   uuid <- L.generateGUID
-  when (organization ^. #_enabled) $ do
+  transporter <- findOrganizationById transporterId
+  when (transporter ^. #_enabled) $ do
     let intent = req ^. #message . #intent
     currTime <- getCurrTime
     let pickup = head $ intent ^. #_pickups
@@ -66,17 +67,17 @@ search _transporterId organization req = withFlowHandler $ do
     let toLocation = mkFromStop req uuid2 currTime dropOff
     Loc.create fromLocation
     Loc.create toLocation
-    let c = mkCase req uuid currTime validity startTime fromLocation toLocation organization
+    let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId
     Case.create c
     admins <-
       Person.findAllByOrgIds
         [Person.ADMIN]
-        [_getOrganizationId $ organization ^. #_id]
+        [_getOrganizationId transporterId]
     Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
 
 cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
-cancel _transporterId org req = withFlowHandler $ do
+cancel transporterId _org req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   uuid <- L.generateGUID
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
@@ -92,11 +93,12 @@ cancel _transporterId org req = withFlowHandler $ do
       _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
-  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
+  transporter <- findOrganizationById transporterId
+  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ transporter ^. #_callbackApiKey
   notifyCancelToGateway prodInstId callbackApiKey
   admins <-
-    if org ^. #_enabled
-      then Person.findAllByOrgIds [Person.ADMIN] [ProductInstance._organizationId prodInst]
+    if transporter ^. #_enabled
+      then Person.findAllByOrgIds [Person.ADMIN] [_getOrganizationId transporterId]
       else return []
   case piList of
     [] -> pure ()
@@ -140,16 +142,16 @@ mkFromStop _req uuid now stop =
           _updatedAt = now
         }
 
-mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> Organization -> SC.Case
-mkCase req uuid now validity startTime fromLocation toLocation org = do
+mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> OrganizationId -> SC.Case
+mkCase req uuid now validity startTime fromLocation toLocation transporterId = do
   let intent = req ^. #message . #intent
   let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
-  let orgId = _getOrganizationId $ org ^. #_id
+  let tId = _getOrganizationId transporterId
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
       _description = Just "Case to search for a Ride",
-      _shortId = orgId <> "_" <> req ^. #context . #_transaction_id,
+      _shortId = tId <> "_" <> req ^. #context . #_transaction_id,
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
@@ -157,7 +159,7 @@ mkCase req uuid now validity startTime fromLocation toLocation org = do
       _startTime = startTime,
       _endTime = Nothing,
       _validTill = validity,
-      _provider = Just orgId,
+      _provider = Just tId,
       _providerType = Nothing,
       _requestor = Nothing,
       _requestorType = Just CONSUMER,
