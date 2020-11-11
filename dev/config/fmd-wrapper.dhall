@@ -55,7 +55,7 @@ in
 , xGatewayUri = gwUri
 , xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = Some (env:FMD_WRAPPER_MIGRATION_PATH as Text ? "dev/migrations/fmd-wrapper")
-, autoMigrate = common.autoMigrate
+, autoMigrate = True
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.3"
