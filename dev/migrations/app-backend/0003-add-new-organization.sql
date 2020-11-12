@@ -1,0 +1,2 @@
+INSERT INTO atlas_app.organization (id, name, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
+  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'Test Cabs', NULL, 'APPROVED', 'PROVIDER','MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, 'TestCabsKey1', NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
