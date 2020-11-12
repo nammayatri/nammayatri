@@ -252,3 +252,17 @@ findByEntityId entityId = do
   where
     predicate Storage.Person {..} =
       _udf1 ==. B.val_ (Just entityId)
+
+updateAverageRating :: PersonId -> Text -> Flow ()
+updateAverageRating personId newAverageRating = do
+  dbTable <- getDbTable
+  now <- getCurrTime
+  DB.update dbTable (setClause newAverageRating now) (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause rating now Storage.Person {..} =
+      mconcat
+        [ _rating <-. B.val_ (Just rating),
+          _updatedAt <-. B.val_ now
+        ]
+    predicate pId Storage.Person {..} = _id ==. B.val_ pId

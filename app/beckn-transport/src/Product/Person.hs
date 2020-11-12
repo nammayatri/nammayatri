@@ -1,6 +1,16 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
-module Product.Person (createPerson, listPerson, updatePerson, getPerson, deletePerson, linkEntity) where
+module Product.Person
+  ( createPerson,
+    listPerson,
+    updatePerson,
+    getPerson,
+    deletePerson,
+    linkEntity,
+    calculateAverageRating,
+  )
+where
 
 import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
@@ -11,15 +21,18 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Person
@@ -209,3 +222,16 @@ mapEntityType :: Text -> Maybe EntityType
 mapEntityType entityType = case entityType of
   "VEHICLE" -> Just VEHICLE
   _ -> Nothing
+
+calculateAverageRating :: PersonId -> Flow ()
+calculateAverageRating personId = do
+  L.logInfo @Text "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
+  allRatings <- Rating.findAllRatingsForPerson personId
+  let ratings = sum $ Rating._ratingValue <$> allRatings
+  let ratingCount = length allRatings
+  when (ratingCount == 0) $
+    L.logInfo @Text "PersonAPI" "No rating found to calculate"
+  when (ratingCount > 0) $ do
+    let newAverage = ratings `div` ratingCount
+    L.logInfo @Text "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
+    QP.updateAverageRating personId $ encodeToText newAverage

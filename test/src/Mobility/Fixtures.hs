@@ -24,6 +24,7 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
+import qualified "beckn-transport" Types.API.Person as TbePerson
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "app-backend" Types.API.Registration as Reg
@@ -218,6 +219,30 @@ listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
 
 buildListPIs :: PI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
 buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Just 50) Nothing
+
+createPerson :: Text -> TbePerson.CreatePersonReq -> ClientM TbePerson.UpdatePersonRes
+listPerson :: Text -> [Person.Role] -> Maybe Bool -> Maybe UTCTime -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
+updatePerson :: Text -> Text -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
+getPerson :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Person.IdentifierType -> ClientM TbePerson.PersonEntityRes
+deletePerson :: Text -> Text -> ClientM TbePerson.DeletePersonRes
+linkEntity :: Text -> Text -> TbePerson.LinkReq -> ClientM TbePerson.PersonEntityRes
+createPerson
+  :<|> listPerson
+  :<|> updatePerson
+  :<|> getPerson
+  :<|> deletePerson
+  :<|> linkEntity = client (Proxy :: Proxy TbeRoutes.PersonAPI)
+
+callGetPerson :: PersonId -> ClientM TbePerson.PersonEntityRes
+callGetPerson personId =
+  getPerson
+    appRegistrationToken
+    (Just $ _getPersonId personId)
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
 
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =

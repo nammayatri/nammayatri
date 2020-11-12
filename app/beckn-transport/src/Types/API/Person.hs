@@ -60,6 +60,9 @@ data UpdatePersonReq = UpdatePersonReq
 instance FromJSON UpdatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
+instance ToJSON UpdatePersonReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
 instance ModifyTransform UpdatePersonReq SP.Person Flow where
   modifyTransform req person = do
     location <- updateOrCreateLocation req $ SP._locationId person
@@ -128,7 +131,7 @@ ifJustExtract a b = fromMaybe b a
 
 newtype UpdatePersonRes = UpdatePersonRes
   {user :: SP.Person}
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 -- Create Person request and response
 data CreatePersonReq = CreatePersonReq
@@ -164,6 +167,9 @@ data CreatePersonReq = CreatePersonReq
 
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON CreatePersonReq where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 instance CreateTransform CreatePersonReq SP.Person Flow where
   createTransform req = do
@@ -213,15 +219,15 @@ createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {_organi
 
 newtype ListPersonRes = ListPersonRes
   {users :: [PersonEntityRes]}
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype PersonRes = PersonRes
   {user :: SP.Person}
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data LinkReq = LinkReq
   { _entityId :: Text,
