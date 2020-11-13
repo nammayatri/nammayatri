@@ -1,5 +1,8 @@
 cradle:
   stack:
+    stackYaml: "./stack-hie.yaml"
+
+    components:
     - path: "app/app-backend/src"
       component: "app-backend:lib"
 
