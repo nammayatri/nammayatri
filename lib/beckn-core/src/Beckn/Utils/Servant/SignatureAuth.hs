@@ -24,7 +24,7 @@ import qualified Network.Wai as Wai (Request (..))
 import Servant
 import Servant.Client
 import Servant.Server.Internal.Delayed (addAuthCheck)
-import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withRequest)
+import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFail, delayedFailFatal, withRequest)
 import qualified Servant.Swagger as S
 import qualified Servant.Swagger.Internal as S
 
@@ -84,9 +84,10 @@ instance
         let headers = Wai.requestHeaders req
         let headerName = fromString $ symbolVal (Proxy @header)
         let mSignature = snd <$> find ((== headerName) . fst) headers
+        -- FIXME: we 404 for now to allow a fallback to X-API-Key
         headerBs <-
           maybe
-            (fail401 $ "Signature header " <> show headerName <> " is required")
+            (fail404 $ "Signature header " <> show headerName <> " missing")
             pure
             mSignature
         sigBs <-
@@ -103,6 +104,7 @@ instance
           (fail401 $ "Signature verification failed on " <> show headerName <> " header")
         return result
 
+      fail404 msg = delayedFail err404 {errBody = msg}
       fail401 msg = delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
       LookupAction runLookup = getContextEntry ctx :: LookupAction lookup r
