@@ -44,7 +44,7 @@ healthHandler = pure "UP"
 gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
-    :<|> handleIfUp P.search
+    :<|> (handleIfUp P.search :<|> handleIfUp P.search)
     :<|> handleIfUp P.searchCb
     :<|> handleIfUp P.log
   where

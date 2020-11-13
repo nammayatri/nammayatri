@@ -38,7 +38,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Utils.Auth (VerifyAPIKey)
+import Utils.Auth (LookupRegistry, VerifyAPIKey)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -318,7 +318,7 @@ transporterServer =
     :<|> routeApiFlow
 
 type OrgBecknAPI =
-  Capture "orgId" OrganizationId :> API.SearchAPI VerifyAPIKey
+  Capture "orgId" OrganizationId :> API.SearchAPI LookupRegistry VerifyAPIKey
     :<|> Capture "orgId" OrganizationId :> API.ConfirmAPI VerifyAPIKey
     :<|> Capture "orgId" OrganizationId :> API.CancelAPI VerifyAPIKey
     :<|> Capture "orgId" OrganizationId :> API.StatusAPI VerifyAPIKey
@@ -327,7 +327,7 @@ type OrgBecknAPI =
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
-  BP.search
+  (\orgId -> BP.search orgId :<|> BP.search orgId)
     :<|> BP.confirm
     :<|> BP.cancel
     :<|> BP.serviceStatus

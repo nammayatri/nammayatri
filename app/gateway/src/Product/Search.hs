@@ -23,6 +23,7 @@ import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
+import Servant
 import Servant.Client (showBaseUrl)
 import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
 
@@ -31,7 +32,7 @@ search org req = withFlowHandler $ do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
     throwBecknError400 "INVALID_BAP_URI"
-  let search' = ET.client $ withClientTracing searchAPI
+  let _ :<|> search' = ET.client $ withClientTracing searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of

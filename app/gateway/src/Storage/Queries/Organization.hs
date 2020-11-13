@@ -14,6 +14,15 @@ getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.Organization
 getDbTable =
   DB._organization . DB.appDb <$> getSchemaName
 
+findOrgById :: Text -> Flow (Maybe Org.Organization)
+findOrgById oId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Org.Organization {..} =
+      _id ==. B.val_ (App.OrganizationId oId)
+
 findOrgByApiKey ::
   Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
 findOrgByApiKey oType apiKey = do
