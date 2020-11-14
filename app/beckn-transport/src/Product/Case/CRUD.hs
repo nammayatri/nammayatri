@@ -27,7 +27,7 @@ import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
 import Models.ProductInstance as MPI
-import Servant.Client (BaseUrl (..), parseBaseUrl)
+import Servant.Client (BaseUrl (..))
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
@@ -145,11 +145,14 @@ notifyGateway c prodInst orgId piStatus = do
     _ -> mkOnSearchPayload c [prodInst] orgInfo
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
   callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ orgInfo ^. #_callbackApiKey
-  bapCallbackUrl <-
-    fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" (c ^. #_udf4)
-      >>= L.runIO . parseBaseUrl . T.unpack
-  _ <- Gateway.onSearch bapCallbackUrl callbackApiKey onSearchPayload
+  callbackUrl <- fetchCallbackUrl
+  _ <- Gateway.onSearch callbackUrl callbackApiKey onSearchPayload
   return ()
+  where
+    fetchCallbackUrl = do
+      bapOrgId <- c ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONATIN_BAP_ORG_ID"
+      bapOrg <- OQ.findOrganizationById $ OrganizationId bapOrgId
+      bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis orgInfo = do

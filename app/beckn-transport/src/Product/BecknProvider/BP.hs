@@ -36,7 +36,6 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
-import Servant.Client (showBaseUrl)
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -68,8 +67,8 @@ search transporterId organization req = withFlowHandler $ do
     let toLocation = mkFromStop req uuid2 currTime dropOff
     Loc.create fromLocation
     Loc.create toLocation
-    callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ organization ^. #_callbackUrl
-    let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId callbackUrl
+    let bapOrgId = organization ^. #_id
+    let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId
     Case.create c
     admins <-
       Person.findAllByOrgIds
@@ -96,7 +95,7 @@ cancel transporterId org req = withFlowHandler $ do
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
   transporter <- findOrganizationById transporterId
-  callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
+  callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ transporter ^. #_callbackApiKey
   notifyCancelToGateway prodInstId callbackUrl callbackApiKey
   admins <-
@@ -145,11 +144,12 @@ mkFromStop _req uuid now stop =
           _updatedAt = now
         }
 
-mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> OrganizationId -> BaseUrl -> SC.Case
-mkCase req uuid now validity startTime fromLocation toLocation transporterId callbackUrl = do
+mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> OrganizationId -> OrganizationId -> SC.Case
+mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId = do
   let intent = req ^. #message . #intent
   let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
   let tId = _getOrganizationId transporterId
+  let bapId = _getOrganizationId bapOrgId
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
@@ -172,7 +172,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId cal
       _udf1 = Just $ intent ^. #_vehicle . #variant,
       _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
       _udf3 = Nothing,
-      _udf4 = Just . T.pack $ showBaseUrl callbackUrl,
+      _udf4 = Just bapId,
       _udf5 = distance,
       _info = Nothing, --Just $ show $ req ^. #message
       _createdAt = now,
@@ -204,7 +204,7 @@ confirm transporterId _org req = withFlowHandler $ do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
-  callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
+  callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
   notifyGateway searchCase orderProductInstance trackerCase callbackUrl callbackApiKey
   admins <-
@@ -383,7 +383,7 @@ serviceStatus _transporterId org req = withFlowHandler $ do
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
+  callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
   notifyServiceStatusToGateway piId trackerPi callbackUrl callbackApiKey
   uuid <- L.generateGUID
@@ -432,7 +432,7 @@ trackTrip _transporterId org req = withFlowHandler $ do
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
-      callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
+      callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
       callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
       notifyTripUrlToGateway case_ parentCase callbackUrl callbackApiKey
       uuid <- L.generateGUID

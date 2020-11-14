@@ -17,8 +17,9 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
+import qualified Storage.Queries.Case as QCase
 import Storage.Queries.Location as LQ
-import Storage.Queries.Organization as OQ
+import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.Vehicle as VQ
@@ -63,12 +64,23 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  org <- OQ.findOrganizationById . OrganizationId $ ordPi ^. #_organizationId
-  callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
-  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
+  callbackUrl <- fetchCallbackUrl $ ordPi ^. #_caseId
+  callbackApiKey <- fetchCallbackApiKey $ ordPi ^. #_organizationId
   notifyTripDetailsToGateway searchPi ordPi callbackUrl callbackApiKey
   notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
+  where
+    fetchCallbackUrl caseId = do
+      prodCase <- fetchCase caseId >>= fromMaybeM500 "PRODUCT_INSTANCE_WITH_CASE_NOT_PRESENT"
+      bapOrgId <- prodCase ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONATIN_BAP_ORG_ID"
+      bapOrg <- OQ.findOrganizationById $ OrganizationId bapOrgId
+      bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+    fetchCase caseId = do
+      prodCase <- QCase.findById caseId
+      checkDBError prodCase
+    fetchCallbackApiKey transporterId = do
+      transporter <- OQ.findOrganizationById $ OrganizationId transporterId
+      transporter ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
@@ -308,7 +320,7 @@ notifyStatusUpdateReq searchPi status = do
       PI.CANCELLED -> do
         org <- findOrganization
         admins <- getAdmins org
-        callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
+        callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
         callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
         BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackUrl callbackApiKey
         Notify.notifyCancelReqByBP searchPi admins
@@ -318,7 +330,7 @@ notifyStatusUpdateReq searchPi status = do
         Notify.notifyDriverCancelledRideRequest searchPi admins
       _ -> do
         org <- findOrganization
-        callbackUrl <- fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED" $ org ^. #_callbackUrl
+        callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
         callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl callbackApiKey
