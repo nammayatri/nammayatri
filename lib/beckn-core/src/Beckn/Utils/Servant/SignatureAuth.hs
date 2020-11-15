@@ -159,40 +159,40 @@ instance
   where
   toSwagger _ =
     S.toSwagger (Proxy @api)
-      & addSecurityRequirement methodName (lookupDescription @lookup) headerName
+      & addSecurityRequirement (lookupDescription @lookup)
       & S.addDefaultResponse400 headerName
       & addResponse401
     where
       headerName = toText $ symbolVal (Proxy @header)
       methodName = show $ typeRep (Proxy @lookup)
 
-addSecurityRequirement :: Text -> Text -> Text -> DS.Swagger -> DS.Swagger
-addSecurityRequirement methodName description headerName = execState $ do
-  DS.securityDefinitions . at methodName ?= securityScheme
-  DS.allOperations . DS.security .= one securityRequirement
-  where
-    securityScheme =
-      DS.SecurityScheme
-        { _securitySchemeDescription = Just description,
-          _securitySchemeType =
-            DS.SecuritySchemeApiKey
-              DS.ApiKeyParams
-                { _apiKeyName = headerName,
-                  _apiKeyIn = DS.ApiKeyHeader
-                }
-        }
-    securityRequirement =
-      let scopes = []
-       in DS.SecurityRequirement $ fromList [(methodName, scopes)]
+      addSecurityRequirement :: Text -> DS.Swagger -> DS.Swagger
+      addSecurityRequirement description = execState $ do
+        DS.securityDefinitions . at methodName ?= securityScheme
+        DS.allOperations . DS.security .= one securityRequirement
+        where
+          securityScheme =
+            DS.SecurityScheme
+              { _securitySchemeDescription = Just description,
+                _securitySchemeType =
+                  DS.SecuritySchemeApiKey
+                    DS.ApiKeyParams
+                      { _apiKeyName = headerName,
+                        _apiKeyIn = DS.ApiKeyHeader
+                      }
+              }
+          securityRequirement =
+            let scopes = []
+             in DS.SecurityRequirement $ fromList [(methodName, scopes)]
 
-addResponse401 :: DS.Swagger -> DS.Swagger
-addResponse401 = execState $ do
-  DS.responses . at response401Name ?= response401
-  DS.allOperations . DS.responses . DS.responses . at 401
-    ?= DS.Ref (DS.Reference response401Name)
-  where
-    response401Name = "Unauthorized"
-    response401 = mempty & DS.description .~ "Unauthorized"
+      addResponse401 :: DS.Swagger -> DS.Swagger
+      addResponse401 = execState $ do
+        DS.responses . at response401Name ?= response401
+        DS.allOperations . DS.responses . DS.responses . at 401
+          ?= DS.Ref (DS.Reference response401Name)
+        where
+          response401Name = "Unauthorized"
+          response401 = mempty & DS.description .~ "Unauthorized"
 
 instance
   SanitizedUrl (subroute :: Type) =>
