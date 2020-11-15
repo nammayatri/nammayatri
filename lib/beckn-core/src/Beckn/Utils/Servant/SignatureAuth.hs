@@ -14,12 +14,15 @@ import Control.Lens ((?=))
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
 import qualified Data.Swagger as DS
+import Data.Time.Clock (NominalDiffTime)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as Http
 import qualified Network.Wai as Wai (Request (..))
 import Servant
 import Servant.Client
@@ -114,10 +117,9 @@ instance
 
 -- | The client implementation for SignatureAuth is a no-op, as we do not have
 -- a request that we can work with at this layer. Clients should instead use
--- `addSignature` in their `Manager`'s `managerModifyRequest` to actually
--- perform the signature. This is a bit ugly, but it does not appear that we
--- have much of a choice in this regard given what plumbing options Servant
--- gives us.
+-- `signatureAuthManager` as their `Manager` to create and add the signature.
+-- This is a bit ugly, but it does not appear that we have much of a choice in
+-- this regard given what plumbing options Servant gives us.
 instance
   (HasClient m api, KnownSymbol header) =>
   HasClient m (SignatureAuth header lookup :> api)
@@ -132,22 +134,40 @@ instance
 
   hoistClientMonad mp _ hst cli = hoistClientMonad mp (Proxy @api) hst cli
 
--- FIXME: we don't currently deal with Content-Length not being there (this is
--- filled later, so we might need to have some special handling)
-addSignature :: HttpSig.PrivateKey -> HttpSig.SignatureParams -> Text -> Http.Request -> Maybe Http.Request
-addSignature key params header req =
-  let headers = Http.requestHeaders req
-      ciHeader = CI.mk $ encodeUtf8 header
-   in -- We check if the header exists because `managerModifyRequest` might be
-      -- called multiple times, so we already added it once, let's skip right over
-      if isJust $ lookup ciHeader headers
-        then Just req
-        else do
-          let method = Http.method req
-              path = Http.path req
-          signature <- HttpSig.sign key params method path headers
-          let headerVal = HttpSig.encode signature params
-          Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
+signatureAuthManager :: MonadIO m => HttpSig.PrivateKey -> Text -> NominalDiffTime -> m Http.Manager
+signatureAuthManager key keyId validity = do
+  liftIO $
+    Http.newManager
+      Http.tlsManagerSettings {Http.managerModifyRequest = doSignature}
+  where
+    doSignature req = do
+      now <- getPOSIXTime
+      let params =
+            HttpSig.SignatureParams
+              keyId
+              HttpSig.Hs2019
+              ["(request-target)"]
+              (Just now)
+              (Just $ now + validity)
+      -- FIXME: can we throw insteado fromJust here?
+      return $ fromJust $ addSignature params "Authorization" req
+
+    -- FIXME: we don't currently deal with Content-Length not being there (this is
+    -- filled later, so we might need to have some special handling)
+    addSignature :: HttpSig.SignatureParams -> Text -> Http.Request -> Maybe Http.Request
+    addSignature params header req =
+      let headers = Http.requestHeaders req
+          ciHeader = CI.mk $ encodeUtf8 header
+       in -- We check if the header exists because `managerModifyRequest` might be
+          -- called multiple times, so we already added it once, let's skip right over
+          if isJust $ lookup ciHeader headers
+            then Just req
+            else do
+              let method = Http.method req
+                  path = Http.path req
+              signature <- HttpSig.sign key params method path headers
+              let headerVal = HttpSig.encode signature params
+              Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
 instance
   ( S.HasSwagger api,
