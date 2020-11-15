@@ -12,7 +12,7 @@ import EulerHS.Prelude
 
 registry :: [Credential]
 registry =
-  [ mkCredential "test-app-2-key" "test-app",
+  [ mkCredential "test-app-2-key" "test-app-2",
     mkCredential "fmd-test-app-key" "fmd-test-app",
     mkCredential "juspay-bg-1-key" "JUSPAY.BG.1",
     mkCredential "juspay-mobility-bap-1-key" "JUSPAY.MOBILITY.APP.UAT.1",
