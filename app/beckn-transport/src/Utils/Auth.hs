@@ -33,7 +33,7 @@ instance LookupMethod LookupRegistry where
 
 lookupRegistryAction :: LookupAction LookupRegistry AppEnv
 lookupRegistryAction = LookupAction $ \keyId -> do
-  cred <- R.lookup keyId >>= fromMaybeM401 "INVALID_KEY_ID"
+  cred <- R.lookupKey keyId >>= fromMaybeM401 "INVALID_KEY_ID"
   org <- Org.findOrganizationById $ OrganizationId $ cred ^. #_orgId
   pk <- case R.decodeKey $ cred ^. #_signPubKey of
     Nothing -> throwError401 "INVALID_PUBLIC_KEY"

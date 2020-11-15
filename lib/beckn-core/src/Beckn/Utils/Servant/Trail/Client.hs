@@ -118,15 +118,16 @@ saveClientTrailFlow (TrailInfo res req) = do
     _response = decodeUtf8 <$> rightToMaybe res
     _error = show <$> leftToMaybe res
 
-callAPIWithTrail ::
+callAPIWithTrail' ::
   (JSONEx a, ToJSON a) =>
+  Maybe String ->
   BaseUrl ->
   (RequestInfo, EulerClient a) ->
   Text ->
   FlowWithTraceFlag r (Either ClientError a)
-callAPIWithTrail baseUrl (reqInfo, req) serviceName = do
+callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
   endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
-  res <- L.callAPI baseUrl req
+  res <- L.callAPI' mbManager baseUrl req
   let status = case res of
         Right _ -> "200"
         Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
@@ -148,3 +149,11 @@ callAPIWithTrail baseUrl (reqInfo, req) serviceName = do
       let trailInfo = TrailInfo (Aeson.encode <$> res') reqInfo
       saveClientTrailFlow trailInfo
       return res'
+
+callAPIWithTrail ::
+  (JSONEx a, ToJSON a) =>
+  BaseUrl ->
+  (RequestInfo, EulerClient a) ->
+  Text ->
+  FlowWithTraceFlag r (Either ClientError a)
+callAPIWithTrail = callAPIWithTrail' Nothing

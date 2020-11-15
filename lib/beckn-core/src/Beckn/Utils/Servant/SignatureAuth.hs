@@ -134,6 +134,9 @@ instance
 
   hoistClientMonad mp _ hst cli = hoistClientMonad mp (Proxy @api) hst cli
 
+signatureAuthManagerKey :: String
+signatureAuthManagerKey = "http-signature"
+
 signatureAuthManager :: MonadIO m => HttpSig.PrivateKey -> Text -> NominalDiffTime -> m Http.Manager
 signatureAuthManager key keyId validity = do
   liftIO $

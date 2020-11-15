@@ -14,7 +14,8 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
+import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
@@ -24,7 +25,6 @@ import Types.API.Location
 search ::
   BaseUrl -> SearchReq -> Flow (Either Text ())
 search url req = do
-  apiKey <- xGatewayApiKey <$> ask
   mGatewaySelector <- xGatewaySelector <$> ask
   res <- case mGatewaySelector of
     Just "NSDL" -> do
@@ -36,7 +36,7 @@ search url req = do
           callAPIWithTrail nsdlBaseUrl (API.nsdlSearch nsdlBapId nsdlBapPwd req) "search"
         Nothing -> throwError500 "invalid nsdl gateway url"
     Just "JUSPAY" -> do
-      callAPIWithTrail url (API.search (apiKey ?: "mobility-app-key") req) "search"
+      callAPIWithTrail' (Just signatureAuthManagerKey) url (API.search req) "search"
     _ -> throwError500 "gateway not configured"
   case res of
     Left err -> do

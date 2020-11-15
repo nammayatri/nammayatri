@@ -1,6 +1,7 @@
 module Beckn.Utils.Registry
   ( decodeKey,
-    lookup,
+    lookupKey,
+    lookupOrg,
   )
 where
 
@@ -30,8 +31,11 @@ registry =
     exampleValidFrom = posixSecondsToUTCTime 1605232000
     exampleValidTill = posixSecondsToUTCTime 1920592000
 
-lookup :: L.MonadFlow m => Text -> m (Maybe Credential)
-lookup k = return $ find (\c -> c ^. #_keyId == k) registry
+lookupKey :: L.MonadFlow m => Text -> m (Maybe Credential)
+lookupKey k = return $ find (\c -> c ^. #_keyId == k) registry
+
+lookupOrg :: L.MonadFlow m => Text -> m (Maybe Credential)
+lookupOrg o = return $ find (\c -> c ^. #_orgId == o) registry
 
 decodeKey :: Text -> Maybe ByteString
 decodeKey = rightToMaybe . Base64.decode . encodeUtf8
