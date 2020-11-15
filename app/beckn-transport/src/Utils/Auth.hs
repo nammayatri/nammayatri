@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Utils.Auth where
 
@@ -9,6 +10,7 @@ import Beckn.Utils.Common (fromMaybeM401, throwError401)
 import qualified Beckn.Utils.Registry as R
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as Org
 
@@ -33,7 +35,12 @@ instance LookupMethod LookupRegistry where
 
 lookupRegistryAction :: LookupAction LookupRegistry AppEnv
 lookupRegistryAction = LookupAction $ \keyId -> do
-  cred <- R.lookupKey keyId >>= fromMaybeM401 "INVALID_KEY_ID"
+  mCred <- R.lookupKey keyId
+  cred <- case mCred of
+    Just c -> return c
+    Nothing -> do
+      L.logError @Text "auth req" $ "Could not look up keyId: " <> keyId
+      throwError401 "INVALID_KEY_ID"
   org <- Org.findOrganizationById $ OrganizationId $ cred ^. #_orgId
   pk <- case R.decodeKey $ cred ^. #_signPubKey of
     Nothing -> throwError401 "INVALID_PUBLIC_KEY"
