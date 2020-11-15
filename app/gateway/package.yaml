@@ -73,7 +73,6 @@ library:
     - beam-core
     - beam-postgres
     - beckn-core
-    - base64-bytestring
     - bytestring
     - cache
     - clock

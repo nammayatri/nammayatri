@@ -1,9 +1,11 @@
 module Beckn.Utils.Registry
-  ( lookup,
+  ( decodeKey,
+    lookup,
   )
 where
 
 import Beckn.Types.Storage.Credential
+import qualified Data.ByteString.Base64 as Base64
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -30,3 +32,6 @@ registry =
 
 lookup :: L.MonadFlow m => Text -> m (Maybe Credential)
 lookup k = return $ find (\c -> c ^. #_keyId == k) registry
+
+decodeKey :: Text -> Maybe ByteString
+decodeKey = rightToMaybe . Base64.decode . encodeUtf8
