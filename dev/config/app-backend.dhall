@@ -60,7 +60,7 @@ in
 , nsdlUsername = None Text
 , nsdlPassword = None Text
 , xProviderUri = providerUri
-, bapSelfId = Some "test-app-2"
+, bapSelfId = Some "mobility-app"
 , bapNwAddress = Some "http://localhost:8013/v1/"
 , searchConfirmExpiry = Some +7200
 , searchCaseExpiry = Some +7200

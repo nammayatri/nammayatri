@@ -36,8 +36,6 @@ let smsConfig =
   , useFakeSms = Some 7891
   }
 
-let gwUri = "http://localhost:8015/v1"
-
 let appUri = "http://localhost:8013/v1"
 
 in
@@ -47,8 +45,6 @@ in
 , smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9997
-, xGatewayUri = appUri
-, xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
 , xGatewayNsdlUrl = None Text
 , nsdlUsername = None Text

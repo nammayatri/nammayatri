@@ -635,14 +635,18 @@ INSERT INTO atlas_app.person(id, role, gender, identifier_type, mobile_country_c
 INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', false, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-05-12 10:23:01+00', '2020-05-12 10:23:01+00');
 
+-- Transporter entries
+-- callback_url - is used to select transporter at BPP end
+-- callback_api_key - will be same for all transporters since this corresponds to one BAP entry at BPP.
+-- api_key - All transporters will send callback with the same api_key, but we dont use the matched org in the callback flow.
+--           Since api_key field is unique, adding dummy values to subsequent trasporter entries.
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
+  ('70c76e36-f035-46fd-98a7-572dc8934323', '[A] Transporter #1', 'transporter1', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'bap-key-1', 'http://localhost:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'bpp-1-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
+  ('1257a139-6039-40b8-8752-96a77311f645', '[A] Transporter #2', 'transporter2', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'bap-key-2', 'http://localhost:8014/v1/e1f37274-f0aa-4bb3-93a0-2476349487b7', 'bpp-1-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
 
-INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES 
-  ('70c76e36-f035-46fd-98a7-572dc8934323', '[A] Transporter #1', 'transporter1', NULL, 'APPROVED', 'PROVIDER', NULL, true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'bpp-1-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
-INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES 
-  ('1257a139-6039-40b8-8752-96a77311f645', '[A] Transporter #2', 'transporter2', NULL, 'APPROVED', 'PROVIDER', NULL, true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8014/v1/e1f37274-f0aa-4bb3-93a0-2476349487b7', 'bpp-2-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
-INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'Test Cabs', 'test-cabs', NULL, 'APPROVED', 'PROVIDER','MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, 'TestCabsKey1', NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
-
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
+  ('e12d9178-4e88-497e-a310-482b6664dc06', 'Juspay Gateway', 'JUSPAY', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-gateway-key', 'http://localhost:8015/v1', 'mobility-app-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
 
 UPDATE atlas_app.person SET
     mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='

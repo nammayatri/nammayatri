@@ -119,3 +119,21 @@ findOrgByApiKey apiKey = do
   where
     predicate Storage.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
+
+findOrgByCbUrl :: BaseUrl -> Flow Storage.Organization
+findOrgByCbUrl url = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_BAP_URI"
+  where
+    predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
+
+findOrgByShortId :: ShortOrganizationId -> Flow Storage.Organization
+findOrgByShortId shortId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= fromMaybeM400 "INVALID_SHORT_ID"
+  where
+    predicate Storage.Organization {..} = _shortId ==. B.val_ shortId

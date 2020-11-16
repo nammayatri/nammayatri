@@ -77,19 +77,19 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
   c <- Case.findById $ CaseId caseId
   p <- PQ.findByName $ fromMaybe "DONT MATCH" (c ^. #_udf1)
   case SP._organizationId person of
-    Just orgId -> do
-      org <- OQ.findOrganizationById (OrganizationId orgId)
-      when (org ^. #_status /= Organization.APPROVED) $
+    Just transporterOrgId -> do
+      transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
+      when (transporterOrg ^. #_status /= Organization.APPROVED) $
         throwBecknError401 "Unauthorized"
       case _transporterChoice of
         "ACCEPTED" -> do
-          prodInst <- createProductInstance c p _quote orgId PI.INSTOCK
-          notifyGateway c prodInst orgId PI.INSTOCK
+          prodInst <- createProductInstance c p _quote transporterOrgId PI.INSTOCK
+          notifyGateway c prodInst transporterOrgId PI.INSTOCK
           Case.updateStatus (c ^. #_id) Case.CONFIRMED
           return c
         "DECLINED" -> do
-          declinedProdInst <- createProductInstance c p _quote orgId PI.OUTOFSTOCK
-          notifyGateway c declinedProdInst orgId PI.OUTOFSTOCK
+          declinedProdInst <- createProductInstance c p _quote transporterOrgId PI.OUTOFSTOCK
+          notifyGateway c declinedProdInst transporterOrgId PI.OUTOFSTOCK
           Case.updateStatus (c ^. #_id) Case.CLOSED
           return c
         _ -> throwError400 "TRANSPORTER CHOICE INVALID"
@@ -136,23 +136,16 @@ createProductInstance cs prod price orgId status = do
         }
 
 notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Flow ()
-notifyGateway c prodInst orgId piStatus = do
+notifyGateway c prodInst transporterOrgId piStatus = do
   L.logInfo @Text "notifyGateway" $ show c
   L.logInfo @Text "notifyGateway" $ show prodInst
-  orgInfo <- OQ.findOrganizationById (OrganizationId orgId) -- transporter
+  transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
   onSearchPayload <- case piStatus of
-    PI.OUTOFSTOCK -> mkOnSearchPayload c [] orgInfo
-    _ -> mkOnSearchPayload c [prodInst] orgInfo
+    PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
+    _ -> mkOnSearchPayload c [prodInst] transporterOrg
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
-  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ orgInfo ^. #_callbackApiKey
-  callbackUrl <- fetchCallbackUrl
-  _ <- Gateway.onSearch callbackUrl callbackApiKey onSearchPayload
+  _ <- Gateway.onSearch onSearchPayload
   return ()
-  where
-    fetchCallbackUrl = do
-      bapOrgId <- c ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONATIN_BAP_ORG_ID"
-      bapOrg <- OQ.findOrganizationById $ OrganizationId bapOrgId
-      bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis orgInfo = do

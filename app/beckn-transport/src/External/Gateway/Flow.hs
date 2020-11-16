@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module External.Gateway.Flow where
 
 import App.Types
@@ -9,21 +11,28 @@ import Beckn.Types.API.Search
 import Beckn.Types.API.Status
 import Beckn.Types.API.Track
 import Beckn.Types.API.Update
+import Beckn.Types.App (ShortOrganizationId (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client (BaseUrl)
+import Storage.Queries.Organization as Org
 
-onSearch :: BaseUrl -> Text -> OnSearchReq -> Flow AckResponse
-onSearch url callbackApiKey req@CallbackReq {context} = do
-  env <- ask
-  res <- case xGatewaySelector env of
-    Just "NSDL" ->
-      callAPIWithTrail url (API.nsdlOnSearch (nsdlUsername env) (nsdlPassword env) req) "on_search"
-    Just "JUSPAY" ->
-      callAPIWithTrail url (API.onSearch callbackApiKey req) "on_search"
+onSearch :: OnSearchReq -> Flow AckResponse
+onSearch req@CallbackReq {context} = do
+  appConfig <- ask
+  gatewayShortId <- xGatewaySelector appConfig & fromMaybeM500 "GATEWAY_SELECTOR_NOT_SET"
+  gatewayOrg <- Org.findOrgByShortId $ ShortOrganizationId gatewayShortId
+  res <- case gatewayShortId of
+    "NSDL" -> do
+      nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 "NSDL_BASEURL_NOT_SET"
+      callAPIWithTrail nsdlBaseUrl (API.nsdlOnSearch (nsdlUsername appConfig) (nsdlPassword appConfig) req) "on_search"
+    "JUSPAY" -> do
+      callbackApiKey <- gatewayOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM500 "CALLBACK_URL_NOT_CONFIGURED"
+      callAPIWithTrail callbackUrl (API.onSearch callbackApiKey req) "on_search"
     _ -> throwError500 "gateway not configured"
   AckResponse {} <- checkClientError context res
   mkOkResponse context

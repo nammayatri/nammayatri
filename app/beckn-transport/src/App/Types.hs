@@ -16,8 +16,6 @@ data AppEnv = AppEnv
     smsCfg :: SmsConfig,
     port :: Int,
     metricsPort :: Int,
-    xGatewayUri :: BaseUrl,
-    xGatewayApiKey :: Maybe Text,
     xGatewaySelector :: Maybe Text,
     xGatewayNsdlUrl :: Maybe BaseUrl,
     nsdlUsername :: Maybe Text,

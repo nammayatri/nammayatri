@@ -64,16 +64,18 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
+
+  -- Send callback to BAP
   bapOrg <- fetchBapOrganization $ ordPi ^. #_caseId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   notifyTripDetailsToGateway searchPi ordPi callbackUrl callbackApiKey
-  notifyStatusUpdateReq searchPi (req ^. #_status)
+  notifyStatusUpdateReq searchPi (req ^. #_status) callbackUrl callbackApiKey
   PIQ.findById piId
   where
     fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM500 "PRODUCT_INSTANCE_WITH_CASE_NOT_PRESENT"
-      bapOrgId <- prodCase ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONATIN_BAP_ORG_ID"
+      bapOrgId <- prodCase ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONTAIN_BAP_ORG_ID"
       OQ.findOrganizationById $ OrganizationId bapOrgId
     fetchCase caseId = do
       prodCase <- QCase.findById caseId
@@ -310,31 +312,26 @@ updateTrip piId newStatus request = do
       pure ()
     _ -> return ()
 
-notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
-notifyStatusUpdateReq searchPi status = do
+notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Text -> Flow ()
+notifyStatusUpdateReq searchPi status callbackUrl callbackApiKey = do
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
-        org <- findOrganization
-        admins <- getAdmins org
-        callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-        callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
+        transporterOrg <- findOrganization
+        admins <- getAdmins transporterOrg
         BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackUrl callbackApiKey
         Notify.notifyCancelReqByBP searchPi admins
       PI.TRIP_REASSIGNMENT -> do
-        org <- findOrganization
-        admins <- getAdmins org
+        transporterOrg <- findOrganization
+        admins <- getAdmins transporterOrg
         Notify.notifyDriverCancelledRideRequest searchPi admins
       _ -> do
-        org <- findOrganization
-        callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-        callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
         trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
         BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl callbackApiKey
     Nothing -> return ()
   where
     findOrganization = OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
-    getAdmins org = do
-      if org ^. #_enabled
+    getAdmins transporterOrg = do
+      if transporterOrg ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
         else pure []

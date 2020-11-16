@@ -50,8 +50,9 @@ import qualified Utils.Notifications as Notify
 -- 3) Respond with Ack
 
 search :: OrganizationId -> Organization -> SearchReq -> FlowHandler AckResponse
-search transporterId organization req = withFlowHandler $ do
+search transporterId _bgOrg req = withFlowHandler $ do
   validateContext "search" $ req ^. #context
+  bapUri <- req ^. #context . #_bap_uri & fromMaybeM400 "INVALID_BAP_URI"
   uuid <- L.generateGUID
   transporter <- findOrganizationById transporterId
   when (transporter ^. #_enabled) $ do
@@ -67,7 +68,8 @@ search transporterId organization req = withFlowHandler $ do
     let toLocation = mkFromStop req uuid2 currTime dropOff
     Loc.create fromLocation
     Loc.create toLocation
-    let bapOrgId = organization ^. #_id
+    bapOrg <- Org.findOrgByCbUrl bapUri
+    let bapOrgId = bapOrg ^. #_id
     let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId
     Case.create c
     admins <-
@@ -78,7 +80,7 @@ search transporterId organization req = withFlowHandler $ do
   mkAckResponse uuid "search"
 
 cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
-cancel transporterId org req = withFlowHandler $ do
+cancel transporterId bapOrg req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   uuid <- L.generateGUID
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
@@ -95,8 +97,8 @@ cancel transporterId org req = withFlowHandler $ do
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
   transporter <- findOrganizationById transporterId
-  callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ transporter ^. #_callbackApiKey
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "ORG_CALLBACK_API_KEY_NOT_CONFIGURED"
   notifyCancelToGateway prodInstId callbackUrl callbackApiKey
   admins <-
     if transporter ^. #_enabled
@@ -180,16 +182,19 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
     }
 
 confirm :: OrganizationId -> Organization -> ConfirmReq -> FlowHandler AckResponse
-confirm transporterId _org req = withFlowHandler $ do
+confirm transporterId bapOrg req = withFlowHandler $ do
   L.logInfo @Text "confirm API Flow" "Reached"
   validateContext "confirm" $ req ^. #context
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
-  let orgId = OrganizationId $ productInstance ^. #_organizationId
-  org <- Org.findOrganizationById orgId
-  unless (orgId == transporterId) (throwError500 "DIFFERENT_TRANSPORTER_IDS")
-  let caseShortId = _getOrganizationId orgId <> "_" <> req ^. #context . #_transaction_id
+  let transporterId' = OrganizationId $ productInstance ^. #_organizationId
+  transporterOrg <- Org.findOrganizationById transporterId'
+  unless (transporterId' == transporterId) (throwError400 "DIFFERENT_TRANSPORTER_IDS")
+  let caseShortId = _getOrganizationId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
+  bapOrgId <- searchCase ^. #_udf4 & fromMaybeM500 "BAP_ORG_NOT_SET"
+  unless (bapOrg ^. #_id == OrganizationId bapOrgId) (throwError400 "BAP mismatch")
+
   orderCase <- mkOrderCase searchCase
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -204,11 +209,14 @@ confirm transporterId _org req = withFlowHandler $ do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
-  callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
+
+  -- Send callback to BAP
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   notifyGateway searchCase orderProductInstance trackerCase callbackUrl callbackApiKey
+
   admins <-
-    if org ^. #_enabled
+    if transporterOrg ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
       else return []
   Notify.notifyTransportersOnConfirm searchCase productInstance admins
@@ -376,15 +384,13 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
       }
 
 serviceStatus :: OrganizationId -> Organization -> StatusReq -> FlowHandler StatusRes
-serviceStatus _transporterId org req = withFlowHandler $ do
+serviceStatus _transporterId bapOrg req = withFlowHandler $ do
   L.logInfo @Text "serviceStatus API Flow" $ show req
-  --  let caseSid = req ^. #message . #service . #id
-  --  c <- Case.findBySid caseSid
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   notifyServiceStatusToGateway piId trackerPi callbackUrl callbackApiKey
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
@@ -433,7 +439,7 @@ trackTrip _transporterId org req = withFlowHandler $ do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
       callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-      callbackApiKey <- fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED" $ org ^. #_callbackApiKey
+      callbackApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       notifyTripUrlToGateway case_ parentCase callbackUrl callbackApiKey
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
