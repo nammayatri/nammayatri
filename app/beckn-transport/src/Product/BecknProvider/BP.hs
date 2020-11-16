@@ -177,13 +177,15 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId = d
     }
 
 confirm :: OrganizationId -> Organization -> ConfirmReq -> FlowHandler AckResponse
-confirm _transporterId _org req = withFlowHandler $ do
+confirm transporterId _org req = withFlowHandler $ do
   L.logInfo @Text "confirm API Flow" "Reached"
   validateContext "confirm" $ req ^. #context
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
-  org <- Org.findOrganizationById $ OrganizationId $ productInstance ^. #_organizationId
-  let caseShortId = _getOrganizationId (org ^. #_id) <> "_" <> req ^. #context . #_transaction_id
+  let orgId = OrganizationId $ productInstance ^. #_organizationId
+  org <- Org.findOrganizationById orgId
+  unless (orgId == transporterId) (throwError500 "DIFFERENT_TRANSPORTER_IDS")
+  let caseShortId = _getOrganizationId orgId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
   orderCase <- mkOrderCase searchCase
   Case.create orderCase
