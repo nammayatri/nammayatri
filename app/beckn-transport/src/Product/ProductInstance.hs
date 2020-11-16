@@ -64,23 +64,20 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateDriverDetails user piList req
   updateStatus user piId req
   updateInfo piId
-  callbackUrl <- fetchCallbackUrl $ ordPi ^. #_caseId
-  callbackApiKey <- fetchCallbackApiKey $ ordPi ^. #_organizationId
+  bapOrg <- fetchBapOrganization $ ordPi ^. #_caseId
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   notifyTripDetailsToGateway searchPi ordPi callbackUrl callbackApiKey
   notifyStatusUpdateReq searchPi (req ^. #_status)
   PIQ.findById piId
   where
-    fetchCallbackUrl caseId = do
+    fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM500 "PRODUCT_INSTANCE_WITH_CASE_NOT_PRESENT"
       bapOrgId <- prodCase ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONATIN_BAP_ORG_ID"
-      bapOrg <- OQ.findOrganizationById $ OrganizationId bapOrgId
-      bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+      OQ.findOrganizationById $ OrganizationId bapOrgId
     fetchCase caseId = do
       prodCase <- QCase.findById caseId
       checkDBError prodCase
-    fetchCallbackApiKey transporterId = do
-      transporter <- OQ.findOrganizationById $ OrganizationId transporterId
-      transporter ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
