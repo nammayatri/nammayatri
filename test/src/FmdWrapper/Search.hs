@@ -191,7 +191,7 @@ incorrectApiKey clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "some-key" searchReq
-  verifyError 400 "INVALID_API_KEY" gatewayResponse
+  verifyError 401 "INVALID_API_KEY" gatewayResponse
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
