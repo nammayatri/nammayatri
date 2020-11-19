@@ -71,9 +71,7 @@ search transporterId _bgOrg req = withFlowHandler $ do
     Loc.create toLocation
     bapOrg <- Org.findOrgByCbUrl bapUri
     let bapOrgId = bapOrg ^. #_id
-    orgLocId <- LocationId <$> transporter ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
-    mbOrgLocation <- Loc.findLocationById orgLocId
-    deadDistance <- maybe (pure Nothing) (`Location.calculateDistance` fromLocation) mbOrgLocation
+    deadDistance <- calculateDeadDistance transporter fromLocation
     let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
     Case.create c
     admins <-
@@ -82,6 +80,13 @@ search transporterId _bgOrg req = withFlowHandler $ do
         [_getOrganizationId transporterId]
     Notify.notifyTransportersOnSearch c intent admins
   mkAckResponse uuid "search"
+  where
+    calculateDeadDistance organization fromLocation = do
+      orgLocId <- LocationId <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
+      mbOrgLocation <- Loc.findLocationById orgLocId
+      case mbOrgLocation of
+        Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
+        Just orgLocation -> Location.calculateDistance orgLocation fromLocation
 
 cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
 cancel transporterId bapOrg req = withFlowHandler $ do
