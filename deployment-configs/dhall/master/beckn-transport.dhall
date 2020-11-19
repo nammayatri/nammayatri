@@ -36,8 +36,6 @@ let smsConfig =
   , useFakeSms = Some 7891
   }
 
-let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
-
 let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
 
 let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
@@ -49,8 +47,6 @@ in
 , smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9999
-, xGatewayUri = gwUri
-, xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
 , xGatewayNsdlUrl = Some nsdlUrl
 , nsdlUsername = Some sec.nsdlUsername
