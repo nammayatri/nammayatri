@@ -58,7 +58,9 @@ updateLocation _ caseId req = withFlowHandler $ do
     Nothing -> do
       -- TODO: run this in a thread
       case_ <- Case.findById $ CaseId caseId
-      fromLocation <- Location.findLocationById (LocationId $ case_ ^. #_fromLocationId)
+      fromLocation <-
+        Location.findLocationById (LocationId $ case_ ^. #_fromLocationId)
+          >>= fromMaybeM400 "INVALID_DATA"
       loc <-
         case (fromLocation ^. #_lat, fromLocation ^. #_long) of
           (Just custLat, Just custLong) -> do
@@ -333,3 +335,30 @@ latLonToXY (lat, long) refLon =
       x = r * MapSearch.deg2Rad lat * cos_phi0
       y = r * MapSearch.deg2Rad long
    in (x, y)
+
+calculateDistance :: Location.Location -> Location.Location -> Flow (Maybe Float)
+calculateDistance source destination = do
+  routeRequest <- mkRouteRequest
+  response <- MapSearch.getRoute routeRequest
+  case response of
+    Left err -> do
+      L.logWarning @Text "" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
+      pure Nothing
+    Right result -> pure $ MapSearch.distanceInM <$> headMaybe (result ^. #routes)
+  where
+    mkRouteRequest = do
+      sourceLat <- source ^. #_lat & fromMaybeM500 "LAT_NOT_FOUND"
+      sourceLng <- source ^. #_long & fromMaybeM500 "LNG_NOT_FOUND"
+      destinationLat <- destination ^. #_lat & fromMaybeM500 "LAT_NOT_FOUND"
+      destinationLng <- destination ^. #_long & fromMaybeM500 "LNG_NOT_FOUND"
+      let sourceMapPoint = mkMapPoint sourceLat sourceLng
+      let destinationMapPoint = mkMapPoint destinationLat destinationLng
+      pure $
+        MapSearch.Request
+          { waypoints = [sourceMapPoint, destinationMapPoint],
+            mode = Just MapSearch.CAR,
+            departureTime = Nothing,
+            arrivalTime = Nothing,
+            calcPoints = Just False
+          }
+    mkMapPoint lat lng = MapSearch.LatLong $ MapSearch.PointXY lat lng

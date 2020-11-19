@@ -22,12 +22,11 @@ create Storage.Location {..} = do
     >>= either DB.throwDBError pure
 
 findLocationById ::
-  LocationId -> Flow Storage.Location
+  LocationId -> Flow (Maybe Storage.Location)
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_DATA"
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 

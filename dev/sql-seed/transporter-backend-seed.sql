@@ -631,3 +631,6 @@ CREATE TABLE atlas_transporter.external_trail (
 
 ALTER TABLE ONLY atlas_transporter."external_trail"
     ADD CONSTRAINT idx_external_trail_primary PRIMARY KEY (id);
+
+INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES 
+  ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);

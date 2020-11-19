@@ -36,6 +36,7 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
+import qualified Product.Location as Location
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -70,7 +71,10 @@ search transporterId _bgOrg req = withFlowHandler $ do
     Loc.create toLocation
     bapOrg <- Org.findOrgByCbUrl bapUri
     let bapOrgId = bapOrg ^. #_id
-    let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId
+    orgLocId <- LocationId <$> transporter ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
+    mbOrgLocation <- Loc.findLocationById orgLocId
+    deadDistance <- maybe (pure Nothing) (`Location.calculateDistance` fromLocation) mbOrgLocation
+    let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
     Case.create c
     admins <-
       Person.findAllByOrgIds
@@ -146,8 +150,8 @@ mkFromStop _req uuid now stop =
           _updatedAt = now
         }
 
-mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> OrganizationId -> OrganizationId -> SC.Case
-mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId = do
+mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> OrganizationId -> OrganizationId -> Maybe Float -> SC.Case
+mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
   let intent = req ^. #message . #intent
   let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
   let tId = _getOrganizationId transporterId
@@ -173,7 +177,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       _toLocationId = TA._getLocationId $ toLocation ^. #_id,
       _udf1 = Just $ intent ^. #_vehicle . #variant,
       _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
-      _udf3 = Nothing,
+      _udf3 = encodeToText <$> deadDistance,
       _udf4 = Just bapId,
       _udf5 = distance,
       _info = Nothing, --Just $ show $ req ^. #message
