@@ -1,15 +1,15 @@
 module App.Routes where
 
 import App.Types
-import Beckn.Types.API.Auth
-import qualified Beckn.Types.API.Call as Call
-import qualified Beckn.Types.API.Cancel as API
-import qualified Beckn.Types.API.Confirm as API
-import qualified Beckn.Types.API.Feedback as API
-import qualified Beckn.Types.API.Search as API
-import qualified Beckn.Types.API.Status as API
-import qualified Beckn.Types.API.Track as API
 import Beckn.Types.App
+import Beckn.Types.Core.API.Auth
+import qualified Beckn.Types.Core.API.Call as Call
+import qualified Beckn.Types.Core.API.Cancel as API
+import qualified Beckn.Types.Core.API.Confirm as API
+import qualified Beckn.Types.Core.API.Feedback as API
+import qualified Beckn.Types.Core.API.Search as API
+import qualified Beckn.Types.Core.API.Status as API
+import qualified Beckn.Types.Core.API.Track as API
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance

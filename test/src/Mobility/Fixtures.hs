@@ -3,11 +3,11 @@ module Mobility.Fixtures where
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
-import qualified Beckn.Types.API.Cancel as Cancel
-import qualified Beckn.Types.API.Confirm as Confirm
-import qualified Beckn.Types.API.Search as Search
 import Beckn.Types.App
 import Beckn.Types.Common as Common
+import qualified Beckn.Types.Core.API.Cancel as Cancel
+import qualified Beckn.Types.Core.API.Confirm as Confirm
+import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
 import Beckn.Types.Mobility.Payload

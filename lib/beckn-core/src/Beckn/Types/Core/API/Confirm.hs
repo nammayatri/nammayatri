@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.API.Confirm where
+module Beckn.Types.Core.API.Confirm where
 
-import Beckn.Types.API.Callback
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
 import Beckn.Utils.Servant.HeaderAuth

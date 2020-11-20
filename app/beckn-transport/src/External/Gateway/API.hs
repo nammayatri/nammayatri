@@ -1,13 +1,13 @@
 module External.Gateway.API where
 
-import Beckn.Types.API.Call
-import Beckn.Types.API.Cancel
-import Beckn.Types.API.Confirm
-import Beckn.Types.API.Search (OnSearchReq, OnSearchRes, nsdlOnSearchAPI)
-import Beckn.Types.API.Status
-import Beckn.Types.API.Track
-import Beckn.Types.API.Update
 import Beckn.Types.Common (AckResponse)
+import Beckn.Types.Core.API.Call
+import Beckn.Types.Core.API.Cancel
+import Beckn.Types.Core.API.Confirm
+import Beckn.Types.Core.API.Search (OnSearchReq, OnSearchRes, nsdlOnSearchAPI)
+import Beckn.Types.Core.API.Status
+import Beckn.Types.Core.API.Track
+import Beckn.Types.Core.API.Update
 import Beckn.Utils.Servant.HeaderAuth (HeaderAuthKey)
 import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude

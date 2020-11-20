@@ -1,4 +1,4 @@
-module Beckn.Types.API.Log where
+module Beckn.Types.Core.API.Log where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context

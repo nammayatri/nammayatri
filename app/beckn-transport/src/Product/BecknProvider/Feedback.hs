@@ -4,12 +4,12 @@
 module Product.BecknProvider.Feedback where
 
 import App.Types (Flow, FlowHandler)
-import qualified Beckn.Types.API.Feedback as API
 import Beckn.Types.App
   ( OrganizationId,
     ProductInstanceId (ProductInstanceId),
     RatingId (RatingId),
   )
+import qualified Beckn.Types.Core.API.Feedback as API
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance

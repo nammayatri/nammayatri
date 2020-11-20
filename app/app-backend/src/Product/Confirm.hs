@@ -4,9 +4,9 @@
 module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
-import Beckn.Types.API.Confirm
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Order (OrderItem (..))
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case

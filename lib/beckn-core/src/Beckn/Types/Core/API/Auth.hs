@@ -1,4 +1,4 @@
-module Beckn.Types.API.Auth where
+module Beckn.Types.Core.API.Auth where
 
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth

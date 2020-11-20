@@ -6,8 +6,8 @@ module App.Routes
 where
 
 import App.Types
-import Beckn.Types.API.Log
 import Beckn.Types.App (FlowServerR)
+import Beckn.Types.Core.API.Log
 import Beckn.Utils.Common (withFlowHandler)
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import qualified EulerHS.Language as L

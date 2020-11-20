@@ -3,7 +3,7 @@
 module Utils.Common where
 
 import App.Types
-import Beckn.Types.API.Log
+import Beckn.Types.Core.API.Log
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error

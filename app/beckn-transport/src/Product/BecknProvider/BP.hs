@@ -6,15 +6,15 @@ module Product.BecknProvider.BP where
 import App.Types
 import qualified Beckn.Product.Auth.SignatureAuth as HttpSign
 import Beckn.Product.Validation.Context
-import Beckn.Types.API.Callback
-import Beckn.Types.API.Cancel
-import Beckn.Types.API.Confirm
-import Beckn.Types.API.Search
-import Beckn.Types.API.Status
-import Beckn.Types.API.Track
-import Beckn.Types.API.Update
 import Beckn.Types.App as TA
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.API.Cancel
+import Beckn.Types.Core.API.Confirm
+import Beckn.Types.Core.API.Search
+import Beckn.Types.Core.API.Status
+import Beckn.Types.Core.API.Track
+import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Core.Order

@@ -1,4 +1,4 @@
-module Beckn.Types.API.Leads where
+module Beckn.Types.Core.API.Leads where
 
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location as CL

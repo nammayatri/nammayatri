@@ -8,9 +8,9 @@ module Types.API.Search
   )
 where
 
-import Beckn.Types.API.Auth
-import Beckn.Types.API.Callback
 import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.Core.API.Auth
+import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Context
 import Data.Aeson (Value)
 import EulerHS.Prelude

@@ -6,9 +6,9 @@ module Product.Call where
 
 import App.Types
 import Beckn.External.Exotel.Flow
-import Beckn.Types.API.Call
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Call
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person

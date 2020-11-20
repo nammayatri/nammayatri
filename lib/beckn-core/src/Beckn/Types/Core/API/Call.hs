@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.API.Call where
+module Beckn.Types.Core.API.Call where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Context

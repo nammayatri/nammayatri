@@ -18,7 +18,7 @@ import EulerHS.Prelude
 import Product.CallsTrack
 
 -- import qualified System.Environment as SE
--- import qualified Beckn.Types.API.Confirm as Confirm
+-- import qualified Beckn.Types.Core.API.Confirm as Confirm
 
 confirmCb :: Organization -> OnConfirmReq -> FlowHandler AckResponse
 confirmCb org req = withFlowHandler $ do

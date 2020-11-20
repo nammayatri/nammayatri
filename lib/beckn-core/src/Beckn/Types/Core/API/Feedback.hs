@@ -1,4 +1,4 @@
-module Beckn.Types.API.Feedback
+module Beckn.Types.Core.API.Feedback
   ( FeedbackAPI,
     FeedbackReq (..),
     FeedbackRes,

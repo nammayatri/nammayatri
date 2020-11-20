@@ -3,13 +3,13 @@
 
 module External.Gateway.Types where
 
-import qualified Beckn.Types.API.Cancel as Cancel
-import qualified Beckn.Types.API.Confirm as Confirm
-import qualified Beckn.Types.API.Feedback as Feedback
-import qualified Beckn.Types.API.Search as Search
-import qualified Beckn.Types.API.Status as Status
-import qualified Beckn.Types.API.Track as Track
 import Beckn.Types.Common (AckResponse)
+import qualified Beckn.Types.Core.API.Cancel as Cancel
+import qualified Beckn.Types.Core.API.Confirm as Confirm
+import qualified Beckn.Types.Core.API.Feedback as Feedback
+import qualified Beckn.Types.Core.API.Search as Search
+import qualified Beckn.Types.Core.API.Status as Status
+import qualified Beckn.Types.Core.API.Track as Track
 import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import EulerHS.Types (EulerClient, client)

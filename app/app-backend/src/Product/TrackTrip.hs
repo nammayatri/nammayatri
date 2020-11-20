@@ -4,9 +4,9 @@
 module Product.TrackTrip where
 
 import App.Types
-import Beckn.Types.API.Track
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
 import qualified Beckn.Types.Storage.Case as Case

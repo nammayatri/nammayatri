@@ -4,9 +4,9 @@
 module Product.Case.CRUD where
 
 import App.Types
-import Beckn.Types.API.Callback
-import Beckn.Types.API.Search
 import Beckn.Types.App
+import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain

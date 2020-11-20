@@ -4,9 +4,9 @@
 module Product.Status (status, onStatus) where
 
 import App.Types
-import qualified Beckn.Types.API.Status as API
 import Beckn.Types.App
 import Beckn.Types.Common hiding (status)
+import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person

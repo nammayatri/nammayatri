@@ -4,8 +4,8 @@
 module Product.Cancel (cancel, onCancel) where
 
 import App.Types
-import qualified Beckn.Types.API.Cancel as API
 import Beckn.Types.App
+import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person

@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.API.Status where
+module Beckn.Types.Core.API.Status where
 
-import Beckn.Types.API.Callback
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Order
 import Beckn.Utils.Servant.HeaderAuth

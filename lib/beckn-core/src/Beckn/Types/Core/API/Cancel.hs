@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.API.Cancel where
+module Beckn.Types.Core.API.Cancel where
 
-import Beckn.Types.API.Callback
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
 import Beckn.Types.Mobility.Trip

@@ -4,9 +4,9 @@
 module Product.Dunzo.Transform where
 
 import App.Types
-import Beckn.Types.API.Callback
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Callback
 import qualified Beckn.Types.Core.Address as CoreAddr
 import Beckn.Types.Core.Amount
 import Beckn.Types.Core.Category

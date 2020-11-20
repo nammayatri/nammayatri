@@ -4,9 +4,9 @@
 module Product.Update where
 
 import App.Types
-import Beckn.Types.API.Update
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Mobility.Trip
 import qualified Beckn.Types.Storage.Case as Case

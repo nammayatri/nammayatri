@@ -4,16 +4,16 @@
 module App.Routes where
 
 import App.Types
-import Beckn.Types.API.Auth
-import qualified Beckn.Types.API.Call as Call
-import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
-import qualified Beckn.Types.API.Confirm as Confirm
-import qualified Beckn.Types.API.Search as Search
-import qualified Beckn.Types.API.Status as Status
-import Beckn.Types.API.Track
-import qualified Beckn.Types.API.Update as Update
 import Beckn.Types.App
 import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.Core.API.Auth
+import qualified Beckn.Types.Core.API.Call as Call
+import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
+import qualified Beckn.Types.Core.API.Confirm as Confirm
+import qualified Beckn.Types.Core.API.Search as Search
+import qualified Beckn.Types.Core.API.Status as Status
+import Beckn.Types.Core.API.Track
+import qualified Beckn.Types.Core.API.Update as Update
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person

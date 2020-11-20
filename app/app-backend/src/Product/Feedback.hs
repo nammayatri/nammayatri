@@ -3,12 +3,12 @@
 module Product.Feedback where
 
 import qualified App.Types as App
-import qualified Beckn.Types.API.Feedback as Beckn
 import Beckn.Types.App
   ( CaseId (_getCaseId),
     OrganizationId (OrganizationId),
     ProductInstanceId (ProductInstanceId),
   )
+import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
 import qualified Beckn.Types.Storage.Person as Person
