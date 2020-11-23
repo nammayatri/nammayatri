@@ -20,14 +20,18 @@ registry =
     mkCredential "juspay-mobility-bpp-1-key" "JUSPAY.MOBILITY.PROVIDER.UAT.1",
     mkCredential "juspay-bg-1-key" "JUSPAY.BG.1",
     mkCredential "juspay-mock-bap-1-key" "JUSPAY.BAP.MOCK.1",
-    mkCredential "juspay-mock-bpp-1-key" "JUSPAY.BPP.MOCK.1"
+    mkCredential "juspay-mock-bpp-1-key" "JUSPAY.BPP.MOCK.1",
+    mkNSDLCredential "nsdl_bg_1" "NSDL.BG.1"
   ]
   where
     mkCredential keyId orgId =
       Credential keyId orgId Nothing Nothing Nothing examplePubKey examplePrivKey examplePubKey examplePrivKey exampleValidFrom exampleValidTill
+    mkNSDLCredential keyId orgId =
+      Credential keyId orgId Nothing Nothing Nothing nsdlPubKey Nothing nsdlPubKey Nothing exampleValidFrom exampleValidTill
 
     examplePubKey = "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
     examplePrivKey = Just "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
+    nsdlPubKey = "7bcdd2676ec1f08c3da1f6bc41f7edc4e40666f4010f07c355ab698be51df8ad"
     exampleValidFrom = posixSecondsToUTCTime 1605232000
     exampleValidTill = posixSecondsToUTCTime 1920592000
 

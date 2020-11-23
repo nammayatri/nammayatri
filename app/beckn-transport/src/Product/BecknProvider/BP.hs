@@ -4,6 +4,7 @@
 module Product.BecknProvider.BP where
 
 import App.Types
+import qualified Beckn.Product.Auth.SignatureAuth as HttpSign
 import Beckn.Product.Validation.Context
 import Beckn.Types.API.Callback
 import Beckn.Types.API.Cancel
@@ -29,6 +30,7 @@ import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
+import Beckn.Utils.SignatureAuth (SignaturePayload)
 import qualified Data.Text as T
 import Data.Time
 import qualified EulerHS.Language as L
@@ -43,6 +45,7 @@ import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as ProductInstance
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
+import Utils.Auth
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -50,8 +53,17 @@ import qualified Utils.Notifications as Notify
 -- 2) Notify all transporter using FCM
 -- 3) Respond with Ack
 
-search :: OrganizationId -> Organization -> SearchReq -> FlowHandler AckResponse
-search transporterId _bgOrg req = withFlowHandler $ do
+searchEndpointSignAuth :: OrganizationId -> SignaturePayload -> SignaturePayload -> SearchReq -> FlowHandler AckResponse
+searchEndpointSignAuth transporterId appSignature gwSignature req = withFlowHandler $ do
+  _gwOrg <- HttpSign.verify lookupRegistryAction gwSignature req
+  _appOrg <- HttpSign.verify lookupRegistryAction appSignature req
+  search transporterId req
+
+searchEndpointApiKey :: OrganizationId -> Organization -> SearchReq -> FlowHandler AckResponse
+searchEndpointApiKey transporterId _appOrg = withFlowHandler . search transporterId
+
+search :: OrganizationId -> SearchReq -> Flow AckResponse
+search transporterId req = do
   validateContext "search" $ req ^. #context
   bapUri <- req ^. #context . #_bap_uri & fromMaybeM400 "INVALID_BAP_URI"
   uuid <- L.generateGUID

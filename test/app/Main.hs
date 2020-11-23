@@ -67,16 +67,27 @@ specs = do
       )
   where
     allServers =
-      [ Gateway.runGateway $ #loggerConfig . #logToConsole .~ False,
+      [ Gateway.runGateway $ \cfg ->
+          cfg & #loggerConfig . #logToConsole .~ False
+            & #loggerConfig . #logRawSql .~ False,
         AppBackend.runAppBackend $
           \cfg ->
             cfg & #loggerConfig . #logToConsole .~ False
+              & #loggerConfig . #logRawSql .~ False
               & #geofencingConfig . #origin .~ Region "Ernakulam"
               & #geofencingConfig . #destination .~ Region "Kerala",
-        TransporterBackend.runTransporterBackendApp $ #loggerConfig . #logToConsole .~ False,
-        FmdWrapper.runFMDWrapper $ #loggerConfig . #logToConsole .~ False,
-        MockAppBackend.runMockApp $ #loggerConfig . #logToConsole .~ False,
-        MockProviderBackend.runMockProvider $ #loggerConfig . #logToConsole .~ False
+        TransporterBackend.runTransporterBackendApp $ \cfg ->
+          cfg & #loggerConfig . #logToConsole .~ False
+            & #loggerConfig . #logRawSql .~ False,
+        FmdWrapper.runFMDWrapper $ \cfg ->
+          cfg & #loggerConfig . #logToConsole .~ False
+            & #loggerConfig . #logRawSql .~ False,
+        MockAppBackend.runMockApp $ \cfg ->
+          cfg & #loggerConfig . #logToConsole .~ False
+            & #loggerConfig . #logRawSql .~ False,
+        MockProviderBackend.runMockProvider $ \cfg ->
+          cfg & #loggerConfig . #logToConsole .~ False
+            & #loggerConfig . #logRawSql .~ False
       ]
 
     startServers servers = do

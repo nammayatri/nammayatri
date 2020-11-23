@@ -45,7 +45,7 @@ in
 , smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9997
-, xGatewaySelector = Some "JUSPAY"
+, xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
 , nsdlUsername = None Text
 , nsdlPassword = None Text

@@ -76,6 +76,7 @@ library:
     - bytestring
     - cache
     - clock
+    - containers
     - http-types
     - servant-client
     - servant-server

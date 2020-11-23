@@ -119,7 +119,7 @@ onSearchServices ::
   Text ->
   Search.OnSearchReq ->
   ClientM Search.OnSearchRes
-searchServices :<|> onSearchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
+searchServices :<|> (_ :<|> onSearchServices) = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: Text -> IO AppBESearch.SearchReq
 buildSearchReq guid = do

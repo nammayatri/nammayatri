@@ -8,6 +8,7 @@ import Beckn.Utils.Common (fromMaybeM401, throwError401)
 import qualified Beckn.Utils.Registry as R
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.App as BA
@@ -38,20 +39,24 @@ instance LookupMethod LookupRegistry where
     "Looks up the given key ID in the Beckn registry."
 
 lookupRegistryAction :: LookupAction LookupRegistry AppEnv
-lookupRegistryAction = LookupAction $ \keyId -> do
+lookupRegistryAction = LookupAction $ \signaturePayload -> do
+  L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show (HttpSig.encode signaturePayload)
+  let keyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
   mCred <- R.lookupKey keyId
   cred <- case mCred of
     Just c -> return c
     Nothing -> do
-      L.logError @Text "auth req" $ "Could not look up keyId: " <> keyId
+      L.logError @Text "SignatureAuth" $ "Could not look up keyId: " <> keyId
       throwError401 "INVALID_KEY_ID"
-  mOrg <- Org.findOrgById (cred ^. #_orgId)
+  mOrg <- Org.findOrgByShortId (cred ^. #_orgId)
   org <- case mOrg of
     Just o -> return o
     Nothing -> do
-      L.logError @Text "auth req" $ "Could not look up orgId: " <> cred ^. #_orgId
+      L.logError @Text "SignatureAuth" $ "Could not look up orgId: " <> cred ^. #_orgId
       throwError401 "INVALID_KEY_ID"
   pk <- case R.decodeKey $ cred ^. #_signPubKey of
-    Nothing -> throwError401 "INVALID_PUBLIC_KEY"
+    Nothing -> do
+      L.logError @Text "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #_signPubKey)
+      throwError401 "INVALID_PUBLIC_KEY"
     Just key -> return key
   return (org, pk)

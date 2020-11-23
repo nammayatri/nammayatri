@@ -30,13 +30,11 @@ search url req = do
     Just "NSDL" -> do
       mNsdlUrl <- xGatewayNsdlUrl <$> ask
       case mNsdlUrl of
-        Just nsdlBaseUrl -> do
-          nsdlBapId <- nsdlUsername <$> ask
-          nsdlBapPwd <- nsdlPassword <$> ask
-          callAPIWithTrail nsdlBaseUrl (API.nsdlSearch nsdlBapId nsdlBapPwd req) "search"
+        Just nsdlBaseUrl ->
+          callAPIWithTrail' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlSearch req) "search"
         Nothing -> throwError500 "invalid nsdl gateway url"
-    Just "JUSPAY" -> do
-      callAPIWithTrail' (Just signatureAuthManagerKey) url (API.search req) "search"
+    Just "JUSPAY.BG.1" ->
+      callAPIWithTrail' (Just signatureAuthManagerKey) url (API.searchSignAuth req) "search"
     _ -> throwError500 "gateway not configured"
   case res of
     Left err -> do

@@ -1,16 +1,23 @@
+{-# OPTIONS_GHC -w #-}
+
 module Beckn.Utils.SignatureAuth
   ( PublicKey,
     PrivateKey,
     SignatureAlgorithm (..),
     SignatureParams (..),
+    SignaturePayload (..),
+    KeyId (..),
     decode,
     encode,
     sign,
     verify,
+    encodeKeyId,
+    decodeKeyId,
   )
 where
 
 import qualified Crypto.Error as Crypto
+import qualified Crypto.Hash as Hash
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
@@ -18,10 +25,12 @@ import qualified Data.ByteString.Base64 as Base64
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
 import qualified Data.Text as T
-import Data.Time.Clock (NominalDiffTime)
+import qualified Data.Text as Text
+import Data.Time.Clock.POSIX
 import Data.Time.Format
 import EulerHS.Prelude
-import Network.HTTP.Types (Header, Method)
+import Network.HTTP.Types (Header)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import Text.ParserCombinators.Parsec
 
 -- | Implementation of HTTP Signature authorization based on
@@ -38,32 +47,68 @@ type Signature = ByteString
 -- | List of supported algorithms, this should grow over time
 data SignatureAlgorithm
   = Hs2019
+  | Ed25519
   deriving (Eq, Show)
 
-encodeAlg :: SignatureAlgorithm -> ByteString
+type HashingAlgorithm = Hash.Digest Hash.Blake2b_512
+
+encodeAlg :: SignatureAlgorithm -> Text
 encodeAlg Hs2019 = "hs2019"
+encodeAlg Ed25519 = "ed25519"
 
 decodeAlg :: String -> Maybe SignatureAlgorithm
 decodeAlg "hs2019" = Just Hs2019
+decodeAlg "ed25519" = Just Ed25519
 decodeAlg _ = Nothing
+
+data KeyId = KeyId
+  { subscriberId :: Text,
+    uniqueKeyId :: Text,
+    alg :: SignatureAlgorithm
+  }
+  deriving (Show, Eq, Generic)
+
+encodeKeyId :: KeyId -> Text
+encodeKeyId KeyId {..} = subscriberId <> "|" <> uniqueKeyId <> "|" <> encodeAlg alg
+
+decodeKeyId :: Text -> Either String KeyId
+decodeKeyId input = do
+  let values = Text.splitOn "|" input
+  unless (length values == 3) $ Left "INVALID_KEY_ID"
+  let [subscriberId, uniqueKeyId, rAlg] = values
+  alg <- maybeToRight "INVALID_ALG" . decodeAlg . Text.unpack $ rAlg
+  pure KeyId {..}
 
 -- | Signature parameters as per the specification
 data SignatureParams = SignatureParams
   { -- | The key ID that should be used to to generate/verify the signature
-    keyId :: Text,
+    keyId :: KeyId,
     -- | The signature algorithm to use
     algorithm :: SignatureAlgorithm,
     -- | Ordered list of headers to sign along with the request body
     headers :: [Text],
     -- | Optional signature creation date/time (as UNIX time)
-    created :: Maybe NominalDiffTime,
+    created :: Maybe POSIXTime,
     -- | Optional signature expiration date/time (as UNIX time)
-    expires :: Maybe NominalDiffTime
+    expires :: Maybe POSIXTime
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+
+-- | Signature payload representation that carries signature and it's params
+data SignaturePayload = SignaturePayload
+  { signature :: Signature,
+    params :: SignatureParams
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToHttpApiData SignaturePayload where
+  toQueryParam = decodeUtf8 . encode
+
+instance FromHttpApiData SignaturePayload where
+  parseQueryParam = first show <$> decode . encodeUtf8
 
 -- | Decode the contents of a signature header to a signature and corresponding params
-decode :: ByteString -> Either String (Signature, SignatureParams)
+decode :: ByteString -> Either String SignaturePayload
 decode val = do
   values <-
     first show $
@@ -72,8 +117,7 @@ decode val = do
     Base64.decode
       =<< (maybeToRight "no valid signature" . fmap fromString . lookup "signature") values
   key <-
-    maybeToRight "no keyId" $
-      fromString <$> lookup "keyId" values
+    join . maybeToRight "no keyId" $ decodeKeyId . Text.pack <$> lookup "keyId" values
   alg <-
     maybeToRight "no algorithm" $
       decodeAlg =<< lookup "algorithm" values
@@ -83,7 +127,7 @@ decode val = do
   -- FIXME: these will silently fail
   let crt = fromInteger <$> (readMaybe =<< lookup "created" values)
   let expi = fromInteger <$> (readMaybe =<< lookup "expires" values)
-  return (sig, SignatureParams key alg hdrs crt expi)
+  return $ SignaturePayload sig (SignatureParams key alg hdrs crt expi)
   where
     signatureHeader = do
       string "Signature" *> spaces
@@ -101,14 +145,14 @@ decode val = do
 
 -- | Encode a signature and corresponding params to a value that can be packed
 -- into the appropriate HTTP header
-encode :: Signature -> SignatureParams -> ByteString
-encode val params =
+encode :: SignaturePayload -> ByteString
+encode SignaturePayload {..} =
   "Signature "
     <> "keyId=\""
-    <> encodeUtf8 (keyId params)
+    <> encodeUtf8 (encodeKeyId $ keyId params)
     <> "\","
     <> "algorithm=\""
-    <> encodeAlg (algorithm params)
+    <> encodeUtf8 (encodeAlg $ algorithm params)
     <> "\","
     <> maybeTime "created" (created params)
     <> maybeTime "expires" (expires params)
@@ -116,14 +160,14 @@ encode val params =
     <> (encodeUtf8 . T.toLower . T.intercalate " " . headers) params
     <> "\","
     <> "signature=\""
-    <> Base64.encode val
+    <> Base64.encode signature
     <> "\""
   where
     maybeTime h (Just v) = fromString $ h <> "=" <> formatTime defaultTimeLocale "%s" v <> ","
     maybeTime _ Nothing = ""
 
-makeSignatureString :: SignatureParams -> Method -> ByteString -> [Header] -> ByteString
-makeSignatureString params method path allHeaders =
+makeSignatureString :: SignatureParams -> ByteString -> [Header] -> ByteString
+makeSignatureString params body allHeaders =
   let signHeaders =
         catMaybes $
           fmap makeHeaderLine . findHeader <$> headers params
@@ -136,11 +180,13 @@ makeSignatureString params method path allHeaders =
     findHeader h =
       (h,) . bsStrip
         <$> case h of
-          "(request-target)" -> Just $ bsToLower method <> " " <> path
-          "(created)" | algorithm params == Hs2019 -> show <$> created params
-          "(expires)" | algorithm params == Hs2019 -> show <$> expires params
+          "(created)" | algorithm params == Hs2019 -> show . floor <$> created params
+          "(created)" | algorithm params == Hs2019 -> show . floor <$> created params
+          "(expires)" | algorithm params == Ed25519 -> show . floor <$> expires params
+          "(expires)" | algorithm params == Ed25519 -> show . floor <$> expires params
           "(created)" -> Nothing -- FIXME: this should error out
           "(expires)" -> Nothing -- FIXME: this should error out
+          "digest" -> pure $ "BLAKE-512=" <> show (Hash.hash body :: HashingAlgorithm)
           _ ->
             -- Find all instances of this header, concatenate values separated by a comma
             let ciHeader = CI.mk $ encodeUtf8 h
@@ -148,22 +194,21 @@ makeSignatureString params method path allHeaders =
                   . BS.intercalate ", "
                   $ snd <$> filter (\h' -> fst h' == ciHeader) allHeaders
 
-    bsToLower = encodeUtf8 . T.toLower . decodeUtf8
     bsStrip = encodeUtf8 . T.strip . decodeUtf8
     bsToMaybe b = if null b then Nothing else Just b
 
 -- | Sign a request given the key, parameters and request headers
-sign :: PrivateKey -> SignatureParams -> Method -> ByteString -> [Header] -> Maybe Signature
-sign key params method path allHeaders =
-  let msg = makeSignatureString params method path allHeaders
+sign :: PrivateKey -> SignatureParams -> ByteString -> [Header] -> Maybe Signature
+sign key params body allHeaders =
+  let msg = makeSignatureString params body allHeaders
       sk = Ed25519.secretKey key
       pk = Ed25519.toPublic <$> sk
       signature = Ed25519.sign <$> sk <*> pk <*> pure msg
    in Crypto.maybeCryptoError $ BA.convert <$> signature
 
-verify :: PublicKey -> SignatureParams -> Method -> ByteString -> [Header] -> Signature -> Bool
-verify key params method path allHeaders signatureBs =
-  let msg = makeSignatureString params method path allHeaders
+verify :: PublicKey -> SignatureParams -> ByteString -> [Header] -> Signature -> Bool
+verify key params body allHeaders signatureBs =
+  let msg = makeSignatureString params body allHeaders
       pk = Ed25519.publicKey key
       signature = Ed25519.signature signatureBs
    in case Ed25519.verify <$> pk <*> pure msg <*> signature of

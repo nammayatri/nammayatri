@@ -17,6 +17,7 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
+import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -58,7 +59,12 @@ runAppBackend' appEnv settings = do
           Nothing -> error $ "No credentials for: " <> selfId
           Just creds -> do
             let privKey = fromJust $ Registry.decodeKey =<< creds ^. #_signPrivKey
-                keyId = creds ^. #_keyId
+            let keyId =
+                  HttpSig.KeyId
+                    { subscriberId = selfId,
+                      uniqueKeyId = creds ^. #_keyId,
+                      alg = HttpSig.Ed25519
+                    }
             -- 10 minutes should be long enough for messages to go through
             signatureAuthManager privKey keyId 600
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}

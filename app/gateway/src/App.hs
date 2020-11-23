@@ -14,10 +14,15 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (exceptionResponse)
+import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
+import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Cache as C
+import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import EulerHS.Runtime as E
+import qualified EulerHS.Runtime as R
 import Network.Wai (Response)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
@@ -47,12 +52,15 @@ runGateway configModifier = do
   cache <- C.newCache Nothing
   threadId <- forkIO $
     E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+      let appEnv = mkAppEnv appCfg cache
+      authManager <- prepareAuthManager flowRt appCfg appEnv
+      let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
       putStrLn @String "Initializing Redis Connections..."
-      try (runFlowR flowRt appCfg $ prepareRedisConnections redisCfg) >>= \case
+      try (runFlowR flowRt' appCfg $ prepareRedisConnections redisCfg) >>= \case
         Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
         Right _ -> do
           void $ migrateIfNeeded migrationPath dbCfg autoMigrate
-          runSettings settings $ run shutdown (App.EnvR flowRt $ mkAppEnv appCfg cache)
+          runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
   -- Wait for shutdown
   atomically $ readTMVar shutdown
   -- Wait to drain all connections
@@ -73,6 +81,23 @@ runGateway configModifier = do
         let sleep = 100000
         threadDelay sleep
         waitForDrain activeConnections $ ms - sleep
+
+    prepareAuthManager flowRt cfg appEnv = do
+      selfId <- maybe (error "No selfId set for gateway") pure $ cfg ^. #selfId
+      creds <-
+        runFlowR flowRt appEnv $
+          Registry.lookupOrg selfId
+            >>= maybe (error $ "No creds found for id: " <> selfId) pure
+      let keyId =
+            HttpSig.KeyId
+              { subscriberId = selfId,
+                uniqueKeyId = creds ^. #_keyId,
+                alg = HttpSig.Ed25519
+              }
+      privateKey <-
+        maybe (error $ "No private key found for credential: " <> show keyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
+          >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #_signPrivKey)) pure
+      signatureAuthManager privateKey keyId 600
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse = exceptionResponse

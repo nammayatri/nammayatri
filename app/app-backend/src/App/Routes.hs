@@ -4,6 +4,7 @@
 module App.Routes where
 
 import App.Types
+import Beckn.Types.API.Auth
 import qualified Beckn.Types.API.Call as Call
 import qualified Beckn.Types.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
 import qualified Beckn.Types.API.Confirm as Confirm
@@ -123,12 +124,12 @@ type SearchAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Search'.SearchReq
     :> Post '[JSON] Search'.AckResponse
-    :<|> Search.OnSearchAPI VerifyAPIKey
+    :<|> BecknAuthProxy VerifyAPIKey Search.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.searchCb
+    :<|> (Search.searchCbEndpointSignAuth :<|> Search.searchCbEndpointAPIKey)
 
 -------- Confirm Flow --------
 type ConfirmAPI =

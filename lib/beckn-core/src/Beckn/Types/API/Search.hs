@@ -2,7 +2,6 @@
 
 module Beckn.Types.API.Search where
 
-import Beckn.Types.API.Auth
 import Beckn.Types.API.Callback
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -12,43 +11,34 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
-import Servant (Header, JSON, Post, ReqBody, (:>))
+import Servant (JSON, Post, ReqBody, (:>))
 
-type SearchAPI sig apiKey =
-  BecknAuth
-    sig
-    apiKey
-    ( "search"
-        :> ReqBody '[JSON] SearchReq
-        :> Post '[JSON] AckResponse
-    )
+type SearchAPI =
+  "search"
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
 
-searchAPI :: Proxy (SearchAPI vSig vApiKey)
+searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
 
 type NSDLSearchAPI =
   "search"
-    :> Header "userid" Text
-    :> Header "Password" Text
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] AckResponse
 
 nsdlSearchAPI :: Proxy NSDLSearchAPI
 nsdlSearchAPI = Proxy
 
-type OnSearchAPI v =
+type OnSearchAPI =
   "on_search"
-    :> APIKeyAuth v
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 
-onSearchAPI :: Proxy (OnSearchAPI v)
+onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
 
 type NSDLOnSearchAPI =
   "on_search"
-    :> Header "userid" Text
-    :> Header "Password" Text
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 

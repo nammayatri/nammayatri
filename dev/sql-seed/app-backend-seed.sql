@@ -646,7 +646,10 @@ INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, dom
   ('1257a139-6039-40b8-8752-96a77311f645', '[A] Transporter #2', 'transporter2', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'bap-key-2', 'http://localhost:8014/v1/e1f37274-f0aa-4bb3-93a0-2476349487b7', 'bpp-1-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
 
 INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
-  ('e12d9178-4e88-497e-a310-482b6664dc06', 'Juspay Gateway', 'JUSPAY', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-gateway-key', 'http://localhost:8015/v1', 'mobility-app-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
+  ('e12d9178-4e88-497e-a310-482b6664dc06', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-gateway-key', 'http://localhost:8015/v1', 'mobility-app-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
+
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
+  ('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-key', 'https:// pilot-gateway-1.beckn.nsdl.co.in/v1', 'nsdl-app-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
 
 UPDATE atlas_app.person SET
     mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='

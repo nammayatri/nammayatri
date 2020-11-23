@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module App where
@@ -13,7 +14,11 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server
+import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
+import qualified Beckn.Utils.SignatureAuth as HttpSig
+import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai
@@ -44,6 +49,8 @@ runTransporterBackendApp' appEnv settings = do
   let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
+    authManager <- prepareAuthManager flowRt
+    let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     try (runFlowR flowRt appEnv prepareDBConnections) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right _ -> do
@@ -57,7 +64,24 @@ runTransporterBackendApp' appEnv settings = do
               Right _ ->
                 putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
             _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-            runSettings settings $ App.run (App.EnvR flowRt appEnv)
+            runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+  where
+    prepareAuthManager flowRt = do
+      selfId <- maybe (error "No selfId set for gateway") pure $ appEnv ^. #selfId
+      creds <-
+        runFlowR flowRt appEnv $
+          Registry.lookupOrg selfId
+            >>= maybe (error $ "No creds found for id: " <> selfId) pure
+      let keyId =
+            HttpSig.KeyId
+              { subscriberId = selfId,
+                uniqueKeyId = creds ^. #_keyId,
+                alg = HttpSig.Ed25519
+              }
+      privateKey <-
+        maybe (error $ "No private key found for credential: " <> show keyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
+          >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #_signPrivKey)) pure
+      signatureAuthManager privateKey keyId 600
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse = exceptionResponse

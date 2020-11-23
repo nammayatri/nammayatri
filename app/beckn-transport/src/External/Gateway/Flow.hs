@@ -14,7 +14,8 @@ import Beckn.Types.API.Update
 import Beckn.Types.App (ShortOrganizationId (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
+import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client (BaseUrl)
@@ -28,11 +29,11 @@ onSearch req@CallbackReq {context} = do
   res <- case gatewayShortId of
     "NSDL" -> do
       nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 "NSDL_BASEURL_NOT_SET"
-      callAPIWithTrail nsdlBaseUrl (API.nsdlOnSearch (nsdlUsername appConfig) (nsdlPassword appConfig) req) "on_search"
-    "JUSPAY" -> do
+      callAPIWithTrail' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
+    "JUSPAY.BG.1" -> do
       callbackApiKey <- gatewayOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
       callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM500 "CALLBACK_URL_NOT_CONFIGURED"
-      callAPIWithTrail callbackUrl (API.onSearch callbackApiKey req) "on_search"
+      callAPIWithTrail' (Just signatureAuthManagerKey) callbackUrl (API.onSearch callbackApiKey req) "on_search"
     _ -> throwError500 "gateway not configured"
   AckResponse {} <- checkClientError context res
   mkOkResponse context

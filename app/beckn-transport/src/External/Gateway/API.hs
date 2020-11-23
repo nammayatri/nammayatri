@@ -26,7 +26,7 @@ onSearchAPI = Proxy
 onSearch :: Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 onSearch callbackApiKey = ET.client (withClientTracing onSearchAPI) (Just callbackApiKey)
 
-nsdlOnSearch :: Maybe Text -> Maybe Text -> OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
+nsdlOnSearch :: OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI
 
 type OnTrackAPI =

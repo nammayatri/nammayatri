@@ -1,6 +1,7 @@
 module App.Routes where
 
 import App.Types
+import Beckn.Types.API.Auth
 import qualified Beckn.Types.API.Call as Call
 import qualified Beckn.Types.API.Cancel as API
 import qualified Beckn.Types.API.Confirm as API
@@ -38,7 +39,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Utils.Auth (LookupRegistry, VerifyAPIKey)
+import Utils.Auth (VerifyAPIKey)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -318,7 +319,7 @@ transporterServer =
     :<|> routeApiFlow
 
 type OrgBecknAPI =
-  Capture "orgId" OrganizationId :> API.SearchAPI LookupRegistry VerifyAPIKey
+  Capture "orgId" OrganizationId :> BecknAuthProxy VerifyAPIKey API.SearchAPI
     :<|> Capture "orgId" OrganizationId :> API.ConfirmAPI VerifyAPIKey
     :<|> Capture "orgId" OrganizationId :> API.CancelAPI VerifyAPIKey
     :<|> Capture "orgId" OrganizationId :> API.StatusAPI VerifyAPIKey
@@ -327,7 +328,7 @@ type OrgBecknAPI =
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
-  (\orgId -> BP.search orgId :<|> BP.search orgId)
+  (\orgId -> BP.searchEndpointSignAuth orgId :<|> BP.searchEndpointApiKey orgId)
     :<|> BP.confirm
     :<|> BP.cancel
     :<|> BP.serviceStatus

@@ -23,6 +23,15 @@ findOrgById oId = do
     predicate Org.Organization {..} =
       _id ==. B.val_ (App.OrganizationId oId)
 
+findOrgByShortId :: Text -> Flow (Maybe Org.Organization)
+findOrgByShortId shortId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Org.Organization {..} =
+      _shortId ==. B.val_ (ShortOrganizationId shortId)
+
 findOrgByApiKey ::
   Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
 findOrgByApiKey oType apiKey = do

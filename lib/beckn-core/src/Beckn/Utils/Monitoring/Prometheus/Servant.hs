@@ -86,3 +86,9 @@ instance
   SanitizedUrl (QueryParam' modifier name t :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
+
+instance
+  SanitizedUrl (subroute :: Type) =>
+  SanitizedUrl (Header' '[Required, Strict] h v :> subroute)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)

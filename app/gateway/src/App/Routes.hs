@@ -24,8 +24,8 @@ type HealthAPI =
 type GatewayAPI' =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SearchAPI
-           :<|> OnSearchAPI
+           :<|> SearchAPI VerifyAPIKey
+           :<|> OnSearchAPI VerifyAPIKey
            :<|> LogAPI VerifyAPIKey
        )
 
@@ -44,8 +44,8 @@ healthHandler = pure "UP"
 gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
-    :<|> (handleIfUp P.search :<|> handleIfUp P.search)
-    :<|> handleIfUp P.searchCb
+    :<|> (handleIfUp P.searchEndpointSignAuth :<|> handleIfUp P.searchEndpointApiKey)
+    :<|> (handleIfUp P.searchCbEndpointSignAuth :<|> handleIfUp P.searchCbEndpointApiKey)
     :<|> handleIfUp P.log
   where
     handleIfUp :: (a -> b -> FlowHandler c) -> a -> b -> FlowHandler c

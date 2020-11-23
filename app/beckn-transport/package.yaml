@@ -56,6 +56,7 @@ dependencies:
   - beam-postgres
   - bytestring
   - cryptonite
+  - containers
   - euler-hs
   - http-api-data
   - http-client

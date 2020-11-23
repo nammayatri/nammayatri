@@ -12,11 +12,9 @@ import Beckn.Types.API.Auth
 import Beckn.Types.API.Callback
 import Beckn.Types.Common (AckResponse (..))
 import Beckn.Types.Core.Context
-import Beckn.Utils.Servant.HeaderAuth (APIKeyAuth)
 import Data.Aeson (Value)
 import EulerHS.Prelude
 import Servant hiding (Context)
-import Utils.Auth (LookupRegistry, VerifyAPIKey)
 
 data SearchReq = SearchReq
   { context :: Context,
@@ -26,23 +24,26 @@ data SearchReq = SearchReq
 
 type OnSearchReq = CallbackReq Value
 
-type SearchAPI =
+type SearchAPI apiKey =
   BecknAuth
-    LookupRegistry
-    VerifyAPIKey
+    "Authorization"
+    apiKey
     ( "search"
         :> ReqBody '[JSON] SearchReq
         :> Post '[JSON] AckResponse
     )
 
-searchAPI :: Proxy SearchAPI
+searchAPI :: Proxy (SearchAPI apiKey)
 searchAPI = Proxy
 
-type OnSearchAPI =
-  "on_search"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnSearchReq
-    :> Post '[JSON] AckResponse
+type OnSearchAPI apiKey =
+  BecknAuth
+    "Authorization"
+    apiKey
+    ( "on_search"
+        :> ReqBody '[JSON] OnSearchReq
+        :> Post '[JSON] AckResponse
+    )
 
-onSearchAPI :: Proxy OnSearchAPI
+onSearchAPI :: Proxy (OnSearchAPI apiKey)
 onSearchAPI = Proxy

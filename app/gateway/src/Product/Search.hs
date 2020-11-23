@@ -2,19 +2,24 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Product.Search
-  ( search,
-    searchCb,
+  ( searchEndpointSignAuth,
+    searchCbEndpointSignAuth,
+    searchCbEndpointApiKey,
+    searchEndpointApiKey,
   )
 where
 
 import App.Types
+import qualified Beckn.Product.Auth.SignatureAuth as HttpSign
 import Beckn.Types.API.Callback
 import qualified Beckn.Types.API.Search as Core
 import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, withClientTracing)
+import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail', withClientTracing)
+import Beckn.Utils.SignatureAuth (SignaturePayload)
 import Data.Aeson (encode)
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -23,16 +28,26 @@ import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
-import Servant
+import Servant (type (:<|>) ((:<|>)))
 import Servant.Client (showBaseUrl)
-import Types.API.Search (OnSearchReq, SearchReq, onSearchAPI, searchAPI)
+import qualified Types.API.Gateway.Search as GatewayAPI
+import Types.API.Search (OnSearchReq, SearchReq)
+import Utils.Auth
 
-search :: Org.Organization -> SearchReq -> FlowHandler AckResponse
-search org req = withFlowHandler $ do
+searchEndpointSignAuth :: SignaturePayload -> SearchReq -> FlowHandler AckResponse
+searchEndpointSignAuth signature req = withFlowHandler $ do
+  org <- HttpSign.verify lookupRegistryAction signature req
+  search org (Just signature) req
+
+searchEndpointApiKey :: Org.Organization -> SearchReq -> FlowHandler AckResponse
+searchEndpointApiKey org req = withFlowHandler $ search org Nothing req
+
+search :: Org.Organization -> Maybe SignaturePayload -> SearchReq -> Flow AckResponse
+search org mbAppSignature req = do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
     throwBecknError400 "INVALID_BAP_URI"
-  let _ :<|> search' = ET.client $ withClientTracing searchAPI
+  let gatewaySearchSignAuth :<|> gatewaySearchApiKey = ET.client $ withClientTracing GatewayAPI.searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of
@@ -46,7 +61,11 @@ search org req = withFlowHandler $ do
         providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
         void $ BA.incrSearchReqCount messageId
         let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
-        eRes <- callAPIWithTrail providerUrl (search' providerApiKey req) "search"
+        -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
+        eRes <- do
+          case mbAppSignature of
+            Just sign -> callAPIWithTrail' (Just signatureAuthManagerKey) providerUrl (gatewaySearchSignAuth (Just sign) req) "search"
+            Nothing -> callAPIWithTrail providerUrl (gatewaySearchApiKey providerApiKey req) "search"
         L.logDebug @Text "gateway_transaction" $
           messageId
             <> ", search_req: "
@@ -72,16 +91,27 @@ search org req = withFlowHandler $ do
         L.runIO $ threadDelay $ maybe (86400 * 1000000) (* 1000000) $ appEnv ^. #searchTimeout
         checkEnd True bgSession
 
-searchCb :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb provider req@CallbackReq {context} = withFlowHandler $ do
+searchCbEndpointSignAuth :: SignaturePayload -> OnSearchReq -> FlowHandler AckResponse
+searchCbEndpointSignAuth signature req = withFlowHandler $ do
+  provider <- HttpSign.verify lookupRegistryAction signature req
+  searchCb provider (Just signature) req
+
+searchCbEndpointApiKey :: Org.Organization -> OnSearchReq -> FlowHandler AckResponse
+searchCbEndpointApiKey provider req = withFlowHandler $ searchCb provider Nothing req
+
+searchCb :: Org.Organization -> Maybe SignaturePayload -> OnSearchReq -> Flow AckResponse
+searchCb provider mbSign req@CallbackReq {context} = do
   validateContext "on_search" context
-  let onSearch = ET.client $ withClientTracing onSearchAPI
+  let gatewayOnSearchSignAuth :<|> gatewayOnSearchApiKey = ET.client $ withClientTracing GatewayAPI.onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
   bgSession <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   let baseUrl = bgSession ^. #cbUrl
   let cbApiKey = bgSession ^. #cbApiKey
-  eRes <- callAPIWithTrail baseUrl (onSearch cbApiKey req) "on_search"
+  eRes <- do
+    case mbSign of
+      Just sign -> callAPIWithTrail' (Just signatureAuthManagerKey) baseUrl (gatewayOnSearchSignAuth (Just sign) req) "on_search"
+      Nothing -> callAPIWithTrail baseUrl (gatewayOnSearchApiKey cbApiKey req) "on_search"
   providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
   L.logDebug @Text "gateway_transaction" $
     messageId

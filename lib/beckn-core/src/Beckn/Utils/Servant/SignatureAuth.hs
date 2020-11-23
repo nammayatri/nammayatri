@@ -6,11 +6,11 @@ module Beckn.Utils.Servant.SignatureAuth where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import Beckn.Utils.Servant.Server
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Lens ((?=))
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
 import qualified Data.Swagger as DS
@@ -23,7 +23,7 @@ import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
-import qualified Network.Wai as Wai (Request (..))
+import qualified Network.Wai as Wai
 import Servant
 import Servant.Client
 import Servant.Server.Internal.Delayed (addAuthCheck)
@@ -41,7 +41,7 @@ import qualified Servant.Swagger.Internal as S
 --
 -- The lookup argument defines how keys can be looked up for performing
 -- signature matches.
-data SignatureAuth (header :: Symbol) (lookup :: Type)
+data SignatureAuth (header :: Symbol)
 
 -- | How key lookup is performed
 class LookupMethod lookup where
@@ -58,7 +58,7 @@ data LookupAction lookup r = LookupMethod lookup =>
   LookupAction
   { -- | Look up the given keyId and return a result to pass to the request,
     -- and a key that can be used for signature verification
-    runLookup :: Text -> FlowR r (LookupResult lookup, ByteString)
+    runLookup :: HttpSig.SignaturePayload -> FlowR r (LookupResult lookup, ByteString)
   }
 
 -- | This server part implementation accepts a signature in @header@ and
@@ -66,24 +66,20 @@ data LookupAction lookup r = LookupMethod lookup =>
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
-    HasContextEntry ctx (LookupAction lookup r),
-    LookupMethod lookup,
     KnownSymbol header
   ) =>
-  HasServer (SignatureAuth header lookup :> api) ctx
+  HasServer (SignatureAuth header :> api) ctx
   where
   type
-    ServerT (SignatureAuth header lookup :> api) m =
-      LookupResult lookup -> ServerT api m
+    ServerT (SignatureAuth header :> api) m =
+      HttpSig.SignaturePayload -> ServerT api m
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
       subserver `addAuthCheck` withRequest (authCheck (runTime env))
     where
-      authCheck :: R.FlowRuntime -> Wai.Request -> DelayedIO (LookupResult lookup)
-      authCheck flowRt req = do
-        let method = Wai.requestMethod req
-        let path = Wai.rawPathInfo req
+      authCheck :: R.FlowRuntime -> Wai.Request -> DelayedIO HttpSig.SignaturePayload
+      authCheck _flowRt req = do
         let headers = Wai.requestHeaders req
         let headerName = fromString $ symbolVal (Proxy @header)
         let mSignature = snd <$> find ((== headerName) . fst) headers
@@ -96,21 +92,11 @@ instance
         sigBs <-
           either (const $ fail401 "Invalid signature header") pure $
             fromString <$> parseHeader @String headerBs
-        (sig, params) <-
-          either (\e -> fail401 . fromString $ "Could not decode signature: " <> e) pure $
-            HttpSig.decode sigBs
-        -- If we don't use delayedFailFatal and just pass the exception,
-        -- it will be JSON-formatted
-        (result, key) <- liftIO . runFlowR flowRt (appEnv env) $ runLookup $ HttpSig.keyId params
-        unless
-          (HttpSig.verify key params method path headers sig)
-          (fail401 $ "Signature verification failed on " <> show headerName <> " header")
-        return result
+        either (\e -> fail401 . fromString $ "Could not decode signature: " <> e) pure $ HttpSig.decode sigBs
 
       fail404 msg = delayedFail err404 {errBody = msg}
       fail401 msg = delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
-      LookupAction runLookup = getContextEntry ctx :: LookupAction lookup r
 
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv
@@ -122,9 +108,9 @@ instance
 -- this regard given what plumbing options Servant gives us.
 instance
   (HasClient m api, KnownSymbol header) =>
-  HasClient m (SignatureAuth header lookup :> api)
+  HasClient m (SignatureAuth header :> api)
   where
-  type Client m (SignatureAuth header lookup :> api) = Client m api
+  type Client m (SignatureAuth header :> api) = Client m api
 
   clientWithRoute mp _ req =
     clientWithRoute
@@ -137,7 +123,7 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
-signatureAuthManager :: MonadIO m => HttpSig.PrivateKey -> Text -> NominalDiffTime -> m Http.Manager
+signatureAuthManager :: MonadIO m => HttpSig.PrivateKey -> HttpSig.KeyId -> NominalDiffTime -> m Http.Manager
 signatureAuthManager key keyId validity = do
   liftIO $
     Http.newManager
@@ -148,17 +134,22 @@ signatureAuthManager key keyId validity = do
       let params =
             HttpSig.SignatureParams
               keyId
-              HttpSig.Hs2019
-              ["(request-target)"]
+              HttpSig.Ed25519
+              ["(created)", "(expires)", "digest"]
               (Just now)
               (Just $ now + validity)
-      -- FIXME: can we throw insteado fromJust here?
-      return $ fromJust $ addSignature params "Authorization" req
+      body <- getBody $ Http.requestBody req
+      case addSignature body params "Authorization" req of
+        Just signedReq -> pure signedReq
+        Nothing -> pure req
+    getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
+    getBody (Http.RequestBodyBS body) = pure body
+    getBody _ = pure "<MISSING_BODY>"
 
     -- FIXME: we don't currently deal with Content-Length not being there (this is
     -- filled later, so we might need to have some special handling)
-    addSignature :: HttpSig.SignatureParams -> Text -> Http.Request -> Maybe Http.Request
-    addSignature params header req =
+    addSignature :: ByteString -> HttpSig.SignatureParams -> Text -> Http.Request -> Maybe Http.Request
+    addSignature body params header req =
       let headers = Http.requestHeaders req
           ciHeader = CI.mk $ encodeUtf8 header
        in -- We check if the header exists because `managerModifyRequest` might be
@@ -166,10 +157,8 @@ signatureAuthManager key keyId validity = do
           if isJust $ lookup ciHeader headers
             then Just req
             else do
-              let method = Http.method req
-                  path = Http.path req
-              signature <- HttpSig.sign key params method path headers
-              let headerVal = HttpSig.encode signature params
+              signature <- HttpSig.sign key params body headers
+              let headerVal = HttpSig.encode $ HttpSig.SignaturePayload signature params
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
 instance
@@ -178,7 +167,7 @@ instance
     Typeable lookup,
     KnownSymbol header
   ) =>
-  S.HasSwagger (SignatureAuth header lookup :> api)
+  S.HasSwagger (SignatureAuth header :> api)
   where
   toSwagger _ =
     S.toSwagger (Proxy @api)
@@ -219,6 +208,6 @@ instance
 
 instance
   SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (SignatureAuth h l :> subroute)
+  SanitizedUrl (SignatureAuth h :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)

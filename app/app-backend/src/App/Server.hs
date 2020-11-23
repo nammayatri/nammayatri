@@ -17,6 +17,7 @@ run env =
       BU.run appAPI appServer context env
   where
     context =
-      verifyApiKey
+      lookupRegistryAction
+        :. verifyApiKey
         :. verifyPersonAction
         :. EmptyContext

@@ -46,6 +46,12 @@ findOrganizationById id = do
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
+findOrganizationByShortId :: ShortOrganizationId -> Flow (Maybe Storage.Organization)
+findOrganizationByShortId shortId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable (\Storage.Organization {..} -> _shortId ==. B.val_ shortId)
+    >>= either DB.throwDBError pure
+
 listOrganizations ::
   Maybe Int ->
   Maybe Int ->

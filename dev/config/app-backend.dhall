@@ -55,7 +55,7 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = Some "JUSPAY"
+, xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
 , nsdlUsername = None Text
 , nsdlPassword = None Text

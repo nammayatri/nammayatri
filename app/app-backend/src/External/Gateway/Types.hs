@@ -23,10 +23,13 @@ confirmAPI = Proxy
 confirm :: Text -> Confirm.ConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
 confirm = ET.client $ withClientTracing confirmAPI
 
-search :: Search.SearchReq -> (RequestInfo, ET.EulerClient AckResponse)
-search :<|> _ = client $ withClientTracing Search.searchAPI
+searchAPI :: Proxy Search.SearchAPI
+searchAPI = Proxy
 
-nsdlSearch :: Maybe Text -> Maybe Text -> Search.SearchReq -> (RequestInfo, ET.EulerClient AckResponse)
+searchSignAuth :: Search.SearchReq -> (RequestInfo, EulerClient AckResponse)
+searchSignAuth = client $ withClientTracing searchAPI
+
+nsdlSearch :: Search.SearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 nsdlSearch = client $ withClientTracing Search.nsdlSearchAPI
 
 type LocationAPI =
