@@ -25,7 +25,7 @@ let smsConfig =
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
-  , useFakeSms = Some 7891
+  , useFakeSms = None Natural
   }
 
 let sesConfig =

@@ -33,7 +33,7 @@ let smsConfig =
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
-  , useFakeSms = Some 7891
+  , useFakeSms = None Natural
   }
 
 let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
