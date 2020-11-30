@@ -17,7 +17,7 @@ let pgcfg =
   }
 
 let rcfg =
-  { connectHost = "ec-redis-beta-002.bfw4iw.0001.apse1.cache.amazonaws.com"
+  { connectHost = "ec-redis-beta.bfw4iw.ng.0001.apse1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +1
