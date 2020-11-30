@@ -27,7 +27,7 @@ search ::
 search url req = do
   mGatewaySelector <- xGatewaySelector <$> ask
   res <- case mGatewaySelector of
-    Just "NSDL" -> do
+    Just "NSDL.BG.1" -> do
       mNsdlUrl <- xGatewayNsdlUrl <$> ask
       case mNsdlUrl of
         Just nsdlBaseUrl ->

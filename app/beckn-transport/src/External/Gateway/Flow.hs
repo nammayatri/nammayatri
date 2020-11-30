@@ -27,7 +27,7 @@ onSearch req@CallbackReq {context} = do
   gatewayShortId <- xGatewaySelector appConfig & fromMaybeM500 "GATEWAY_SELECTOR_NOT_SET"
   gatewayOrg <- Org.findOrgByShortId $ ShortOrganizationId gatewayShortId
   res <- case gatewayShortId of
-    "NSDL" -> do
+    "NSDL.BG.1" -> do
       nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 "NSDL_BASEURL_NOT_SET"
       callAPIWithTrail' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
     "JUSPAY.BG.1" -> do

@@ -90,7 +90,8 @@ search person req = withFlowHandler $ do
         throwError400 "Ride not serviceable due to georestrictions"
 
 searchCbEndpointSignAuth :: SignaturePayload -> SignaturePayload -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCbEndpointSignAuth tnSignature _ req = withFlowHandler $ do
+searchCbEndpointSignAuth gwSignature tnSignature req = withFlowHandler $ do
+  _gwOrg <- HttpSign.verify lookupRegistryAction gwSignature req
   org <- HttpSign.verify lookupRegistryAction tnSignature req
   searchCb org req
 

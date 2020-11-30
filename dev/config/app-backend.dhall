@@ -60,7 +60,7 @@ in
 , nsdlUsername = None Text
 , nsdlPassword = None Text
 , xProviderUri = providerUri
-, bapSelfId = Some "mobility-app"
+, bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
 , bapNwAddress = Some "http://localhost:8013/v1/"
 , searchConfirmExpiry = Some +7200
 , searchCaseExpiry = Some +7200
