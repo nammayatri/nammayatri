@@ -4,8 +4,8 @@
 module Product.Status where
 
 import App.Types
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Status
 import Beckn.Types.Storage.Organization (Organization)

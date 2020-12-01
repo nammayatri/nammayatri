@@ -1,6 +1,6 @@
 module Types.API.Status where
 
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack (AckResponse)
 import EulerHS.Prelude
 
 newtype StatusReq = StatusReq

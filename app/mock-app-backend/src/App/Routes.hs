@@ -2,7 +2,7 @@ module App.Routes where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.FMD.API.Cancel (OnCancelReq)
 import Beckn.Types.FMD.API.Confirm (OnConfirmReq)
 import Beckn.Types.FMD.API.Init (OnInitReq)

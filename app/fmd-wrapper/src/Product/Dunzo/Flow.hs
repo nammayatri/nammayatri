@@ -7,7 +7,7 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.App (CaseId (..), _getOrganizationId)
-import Beckn.Types.Common (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)

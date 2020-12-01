@@ -5,7 +5,7 @@ module Product.Delhivery.Flow where
 
 import App.Types
 import Beckn.Types.App (CaseId (..), _getOrganizationId)
-import Beckn.Types.Common (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)

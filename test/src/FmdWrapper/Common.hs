@@ -1,7 +1,6 @@
 module FmdWrapper.Common where
 
-import Beckn.Types.Common hiding (_status)
-import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Ack hiding (NackResponseError (..))
 import Data.Text
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID

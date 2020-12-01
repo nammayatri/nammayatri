@@ -17,7 +17,7 @@ where
 import App.Types
 import App.Utils
 import Beckn.Types.App
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.FmdError
 import Beckn.Types.FMD.API.Cancel

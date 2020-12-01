@@ -2,8 +2,8 @@
 
 module Beckn.Types.FMD.API.Confirm where
 
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.Order as FMD
 import Beckn.Utils.Servant.HeaderAuth

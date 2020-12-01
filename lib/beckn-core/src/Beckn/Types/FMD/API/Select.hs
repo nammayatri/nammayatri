@@ -2,8 +2,8 @@
 
 module Beckn.Types.FMD.API.Select where
 
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Servant.HeaderAuth

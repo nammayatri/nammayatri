@@ -6,7 +6,7 @@ module Beckn.Types.Core.API.Feedback
   )
 where
 
-import qualified Beckn.Types.Common as Common
+import Beckn.Types.Core.Ack (AckResponse (..))
 import qualified Beckn.Types.Core.Context as Core
 import qualified Beckn.Types.Core.Description as Core
 import qualified Beckn.Types.Core.Rating as Core
@@ -26,7 +26,7 @@ data FeedbackReq = FeedbackReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-type FeedbackRes = Common.AckResponse
+type FeedbackRes = AckResponse
 
 data FeedbackReqMessage = FeedbackReqMessage
   { order_id :: Text,

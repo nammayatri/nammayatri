@@ -8,7 +8,7 @@ where
 
 import App.Types
 import App.Utils
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)

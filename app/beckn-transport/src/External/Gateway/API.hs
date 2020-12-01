@@ -1,6 +1,5 @@
 module External.Gateway.API where
 
-import Beckn.Types.Common (AckResponse)
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.API.Cancel
 import Beckn.Types.Core.API.Confirm
@@ -8,6 +7,7 @@ import Beckn.Types.Core.API.Search (OnSearchReq, OnSearchRes, nsdlOnSearchAPI)
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
+import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Utils.Servant.HeaderAuth (HeaderAuthKey)
 import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude

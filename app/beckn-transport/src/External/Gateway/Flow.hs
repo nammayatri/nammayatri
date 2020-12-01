@@ -4,7 +4,6 @@ module External.Gateway.Flow where
 
 import App.Types
 import Beckn.Types.App (ShortOrganizationId (..))
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Cancel
@@ -13,6 +12,7 @@ import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
+import Beckn.Types.Core.Ack
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')

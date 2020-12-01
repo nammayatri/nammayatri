@@ -7,8 +7,8 @@ module Product.Cancel
 where
 
 import App.Types
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.Storage.Organization (Organization)

@@ -2,8 +2,8 @@
 
 module Beckn.Types.Core.API.Search where
 
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Catalog
 import Beckn.Types.Mobility.Intent

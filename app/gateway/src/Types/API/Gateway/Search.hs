@@ -1,6 +1,6 @@
 module Types.API.Gateway.Search where
 
-import Beckn.Types.Common (AckResponse (..))
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.SignatureAuth
 import EulerHS.Prelude

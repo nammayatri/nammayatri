@@ -1,6 +1,6 @@
 module Types.API.Cancel where
 
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import EulerHS.Prelude
 
 data Entity = CASE | PRODUCT_INSTANCE

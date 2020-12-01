@@ -1,6 +1,6 @@
 module Beckn.Types.Core.API.Log where
 
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Context
 import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude

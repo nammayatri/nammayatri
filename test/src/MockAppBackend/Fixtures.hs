@@ -1,8 +1,8 @@
 module MockAppBackend.Fixtures where
 
 import "mock-app-backend" App.Routes as MockAppRoutes
-import Beckn.Types.Common as Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
@@ -24,13 +24,13 @@ mockAppBaseUrl =
       baseUrlPath = "/v1"
     }
 
-triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM Common.AckResponse
-triggerTrack :: Text -> ClientM Common.AckResponse
-triggerTrackForLast :: ClientM Common.AckResponse
-triggerCancel :: Text -> ClientM Common.AckResponse
-triggerCancelLast :: ClientM Common.AckResponse
-triggerUpdate :: Text -> MockAppTrigger.TriggerUpdateMode -> ClientM Common.AckResponse
-triggerUpdateLast :: MockAppTrigger.TriggerUpdateMode -> ClientM Common.AckResponse
+triggerSearchReq :: MockAppTrigger.TriggerFlow -> ClientM AckResponse
+triggerTrack :: Text -> ClientM AckResponse
+triggerTrackForLast :: ClientM AckResponse
+triggerCancel :: Text -> ClientM AckResponse
+triggerCancelLast :: ClientM AckResponse
+triggerUpdate :: Text -> MockAppTrigger.TriggerUpdateMode -> ClientM AckResponse
+triggerUpdateLast :: MockAppTrigger.TriggerUpdateMode -> ClientM AckResponse
 triggerSearchReq
   :<|> _
   :<|> triggerTrackForLast
@@ -40,7 +40,7 @@ triggerSearchReq
   :<|> triggerUpdateLast
   :<|> triggerUpdate = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
 
-onSearchFlow :: Text -> OnSearchReq -> ClientM Common.AckResponse
+onSearchFlow :: Text -> OnSearchReq -> ClientM AckResponse
 onSearchFlow = client (Proxy :: Proxy MockAppRoutes.OnSearchAPI)
 
 buildOnSearchReq :: Context -> OnSearchReq
@@ -50,7 +50,7 @@ buildOnSearchReq context =
       contents = Right $ OnSearchServices example
     }
 
-onSelectFlow :: Text -> OnSelectReq -> ClientM Common.AckResponse
+onSelectFlow :: Text -> OnSelectReq -> ClientM AckResponse
 onSelectFlow = client (Proxy :: Proxy MockAppRoutes.OnSelectAPI)
 
 buildOnSelectReq :: Context -> OnSelectReq
@@ -60,7 +60,7 @@ buildOnSelectReq context =
       contents = Right $ SelectOrder example
     }
 
-onInitFlow :: Text -> OnInitReq -> ClientM Common.AckResponse
+onInitFlow :: Text -> OnInitReq -> ClientM AckResponse
 onInitFlow = client (Proxy :: Proxy MockAppRoutes.OnInitAPI)
 
 buildOnInitReq :: Context -> OnInitReq
@@ -70,7 +70,7 @@ buildOnInitReq context =
       contents = Right $ InitOrder example
     }
 
-onConfirmFlow :: Text -> OnConfirmReq -> ClientM Common.AckResponse
+onConfirmFlow :: Text -> OnConfirmReq -> ClientM AckResponse
 onConfirmFlow = client (Proxy :: Proxy MockAppRoutes.OnConfirmAPI)
 
 buildOnConfirmReq :: Context -> OnConfirmReq
@@ -80,7 +80,7 @@ buildOnConfirmReq context =
       contents = Right $ ConfirmResMessage example
     }
 
-onUpdateFlow :: Text -> OnUpdateReq -> ClientM Common.AckResponse
+onUpdateFlow :: Text -> OnUpdateReq -> ClientM AckResponse
 onUpdateFlow = client (Proxy :: Proxy MockAppRoutes.OnUpdateAPI)
 
 buildOnUpdateReq :: Context -> OnUpdateReq

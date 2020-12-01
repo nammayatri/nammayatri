@@ -4,7 +4,7 @@ module Types.API.Feedback
   )
 where
 
-import Beckn.Types.Common (AckResponse)
+import Beckn.Types.Core.Ack (AckResponse)
 import EulerHS.Prelude
 
 data FeedbackReq = FeedbackReq

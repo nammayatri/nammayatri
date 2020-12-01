@@ -1,6 +1,6 @@
 module MockProviderBackend.Fixtures where
 
-import Beckn.Types.Common as Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
@@ -18,19 +18,19 @@ mockProviderBaseUrl =
       baseUrlPath = "/v1"
     }
 
-searchFlow :: Text -> SearchReq -> ClientM Common.AckResponse
+searchFlow :: Text -> SearchReq -> ClientM AckResponse
 searchFlow = client searchAPI
 
-selectFlow :: Text -> SelectReq -> ClientM Common.AckResponse
+selectFlow :: Text -> SelectReq -> ClientM AckResponse
 selectFlow = client selectAPI
 
-initFlow :: Text -> InitReq -> ClientM Common.AckResponse
+initFlow :: Text -> InitReq -> ClientM AckResponse
 initFlow = client initAPI
 
-confirmFlow :: Text -> ConfirmReq -> ClientM Common.AckResponse
+confirmFlow :: Text -> ConfirmReq -> ClientM AckResponse
 confirmFlow = client confirmAPI
 
-updateFlow :: Text -> UpdateReq -> ClientM Common.AckResponse
+updateFlow :: Text -> UpdateReq -> ClientM AckResponse
 updateFlow = client updateAPI
 
 mockProviderApiKey :: Text

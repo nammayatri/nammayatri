@@ -5,7 +5,7 @@ module Product.Select where
 
 import App.Types
 import App.Utils
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.Storage.Organization (Organization)

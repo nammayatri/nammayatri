@@ -5,7 +5,7 @@ module Product.Init where
 
 import App.Types
 import App.Utils
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.Storage.Organization (Organization)

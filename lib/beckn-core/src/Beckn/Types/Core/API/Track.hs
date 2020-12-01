@@ -2,8 +2,8 @@
 
 module Beckn.Types.Core.API.Track where
 
-import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Tracking
 import Beckn.Utils.Servant.HeaderAuth

@@ -4,7 +4,7 @@
 module Product.Track where
 
 import App.Types
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.FMD.API.Track
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common

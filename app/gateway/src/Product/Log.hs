@@ -4,8 +4,8 @@
 module Product.Log where
 
 import App.Types
-import Beckn.Types.Common (AckResponse (..), ack)
 import Beckn.Types.Core.API.Log (LogReq)
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (withFlowHandler)

@@ -5,7 +5,7 @@ module Beckn.Utils.Servant.Server where
 
 import Beckn.Constants.APIErrorCode
 import Beckn.Types.App (EnvR, FlowServerR)
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack (NackResponseError (_status))
 import Beckn.Utils.Common
 import qualified Data.Aeson as Aeson
 import EulerHS.Prelude

@@ -2,7 +2,8 @@
 
 module Beckn.Types.Core.API.Call where
 
-import Beckn.Types.Common
+import Beckn.Types.Common (IdObject)
+import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import EulerHS.Prelude
 

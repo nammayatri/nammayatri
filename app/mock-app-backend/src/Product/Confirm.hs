@@ -7,7 +7,7 @@ module Product.Confirm
 where
 
 import App.Types
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common

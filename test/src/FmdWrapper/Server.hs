@@ -2,7 +2,7 @@
 
 module FmdWrapper.Server where
 
-import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.FMD.API.Search (OnSearchEndReq, OnSearchEndRes, OnSearchReq)
 import Control.Concurrent.Async
 import EulerHS.Prelude
