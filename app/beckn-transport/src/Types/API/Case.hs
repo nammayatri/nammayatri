@@ -1,6 +1,6 @@
 module Types.API.Case where
 
-import Beckn.Types.Core.Amount
+import Beckn.Types.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
 import Data.Swagger

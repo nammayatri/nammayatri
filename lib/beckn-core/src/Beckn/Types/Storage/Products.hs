@@ -3,8 +3,8 @@
 
 module Beckn.Types.Storage.Products where
 
+import Beckn.Types.Amount
 import Beckn.Types.App
-import Beckn.Types.Core.Amount
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL

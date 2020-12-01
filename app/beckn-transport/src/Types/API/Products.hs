@@ -1,6 +1,6 @@
 module Types.API.Products where
 
-import Beckn.Types.Core.Amount
+import Beckn.Types.Amount
 import qualified Beckn.Types.Storage.Products as Product
 import Data.Swagger
 import EulerHS.Prelude

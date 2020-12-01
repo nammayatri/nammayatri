@@ -1,6 +1,6 @@
 module DecimalValue where
 
-import Beckn.Types.Core.Amount
+import Beckn.Types.Amount
 import Beckn.Types.Core.DecimalValue
 import Data.Ratio
 import EulerHS.Prelude

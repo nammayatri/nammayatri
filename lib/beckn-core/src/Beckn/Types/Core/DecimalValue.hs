@@ -1,6 +1,6 @@
 module Beckn.Types.Core.DecimalValue where
 
-import Beckn.Types.Core.Amount
+import Beckn.Types.Amount
 import Beckn.Utils.Common
 import Data.Text hiding (head, length)
 import EulerHS.Prelude

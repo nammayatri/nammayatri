@@ -1,6 +1,6 @@
 module Amount where
 
-import Beckn.Types.Core.Amount
+import Beckn.Types.Amount
 import Data.Aeson
 import Data.Ratio
 import EulerHS.Prelude
