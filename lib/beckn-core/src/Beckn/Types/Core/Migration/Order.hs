@@ -56,7 +56,7 @@ data OrderFulfillment = OrderFulfillment
     _start :: Maybe FulfillmentDetails,
     _end :: Maybe FulfillmentDetails,
     _purpose :: Maybe Text,
-    _tags :: Maybe Tags,
+    _tags :: [Tags], -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
     _customer :: PersonWithContact
   }
   deriving (Generic, Show)
@@ -65,13 +65,13 @@ data OrderFulfillment = OrderFulfillment
 data PersonWithContact = PersonWithContact
   { _name :: Name, -- Strict here
     _image :: Maybe Image,
-    _dob :: Maybe UTCTime, -- FIXME: format: date
+    _dob :: Maybe Text, -- format: date
     _gender :: Maybe Text,
     _cred :: Maybe Text,
     -- from Contact:
     _phone :: Maybe Text,
     _email :: Maybe Text,
-    _tags :: Maybe Tags
+    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
   }
   deriving (Generic, Show)
 

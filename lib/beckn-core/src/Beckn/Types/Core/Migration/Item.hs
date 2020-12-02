@@ -17,7 +17,7 @@ data Item = Item
     _category_id :: Maybe Text,
     _location_id :: Maybe Text,
     _time :: Maybe Time,
-    _tags :: Maybe [Tags] -- FIXME: probably needs to be just Maybe Tags
+    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
   }
   deriving (Generic, Show)
 

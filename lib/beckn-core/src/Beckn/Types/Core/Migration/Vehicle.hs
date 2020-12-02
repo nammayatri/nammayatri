@@ -14,6 +14,7 @@ data Vehicle = Vehicle
     _size :: Maybe Text,
     _variant :: Maybe Text,
     _color :: Maybe Text,
+    _energy_type :: Maybe Text,
     _registration :: Maybe Text
   }
   deriving (Generic, Show)

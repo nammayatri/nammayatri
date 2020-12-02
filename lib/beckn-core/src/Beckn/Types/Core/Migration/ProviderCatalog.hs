@@ -14,12 +14,12 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data ProviderCatalog = ProviderCatalog
-  { _categories :: Maybe [Category],
-    _fulfillments :: Maybe [Fulfillment],
-    _payments :: Maybe [Payment],
-    _locations :: Maybe [TimedLocation],
-    _offers :: Maybe [Offer],
-    _items :: Maybe [Item],
+  { _categories :: [Category],
+    _fulfillments :: [Fulfillment],
+    _payments :: [Payment],
+    _locations :: [TimedLocation],
+    _offers :: [Offer],
+    _items :: [Item],
     _exp :: Maybe UTCTime
   }
   deriving (Generic)

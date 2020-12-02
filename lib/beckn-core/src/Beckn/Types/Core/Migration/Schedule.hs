@@ -9,8 +9,8 @@ import EulerHS.Prelude
 
 data Schedule = Schedule
   { _frequency :: Maybe Duration,
-    _holidays :: Maybe [UTCTime],
-    _times :: Maybe [UTCTime]
+    _holidays :: [UTCTime],
+    _times :: [UTCTime]
   }
   deriving (Generic, Show)
 

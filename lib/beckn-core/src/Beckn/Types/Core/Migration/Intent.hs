@@ -19,14 +19,14 @@ data Intent = Intent
     _offer :: Maybe OfferInfo,
     _item :: Maybe ItemInfo,
     _purpose :: Maybe Text,
-    _tags :: Maybe [Tags] -- FIXME: probably needs to be just Maybe Tags
+    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
   }
   deriving (Generic, Show)
 
 data ProviderInfo = ProviderInfo
   { _id :: Maybe Text,
     _descriptor :: Maybe DescriptorName,
-    _locations :: Maybe [IdObject]
+    _locations :: [IdObject]
   }
   deriving (Generic, Show)
 

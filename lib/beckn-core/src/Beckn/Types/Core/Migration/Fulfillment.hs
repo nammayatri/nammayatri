@@ -23,7 +23,7 @@ data Fulfillment = Fulfillment
     _start :: Maybe FulfillmentDetails,
     _end :: Maybe FulfillmentDetails,
     _purpose :: Maybe Text,
-    _tags :: Maybe Tags
+    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
   }
   deriving (Generic, Show)
 
@@ -41,7 +41,7 @@ data FulfillmentDetails = FulfillmentDetails
   { _location :: Maybe Location,
     _time :: Maybe Time,
     _instructions :: Maybe Descriptor,
-    _contact :: Maybe [Contact]
+    _contact :: [Contact]
   }
   deriving (Generic, Show)
 

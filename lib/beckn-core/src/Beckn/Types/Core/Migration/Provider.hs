@@ -13,8 +13,8 @@ data Provider = Provider
   { _id :: Maybe Text,
     _descriptor :: Maybe Descriptor,
     _time :: Maybe Time,
-    _locations :: Maybe [Location],
-    _tags :: Maybe [Tags] -- FIXME: probably needs to be just Maybe Tags
+    _locations :: [Location],
+    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
   }
   deriving (Generic, Show)
 

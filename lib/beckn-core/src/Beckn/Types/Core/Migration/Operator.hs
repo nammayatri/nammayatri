@@ -1,4 +1,4 @@
 module Beckn.Types.Core.Migration.Operator where
 
--- FIXME: implement Operator type
+-- https://github.com/beckn/protocol-specifications/pull/61
 type Operator = ()
