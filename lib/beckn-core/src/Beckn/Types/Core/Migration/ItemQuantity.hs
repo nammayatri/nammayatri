@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.ItemQuantity where
 
 import Beckn.Types.Core.Migration.Scalar
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Quantity = Quantity
@@ -12,7 +12,7 @@ data Quantity = Quantity
   }
   deriving (Generic, Show)
 
-deriveJSON ''Quantity 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Quantity
 
 data ItemQuantity = ItemQuantity
   { _allocated :: Maybe Quantity,
@@ -23,4 +23,4 @@ data ItemQuantity = ItemQuantity
   }
   deriving (Generic, Show)
 
-deriveJSON ''ItemQuantity 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''ItemQuantity

@@ -6,7 +6,8 @@ import Beckn.Types.Common (IdObject)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Option (Option)
 import Beckn.Types.Core.Migration.Policy (Policy)
-import Beckn.Utils.JSON (constructorsToLowerOptions, deriveJSON)
+import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -25,5 +26,5 @@ data Cancellation = Cancellation
 data CancellationType = Full | Partial
   deriving (Generic, Show)
 
-deriveJSON ''Cancellation 'stripLensPrefixOptions
-deriveJSON ''CancellationType 'constructorsToLowerOptions
+deriveJSON stripLensPrefixOptions ''Cancellation
+deriveJSON constructorsToLowerOptions ''CancellationType

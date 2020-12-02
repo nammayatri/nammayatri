@@ -7,7 +7,8 @@ module Beckn.Types.Core.Migration.Error
   )
 where
 
-import Beckn.Utils.JSON (constructorsWithHyphens, deriveJSON)
+import Beckn.Utils.JSON (constructorsWithHyphens)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Error = Error
@@ -29,5 +30,5 @@ data ErrorType
   | JSON_SCHEMA_ERROR
   deriving (Generic, Show)
 
-deriveJSON ''ErrorType 'constructorsWithHyphens
-deriveJSON ''Error 'stripAllLensPrefixOptions
+deriveJSON constructorsWithHyphens ''ErrorType
+deriveJSON stripAllLensPrefixOptions ''Error

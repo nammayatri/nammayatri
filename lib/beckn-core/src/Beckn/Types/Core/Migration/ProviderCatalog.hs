@@ -9,7 +9,8 @@ import Beckn.Types.Core.Migration.Location (Location)
 import Beckn.Types.Core.Migration.Offer (Offer)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON (deriveJSON, uniteObjects)
+import Beckn.Utils.JSON (uniteObjects)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -33,4 +34,4 @@ instance FromJSON TimedLocation where
 instance ToJSON TimedLocation where
   toJSON (TimedLocation l t) = uniteObjects [toJSON l, toJSON t]
 
-deriveJSON ''ProviderCatalog 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''ProviderCatalog

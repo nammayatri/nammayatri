@@ -8,7 +8,7 @@ where
 import Beckn.Types.Core.Migration.Address (Address)
 import Beckn.Types.Core.Migration.Organization (Organization)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -25,4 +25,4 @@ data Billing = Billing
   }
   deriving (Generic, Show)
 
-deriveJSON ''Billing 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Billing

@@ -4,7 +4,7 @@ module Beckn.Types.Core.Migration.Circle (Circle (..)) where
 
 import Beckn.Types.Core.Migration.Gps (Gps)
 import Beckn.Types.Core.Migration.Scalar (Scalar)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 -- FIXME: Gps is a string, it cannot be united with an object, possible error here
@@ -16,4 +16,4 @@ data Circle = Circle
   }
   deriving (Generic, Show)
 
-deriveJSON ''Circle 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Circle

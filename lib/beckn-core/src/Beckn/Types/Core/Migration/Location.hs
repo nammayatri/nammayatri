@@ -8,7 +8,7 @@ import Beckn.Types.Core.Migration.City (City)
 import Beckn.Types.Core.Migration.Country (Country)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Gps (Gps)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Location = Location
@@ -25,4 +25,4 @@ data Location = Location
   }
   deriving (Generic, Show)
 
-deriveJSON ''Location 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Location

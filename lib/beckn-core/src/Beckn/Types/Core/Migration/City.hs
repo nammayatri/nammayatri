@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.City (City (..)) where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data City = City
@@ -11,4 +11,4 @@ data City = City
   }
   deriving (Generic, Show)
 
-deriveJSON ''City 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''City

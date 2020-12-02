@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.Scalar (Scalar (..), Range (..)) where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Scalar = Scalar
@@ -24,5 +24,5 @@ data Range = Range
   }
   deriving (Generic, Show)
 
-deriveJSON ''Scalar 'stripAllLensPrefixOptions
-deriveJSON ''Range 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Scalar
+deriveJSON stripAllLensPrefixOptions ''Range

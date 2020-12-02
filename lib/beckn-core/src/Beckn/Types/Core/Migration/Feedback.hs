@@ -4,7 +4,8 @@ module Beckn.Types.Core.Migration.Feedback (Feedback) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Rating (Rating)
-import Beckn.Utils.JSON (constructorsToLowerOptions, deriveJSON)
+import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Feedback = Feedback
@@ -23,5 +24,5 @@ data FeedbackType
   | PERSON
   deriving (Generic, Show)
 
-deriveJSON ''Feedback 'stripAllLensPrefixOptions
-deriveJSON ''FeedbackType 'constructorsToLowerOptions
+deriveJSON stripAllLensPrefixOptions ''Feedback
+deriveJSON constructorsToLowerOptions ''FeedbackType

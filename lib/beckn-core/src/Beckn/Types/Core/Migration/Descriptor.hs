@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.Descriptor (Descriptor (..)) where
 
 import Beckn.Types.Core.Migration.Image (Image)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
 
@@ -19,4 +19,4 @@ data Descriptor = Descriptor
   }
   deriving (Generic, Show)
 
-deriveJSON ''Descriptor 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Descriptor

@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.MonetaryValue (MonetaryValue (..)) where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data MonetaryValue = MonetaryValue
@@ -12,4 +12,4 @@ data MonetaryValue = MonetaryValue
   }
   deriving (Eq, Generic, Show)
 
-deriveJSON ''MonetaryValue 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''MonetaryValue

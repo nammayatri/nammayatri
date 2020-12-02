@@ -3,7 +3,7 @@
 
 module Beckn.Types.Core.Migration.Vehicle where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Vehicle = Vehicle
@@ -19,4 +19,4 @@ data Vehicle = Vehicle
   }
   deriving (Generic, Show)
 
-deriveJSON ''Vehicle 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Vehicle

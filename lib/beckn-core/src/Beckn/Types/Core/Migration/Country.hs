@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.Country (Country (..)) where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Country = Country
@@ -11,4 +11,4 @@ data Country = Country
   }
   deriving (Generic, Show)
 
-deriveJSON ''Country 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Country

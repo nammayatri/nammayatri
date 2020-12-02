@@ -4,7 +4,7 @@ module Beckn.Types.Core.Migration.AddOn (AddOn (..)) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Price (Price)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data AddOn = AddOn
@@ -14,4 +14,4 @@ data AddOn = AddOn
   }
   deriving (Generic, Show)
 
-deriveJSON ''AddOn 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''AddOn

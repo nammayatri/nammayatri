@@ -5,7 +5,7 @@ module Beckn.Types.Core.Migration.Person (Person (..)) where
 import Beckn.Types.Core.Migration.Image (Image)
 import Beckn.Types.Core.Migration.Name (Name)
 import Beckn.Types.Core.Migration.Tags (Tags)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Person = Person
@@ -18,4 +18,4 @@ data Person = Person
   }
   deriving (Generic, Show)
 
-deriveJSON ''Person 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Person

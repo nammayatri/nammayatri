@@ -4,7 +4,8 @@ module Beckn.Types.Core.Migration.Context (Context (..)) where
 
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Core.Migration.Duration (Duration)
-import Beckn.Utils.JSON (constructorsToLowerOptions, deriveJSON)
+import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
@@ -51,5 +52,5 @@ data Action
   | ACK
   deriving (Generic, Show)
 
-deriveJSON ''Context 'stripLensPrefixOptions
-deriveJSON ''Action 'constructorsToLowerOptions
+deriveJSON stripLensPrefixOptions ''Context
+deriveJSON constructorsToLowerOptions ''Action

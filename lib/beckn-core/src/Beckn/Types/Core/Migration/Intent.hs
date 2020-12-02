@@ -7,7 +7,7 @@ import Beckn.Types.Core.Migration.Location (Location)
 import Beckn.Types.Core.Migration.Payment (PaymentType)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Intent = Intent
@@ -88,14 +88,14 @@ data IdAndDescriptor descriptor = IdAndDescriptor
   }
 -}
 
-deriveJSON ''PaymentParams 'stripLensPrefixOptions
-deriveJSON ''PaymentInfo 'stripLensPrefixOptions
-deriveJSON ''Intent 'stripLensPrefixOptions
-deriveJSON ''ProviderInfo 'stripLensPrefixOptions
-deriveJSON ''FulFillmentInfo 'stripLensPrefixOptions
-deriveJSON ''LocationAndTime 'stripLensPrefixOptions
-deriveJSON ''CategoryInfo 'stripAllLensPrefixOptions
-deriveJSON ''DescriptorName 'stripLensPrefixOptions
-deriveJSON ''OfferInfo 'stripLensPrefixOptions
-deriveJSON ''ItemInfo 'stripLensPrefixOptions
-deriveJSON ''ItemInfoDescriptor 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''PaymentParams
+deriveJSON stripLensPrefixOptions ''PaymentInfo
+deriveJSON stripLensPrefixOptions ''Intent
+deriveJSON stripLensPrefixOptions ''ProviderInfo
+deriveJSON stripLensPrefixOptions ''FulFillmentInfo
+deriveJSON stripLensPrefixOptions ''LocationAndTime
+deriveJSON stripAllLensPrefixOptions ''CategoryInfo
+deriveJSON stripLensPrefixOptions ''DescriptorName
+deriveJSON stripLensPrefixOptions ''OfferInfo
+deriveJSON stripLensPrefixOptions ''ItemInfo
+deriveJSON stripLensPrefixOptions ''ItemInfoDescriptor

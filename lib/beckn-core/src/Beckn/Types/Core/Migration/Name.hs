@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.Name (Name (..)) where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Name = Name
@@ -16,7 +16,7 @@ data Name = Name
   }
   deriving (Generic, Show)
 
-deriveJSON ''Name 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Name
 
 {- DELETEME: Should it be something more like this?
 data Name

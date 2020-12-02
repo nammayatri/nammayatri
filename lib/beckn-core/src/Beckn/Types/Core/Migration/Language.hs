@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.Language where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 newtype Language = Language
@@ -10,4 +10,4 @@ newtype Language = Language
   }
   deriving (Generic, Show)
 
-deriveJSON ''Language 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Language

@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.Price (Price (..)) where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 -- allOf case
@@ -19,4 +19,4 @@ data Price = Price
   }
   deriving (Generic, Show)
 
-deriveJSON ''Price 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Price

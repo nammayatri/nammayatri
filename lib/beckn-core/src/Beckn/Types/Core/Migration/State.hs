@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.State (State (..)) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State)
 
@@ -14,4 +14,4 @@ data State = State
   }
   deriving (Generic, Show)
 
-deriveJSON ''State 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''State

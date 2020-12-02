@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.Option where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Option = Option
@@ -12,4 +12,4 @@ data Option = Option
   }
   deriving (Generic, Show)
 
-deriveJSON ''Option 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Option

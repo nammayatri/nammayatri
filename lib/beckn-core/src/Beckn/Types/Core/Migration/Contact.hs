@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.Contact (Contact (..)) where
 
 import Beckn.Types.Core.Migration.Tags (Tags)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 -- allOf union
@@ -14,4 +14,4 @@ data Contact = Contact
   }
   deriving (Generic, Show)
 
-deriveJSON ''Contact 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Contact

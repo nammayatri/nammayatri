@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.Address (Address (..)) where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Address = Address
@@ -19,4 +19,4 @@ data Address = Address
   }
   deriving (Generic, Show)
 
-deriveJSON ''Address 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Address

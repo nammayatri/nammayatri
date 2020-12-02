@@ -13,7 +13,7 @@ import Beckn.Types.Core.Migration.Quotation
 import Beckn.Types.Core.Migration.State
 import Beckn.Types.Core.Migration.Tags
 import Beckn.Types.Core.Migration.Vehicle
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time
 import EulerHS.Prelude hiding (State)
 
@@ -75,8 +75,8 @@ data PersonWithContact = PersonWithContact
   }
   deriving (Generic, Show)
 
-deriveJSON ''Order 'stripLensPrefixOptions
-deriveJSON ''OrderItem 'stripLensPrefixOptions
-deriveJSON ''OrderFulfillment 'stripLensPrefixOptions
-deriveJSON ''PersonWithContact 'stripLensPrefixOptions
-deriveJSON ''IdAndLocations 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Order
+deriveJSON stripLensPrefixOptions ''OrderItem
+deriveJSON stripLensPrefixOptions ''OrderFulfillment
+deriveJSON stripLensPrefixOptions ''PersonWithContact
+deriveJSON stripLensPrefixOptions ''IdAndLocations

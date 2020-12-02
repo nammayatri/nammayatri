@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Migration.Organization (Organization (..)) where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Organization = Organization
@@ -11,4 +11,4 @@ data Organization = Organization
   }
   deriving (Generic, Show)
 
-deriveJSON ''Organization 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Organization

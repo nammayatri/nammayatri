@@ -3,7 +3,7 @@
 
 module Beckn.Types.Core.Migration.Ack where
 
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Status = ACK | NACK
@@ -15,4 +15,4 @@ data Ack = Ack
   }
   deriving (Generic, Show)
 
-deriveJSON ''Ack 'stripLensPrefixOptions
+deriveJSON stripLensPrefixOptions ''Ack

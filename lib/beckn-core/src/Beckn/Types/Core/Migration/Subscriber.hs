@@ -3,7 +3,8 @@
 module Beckn.Types.Core.Migration.Subscriber where
 
 import Beckn.Types.Core.Migration.Domain
-import Beckn.Utils.JSON (constructorsToLowerOptions, deriveJSON)
+import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time
 import EulerHS.Prelude
 
@@ -39,5 +40,5 @@ data SubscriberStatus
   | UNSUBSCRIBED
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-deriveJSON ''SubscriberType 'constructorsToLowerOptions
-deriveJSON ''Subscriber 'stripAllLensPrefixOptions
+deriveJSON constructorsToLowerOptions ''SubscriberType
+deriveJSON stripAllLensPrefixOptions ''Subscriber

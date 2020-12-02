@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.Time (Time (..), Range (..)) where
 
 import Beckn.Types.Core.Migration.Duration (Duration)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -22,5 +22,5 @@ data Range = Range
   }
   deriving (Generic, Show, Eq)
 
-deriveJSON ''Range 'stripAllLensPrefixOptions
-deriveJSON ''Time 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Range
+deriveJSON stripAllLensPrefixOptions ''Time

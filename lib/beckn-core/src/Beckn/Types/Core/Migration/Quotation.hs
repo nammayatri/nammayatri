@@ -4,7 +4,8 @@ module Beckn.Types.Core.Migration.Quotation where
 
 import Beckn.Types.Core.Migration.Duration
 import Beckn.Types.Core.Migration.Price
-import Beckn.Utils.JSON (constructorsWithHyphensToLowerOptions, deriveJSON)
+import Beckn.Utils.JSON (constructorsWithHyphensToLowerOptions)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Quotation = Quotation
@@ -29,6 +30,6 @@ data BreakupItemType
   | FULFILLMENT
   deriving (Generic, Show)
 
-deriveJSON ''Quotation 'stripAllLensPrefixOptions
-deriveJSON ''BreakupItem 'stripAllLensPrefixOptions
-deriveJSON ''BreakupItemType 'constructorsWithHyphensToLowerOptions
+deriveJSON stripAllLensPrefixOptions ''Quotation
+deriveJSON stripAllLensPrefixOptions ''BreakupItem
+deriveJSON constructorsWithHyphensToLowerOptions ''BreakupItemType

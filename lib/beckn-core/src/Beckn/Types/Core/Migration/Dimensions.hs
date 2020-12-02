@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Migration.Dimensions where
 
 import Beckn.Types.Core.Migration.Scalar (Scalar)
-import Beckn.Utils.JSON (deriveJSON)
+import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Dimensions = Dimensions
@@ -13,4 +13,4 @@ data Dimensions = Dimensions
   }
   deriving (Generic, Show)
 
-deriveJSON ''Dimensions 'stripAllLensPrefixOptions
+deriveJSON stripAllLensPrefixOptions ''Dimensions

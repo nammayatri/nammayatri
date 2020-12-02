@@ -9,11 +9,10 @@ import Beckn.Types.Core.Migration.Offer (Offer)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Provider (Provider)
 import Beckn.Types.Core.Migration.ProviderCatalog (ProviderCatalog)
-import Beckn.Utils.JSON (deriveJSON, uniteObjects)
-import Data.Aeson (Options (..), defaultOptions)
-import Data.Text (pack, replace, unpack)
+import Beckn.Utils.JSON (slashedRecordFields, uniteObjects)
+import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
-import EulerHS.Prelude hiding (pack, unpack)
+import EulerHS.Prelude
 
 data Catalog = Catalog
   { _bpp_descriptor :: Maybe Descriptor,
@@ -35,10 +34,4 @@ instance FromJSON BppProvider where
 instance ToJSON BppProvider where
   toJSON (BppProvider p pc) = uniteObjects [toJSON p, toJSON pc]
 
-slashedRecordFields :: Options
-slashedRecordFields =
-  defaultOptions
-    { fieldLabelModifier = \('_' : xs) -> unpack . replace "_" "/" . pack $ xs
-    }
-
-deriveJSON ''Catalog 'slashedRecordFields
+deriveJSON slashedRecordFields ''Catalog

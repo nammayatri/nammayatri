@@ -2,7 +2,8 @@
 
 module Beckn.Types.Core.Migration.Tracking where
 
-import Beckn.Utils.JSON (constructorsToLowerOptions, deriveJSON)
+import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Aeson.Types (Value (..), typeMismatch)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
@@ -29,5 +30,5 @@ instance ToJSON TlMethod where
 data TrackingStatus = ACTIVE | INACTIVE
   deriving (Generic, Show)
 
-deriveJSON ''TrackingStatus 'constructorsToLowerOptions
-deriveJSON ''Tracking 'stripLensPrefixOptions
+deriveJSON constructorsToLowerOptions ''TrackingStatus
+deriveJSON stripLensPrefixOptions ''Tracking
