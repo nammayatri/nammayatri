@@ -254,7 +254,7 @@ buildUpdateCaseReq =
 buildUpdatePIReq :: TbePI.ProdInstUpdateReq
 buildUpdatePIReq =
   TbePI.ProdInstUpdateReq
-    { _status = Nothing,
+    { _status = Just PI.TRIP_ASSIGNED,
       _personId = Just testDriverId,
       _vehicleId = Just testVehicleId,
       _otpCode = Nothing

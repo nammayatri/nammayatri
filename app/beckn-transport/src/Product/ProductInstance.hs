@@ -161,10 +161,10 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 
 isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed prodInst req = do
-  piList <- PIQ.findAllByStatusParentId [PI.COMPLETED, PI.INPROGRESS] (prodInst ^. #_parentId)
-  unless (null piList) $
-    case (req ^. #_personId, req ^. #_vehicleId) of
-      (Nothing, Nothing) -> return ()
+  piList <- PIQ.findAllByStatusParentId [PI.COMPLETED, PI.INPROGRESS, PI.TRIP_ASSIGNED] (prodInst ^. #_parentId)
+  when ((req ^. #_status == Just PI.TRIP_ASSIGNED) || isJust (req ^. #_personId) || isJust (req ^. #_vehicleId)) $ do
+    case (length piList, req ^. #_personId, req ^. #_vehicleId, req ^. #_status) of
+      (0, Just _, Just _, Just PI.TRIP_ASSIGNED) -> return ()
       _ -> throwError400 "INVALID UPDATE OPERATION"
 
 updateDriverDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
@@ -325,9 +325,8 @@ notifyStatusUpdateReq searchPi status callbackUrl callbackApiKey = do
         transporterOrg <- findOrganization
         admins <- getAdmins transporterOrg
         Notify.notifyDriverCancelledRideRequest searchPi admins
-      _ -> do
-        trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
-        BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl callbackApiKey
+        notifyStatusToGateway
+      _ -> notifyStatusToGateway
     Nothing -> return ()
   where
     findOrganization = OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
@@ -335,3 +334,6 @@ notifyStatusUpdateReq searchPi status callbackUrl callbackApiKey = do
       if transporterOrg ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
         else pure []
+    notifyStatusToGateway = do
+      trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
+      BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl callbackApiKey

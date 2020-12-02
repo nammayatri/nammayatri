@@ -87,6 +87,29 @@ notifyOnStatusUpdate prodInst piStatus =
                           driverName
                         ]
               notifyPerson title body notificationData p
+            ProductInstance.TRIP_REASSIGNMENT -> do
+              let notificationData =
+                    FCMData DRIVER_UNASSIGNED SHOW FCM.Product $
+                      show (_getProductInstanceId productInstanceId)
+                  title = FCMNotificationTitle $ T.pack "Assigning another driver for the ride!"
+                  body =
+                    FCMNotificationBody $
+                      unwords
+                        ["Current driver has cancelled the ride. Looking for other drivers..."]
+              notifyPerson title body notificationData p
+            ProductInstance.TRIP_ASSIGNED -> do
+              let notificationData =
+                    FCMData DRIVER_ASSIGNMENT SHOW FCM.Product $
+                      show (_getProductInstanceId productInstanceId)
+                  title = FCMNotificationTitle $ T.pack "Driver assigned!"
+                  driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
+                  body =
+                    FCMNotificationBody $
+                      unwords
+                        [ driverName,
+                          "will be your driver for this trip."
+                        ]
+              notifyPerson title body notificationData p
             _ -> pure ()
           _ -> pure ()
       _ -> pure ()
