@@ -7,8 +7,8 @@ where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON (constructorsWithHyphens)
-import Data.Aeson (Value (..))
+import Beckn.Utils.JSON (constructorsWithHyphens, uniteObjects)
+import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
 import EulerHS.Prelude hiding (State, (.=))
 import Servant.Client (BaseUrl)
@@ -37,29 +37,28 @@ instance ToJSON TLMethod where
 
 data Params = Params
   { _transaction_id :: Maybe Text,
-    _amount :: Maybe DecimalValue
-    -- _amount :: Maybe MonetaryValue -- DELETEME: should it be like this?
-    -- _additional :: HashMap Text Text -- DELETEME
+    _amount :: Maybe DecimalValue,
+    _additional :: HashMap Text Text
   }
   deriving (Generic, Show)
 
-{- DELETEME:
-   possible implementation of Params to support
-     additionalProperties: { "type": "string" }
-
 instance FromJSON Params where
-  parseJSON = withObject "Params" $ \o -> Params
-    <$> o .: "transaction_id"
-    <*> o .: "amount"
-    <*> pure o -- error
+  parseJSON = withObject "Params" $ \o ->
+    Params
+      <$> o .: "transaction_id"
+      <*> o .: "amount"
+      <*> mapM f o
+    where
+      f (String val) = pure val
+      f e = typeMismatch "additional property of Params" e
 
 instance ToJSON Params where
-  toJSON Params {..} = uniteObjects [knownParams, Object _additional]
-    where knownParams = object
-            [ "transaction_id" .= _transaction_id,
-              "amount" .= _amount
-            ]
--}
+  toJSON Params {..} = uniteObjects [object knownParams, Object (String <$> _additional)]
+    where
+      knownParams =
+        [ "transaction_id" .= _transaction_id,
+          "amount" .= _amount
+        ]
 
 data PaymentType
   = ON_ORDER
@@ -88,9 +87,3 @@ instance FromJSON Status where
 
 instance ToJSON Status where
   toJSON = genericToJSON constructorsWithHyphens
-
-instance FromJSON Params where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON Params where
-  toJSON = genericToJSON stripAllLensPrefixOptions

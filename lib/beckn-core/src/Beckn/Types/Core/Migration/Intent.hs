@@ -54,36 +54,23 @@ newtype PaymentParams = PaymentParams
   {_mode :: Maybe Text}
   deriving (Generic, Show)
 
-data CategoryInfo = CategoryInfo
+data IdAndDescriptor descriptor = IdAndDescriptor
   { _id :: Maybe Text,
-    _descriptor :: Maybe DescriptorName
+    _descriptor :: Maybe descriptor
   }
   deriving (Generic, Show)
 
-data OfferInfo = OfferInfo
-  { _id :: Maybe Text,
-    _descriptor :: Maybe DescriptorName
-  }
-  deriving (Generic, Show)
+type CategoryInfo = IdAndDescriptor DescriptorName
 
-data ItemInfo = ItemInfo
-  { _id :: Maybe Text,
-    _descriptor :: Maybe ItemInfoDescriptor
-  }
-  deriving (Generic, Show)
+type OfferInfo = IdAndDescriptor DescriptorName
+
+type ItemInfo = IdAndDescriptor ItemInfoDescriptor
 
 data ItemInfoDescriptor = ItemInfoDescriptor
   { _name :: Maybe Text,
     _tags :: Maybe Tags
   }
   deriving (Generic, Show)
-
-{- possible solution to this multitude of types:
-data IdAndDescriptor descriptor = IdAndDescriptor
-  { _id :: Maybe Text,
-    _descriptor :: Maybe descriptor
-  }
--}
 
 instance FromJSON PaymentParams where
   parseJSON = genericParseJSON stripLensPrefixOptions
@@ -121,28 +108,16 @@ instance FromJSON LocationAndTime where
 instance ToJSON LocationAndTime where
   toJSON = genericToJSON stripLensPrefixOptions
 
-instance FromJSON CategoryInfo where
+instance FromJSON a => FromJSON (IdAndDescriptor a) where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToJSON CategoryInfo where
+instance ToJSON a => ToJSON (IdAndDescriptor a) where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 instance FromJSON DescriptorName where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
 instance ToJSON DescriptorName where
-  toJSON = genericToJSON stripLensPrefixOptions
-
-instance FromJSON OfferInfo where
-  parseJSON = genericParseJSON stripLensPrefixOptions
-
-instance ToJSON OfferInfo where
-  toJSON = genericToJSON stripLensPrefixOptions
-
-instance FromJSON ItemInfo where
-  parseJSON = genericParseJSON stripLensPrefixOptions
-
-instance ToJSON ItemInfo where
   toJSON = genericToJSON stripLensPrefixOptions
 
 instance FromJSON ItemInfoDescriptor where
