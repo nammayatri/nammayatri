@@ -1,12 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Provider (Provider (..)) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Location (Location)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Provider = Provider
@@ -18,4 +15,8 @@ data Provider = Provider
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Provider
+instance FromJSON Provider where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Provider where
+  toJSON = genericToJSON stripAllLensPrefixOptions

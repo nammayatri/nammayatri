@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Billing
   ( Billing (..),
   )
@@ -8,7 +6,6 @@ where
 import Beckn.Types.Core.Migration.Address (Address)
 import Beckn.Types.Core.Migration.Organization (Organization)
 import Beckn.Types.Core.Migration.Time (Time)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -25,4 +22,8 @@ data Billing = Billing
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Billing
+instance FromJSON Billing where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Billing where
+  toJSON = genericToJSON stripLensPrefixOptions

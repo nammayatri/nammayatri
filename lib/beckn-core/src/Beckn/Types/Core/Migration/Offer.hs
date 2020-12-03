@@ -1,10 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Offer (Offer (..)) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Time (Time)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Offer = Offer
@@ -17,4 +14,8 @@ data Offer = Offer
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Offer
+instance FromJSON Offer where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Offer where
+  toJSON = genericToJSON stripLensPrefixOptions

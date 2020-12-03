@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Dimensions where
 
 import Beckn.Types.Core.Migration.Scalar (Scalar)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Dimensions = Dimensions
@@ -13,4 +10,8 @@ data Dimensions = Dimensions
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Dimensions
+instance FromJSON Dimensions where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Dimensions where
+  toJSON = genericToJSON stripAllLensPrefixOptions

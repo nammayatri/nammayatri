@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Address (Address (..)) where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Address = Address
@@ -19,4 +16,8 @@ data Address = Address
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Address
+instance FromJSON Address where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Address where
+  toJSON = genericToJSON stripAllLensPrefixOptions

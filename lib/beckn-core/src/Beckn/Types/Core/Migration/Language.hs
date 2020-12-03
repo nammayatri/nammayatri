@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Language where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 newtype Language = Language
@@ -10,4 +7,8 @@ newtype Language = Language
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Language
+instance FromJSON Language where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Language where
+  toJSON = genericToJSON stripLensPrefixOptions

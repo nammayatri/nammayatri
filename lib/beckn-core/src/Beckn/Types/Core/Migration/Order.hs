@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Order where
 
 import Beckn.Types.Common (IdObject)
@@ -13,7 +11,6 @@ import Beckn.Types.Core.Migration.Quotation
 import Beckn.Types.Core.Migration.State
 import Beckn.Types.Core.Migration.Tags
 import Beckn.Types.Core.Migration.Vehicle
-import Data.Aeson.TH (deriveJSON)
 import Data.Time
 import EulerHS.Prelude hiding (State)
 
@@ -75,8 +72,32 @@ data PersonWithContact = PersonWithContact
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Order
-deriveJSON stripLensPrefixOptions ''OrderItem
-deriveJSON stripLensPrefixOptions ''OrderFulfillment
-deriveJSON stripLensPrefixOptions ''PersonWithContact
-deriveJSON stripLensPrefixOptions ''IdAndLocations
+instance FromJSON Order where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Order where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON OrderItem where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON OrderItem where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON OrderFulfillment where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON OrderFulfillment where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON PersonWithContact where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON PersonWithContact where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON IdAndLocations where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON IdAndLocations where
+  toJSON = genericToJSON stripLensPrefixOptions

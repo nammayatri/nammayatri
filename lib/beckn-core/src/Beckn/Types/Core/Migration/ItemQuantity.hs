@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.ItemQuantity where
 
 import Beckn.Types.Core.Migration.Scalar
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Quantity = Quantity
@@ -12,7 +9,11 @@ data Quantity = Quantity
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Quantity
+instance FromJSON Quantity where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Quantity where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 data ItemQuantity = ItemQuantity
   { _allocated :: Maybe Quantity,
@@ -23,4 +24,8 @@ data ItemQuantity = ItemQuantity
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''ItemQuantity
+instance FromJSON ItemQuantity where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON ItemQuantity where
+  toJSON = genericToJSON stripAllLensPrefixOptions

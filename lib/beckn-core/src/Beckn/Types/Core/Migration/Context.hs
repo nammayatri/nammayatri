@@ -1,11 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Context (Context (..)) where
 
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Core.Migration.Duration (Duration)
 import Beckn.Utils.JSON (constructorsToLowerOptions)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
@@ -52,5 +49,14 @@ data Action
   | ACK
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Context
-deriveJSON constructorsToLowerOptions ''Action
+instance FromJSON Context where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Context where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON Action where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON Action where
+  toJSON = genericToJSON constructorsToLowerOptions

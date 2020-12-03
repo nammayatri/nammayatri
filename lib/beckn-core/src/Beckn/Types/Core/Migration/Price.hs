@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Price (Price (..)) where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 -- allOf case
@@ -19,4 +16,8 @@ data Price = Price
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Price
+instance FromJSON Price where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Price where
+  toJSON = genericToJSON stripAllLensPrefixOptions

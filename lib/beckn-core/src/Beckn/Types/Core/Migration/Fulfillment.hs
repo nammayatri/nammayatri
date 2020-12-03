@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Fulfillment (Fulfillment (..), Agent (..), FulfillmentDetails (..)) where
 
 import Beckn.Types.Core.Migration.Contact (Contact)
@@ -11,7 +9,6 @@ import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
 import Beckn.Utils.JSON (uniteObjects)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude hiding (State)
 
 data Fulfillment = Fulfillment
@@ -46,5 +43,14 @@ data FulfillmentDetails = FulfillmentDetails
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Fulfillment
-deriveJSON stripLensPrefixOptions ''FulfillmentDetails
+instance FromJSON Fulfillment where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Fulfillment where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON FulfillmentDetails where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON FulfillmentDetails where
+  toJSON = genericToJSON stripLensPrefixOptions

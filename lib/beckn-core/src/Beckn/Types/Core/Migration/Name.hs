@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Name (Name (..)) where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Name = Name
@@ -16,7 +13,11 @@ data Name = Name
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Name
+instance FromJSON Name where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Name where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 {- DELETEME: Should it be something more like this?
 data Name

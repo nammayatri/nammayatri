@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Catalog (Catalog (..)) where
 
 import Beckn.Types.Core.Migration.Category (Category)
@@ -10,7 +8,6 @@ import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Provider (Provider)
 import Beckn.Types.Core.Migration.ProviderCatalog (ProviderCatalog)
 import Beckn.Utils.JSON (slashedRecordFields, uniteObjects)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -34,4 +31,8 @@ instance FromJSON BppProvider where
 instance ToJSON BppProvider where
   toJSON (BppProvider p pc) = uniteObjects [toJSON p, toJSON pc]
 
-deriveJSON slashedRecordFields ''Catalog
+instance FromJSON Catalog where
+  parseJSON = genericParseJSON slashedRecordFields
+
+instance ToJSON Catalog where
+  toJSON = genericToJSON slashedRecordFields

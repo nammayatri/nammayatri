@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Option where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Option = Option
@@ -12,4 +9,8 @@ data Option = Option
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Option
+instance FromJSON Option where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Option where
+  toJSON = genericToJSON stripLensPrefixOptions

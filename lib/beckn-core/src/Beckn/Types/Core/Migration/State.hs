@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.State (State (..)) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State)
 
@@ -14,4 +11,8 @@ data State = State
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''State
+instance FromJSON State where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON State where
+  toJSON = genericToJSON stripLensPrefixOptions

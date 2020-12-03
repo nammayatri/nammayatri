@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.ProviderCatalog where
 
 import Beckn.Types.Core.Migration.Category (Category)
@@ -10,7 +8,6 @@ import Beckn.Types.Core.Migration.Offer (Offer)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.JSON (uniteObjects)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -34,4 +31,8 @@ instance FromJSON TimedLocation where
 instance ToJSON TimedLocation where
   toJSON (TimedLocation l t) = uniteObjects [toJSON l, toJSON t]
 
-deriveJSON stripLensPrefixOptions ''ProviderCatalog
+instance FromJSON ProviderCatalog where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON ProviderCatalog where
+  toJSON = genericToJSON stripLensPrefixOptions

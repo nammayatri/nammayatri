@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Error
   ( Error (..),
     ErrorType (..),
@@ -8,7 +6,6 @@ module Beckn.Types.Core.Migration.Error
 where
 
 import Beckn.Utils.JSON (constructorsWithHyphens)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Error = Error
@@ -30,5 +27,14 @@ data ErrorType
   | JSON_SCHEMA_ERROR
   deriving (Generic, Show)
 
-deriveJSON constructorsWithHyphens ''ErrorType
-deriveJSON stripAllLensPrefixOptions ''Error
+instance FromJSON ErrorType where
+  parseJSON = genericParseJSON constructorsWithHyphens
+
+instance ToJSON ErrorType where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance FromJSON Error where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Error where
+  toJSON = genericToJSON stripAllLensPrefixOptions

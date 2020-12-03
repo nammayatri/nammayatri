@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Scalar (Scalar (..), Range (..)) where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Scalar = Scalar
@@ -24,5 +21,14 @@ data Range = Range
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Scalar
-deriveJSON stripAllLensPrefixOptions ''Range
+instance FromJSON Scalar where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Scalar where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON Range where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Range where
+  toJSON = genericToJSON stripAllLensPrefixOptions

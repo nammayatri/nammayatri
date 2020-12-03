@@ -1,9 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Types.Core.Migration.Ack where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Status = ACK | NACK
@@ -15,4 +13,8 @@ data Ack = Ack
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Ack
+instance FromJSON Ack where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Ack where
+  toJSON = genericToJSON stripLensPrefixOptions

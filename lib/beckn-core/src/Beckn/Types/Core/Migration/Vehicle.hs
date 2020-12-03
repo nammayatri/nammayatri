@@ -1,9 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Types.Core.Migration.Vehicle where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Vehicle = Vehicle
@@ -19,4 +17,8 @@ data Vehicle = Vehicle
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Vehicle
+instance FromJSON Vehicle where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Vehicle where
+  toJSON = genericToJSON stripLensPrefixOptions

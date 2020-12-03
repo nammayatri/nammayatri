@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Payment
   ( Payment (..),
     PaymentType (..),
@@ -11,7 +9,6 @@ import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.JSON (constructorsWithHyphens)
 import Data.Aeson (Value (..))
-import Data.Aeson.TH (deriveJSON)
 import Data.Aeson.Types (typeMismatch)
 import EulerHS.Prelude hiding (State, (.=))
 import Servant.Client (BaseUrl)
@@ -74,7 +71,26 @@ data PaymentType
 data Status = PAID | NOT_PAID
   deriving (Generic, Eq, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Payment
-deriveJSON constructorsWithHyphens ''PaymentType
-deriveJSON constructorsWithHyphens ''Status
-deriveJSON stripAllLensPrefixOptions ''Params
+instance FromJSON Payment where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Payment where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON PaymentType where
+  parseJSON = genericParseJSON constructorsWithHyphens
+
+instance ToJSON PaymentType where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance FromJSON Status where
+  parseJSON = genericParseJSON constructorsWithHyphens
+
+instance ToJSON Status where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance FromJSON Params where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Params where
+  toJSON = genericToJSON stripAllLensPrefixOptions

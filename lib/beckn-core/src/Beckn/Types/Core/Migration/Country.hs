@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Country (Country (..)) where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Country = Country
@@ -11,4 +8,8 @@ data Country = Country
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Country
+instance FromJSON Country where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Country where
+  toJSON = genericToJSON stripAllLensPrefixOptions

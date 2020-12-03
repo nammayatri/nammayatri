@@ -1,10 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.AddOn (AddOn (..)) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Price (Price)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data AddOn = AddOn
@@ -14,4 +11,8 @@ data AddOn = AddOn
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''AddOn
+instance FromJSON AddOn where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON AddOn where
+  toJSON = genericToJSON stripAllLensPrefixOptions

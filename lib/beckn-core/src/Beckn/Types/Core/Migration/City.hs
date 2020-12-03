@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.City (City (..)) where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data City = City
@@ -11,4 +8,8 @@ data City = City
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''City
+instance FromJSON City where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON City where
+  toJSON = genericToJSON stripAllLensPrefixOptions

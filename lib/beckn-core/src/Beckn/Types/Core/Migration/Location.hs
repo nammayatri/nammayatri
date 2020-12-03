@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Location (Location (..)) where
 
 import Beckn.Types.Core.Migration.Address (Address)
@@ -8,7 +6,6 @@ import Beckn.Types.Core.Migration.City (City)
 import Beckn.Types.Core.Migration.Country (Country)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Gps (Gps)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Location = Location
@@ -25,4 +22,8 @@ data Location = Location
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Location
+instance FromJSON Location where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Location where
+  toJSON = genericToJSON stripLensPrefixOptions

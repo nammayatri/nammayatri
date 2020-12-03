@@ -1,11 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Feedback (Feedback) where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Rating (Rating)
 import Beckn.Utils.JSON (constructorsToLowerOptions)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Feedback = Feedback
@@ -24,5 +21,14 @@ data FeedbackType
   | PERSON
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Feedback
-deriveJSON constructorsToLowerOptions ''FeedbackType
+instance FromJSON Feedback where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Feedback where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON FeedbackType where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON FeedbackType where
+  toJSON = genericToJSON constructorsToLowerOptions

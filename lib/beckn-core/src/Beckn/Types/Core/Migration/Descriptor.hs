@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Descriptor (Descriptor (..)) where
 
 import Beckn.Types.Core.Migration.Image (Image)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
 
@@ -19,4 +16,8 @@ data Descriptor = Descriptor
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Descriptor
+instance FromJSON Descriptor where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Descriptor where
+  toJSON = genericToJSON stripAllLensPrefixOptions

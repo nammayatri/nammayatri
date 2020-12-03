@@ -1,10 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Policy where
 
 import Beckn.Types.Core.Migration.Descriptor
 import Beckn.Types.Core.Migration.Time
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Policy = Policy
@@ -15,4 +12,8 @@ data Policy = Policy
   }
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Policy
+instance FromJSON Policy where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Policy where
+  toJSON = genericToJSON stripAllLensPrefixOptions

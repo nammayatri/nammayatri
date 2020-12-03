@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Contact (Contact (..)) where
 
 import Beckn.Types.Core.Migration.Tags (Tags)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 -- allOf union
@@ -14,4 +11,8 @@ data Contact = Contact
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Contact
+instance FromJSON Contact where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Contact where
+  toJSON = genericToJSON stripLensPrefixOptions

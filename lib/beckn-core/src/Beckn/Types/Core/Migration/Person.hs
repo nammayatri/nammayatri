@@ -1,11 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Person (Person (..)) where
 
 import Beckn.Types.Core.Migration.Image (Image)
 import Beckn.Types.Core.Migration.Name (Name)
 import Beckn.Types.Core.Migration.Tags (Tags)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Person = Person
@@ -18,4 +15,8 @@ data Person = Person
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Person
+instance FromJSON Person where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Person where
+  toJSON = genericToJSON stripLensPrefixOptions

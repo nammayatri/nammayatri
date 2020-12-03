@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Time (Time (..), Range (..)) where
 
 import Beckn.Types.Core.Migration.Duration (Duration)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -22,5 +19,14 @@ data Range = Range
   }
   deriving (Generic, Show, Eq)
 
-deriveJSON stripAllLensPrefixOptions ''Range
-deriveJSON stripAllLensPrefixOptions ''Time
+instance FromJSON Range where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Range where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON Time where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Time where
+  toJSON = genericToJSON stripAllLensPrefixOptions

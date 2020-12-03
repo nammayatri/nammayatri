@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Organization (Organization (..)) where
 
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Organization = Organization
@@ -11,4 +8,8 @@ data Organization = Organization
   }
   deriving (Generic, Show)
 
-deriveJSON stripLensPrefixOptions ''Organization
+instance FromJSON Organization where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Organization where
+  toJSON = genericToJSON stripLensPrefixOptions

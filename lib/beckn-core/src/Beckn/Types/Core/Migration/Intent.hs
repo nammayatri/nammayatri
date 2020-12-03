@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Intent (Intent (..)) where
 
 import Beckn.Types.Common (IdObject)
@@ -7,7 +5,6 @@ import Beckn.Types.Core.Migration.Location (Location)
 import Beckn.Types.Core.Migration.Payment (PaymentType)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Intent = Intent
@@ -88,14 +85,68 @@ data IdAndDescriptor descriptor = IdAndDescriptor
   }
 -}
 
-deriveJSON stripLensPrefixOptions ''PaymentParams
-deriveJSON stripLensPrefixOptions ''PaymentInfo
-deriveJSON stripLensPrefixOptions ''Intent
-deriveJSON stripLensPrefixOptions ''ProviderInfo
-deriveJSON stripLensPrefixOptions ''FulFillmentInfo
-deriveJSON stripLensPrefixOptions ''LocationAndTime
-deriveJSON stripAllLensPrefixOptions ''CategoryInfo
-deriveJSON stripLensPrefixOptions ''DescriptorName
-deriveJSON stripLensPrefixOptions ''OfferInfo
-deriveJSON stripLensPrefixOptions ''ItemInfo
-deriveJSON stripLensPrefixOptions ''ItemInfoDescriptor
+instance FromJSON PaymentParams where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON PaymentParams where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON PaymentInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON PaymentInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON Intent where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON Intent where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON ProviderInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON ProviderInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON FulFillmentInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON FulFillmentInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON LocationAndTime where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON LocationAndTime where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON CategoryInfo where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON CategoryInfo where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON DescriptorName where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON DescriptorName where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON OfferInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON OfferInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON ItemInfo where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON ItemInfo where
+  toJSON = genericToJSON stripLensPrefixOptions
+
+instance FromJSON ItemInfoDescriptor where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON ItemInfoDescriptor where
+  toJSON = genericToJSON stripLensPrefixOptions

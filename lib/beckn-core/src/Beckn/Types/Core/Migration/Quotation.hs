@@ -1,11 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Core.Migration.Quotation where
 
 import Beckn.Types.Core.Migration.Duration
 import Beckn.Types.Core.Migration.Price
 import Beckn.Utils.JSON (constructorsWithHyphensToLowerOptions)
-import Data.Aeson.TH (deriveJSON)
 import EulerHS.Prelude
 
 data Quotation = Quotation
@@ -30,6 +27,20 @@ data BreakupItemType
   | FULFILLMENT
   deriving (Generic, Show)
 
-deriveJSON stripAllLensPrefixOptions ''Quotation
-deriveJSON stripAllLensPrefixOptions ''BreakupItem
-deriveJSON constructorsWithHyphensToLowerOptions ''BreakupItemType
+instance FromJSON Quotation where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON Quotation where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON BreakupItem where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON BreakupItem where
+  toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance FromJSON BreakupItemType where
+  parseJSON = genericParseJSON constructorsWithHyphensToLowerOptions
+
+instance ToJSON BreakupItemType where
+  toJSON = genericToJSON constructorsWithHyphensToLowerOptions
