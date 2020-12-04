@@ -58,8 +58,8 @@ in
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
 , xProviderUri = providerUri
-, bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
-, bapNwAddress = Some "http://localhost:8013/v1/"
+, bapSelfId = "JUSPAY.MOBILITY.APP.UAT.1"
+, bapNwAddress = "http://localhost:8013/v1/"
 , searchConfirmExpiry = Some +7200
 , searchCaseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey

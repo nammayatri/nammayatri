@@ -147,7 +147,7 @@ buildContext act tid = do
         _city = Nothing,
         _core_version = Just "0.8.0",
         _domain_version = Just "0.8.3",
-        _bap_uri = bapNwAddr,
+        _bap_uri = Just bapNwAddr,
         _bpp_uri = Nothing,
         _transaction_id = tid,
         _message_id = tid,
@@ -196,4 +196,4 @@ buildConfirmReq ctx order =
 updateCaller :: Context -> Flow Context
 updateCaller ctx = do
   bapNwAddr <- nwAddress <$> ask
-  return $ ctx {_bap_uri = bapNwAddr}
+  return $ ctx {_bap_uri = Just bapNwAddr}

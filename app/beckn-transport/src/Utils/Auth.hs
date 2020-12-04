@@ -35,7 +35,7 @@ instance LookupMethod LookupRegistry where
 
 lookupRegistryAction :: LookupAction LookupRegistry AppEnv
 lookupRegistryAction = LookupAction $ \signaturePayload -> do
-  selfUrl <- ask >>= fromMaybeM500 "NO_SELF_URL" . nwAddress
+  selfUrl <- nwAddress <$> ask
   L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   let keyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
   mCred <- R.lookupKey keyId

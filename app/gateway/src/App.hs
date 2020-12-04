@@ -82,7 +82,7 @@ runGateway configModifier = do
         waitForDrain activeConnections $ ms - sleep
 
     prepareAuthManager flowRt cfg appEnv = do
-      selfId <- maybe (error "No selfId set for gateway") pure $ cfg ^. #selfId
+      let selfId = cfg ^. #selfId
       creds <-
         runFlowR flowRt appEnv $
           Registry.lookupOrg selfId

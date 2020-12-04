@@ -24,7 +24,7 @@ confirm org req = withFlowHandler $ do
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
-          { _bpp_uri = bppNwAddr
+          { _bpp_uri = Just bppNwAddr
           }
   case mAppUrl of
     Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"

@@ -26,7 +26,7 @@ search org req = withFlowHandler $ do
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let context =
         (req ^. #context)
-          { _bpp_uri = bppNwAddr
+          { _bpp_uri = Just bppNwAddr
           }
   case context ^. #_transaction_id of
     tId

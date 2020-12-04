@@ -61,7 +61,8 @@ search person req = withFlowHandler $ do
   now <- L.runIO getCurrentTime
   msgId <- L.generateGUID
   env <- ask
-  let context = mkContext "search" (_getCaseId (case_ ^. #_id)) msgId now (bapNwAddress env) Nothing
+  let bapNwAddr = env ^. #bapNwAddress
+      context = mkContext "search" (_getCaseId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
       intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
   eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)

@@ -24,8 +24,8 @@ in
 , port = +8017
 , metricsPort = +9995
 , xGatewayUri = gwUri
-, selfId = Some "JUSPAY.BPP.MOCK.1"
-, nwAddress = Some "http://localhost:8017/v1/"
+, selfId = "JUSPAY.BPP.MOCK.1"
+, nwAddress = "http://localhost:8017/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-provider-backend.log"}

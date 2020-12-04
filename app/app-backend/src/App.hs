@@ -48,9 +48,8 @@ runAppBackend' appEnv settings = do
   let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
-    authManager <- case appEnv ^. #bapSelfId of
-      Nothing -> error "Self id not configured"
-      Just selfId -> do
+    let selfId = appEnv ^. #bapSelfId
+    authManager <- do
         mbCreds <-
           runFlowR flowRt appEnv $
             Registry.lookupOrg selfId

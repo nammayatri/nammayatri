@@ -59,8 +59,8 @@ in
 , xGatewaySelector = Some "JUSPAY"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xProviderUri = providerUri
-, bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
-, bapNwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
+, bapSelfId = "JUSPAY.MOBILITY.APP.UAT.1"
+, bapNwAddress = "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
 , searchConfirmExpiry = Some +7200
 , searchCaseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey

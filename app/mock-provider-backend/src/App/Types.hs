@@ -12,8 +12,8 @@ data AppEnv = AppEnv
     port :: Int,
     metricsPort :: Int,
     xGatewayUri :: BaseUrl,
-    selfId :: Maybe Text,
-    nwAddress :: Maybe BaseUrl,
+    selfId :: Text,
+    nwAddress :: BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig

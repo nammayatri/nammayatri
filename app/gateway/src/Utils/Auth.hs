@@ -4,7 +4,7 @@ module Utils.Auth where
 
 import App.Types
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common (fromMaybeM401, fromMaybeM500, throwError401)
+import Beckn.Utils.Common (fromMaybeM401, throwError401)
 import qualified Beckn.Utils.Registry as R
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
@@ -40,7 +40,7 @@ instance LookupMethod LookupRegistry where
 
 lookupRegistryAction :: LookupAction LookupRegistry AppEnv
 lookupRegistryAction = LookupAction $ \signaturePayload -> do
-  selfUrl <- ask >>= fromMaybeM500 "NO_SELF_URL" . gwNwAddress
+  selfUrl <- gwNwAddress <$> ask
   L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show (HttpSig.encode signaturePayload)
   let keyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
   mCred <- R.lookupKey keyId

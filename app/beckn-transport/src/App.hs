@@ -66,7 +66,7 @@ runTransporterBackendApp' appEnv settings = do
             runSettings settings $ App.run (App.EnvR flowRt' appEnv)
   where
     prepareAuthManager flowRt = do
-      selfId <- maybe (error "No selfId set for gateway") pure $ appEnv ^. #selfId
+      let selfId = appEnv ^. #selfId
       creds <-
         runFlowR flowRt appEnv $
           Registry.lookupOrg selfId

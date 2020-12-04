@@ -32,8 +32,8 @@ in
 , redisCfg = rcfg
 , port = +8015
 , metricsPort = +9998
-, selfId = Some "JUSPAY.BG.1"
-, nwAddress = Some "http://localhost:8015/v1/"  -- public address of a node
+, selfId = "JUSPAY.BG.1"
+, nwAddress = "http://localhost:8015/v1/"  -- public address of a node
 , migrationPath = Some (env:BECKN_GATEWAY_MIGRATION_PATH as Text ? "dev/migrations/beckn-gateway")
 , autoMigrate = True
 , searchTimeout = None Integer

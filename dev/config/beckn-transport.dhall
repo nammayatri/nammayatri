@@ -48,8 +48,8 @@ in
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
 , xAppUri = appUri
-, selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = Some "http://localhost:8014/v1/"
+, selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
+, nwAddress = "http://localhost:8014/v1/"
 , caseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto

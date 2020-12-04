@@ -50,8 +50,8 @@ in
 , xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xAppUri = appUri
-, selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/transport/v1/"
+, selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/transport/v1/"
 , caseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto

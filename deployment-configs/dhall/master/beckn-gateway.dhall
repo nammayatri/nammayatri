@@ -32,8 +32,8 @@ in
 , redisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
-, selfId = Some "JUSPAY.BG.1"
-, nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
+, selfId = "JUSPAY.BG.1"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , searchTimeout = Some +3600
