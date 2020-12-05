@@ -102,12 +102,12 @@ data SignatureParams = SignatureParams
   deriving (Eq, Show, Generic)
 
 mkSignatureParams :: Text -> Text -> POSIXTime -> NominalDiffTime -> SignatureAlgorithm -> SignatureParams
-mkSignatureParams orgId keyId now validity alg =
+mkSignatureParams shortOrgId uniqueKeyId now validity alg =
   SignatureParams
     { keyId =
         KeyId
-          { subscriberId = orgId,
-            uniqueKeyId = keyId,
+          { subscriberId = shortOrgId,
+            uniqueKeyId = uniqueKeyId,
             alg = alg
           },
       algorithm = alg,

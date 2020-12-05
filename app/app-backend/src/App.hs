@@ -57,9 +57,9 @@ runAppBackend' appEnv settings = do
         Nothing -> error $ "No credentials for: " <> selfId
         Just creds -> do
           let privKey = fromJust $ Registry.decodeKey =<< creds ^. #_signPrivKey
-          let keyId = creds ^. #_keyId
+          let uniqueKeyId = creds ^. #_uniqueKeyId
           -- 10 minutes should be long enough for messages to go through
-          signatureAuthManager flowRt appEnv "Authorization" privKey selfId keyId (appEnv ^. #signatureExpiry)
+          signatureAuthManager flowRt appEnv "Authorization" privKey selfId uniqueKeyId (appEnv ^. #signatureExpiry)
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections

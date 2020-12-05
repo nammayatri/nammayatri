@@ -146,14 +146,14 @@ signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
 signatureAuthManager :: MonadIO m => R.FlowRuntime -> r -> Text -> HttpSig.PrivateKey -> Text -> Text -> NominalDiffTime -> m Http.Manager
-signatureAuthManager flowRt appEnv header key orgId keyId validity = do
+signatureAuthManager flowRt appEnv header key shortOrgId uniqueKeyId validity = do
   liftIO $
     Http.newManager
       Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = do
       now <- L.runIO getPOSIXTime
-      let params = HttpSig.mkSignatureParams orgId keyId now validity HttpSig.Ed25519
+      let params = HttpSig.mkSignatureParams shortOrgId uniqueKeyId now validity HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
       let headers = Http.requestHeaders req
       let signatureMsg = HttpSig.makeSignatureString params body headers

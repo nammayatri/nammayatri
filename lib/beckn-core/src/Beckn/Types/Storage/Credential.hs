@@ -9,8 +9,8 @@ import qualified Database.Beam as B
 import EulerHS.Prelude
 
 data CredentialT f = Credential
-  { _keyId :: B.C f Text,
-    _orgId :: B.C f Text,
+  { _uniqueKeyId :: B.C f Text,
+    _shortOrgId :: B.C f Text,
     _domain :: B.C f (Maybe OrganizationDomain),
     _city :: B.C f (Maybe Text),
     _country :: B.C f (Maybe Text),
@@ -30,7 +30,7 @@ type CredentialPrimaryKey = B.PrimaryKey CredentialT Identity
 instance B.Table CredentialT where
   data PrimaryKey CredentialT f = CredentialPrimaryKey (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = CredentialPrimaryKey . _keyId
+  primaryKey = CredentialPrimaryKey . _uniqueKeyId
 
 deriving instance Show Credential
 
@@ -42,8 +42,8 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _keyId = "key_id",
-        _orgId = "org_id",
+      { _uniqueKeyId = "unique_key_id",
+        _shortOrgId = "short_org_id",
         _signPubKey = "sign_pub_key",
         _signPrivKey = "sign_priv_key",
         _encPubKey = "enc_pub_key",

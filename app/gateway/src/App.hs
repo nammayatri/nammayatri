@@ -87,11 +87,11 @@ runGateway configModifier = do
         runFlowR flowRt appEnv $
           Registry.lookupOrg selfId
             >>= maybe (error $ "No creds found for id: " <> selfId) pure
-      let keyId = creds ^. #_keyId
+      let uniqueKeyId = creds ^. #_uniqueKeyId
       privateKey <-
-        maybe (error $ "No private key found for credential: " <> show keyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
+        maybe (error $ "No private key found for credential: " <> show uniqueKeyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
           >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #_signPrivKey)) pure
-      signatureAuthManager flowRt appEnv "Proxy-Authorization" privateKey selfId keyId (appEnv ^. #signatureExpiry)
+      signatureAuthManager flowRt appEnv "Proxy-Authorization" privateKey selfId uniqueKeyId (appEnv ^. #signatureExpiry)
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse = exceptionResponse

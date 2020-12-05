@@ -42,18 +42,18 @@ lookupRegistryAction :: LookupAction LookupRegistry AppEnv
 lookupRegistryAction = LookupAction $ \signaturePayload -> do
   selfUrl <- gwNwAddress <$> ask
   L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show (HttpSig.encode signaturePayload)
-  let keyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
-  mCred <- R.lookupKey keyId
+  let uniqueKeyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
+  mCred <- R.lookupKey uniqueKeyId
   cred <- case mCred of
     Just c -> return c
     Nothing -> do
-      L.logError @Text "SignatureAuth" $ "Could not look up keyId: " <> keyId
+      L.logError @Text "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
       throwError401 "INVALID_KEY_ID"
-  mOrg <- Org.findOrgByShortId (cred ^. #_orgId)
+  mOrg <- Org.findOrgByShortId (cred ^. #_shortOrgId)
   org <- case mOrg of
     Just o -> return o
     Nothing -> do
-      L.logError @Text "SignatureAuth" $ "Could not look up orgId: " <> cred ^. #_orgId
+      L.logError @Text "SignatureAuth" $ "Could not look up orgId: " <> cred ^. #_shortOrgId
       throwError401 "INVALID_KEY_ID"
   pk <- case R.decodeKey $ cred ^. #_signPubKey of
     Nothing -> do

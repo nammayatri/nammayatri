@@ -24,10 +24,10 @@ registry =
     mkNSDLCredential "nsdl_bg_1" "NSDL.BG.1"
   ]
   where
-    mkCredential keyId orgId =
-      Credential keyId orgId Nothing Nothing Nothing examplePubKey examplePrivKey examplePubKey examplePrivKey exampleValidFrom exampleValidTill
-    mkNSDLCredential keyId orgId =
-      Credential keyId orgId Nothing Nothing Nothing nsdlPubKey nsdlPrivKey nsdlPubKey nsdlPrivKey exampleValidFrom exampleValidTill
+    mkCredential uniqueKeyId shortOrgId =
+      Credential uniqueKeyId shortOrgId Nothing Nothing Nothing examplePubKey examplePrivKey examplePubKey examplePrivKey exampleValidFrom exampleValidTill
+    mkNSDLCredential uniqueKeyId shortOrgId =
+      Credential uniqueKeyId shortOrgId Nothing Nothing Nothing nsdlPubKey nsdlPrivKey nsdlPubKey nsdlPrivKey exampleValidFrom exampleValidTill
 
     examplePubKey = "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
     examplePrivKey = Just "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
@@ -37,10 +37,10 @@ registry =
     exampleValidTill = posixSecondsToUTCTime 1920592000
 
 lookupKey :: L.MonadFlow m => Text -> m (Maybe Credential)
-lookupKey k = return $ find (\c -> c ^. #_keyId == k) registry
+lookupKey k = return $ find (\c -> c ^. #_uniqueKeyId == k) registry
 
 lookupOrg :: L.MonadFlow m => Text -> m (Maybe Credential)
-lookupOrg o = return $ find (\c -> c ^. #_orgId == o) registry
+lookupOrg o = return $ find (\c -> c ^. #_shortOrgId == o) registry
 
 decodeKey :: Text -> Maybe ByteString
 decodeKey = rightToMaybe . Base64.decode . encodeUtf8
