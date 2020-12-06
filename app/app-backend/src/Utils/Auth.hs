@@ -46,11 +46,11 @@ lookupRegistryAction = LookupAction $ \signaturePayload -> do
       L.logError @Text "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
       throwError401 "INVALID_KEY_ID"
   org <-
-    QOrganization.findOrgByShortId (ShortOrganizationId $ cred ^. #_shortOrgId)
+    QOrganization.findOrgByShortId (ShortOrganizationId $ cred ^. #shortOrgId)
       >>= maybe (throwError401 "ORG_NOT_FOUND") pure
-  pk <- case R.decodeKey $ cred ^. #_signPubKey of
+  pk <- case R.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
-      L.logError @Text "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #_signPubKey)
+      L.logError @Text "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
       throwError401 "INVALID_PUBLIC_KEY"
     Just key -> return key
   return (org, pk, selfUrl)

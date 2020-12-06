@@ -56,8 +56,8 @@ runAppBackend' appEnv settings = do
       case mbCreds of
         Nothing -> error $ "No credentials for: " <> selfId
         Just creds -> do
-          let privKey = fromJust $ Registry.decodeKey =<< creds ^. #_signPrivKey
-          let uniqueKeyId = creds ^. #_uniqueKeyId
+          let privKey = fromJust $ Registry.decodeKey =<< creds ^. #signPrivKey
+          let uniqueKeyId = creds ^. #uniqueKeyId
           -- 10 minutes should be long enough for messages to go through
           signatureAuthManager flowRt appEnv "Authorization" privKey selfId uniqueKeyId (appEnv ^. #signatureExpiry)
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}

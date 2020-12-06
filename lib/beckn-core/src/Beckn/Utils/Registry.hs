@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Beckn.Utils.Registry
   ( decodeKey,
     lookupKey,
@@ -5,9 +7,9 @@ module Beckn.Utils.Registry
   )
 where
 
-import Beckn.Types.Storage.Credential
+import Beckn.Types.Credential
 import qualified Data.ByteString.Base64 as Base64
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Generics.Labels ()
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
@@ -25,22 +27,19 @@ registry =
   ]
   where
     mkCredential uniqueKeyId shortOrgId =
-      Credential uniqueKeyId shortOrgId Nothing Nothing Nothing examplePubKey examplePrivKey examplePubKey examplePrivKey exampleValidFrom exampleValidTill
+      Credential uniqueKeyId shortOrgId examplePubKey examplePrivKey
     mkNSDLCredential uniqueKeyId shortOrgId =
-      Credential uniqueKeyId shortOrgId Nothing Nothing Nothing nsdlPubKey nsdlPrivKey nsdlPubKey nsdlPrivKey exampleValidFrom exampleValidTill
+      Credential uniqueKeyId shortOrgId nsdlPubKey Nothing
 
     examplePubKey = "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
     examplePrivKey = Just "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
     nsdlPubKey = "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-    nsdlPrivKey = Nothing
-    exampleValidFrom = posixSecondsToUTCTime 1605232000
-    exampleValidTill = posixSecondsToUTCTime 1920592000
 
 lookupKey :: L.MonadFlow m => Text -> m (Maybe Credential)
-lookupKey k = return $ find (\c -> c ^. #_uniqueKeyId == k) registry
+lookupKey k = return $ find (\c -> c ^. #uniqueKeyId == k) registry
 
 lookupOrg :: L.MonadFlow m => Text -> m (Maybe Credential)
-lookupOrg o = return $ find (\c -> c ^. #_shortOrgId == o) registry
+lookupOrg o = return $ find (\c -> c ^. #shortOrgId == o) registry
 
 decodeKey :: Text -> Maybe ByteString
 decodeKey = rightToMaybe . Base64.decode . encodeUtf8
