@@ -17,7 +17,6 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
-import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Cache as C
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
@@ -88,16 +87,11 @@ runGateway configModifier = do
         runFlowR flowRt appEnv $
           Registry.lookupOrg selfId
             >>= maybe (error $ "No creds found for id: " <> selfId) pure
-      let keyId =
-            HttpSig.KeyId
-              { subscriberId = selfId,
-                uniqueKeyId = creds ^. #_keyId,
-                alg = HttpSig.Ed25519
-              }
+      let keyId = creds ^. #_keyId
       privateKey <-
         maybe (error $ "No private key found for credential: " <> show keyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
           >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #_signPrivKey)) pure
-      signatureAuthManager privateKey keyId 600
+      signatureAuthManager "Proxy-Authorization" privateKey selfId keyId 600
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse = exceptionResponse

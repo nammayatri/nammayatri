@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -w #-}
-
 module Beckn.Utils.SignatureAuth
   ( PublicKey,
     PrivateKey,
@@ -13,6 +11,10 @@ module Beckn.Utils.SignatureAuth
     verify,
     encodeKeyId,
     decodeKeyId,
+    mkSignatureRealm,
+    defaultHeaderFields,
+    makeSignatureString,
+    mkSignatureParams,
   )
 where
 
@@ -26,7 +28,8 @@ import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
 import qualified Data.Text as T
 import qualified Data.Text as Text
-import Data.Time.Clock.POSIX
+import Data.Time.Clock (NominalDiffTime)
+import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Format
 import EulerHS.Prelude
 import Network.HTTP.Types (Header)
@@ -50,7 +53,11 @@ data SignatureAlgorithm
   | Ed25519
   deriving (Eq, Show)
 
-type HashingAlgorithm = Hash.Digest Hash.Blake2b_512
+blake2b512 :: ByteString -> Hash.Digest Hash.Blake2b_512
+blake2b512 = Hash.hash
+
+defaultHeaderFields :: [Text]
+defaultHeaderFields = ["(created)", "(expires)", "digest"]
 
 encodeAlg :: SignatureAlgorithm -> Text
 encodeAlg Hs2019 = "hs2019"
@@ -72,12 +79,12 @@ encodeKeyId :: KeyId -> Text
 encodeKeyId KeyId {..} = subscriberId <> "|" <> uniqueKeyId <> "|" <> encodeAlg alg
 
 decodeKeyId :: Text -> Either String KeyId
-decodeKeyId input = do
-  let values = Text.splitOn "|" input
-  unless (length values == 3) $ Left "INVALID_KEY_ID"
-  let [subscriberId, uniqueKeyId, rAlg] = values
-  alg <- maybeToRight "INVALID_ALG" . decodeAlg . Text.unpack $ rAlg
-  pure KeyId {..}
+decodeKeyId input =
+  case Text.splitOn "|" input of
+    [subscriberId, uniqueKeyId, rAlg] -> do
+      alg <- maybeToRight "INVALID_ALG" . decodeAlg . Text.unpack $ rAlg
+      pure KeyId {..}
+    _ -> Left "INVALID_KEY_ID"
 
 -- | Signature parameters as per the specification
 data SignatureParams = SignatureParams
@@ -93,6 +100,21 @@ data SignatureParams = SignatureParams
     expires :: Maybe POSIXTime
   }
   deriving (Eq, Show, Generic)
+
+mkSignatureParams :: Text -> Text -> POSIXTime -> NominalDiffTime -> SignatureAlgorithm -> SignatureParams
+mkSignatureParams orgId keyId now validity alg =
+  SignatureParams
+    { keyId =
+        KeyId
+          { subscriberId = orgId,
+            uniqueKeyId = keyId,
+            alg = alg
+          },
+      algorithm = alg,
+      headers = defaultHeaderFields,
+      created = Just now,
+      expires = Just $ now + validity
+    }
 
 -- | Signature payload representation that carries signature and it's params
 data SignaturePayload = SignaturePayload
@@ -121,6 +143,7 @@ decode val = do
   alg <-
     maybeToRight "no algorithm" $
       decodeAlg =<< lookup "algorithm" values
+  unless (checkAlg alg key) $ Left "Algorithm is invalid"
   hdrs <-
     maybeToRight "no headers" $
       T.splitOn " " . fromString <$> lookup "headers" values
@@ -129,6 +152,7 @@ decode val = do
   let expi = fromInteger <$> (readMaybe =<< lookup "expires" values)
   return $ SignaturePayload sig (SignatureParams key alg hdrs crt expi)
   where
+    checkAlg algo KeyId {..} = algo == alg
     signatureHeader = do
       string "Signature" *> spaces
       keyValues `sepBy` (char ',' *> spaces)
@@ -178,21 +202,20 @@ makeSignatureString params body allHeaders =
 
     findHeader :: Text -> Maybe (Text, ByteString)
     findHeader h =
-      (h,) . bsStrip
-        <$> case h of
-          "(created)" | algorithm params == Hs2019 -> show . floor <$> created params
-          "(created)" | algorithm params == Hs2019 -> show . floor <$> created params
-          "(expires)" | algorithm params == Ed25519 -> show . floor <$> expires params
-          "(expires)" | algorithm params == Ed25519 -> show . floor <$> expires params
-          "(created)" -> Nothing -- FIXME: this should error out
-          "(expires)" -> Nothing -- FIXME: this should error out
-          "digest" -> pure $ "BLAKE-512=" <> show (Hash.hash body :: HashingAlgorithm)
-          _ ->
-            -- Find all instances of this header, concatenate values separated by a comma
-            let ciHeader = CI.mk $ encodeUtf8 h
-             in bsToMaybe
-                  . BS.intercalate ", "
-                  $ snd <$> filter (\h' -> fst h' == ciHeader) allHeaders
+      let alg = algorithm params
+       in (h,) . bsStrip
+            <$> case h of
+              "(created)" | alg == Hs2019 || alg == Ed25519 -> (show :: Int -> ByteString) . floor <$> created params
+              "(expires)" | alg == Hs2019 || alg == Ed25519 -> (show :: Int -> ByteString) . floor <$> expires params
+              "(created)" -> Nothing -- FIXME: this should error out
+              "(expires)" -> Nothing -- FIXME: this should error out
+              "digest" -> pure $ "BLAKE-512=" <> Base64.encode (show $ blake2b512 body)
+              _ ->
+                -- Find all instances of this header, concatenate values separated by a comma
+                let ciHeader = CI.mk $ encodeUtf8 h
+                 in bsToMaybe
+                      . BS.intercalate ", "
+                      $ snd <$> filter (\h' -> fst h' == ciHeader) allHeaders
 
     bsStrip = encodeUtf8 . T.strip . decodeUtf8
     bsToMaybe b = if null b then Nothing else Just b
@@ -214,3 +237,9 @@ verify key params body allHeaders signatureBs =
    in case Ed25519.verify <$> pk <*> pure msg <*> signature of
         Crypto.CryptoPassed True -> True
         _ -> False
+
+mkSignatureRealm :: Text -> Text -> Header
+mkSignatureRealm headerName host =
+  ( CI.mk $ encodeUtf8 headerName,
+    "Signature realm=\"" <> encodeUtf8 host <> "\",headers=\"" <> encodeUtf8 (unwords defaultHeaderFields) <> "\""
+  )

@@ -4,7 +4,6 @@
 module Product.Search where
 
 import App.Types
-import qualified Beckn.Product.Auth.SignatureAuth as HttpSign
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App as TA
 import Beckn.Types.Common
@@ -23,7 +22,6 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common
-import Beckn.Utils.SignatureAuth (SignaturePayload)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map as Map
@@ -45,7 +43,6 @@ import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.ProductInfo
-import Utils.Auth
 import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
@@ -90,17 +87,8 @@ search person req = withFlowHandler $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError400 "Ride not serviceable due to georestrictions"
 
-searchCbEndpointSignAuth :: SignaturePayload -> SignaturePayload -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCbEndpointSignAuth gwSignature tnSignature req = withFlowHandler $ do
-  _gwOrg <- HttpSign.verify lookupRegistryAction gwSignature req
-  org <- HttpSign.verify lookupRegistryAction tnSignature req
-  searchCb org req
-
-searchCbEndpointAPIKey :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCbEndpointAPIKey org = withFlowHandler . searchCb org
-
-searchCb :: Org.Organization -> Search.OnSearchReq -> Flow Search.OnSearchRes
-searchCb _org req = do
+searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
+searchCb _bppOrg req = withFlowHandler $ do
   validateContext "on_search" $ req ^. #context
   case req ^. #contents of
     Right msg -> do

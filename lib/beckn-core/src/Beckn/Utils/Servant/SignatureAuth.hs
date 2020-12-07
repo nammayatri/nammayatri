@@ -4,12 +4,14 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
-import Beckn.Types.App
-import Beckn.Types.Common
+import Beckn.Types.App (BaseUrl, EnvR (runTime), FlowHandlerR)
+import Beckn.Types.Common (FlowR)
+import Beckn.Utils.Common (throwAuthError, withFlowHandler)
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
-import Beckn.Utils.Servant.Server
+import Beckn.Utils.Servant.Server (HasEnvEntry (..))
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Lens ((?=))
+import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
@@ -25,7 +27,14 @@ import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
 import qualified Network.Wai as Wai
 import Servant
-import Servant.Client
+  ( FromHttpApiData (parseHeader),
+    HasServer (..),
+    ServerError (errBody),
+    err401,
+    err404,
+    type (:>),
+  )
+import Servant.Client (BaseUrl (baseUrlHost), HasClient (..))
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFail, delayedFailFatal, withRequest)
 import qualified Servant.Swagger as S
@@ -58,7 +67,7 @@ data LookupAction lookup r = LookupMethod lookup =>
   LookupAction
   { -- | Look up the given keyId and return a result to pass to the request,
     -- and a key that can be used for signature verification
-    runLookup :: HttpSig.SignaturePayload -> FlowR r (LookupResult lookup, ByteString)
+    runLookup :: HttpSig.SignaturePayload -> FlowR r (LookupResult lookup, HttpSig.PublicKey, BaseUrl)
   }
 
 -- | This server part implementation accepts a signature in @header@ and
@@ -123,23 +132,17 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
-signatureAuthManager :: MonadIO m => HttpSig.PrivateKey -> HttpSig.KeyId -> NominalDiffTime -> m Http.Manager
-signatureAuthManager key keyId validity = do
+signatureAuthManager :: MonadIO m => Text -> HttpSig.PrivateKey -> Text -> Text -> NominalDiffTime -> m Http.Manager
+signatureAuthManager header key orgId keyId validity = do
   liftIO $
     Http.newManager
       Http.tlsManagerSettings {Http.managerModifyRequest = doSignature}
   where
     doSignature req = do
       now <- getPOSIXTime
-      let params =
-            HttpSig.SignatureParams
-              keyId
-              HttpSig.Ed25519
-              ["(created)", "(expires)", "digest"]
-              (Just now)
-              (Just $ now + validity)
+      let params = HttpSig.mkSignatureParams orgId keyId now validity HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
-      case addSignature body params "Authorization" req of
+      case addSignature body params req of
         Just signedReq -> pure signedReq
         Nothing -> pure req
     getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
@@ -148,8 +151,8 @@ signatureAuthManager key keyId validity = do
 
     -- FIXME: we don't currently deal with Content-Length not being there (this is
     -- filled later, so we might need to have some special handling)
-    addSignature :: ByteString -> HttpSig.SignatureParams -> Text -> Http.Request -> Maybe Http.Request
-    addSignature body params header req =
+    addSignature :: ByteString -> HttpSig.SignatureParams -> Http.Request -> Maybe Http.Request
+    addSignature body params req =
       let headers = Http.requestHeaders req
           ciHeader = CI.mk $ encodeUtf8 header
        in -- We check if the header exists because `managerModifyRequest` might be
@@ -160,6 +163,30 @@ signatureAuthManager key keyId validity = do
               signature <- HttpSig.sign key params body headers
               let headerVal = HttpSig.encode $ HttpSig.SignaturePayload signature params
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
+
+verifySignature :: ToJSON body => Text -> LookupAction lookup r -> HttpSig.SignaturePayload -> body -> FlowR r (LookupResult lookup)
+verifySignature headerName (LookupAction runLookup) signPayload req = do
+  let headers =
+        [ ("(created)", maybe "" show (signPayload ^. #params . #created)),
+          ("(expires)", maybe "" show (signPayload ^. #params . #expires)),
+          ("digest", "")
+        ]
+  (lookupResult, key, selfUrl) <- runLookup signPayload
+  let host = fromString $ baseUrlHost selfUrl
+  unless (HttpSig.verify key (signPayload ^. #params) (BSL.toStrict . J.encode $ req) headers (signPayload ^. #signature)) $
+    throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
+  pure lookupResult
+
+withBecknAuth :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
+withBecknAuth handler lookupAction sign req = do
+  lookupResult <- withFlowHandler $ verifySignature "WWW-Authenticate" lookupAction sign req
+  handler lookupResult req
+
+withBecknAuthProxy :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
+withBecknAuthProxy handler lookupAction sign proxySign req = do
+  lookupResult <- withFlowHandler $ verifySignature "WWW-Authenticate" lookupAction sign req
+  _ <- withFlowHandler $ verifySignature "Proxy-Authenticate" lookupAction proxySign req
+  handler lookupResult req
 
 instance
   ( S.HasSwagger api,

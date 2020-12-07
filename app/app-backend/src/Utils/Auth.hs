@@ -36,6 +36,7 @@ instance LookupMethod LookupRegistry where
 
 lookupRegistryAction :: LookupAction LookupRegistry AppEnv
 lookupRegistryAction = LookupAction $ \signaturePayload -> do
+  selfUrl <- ask >>= fromMaybeM500 "NO_SELF_URL" . bapNwAddress
   L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   let keyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
   mCred <- R.lookupKey keyId
@@ -52,4 +53,4 @@ lookupRegistryAction = LookupAction $ \signaturePayload -> do
       L.logError @Text "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #_signPubKey)
       throwError401 "INVALID_PUBLIC_KEY"
     Just key -> return key
-  return (org, pk)
+  return (org, pk, selfUrl)

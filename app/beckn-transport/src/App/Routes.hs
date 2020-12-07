@@ -15,6 +15,7 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Time
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
@@ -39,7 +40,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Utils.Auth (VerifyAPIKey)
+import Utils.Auth (VerifyAPIKey, lookupRegistryAction)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -328,7 +329,7 @@ type OrgBecknAPI =
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
-  (\orgId -> BP.searchEndpointSignAuth orgId :<|> BP.searchEndpointApiKey orgId)
+  (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookupRegistryAction :<|> BP.search orgId)
     :<|> BP.confirm
     :<|> BP.cancel
     :<|> BP.serviceStatus

@@ -26,7 +26,7 @@ import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
 import GHC.TypeLits (Symbol)
-import Network.HTTP.Types (hContentType)
+import Network.HTTP.Types (Header, hContentType)
 import Network.HTTP.Types.Status
 import Servant (ServerError (..), err500)
 import qualified Servant.Client as S
@@ -235,7 +235,7 @@ throwBecknError err errMsg = do
   L.throwException
     err
       { errBody = A.encode $ getBecknError err errMsg,
-        errHeaders = pure jsonHeader
+        errHeaders = jsonHeader : errHeaders err
       }
   where
     jsonHeader =
@@ -276,6 +276,9 @@ throwBecknError501 = throwBecknError S.err501
 throwBecknError400 = throwBecknError S.err400
 throwBecknError401 = throwBecknError S.err401
 throwBecknError404 = throwBecknError S.err404
+
+throwAuthError :: (HasCallStack, L.MonadFlow m) => [Header] -> Text -> m a
+throwAuthError headers = throwBecknError (S.err401 {errHeaders = headers})
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format

@@ -10,7 +10,7 @@ import Utils.Auth
 
 type SearchAPI =
   ( "search"
-      :> Header "Proxy-Authorization" SignaturePayload
+      :> Header "Authorization" SignaturePayload
       :> ReqBody '[JSON] SearchReq
       :> Post '[JSON] AckResponse
   )
@@ -25,7 +25,7 @@ searchAPI = Proxy
 
 type OnSearchAPI =
   ( "on_search"
-      :> Header "Proxy-Authorization" SignaturePayload
+      :> Header "Authorization" SignaturePayload
       :> ReqBody '[JSON] OnSearchReq
       :> Post '[JSON] AckResponse
   )

@@ -18,6 +18,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
@@ -50,7 +51,11 @@ import qualified Types.API.Serviceability as Serviceability
 import Types.API.Status
 import qualified Types.API.Support as Support
 import Types.Geofencing
-import Utils.Auth (VerificationAPIKey, VerifyAPIKey)
+import Utils.Auth
+  ( VerificationAPIKey,
+    VerifyAPIKey,
+    lookupRegistryAction,
+  )
 import Utils.Common (TokenAuth)
 
 type AppAPI =
@@ -129,7 +134,7 @@ type SearchAPI =
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> (Search.searchCbEndpointSignAuth :<|> Search.searchCbEndpointAPIKey)
+    :<|> (HttpSig.withBecknAuthProxy Search.searchCb lookupRegistryAction :<|> Search.searchCb)
 
 -------- Confirm Flow --------
 type ConfirmAPI =

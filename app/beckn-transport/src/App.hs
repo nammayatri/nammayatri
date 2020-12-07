@@ -17,7 +17,6 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
-import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -72,16 +71,12 @@ runTransporterBackendApp' appEnv settings = do
         runFlowR flowRt appEnv $
           Registry.lookupOrg selfId
             >>= maybe (error $ "No creds found for id: " <> selfId) pure
-      let keyId =
-            HttpSig.KeyId
-              { subscriberId = selfId,
-                uniqueKeyId = creds ^. #_keyId,
-                alg = HttpSig.Ed25519
-              }
+      let keyId = creds ^. #_keyId
+
       privateKey <-
         maybe (error $ "No private key found for credential: " <> show keyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
           >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #_signPrivKey)) pure
-      signatureAuthManager privateKey keyId 600
+      signatureAuthManager "Authorization" privateKey selfId keyId 600
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse = exceptionResponse

@@ -16,7 +16,8 @@ import qualified Product.Log as P
 import qualified Product.Search as P
 import Servant
 import Types.API.Search
-import Utils.Auth (VerifyAPIKey)
+import Utils.Auth (VerifyAPIKey, lookupRegistryAction)
+import qualified Utils.Servant.SignatureAuth as HttpSig
 
 type HealthAPI =
   "healthz" :> Get '[JSON] Text
@@ -44,8 +45,8 @@ healthHandler = pure "UP"
 gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
-    :<|> (handleIfUp P.searchEndpointSignAuth :<|> handleIfUp P.searchEndpointApiKey)
-    :<|> (handleIfUp P.searchCbEndpointSignAuth :<|> handleIfUp P.searchCbEndpointApiKey)
+    :<|> (handleIfUp (HttpSig.withBecknAuth (P.search . Just) lookupRegistryAction) :<|> handleIfUp (P.search Nothing))
+    :<|> (handleIfUp (HttpSig.withBecknAuth (P.searchCb . Just) lookupRegistryAction) :<|> handleIfUp (P.searchCb Nothing))
     :<|> handleIfUp P.log
   where
     handleIfUp :: (a -> b -> FlowHandler c) -> a -> b -> FlowHandler c

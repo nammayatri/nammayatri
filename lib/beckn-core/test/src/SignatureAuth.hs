@@ -51,7 +51,21 @@ exampleExpires :: Integer
 exampleExpires = 1402170699
 
 exampleSignature :: ByteString
-exampleSignature = "+x+lTR2RXqiF/5Mpg0mDomgHraJaIknl/g8m4LRkJkQyBcXFRTZy2iok4SUxym63iv8vmLpJok79X1zkTKKOAQ=="
+exampleSignature = "thx8bUj/FQ1j5eWKL52Uj1cz0zmbcPje8sh2vhHJjcH6po38GDfAMifL+hMM9coKZ3tQOilKukVMTbTWGm1LBg=="
+
+exampleSignatureMessage :: ByteString
+exampleSignatureMessage =
+  encodeUtf8 $
+    unlines
+      [ "(request-target): " <> decodeUtf8 methodPost <> " " <> decodeUtf8 examplePath,
+        "(created): " <> show exampleCreated,
+        "(expires): " <> show exampleExpires,
+        "host: example.com",
+        "date: Sun, 05 Jan 2014 21:31:40 GMT",
+        "content-type: application/json",
+        "digest: BLAKE-512=MjBjYjhmMTE3NWFhYTNmMjNmMDIwYjM5NjIzMDBjNDgzYmEzM2RkYTNmMWFlMzI3MzQ2MDVkYjRkODM0NDE5Zjg3NGYxOTk2MzYzNmZmMGM3OWQ0NWEwNTRhZjg5NWIyMGZkYWM3NDVmMzU0Yzg2NWQ5MzhlZjZlODAxYjhlMzM=",
+        "content-length: 18"
+      ]
 
 -- | algorithm is modified to hs2019
 exampleSignatureHeader :: ByteString
@@ -104,6 +118,13 @@ simpleEncode =
     -- filtering '\n'
     HttpSig.encode (HttpSig.SignaturePayload sig exampleParams) @?= dropNewline exampleSignatureHeader
 
+checkSignatureMessage :: TestTree
+checkSignatureMessage =
+  testCase "Check Signature Message" $ do
+    let message = HttpSig.makeSignatureString exampleParams exampleBody $ first (CI.mk . encodeUtf8) <$> exampleHeaders
+    -- filtering '\n'
+    dropNewline message @?= dropNewline exampleSignatureMessage
+
 signRequest :: TestTree
 signRequest =
   testCase "Sign a request" $ do
@@ -130,6 +151,7 @@ signatureAuthTests =
     "Signature auth tests"
     [ simpleDecode,
       simpleEncode,
+      checkSignatureMessage,
       signRequest,
       verifyRequest
     ]
