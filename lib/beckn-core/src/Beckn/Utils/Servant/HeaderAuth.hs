@@ -84,7 +84,7 @@ instance
         -- it will be JSON-formatted
 
         liftIO . runFlowR flowRt (appEnv env) $ verifyMethod val
-      formatErr msg = delayedFailFatal err400 {errBody = msg}
+      formatErr msg = delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
       VerificationAction verifyMethod = getContextEntry ctx :: VerificationAction verify r
 
