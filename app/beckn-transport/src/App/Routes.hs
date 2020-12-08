@@ -391,6 +391,7 @@ routeApiFlow = Location.getRoute
 
 type DriversInformationAPI =
   "active_drivers"
+    :> TokenAuth -- FIXME
     :> Get '[JSON] ActiveDriversResponse
 
 driversInformationFlow :: FlowServer DriversInformationAPI

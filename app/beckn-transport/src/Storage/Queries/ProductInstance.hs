@@ -394,16 +394,16 @@ findByStartTimeBuffer piType startTime buffer statuses = do
             &&. _startTime B.>=. B.val_ fromTime
             &&. _status `B.in_` inStatus
 
-findCompletedRidesOver24hByDriverId :: PersonId -> Flow (T.DBResult [Storage.ProductInstance])
-findCompletedRidesOver24hByDriverId driverId = do
+getDriverRides :: PersonId -> NominalDiffTime -> Flow (T.DBResult [Storage.ProductInstance])
+getDriverRides driverId period = do
   dbTable <- getDbTable
   now <- getCurrTime
-  let fromTime = addUTCTime (- nominalDay) now
+  let fromTime = addUTCTime (- period) now
   DB.findAll dbTable (predicate fromTime now)
   where
     predicate fromTime toTime Storage.ProductInstance {..} =
       _type ==. B.val_ Case.RIDEORDER
+        &&. _personId ==. B.val_ (Just driverId)
+        &&. _status ==. B.val_ Storage.COMPLETED
         &&. _startTime B.>=. B.val_ fromTime
         &&. _startTime B.<=. B.val_ toTime
-        &&. _status ==. B.val_ Storage.COMPLETED
-        &&. _personId ==. B.val_ (Just driverId)
