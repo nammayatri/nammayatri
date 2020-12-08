@@ -23,6 +23,7 @@ import Product.BecknProvider.Feedback as BP
 import qualified Product.Call as Call
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron
+import qualified Product.DriversInformation as DriversInformation
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
@@ -33,6 +34,7 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Types.API.Case
 import Types.API.Cron
+import Types.API.DriversInformation (ActiveDriversResponse)
 import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
@@ -58,6 +60,7 @@ type TransportAPI =
            :<|> ProductAPI
            :<|> CallAPIs
            :<|> RouteAPI
+           :<|> DriversInformationAPI
        )
 
 ---- Registration Flow ------
@@ -318,6 +321,7 @@ transporterServer =
     :<|> productFlow
     :<|> callFlow
     :<|> routeApiFlow
+    :<|> driversInformationFlow
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId
@@ -384,3 +388,10 @@ type RouteAPI =
 
 routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoute
+
+type DriversInformationAPI =
+  "active_drivers"
+    :> Get '[JSON] ActiveDriversResponse
+
+driversInformationFlow :: FlowServer DriversInformationAPI
+driversInformationFlow = DriversInformation.handleActiveDrivers

@@ -83,6 +83,20 @@ findAllByOrgIds roles orgIds = do
           _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
+findAllActiveDrivers :: Flow [Storage.Person]
+findAllActiveDrivers = do
+  dbTable <- getDbTable
+  DB.findAllOrErr dbTable predicate
+    >>= decrypt
+  where
+    predicate Storage.Person {..} =
+      foldr
+        (&&.)
+        (B.val_ True)
+        [ _role ==. B.val_ Storage.DRIVER,
+          _status ==. B.val_ Storage.ACTIVE
+        ]
+
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True

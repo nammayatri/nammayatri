@@ -34,6 +34,8 @@ instance ToSchema Status
 
 instance ToParamSchema Status
 
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Status
+
 -------------------------------------------------------------------------------------------
 
 data Role
