@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module App
@@ -27,7 +28,7 @@ import Network.Wai.Handler.Warp
 runFMDWrapper :: (AppEnv -> AppEnv) -> IO ()
 runFMDWrapper configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
-  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
+  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings

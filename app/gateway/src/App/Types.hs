@@ -3,8 +3,10 @@ module App.Types where
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
@@ -17,6 +19,8 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     selfId :: Text,
     nwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
@@ -35,6 +39,8 @@ data AppEnv = AppEnv
     redisCfg :: T.RedisConfig,
     gwId :: Text,
     gwNwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
     cache :: C.Cache Text Text,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
@@ -63,3 +69,10 @@ type Flow = FlowR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer r api = FlowServerR AppEnv api
+
+instance AuthenticatingEntity AppEnv where
+  getSelfId = gwId
+  getSelfUrl = gwNwAddress
+  getRegistry = credRegistry
+  getSigningKeys = signingKeys
+  getSignatureExpiry = signatureExpiry

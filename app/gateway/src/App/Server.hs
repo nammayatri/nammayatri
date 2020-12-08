@@ -19,4 +19,4 @@ run shutdown env = do
     Trail.toTraceOrNotToTrace env $
       BU.run gatewayAPI (gatewayServer shutdown) context env
   where
-    context = lookupRegistryAction :. verifyAPIKeyAction :. EmptyContext
+    context = verifyAPIKeyAction :. EmptyContext

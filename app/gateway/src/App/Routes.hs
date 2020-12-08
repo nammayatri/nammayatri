@@ -9,14 +9,16 @@ import App.Types
 import Beckn.Types.App (FlowServerR)
 import Beckn.Types.Core.API.Log
 import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Servant.SignatureAuth
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.Log as P
 import qualified Product.Search as P
 import Servant
+import Storage.Queries.Organization
 import Types.API.Search
-import Utils.Auth (VerifyAPIKey, lookupRegistryAction)
+import Utils.Auth (VerifyAPIKey)
 import qualified Utils.Servant.SignatureAuth as HttpSig
 
 type HealthAPI =
@@ -45,8 +47,8 @@ healthHandler = pure "UP"
 gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
-    :<|> (handleIfUp (HttpSig.withBecknAuth (P.search . Just) lookupRegistryAction) :<|> handleIfUp (P.search Nothing))
-    :<|> (handleIfUp (HttpSig.withBecknAuth (P.searchCb . Just) lookupRegistryAction) :<|> handleIfUp (P.searchCb Nothing))
+    :<|> (handleIfUp (HttpSig.withBecknAuth (P.search . Just) lookup) :<|> handleIfUp (P.search Nothing))
+    :<|> (handleIfUp (HttpSig.withBecknAuth (P.searchCb . Just) lookup) :<|> handleIfUp (P.searchCb Nothing))
     :<|> handleIfUp P.log
   where
     handleIfUp :: (a -> b -> FlowHandler c) -> a -> b -> FlowHandler c
@@ -55,3 +57,5 @@ gatewayHandler shutdown = do
       if shouldRun
         then handler a b
         else withFlowHandler $ L.throwException err503
+
+    lookup = lookupRegistryAction findOrgByShortId

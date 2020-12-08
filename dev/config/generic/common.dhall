@@ -1,5 +1,13 @@
 let sec = ./secrets/common.dhall
 
+let mkCredential =
+ \(uniqueKeyId : Text) -> \(shortOrgId : Text) -> \(signPubKey : Text) ->
+  {
+    uniqueKeyId = uniqueKeyId
+  , shortOrgId = shortOrgId
+  , signPubKey = signPubKey
+  }
+
 let TraceFlag = < TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING >
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
@@ -10,6 +18,19 @@ let ExotelCfg =
   , sid : Text
   , callerId : Text
   }
+
+let credRegistry = 
+  [
+    mkCredential "mobility-app-key" "mobility-app" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "fmd-test-app-key" "fmd-test-app" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "juspay-bg-1-key" "JUSPAY.BG.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "juspay-mobility-bap-1-key" "JUSPAY.MOBILITY.APP.UAT.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "juspay-mobility-bpp-1-key" "JUSPAY.MOBILITY.PROVIDER.UAT.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "juspay-bg-1-key" "JUSPAY.BG.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "juspay-mock-bap-1-key" "JUSPAY.BAP.MOCK.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "juspay-mock-bpp-1-key" "JUSPAY.BPP.MOCK.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , mkCredential "nsdl_bg_1" "NSDL.BG.1" "7bcdd2676ec1f08c3da1f6bc41f7edc4e40666f4010f07c355ab698be51df8ad"
+  ]
 
 let defaultPoolConfig =
     { stripes = +1
@@ -39,6 +60,8 @@ in { defaultPoolConfig = defaultPoolConfig
    , fcmJsonPath = None Text
    , autoMigrate = False
    , loggerConfig = loggerConfig
+   , credRegistry = credRegistry
+   , signingKeys = sec.signingKeys
    , TraceFlag = TraceFlag
    , LogLevel = LogLevel
    , ExotelCfg = ExotelCfg

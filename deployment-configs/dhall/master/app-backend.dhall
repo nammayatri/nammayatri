@@ -63,6 +63,8 @@ in
 , xProviderUri = providerUri
 , bapSelfId = "JUSPAY.MOBILITY.APP.UAT.1"
 , bapNwAddress = "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +7200
 , searchCaseExpiry = Some +7200
 , cronAuthKey = Some sec.cronAutKey

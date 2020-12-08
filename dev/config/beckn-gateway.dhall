@@ -34,6 +34,8 @@ in
 , metricsPort = +9998
 , selfId = "JUSPAY.BG.1"
 , nwAddress = "http://localhost:8015/v1/"  -- public address of a node
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
 , migrationPath = Some (env:BECKN_GATEWAY_MIGRATION_PATH as Text ? "dev/migrations/beckn-gateway")
 , autoMigrate = True
 , searchTimeout = None Integer

@@ -4,10 +4,13 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
-import Beckn.Types.App (BaseUrl, EnvR (..), FlowHandlerR)
+import Beckn.Types.App
 import Beckn.Types.Common (FlowR)
-import Beckn.Utils.Common (runFlowR, throwAuthError, withFlowHandler)
+import Beckn.Types.Credentials
+import Beckn.Types.Storage.Organization
+import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (HasEnvEntry (..))
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Lens ((?=))
@@ -64,6 +67,13 @@ class LookupMethod lookup where
   -- | Description of this lookup scheme as it appears in swagger.
   lookupDescription :: Text
 
+class AuthenticatingEntity r where
+  getSelfId :: r -> Text
+  getSelfUrl :: r -> BaseUrl
+  getRegistry :: r -> [Credential]
+  getSigningKeys :: r -> [SigningKey]
+  getSignatureExpiry :: r -> NominalDiffTime
+
 -- | Implementation of lookup.
 data LookupAction lookup r = LookupMethod lookup =>
   LookupAction
@@ -71,6 +81,39 @@ data LookupAction lookup r = LookupMethod lookup =>
     -- and a key that can be used for signature verification
     runLookup :: HttpSig.SignaturePayload -> FlowR r (LookupResult lookup, HttpSig.PublicKey, BaseUrl)
   }
+
+data LookupRegistry = LookupRegistry
+
+instance LookupMethod LookupRegistry where
+  type LookupResult LookupRegistry = Organization
+  lookupDescription =
+    "Looks up the given key ID in the Beckn registry."
+
+lookupRegistryAction ::
+  AuthenticatingEntity r =>
+  (ShortOrganizationId -> FlowR r (Maybe Organization)) ->
+  LookupAction LookupRegistry r
+lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
+  appEnv <- ask
+  let selfUrl = getSelfUrl appEnv
+  let registry = getRegistry appEnv
+  L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show signaturePayload
+  let uniqueKeyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
+  let mCred = Registry.lookupKey uniqueKeyId registry
+  cred <- case mCred of
+    Just c -> return c
+    Nothing -> do
+      L.logError @Text "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
+      throwError401 "INVALID_KEY_ID"
+  org <-
+    findOrgByShortId (ShortOrganizationId $ cred ^. #shortOrgId)
+      >>= maybe (throwError401 "ORG_NOT_FOUND") pure
+  pk <- case Registry.decodeKey $ cred ^. #signPubKey of
+    Nothing -> do
+      L.logError @Text "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
+      throwError401 "INVALID_PUBLIC_KEY"
+    Just key -> return key
+  return (org, pk, selfUrl)
 
 -- | This server part implementation accepts a signature in @header@ and
 -- verifies it using @LookupAction@.
@@ -145,15 +188,23 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
-signatureAuthManager :: MonadIO m => R.FlowRuntime -> r -> Text -> HttpSig.PrivateKey -> Text -> Text -> NominalDiffTime -> m Http.Manager
-signatureAuthManager flowRt appEnv header key shortOrgId uniqueKeyId validity = do
-  liftIO $
-    Http.newManager
-      Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
+signatureAuthManager ::
+  AuthenticatingEntity r =>
+  R.FlowRuntime ->
+  r ->
+  Text ->
+  HttpSig.PrivateKey ->
+  Text ->
+  IO Http.Manager
+signatureAuthManager flowRt appEnv header key uniqueKeyId = do
+  Http.newManager
+    Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = do
+      let shortOrgId = getSelfId appEnv
+      let signatureExpiry = getSignatureExpiry appEnv
       now <- L.runIO getPOSIXTime
-      let params = HttpSig.mkSignatureParams shortOrgId uniqueKeyId now validity HttpSig.Ed25519
+      let params = HttpSig.mkSignatureParams shortOrgId uniqueKeyId now signatureExpiry HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
       let headers = Http.requestHeaders req
       let signatureMsg = HttpSig.makeSignatureString params body headers
@@ -224,6 +275,25 @@ withBecknAuthProxy handler lookupAction sign proxySign req = do
   lookupResult <- withFlowHandler $ verifySignature "WWW-Authenticate" lookupAction sign req
   _ <- withFlowHandler $ verifySignature "Proxy-Authenticate" lookupAction proxySign req
   handler lookupResult req
+
+prepareAuthManager ::
+  AuthenticatingEntity r =>
+  R.FlowRuntime ->
+  r ->
+  Text ->
+  IO Http.Manager
+prepareAuthManager flowRt appEnv header = do
+  let shortOrgId = getSelfId appEnv
+  let registry = getRegistry appEnv
+  let signingKeys = getSigningKeys appEnv
+  case Registry.lookupOrg shortOrgId registry of
+    Nothing -> error $ "No credentials for: " <> shortOrgId
+    Just creds -> do
+      let uniqueKeyId = creds ^. #uniqueKeyId
+      case Registry.lookupSigningKey uniqueKeyId signingKeys >>= Registry.decodeKey . signPrivKey of
+        Nothing -> error $ "No private key found for credential: " <> uniqueKeyId
+        Just privateKey ->
+          signatureAuthManager flowRt appEnv header privateKey uniqueKeyId
 
 instance
   ( S.HasSwagger api,

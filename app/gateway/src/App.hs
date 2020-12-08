@@ -14,9 +14,8 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (exceptionResponse)
-import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
@@ -35,24 +34,30 @@ import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
 runGateway :: (AppCfg -> AppCfg) -> IO ()
 runGateway configModifier = do
-  appCfg@AppCfg {..} <- configModifier <$> readDhallConfigDefault "beckn-gateway"
+  appCfg <- configModifier <$> readDhallConfigDefault "beckn-gateway"
+  let port = appCfg ^. #port
+  let metricsPort = appCfg ^. #metricsPort
   Metrics.serve metricsPort
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
   shutdown <- newEmptyTMVarIO
   activeConnections <- newTVarIO (0 :: Int)
   void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
-  let loggerCfg = getEulerLoggerConfig loggerConfig
+  let loggerCfg = getEulerLoggerConfig $ appCfg ^. #loggerConfig
       settings =
         setOnExceptionResponse gatewayExceptionResponse $
           setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
             setOnClose (\_ -> atomically $ modifyTVar' activeConnections (subtract 1)) $
               setPort port defaultSettings
+  let redisCfg = appCfg ^. #redisCfg
+  let migrationPath = appCfg ^. #migrationPath
+  let dbCfg = appCfg ^. #dbCfg
+  let autoMigrate = appCfg ^. #autoMigrate
   cache <- C.newCache Nothing
   threadId <- forkIO $
     E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
       let appEnv = mkAppEnv appCfg cache
-      authManager <- prepareAuthManager flowRt appCfg appEnv
+      authManager <- prepareAuthManager flowRt appEnv "Proxy-Authorization"
       let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
       putStrLn @String "Initializing Redis Connections..."
       try (runFlowR flowRt' appCfg $ prepareRedisConnections redisCfg) >>= \case
@@ -80,18 +85,6 @@ runGateway configModifier = do
         let sleep = 100000
         threadDelay sleep
         waitForDrain activeConnections $ ms - sleep
-
-    prepareAuthManager flowRt cfg appEnv = do
-      let selfId = cfg ^. #selfId
-      creds <-
-        runFlowR flowRt appEnv $
-          Registry.lookupOrg selfId
-            >>= maybe (error $ "No creds found for id: " <> selfId) pure
-      let uniqueKeyId = creds ^. #uniqueKeyId
-      privateKey <-
-        maybe (error $ "No private key found for credential: " <> show uniqueKeyId) pure (Registry.decodeKey <$> creds ^. #signPrivKey)
-          >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #signPrivKey)) pure
-      signatureAuthManager flowRt appEnv "Proxy-Authorization" privateKey selfId uniqueKeyId (appEnv ^. #signatureExpiry)
 
 gatewayExceptionResponse :: SomeException -> Response
 gatewayExceptionResponse = exceptionResponse

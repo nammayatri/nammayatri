@@ -18,6 +18,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -37,6 +38,7 @@ import qualified Product.Support as Support
 import qualified Product.TrackTrip as TrackTrip
 import qualified Product.Update as Update
 import Servant
+import Storage.Queries.Organization
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
@@ -54,7 +56,6 @@ import Types.Geofencing
 import Utils.Auth
   ( VerificationAPIKey,
     VerifyAPIKey,
-    lookupRegistryAction,
   )
 import Utils.Common (TokenAuth)
 
@@ -134,7 +135,9 @@ type SearchAPI =
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> (HttpSig.withBecknAuthProxy Search.searchCb lookupRegistryAction :<|> Search.searchCb)
+    :<|> (HttpSig.withBecknAuthProxy Search.searchCb lookup :<|> Search.searchCb)
+  where
+    lookup = lookupRegistryAction findOrgByShortId
 
 -------- Confirm Flow --------
 type ConfirmAPI =

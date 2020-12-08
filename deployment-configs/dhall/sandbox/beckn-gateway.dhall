@@ -34,6 +34,8 @@ in
 , metricsPort = +9999
 , selfId = "JUSPAY.BG.1"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , searchTimeout = None Integer

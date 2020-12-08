@@ -14,9 +14,8 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server
-import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -45,10 +44,10 @@ prepareAppOptions =
 
 runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
 runTransporterBackendApp' appEnv settings = do
-  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
+  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing DB Connections..."
-    authManager <- prepareAuthManager flowRt
+    authManager <- prepareAuthManager flowRt appEnv "Authorization"
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     try (runFlowR flowRt appEnv prepareDBConnections) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
@@ -64,19 +63,6 @@ runTransporterBackendApp' appEnv settings = do
                 putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
             _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
             runSettings settings $ App.run (App.EnvR flowRt' appEnv)
-  where
-    prepareAuthManager flowRt = do
-      let selfId = appEnv ^. #selfId
-      creds <-
-        runFlowR flowRt appEnv $
-          Registry.lookupOrg selfId
-            >>= maybe (error $ "No creds found for id: " <> selfId) pure
-      let uniqueKeyId = creds ^. #uniqueKeyId
-
-      privateKey <-
-        maybe (error $ "No private key found for credential: " <> show uniqueKeyId) pure (Registry.decodeKey <$> creds ^. #signPrivKey)
-          >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #signPrivKey)) pure
-      signatureAuthManager flowRt appEnv "Authorization" privateKey selfId uniqueKeyId (appEnv ^. #signatureExpiry)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse = exceptionResponse

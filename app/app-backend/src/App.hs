@@ -14,9 +14,8 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server
-import Beckn.Utils.Servant.SignatureAuth (signatureAuthManager, signatureAuthManagerKey)
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -45,21 +44,10 @@ prepareAppOptions =
 
 runAppBackend' :: AppEnv -> Settings -> IO ()
 runAppBackend' appEnv settings = do
-  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
+  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
-    let selfId = appEnv ^. #bapSelfId
-    authManager <- do
-      mbCreds <-
-        runFlowR flowRt appEnv $
-          Registry.lookupOrg selfId
-      case mbCreds of
-        Nothing -> error $ "No credentials for: " <> selfId
-        Just creds -> do
-          let privKey = fromJust $ Registry.decodeKey =<< creds ^. #signPrivKey
-          let uniqueKeyId = creds ^. #uniqueKeyId
-          -- 10 minutes should be long enough for messages to go through
-          signatureAuthManager flowRt appEnv "Authorization" privKey selfId uniqueKeyId (appEnv ^. #signatureExpiry)
+    authManager <- prepareAuthManager flowRt appEnv "Authorization"
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections

@@ -6,8 +6,10 @@ import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
+import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.Geofencing
@@ -25,6 +27,8 @@ data AppEnv = AppEnv
     xProviderUri :: BaseUrl,
     bapSelfId :: Text,
     bapNwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
     searchConfirmExpiry :: Maybe Integer,
     searchCaseExpiry :: Maybe Integer,
     cronAuthKey :: Maybe CronAuthKey,
@@ -49,3 +53,10 @@ type Flow = FlowR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
+
+instance AuthenticatingEntity AppEnv where
+  getSelfId = bapSelfId
+  getSelfUrl = bapNwAddress
+  getRegistry = credRegistry
+  getSigningKeys = signingKeys
+  getSignatureExpiry = signatureExpiry

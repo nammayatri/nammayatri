@@ -17,8 +17,7 @@ run env =
       BU.run transporterAPI transporterServer context env
   where
     context =
-      lookupRegistryAction
-        :. verifyApiKey
+      verifyApiKey
         :. verifyTokenAction
         :. verifyOrgAction
         :. validateAdminAction

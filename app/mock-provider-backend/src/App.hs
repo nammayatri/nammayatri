@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module App
   ( runMockProvider,
   )
@@ -25,7 +27,7 @@ runMockProvider :: (AppEnv -> AppEnv) -> IO ()
 runMockProvider configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "mock-provider-backend"
   Metrics.serve (metricsPort appEnv)
-  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
+  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse mockProviderExceptionResponse $
           setPort (port appEnv) defaultSettings

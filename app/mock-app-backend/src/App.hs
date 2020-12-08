@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module App
   ( runMockApp,
   )
@@ -25,7 +27,7 @@ runMockApp :: (AppEnv -> AppEnv) -> IO ()
 runMockApp configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "mock-app-backend"
   Metrics.serve (metricsPort appEnv)
-  let loggerCfg = getEulerLoggerConfig $ loggerConfig appEnv
+  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
           setPort (port appEnv) defaultSettings
