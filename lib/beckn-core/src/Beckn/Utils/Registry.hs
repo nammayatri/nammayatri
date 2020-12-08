@@ -27,11 +27,12 @@ registry =
     mkCredential keyId orgId =
       Credential keyId orgId Nothing Nothing Nothing examplePubKey examplePrivKey examplePubKey examplePrivKey exampleValidFrom exampleValidTill
     mkNSDLCredential keyId orgId =
-      Credential keyId orgId Nothing Nothing Nothing nsdlPubKey Nothing nsdlPubKey Nothing exampleValidFrom exampleValidTill
+      Credential keyId orgId Nothing Nothing Nothing nsdlPubKey nsdlPrivKey nsdlPubKey nsdlPrivKey exampleValidFrom exampleValidTill
 
     examplePubKey = "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
     examplePrivKey = Just "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
-    nsdlPubKey = "7bcdd2676ec1f08c3da1f6bc41f7edc4e40666f4010f07c355ab698be51df8ad"
+    nsdlPubKey = "RWc4RV9QUCV1yMb3xOPppJOO3Wmlb5E5G8raFj4UmIQ="
+    nsdlPrivKey = Just "dmA/OxVM7C8WVZMF0Q7aFarUTp2hNUVZRJytAdG1s0M="
     exampleValidFrom = posixSecondsToUTCTime 1605232000
     exampleValidTill = posixSecondsToUTCTime 1920592000
 

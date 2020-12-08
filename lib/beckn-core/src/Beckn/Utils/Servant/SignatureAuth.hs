@@ -19,6 +19,7 @@ import qualified Data.Swagger as DS
 import Data.Time.Clock (NominalDiffTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
@@ -142,6 +143,10 @@ signatureAuthManager header key orgId keyId validity = do
       now <- getPOSIXTime
       let params = HttpSig.mkSignatureParams orgId keyId now validity HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
+      let headers = Http.requestHeaders req
+      let signatureMsg = HttpSig.makeSignatureString params body headers
+      putStrLn @Text $ decodeUtf8 $ "[DEBUG]: Request: " <> body
+      putStrLn @Text $ decodeUtf8 $ "[DEBUG]: Signature: " <> signatureMsg
       case addSignature body params req of
         Just signedReq -> pure signedReq
         Nothing -> pure req
@@ -173,9 +178,22 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
         ]
   (lookupResult, key, selfUrl) <- runLookup signPayload
   let host = fromString $ baseUrlHost selfUrl
-  unless (HttpSig.verify key (signPayload ^. #params) (BSL.toStrict . J.encode $ req) headers (signPayload ^. #signature)) $
+  isVerified <-
+    either (throwVerificationFail host) pure $
+      HttpSig.verify
+        key
+        (signPayload ^. #params)
+        (BSL.toStrict . J.encode $ req)
+        headers
+        (signPayload ^. #signature)
+  unless isVerified $ do
+    L.logError @Text "verifySignature" $ "Signature is not valid."
     throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
   pure lookupResult
+  where
+    throwVerificationFail host err = do
+      L.logError @Text "verifySignature" $ "Failed to verify the signature. Error: " <> err
+      throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
 
 withBecknAuth :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
 withBecknAuth handler lookupAction sign req = do

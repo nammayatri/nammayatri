@@ -142,8 +142,76 @@ verifyRequest =
     let eSig = Base64.decode exampleSignature
     case eSig of
       Left err -> assertFailure $ "Could not decode request: " <> err
-      Right sig -> assertBool "Signature is valid" $ do
-        HttpSig.verify publicKey exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig
+      Right sig -> do
+        case HttpSig.verify publicKey exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig of
+          Left err -> assertFailure $ "Could not verify signature: " <> show err
+          Right isVerified -> assertBool "Signature is valid" isVerified
+
+exampleSignatureNSDL :: ByteString
+exampleSignatureNSDL = "3qlCaqdWAP1zv95jYaVp+KgPhyCvsIhxJLQkyhJBiB30emxa7ZzXXMBMFanZUJmD+5Dizwb8W53P/nN4CT3WDw=="
+
+exampleKeyIdNSDL :: ByteString
+exampleKeyIdNSDL = "pilot-gateway-1.beckn.nsdl.co.in|nsdl_bg_1|ed25519"
+
+exampleHeadersNSDL :: [(Text, ByteString)]
+exampleHeadersNSDL =
+  [ ("(created)", ""),
+    ("(expires)", ""),
+    ("digest", "BLAKE-512=20cb8f1175aaa3f23f020b3962300c483ba33dda3f1ae32734605db4d834419f874f19963636ff0c79d45a054af895b20fdac745f354c865d938ef6e801b8e33")
+  ]
+
+exampleParamsNSDL :: HttpSig.SignatureParams
+exampleParamsNSDL =
+  let Right keyId = HttpSig.decodeKeyId $ decodeUtf8 exampleKeyIdNSDL
+   in HttpSig.SignatureParams
+        keyId
+        HttpSig.Ed25519
+        (fst <$> exampleHeadersNSDL)
+        (toTime 1607417584)
+        (toTime 1607418184)
+
+publicKeyNSDL :: ByteString
+Right publicKeyNSDL = Base64.decode "RWc4RV9QUCV1yMb3xOPppJOO3Wmlb5E5G8raFj4UmIQ="
+
+privateKeyNSDL :: ByteString
+Right privateKeyNSDL = Base64.decode "dmA/OxVM7C8WVZMF0Q7aFarUTp2hNUVZRJytAdG1s0M="
+
+exampleSignatureHeaderNSDL :: ByteString
+exampleSignatureHeaderNSDL =
+  "Signature keyId=\"" <> exampleKeyIdNSDL <> "\",algorithm=\"ed25519\",\n"
+    <> "created="
+    <> show (1607417584 :: Int)
+    <> ",expires="
+    <> show (1607418184 :: Int)
+    <> ",\n"
+    <> "headers=\""
+    <> (encodeUtf8 . T.intercalate " " $ fst <$> exampleHeadersNSDL)
+    <> "\",\n"
+    <> "signature=\""
+    <> exampleSignatureNSDL
+    <> "\""
+
+signRequestNSDL :: TestTree
+signRequestNSDL =
+  testCase "Sign a NSDL request" $ do
+    let mSig =
+          HttpSig.sign privateKeyNSDL exampleParamsNSDL exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeadersNSDL)
+    case mSig of
+      Nothing -> assertFailure "Could not sign request"
+      Just sig ->
+        -- filtering '\n'
+        HttpSig.encode (HttpSig.SignaturePayload sig exampleParamsNSDL) @?= dropNewline exampleSignatureHeaderNSDL
+
+verifyRequestNSDL :: TestTree
+verifyRequestNSDL =
+  testCase "Verify a NSDL example signed request" $ do
+    let eSig = Base64.decode exampleSignatureNSDL
+    case eSig of
+      Left err -> assertFailure $ "Could not decode request: " <> err
+      Right sig -> do
+        case HttpSig.verify publicKeyNSDL exampleParamsNSDL exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeadersNSDL) sig of
+          Left err -> assertFailure $ "Could not verify signature: " <> show err
+          Right isVerified -> assertBool "Signature is not valid" isVerified
 
 signatureAuthTests :: TestTree
 signatureAuthTests =
@@ -153,5 +221,7 @@ signatureAuthTests =
       simpleEncode,
       checkSignatureMessage,
       signRequest,
-      verifyRequest
+      verifyRequest,
+      signRequestNSDL,
+      verifyRequestNSDL
     ]
