@@ -143,10 +143,6 @@ signatureAuthManager header key orgId keyId validity = do
       now <- getPOSIXTime
       let params = HttpSig.mkSignatureParams orgId keyId now validity HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
-      let headers = Http.requestHeaders req
-      let signatureMsg = HttpSig.makeSignatureString params body headers
-      putStrLn @Text $ decodeUtf8 $ "[DEBUG]: Request: " <> body
-      putStrLn @Text $ decodeUtf8 $ "[DEBUG]: Signature: " <> signatureMsg
       case addSignature body params req of
         Just signedReq -> pure signedReq
         Nothing -> pure req
@@ -192,7 +188,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   pure lookupResult
   where
     throwVerificationFail host err = do
-      L.logError @Text "verifySignature" $ "Failed to verify the signature. Error: " <> err
+      L.logError @Text "verifySignature" $ "Failed to verify the signature. Error: " <> show err
       throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
 
 withBecknAuth :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b

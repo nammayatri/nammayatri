@@ -229,14 +229,12 @@ sign key params body allHeaders =
       signature = Ed25519.sign <$> sk <*> pk <*> pure msg
    in Crypto.maybeCryptoError $ BA.convert <$> signature
 
-verify :: PublicKey -> SignatureParams -> ByteString -> [Header] -> Signature -> Either Text Bool
+verify :: PublicKey -> SignatureParams -> ByteString -> [Header] -> Signature -> Either Crypto.CryptoError Bool
 verify key params body allHeaders signatureBs =
   let msg = makeSignatureString params body allHeaders
       pk = Ed25519.publicKey key
       signature = Ed25519.signature signatureBs
-   in case Ed25519.verify <$> pk <*> pure msg <*> signature of
-        Crypto.CryptoPassed isVerified -> pure isVerified
-        Crypto.CryptoFailed err -> Left $ show err
+   in Crypto.eitherCryptoError $ Ed25519.verify <$> pk <*> pure msg <*> signature
 
 mkSignatureRealm :: Text -> Text -> Header
 mkSignatureRealm headerName host =
