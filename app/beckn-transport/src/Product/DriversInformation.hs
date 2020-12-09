@@ -5,8 +5,8 @@ module Product.DriversInformation (handleActiveDrivers) where
 import qualified App.Types as App
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
-import Beckn.Utils.Common (checkDBError, fromMaybeM500, withFlowHandler)
-import Data.Time (diffUTCTime, nominalDay)
+import Beckn.Utils.Common (checkDBError, fromMaybeM500, getCurrTime, withFlowHandler)
+import Data.Time (addUTCTime, diffUTCTime, nominalDay)
 import EulerHS.Prelude
 import Storage.Queries.Person (findAllActiveDrivers)
 import Storage.Queries.ProductInstance (getDriverRides)
@@ -15,15 +15,17 @@ import Types.API.DriversInformation (ActiveDriversResponse (..), DriverInformati
 handleActiveDrivers :: RegistrationToken -> App.FlowHandler ActiveDriversResponse
 handleActiveDrivers _ = withFlowHandler $ do
   activeDriversIds <- fmap Person._id <$> findAllActiveDrivers
-  activeDrivers <- traverse driverInfoById activeDriversIds
+  now <- getCurrTime
+  let fromTime = addUTCTime (- timePeriod) now
+  activeDrivers <- traverse (driverInfoById fromTime now) activeDriversIds
   return $
     ActiveDriversResponse
       { active_drivers = activeDrivers,
         time_period = timePeriod
       }
   where
-    driverInfoById driverId = do
-      rides <- checkDBError =<< getDriverRides driverId timePeriod
+    driverInfoById fromTime toTime driverId = do
+      rides <- checkDBError =<< getDriverRides driverId fromTime toTime
       totalRideTime <- foldrM sumProductInstancesByTime 0 rides
       return $
         DriverInformation
