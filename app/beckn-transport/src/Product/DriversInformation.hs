@@ -12,7 +12,7 @@ import Data.Time (UTCTime, addUTCTime, nominalDay)
 import EulerHS.Prelude hiding (Handle)
 import Storage.Queries.Person (findAllActiveDrivers)
 import Storage.Queries.ProductInstance (getDriverRides)
-import Types.API.DriversInformation (ActiveDriversResponse (..), DriverInformation (..))
+import Types.API.DriversInformation (ActiveDriversResponse, DriverInformation (..))
 
 data Handle m = Handle
   { findActiveDrivers :: m [Person.Person],
@@ -35,12 +35,7 @@ runLogic Handle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   now <- getCurrentTime
   let fromTime = addUTCTime (- timePeriod) now
-  activeDrivers <- traverse (driverInfoById fromTime now) activeDriversIds
-  return $
-    ActiveDriversResponse
-      { active_drivers = activeDrivers,
-        time_period = timePeriod
-      }
+  traverse (driverInfoById fromTime now) activeDriversIds
   where
     driverInfoById fromTime toTime driverId = do
       rides <- getDriverRidesInPeriod driverId fromTime toTime

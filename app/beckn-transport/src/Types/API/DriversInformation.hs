@@ -1,18 +1,13 @@
 module Types.API.DriversInformation
-  ( ActiveDriversResponse (..),
+  ( ActiveDriversResponse,
     DriverInformation (..),
   )
 where
 
 import Beckn.Types.App (PersonId)
-import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 
-data ActiveDriversResponse = ActiveDriversResponse
-  { active_drivers :: [DriverInformation],
-    time_period :: NominalDiffTime
-  }
-  deriving (Generic, ToJSON)
+type ActiveDriversResponse = [DriverInformation]
 
 data DriverInformation = DriverInformation
   { driver_id :: PersonId,
