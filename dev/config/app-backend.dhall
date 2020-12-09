@@ -57,8 +57,6 @@ in
 , xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
-, nsdlUsername = None Text
-, nsdlPassword = None Text
 , xProviderUri = providerUri
 , bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
 , bapNwAddress = Some "http://localhost:8013/v1/"
@@ -75,4 +73,5 @@ in
 , geofencingConfig = geofencingConfig
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
+, signatureExpiry = common.signatureExpiry
 }

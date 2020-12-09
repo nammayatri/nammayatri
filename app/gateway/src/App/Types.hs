@@ -6,6 +6,7 @@ import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
 import qualified Data.Cache as C
+import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 
@@ -24,7 +25,8 @@ data AppCfg = AppCfg
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
-    fmdDomainVersion :: Text
+    fmdDomainVersion :: Text,
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 
@@ -42,7 +44,8 @@ data AppEnv = AppEnv
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
-    fmdDomainVersion :: Text
+    fmdDomainVersion :: Text,
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic)
 

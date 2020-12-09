@@ -7,6 +7,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
+import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 
@@ -18,8 +19,6 @@ data AppEnv = AppEnv
     metricsPort :: Int,
     xGatewaySelector :: Maybe Text,
     xGatewayNsdlUrl :: Maybe BaseUrl,
-    nsdlUsername :: Maybe Text,
-    nsdlPassword :: Maybe Text,
     xAppUri :: BaseUrl,
     selfId :: Maybe Text,
     nwAddress :: Maybe BaseUrl,
@@ -33,7 +32,8 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    traceFlag :: TraceFlag
+    traceFlag :: TraceFlag,
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 

@@ -49,8 +49,6 @@ in
 , metricsPort = +9999
 , xGatewaySelector = Some "JUSPAY"
 , xGatewayNsdlUrl = Some nsdlUrl
-, nsdlUsername = Some sec.nsdlUsername
-, nsdlPassword = Some sec.nsdlPassword
 , xAppUri = appUri
 , selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
 , nwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/transport/v1/"
@@ -65,4 +63,5 @@ in
 , domainVersion = "0.8.2"
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
+, signatureExpiry = common.signatureExpiry
 }

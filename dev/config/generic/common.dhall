@@ -42,4 +42,5 @@ in { defaultPoolConfig = defaultPoolConfig
    , TraceFlag = TraceFlag
    , LogLevel = LogLevel
    , ExotelCfg = ExotelCfg
+   , signatureExpiry = +600 -- in seconds
    }

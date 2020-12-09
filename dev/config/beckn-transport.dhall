@@ -47,8 +47,6 @@ in
 , metricsPort = +9997
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
-, nsdlUsername = None Text
-, nsdlPassword = None Text
 , xAppUri = appUri
 , selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"
 , nwAddress = Some "http://localhost:8014/v1/"
@@ -63,4 +61,5 @@ in
 , domainVersion = "0.8.2"
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
+, signatureExpiry = common.signatureExpiry
 }

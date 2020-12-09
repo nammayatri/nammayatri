@@ -58,8 +58,6 @@ in
 , xGatewayApiKey = None Text
 , xGatewaySelector = Some "JUSPAY"
 , xGatewayNsdlUrl = Some nsdlUrl
-, nsdlUsername = Some sec.nsdlUsername
-, nsdlPassword = Some sec.nsdlPassword
 , xProviderUri = providerUri
 , bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
 , bapNwAddress = Some "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
@@ -76,4 +74,5 @@ in
 , geofencingConfig = geofencingConfig
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
+, signatureExpiry = common.signatureExpiry
 }

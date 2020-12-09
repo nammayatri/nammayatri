@@ -43,4 +43,5 @@ in
 , mobilityDomainVersion = "0.8.2"
 , fmdCoreVersion = "0.8.0"
 , fmdDomainVersion = "0.8.3"
+, signatureExpiry = common.signatureExpiry
 }

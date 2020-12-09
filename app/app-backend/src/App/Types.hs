@@ -8,6 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
+import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.Geofencing
 
@@ -21,8 +22,6 @@ data AppEnv = AppEnv
     xGatewayApiKey :: Maybe Text,
     xGatewaySelector :: Maybe Text,
     xGatewayNsdlUrl :: Maybe BaseUrl,
-    nsdlUsername :: Maybe Text,
-    nsdlPassword :: Maybe Text,
     xProviderUri :: BaseUrl,
     bapSelfId :: Maybe Text,
     bapNwAddress :: Maybe BaseUrl,
@@ -38,7 +37,8 @@ data AppEnv = AppEnv
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     geofencingConfig :: GeofencingConfig,
-    traceFlag :: TraceFlag
+    traceFlag :: TraceFlag,
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 
