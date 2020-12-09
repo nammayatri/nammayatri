@@ -76,7 +76,7 @@ runTransporterBackendApp' appEnv settings = do
       privateKey <-
         maybe (error $ "No private key found for credential: " <> show keyId) pure (Registry.decodeKey <$> creds ^. #_signPrivKey)
           >>= maybe (error $ "No private key to decode: " <> fromMaybe "No Key" (creds ^. #_signPrivKey)) pure
-      signatureAuthManager "Authorization" privateKey selfId keyId (appEnv ^. #signatureExpiry)
+      signatureAuthManager flowRt appEnv "Authorization" privateKey selfId keyId (appEnv ^. #signatureExpiry)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse = exceptionResponse

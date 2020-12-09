@@ -6,7 +6,7 @@ module Beckn.Utils.Servant.SignatureAuth where
 
 import Beckn.Types.App (BaseUrl, EnvR (runTime), FlowHandlerR)
 import Beckn.Types.Common (FlowR)
-import Beckn.Utils.Common (throwAuthError, withFlowHandler)
+import Beckn.Utils.Common (runFlowR, throwAuthError, withFlowHandler)
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import Beckn.Utils.Servant.Server (HasEnvEntry (..))
 import qualified Beckn.Utils.SignatureAuth as HttpSig
@@ -26,6 +26,7 @@ import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
+import qualified Network.HTTP.Types as Http
 import qualified Network.Wai as Wai
 import Servant
   ( FromHttpApiData (parseHeader),
@@ -133,17 +134,21 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
-signatureAuthManager :: MonadIO m => Text -> HttpSig.PrivateKey -> Text -> Text -> NominalDiffTime -> m Http.Manager
-signatureAuthManager header key orgId keyId validity = do
+signatureAuthManager :: MonadIO m => R.FlowRuntime -> r -> Text -> HttpSig.PrivateKey -> Text -> Text -> NominalDiffTime -> m Http.Manager
+signatureAuthManager flowRt appEnv header key orgId keyId validity = do
   liftIO $
     Http.newManager
-      Http.tlsManagerSettings {Http.managerModifyRequest = doSignature}
+      Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = do
-      now <- getPOSIXTime
+      now <- L.runIO getPOSIXTime
       let params = HttpSig.mkSignatureParams orgId keyId now validity HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
-      case addSignature body params req of
+      let headers = Http.requestHeaders req
+      let signatureMsg = HttpSig.makeSignatureString params body headers
+      L.logDebug @Text "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
+      L.logDebug @Text "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
+      case addSignature body params headers req of
         Just signedReq -> pure signedReq
         Nothing -> pure req
     getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
@@ -152,10 +157,9 @@ signatureAuthManager header key orgId keyId validity = do
 
     -- FIXME: we don't currently deal with Content-Length not being there (this is
     -- filled later, so we might need to have some special handling)
-    addSignature :: ByteString -> HttpSig.SignatureParams -> Http.Request -> Maybe Http.Request
-    addSignature body params req =
-      let headers = Http.requestHeaders req
-          ciHeader = CI.mk $ encodeUtf8 header
+    addSignature :: ByteString -> HttpSig.SignatureParams -> Http.RequestHeaders -> Http.Request -> Maybe Http.Request
+    addSignature body params headers req =
+      let ciHeader = CI.mk $ encodeUtf8 header
        in -- We check if the header exists because `managerModifyRequest` might be
           -- called multiple times, so we already added it once, let's skip right over
           if isJust $ lookup ciHeader headers
@@ -167,26 +171,33 @@ signatureAuthManager header key orgId keyId validity = do
 
 verifySignature :: ToJSON body => Text -> LookupAction lookup r -> HttpSig.SignaturePayload -> body -> FlowR r (LookupResult lookup)
 verifySignature headerName (LookupAction runLookup) signPayload req = do
-  let headers =
-        [ ("(created)", maybe "" show (signPayload ^. #params . #created)),
-          ("(expires)", maybe "" show (signPayload ^. #params . #expires)),
-          ("digest", "")
-        ]
   (lookupResult, key, selfUrl) <- runLookup signPayload
   let host = fromString $ baseUrlHost selfUrl
-  isVerified <-
-    either (throwVerificationFail host) pure $
-      HttpSig.verify
-        key
-        (signPayload ^. #params)
-        (BSL.toStrict . J.encode $ req)
-        headers
-        (signPayload ^. #signature)
+  let body = BSL.toStrict . J.encode $ req -- TODO: we should be able to receive raw body without using Aeson encoders. Maybe use WAI middleware to catch a raw body before handling a req by Servant?
+  isVerified <- performVerification key host body
   unless isVerified $ do
-    L.logError @Text "verifySignature" $ "Signature is not valid."
+    L.logError @Text "verifySignature" "Signature is not valid."
     throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
   pure lookupResult
   where
+    performVerification key host body = do
+      let headers =
+            [ ("(created)", maybe "" show (signPayload ^. #params . #created)),
+              ("(expires)", maybe "" show (signPayload ^. #params . #expires)),
+              ("digest", "")
+            ]
+      let signatureParams = signPayload ^. #params
+      let signature = signPayload ^. #signature
+      let signatureMsg = HttpSig.makeSignatureString signatureParams body headers
+      L.logDebug @Text "verifySignature" $
+        "Start verifying signature. Signature: " +|| signature ||+ ", Signature Message: " +|| signatureMsg ||+ ""
+      either (throwVerificationFail host) pure $
+        HttpSig.verify
+          key
+          signatureParams
+          body
+          headers
+          signature
     throwVerificationFail host err = do
       L.logError @Text "verifySignature" $ "Failed to verify the signature. Error: " <> show err
       throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"

@@ -60,7 +60,7 @@ runAppBackend' appEnv settings = do
             let privKey = fromJust $ Registry.decodeKey =<< creds ^. #_signPrivKey
             let keyId = creds ^. #_keyId
             -- 10 minutes should be long enough for messages to go through
-            signatureAuthManager "Authorization" privKey selfId keyId (appEnv ^. #signatureExpiry)
+            signatureAuthManager flowRt appEnv "Authorization" privKey selfId keyId (appEnv ^. #signatureExpiry)
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections
