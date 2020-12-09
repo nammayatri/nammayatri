@@ -47,7 +47,7 @@ in
 , smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9999
-, xGatewaySelector = Some "JUSPAY"
+, xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xAppUri = appUri
 , selfId = Some "JUSPAY.MOBILITY.PROVIDER.UAT.1"

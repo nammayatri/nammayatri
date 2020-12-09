@@ -58,7 +58,7 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = Some "JUSPAY"
+, xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xProviderUri = providerUri
 , bapSelfId = Some "JUSPAY.MOBILITY.APP.UAT.1"
