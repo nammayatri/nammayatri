@@ -10,7 +10,7 @@ import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude
--- import Network.HTTP.Types (methodPost)
+import Network.HTTP.Types (methodPost)
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -20,22 +20,22 @@ Right secretKey = Base64.decode "faGTaRPYJx8OQ7zbQOlrevtWTmqs+hAJr2tn08Dgx1U="
 publicKey :: ByteString
 Right publicKey = Base64.decode "oUvUHbL/9ZU4JT0RjcnAvgSXpXtyNTDBWRWDpnlP4N0="
 
--- examplePath :: ByteString
--- examplePath = "/foo?param=value&pet=dog"
+examplePath :: ByteString
+examplePath = "/foo?param=value&pet=dog"
 
--- exampleMethod :: ByteString
--- exampleMethod = methodPost
+exampleMethod :: ByteString
+exampleMethod = methodPost
 
 exampleHeaders :: [(Text, ByteString)]
 exampleHeaders =
-  [ -- ("(request-target)", exampleMethod <> " " <> examplePath),
+  [ ("(request-target)", exampleMethod <> " " <> examplePath),
     ("(created)", ""),
     ("(expires)", ""),
-    -- ("host", "example.com"),
-    -- ("date", "Sun, 05 Jan 2014 21:31:40 GMT"),
-    -- ("content-type", "application/json"),
-    ("digest", "BLAKE-512=20cb8f1175aaa3f23f020b3962300c483ba33dda3f1ae32734605db4d834419f874f19963636ff0c79d45a054af895b20fdac745f354c865d938ef6e801b8e33")
-    -- ("content-length", "18")
+    ("host", "example.com"),
+    ("date", "Sun, 05 Jan 2014 21:31:40 GMT"),
+    ("content-type", "application/json"),
+    ("digest", "BLAKE-512=20cb8f1175aaa3f23f020b3962300c483ba33dda3f1ae32734605db4d834419f874f19963636ff0c79d45a054af895b20fdac745f354c865d938ef6e801b8e33"),
+    ("content-length", "18")
   ]
 
 exampleBody :: ByteString
@@ -57,14 +57,14 @@ exampleSignatureMessage :: ByteString
 exampleSignatureMessage =
   encodeUtf8 $
     unlines
-      [ -- "(request-target): " <> decodeUtf8 methodPost <> " " <> decodeUtf8 examplePath,
+      [ "(request-target): " <> decodeUtf8 methodPost <> " " <> decodeUtf8 examplePath,
         "(created): " <> show exampleCreated,
         "(expires): " <> show exampleExpires,
-        -- "host: example.com",
-        -- "date: Sun, 05 Jan 2014 21:31:40 GMT",
-        -- "content-type: application/json",
-        "digest: BLAKE-512=MjBjYjhmMTE3NWFhYTNmMjNmMDIwYjM5NjIzMDBjNDgzYmEzM2RkYTNmMWFlMzI3MzQ2MDVkYjRkODM0NDE5Zjg3NGYxOTk2MzYzNmZmMGM3OWQ0NWEwNTRhZjg5NWIyMGZkYWM3NDVmMzU0Yzg2NWQ5MzhlZjZlODAxYjhlMzM="
-        -- "content-length: 18"
+        "host: example.com",
+        "date: Sun, 05 Jan 2014 21:31:40 GMT",
+        "content-type: application/json",
+        "digest: BLAKE-512=MjBjYjhmMTE3NWFhYTNmMjNmMDIwYjM5NjIzMDBjNDgzYmEzM2RkYTNmMWFlMzI3MzQ2MDVkYjRkODM0NDE5Zjg3NGYxOTk2MzYzNmZmMGM3OWQ0NWEwNTRhZjg5NWIyMGZkYWM3NDVmMzU0Yzg2NWQ5MzhlZjZlODAxYjhlMzM=",
+        "content-length: 18"
       ]
 
 -- | algorithm is modified to hs2019
