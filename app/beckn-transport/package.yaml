@@ -73,6 +73,8 @@ dependencies:
   - warp
   - time
   - random-strings
+  - tasty
+  - tasty-hunit
 
 ghc-options:
   - -fwrite-ide-info
@@ -98,6 +100,16 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
 
+    dependencies:
+      - beckn-transport
+      - beckn-core
+
+tests:
+  beckn-core-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
     dependencies:
       - beckn-transport
       - beckn-core

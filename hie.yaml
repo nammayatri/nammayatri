@@ -66,6 +66,12 @@ cradle:
     - path: "lib/beckn-core/test/src"
       component: "beckn-core:test:beckn-core-tests"
 
+    - path: "app/beckn-transport/test/app"
+      component: "beckn-transport:test:beckn-transport-tests"
+
+    - path: "app/beckn-transport/test/src"
+      component: "beckn-transport:test:beckn-transport-tests"
+
     - path: "test/src"
       component: "beckn-test:lib"
 

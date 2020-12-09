@@ -14,4 +14,4 @@ data DriverInformation = DriverInformation
     completed_rides_over_24h :: Int,
     earnings_over_24h :: Float
   }
-  deriving (Generic, ToJSON)
+  deriving (Eq, Show, Generic, ToJSON)
