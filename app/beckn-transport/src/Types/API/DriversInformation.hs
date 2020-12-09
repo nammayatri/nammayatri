@@ -17,7 +17,6 @@ data ActiveDriversResponse = ActiveDriversResponse
 data DriverInformation = DriverInformation
   { driver_id :: PersonId,
     completed_rides_over_time :: Int,
-    earnings_over_time :: Float,
-    total_ride_time :: NominalDiffTime
+    earnings_over_time :: Float
   }
   deriving (Generic, ToJSON)
