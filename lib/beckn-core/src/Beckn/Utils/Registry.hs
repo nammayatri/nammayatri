@@ -31,8 +31,8 @@ registry =
 
     examplePubKey = "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
     examplePrivKey = Just "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
-    nsdlPubKey = "RWc4RV9QUCV1yMb3xOPppJOO3Wmlb5E5G8raFj4UmIQ="
-    nsdlPrivKey = Just "dmA/OxVM7C8WVZMF0Q7aFarUTp2hNUVZRJytAdG1s0M="
+    nsdlPubKey = "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
+    nsdlPrivKey = Nothing
     exampleValidFrom = posixSecondsToUTCTime 1605232000
     exampleValidTill = posixSecondsToUTCTime 1920592000
 
