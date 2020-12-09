@@ -11,7 +11,7 @@ type ActiveDriversResponse = [DriverInformation]
 
 data DriverInformation = DriverInformation
   { driver_id :: PersonId,
-    completed_rides_over_time :: Int,
-    earnings_over_time :: Float
+    completed_rides_over_24h :: Int,
+    earnings_over_24h :: Float
   }
   deriving (Generic, ToJSON)

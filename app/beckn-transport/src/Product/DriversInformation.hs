@@ -42,8 +42,8 @@ runLogic Handle {..} = do
       return $
         DriverInformation
           { driver_id = driverId,
-            completed_rides_over_time = length rides,
-            earnings_over_time = foldr sumProductInstancesByPrice 0 rides
+            completed_rides_over_24h = length rides,
+            earnings_over_24h = foldr sumProductInstancesByPrice 0 rides
           }
     sumProductInstancesByPrice inst acc = acc + fromRational (toRational (inst ^. #_price))
     timePeriod = nominalDay
