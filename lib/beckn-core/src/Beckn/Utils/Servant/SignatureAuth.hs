@@ -202,7 +202,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       let signature = signPayload ^. #signature
       let signatureMsg = HttpSig.makeSignatureString signatureParams body headers
       L.logDebug @Text logTag $
-        "Start verifying. Signature: " +|| signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ""
+        "Start verifying. Signature: " +|| HttpSig.encode signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ""
       either (throwVerificationFail host) pure $
         HttpSig.verify
           key
