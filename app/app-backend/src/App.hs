@@ -50,16 +50,16 @@ runAppBackend' appEnv settings = do
     putStrLn @String "Setting up for signature auth..."
     let selfId = appEnv ^. #bapSelfId
     authManager <- do
-        mbCreds <-
-          runFlowR flowRt appEnv $
-            Registry.lookupOrg selfId
-        case mbCreds of
-          Nothing -> error $ "No credentials for: " <> selfId
-          Just creds -> do
-            let privKey = fromJust $ Registry.decodeKey =<< creds ^. #_signPrivKey
-            let keyId = creds ^. #_keyId
-            -- 10 minutes should be long enough for messages to go through
-            signatureAuthManager flowRt appEnv "Authorization" privKey selfId keyId (appEnv ^. #signatureExpiry)
+      mbCreds <-
+        runFlowR flowRt appEnv $
+          Registry.lookupOrg selfId
+      case mbCreds of
+        Nothing -> error $ "No credentials for: " <> selfId
+        Just creds -> do
+          let privKey = fromJust $ Registry.decodeKey =<< creds ^. #_signPrivKey
+          let keyId = creds ^. #_keyId
+          -- 10 minutes should be long enough for messages to go through
+          signatureAuthManager flowRt appEnv "Authorization" privKey selfId keyId (appEnv ^. #signatureExpiry)
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     putStrLn @String "Initializing DB Connections..."
     let prepare = prepareDBConnections

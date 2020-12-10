@@ -162,7 +162,7 @@ mkOnSearchPayload c pis orgInfo = do
             _transaction_id = last $ T.split (== '_') $ c ^. #_shortId,
             _message_id = c ^. #_shortId,
             _bap_uri = Nothing,
-            _bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
+            _bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
             _timestamp = currTime,
             _ttl = Nothing
           }
