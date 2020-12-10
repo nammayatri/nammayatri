@@ -187,10 +187,11 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   let body = BSL.toStrict . J.encode $ req -- TODO: we should be able to receive raw body without using Aeson encoders. Maybe use WAI middleware to catch a raw body before handling a req by Servant?
   isVerified <- performVerification key host body
   unless isVerified $ do
-    L.logError @Text "verifySignature" "Signature is not valid."
+    L.logError @Text logTag $ "Signature is not valid."
     throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
   pure lookupResult
   where
+    logTag = "verifySignature-" <> headerName
     performVerification key host body = do
       let headers =
             [ ("(created)", maybe "" show (signPayload ^. #params . #created)),
@@ -200,8 +201,8 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       let signatureParams = signPayload ^. #params
       let signature = signPayload ^. #signature
       let signatureMsg = HttpSig.makeSignatureString signatureParams body headers
-      L.logDebug @Text "verifySignature" $
-        "Start verifying signature. Signature: " +|| signature ||+ ", Signature Message: " +|| signatureMsg ||+ ""
+      L.logDebug @Text logTag $
+        "Start verifying. Signature: " +|| signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ""
       either (throwVerificationFail host) pure $
         HttpSig.verify
           key
@@ -210,7 +211,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
           headers
           signature
     throwVerificationFail host err = do
-      L.logError @Text "verifySignature" $ "Failed to verify the signature. Error: " <> show err
+      L.logError @Text logTag $ "Failed to verify the signature. Error: " <> show err
       throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
 
 withBecknAuth :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
