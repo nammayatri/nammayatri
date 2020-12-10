@@ -28,10 +28,10 @@ handleActiveDrivers _ = do
             getCurrentTime = getCurrTime,
             getDriverRidesInPeriod = getDriverRides
           }
-  withFlowHandler $ runLogic handle
+  withFlowHandler $ execute handle
 
-runLogic :: (Monad m) => Handle m -> m ActiveDriversResponse
-runLogic Handle {..} = do
+execute :: (Monad m) => Handle m -> m ActiveDriversResponse
+execute Handle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   now <- getCurrentTime
   let fromTime = addUTCTime (- timePeriod) now
