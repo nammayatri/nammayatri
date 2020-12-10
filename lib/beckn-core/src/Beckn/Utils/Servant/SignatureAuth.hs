@@ -4,7 +4,7 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
-import Beckn.Types.App (BaseUrl, EnvR (runTime), FlowHandlerR)
+import Beckn.Types.App (BaseUrl, EnvR (..), FlowHandlerR)
 import Beckn.Types.Common (FlowR)
 import Beckn.Utils.Common (runFlowR, throwAuthError, withFlowHandler)
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
@@ -87,27 +87,38 @@ instance
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
-      subserver `addAuthCheck` withRequest (authCheck (runTime env))
+      subserver `addAuthCheck` withRequest authCheck
     where
-      authCheck :: R.FlowRuntime -> Wai.Request -> DelayedIO HttpSig.SignaturePayload
-      authCheck _flowRt req = do
+      authCheck :: Wai.Request -> DelayedIO HttpSig.SignaturePayload
+      authCheck req = do
         let headers = Wai.requestHeaders req
         let headerName = fromString $ symbolVal (Proxy @header)
         let mSignature = snd <$> find ((== headerName) . fst) headers
+        liftIO $ runFlowR flowRt (appEnv env) $ L.logDebug @Text "authCheck" $ "Incoming headers: " +|| headers ||+ ""
         -- FIXME: we 404 for now to allow a fallback to X-API-Key
         headerBs <-
-          maybe
-            (fail404 $ "Signature header " <> show headerName <> " missing")
-            pure
-            mSignature
+          case mSignature of
+            Just s -> pure s
+            Nothing -> do
+              let msg = fromString $ "Signature header " +|| headerName ||+ " missing"
+              liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
+              delayedFail err404 {errBody = msg}
         sigBs <-
-          either (const $ fail401 "Invalid signature header") pure $
-            fromString <$> parseHeader @String headerBs
-        either (\e -> fail401 . fromString $ "Could not decode signature: " <> e) pure $ HttpSig.decode sigBs
-
-      fail404 msg = delayedFail err404 {errBody = msg}
-      fail401 msg = delayedFailFatal err401 {errBody = msg}
+          case fromString <$> parseHeader @String headerBs of
+            Right s -> pure s
+            Left err -> do
+              let msg = fromString $ "Invalid signature header. Error: " +|| err ||+ ""
+              liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
+              delayedFailFatal err401 {errBody = msg}
+        case HttpSig.decode sigBs of
+          Right res -> pure res
+          Left err -> do
+            let msg = fromString $ "Could not decode signature: " +|| err ||+ ""
+            liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
+            delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
+      flowRt = runTime env
+      appConfig = appEnv env
 
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv
