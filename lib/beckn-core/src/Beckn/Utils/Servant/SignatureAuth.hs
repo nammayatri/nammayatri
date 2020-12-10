@@ -187,7 +187,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   let body = BSL.toStrict . J.encode $ req -- TODO: we should be able to receive raw body without using Aeson encoders. Maybe use WAI middleware to catch a raw body before handling a req by Servant?
   isVerified <- performVerification key host body
   unless isVerified $ do
-    L.logError @Text logTag $ "Signature is not valid."
+    L.logError @Text logTag "Signature is not valid."
     throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
   pure lookupResult
   where
