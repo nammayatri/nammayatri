@@ -394,6 +394,15 @@ findByStartTimeBuffer piType startTime buffer statuses = do
             &&. _startTime B.>=. B.val_ fromTime
             &&. _status `B.in_` inStatus
 
+findByTypeAndStatuses :: Storage.ProductInstanceType -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
+findByTypeAndStatuses piType statuses = do
+  dbTable <- getDbTable
+  DB.findAll dbTable predicate >>= checkDBError
+  where
+    predicate Storage.ProductInstance {..} =
+      _type ==. B.val_ piType
+        &&. (_status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses)
+
 getDriverRides :: PersonId -> UTCTime -> UTCTime -> Flow [Storage.ProductInstance]
 getDriverRides driverId fromTime toTime = do
   dbTable <- getDbTable

@@ -13,8 +13,9 @@ handle :: Handle Identity
 handle =
   Handle
     { findActiveDrivers = pure [Fixtures.defaultDriver],
+      findByTypeAndStatuses = \piType statuses -> pure [],
       getCurrentTime = pure Fixtures.defaultTime,
-      getDriverRidesInPeriod = \driverId fromTime toTime -> do
+      getDriverRidesInPeriod = \driverId fromTime toTime ->
         pure [Fixtures.defaultProductInstance, Fixtures.defaultProductInstance]
     }
 

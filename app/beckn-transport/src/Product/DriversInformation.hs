@@ -4,20 +4,22 @@ module Product.DriversInformation where
 
 import qualified App.Types as App
 import Beckn.Types.App (PersonId)
+import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import EulerHS.Prelude hiding (Handle)
 import Storage.Queries.Person (findAllActiveDrivers)
-import Storage.Queries.ProductInstance (getDriverRides)
+import qualified Storage.Queries.ProductInstance as QueryPI
 import Types.API.DriversInformation (ActiveDriversResponse (..), DriverInformation (..))
 
 data Handle m = Handle
   { findActiveDrivers :: m [Person.Person],
+    findByTypeAndStatuses :: PI.ProductInstanceType -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
     getCurrentTime :: m UTCTime,
-    getDriverRidesInPeriod :: PersonId -> UTCTime -> UTCTime -> m [ProductInstance.ProductInstance]
+    getDriverRidesInPeriod :: PersonId -> UTCTime -> UTCTime -> m [PI.ProductInstance]
   }
 
 handleActiveDrivers :: RegistrationToken -> App.FlowHandler ActiveDriversResponse
@@ -25,17 +27,21 @@ handleActiveDrivers _ = do
   let handle =
         Handle
           { findActiveDrivers = findAllActiveDrivers,
+            findByTypeAndStatuses = QueryPI.findByTypeAndStatuses,
             getCurrentTime = getCurrTime,
-            getDriverRidesInPeriod = getDriverRides
+            getDriverRidesInPeriod = QueryPI.getDriverRides
           }
   withFlowHandler $ execute handle
 
 execute :: (Monad m) => Handle m -> m ActiveDriversResponse
 execute Handle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
+  ridesInProcess <- findByTypeAndStatuses Case.RIDEORDER [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
+  let busyDriversIds = catMaybes $ PI._personId <$> ridesInProcess
+  let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
   now <- getCurrentTime
   let fromTime = addUTCTime (- timePeriod) now
-  activeDriversInfo <- traverse (driverInfoById fromTime now) activeDriversIds
+  activeDriversInfo <- traverse (driverInfoById fromTime now) freeDriversIds
   pure $ ActiveDriversResponse {time = timePeriod, active_drivers = activeDriversInfo}
   where
     driverInfoById fromTime toTime driverId = do
