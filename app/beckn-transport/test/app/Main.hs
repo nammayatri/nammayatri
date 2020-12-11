@@ -1,7 +1,7 @@
 module Main where
 
 import EulerHS.Prelude
-import qualified Logic.ActiveDrivers
+import qualified Flow.ActiveDrivers
 import Test.Tasty
 
 main :: IO ()
@@ -9,11 +9,11 @@ main = defaultMain =<< specs
 
 specs :: IO TestTree
 specs = do
-  let unitTests = testGroup "Unit tests" [logicTests]
+  let unitTests = testGroup "Unit tests" [flowTests]
   return $ testGroup "Tests" [unitTests]
 
-logicTests :: TestTree
-logicTests =
+flowTests :: TestTree
+flowTests =
   testGroup
-    "Logic tests"
-    [Logic.ActiveDrivers.runTests]
+    "Flow tests"
+    [Flow.ActiveDrivers.runTests]

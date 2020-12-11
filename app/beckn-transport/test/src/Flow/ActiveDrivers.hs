@@ -1,6 +1,7 @@
-module Logic.ActiveDrivers (runTests) where
+module Flow.ActiveDrivers (runTests) where
 
 import Beckn.Types.App (PersonId (..))
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.Time (nominalDay)
 import EulerHS.Prelude hiding (Handle)
 import qualified Fixtures
@@ -25,7 +26,8 @@ runTests =
     "active_drivers endpoint tests"
     [ successfulCaseWithRides,
       successfulCaseWithNoRides,
-      successfulCaseWithNoDrivers
+      successfulCaseWithNoDrivers,
+      successfulCaseWithDriverOnTrip
     ]
 
 successfulCaseWithRides :: TestTree
@@ -57,6 +59,22 @@ successfulCaseWithNoDrivers =
     execute handleCase @?= pure expectedResponse
   where
     handleCase = handle {findActiveDrivers = pure [], getDriverRidesInPeriod = \_ _ _ -> pure []}
+    expectedResponse =
+      ActiveDriversResponse
+        { time = nominalDay,
+          active_drivers = []
+        }
+
+successfulCaseWithDriverOnTrip :: TestTree
+successfulCaseWithDriverOnTrip =
+  testCase "Successful case with driver on trip" $
+    execute handleCase @?= pure expectedResponse
+  where
+    handleCase =
+      handle
+        { findByTypeAndStatuses = \_ _ -> pure [Fixtures.defaultProductInstance {PI._status = PI.INPROGRESS}],
+          getDriverRidesInPeriod = \_ _ _ -> pure []
+        }
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
