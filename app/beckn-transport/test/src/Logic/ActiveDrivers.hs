@@ -1,6 +1,7 @@
 module Logic.ActiveDrivers (runTests) where
 
 import Beckn.Types.App (PersonId (..))
+import Data.Time (nominalDay)
 import EulerHS.Prelude hiding (Handle)
 import qualified Fixtures
 import Product.DriversInformation (Handle (..), execute)
@@ -32,7 +33,10 @@ successfulCaseWithRides =
     execute handle @?= pure expectedResponse
   where
     expectedResponse =
-      [DriverInformation {driver_id = PersonId "1", completed_rides_over_24h = 2, earnings_over_24h = 200.0}]
+      ActiveDriversResponse
+        { time = nominalDay,
+          active_drivers = [DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
+        }
 
 successfulCaseWithNoRides :: TestTree
 successfulCaseWithNoRides =
@@ -41,7 +45,10 @@ successfulCaseWithNoRides =
   where
     handleCase = handle {getDriverRidesInPeriod = \_ _ _ -> pure []}
     expectedResponse =
-      [DriverInformation {driver_id = PersonId "1", completed_rides_over_24h = 0, earnings_over_24h = 0.0}]
+      ActiveDriversResponse
+        { time = nominalDay,
+          active_drivers = [DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+        }
 
 successfulCaseWithNoDrivers :: TestTree
 successfulCaseWithNoDrivers =
@@ -49,4 +56,8 @@ successfulCaseWithNoDrivers =
     execute handleCase @?= pure expectedResponse
   where
     handleCase = handle {findActiveDrivers = pure [], getDriverRidesInPeriod = \_ _ _ -> pure []}
-    expectedResponse = []
+    expectedResponse =
+      ActiveDriversResponse
+        { time = nominalDay,
+          active_drivers = []
+        }
