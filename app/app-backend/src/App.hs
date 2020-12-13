@@ -47,20 +47,23 @@ runAppBackend' appEnv settings = do
   let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
-    authManager <- prepareAuthManager flowRt appEnv "Authorization"
-    let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-    putStrLn @String "Initializing DB Connections..."
-    let prepare = prepareDBConnections
-    try (runFlowR flowRt' appEnv prepare) >>= \case
-      Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-      Right _ -> do
-        putStrLn @String "Initializing Options..."
-        try (runFlowR flowRt' appEnv prepareAppOptions) >>= \case
+    case prepareAuthManager flowRt appEnv "Authorization" of
+      Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
+      Right getManager -> do
+        authManager <- getManager
+        let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        putStrLn @String "Initializing DB Connections..."
+        let prepare = prepareDBConnections
+        try (runFlowR flowRt' appEnv prepare) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-          Right _ ->
-            putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
-        _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-        runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+          Right _ -> do
+            putStrLn @String "Initializing Options..."
+            try (runFlowR flowRt' appEnv prepareAppOptions) >>= \case
+              Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+              Right _ ->
+                putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
+            _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
+            runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 
 appExceptionResponse :: SomeException -> Response
 appExceptionResponse = exceptionResponse

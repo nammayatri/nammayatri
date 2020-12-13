@@ -281,19 +281,19 @@ prepareAuthManager ::
   R.FlowRuntime ->
   r ->
   Text ->
-  IO Http.Manager
+  Either Text (IO Http.Manager)
 prepareAuthManager flowRt appEnv header = do
   let shortOrgId = getSelfId appEnv
   let registry = getRegistry appEnv
   let signingKeys = getSigningKeys appEnv
-  case Registry.lookupOrg shortOrgId registry of
-    Nothing -> error $ "No credentials for: " <> shortOrgId
-    Just creds -> do
-      let uniqueKeyId = creds ^. #uniqueKeyId
-      case Registry.lookupSigningKey uniqueKeyId signingKeys >>= Registry.decodeKey . signPrivKey of
-        Nothing -> error $ "No private key found for credential: " <> uniqueKeyId
-        Just privateKey ->
-          signatureAuthManager flowRt appEnv header privateKey uniqueKeyId
+  let mCred = Registry.lookupOrg shortOrgId registry
+  creds <- mCred & maybeToRight ("No credentials for: " <> shortOrgId)
+  let uniqueKeyId = creds ^. #uniqueKeyId
+  let mSigningKey = Registry.lookupSigningKey uniqueKeyId signingKeys
+  encodedKey <- mSigningKey & maybeToRight ("No private key found for credential: " <> uniqueKeyId)
+  let mPrivateKey = Registry.decodeKey $ encodedKey ^. #signPrivKey
+  privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
+  Right $ signatureAuthManager flowRt appEnv header privateKey uniqueKeyId
 
 instance
   ( S.HasSwagger api,

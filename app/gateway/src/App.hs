@@ -57,14 +57,17 @@ runGateway configModifier = do
   threadId <- forkIO $
     E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
       let appEnv = mkAppEnv appCfg cache
-      authManager <- prepareAuthManager flowRt appEnv "Proxy-Authorization"
-      let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-      putStrLn @String "Initializing Redis Connections..."
-      try (runFlowR flowRt' appCfg $ prepareRedisConnections redisCfg) >>= \case
-        Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-        Right _ -> do
-          void $ migrateIfNeeded migrationPath dbCfg autoMigrate
-          runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
+      case prepareAuthManager flowRt appEnv "Proxy-Authorization" of
+        Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
+        Right getManager -> do
+          authManager <- getManager
+          let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+          putStrLn @String "Initializing Redis Connections..."
+          try (runFlowR flowRt' appCfg $ prepareRedisConnections redisCfg) >>= \case
+            Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+            Right _ -> do
+              void $ migrateIfNeeded migrationPath dbCfg autoMigrate
+              runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
   -- Wait for shutdown
   atomically $ readTMVar shutdown
   -- Wait to drain all connections
