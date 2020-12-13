@@ -212,7 +212,7 @@ signatureAuthManager flowRt appEnv header key uniqueKeyId = do
       L.logDebug @Text "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
       case addSignature body params headers req of
         Just signedReq -> pure signedReq
-        Nothing -> pure req
+        Nothing -> throwError500 $ "Could not add signature: " <> show params
     getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
     getBody (Http.RequestBodyBS body) = pure body
     getBody _ = pure "<MISSING_BODY>"
