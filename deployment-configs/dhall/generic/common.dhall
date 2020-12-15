@@ -12,14 +12,14 @@ let TraceFlag = < TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING >
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
-let ExotelCfg = 
+let ExotelCfg =
   { apiKey : Text
   , apiToken : Text
   , sid : Text
   , callerId : Text
   }
 
-let credRegistry = 
+let credRegistry =
   [
     mkCredential "mobility-app-key" "mobility-app" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , mkCredential "fmd-test-app-key" "fmd-test-app" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
@@ -29,7 +29,7 @@ let credRegistry =
   , mkCredential "juspay-bg-1-key" "JUSPAY.BG.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , mkCredential "juspay-mock-bap-1-key" "JUSPAY.BAP.MOCK.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , mkCredential "juspay-mock-bpp-1-key" "JUSPAY.BPP.MOCK.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , mkCredential "nsdl_bg_1" "NSDL.BG.1" "7bcdd2676ec1f08c3da1f6bc41f7edc4e40666f4010f07c355ab698be51df8ad"
+  , mkCredential "nsdl_bg_1" "NSDL.BG.1" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
   ]
 
 -- To be substituted during deployment
@@ -47,14 +47,14 @@ let smsSessionConfig =
   , tokenExpiry = +365
   }
 
-let loggerConfig = 
+let loggerConfig =
   { level = LogLevel.DEBUG
   , isAsync = True
   , logToFile = True
   , logToConsole = True
   , logRawSql = True
   }
-  
+
 in { defaultPoolConfig = defaultPoolConfig
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
