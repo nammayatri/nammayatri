@@ -14,7 +14,7 @@ handle :: Handle Identity
 handle =
   Handle
     { findActiveDrivers = pure [Fixtures.defaultDriver],
-      findByTypeAndStatuses = \piType statuses -> pure [],
+      findRidesByStartTimeBuffer = \fromTime timeBuffer statuses -> pure [],
       getCurrentTime = pure Fixtures.defaultTime,
       getDriverRidesInPeriod = \driverId fromTime toTime ->
         pure [Fixtures.defaultProductInstance, Fixtures.defaultProductInstance]
@@ -72,7 +72,7 @@ successfulCaseWithDriverOnTrip =
   where
     handleCase =
       handle
-        { findByTypeAndStatuses = \_ _ -> pure [Fixtures.defaultProductInstance {PI._status = PI.INPROGRESS}],
+        { findRidesByStartTimeBuffer = \_ _ _ -> pure [Fixtures.defaultProductInstance {PI._status = PI.INPROGRESS}],
           getDriverRidesInPeriod = \_ _ _ -> pure []
         }
     expectedResponse =

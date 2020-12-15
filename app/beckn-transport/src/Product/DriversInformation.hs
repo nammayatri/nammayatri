@@ -10,14 +10,16 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
 import Data.Time (UTCTime, addUTCTime, nominalDay)
+import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude hiding (Handle)
+import qualified Models.ProductInstance as ModelPI
 import Storage.Queries.Person (findAllActiveDrivers)
 import qualified Storage.Queries.ProductInstance as QueryPI
 import Types.API.DriversInformation (ActiveDriversResponse (..), DriverInformation (..))
 
 data Handle m = Handle
   { findActiveDrivers :: m [Person.Person],
-    findByTypeAndStatuses :: PI.ProductInstanceType -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
+    findRidesByStartTimeBuffer :: UTCTime -> NominalDiffTime -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
     getCurrentTime :: m UTCTime,
     getDriverRidesInPeriod :: PersonId -> UTCTime -> UTCTime -> m [PI.ProductInstance]
   }
@@ -27,7 +29,7 @@ handleActiveDrivers _ = do
   let handle =
         Handle
           { findActiveDrivers = findAllActiveDrivers,
-            findByTypeAndStatuses = QueryPI.findByTypeAndStatuses,
+            findRidesByStartTimeBuffer = ModelPI.findByStartTimeBuffer Case.RIDEORDER,
             getCurrentTime = getCurrTime,
             getDriverRidesInPeriod = QueryPI.getDriverRides
           }
@@ -36,14 +38,17 @@ handleActiveDrivers _ = do
 execute :: (Monad m) => Handle m -> m ActiveDriversResponse
 execute Handle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
-  ridesInProcess <- findByTypeAndStatuses Case.RIDEORDER [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
-  let busyDriversIds = catMaybes $ PI._personId <$> ridesInProcess
-  let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
   now <- getCurrentTime
+  freeDriversIds <- fetchFreeDriversIds activeDriversIds now
   let fromTime = addUTCTime (- timePeriod) now
   activeDriversInfo <- traverse (driverInfoById fromTime now) freeDriversIds
   pure $ ActiveDriversResponse {time = timePeriod, active_drivers = activeDriversInfo}
   where
+    fetchFreeDriversIds activeDriversIds time = do
+      ridesBuffer <- findRidesByStartTimeBuffer time 1 [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
+      let busyDriversIds = catMaybes $ PI._personId <$> ridesBuffer
+      let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
+      pure freeDriversIds
     driverInfoById fromTime toTime driverId = do
       rides <- getDriverRidesInPeriod driverId fromTime toTime
       pure $
