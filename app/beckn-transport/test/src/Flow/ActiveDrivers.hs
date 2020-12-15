@@ -24,15 +24,15 @@ runTests :: TestTree
 runTests =
   testGroup
     "active_drivers endpoint tests"
-    [ successfulCaseWithRides,
+    [ successfulCaseWithInfo,
       successfulCaseWithNoRides,
       successfulCaseWithNoDrivers,
       successfulCaseWithDriverOnTrip
     ]
 
-successfulCaseWithRides :: TestTree
-successfulCaseWithRides =
-  testCase "Successful case with rides" $
+successfulCaseWithInfo :: TestTree
+successfulCaseWithInfo =
+  testCase "Successful case with information" $
     execute handle @?= pure expectedResponse
   where
     expectedResponse =
@@ -43,7 +43,7 @@ successfulCaseWithRides =
 
 successfulCaseWithNoRides :: TestTree
 successfulCaseWithNoRides =
-  testCase "Successful case with no completed rides" $
+  testCase "Successful case with drivers without completed rides" $
     execute handleCase @?= pure expectedResponse
   where
     handleCase = handle {getDriverRidesInPeriod = \_ _ _ -> pure []}
@@ -67,7 +67,7 @@ successfulCaseWithNoDrivers =
 
 successfulCaseWithDriverOnTrip :: TestTree
 successfulCaseWithDriverOnTrip =
-  testCase "Successful case with driver on trip" $
+  testCase "Should successfully filter drivers on a trip" $
     execute handleCase @?= pure expectedResponse
   where
     handleCase =
