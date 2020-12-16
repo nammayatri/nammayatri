@@ -50,7 +50,7 @@ cancelProductInstance person req = do
         OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
           >>= fromMaybeM500 "INVALID_PROVIDER_ID"
       baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-      eres <- Gateway.cancel baseUrl organization (API.CancelReq context cancelReqMessage)
+      eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"

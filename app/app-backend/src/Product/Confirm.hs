@@ -49,7 +49,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   context <- buildContext "confirm" caseId msgId
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   order <- mkOrder productInstance
-  Gateway.confirm baseUrl organization $ ConfirmReq context $ ConfirmOrder order
+  Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where
     mkOrder productInstance = do
       now <- getCurrTime

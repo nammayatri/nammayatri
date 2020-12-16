@@ -8,7 +8,6 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Catalog
 import Beckn.Types.Mobility.Intent
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
@@ -73,14 +72,13 @@ instance Example OnSearchServices where
       { catalog = example
       }
 
-type OnSearchEndAPI v =
+type OnSearchEndAPI =
   "on_search"
     :> "end"
-    :> APIKeyAuth v
     :> ReqBody '[JSON] OnSearchEndReq
     :> Post '[JSON] OnSearchEndRes
 
-onSearchEndAPI :: Proxy (OnSearchEndAPI v)
+onSearchEndAPI :: Proxy OnSearchEndAPI
 onSearchEndAPI = Proxy
 
 newtype OnSearchEndReq = OnSearchEndReq {context :: Context}

@@ -323,20 +323,20 @@ transporterServer =
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId :> BecknAuthProxy VerifyAPIKey API.SearchAPI
-    :<|> Capture "orgId" OrganizationId :> API.ConfirmAPI VerifyAPIKey
-    :<|> Capture "orgId" OrganizationId :> API.CancelAPI VerifyAPIKey
-    :<|> Capture "orgId" OrganizationId :> API.StatusAPI VerifyAPIKey
-    :<|> Capture "orgId" OrganizationId :> API.TrackAPI VerifyAPIKey
-    :<|> Capture "orgId" OrganizationId :> API.FeedbackAPI VerifyAPIKey
+    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.ConfirmAPI
+    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.CancelAPI
+    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.StatusAPI
+    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.TrackAPI
+    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.FeedbackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookup :<|> BP.search orgId)
-    :<|> BP.confirm
-    :<|> BP.cancel
-    :<|> BP.serviceStatus
-    :<|> BP.trackTrip
-    :<|> BP.feedback
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.confirm orgId) lookup :<|> BP.confirm orgId)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.cancel orgId) lookup :<|> BP.cancel orgId)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup :<|> BP.serviceStatus orgId)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup :<|> BP.trackTrip orgId)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup :<|> BP.feedback orgId)
   where
     lookup = lookupRegistryAction findOrganizationByShortId
 

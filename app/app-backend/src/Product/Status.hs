@@ -33,7 +33,7 @@ status person StatusReq {..} = withFlowHandler $ do
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
-  Gateway.status baseUrl organization $ API.StatusReq context statusMessage
+  Gateway.status baseUrl $ API.StatusReq context statusMessage
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus _org req = withFlowHandler $ do

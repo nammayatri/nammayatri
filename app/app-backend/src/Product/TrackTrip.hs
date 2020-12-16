@@ -44,7 +44,7 @@ track person req = withFlowHandler $ do
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
           gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-          Gateway.track gatewayUrl organization $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
+          Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
 
 trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb _org req = withFlowHandler $ do

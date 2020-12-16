@@ -47,8 +47,8 @@ healthHandler = pure "UP"
 gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
-    :<|> (handleIfUp (HttpSig.withBecknAuth (P.search . Just) lookup) :<|> handleIfUp (P.search Nothing))
-    :<|> (handleIfUp (HttpSig.withBecknAuth (P.searchCb . Just) lookup) :<|> handleIfUp (P.searchCb Nothing))
+    :<|> (handleIfUp (HttpSig.withBecknAuth' (P.search . Just) lookup) :<|> handleIfUp (P.search Nothing))
+    :<|> (handleIfUp (HttpSig.withBecknAuth' (P.searchCb . Just) lookup) :<|> handleIfUp (P.searchCb Nothing))
     :<|> handleIfUp P.log
   where
     handleIfUp :: (a -> b -> FlowHandler c) -> a -> b -> FlowHandler c

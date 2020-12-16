@@ -10,13 +10,11 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import qualified Beckn.Types.Core.Context as Core
 import qualified Beckn.Types.Core.Description as Core
 import qualified Beckn.Types.Core.Rating as Core
-import Beckn.Utils.Servant.HeaderAuth (APIKeyAuth)
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, type (:>))
 
-type FeedbackAPI v =
+type FeedbackAPI =
   "feedback"
-    :> APIKeyAuth v
     :> ReqBody '[JSON] FeedbackReq
     :> Post '[JSON] FeedbackRes
 

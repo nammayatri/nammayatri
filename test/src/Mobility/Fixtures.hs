@@ -4,9 +4,6 @@ import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.App
-import qualified Beckn.Types.Core.API.Cancel as Cancel
-import qualified Beckn.Types.Core.API.Confirm as Confirm
-import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
@@ -115,11 +112,7 @@ searchServices ::
   Text ->
   AppBESearch.SearchReq ->
   ClientM AppBESearch.AckResponse
-onSearchServices ::
-  Text ->
-  Search.OnSearchReq ->
-  ClientM Search.OnSearchRes
-searchServices :<|> (_ :<|> onSearchServices) = client (Proxy :: Proxy AbeRoutes.SearchAPI)
+searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: Text -> IO AppBESearch.SearchReq
 buildSearchReq guid = do
@@ -128,8 +121,7 @@ buildSearchReq guid = do
   pure $ searchReq guid utcTime futureTime
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
-onCancelRide :: Text -> Cancel.OnCancelReq -> ClientM Cancel.OnCancelRes
-cancelRide :<|> onCancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
+cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
 buildAppCancelReq guid entityId entityType =
@@ -177,8 +169,7 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
-appOnConfirmRide :: Text -> Confirm.OnConfirmReq -> ClientM Confirm.OnConfirmRes
-appConfirmRide :<|> appOnConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
+appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM AckResponse
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)

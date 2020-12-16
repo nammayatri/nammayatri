@@ -15,7 +15,6 @@ import Beckn.Types.Core.API.Track
 import qualified Beckn.Types.Core.API.Update as Update
 import Beckn.Types.Core.Ack (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Servant.SignatureAuth
@@ -54,8 +53,7 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import Types.Geofencing
 import Utils.Auth
-  ( VerificationAPIKey,
-    VerifyAPIKey,
+  ( VerifyAPIKey,
   )
 import Utils.Common (TokenAuth)
 
@@ -145,16 +143,21 @@ type ConfirmAPI =
       :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
-      :<|> "on_confirm"
-      :> VerificationAPIKey
-      :> ReqBody '[JSON] Confirm.OnConfirmReq
-      :> Post '[JSON] Confirm.OnConfirmRes
+      :<|> BecknAuth
+             "Authorization"
+             VerifyAPIKey
+             ( "on_confirm"
+                 :> ReqBody '[JSON] Confirm.OnConfirmReq
+                 :> Post '[JSON] Confirm.OnConfirmRes
+             )
   )
 
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
-    :<|> Confirm.onConfirm
+    :<|> (HttpSig.withBecknAuth Confirm.onConfirm lookup :<|> Confirm.onConfirm)
+  where
+    lookup = lookupRegistryAction findOrgByShortId
 
 ------- Case Flow -------
 type CaseAPI =
@@ -197,26 +200,36 @@ type TrackTripAPI =
     :> TokenAuth
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
-    :<|> "on_track"
-    :> VerificationAPIKey
-    :> ReqBody '[JSON] OnTrackTripReq
-    :> Post '[JSON] OnTrackTripRes
+    :<|> BecknAuth
+           "Authorization"
+           VerifyAPIKey
+           ( "on_track"
+               :> ReqBody '[JSON] OnTrackTripReq
+               :> Post '[JSON] OnTrackTripRes
+           )
 
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
   TrackTrip.track
-    :<|> TrackTrip.trackCb
+    :<|> (HttpSig.withBecknAuth TrackTrip.trackCb lookup :<|> TrackTrip.trackCb)
+  where
+    lookup = lookupRegistryAction findOrgByShortId
 
 ------- Update Flow -------
 type UpdateAPI =
-  "on_update"
-    :> VerificationAPIKey
-    :> ReqBody '[JSON] Update.OnUpdateReq
-    :> Post '[JSON] Update.OnUpdateRes
+  BecknAuth
+    "Authorization"
+    VerifyAPIKey
+    ( "on_update"
+        :> ReqBody '[JSON] Update.OnUpdateReq
+        :> Post '[JSON] Update.OnUpdateRes
+    )
 
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
-  Update.onUpdate
+  HttpSig.withBecknAuth Update.onUpdate lookup :<|> Update.onUpdate
+  where
+    lookup = lookupRegistryAction findOrgByShortId
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
@@ -245,20 +258,20 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    :<|> "on_cancel"
-    :> VerificationAPIKey
-    :> ReqBody '[JSON] Cancel.OnCancelReq
-    :> Post '[JSON] Cancel.OnCancelRes
+    :<|> BecknAuth
+           "Authorization"
+           VerifyAPIKey
+           ( "on_cancel"
+               :> ReqBody '[JSON] Cancel.OnCancelReq
+               :> Post '[JSON] Cancel.OnCancelRes
+           )
 
-cancelFlow ::
-  ( Person.Person ->
-    Cancel.CancelReq ->
-    FlowHandler Cancel.CancelRes
-  )
-    :<|> (Organization.Organization -> Cancel.OnCancelReq -> FlowHandler Cancel.OnCancelRes)
+cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
-    :<|> Cancel.onCancel
+    :<|> (HttpSig.withBecknAuth Cancel.onCancel lookup :<|> Cancel.onCancel)
+  where
+    lookup = lookupRegistryAction findOrgByShortId
 
 -------- Cron API --------
 type CronAPI =
@@ -308,20 +321,20 @@ type StatusAPI =
     :> TokenAuth
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
-    :<|> "on_status"
-    :> VerificationAPIKey
-    :> ReqBody '[JSON] Status.OnStatusReq
-    :> Post '[JSON] Status.OnStatusRes
+    :<|> BecknAuth
+           "Authorization"
+           VerifyAPIKey
+           ( "on_status"
+               :> ReqBody '[JSON] Status.OnStatusReq
+               :> Post '[JSON] Status.OnStatusRes
+           )
 
-statusFlow ::
-  ( Person.Person ->
-    StatusReq ->
-    FlowHandler StatusRes
-  )
-    :<|> (Organization.Organization -> Status.OnStatusReq -> FlowHandler Status.OnStatusRes)
+statusFlow :: FlowServer StatusAPI
 statusFlow =
   Status.status
-    :<|> Status.onStatus
+    :<|> (HttpSig.withBecknAuth Status.onStatus lookup :<|> Status.onStatus)
+  where
+    lookup = lookupRegistryAction findOrgByShortId
 
 -------- Support Flow----------
 type SupportAPI =

@@ -62,4 +62,4 @@ feedback person request = withFlowHandler $ do
                 }
           }
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-  Gateway.feedback gatewayUrl organization $ Beckn.FeedbackReq context feedbackMsg
+  Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg

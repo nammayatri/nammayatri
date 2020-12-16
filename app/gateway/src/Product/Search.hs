@@ -145,8 +145,7 @@ sendSearchEndCb bgSession = do
   let onSearchEnd = ET.client $ withClientTracing Core.onSearchEndAPI
   let onSearchEndReq = Core.OnSearchEndReq context
   let baseUrl = bgSession ^. #cbUrl
-  let cbApiKey = bgSession ^. #cbApiKey
-  eRes <- callAPIWithTrail baseUrl (onSearchEnd cbApiKey onSearchEndReq) "on_search"
+  eRes <- callAPIWithTrail' (Just signatureAuthManagerKey) baseUrl (onSearchEnd onSearchEndReq) "on_search"
   L.logDebug @Text "gateway_transaction" $
     messageId
       <> ", on_search/end: "

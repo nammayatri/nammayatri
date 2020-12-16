@@ -7,13 +7,11 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Order
-import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
-type StatusAPI v =
+type StatusAPI =
   "status"
-    :> APIKeyAuth v
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
 

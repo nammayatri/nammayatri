@@ -17,17 +17,17 @@ import qualified EulerHS.Types as ET
 import Servant
 import Types.API.Location
 
-confirmAPI :: Proxy (Confirm.ConfirmAPI v)
+confirmAPI :: Proxy Confirm.ConfirmAPI
 confirmAPI = Proxy
 
-confirm :: Text -> Confirm.ConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
+confirm :: Confirm.ConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
 confirm = ET.client $ withClientTracing confirmAPI
 
 searchAPI :: Proxy Search.SearchAPI
 searchAPI = Proxy
 
-searchSignAuth :: Search.SearchReq -> (RequestInfo, EulerClient AckResponse)
-searchSignAuth = client $ withClientTracing searchAPI
+search :: Search.SearchReq -> (RequestInfo, EulerClient AckResponse)
+search = client $ withClientTracing searchAPI
 
 nsdlSearch :: Search.SearchReq -> (RequestInfo, ET.EulerClient AckResponse)
 nsdlSearch = client $ withClientTracing Search.nsdlSearchAPI
@@ -43,26 +43,26 @@ locationAPI = Proxy
 location :: Text -> (RequestInfo, EulerClient GetLocationRes)
 location = client $ withClientTracing locationAPI
 
-trackTripAPI :: Proxy (Track.TrackAPI v)
+trackTripAPI :: Proxy Track.TrackAPI
 trackTripAPI = Proxy
 
-trackTrip :: Text -> Track.TrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
+trackTrip :: Track.TrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
 trackTrip = client $ withClientTracing trackTripAPI
 
-cancelAPI :: Proxy (Cancel.CancelAPI v)
+cancelAPI :: Proxy Cancel.CancelAPI
 cancelAPI = Proxy
 
-cancel :: Text -> Cancel.CancelReq -> (RequestInfo, ET.EulerClient AckResponse)
+cancel :: Cancel.CancelReq -> (RequestInfo, ET.EulerClient AckResponse)
 cancel = client $ withClientTracing cancelAPI
 
-statusAPI :: Proxy (Status.StatusAPI v)
+statusAPI :: Proxy Status.StatusAPI
 statusAPI = Proxy
 
-status :: Text -> Status.StatusReq -> (RequestInfo, ET.EulerClient AckResponse)
+status :: Status.StatusReq -> (RequestInfo, ET.EulerClient AckResponse)
 status = client $ withClientTracing statusAPI
 
-feedbackAPI :: Proxy (Feedback.FeedbackAPI v)
+feedbackAPI :: Proxy Feedback.FeedbackAPI
 feedbackAPI = Proxy
 
-feedback :: Text -> Feedback.FeedbackReq -> (RequestInfo, ET.EulerClient AckResponse)
+feedback :: Feedback.FeedbackReq -> (RequestInfo, ET.EulerClient AckResponse)
 feedback = client $ withClientTracing feedbackAPI
