@@ -15,6 +15,7 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Customer as Customer
+import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
@@ -34,7 +35,8 @@ data TransporterDb f = TransporterDb
     _products :: f (B.TableEntity Product.ProductsT),
     _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
-    _rating :: f (B.TableEntity Rating.RatingT)
+    _rating :: f (B.TableEntity Rating.RatingT),
+    _driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT)
   }
   deriving (Generic, B.Database be)
 
@@ -55,7 +57,8 @@ transporterDb dbSchemaName =
         _products = setSchema dbSchemaName <> Product.fieldEMod,
         _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
         _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
-        _rating = setSchema dbSchemaName <> Rating.fieldEMod
+        _rating = setSchema dbSchemaName <> Rating.fieldEMod,
+        _driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

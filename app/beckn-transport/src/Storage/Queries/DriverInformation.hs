@@ -1,0 +1,45 @@
+module Storage.Queries.DriverInformation where
+
+import App.Types (AppEnv (dbCfg), Flow)
+import qualified Beckn.Storage.Common as Storage.Common
+import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Amount (Amount)
+import Beckn.Utils.Common (getSchemaName)
+import Database.Beam ((<-.), (==.))
+import qualified Database.Beam as B
+import EulerHS.Prelude hiding (id)
+import Types.App (DriverId)
+import qualified Types.Storage.DB as DB
+import qualified Types.Storage.DriverInformation as Storage
+
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverInformationT))
+getDbTable =
+  DB._driverInformation . DB.transporterDb <$> getSchemaName
+
+create :: Storage.DriverInformation -> Flow ()
+create Storage.DriverInformation {..} = do
+  dbTable <- getDbTable
+  DB.createOne dbTable (Storage.Common.insertExpression Storage.DriverInformation {..})
+    >>= either DB.throwDBError pure
+
+findById ::
+  DriverId -> Flow (Maybe Storage.DriverInformation)
+findById id = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.DriverInformation {..} = _id ==. B.val_ id
+
+update :: DriverId -> Int -> Amount -> Flow ()
+update driverId completedRides earnings = do
+  dbTable <- getDbTable
+  DB.update dbTable (setClause completedRides earnings) (predicate driverId)
+    >>= either DB.throwDBError pure
+  where
+    setClause cr e Storage.DriverInformation {..} =
+      mconcat
+        [ _completedRidesNumber <-. B.val_ cr,
+          _earnings <-. B.val_ e
+        ]
+    predicate id Storage.DriverInformation {..} = _id ==. B.val_ id
