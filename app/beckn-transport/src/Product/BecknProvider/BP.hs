@@ -106,8 +106,7 @@ cancel transporterId bapOrg req = withFlowHandler $ do
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
   transporter <- findOrganizationById transporterId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "ORG_CALLBACK_API_KEY_NOT_CONFIGURED"
-  notifyCancelToGateway prodInstId callbackUrl callbackApiKey
+  notifyCancelToGateway prodInstId callbackUrl
   admins <-
     if transporter ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [_getOrganizationId transporterId]
@@ -220,8 +219,7 @@ confirm transporterId bapOrg req = withFlowHandler $ do
 
   -- Send callback to BAP
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  notifyGateway searchCase orderProductInstance trackerCase callbackUrl callbackApiKey
+  notifyGateway searchCase orderProductInstance trackerCase callbackUrl
 
   admins <-
     if transporterOrg ^. #_enabled
@@ -352,13 +350,13 @@ mkTrackerCase case_ uuid now shortId =
       _updatedAt = now
     }
 
-notifyGateway :: Case -> ProductInstance -> Case -> BaseUrl -> Text -> Flow ()
-notifyGateway c orderPi trackerCase callbackUrl callbackApiKey = do
+notifyGateway :: Case -> ProductInstance -> Case -> BaseUrl -> Flow ()
+notifyGateway c orderPi trackerCase callbackUrl = do
   L.logInfo @Text "notifyGateway" $ show c
   allPis <- ProductInstance.findAllByCaseId (c ^. #_id)
   onConfirmPayload <- mkOnConfirmPayload c [orderPi] allPis trackerCase
   L.logInfo @Text "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
-  _ <- Gateway.onConfirm callbackUrl callbackApiKey onConfirmPayload
+  _ <- Gateway.onConfirm callbackUrl onConfirmPayload
   return ()
 
 mkContext :: Text -> Text -> Flow Context
@@ -398,16 +396,15 @@ serviceStatus _transporterId bapOrg req = withFlowHandler $ do
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  notifyServiceStatusToGateway piId trackerPi callbackUrl callbackApiKey
+  notifyServiceStatusToGateway piId trackerPi callbackUrl
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
 
-notifyServiceStatusToGateway :: Text -> ProductInstance -> BaseUrl -> Text -> Flow ()
-notifyServiceStatusToGateway piId trackerPi callbackUrl callbackApiKey = do
+notifyServiceStatusToGateway :: Text -> ProductInstance -> BaseUrl -> Flow ()
+notifyServiceStatusToGateway piId trackerPi callbackUrl = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
   L.logInfo @Text "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
-  _ <- Gateway.onStatus callbackUrl callbackApiKey onServiceStatusPayload
+  _ <- Gateway.onStatus callbackUrl onServiceStatusPayload
   return ()
 
 mkOnServiceStatusPayload :: Text -> ProductInstance -> Flow OnStatusReq
@@ -447,31 +444,30 @@ trackTrip _transporterId org req = withFlowHandler $ do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
       callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-      callbackApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-      notifyTripUrlToGateway case_ parentCase callbackUrl callbackApiKey
+      notifyTripUrlToGateway case_ parentCase callbackUrl
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
     Nothing -> throwError400 "Case does not have an associated parent case"
 
-notifyTripUrlToGateway :: Case -> Case -> BaseUrl -> Text -> Flow ()
-notifyTripUrlToGateway case_ parentCase callbackUrl callbackApiKey = do
+notifyTripUrlToGateway :: Case -> Case -> BaseUrl -> Flow ()
+notifyTripUrlToGateway case_ parentCase callbackUrl = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
   L.logInfo @Text "notifyTripUrlToGateway Request" $ show onTrackTripPayload
-  _ <- Gateway.onTrackTrip callbackUrl callbackApiKey onTrackTripPayload
+  _ <- Gateway.onTrackTrip callbackUrl onTrackTripPayload
   return ()
 
-notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> BaseUrl -> Text -> Flow ()
-notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl callbackApiKey = do
+notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> BaseUrl -> Flow ()
+notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl = do
   onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
   L.logInfo @Text "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  _ <- Gateway.onUpdate callbackUrl callbackApiKey onUpdatePayload
+  _ <- Gateway.onUpdate callbackUrl onUpdatePayload
   return ()
 
-notifyCancelToGateway :: Text -> BaseUrl -> Text -> Flow ()
-notifyCancelToGateway prodInstId callbackUrl callbackApiKey = do
+notifyCancelToGateway :: Text -> BaseUrl -> Flow ()
+notifyCancelToGateway prodInstId callbackUrl = do
   onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
   L.logInfo @Text "notifyGateway Request" $ show onCancelPayload
-  _ <- Gateway.onCancel callbackUrl callbackApiKey onCancelPayload
+  _ <- Gateway.onCancel callbackUrl onCancelPayload
   return ()
 
 mkOnTrackTripPayload :: Case -> Case -> Flow OnTrackTripReq

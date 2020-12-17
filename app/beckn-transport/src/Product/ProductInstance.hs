@@ -68,9 +68,8 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   -- Send callback to BAP
   bapOrg <- fetchBapOrganization $ ordPi ^. #_caseId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  callbackApiKey <- bapOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
-  notifyTripDetailsToGateway searchPi ordPi callbackUrl callbackApiKey
-  notifyStatusUpdateReq searchPi (req ^. #_status) callbackUrl callbackApiKey
+  notifyTripDetailsToGateway searchPi ordPi callbackUrl
+  notifyStatusUpdateReq searchPi (req ^. #_status) callbackUrl
   PIQ.findById piId
   where
     fetchBapOrganization caseId = do
@@ -217,12 +216,12 @@ updateStatus user piId req = do
     _ -> throwError400 "DRIVER_VEHICLE_UNASSIGNED"
   return ()
 
-notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Text -> Flow ()
-notifyTripDetailsToGateway searchPi orderPi callbackUrl apiKey = do
+notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
+notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl apiKey
+    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()
@@ -312,14 +311,14 @@ updateTrip piId newStatus request = do
       pure ()
     _ -> return ()
 
-notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Text -> Flow ()
-notifyStatusUpdateReq searchPi status callbackUrl callbackApiKey = do
+notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
+notifyStatusUpdateReq searchPi status callbackUrl = do
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
         transporterOrg <- findOrganization
         admins <- getAdmins transporterOrg
-        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackUrl callbackApiKey
+        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackUrl
         Notify.notifyCancelReqByBP searchPi admins
       PI.TRIP_REASSIGNMENT -> do
         transporterOrg <- findOrganization
@@ -336,4 +335,4 @@ notifyStatusUpdateReq searchPi status callbackUrl callbackApiKey = do
         else pure []
     notifyStatusToGateway = do
       trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
-      BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl callbackApiKey
+      BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl
