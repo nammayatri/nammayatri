@@ -17,7 +17,6 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -37,7 +36,6 @@ import qualified Product.Support as Support
 import qualified Product.TrackTrip as TrackTrip
 import qualified Product.Update as Update
 import Servant
-import Storage.Queries.Organization
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
@@ -54,6 +52,7 @@ import qualified Types.API.Support as Support
 import Types.Geofencing
 import Utils.Auth
   ( VerifyAPIKey,
+    lookup,
   )
 import Utils.Common (TokenAuth)
 
@@ -134,8 +133,6 @@ searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
     :<|> (HttpSig.withBecknAuthProxy Search.searchCb lookup :<|> Search.searchCb)
-  where
-    lookup = lookupRegistryAction findOrgByShortId
 
 -------- Confirm Flow --------
 type ConfirmAPI =
@@ -156,8 +153,6 @@ confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
     :<|> (HttpSig.withBecknAuth Confirm.onConfirm lookup :<|> Confirm.onConfirm)
-  where
-    lookup = lookupRegistryAction findOrgByShortId
 
 ------- Case Flow -------
 type CaseAPI =
@@ -212,8 +207,6 @@ trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
   TrackTrip.track
     :<|> (HttpSig.withBecknAuth TrackTrip.trackCb lookup :<|> TrackTrip.trackCb)
-  where
-    lookup = lookupRegistryAction findOrgByShortId
 
 ------- Update Flow -------
 type UpdateAPI =
@@ -228,8 +221,6 @@ type UpdateAPI =
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
   HttpSig.withBecknAuth Update.onUpdate lookup :<|> Update.onUpdate
-  where
-    lookup = lookupRegistryAction findOrgByShortId
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
@@ -270,8 +261,6 @@ cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
     :<|> (HttpSig.withBecknAuth Cancel.onCancel lookup :<|> Cancel.onCancel)
-  where
-    lookup = lookupRegistryAction findOrgByShortId
 
 -------- Cron API --------
 type CronAPI =
@@ -333,8 +322,6 @@ statusFlow :: FlowServer StatusAPI
 statusFlow =
   Status.status
     :<|> (HttpSig.withBecknAuth Status.onStatus lookup :<|> Status.onStatus)
-  where
-    lookup = lookupRegistryAction findOrgByShortId
 
 -------- Support Flow----------
 type SupportAPI =

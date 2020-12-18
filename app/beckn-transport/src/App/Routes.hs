@@ -15,7 +15,6 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Time
 import EulerHS.Prelude
@@ -32,7 +31,6 @@ import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
-import Storage.Queries.Organization
 import Types.API.Case
 import Types.API.Cron
 import Types.API.Location as Location
@@ -42,7 +40,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Utils.Auth (VerifyAPIKey)
+import Utils.Auth (VerifyAPIKey, lookup)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -337,8 +335,6 @@ orgBecknApiFlow =
     :<|> (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup :<|> BP.serviceStatus orgId)
     :<|> (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup :<|> BP.trackTrip orgId)
     :<|> (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup :<|> BP.feedback orgId)
-  where
-    lookup = lookupRegistryAction findOrganizationByShortId
 
 type CronAPI =
   "cron"
