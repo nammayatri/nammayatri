@@ -61,4 +61,8 @@ in
 , domainVersion = "0.8.3"
 , dzConfig = dunzoConfig
 , dlConfig = delhiveryConfig
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
+, signatureExpiry = common.signatureExpiry
+, selfId = "JUSPAY.FMD.UAT.1"
 }

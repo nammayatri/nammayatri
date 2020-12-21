@@ -8,6 +8,7 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Status
 import Beckn.Types.FMD.API.Update
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.Cancel as P
 import qualified Product.Confirm as P
@@ -46,22 +47,22 @@ mockProviderBackendServer =
     :<|> updateFlow
 
 searchFlow :: FlowServer (SearchAPI VerifyAPIKey)
-searchFlow = P.search
+searchFlow = HttpSig.withBecknAuth P.search lookup :<|> P.search
 
 selectFlow :: FlowServer (SelectAPI VerifyAPIKey)
-selectFlow = P.select
+selectFlow = HttpSig.withBecknAuth P.select lookup :<|> P.select
 
 initFlow :: FlowServer (InitAPI VerifyAPIKey)
-initFlow = P.init
+initFlow = HttpSig.withBecknAuth P.init lookup :<|> P.init
 
 confirmFlow :: FlowServer (ConfirmAPI VerifyAPIKey)
-confirmFlow = P.confirm
+confirmFlow = HttpSig.withBecknAuth P.confirm lookup :<|> P.confirm
 
 statusFlow :: FlowServer (StatusAPI VerifyAPIKey)
-statusFlow = P.status
+statusFlow = HttpSig.withBecknAuth P.status lookup :<|> P.status
 
 cancelFlow :: FlowServer (CancelAPI VerifyAPIKey)
-cancelFlow = P.cancel
+cancelFlow = HttpSig.withBecknAuth P.cancel lookup :<|> P.cancel
 
 updateFlow :: FlowServer (UpdateAPI VerifyAPIKey)
-updateFlow = P.update
+updateFlow = HttpSig.withBecknAuth P.update lookup :<|> P.update

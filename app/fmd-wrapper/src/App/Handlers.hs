@@ -9,6 +9,7 @@ import Beckn.Types.FMD.API.Select (SelectAPI)
 import Beckn.Types.FMD.API.Status (StatusAPI)
 import Beckn.Types.FMD.API.Track (TrackAPI)
 import Beckn.Types.FMD.API.Update (UpdateAPI)
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.APIMapper as API
 import Servant
@@ -43,25 +44,25 @@ fmdWrapperBackendServer =
     :<|> updateFlow
 
 searchFlow :: FlowServer (SearchAPI VerifyAPIKey)
-searchFlow = API.search
+searchFlow = HttpSig.withBecknAuth API.search lookup :<|> API.search
 
 selectFlow :: FlowServer (SelectAPI VerifyAPIKey)
-selectFlow = API.select
+selectFlow = HttpSig.withBecknAuth API.select lookup :<|> API.select
 
 initFlow :: FlowServer (InitAPI VerifyAPIKey)
-initFlow = API.init
+initFlow = HttpSig.withBecknAuth API.init lookup :<|> API.init
 
 confirmFlow :: FlowServer (ConfirmAPI VerifyAPIKey)
-confirmFlow = API.confirm
+confirmFlow = HttpSig.withBecknAuth API.confirm lookup :<|> API.confirm
 
 statusFlow :: FlowServer (StatusAPI VerifyAPIKey)
-statusFlow = API.status
+statusFlow = HttpSig.withBecknAuth API.status lookup :<|> API.status
 
 trackFlow :: FlowServer (TrackAPI VerifyAPIKey)
-trackFlow = API.track
+trackFlow = HttpSig.withBecknAuth API.track lookup :<|> API.track
 
 cancelFlow :: FlowServer (CancelAPI VerifyAPIKey)
-cancelFlow = API.cancel
+cancelFlow = HttpSig.withBecknAuth API.cancel lookup :<|> API.cancel
 
 updateFlow :: FlowServer (UpdateAPI VerifyAPIKey)
-updateFlow = API.update
+updateFlow = HttpSig.withBecknAuth API.update lookup :<|> API.update

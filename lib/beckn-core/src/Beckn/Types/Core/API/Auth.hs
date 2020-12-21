@@ -4,8 +4,8 @@ import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
 import Servant
 
-type BecknAuth sig apiKey api =
-  SignatureAuth sig :> api
+type BecknAuth apiKey api =
+  SignatureAuth "Authorization" :> api
     :<|> APIKeyAuth apiKey :> api
 
 type BecknAuthProxy apiKey api =

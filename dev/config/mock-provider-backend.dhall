@@ -29,4 +29,7 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-provider-backend.log"}
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
+, signatureExpiry = common.signatureExpiry
 }

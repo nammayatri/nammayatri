@@ -26,7 +26,6 @@ type OnSearchReq = CallbackReq Value
 
 type SearchAPI apiKey =
   BecknAuth
-    "Authorization"
     apiKey
     ( "search"
         :> ReqBody '[JSON] SearchReq
@@ -38,7 +37,6 @@ searchAPI = Proxy
 
 type OnSearchAPI apiKey =
   BecknAuth
-    "Authorization"
     apiKey
     ( "on_search"
         :> ReqBody '[JSON] OnSearchReq

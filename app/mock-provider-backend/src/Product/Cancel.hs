@@ -10,14 +10,15 @@ import App.Types
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Cancel
+import qualified Beckn.Types.FMD.API.Cancel as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-cancel :: Organization -> CancelReq -> FlowHandler AckResponse
+cancel :: Organization -> API.CancelReq -> FlowHandler AckResponse
 cancel org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -33,8 +34,7 @@ cancel org req = withFlowHandler $ do
         cancelMessage <- mkCancelMessage
         AckResponse {} <-
           callClient "cancel" (req ^. #context) appUrl $
-            client
-              onCancelAPI
+            onCancelAPI
               cbApiKey
               CallbackReq
                 { context = context {_action = "on_cancel"},
@@ -47,8 +47,10 @@ cancel org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> onCancelAPI = client API.onCancelAPI
 
-mkCancelMessage :: Flow CancelResMessage
+mkCancelMessage :: Flow API.CancelResMessage
 mkCancelMessage = do
   L.runIO $ threadDelay 0.5e6
-  return $ CancelResMessage example
+  return $ API.CancelResMessage example

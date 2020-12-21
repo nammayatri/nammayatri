@@ -11,7 +11,7 @@ import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.FmdError
-import Beckn.Types.FMD.API.Search
+import qualified Beckn.Types.FMD.API.Search as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
@@ -19,8 +19,9 @@ import qualified Data.Map as M
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-search :: Organization -> SearchReq -> FlowHandler AckResponse
+search :: Organization -> API.SearchReq -> FlowHandler AckResponse
 search org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -37,7 +38,7 @@ search org req = withFlowHandler $ do
       | Just fmdErr <- M.lookup tId allFmdErrorFlowIds ->
         sendResponse cbApiKey context $ Left $ fromFmdError fmdErr
     _ ->
-      sendResponse cbApiKey context $ Right $ OnSearchServices example
+      sendResponse cbApiKey context $ Right $ API.OnSearchServices example
   return
     AckResponse
       { _context = context,
@@ -45,14 +46,14 @@ search org req = withFlowHandler $ do
         _error = Nothing
       }
   where
+    _ :<|> onSearchAPI = client API.onSearchAPI
     sendResponse cbKey context contents =
       fork "Search" $ do
         baseUrl <- xGatewayUri <$> ask
         L.runIO $ threadDelay 0.5e6
         AckResponse {} <-
           callClient "search" (req ^. #context) baseUrl $
-            client
-              onSearchAPI
+            onSearchAPI
               cbKey
               CallbackReq
                 { context = context {_action = "on_search"},

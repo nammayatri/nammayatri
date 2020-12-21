@@ -58,3 +58,11 @@ findByBapUrl bapUrl = do
       _callbackUrl ==. B.val_ (Just bapUrl)
         &&. _verified ==. B.val_ True
         &&. _enabled ==. B.val_ True
+
+findOrgByShortId :: ShortOrganizationId -> Flow (Maybe Org.Organization)
+findOrgByShortId shortId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Org.Organization {..} = _shortId ==. B.val_ shortId

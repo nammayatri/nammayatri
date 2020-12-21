@@ -2,30 +2,34 @@
 
 module Beckn.Types.FMD.API.Update where
 
+import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.Core.Order as Core
 import Beckn.Types.FMD.Order
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
 type UpdateAPI v =
-  "update"
-    :> APIKeyAuth v
-    :> ReqBody '[JSON] UpdateReq
-    :> Post '[JSON] UpdateRes
+  BecknAuth
+    v
+    ( "update"
+        :> ReqBody '[JSON] UpdateReq
+        :> Post '[JSON] UpdateRes
+    )
 
 updateAPI :: Proxy (UpdateAPI v)
 updateAPI = Proxy
 
 type OnUpdateAPI v =
-  "on_update"
-    :> APIKeyAuth v
-    :> ReqBody '[JSON] OnUpdateReq
-    :> Post '[JSON] OnUpdateRes
+  BecknAuth
+    v
+    ( "on_update"
+        :> ReqBody '[JSON] OnUpdateReq
+        :> Post '[JSON] OnUpdateRes
+    )
 
 onUpdateAPI :: Proxy (OnUpdateAPI v)
 onUpdateAPI = Proxy

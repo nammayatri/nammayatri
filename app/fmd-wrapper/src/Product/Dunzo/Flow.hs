@@ -10,14 +10,14 @@ import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
-import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes, onCancelAPI)
-import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes, onConfirmAPI)
-import Beckn.Types.FMD.API.Init (InitReq, InitRes, onInitAPI)
-import Beckn.Types.FMD.API.Search (SearchReq, SearchRes, onSearchAPI)
-import Beckn.Types.FMD.API.Select (SelectOrder (..), SelectReq (..), SelectRes, onSelectAPI)
-import Beckn.Types.FMD.API.Status (StatusReq, StatusRes, onStatusAPI)
-import Beckn.Types.FMD.API.Track (TrackReq, TrackRes, onTrackAPI)
-import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes, onUpdateAPI)
+import qualified Beckn.Types.FMD.API.Cancel as API
+import qualified Beckn.Types.FMD.API.Confirm as API
+import qualified Beckn.Types.FMD.API.Init as API
+import qualified Beckn.Types.FMD.API.Search as API
+import qualified Beckn.Types.FMD.API.Select as API
+import qualified Beckn.Types.FMD.API.Status as API
+import qualified Beckn.Types.FMD.API.Track as API
+import qualified Beckn.Types.FMD.API.Update as API
 import qualified Beckn.Types.FMD.Item as Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
@@ -34,6 +34,7 @@ import qualified EulerHS.Types as ET
 import qualified External.Dunzo.Flow as API
 import External.Dunzo.Types
 import Product.Dunzo.Transform
+import Servant ((:<|>) (..))
 import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
@@ -44,7 +45,7 @@ import Types.Error
 import Types.Wrapper
 import Utils.Common (fromMaybe400Log)
 
-search :: Org.Organization -> SearchReq -> Flow SearchRes
+search :: Org.Organization -> API.SearchReq -> Flow API.SearchRes
 search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
@@ -58,6 +59,7 @@ search org req = do
     sendCb context eres
   returnAck context
   where
+    _ :<|> onSearchAPI = ET.client API.onSearchAPI
     sendCb context res = do
       cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
       cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -65,7 +67,8 @@ search org req = do
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search req") $ encodeToText onSearchReq
-          onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchReq
+
+          onSearchResp <- L.callAPI cbUrl $ onSearchAPI cbApiKey onSearchReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search res") $ show onSearchResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -73,11 +76,11 @@ search org req = do
             handleError err = do
               let onSearchErrReq = mkOnSearchErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
-              onSearchResp <- L.callAPI cbUrl $ ET.client onSearchAPI cbApiKey onSearchErrReq
+              onSearchResp <- L.callAPI cbUrl $ onSearchAPI cbApiKey onSearchErrReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search err res") $ show onSearchResp
         _ -> pass
 
-select :: Org.Organization -> SelectReq -> Flow SelectRes
+select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
 select org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dzBPNwAddress
@@ -93,6 +96,7 @@ select org req = do
     sendCallback ctx dzQuotationTTLinMin cbUrl cbApiKey eres
   returnAck ctx
   where
+    _ :<|> onSelectAPI = ET.client API.onSelectAPI
     sendCallback context quotationTTLinMin cbUrl cbApiKey res =
       case res of
         Right quoteRes -> do
@@ -106,7 +110,7 @@ select org req = do
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select req") $ encodeToText onSelectReq
-          onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+          onSelectResp <- L.callAPI cbUrl $ onSelectAPI cbApiKey onSelectReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select res") $ show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -114,7 +118,7 @@ select org req = do
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select err req") $ encodeToText onSelectReq
-              onSelectResp <- L.callAPI cbUrl $ ET.client onSelectAPI cbApiKey onSelectReq
+              onSelectResp <- L.callAPI cbUrl $ onSelectAPI cbApiKey onSelectReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
         _ -> pass
 
@@ -132,7 +136,7 @@ select org req = do
         -- Category id is the index value of dzPackageContentList
         Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwBecknError400 "INVALID_PACKAGE_CATEGORY_ID"
 
-init :: Org.Organization -> InitReq -> Flow InitRes
+init :: Org.Organization -> API.InitReq -> Flow API.InitRes
 init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
@@ -146,12 +150,13 @@ init org req = do
   validateReturn order
   dzBACreds <- getDzBAPCreds org
   fork "init" do
-    quoteReq <- mkQuoteReqFromSelect $ SelectReq context (SelectOrder (orderDetails ^. #order))
+    quoteReq <- mkQuoteReqFromSelect $ API.SelectReq context (API.SelectOrder (orderDetails ^. #order))
     eres <- getQuote dzBACreds conf quoteReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId dzQuotationTTLinMin eres
   returnAck context
   where
+    _ :<|> onInitAPI = ET.client API.onInitAPI
     sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId quotationTTLinMin (Right res) = do
       -- quoteId will be used as orderId
       onInitMessage <-
@@ -165,7 +170,7 @@ init org req = do
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
       L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
-      onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
+      onInitResp <- L.callAPI cbUrl $ onInitAPI cbApiKey onInitReq
       L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
       return ()
     sendCb _ context cbApiKey cbUrl _ _ _ (Left (FailureResponse _ (Response _ _ _ body))) = do
@@ -173,7 +178,7 @@ init org req = do
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
-          onInitResp <- L.callAPI cbUrl $ ET.client onInitAPI cbApiKey onInitReq
+          onInitResp <- L.callAPI cbUrl $ onInitAPI cbApiKey onInitReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
           return ()
         Nothing -> return ()
@@ -216,7 +221,7 @@ init org req = do
         Nothing -> Storage.create case_
         Just _ -> pass
 
-confirm :: Org.Organization -> ConfirmReq -> Flow ConfirmRes
+confirm :: Org.Organization -> API.ConfirmReq -> Flow API.ConfirmRes
 confirm org req = do
   dconf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
@@ -273,6 +278,7 @@ confirm org req = do
       token <- fetchToken dzBACreds conf
       API.createTask dzClientId token dzUrl dzTestMode req'
 
+    _ :<|> onConfirmAPI = ET.client API.onConfirmAPI
     sendCb case_ orderDetails context cbApiKey cbUrl payeeDetails res = do
       case res of
         Right taskStatus -> do
@@ -282,7 +288,7 @@ confirm org req = do
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
           onConfirmReq <- mkOnConfirmReq context uOrder
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
-          eres <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
+          eres <- L.callAPI cbUrl $ onConfirmAPI cbApiKey onConfirmReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -290,7 +296,7 @@ confirm org req = do
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
-              onConfirmResp <- L.callAPI cbUrl $ ET.client onConfirmAPI cbApiKey onConfirmReq
+              onConfirmResp <- L.callAPI cbUrl $ onConfirmAPI cbApiKey onConfirmReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
         _ -> pass
 
@@ -311,7 +317,7 @@ confirm org req = do
       when (thresholdTime < now) $
         throwBecknError400 "TOOK_TOO_LONG_TO_CONFIRM"
 
-track :: Org.Organization -> TrackReq -> Flow TrackRes
+track :: Org.Organization -> API.TrackReq -> Flow API.TrackRes
 track org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req ^. (#message . #order_id)
@@ -328,16 +334,18 @@ track org req = do
       Left _ -> do
         let onTrackErrReq = mkOnTrackErrReq context "Failed to fetch tracking URL"
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track err req") $ encodeToText onTrackErrReq
-        eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackErrReq
+        eres <- L.callAPI cbUrl $ onTrackAPI cbApiKey onTrackErrReq
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track err res") $ show eres
       Right statusRes -> do
         let onTrackReq = mkOnTrackReq context orderId (statusRes ^. #tracking_url)
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track req") $ encodeToText onTrackReq
-        eres <- L.callAPI cbUrl $ ET.client onTrackAPI cbApiKey onTrackReq
+        eres <- L.callAPI cbUrl $ onTrackAPI cbApiKey onTrackReq
         L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_track res") $ show eres
   returnAck context
+  where
+    _ :<|> onTrackAPI = ET.client API.onTrackAPI
 
-status :: Org.Organization -> StatusReq -> Flow StatusRes
+status :: Org.Organization -> API.StatusReq -> Flow API.StatusRes
 status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
@@ -355,11 +363,12 @@ status org req = do
     sendCb c orderDetails context cbApiKey cbUrl payeeDetails eres
   returnAck context
   where
+    _ :<|> onStatusAPI = ET.client API.onStatusAPI
     updateCase caseId orderDetails taskStatus case_ = do
       let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
       Storage.update caseId updatedCase
 
-    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . ET.client onStatusAPI cbApiKey
+    callCbAPI cbApiKey cbUrl = L.callAPI cbUrl . onStatusAPI cbApiKey
 
     sendCb case_ orderDetails context cbApiKey cbUrl payeeDetails res = do
       let order = orderDetails ^. #order
@@ -383,7 +392,7 @@ status org req = do
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_status err res") $ show onStatusResp
         _ -> pass
 
-cancel :: Org.Organization -> CancelReq -> Flow CancelRes
+cancel :: Org.Organization -> API.CancelReq -> Flow API.CancelRes
 cancel org req = do
   let oId = req ^. (#message . #order . #id)
   conf@DunzoConfig {..} <- dzConfig <$> ask
@@ -410,6 +419,7 @@ cancel org req = do
       let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase
 
+    _ :<|> onCancelAPI = ET.client API.onCancelAPI
     sendCb case_ orderDetails context cbApiKey cbUrl res =
       case res of
         Right () -> do
@@ -418,7 +428,7 @@ cancel org req = do
           let updatedOrderDetails = orderDetails & #order .~ updatedOrder
           updateCase (case_ ^. #_id) updatedOrderDetails case_
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_cancel req") $ encodeToText onCancelReq
-          onCancelRes <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
+          onCancelRes <- L.callAPI cbUrl $ onCancelAPI cbApiKey onCancelReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_cancel res") $ show onCancelRes
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -426,11 +436,11 @@ cancel org req = do
             handleError err = do
               let onCancelReq = mkOnCancelErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_cancel err req") $ encodeToText onCancelReq
-              onCancelResp <- L.callAPI cbUrl $ ET.client onCancelAPI cbApiKey onCancelReq
+              onCancelResp <- L.callAPI cbUrl $ onCancelAPI cbApiKey onCancelReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_cancel err res") $ show onCancelResp
         _ -> pass
 
-update :: Org.Organization -> UpdateReq -> Flow UpdateRes
+update :: Org.Organization -> API.UpdateReq -> Flow API.UpdateRes
 update org req = do
   DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
@@ -440,9 +450,11 @@ update org req = do
     -- TODO: Dunzo doesnt have update
     let onUpdateReq = mkOnUpdateErrReq context
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_update err req") $ encodeToText onUpdateReq
-    eres <- L.callAPI cbUrl $ ET.client onUpdateAPI cbApiKey onUpdateReq
+    eres <- L.callAPI cbUrl $ onUpdateAPI cbApiKey onUpdateReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_update err res") $ show eres
   returnAck context
+  where
+    _ :<|> onUpdateAPI = ET.client API.onUpdateAPI
 
 -- Helpers
 getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)

@@ -2,7 +2,6 @@ module App.Routes where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.Core.API.Auth
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
@@ -15,6 +14,7 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Time
 import EulerHS.Prelude
@@ -40,7 +40,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Utils.Auth (VerifyAPIKey, lookup)
+import Utils.Auth (lookup)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -320,21 +320,34 @@ transporterServer =
     :<|> routeApiFlow
 
 type OrgBecknAPI =
-  Capture "orgId" OrganizationId :> BecknAuthProxy VerifyAPIKey API.SearchAPI
-    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.ConfirmAPI
-    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.CancelAPI
-    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.StatusAPI
-    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.TrackAPI
-    :<|> Capture "orgId" OrganizationId :> BecknAuth "Authorization" VerifyAPIKey API.FeedbackAPI
+  Capture "orgId" OrganizationId
+    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Proxy-Authorization"
+    :> API.SearchAPI
+    :<|> Capture "orgId" OrganizationId
+    :> SignatureAuth "Authorization"
+    :> API.ConfirmAPI
+    :<|> Capture "orgId" OrganizationId
+    :> SignatureAuth "Authorization"
+    :> API.CancelAPI
+    :<|> Capture "orgId" OrganizationId
+    :> SignatureAuth "Authorization"
+    :> API.StatusAPI
+    :<|> Capture "orgId" OrganizationId
+    :> SignatureAuth "Authorization"
+    :> API.TrackAPI
+    :<|> Capture "orgId" OrganizationId
+    :> SignatureAuth "Authorization"
+    :> API.FeedbackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
-  (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookup :<|> BP.search orgId)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.confirm orgId) lookup :<|> BP.confirm orgId)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.cancel orgId) lookup :<|> BP.cancel orgId)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup :<|> BP.serviceStatus orgId)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup :<|> BP.trackTrip orgId)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup :<|> BP.feedback orgId)
+  (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookup)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.confirm orgId) lookup)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.cancel orgId) lookup)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup)
+    :<|> (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup)
 
 type CronAPI =
   "cron"

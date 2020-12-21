@@ -5,7 +5,6 @@ module App.Routes where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.Core.API.Auth
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
 import qualified Beckn.Types.Core.API.Confirm as Confirm
@@ -17,6 +16,7 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -51,8 +51,7 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import Types.Geofencing
 import Utils.Auth
-  ( VerifyAPIKey,
-    lookup,
+  ( lookup,
   )
 import Utils.Common (TokenAuth)
 
@@ -127,12 +126,14 @@ type SearchAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Search'.SearchReq
     :> Post '[JSON] Search'.AckResponse
-    :<|> BecknAuthProxy VerifyAPIKey Search.OnSearchAPI
+    :<|> SignatureAuth "Authorization"
+    :> SignatureAuth "Proxy-Authorization"
+    :> Search.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> (HttpSig.withBecknAuthProxy Search.searchCb lookup :<|> Search.searchCb)
+    :<|> HttpSig.withBecknAuthProxy Search.searchCb lookup
 
 -------- Confirm Flow --------
 type ConfirmAPI =
@@ -140,19 +141,16 @@ type ConfirmAPI =
       :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
-      :<|> BecknAuth
-             "Authorization"
-             VerifyAPIKey
-             ( "on_confirm"
-                 :> ReqBody '[JSON] Confirm.OnConfirmReq
-                 :> Post '[JSON] Confirm.OnConfirmRes
-             )
+      :<|> SignatureAuth "Authorization"
+        :> "on_confirm"
+        :> ReqBody '[JSON] Confirm.OnConfirmReq
+        :> Post '[JSON] Confirm.OnConfirmRes
   )
 
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
-    :<|> (HttpSig.withBecknAuth Confirm.onConfirm lookup :<|> Confirm.onConfirm)
+    :<|> HttpSig.withBecknAuth Confirm.onConfirm lookup
 
 ------- Case Flow -------
 type CaseAPI =
@@ -195,32 +193,26 @@ type TrackTripAPI =
     :> TokenAuth
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
-    :<|> BecknAuth
-           "Authorization"
-           VerifyAPIKey
-           ( "on_track"
-               :> ReqBody '[JSON] OnTrackTripReq
-               :> Post '[JSON] OnTrackTripRes
-           )
+    :<|> SignatureAuth "Authorization"
+      :> "on_track"
+      :> ReqBody '[JSON] OnTrackTripReq
+      :> Post '[JSON] OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
   TrackTrip.track
-    :<|> (HttpSig.withBecknAuth TrackTrip.trackCb lookup :<|> TrackTrip.trackCb)
+    :<|> HttpSig.withBecknAuth TrackTrip.trackCb lookup
 
 ------- Update Flow -------
 type UpdateAPI =
-  BecknAuth
-    "Authorization"
-    VerifyAPIKey
-    ( "on_update"
-        :> ReqBody '[JSON] Update.OnUpdateReq
-        :> Post '[JSON] Update.OnUpdateRes
-    )
+  SignatureAuth "Authorization"
+    :> "on_update"
+    :> ReqBody '[JSON] Update.OnUpdateReq
+    :> Post '[JSON] Update.OnUpdateRes
 
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
-  HttpSig.withBecknAuth Update.onUpdate lookup :<|> Update.onUpdate
+  HttpSig.withBecknAuth Update.onUpdate lookup
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
@@ -249,18 +241,15 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    :<|> BecknAuth
-           "Authorization"
-           VerifyAPIKey
-           ( "on_cancel"
-               :> ReqBody '[JSON] Cancel.OnCancelReq
-               :> Post '[JSON] Cancel.OnCancelRes
-           )
+    :<|> SignatureAuth "Authorization"
+      :> "on_cancel"
+      :> ReqBody '[JSON] Cancel.OnCancelReq
+      :> Post '[JSON] Cancel.OnCancelRes
 
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
-    :<|> (HttpSig.withBecknAuth Cancel.onCancel lookup :<|> Cancel.onCancel)
+    :<|> HttpSig.withBecknAuth Cancel.onCancel lookup
 
 -------- Cron API --------
 type CronAPI =
@@ -310,18 +299,15 @@ type StatusAPI =
     :> TokenAuth
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
-    :<|> BecknAuth
-           "Authorization"
-           VerifyAPIKey
-           ( "on_status"
-               :> ReqBody '[JSON] Status.OnStatusReq
-               :> Post '[JSON] Status.OnStatusRes
-           )
+    :<|> SignatureAuth "Authorization"
+      :> "on_status"
+      :> ReqBody '[JSON] Status.OnStatusReq
+      :> Post '[JSON] Status.OnStatusRes
 
 statusFlow :: FlowServer StatusAPI
 statusFlow =
   Status.status
-    :<|> (HttpSig.withBecknAuth Status.onStatus lookup :<|> Status.onStatus)
+    :<|> HttpSig.withBecknAuth Status.onStatus lookup
 
 -------- Support Flow----------
 type SupportAPI =

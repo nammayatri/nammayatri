@@ -7,14 +7,15 @@ import App.Types
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Track
+import qualified Beckn.Types.FMD.API.Track as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-track :: Organization -> TrackReq -> FlowHandler AckResponse
+track :: Organization -> API.TrackReq -> FlowHandler AckResponse
 track org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   let orderId = req ^. (#message . #order_id)
@@ -31,8 +32,7 @@ track org req = withFlowHandler $ do
         trackMessage <- mkTrackMessage orderId
         AckResponse {} <-
           callClient "track" (req ^. #context) appUrl $
-            client
-              onTrackAPI
+            onTrackAPI
               cbApiKey
               CallbackReq
                 { context = context {_action = "on_track"},
@@ -45,8 +45,10 @@ track org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> onTrackAPI = client API.onTrackAPI
 
-mkTrackMessage :: Text -> Flow TrackResMessage
+mkTrackMessage :: Text -> Flow API.TrackResMessage
 mkTrackMessage orderId = do
   L.runIO $ threadDelay 0.5e6
-  return $ TrackResMessage example orderId
+  return $ API.TrackResMessage example orderId

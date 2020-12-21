@@ -46,4 +46,8 @@ in
 , fmdCoreVersion = "0.8.0"
 , fmdDomainVersion = "0.8.3"
 , signatureExpiry = common.signatureExpiry
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
+, signatureExpiry = common.signatureExpiry
+, selfId = "JUSPAY.FMD.UAT.1"
 }

@@ -6,7 +6,7 @@ module Product.Init where
 import App.Types
 import App.Utils
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
-import Beckn.Types.FMD.API.Confirm
+import qualified Beckn.Types.FMD.API.Confirm as API
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
@@ -14,6 +14,7 @@ import Data.Aeson (encode)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
 initCb :: Organization -> OnInitReq -> FlowHandler AckResponse
 initCb org req = withFlowHandler $ do
@@ -28,5 +29,7 @@ initCb org req = withFlowHandler $ do
       Just url ->
         void $
           callClient "confirm" (req ^. #context) url $
-            client confirmAPI cbApiKey confirmReq
+            confirmAPI cbApiKey confirmReq
   return resp
+  where
+    _ :<|> confirmAPI = client API.confirmAPI

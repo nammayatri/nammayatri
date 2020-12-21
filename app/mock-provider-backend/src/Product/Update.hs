@@ -10,7 +10,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.FmdError
-import Beckn.Types.FMD.API.Update
+import qualified Beckn.Types.FMD.API.Update as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
@@ -18,8 +18,9 @@ import qualified Data.Map as M
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-update :: Organization -> UpdateReq -> FlowHandler AckResponse
+update :: Organization -> API.UpdateReq -> FlowHandler AckResponse
 update org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -46,12 +47,12 @@ update org req = withFlowHandler $ do
         _error = Nothing
       }
   where
+    _ :<|> onUpdateAPI = client API.onUpdateAPI
     sendResponse appUrl cbApiKey context contents =
       fork "Update" $ do
         AckResponse {} <-
           callClient "update" (req ^. #context) appUrl $
-            client
-              onUpdateAPI
+            onUpdateAPI
               cbApiKey
               CallbackReq
                 { context = context {_action = "on_update"},
@@ -59,10 +60,10 @@ update org req = withFlowHandler $ do
                 }
         pass
 
-mkUpdateMessage :: FlowR r UpdateResMessage
+mkUpdateMessage :: FlowR r API.UpdateResMessage
 mkUpdateMessage = do
   L.runIO $ threadDelay 0.5e6
-  return $ UpdateResMessage example
+  return $ API.UpdateResMessage example
 
 locationTooFarError :: Error
 locationTooFarError =

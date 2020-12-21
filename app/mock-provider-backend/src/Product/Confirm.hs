@@ -10,14 +10,15 @@ import App.Types
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Confirm
+import qualified Beckn.Types.FMD.API.Confirm as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-confirm :: Organization -> ConfirmReq -> FlowHandler AckResponse
+confirm :: Organization -> API.ConfirmReq -> FlowHandler AckResponse
 confirm org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -33,8 +34,7 @@ confirm org req = withFlowHandler $ do
         resp <- mkConfirmResponse
         AckResponse {} <-
           callClient "confirm" (req ^. #context) appUrl $
-            client
-              onConfirmAPI
+            onConfirmAPI
               cbApiKey
               CallbackReq
                 { context = context {_action = "on_confirm"},
@@ -47,8 +47,10 @@ confirm org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> onConfirmAPI = client API.onConfirmAPI
 
-mkConfirmResponse :: Flow ConfirmResMessage
+mkConfirmResponse :: Flow API.ConfirmResMessage
 mkConfirmResponse = do
   L.runIO $ threadDelay 0.5e6
-  return $ ConfirmResMessage example
+  return $ API.ConfirmResMessage example

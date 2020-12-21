@@ -2,29 +2,33 @@
 
 module Beckn.Types.FMD.API.Status where
 
+import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.FMD.Order
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
 type StatusAPI v =
-  "status"
-    :> APIKeyAuth v
-    :> ReqBody '[JSON] StatusReq
-    :> Post '[JSON] StatusRes
+  BecknAuth
+    v
+    ( "status"
+        :> ReqBody '[JSON] StatusReq
+        :> Post '[JSON] StatusRes
+    )
 
 statusAPI :: Proxy (StatusAPI v)
 statusAPI = Proxy
 
 type OnStatusAPI v =
-  "on_status"
-    :> APIKeyAuth v
-    :> ReqBody '[JSON] OnStatusReq
-    :> Post '[JSON] OnStatusRes
+  BecknAuth
+    v
+    ( "on_status"
+        :> ReqBody '[JSON] OnStatusReq
+        :> Post '[JSON] OnStatusRes
+    )
 
 onStatusAPI :: Proxy (OnStatusAPI v)
 onStatusAPI = Proxy

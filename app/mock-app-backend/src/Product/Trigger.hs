@@ -20,10 +20,10 @@ import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.FmdError
-import Beckn.Types.FMD.API.Cancel
-import Beckn.Types.FMD.API.Search
-import Beckn.Types.FMD.API.Track
-import Beckn.Types.FMD.API.Update
+import qualified Beckn.Types.FMD.API.Cancel as API
+import qualified Beckn.Types.FMD.API.Search as API
+import qualified Beckn.Types.FMD.API.Track as API
+import qualified Beckn.Types.FMD.API.Update as API
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
 import Data.Aeson
@@ -81,7 +81,7 @@ triggerSearch flow = withFlowHandler $ do
   req <- buildSearchReq transactionId
   eRes <-
     callClient "search" (req ^. #context) baseUrl $
-      client searchAPI "test-app-2-key" req
+      searchAPI "test-app-2-key" req
   EL.logDebug @Text "mock_app_backend" $ "search context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -89,21 +89,23 @@ triggerSearch flow = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> searchAPI = client API.searchAPI
 
 triggerTrack :: Text -> FlowHandler AckResponse
 triggerTrack orderId = withFlowHandler $ do
   tid <- EL.generateGUID
   context <- buildContext "track" tid
   let reqMsg =
-        TrackReqMessage
+        API.TrackReqMessage
           { order_id = orderId,
             callback_url = Nothing
           }
-  let req = TrackReq context reqMsg
+  let req = API.TrackReq context reqMsg
   (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
   eRes <-
     callClient "track" context cbUrl $
-      client trackAPI cbApiKey req
+      trackAPI cbApiKey req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -111,6 +113,8 @@ triggerTrack orderId = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> trackAPI = client API.trackAPI
 
 triggerTrackForLast :: FlowHandler AckResponse
 triggerTrackForLast = getLastOrderId >>= triggerTrack
@@ -120,16 +124,16 @@ triggerCancel orderId = withFlowHandler $ do
   tid <- EL.generateGUID
   context <- buildContext "cancel" tid
   let reqMsg =
-        CancelReqMessage $
-          CancelOrder
+        API.CancelReqMessage $
+          API.CancelOrder
             { id = orderId,
               cancellation_reason_id = "Test cancel triggered"
             }
-  let req = CancelReq context reqMsg
+  let req = API.CancelReq context reqMsg
   (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
   eRes <-
     callClient "cancel" context cbUrl $
-      client cancelAPI cbApiKey req
+      cancelAPI cbApiKey req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -137,6 +141,8 @@ triggerCancel orderId = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> cancelAPI = client API.cancelAPI
 
 triggerCancelForLast :: FlowHandler AckResponse
 triggerCancelForLast = getLastOrderId >>= triggerCancel
@@ -167,23 +173,23 @@ triggerUpdate orderId mode = withFlowHandler $ do
   context <- buildContext "update" tid
   let req = case mode of
         LeaveIntact ->
-          UpdateReq
+          API.UpdateReq
             context
-            UpdateReqMessage
+            API.UpdateReqMessage
               { order = example,
                 update_action = "update_drop_instructions"
               }
         SetFarDropLocation ->
-          UpdateReq
+          API.UpdateReq
             context {_transaction_id = locationTooFarId}
-            UpdateReqMessage
+            API.UpdateReqMessage
               { order = example,
                 update_action = "update_drop_location"
               }
   (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
   eRes <-
     callClient "update" context cbUrl $
-      client updateAPI cbApiKey req
+      updateAPI cbApiKey req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -191,6 +197,8 @@ triggerUpdate orderId mode = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> updateAPI = client API.updateAPI
 
 triggerUpdateForLast :: TriggerUpdateMode -> FlowHandler AckResponse
 triggerUpdateForLast mode = do

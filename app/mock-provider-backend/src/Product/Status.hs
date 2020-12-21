@@ -7,14 +7,15 @@ import App.Types
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
-import Beckn.Types.FMD.API.Status
+import qualified Beckn.Types.FMD.API.Status as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-status :: Organization -> StatusReq -> FlowHandler AckResponse
+status :: Organization -> API.StatusReq -> FlowHandler AckResponse
 status org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
   cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -30,8 +31,7 @@ status org req = withFlowHandler $ do
         statusMessage <- mkStatusMessage
         AckResponse {} <-
           callClient "status" (req ^. #context) appUrl $
-            client
-              onStatusAPI
+            onStatusAPI
               cbApiKey
               CallbackReq
                 { context = context {_action = "on_status"},
@@ -44,8 +44,10 @@ status org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
+  where
+    _ :<|> onStatusAPI = client API.onStatusAPI
 
-mkStatusMessage :: Flow StatusResMessage
+mkStatusMessage :: Flow API.StatusResMessage
 mkStatusMessage = do
   L.runIO $ threadDelay 0.5e6
-  return $ StatusResMessage example
+  return $ API.StatusResMessage example

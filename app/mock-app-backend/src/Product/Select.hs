@@ -6,16 +6,17 @@ module Product.Select where
 import App.Types
 import App.Utils
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
-import Beckn.Types.FMD.API.Init
-import Beckn.Types.FMD.API.Select
+import qualified Beckn.Types.FMD.API.Init as API
+import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Data.Aeson (encode)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Servant ((:<|>) (..))
 
-selectCb :: Organization -> OnSelectReq -> FlowHandler AckResponse
+selectCb :: Organization -> API.OnSelectReq -> FlowHandler AckResponse
 selectCb org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
@@ -35,6 +36,8 @@ selectCb org req = withFlowHandler $ do
         Just url ->
           void $
             callClient "init" (req ^. #context) url $
-              client initAPI cbApiKey initReq
+              initAPI cbApiKey initReq
     Left err -> EL.logDebug @Text "mock_app_backend" $ "select_cb error: " <> show err
   return resp
+  where
+    _ :<|> initAPI = client API.initAPI

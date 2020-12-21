@@ -4,6 +4,7 @@ import App.Types
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (fromMaybeM400)
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as Org
 
@@ -18,3 +19,6 @@ instance VerificationMethod VerifyAPIKey where
 
 verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
 verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM400 "INVALID_API_KEY")
+
+lookup :: HttpSig.LookupAction HttpSig.LookupRegistry AppEnv
+lookup = HttpSig.lookupRegistryAction Org.findOrgByShortId
