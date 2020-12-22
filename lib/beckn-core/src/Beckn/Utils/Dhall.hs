@@ -30,7 +30,7 @@ readDhallConfigDefault appname = do
   fname <- fromMaybe defCfgPath <$> lookupEnv envVarName
   readDhallConfig fname
   where
-    defCfgPath = "./dev/config/" ++ appname ++ ".dhall"
+    defCfgPath = "./dhall-configs/dev/" ++ appname ++ ".dhall"
     envVarName = map norm appname ++ "_CONFIG_PATH"
     norm '-' = '_'
     norm c = toUpper c

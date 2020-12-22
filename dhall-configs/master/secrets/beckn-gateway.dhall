@@ -1,0 +1,3 @@
+{ dbUserId = "atlas"
+, dbPassword = "atlas"
+}
