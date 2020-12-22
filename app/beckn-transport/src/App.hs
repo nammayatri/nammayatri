@@ -46,12 +46,13 @@ runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
 runTransporterBackendApp' appEnv settings = do
   let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
-    putStrLn @String "Initializing DB Connections..."
+    putStrLn @String "Setting up for signature auth..."
     case prepareAuthManager flowRt appEnv "Authorization" of
       Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
       Right getManager -> do
         authManager <- getManager
         let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        putStrLn @String "Initializing DB Connections..."
         try (runFlowR flowRt appEnv prepareDBConnections) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ -> do
