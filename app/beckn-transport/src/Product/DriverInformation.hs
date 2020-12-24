@@ -3,6 +3,7 @@
 module Product.DriverInformation where
 
 import qualified App.Types as App
+import qualified Beckn.Types.Ack as Ack
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -59,13 +60,14 @@ execute Handle {..} = do
           earnings_over_time = fromRational $ toRational _earnings
         }
 
-updateDriverInfo :: Text -> Integer -> App.FlowHandler ()
+updateDriverInfo :: Text -> Integer -> App.FlowHandler Ack.Ack
 updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
   driversIdsWithInfo <- fmap DI._driverId <$> QueryDI.fetchMostOutdatedDriversInfo quantityToUpdate
   now <- getCurrTime
   let fromTime = addUTCTime (- timePeriod) now
   driversInfo <- traverse (fetchDriverInfoById fromTime now) driversIdsWithInfo
   traverse_ updateInfo driversInfo
+  pure Ack.ackSuccess
   where
     fetchDriverInfoById fromTime toTime driverId = do
       rides <- QueryPI.getDriverCompletedRides (PersonId $ driverId ^. #_getDriverId) fromTime toTime

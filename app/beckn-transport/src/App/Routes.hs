@@ -1,6 +1,7 @@
 module App.Routes where
 
 import App.Types
+import qualified Beckn.Types.Ack as Ack
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as API
@@ -396,7 +397,7 @@ type DriverInformationAPI =
     :<|> "update_drivers_info"
     :> AdminTokenAuth
     :> Capture "quantity" Integer
-    :> Post '[JSON] ()
+    :> Post '[JSON] Ack.Ack
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
