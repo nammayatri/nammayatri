@@ -240,15 +240,17 @@ spec:
             - key: beckn-transport.dhall
               path: config/beckn-transport.dhall
             - key: common.dhall
+              path: config/common.dhall
+            - key: globalCommon.dhall
               path: generic/common.dhall
         - name: dhall-secrets
           secret:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
             - key: beckn-transport.dhall
-              path: secrets/beckn-transport.dhall
+              path: config/secrets/beckn-transport.dhall
             - key: common.dhall
-              path: generic/secrets/common.dhall
+              path: config/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

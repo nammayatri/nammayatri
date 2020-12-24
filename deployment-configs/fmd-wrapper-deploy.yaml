@@ -238,6 +238,8 @@ spec:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
             - key: common.dhall
+              path: config/common.dhall
+            - key: globalCommon.dhall
               path: generic/common.dhall
             - key: fmd-wrapper.dhall
               path: config/fmd-wrapper.dhall
@@ -246,9 +248,9 @@ spec:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
             - key: common.dhall
-              path: generic/secrets/common.dhall
+              path: config/secrets/common.dhall
             - key: fmd-wrapper.dhall
-              path: secrets/fmd-wrapper.dhall
+              path: config/secrets/fmd-wrapper.dhall
 status: {}
 ---
 apiVersion: v1

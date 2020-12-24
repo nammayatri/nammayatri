@@ -240,15 +240,17 @@ spec:
             - key: app-backend.dhall
               path: config/app-backend.dhall
             - key: common.dhall
+              path: config/common.dhall
+            - key: globalCommon.dhall
               path: generic/common.dhall
         - name: dhall-secrets
           secret:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
             - key: app-backend.dhall
-              path: secrets/app-backend.dhall
+              path: config/secrets/app-backend.dhall
             - key: common.dhall
-              path: generic/secrets/common.dhall
+              path: config/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

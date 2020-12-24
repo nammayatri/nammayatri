@@ -232,6 +232,8 @@ spec:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
             - key: common.dhall
+              path: config/common.dhall
+            - key: globalCommon.dhall
               path: generic/common.dhall
             - key: mock-provider-backend.dhall
               path: config/mock-provider-backend.dhall
@@ -240,9 +242,9 @@ spec:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
             - key: mock-provider-backend.dhall
-              path: secrets/mock-provider-backend.dhall
+              path: config/secrets/mock-provider-backend.dhall
             - key: common.dhall
-              path: generic/secrets/common.dhall
+              path: config/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

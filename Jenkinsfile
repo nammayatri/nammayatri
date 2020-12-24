@@ -69,8 +69,8 @@ pipeline {
               steps {
                 sh '''
                   (kubectl create configmap beckn-dhall-config-$DEPLOY_VARIANT \
-                    --from-file=deployment-configs/dhall/$DEPLOY_VARIANT \
-                    --from-file=deployment-configs/dhall/generic \
+                    --from-file=dhall-configs/$DEPLOY_VARIANT \
+                    --from-file=globalCommon.dhall=dhall-configs/generic/common.dhall \
                     -n atlas -o yaml --dry-run | \
                     grep -v 'creationTimestamp' \
                   ) > deployment-configs/beckn-dhall-config.yaml
