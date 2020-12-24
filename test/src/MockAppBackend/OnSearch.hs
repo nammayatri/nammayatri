@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_search" "dummy-txn-id" Nothing Nothing
       let onSearchReq = buildOnSearchReq ctx
-      eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow mockAppApiKey onSearchReq
+      eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow onSearchReq
       eitherSearchCbRes `shouldSatisfy` isRight

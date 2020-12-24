@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_init" "dummy-txn-id" Nothing Nothing
       let onInitReq = buildOnInitReq ctx
-      eitherInitCbRes <- runClient appClientEnv $ onInitFlow mockAppApiKey onInitReq
+      eitherInitCbRes <- runClient appClientEnv $ onInitFlow onInitReq
       eitherInitCbRes `shouldSatisfy` isRight

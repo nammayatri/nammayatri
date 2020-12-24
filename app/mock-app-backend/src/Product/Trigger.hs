@@ -26,6 +26,7 @@ import qualified Beckn.Types.FMD.API.Track as API
 import qualified Beckn.Types.FMD.API.Update as API
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.List (lookup)
@@ -80,8 +81,8 @@ triggerSearch flow = withFlowHandler $ do
       SearchErrorFMD err -> pure $ fmdErrorFlowId err
   req <- buildSearchReq transactionId
   eRes <-
-    callClient "search" (req ^. #context) baseUrl $
-      searchAPI "test-app-2-key" req
+    callClient' (Just HttpSig.signatureAuthManagerKey) "search" (req ^. #context) baseUrl $
+      client API.searchAPI req
   EL.logDebug @Text "mock_app_backend" $ "search context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -89,8 +90,6 @@ triggerSearch flow = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> searchAPI = client API.searchAPI
 
 triggerTrack :: Text -> FlowHandler AckResponse
 triggerTrack orderId = withFlowHandler $ do
@@ -102,10 +101,10 @@ triggerTrack orderId = withFlowHandler $ do
             callback_url = Nothing
           }
   let req = API.TrackReq context reqMsg
-  (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
+  (cbUrl, _) <- getOrderCallbackCoords orderId
   eRes <-
-    callClient "track" context cbUrl $
-      trackAPI cbApiKey req
+    callClient' (Just HttpSig.signatureAuthManagerKey) "track" context cbUrl $
+      client API.trackAPI req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -113,8 +112,6 @@ triggerTrack orderId = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> trackAPI = client API.trackAPI
 
 triggerTrackForLast :: FlowHandler AckResponse
 triggerTrackForLast = getLastOrderId >>= triggerTrack
@@ -130,10 +127,10 @@ triggerCancel orderId = withFlowHandler $ do
               cancellation_reason_id = "Test cancel triggered"
             }
   let req = API.CancelReq context reqMsg
-  (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
+  (cbUrl, _) <- getOrderCallbackCoords orderId
   eRes <-
-    callClient "cancel" context cbUrl $
-      cancelAPI cbApiKey req
+    callClient' (Just HttpSig.signatureAuthManagerKey) "cancel" context cbUrl $
+      client API.cancelAPI req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -141,8 +138,6 @@ triggerCancel orderId = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> cancelAPI = client API.cancelAPI
 
 triggerCancelForLast :: FlowHandler AckResponse
 triggerCancelForLast = getLastOrderId >>= triggerCancel
@@ -186,10 +181,10 @@ triggerUpdate orderId mode = withFlowHandler $ do
               { order = example,
                 update_action = "update_drop_location"
               }
-  (cbUrl, cbApiKey) <- getOrderCallbackCoords orderId
+  (cbUrl, _) <- getOrderCallbackCoords orderId
   eRes <-
-    callClient "update" context cbUrl $
-      updateAPI cbApiKey req
+    callClient' (Just HttpSig.signatureAuthManagerKey) "update" context cbUrl $
+      client API.updateAPI req
   EL.logDebug @Text "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
@@ -197,8 +192,6 @@ triggerUpdate orderId mode = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> updateAPI = client API.updateAPI
 
 triggerUpdateForLast :: TriggerUpdateMode -> FlowHandler AckResponse
 triggerUpdateForLast mode = do

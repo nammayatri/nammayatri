@@ -18,5 +18,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "search" "dummy-txn-id" Nothing Nothing
       let searchReq = buildFMDSearchReq ctx
-      initiateSearchRes <- runClient providerClientEnv $ searchFlow mockProviderApiKey searchReq
+      initiateSearchRes <- runClient providerClientEnv $ searchFlow searchReq
       initiateSearchRes `shouldSatisfy` isRight

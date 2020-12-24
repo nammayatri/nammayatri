@@ -40,8 +40,20 @@ triggerSearchReq
   :<|> triggerUpdateLast
   :<|> triggerUpdate = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
 
-onSearchFlow :: Text -> OnSearchReq -> ClientM AckResponse
-onSearchFlow = client (Proxy :: Proxy MockAppRoutes.OnSearchAPI)
+onSearchFlow :: OnSearchReq -> ClientM AckResponse
+onSelectFlow :: OnSelectReq -> ClientM AckResponse
+onInitFlow :: OnInitReq -> ClientM AckResponse
+onConfirmFlow :: OnConfirmReq -> ClientM AckResponse
+onUpdateFlow :: OnUpdateReq -> ClientM AckResponse
+onSearchFlow
+  :<|> onSelectFlow
+  :<|> onInitFlow
+  :<|> onConfirmFlow
+  :<|> _
+  :<|> _
+  :<|> _
+  :<|> onUpdateFlow =
+    client (Proxy :: Proxy MockAppRoutes.BecknAPI)
 
 buildOnSearchReq :: Context -> OnSearchReq
 buildOnSearchReq context =
@@ -50,18 +62,12 @@ buildOnSearchReq context =
       contents = Right $ OnSearchServices example
     }
 
-onSelectFlow :: Text -> OnSelectReq -> ClientM AckResponse
-onSelectFlow = client (Proxy :: Proxy MockAppRoutes.OnSelectAPI)
-
 buildOnSelectReq :: Context -> OnSelectReq
 buildOnSelectReq context =
   CallbackReq
     { context,
       contents = Right $ SelectOrder example
     }
-
-onInitFlow :: Text -> OnInitReq -> ClientM AckResponse
-onInitFlow = client (Proxy :: Proxy MockAppRoutes.OnInitAPI)
 
 buildOnInitReq :: Context -> OnInitReq
 buildOnInitReq context =
@@ -70,18 +76,12 @@ buildOnInitReq context =
       contents = Right $ InitOrder example
     }
 
-onConfirmFlow :: Text -> OnConfirmReq -> ClientM AckResponse
-onConfirmFlow = client (Proxy :: Proxy MockAppRoutes.OnConfirmAPI)
-
 buildOnConfirmReq :: Context -> OnConfirmReq
 buildOnConfirmReq context =
   CallbackReq
     { context,
       contents = Right $ ConfirmResMessage example
     }
-
-onUpdateFlow :: Text -> OnUpdateReq -> ClientM AckResponse
-onUpdateFlow = client (Proxy :: Proxy MockAppRoutes.OnUpdateAPI)
 
 buildOnUpdateReq :: Context -> OnUpdateReq
 buildOnUpdateReq context =

@@ -7,10 +7,14 @@ import App.Types
 import Beckn.Types.App (CaseId (..), _getOrganizationId)
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
-import qualified Beckn.Types.FMD.API.Confirm as API
-import qualified Beckn.Types.FMD.API.Init as API
-import qualified Beckn.Types.FMD.API.Search as API
-import qualified Beckn.Types.FMD.API.Select as API
+import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
+import Beckn.Types.FMD.API.Init (InitReq, InitRes)
+import Beckn.Types.FMD.API.Search (SearchReq, SearchRes)
+import Beckn.Types.FMD.API.Select
+  ( SelectOrder (SelectOrder),
+    SelectReq (SelectReq),
+    SelectRes,
+  )
 import Beckn.Types.FMD.Order
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
@@ -23,8 +27,8 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Delhivery.Flow as API
 import External.Delhivery.Types
+import qualified Product.Delhivery.API as API
 import Product.Delhivery.Transform
-import Servant ((:<|>) (..))
 import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Organization as Org
@@ -34,7 +38,7 @@ import Types.Error
 import Types.Wrapper
 import Utils.Common
 
-search :: Org.Organization -> API.SearchReq -> Flow API.SearchRes
+search :: Org.Organization -> SearchReq -> Flow SearchRes
 search org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
@@ -47,7 +51,6 @@ search org req = do
     sendCb context eres
   returnAck context
   where
-    _ :<|> onSearchAPI = ET.client API.onSearchAPI
     sendCb context res = do
       cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
       cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
@@ -55,7 +58,7 @@ search org req = do
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search req") $ encodeToText onSearchReq
-          onSearchResp <- L.callAPI cbUrl $ onSearchAPI cbApiKey onSearchReq
+          onSearchResp <- L.callAPI cbUrl $ ET.client API.onSearchAPI cbApiKey onSearchReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search res") $ show onSearchResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -63,11 +66,11 @@ search org req = do
             handleError err = do
               let onSearchErrReq = mkOnSearchErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
-              onSearchResp <- L.callAPI cbUrl $ onSearchAPI cbApiKey onSearchErrReq
+              onSearchResp <- L.callAPI cbUrl $ ET.client API.onSearchAPI cbApiKey onSearchErrReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_search err res") $ show onSearchResp
         _ -> pass
 
-select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
+select :: Org.Organization -> SelectReq -> Flow SelectRes
 select org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
@@ -82,7 +85,6 @@ select org req = do
     sendCallback context cbUrl cbApiKey eres
   returnAck context
   where
-    _ :<|> onSelectAPI = ET.client API.onSelectAPI
     sendCallback context cbUrl cbApiKey res =
       case res of
         Right quoteRes -> do
@@ -96,7 +98,7 @@ select org req = do
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select req") $ encodeToText onSelectReq
-          onSelectResp <- L.callAPI cbUrl $ onSelectAPI cbApiKey onSelectReq
+          onSelectResp <- L.callAPI cbUrl $ ET.client API.onSelectAPI cbApiKey onSelectReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select res") $ show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -104,11 +106,11 @@ select org req = do
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select err req") $ encodeToText onSelectReq
-              onSelectResp <- L.callAPI cbUrl $ onSelectAPI cbApiKey onSelectReq
+              onSelectResp <- L.callAPI cbUrl $ ET.client API.onSelectAPI cbApiKey onSelectReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
         _ -> pass
 
-init :: Org.Organization -> API.InitReq -> Flow API.InitRes
+init :: Org.Organization -> InitReq -> Flow InitRes
 init org req = do
   conf@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
@@ -120,13 +122,12 @@ init org req = do
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
   dlBACreds <- getDlBAPCreds org
   fork "init" $ do
-    quoteReq <- mkQuoteReqFromSelect $ API.SelectReq context (API.SelectOrder (orderDetails ^. #order))
+    quoteReq <- mkQuoteReqFromSelect $ SelectReq context (SelectOrder (orderDetails ^. #order))
     eres <- getQuote dlBACreds conf quoteReq
     L.logInfo @Text (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId eres
   returnAck context
   where
-    _ :<|> onInitAPI = ET.client API.onInitAPI
     sendCb orderDetails context cbApiKey cbUrl payeeDetails quoteId (Right res) = do
       -- quoteId will be used as orderId
       onInitMessage <-
@@ -139,7 +140,7 @@ init org req = do
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
       L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
-      onInitResp <- L.callAPI cbUrl $ onInitAPI cbApiKey onInitReq
+      onInitResp <- L.callAPI cbUrl $ ET.client API.onInitAPI cbApiKey onInitReq
       L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
       return ()
     sendCb _ context cbApiKey cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) =
@@ -147,7 +148,7 @@ init org req = do
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
-          onInitResp <- L.callAPI cbUrl $ onInitAPI cbApiKey onInitReq
+          onInitResp <- L.callAPI cbUrl $ ET.client API.onInitAPI cbApiKey onInitReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
           return ()
         Nothing -> return ()
@@ -190,7 +191,7 @@ init org req = do
         Nothing -> Storage.create case_
         Just _ -> pass
 
-confirm :: Org.Organization -> API.ConfirmReq -> Flow API.ConfirmRes
+confirm :: Org.Organization -> ConfirmReq -> Flow ConfirmRes
 confirm org req = do
   dconf@DelhiveryConfig {..} <- dlConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dlBPNwAddress
@@ -228,13 +229,12 @@ confirm org req = do
         then pass
         else throwError400 "INVALID_ORDER_AMOUNT"
 
-    _ :<|> onConfirmAPI = ET.client API.onConfirmAPI
     sendCb order context cbApiKey cbUrl res =
       case res of
         Right _ -> do
           onConfirmReq <- mkOnConfirmReq context order
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
-          eres <- L.callAPI cbUrl $ onConfirmAPI cbApiKey onConfirmReq
+          eres <- L.callAPI cbUrl $ ET.client API.onConfirmAPI cbApiKey onConfirmReq
           L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -242,7 +242,7 @@ confirm org req = do
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
-              onConfirmResp <- L.callAPI cbUrl $ onConfirmAPI cbApiKey onConfirmReq
+              onConfirmResp <- L.callAPI cbUrl $ ET.client API.onConfirmAPI cbApiKey onConfirmReq
               L.logInfo @Text (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
         _ -> pass
 

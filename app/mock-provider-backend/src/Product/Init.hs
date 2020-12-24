@@ -10,15 +10,14 @@ import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Init as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 init :: Organization -> API.InitReq -> FlowHandler AckResponse
-init org req = withFlowHandler $ do
+init _org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
@@ -30,9 +29,9 @@ init org req = withFlowHandler $ do
       fork "Init" $ do
         msg <- mkInitOrder
         AckResponse {} <-
-          callClient "init" (req ^. #context) appUrl $
-            onInitAPI
-              cbApiKey
+          callClient' (Just HttpSig.signatureAuthManagerKey) "init" (req ^. #context) appUrl $
+            client
+              API.onInitAPI
               CallbackReq
                 { context = context {_action = "on_init"},
                   contents = Right msg
@@ -44,8 +43,6 @@ init org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> onInitAPI = client API.onInitAPI
 
 mkInitOrder :: Flow API.InitOrder
 mkInitOrder = do

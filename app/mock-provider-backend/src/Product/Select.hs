@@ -10,15 +10,14 @@ import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 select :: Organization -> API.SelectReq -> FlowHandler AckResponse
-select org req = withFlowHandler $ do
+select _org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
@@ -30,9 +29,9 @@ select org req = withFlowHandler $ do
       fork "Select" $ do
         onSelectMessage <- mkQuote
         AckResponse {} <-
-          callClient "select" (req ^. #context) appUrl $
-            onSelectAPI
-              cbApiKey
+          callClient' (Just HttpSig.signatureAuthManagerKey) "select" (req ^. #context) appUrl $
+            client
+              API.onSelectAPI
               CallbackReq
                 { context = context {_action = "on_select"},
                   contents = Right onSelectMessage
@@ -44,8 +43,6 @@ select org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> onSelectAPI = client API.onSelectAPI
 
 mkQuote :: Flow API.SelectOrder
 mkQuote = do

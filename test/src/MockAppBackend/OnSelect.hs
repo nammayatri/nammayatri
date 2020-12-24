@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_select" "dummy-txn-id" Nothing Nothing
       let onSelectReq = buildOnSelectReq ctx
-      eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow mockAppApiKey onSelectReq
+      eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow onSelectReq
       eitherSelectCbRes `shouldSatisfy` isRight

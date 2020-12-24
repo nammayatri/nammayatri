@@ -3,8 +3,11 @@ module App.Types where
 import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
+import Beckn.Utils.Servant.SignatureAuth
+import Data.Time
 import EulerHS.Prelude
 
 data AppEnv = AppEnv
@@ -16,7 +19,10 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    loggerConfig :: LoggerConfig
+    loggerConfig :: LoggerConfig,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 
@@ -27,3 +33,10 @@ type Flow = FlowR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
+
+instance AuthenticatingEntity AppEnv where
+  getSelfId = selfId
+  getSelfUrl = nwAddress
+  getRegistry = credRegistry
+  getSigningKeys = signingKeys
+  getSignatureExpiry = signatureExpiry

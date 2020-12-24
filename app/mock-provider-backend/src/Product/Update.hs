@@ -14,16 +14,15 @@ import qualified Beckn.Types.FMD.API.Update as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Mock
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified Data.Map as M
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 update :: Organization -> API.UpdateReq -> FlowHandler AckResponse
-update org req = withFlowHandler $ do
+update _org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
@@ -34,12 +33,12 @@ update org req = withFlowHandler $ do
     Just appUrl -> case context ^. #_transaction_id of
       tId
         | tId == locationTooFarId ->
-          sendResponse appUrl cbApiKey context $ Left locationTooFarError
+          sendResponse appUrl context $ Left locationTooFarError
         | Just fmdErr <- M.lookup tId allFmdErrorFlowIds ->
-          sendResponse appUrl cbApiKey context $ Left $ fromFmdError fmdErr
+          sendResponse appUrl context $ Left $ fromFmdError fmdErr
         | otherwise -> do
           updateMessage <- mkUpdateMessage
-          sendResponse appUrl cbApiKey context $ Right updateMessage
+          sendResponse appUrl context $ Right updateMessage
   return
     AckResponse
       { _context = context,
@@ -47,13 +46,12 @@ update org req = withFlowHandler $ do
         _error = Nothing
       }
   where
-    _ :<|> onUpdateAPI = client API.onUpdateAPI
-    sendResponse appUrl cbApiKey context contents =
+    sendResponse appUrl context contents =
       fork "Update" $ do
         AckResponse {} <-
-          callClient "update" (req ^. #context) appUrl $
-            onUpdateAPI
-              cbApiKey
+          callClient' (Just HttpSig.signatureAuthManagerKey) "update" (req ^. #context) appUrl $
+            client
+              API.onUpdateAPI
               CallbackReq
                 { context = context {_action = "on_update"},
                   contents = contents

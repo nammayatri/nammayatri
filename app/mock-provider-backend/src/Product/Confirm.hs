@@ -13,15 +13,14 @@ import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Confirm as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 confirm :: Organization -> API.ConfirmReq -> FlowHandler AckResponse
-confirm org req = withFlowHandler $ do
+confirm _org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
@@ -33,9 +32,9 @@ confirm org req = withFlowHandler $ do
       fork "Confirm" $ do
         resp <- mkConfirmResponse
         AckResponse {} <-
-          callClient "confirm" (req ^. #context) appUrl $
-            onConfirmAPI
-              cbApiKey
+          callClient' (Just HttpSig.signatureAuthManagerKey) "confirm" (req ^. #context) appUrl $
+            client
+              API.onConfirmAPI
               CallbackReq
                 { context = context {_action = "on_confirm"},
                   contents = Right resp
@@ -47,8 +46,6 @@ confirm org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> onConfirmAPI = client API.onConfirmAPI
 
 mkConfirmResponse :: Flow API.ConfirmResMessage
 mkConfirmResponse = do

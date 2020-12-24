@@ -13,15 +13,14 @@ import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Cancel as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 cancel :: Organization -> API.CancelReq -> FlowHandler AckResponse
-cancel org req = withFlowHandler $ do
+cancel _org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
@@ -33,9 +32,9 @@ cancel org req = withFlowHandler $ do
       fork "Cancel" $ do
         cancelMessage <- mkCancelMessage
         AckResponse {} <-
-          callClient "cancel" (req ^. #context) appUrl $
-            onCancelAPI
-              cbApiKey
+          callClient' (Just HttpSig.signatureAuthManagerKey) "cancel" (req ^. #context) appUrl $
+            client
+              API.onCancelAPI
               CallbackReq
                 { context = context {_action = "on_cancel"},
                   contents = Right cancelMessage
@@ -47,8 +46,6 @@ cancel org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> onCancelAPI = client API.onCancelAPI
 
 mkCancelMessage :: Flow API.CancelResMessage
 mkCancelMessage = do

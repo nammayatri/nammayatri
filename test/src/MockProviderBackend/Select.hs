@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "select" "dummy-txn-id" Nothing Nothing
       let selectReq = buildFMDSelectReq ctx
-      initiateSelectRes <- runClient providerClientEnv $ selectFlow mockProviderApiKey selectReq
+      initiateSelectRes <- runClient providerClientEnv $ selectFlow selectReq
       initiateSelectRes `shouldSatisfy` isRight

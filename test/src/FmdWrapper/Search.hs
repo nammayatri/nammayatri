@@ -25,7 +25,6 @@ import FmdWrapper.Common
 import FmdWrapper.Server
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Servant ((:<|>) (..))
 import Servant.Client
 import Test.Hspec hiding (context, example)
 import Utils
@@ -49,10 +48,8 @@ numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
 
 runSearch :: ClientEnv -> Text -> Search.SearchReq -> IO (Either ClientError AckResponse)
-runSearch clientEnv apiKey searchReq =
-  runClient clientEnv $ searchAPI apiKey searchReq
-  where
-    _ :<|> searchAPI = client Search.searchAPI
+runSearch clientEnv _apiKey searchReq =
+  runClient clientEnv $ client Search.searchAPI searchReq
 
 verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do

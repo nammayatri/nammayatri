@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_update" "dummy-txn-id" Nothing Nothing
       let onUpdateReq = buildOnUpdateReq ctx
-      eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow mockAppApiKey onUpdateReq
+      eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow onUpdateReq
       eitherUpdateCbRes `shouldSatisfy` isRight

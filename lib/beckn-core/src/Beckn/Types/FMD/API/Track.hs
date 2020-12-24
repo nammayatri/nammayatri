@@ -2,7 +2,6 @@
 
 module Beckn.Types.FMD.API.Track where
 
-import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
@@ -11,26 +10,20 @@ import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
-type TrackAPI v =
-  BecknAuth
-    v
-    ( "track"
-        :> ReqBody '[JSON] TrackReq
-        :> Post '[JSON] TrackRes
-    )
+type TrackAPI =
+  "track"
+    :> ReqBody '[JSON] TrackReq
+    :> Post '[JSON] TrackRes
 
-trackAPI :: Proxy (TrackAPI v)
+trackAPI :: Proxy TrackAPI
 trackAPI = Proxy
 
-type OnTrackAPI v =
-  BecknAuth
-    v
-    ( "on_track"
-        :> ReqBody '[JSON] OnTrackReq
-        :> Post '[JSON] OnTrackRes
-    )
+type OnTrackAPI =
+  "on_track"
+    :> ReqBody '[JSON] OnTrackReq
+    :> Post '[JSON] OnTrackRes
 
-onTrackAPI :: Proxy (OnTrackAPI v)
+onTrackAPI :: Proxy OnTrackAPI
 onTrackAPI = Proxy
 
 data TrackReq = TrackReq

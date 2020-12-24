@@ -27,8 +27,8 @@ let rcfg =
   }
 
 let dunzoConfig =
-  { dzUrl = "apis-staging.dunzo.in"
-  , dzTokenUrl = "http://d4b.dunzodev.in:9016"
+  { dzUrl = "https://apis-staging.dunzo.in/"
+  , dzTokenUrl = "https://apis-staging.dunzo.in/"
   , dzBPId = "fmd-wrapper.dunzo"
   , dzBPNwAddress = "http://localhost:8018/v1"
   , payee = sec.payee

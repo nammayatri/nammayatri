@@ -10,15 +10,14 @@ import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Status as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 status :: Organization -> API.StatusReq -> FlowHandler AckResponse
-status org req = withFlowHandler $ do
+status _org req = withFlowHandler $ do
   bppNwAddr <- nwAddress <$> ask
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
   let mAppUrl = req ^. #context . #_bap_uri
       context =
         (req ^. #context)
@@ -30,9 +29,9 @@ status org req = withFlowHandler $ do
       fork "Status" $ do
         statusMessage <- mkStatusMessage
         AckResponse {} <-
-          callClient "status" (req ^. #context) appUrl $
-            onStatusAPI
-              cbApiKey
+          callClient' (Just HttpSig.signatureAuthManagerKey) "status" (req ^. #context) appUrl $
+            client
+              API.onStatusAPI
               CallbackReq
                 { context = context {_action = "on_status"},
                   contents = Right statusMessage
@@ -44,8 +43,6 @@ status org req = withFlowHandler $ do
         _message = ack "ACK",
         _error = Nothing
       }
-  where
-    _ :<|> onStatusAPI = client API.onStatusAPI
 
 mkStatusMessage :: Flow API.StatusResMessage
 mkStatusMessage = do

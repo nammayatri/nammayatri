@@ -13,13 +13,12 @@ import Beckn.Types.FMD.API.Search
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.At (ix)
 import Data.Aeson (encode)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
-import Storage.Queries.Organization
 
 searchCb :: Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _ req = withFlowHandler $ do
@@ -33,15 +32,11 @@ searchCb _ req = withFlowHandler $ do
           selectReq <- buildSelectReq ctx itemId
           case req ^. #context . #_bpp_uri of
             Just url -> do
-              bppOrg <- findOrgByCallbackUrl url >>= fromMaybeM500 "UNKNOWN_PROVIDER_URI"
-              cbApiKey <- bppOrg ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
               void $
-                callClient "select" (req ^. #context) url $
-                  selectAPI cbApiKey selectReq
+                callClient' (Just HttpSig.signatureAuthManagerKey) "select" (req ^. #context) url $
+                  client API.selectAPI selectReq
             Nothing -> EL.logError @Text "mock_app_backend" "Bad ac_id"
         Nothing ->
           EL.logDebug @Text "mock_app_backend" "search_cb error: no items in the catalog."
     Left err -> EL.logDebug @Text "mock_app_backend" $ "search_cb error: " <> show err
   return resp
-  where
-    _ :<|> selectAPI = client API.selectAPI

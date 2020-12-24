@@ -2,7 +2,6 @@
 
 module Beckn.Types.FMD.API.Select where
 
-import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
@@ -11,26 +10,20 @@ import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
-type SelectAPI v =
-  BecknAuth
-    v
-    ( "select"
-        :> ReqBody '[JSON] SelectReq
-        :> Post '[JSON] SelectRes
-    )
+type SelectAPI =
+  "select"
+    :> ReqBody '[JSON] SelectReq
+    :> Post '[JSON] SelectRes
 
-selectAPI :: Proxy (SelectAPI v)
+selectAPI :: Proxy SelectAPI
 selectAPI = Proxy
 
-type OnSelectAPI v =
-  BecknAuth
-    v
-    ( "on_select"
-        :> ReqBody '[JSON] OnSelectReq
-        :> Post '[JSON] OnSelectRes
-    )
+type OnSelectAPI =
+  "on_select"
+    :> ReqBody '[JSON] OnSelectReq
+    :> Post '[JSON] OnSelectRes
 
-onSelectAPI :: Proxy (OnSelectAPI v)
+onSelectAPI :: Proxy OnSelectAPI
 onSelectAPI = Proxy
 
 data SelectReq = SelectReq

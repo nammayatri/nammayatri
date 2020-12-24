@@ -10,26 +10,23 @@ import qualified Beckn.Types.FMD.API.Confirm as API
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Aeson (encode)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import Servant ((:<|>) (..))
 
 initCb :: Organization -> OnInitReq -> FlowHandler AckResponse
-initCb org req = withFlowHandler $ do
+initCb _org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
   EL.logDebug @Text "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   whenRight (req ^. #contents) $ \initResMsg -> do
     confirmReq <- buildConfirmReq ctx (initResMsg ^. #order)
-    cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "API_KEY_NOT_CONFIGURED"
     case req ^. #context . #_bpp_uri of
       Nothing -> EL.logError @Text "mock-app-backend" "Bad ac_id"
       Just url ->
         void $
-          callClient "confirm" (req ^. #context) url $
-            confirmAPI cbApiKey confirmReq
+          callClient' (Just HttpSig.signatureAuthManagerKey) "confirm" (req ^. #context) url $
+            client API.confirmAPI confirmReq
   return resp
-  where
-    _ :<|> confirmAPI = client API.confirmAPI

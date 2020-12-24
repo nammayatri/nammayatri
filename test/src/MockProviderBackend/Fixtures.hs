@@ -7,7 +7,6 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Update
 import EulerHS.Prelude
-import Servant ((:<|>) (..))
 import Servant.Client
 
 mockProviderBaseUrl :: BaseUrl
@@ -19,20 +18,20 @@ mockProviderBaseUrl =
       baseUrlPath = "/v1"
     }
 
-searchFlow :: Text -> SearchReq -> ClientM AckResponse
-_ :<|> searchFlow = client searchAPI
+searchFlow :: SearchReq -> ClientM AckResponse
+searchFlow = client searchAPI
 
-selectFlow :: Text -> SelectReq -> ClientM AckResponse
-_ :<|> selectFlow = client selectAPI
+selectFlow :: SelectReq -> ClientM AckResponse
+selectFlow = client selectAPI
 
-initFlow :: Text -> InitReq -> ClientM AckResponse
-_ :<|> initFlow = client initAPI
+initFlow :: InitReq -> ClientM AckResponse
+initFlow = client initAPI
 
-confirmFlow :: Text -> ConfirmReq -> ClientM AckResponse
-_ :<|> confirmFlow = client confirmAPI
+confirmFlow :: ConfirmReq -> ClientM AckResponse
+confirmFlow = client confirmAPI
 
-updateFlow :: Text -> UpdateReq -> ClientM AckResponse
-_ :<|> updateFlow = client updateAPI
+updateFlow :: UpdateReq -> ClientM AckResponse
+updateFlow = client updateAPI
 
 mockProviderApiKey :: Text
 mockProviderApiKey = "test-provider-2-key"

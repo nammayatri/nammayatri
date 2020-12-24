@@ -31,3 +31,12 @@ findOrgByCallbackUrl cbUrl = do
   where
     predicate Org.Organization {..} =
       _callbackUrl ==. B.val_ (Just cbUrl)
+
+findOrgByShortId :: ShortOrganizationId -> Flow (Maybe Org.Organization)
+findOrgByShortId shortOrgId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Org.Organization {..} =
+      _shortId ==. B.val_ shortOrgId

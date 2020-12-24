@@ -18,5 +18,5 @@ spec = do
       ctx <- buildContext "init" "dummy-txn-id" Nothing Nothing
       let quoteId = "dummy-quote-id"
           initReq = buildFMDInitReq ctx quoteId
-      initiateInitRes <- runClient providerClientEnv $ initFlow mockProviderApiKey initReq
+      initiateInitRes <- runClient providerClientEnv $ initFlow initReq
       initiateInitRes `shouldSatisfy` isRight

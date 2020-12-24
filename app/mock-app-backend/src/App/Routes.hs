@@ -3,15 +3,15 @@ module App.Routes where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Core.Ack (AckResponse (..))
-import Beckn.Types.FMD.API.Cancel (OnCancelReq)
-import Beckn.Types.FMD.API.Confirm (OnConfirmReq)
-import Beckn.Types.FMD.API.Init (OnInitReq)
-import Beckn.Types.FMD.API.Search (OnSearchReq)
-import Beckn.Types.FMD.API.Select (OnSelectReq)
-import Beckn.Types.FMD.API.Status (OnStatusReq)
-import Beckn.Types.FMD.API.Track (OnTrackReq)
-import Beckn.Types.FMD.API.Update (OnUpdateReq)
-import Beckn.Utils.Servant.HeaderAuth
+import qualified Beckn.Types.FMD.API.Cancel as API
+import qualified Beckn.Types.FMD.API.Confirm as API
+import qualified Beckn.Types.FMD.API.Init as API
+import qualified Beckn.Types.FMD.API.Search as API
+import qualified Beckn.Types.FMD.API.Select as API
+import qualified Beckn.Types.FMD.API.Status as API
+import qualified Beckn.Types.FMD.API.Track as API
+import qualified Beckn.Types.FMD.API.Update as API
+import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified Product.Cancel as P
 import qualified Product.Confirm as P
@@ -29,15 +29,18 @@ type MockAppBackendAPI =
   "v1"
     :> ( Get '[JSON] Text
            :<|> TriggerAPI
-           :<|> OnSearchAPI
-           :<|> OnSelectAPI
-           :<|> OnInitAPI
-           :<|> OnConfirmAPI
-           :<|> OnTrackAPI
-           :<|> OnStatusAPI
-           :<|> OnCancelAPI
-           :<|> OnUpdateAPI
+           :<|> BecknAPI
        )
+
+type BecknAPI =
+  SignatureAuth "Authorization" :> API.OnSearchAPI
+    :<|> SignatureAuth "Authorization" :> API.OnSelectAPI
+    :<|> SignatureAuth "Authorization" :> API.OnInitAPI
+    :<|> SignatureAuth "Authorization" :> API.OnConfirmAPI
+    :<|> SignatureAuth "Authorization" :> API.OnTrackAPI
+    :<|> SignatureAuth "Authorization" :> API.OnStatusAPI
+    :<|> SignatureAuth "Authorization" :> API.OnCancelAPI
+    :<|> SignatureAuth "Authorization" :> API.OnUpdateAPI
 
 mockAppBackendAPI :: Proxy MockAppBackendAPI
 mockAppBackendAPI = Proxy
@@ -46,14 +49,14 @@ mockAppBackendServer :: FlowServer MockAppBackendAPI
 mockAppBackendServer =
   pure "Mock app backend is UP"
     :<|> triggerFlow
-    :<|> onSearchFlow
-    :<|> onSelectFlow
-    :<|> onInitFlow
-    :<|> onConfirmFlow
-    :<|> onTrackFlow
-    :<|> onStatusFlow
-    :<|> onCancelFlow
-    :<|> onUpdateFlow
+    :<|> withBecknAuth P.searchCb lookup
+    :<|> withBecknAuth P.selectCb lookup
+    :<|> withBecknAuth P.initCb lookup
+    :<|> withBecknAuth P.confirmCb lookup
+    :<|> withBecknAuth P.trackCb lookup
+    :<|> withBecknAuth P.statusCb lookup
+    :<|> withBecknAuth P.cancelCb lookup
+    :<|> withBecknAuth P.updateCb lookup
 
 type TriggerAPI =
   "trigger"
@@ -94,75 +97,3 @@ triggerFlow =
     :<|> T.triggerCancel
     :<|> T.triggerUpdateForLast
     :<|> T.triggerUpdate
-
-type OnSearchAPI =
-  "on_search"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnSearchReq
-    :> Post '[JSON] AckResponse
-
-onSearchFlow :: FlowServer OnSearchAPI
-onSearchFlow = P.searchCb
-
-type OnSelectAPI =
-  "on_select"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnSelectReq
-    :> Post '[JSON] AckResponse
-
-onSelectFlow :: FlowServer OnSelectAPI
-onSelectFlow = P.selectCb
-
-type OnInitAPI =
-  "on_init"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnInitReq
-    :> Post '[JSON] AckResponse
-
-onInitFlow :: FlowServer OnInitAPI
-onInitFlow = P.initCb
-
-type OnConfirmAPI =
-  "on_confirm"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnConfirmReq
-    :> Post '[JSON] AckResponse
-
-onConfirmFlow :: FlowServer OnConfirmAPI
-onConfirmFlow = P.confirmCb
-
-type OnTrackAPI =
-  "on_track"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnTrackReq
-    :> Post '[JSON] AckResponse
-
-onTrackFlow :: FlowServer OnTrackAPI
-onTrackFlow = P.trackCb
-
-type OnStatusAPI =
-  "on_status"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnStatusReq
-    :> Post '[JSON] AckResponse
-
-onStatusFlow :: FlowServer OnStatusAPI
-onStatusFlow = P.statusCb
-
-type OnCancelAPI =
-  "on_cancel"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnCancelReq
-    :> Post '[JSON] AckResponse
-
-onCancelFlow :: FlowServer OnCancelAPI
-onCancelFlow = P.cancelCb
-
-type OnUpdateAPI =
-  "on_update"
-    :> APIKeyAuth VerifyAPIKey
-    :> ReqBody '[JSON] OnUpdateReq
-    :> Post '[JSON] AckResponse
-
-onUpdateFlow :: FlowServer OnUpdateAPI
-onUpdateFlow = P.updateCb

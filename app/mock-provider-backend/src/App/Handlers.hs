@@ -23,13 +23,13 @@ import Utils.Auth
 type ProviderAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SearchAPI VerifyAPIKey
-           :<|> SelectAPI VerifyAPIKey
-           :<|> InitAPI VerifyAPIKey
-           :<|> ConfirmAPI VerifyAPIKey
-           :<|> StatusAPI VerifyAPIKey
-           :<|> CancelAPI VerifyAPIKey
-           :<|> UpdateAPI VerifyAPIKey
+           :<|> HttpSig.SignatureAuth "Authorization" :> SearchAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> SelectAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> InitAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> ConfirmAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> StatusAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> CancelAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> UpdateAPI
        )
 
 providerAPI :: Proxy ProviderAPI
@@ -38,31 +38,10 @@ providerAPI = Proxy
 mockProviderBackendServer :: FlowServer ProviderAPI
 mockProviderBackendServer =
   pure "Mock provider backend is UP"
-    :<|> searchFlow
-    :<|> selectFlow
-    :<|> initFlow
-    :<|> confirmFlow
-    :<|> statusFlow
-    :<|> cancelFlow
-    :<|> updateFlow
-
-searchFlow :: FlowServer (SearchAPI VerifyAPIKey)
-searchFlow = HttpSig.withBecknAuth P.search lookup :<|> P.search
-
-selectFlow :: FlowServer (SelectAPI VerifyAPIKey)
-selectFlow = HttpSig.withBecknAuth P.select lookup :<|> P.select
-
-initFlow :: FlowServer (InitAPI VerifyAPIKey)
-initFlow = HttpSig.withBecknAuth P.init lookup :<|> P.init
-
-confirmFlow :: FlowServer (ConfirmAPI VerifyAPIKey)
-confirmFlow = HttpSig.withBecknAuth P.confirm lookup :<|> P.confirm
-
-statusFlow :: FlowServer (StatusAPI VerifyAPIKey)
-statusFlow = HttpSig.withBecknAuth P.status lookup :<|> P.status
-
-cancelFlow :: FlowServer (CancelAPI VerifyAPIKey)
-cancelFlow = HttpSig.withBecknAuth P.cancel lookup :<|> P.cancel
-
-updateFlow :: FlowServer (UpdateAPI VerifyAPIKey)
-updateFlow = HttpSig.withBecknAuth P.update lookup :<|> P.update
+    :<|> HttpSig.withBecknAuth P.search lookup
+    :<|> HttpSig.withBecknAuth P.select lookup
+    :<|> HttpSig.withBecknAuth P.init lookup
+    :<|> HttpSig.withBecknAuth P.confirm lookup
+    :<|> HttpSig.withBecknAuth P.status lookup
+    :<|> HttpSig.withBecknAuth P.cancel lookup
+    :<|> HttpSig.withBecknAuth P.update lookup

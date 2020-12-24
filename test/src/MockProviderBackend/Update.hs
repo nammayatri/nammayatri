@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "update" "dummy-txn-id" Nothing Nothing
       let updateReq = buildFMDUpdateReq ctx
-      initiateUpdateRes <- runClient providerClientEnv $ updateFlow mockProviderApiKey updateReq
+      initiateUpdateRes <- runClient providerClientEnv $ updateFlow updateReq
       initiateUpdateRes `shouldSatisfy` isRight

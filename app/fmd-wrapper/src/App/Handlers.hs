@@ -18,14 +18,14 @@ import Utils.Auth
 type WrapperAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SearchAPI VerifyAPIKey
-           :<|> SelectAPI VerifyAPIKey
-           :<|> InitAPI VerifyAPIKey
-           :<|> ConfirmAPI VerifyAPIKey
-           :<|> StatusAPI VerifyAPIKey
-           :<|> TrackAPI VerifyAPIKey
-           :<|> CancelAPI VerifyAPIKey
-           :<|> UpdateAPI VerifyAPIKey
+           :<|> HttpSig.SignatureAuth "Authorization" :> SearchAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> SelectAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> InitAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> ConfirmAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> StatusAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> TrackAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> CancelAPI
+           :<|> HttpSig.SignatureAuth "Authorization" :> UpdateAPI
        )
 
 wrapperAPI :: Proxy WrapperAPI
@@ -34,35 +34,11 @@ wrapperAPI = Proxy
 fmdWrapperBackendServer :: FlowServer WrapperAPI
 fmdWrapperBackendServer =
   pure "FMD wrapper backend is UP"
-    :<|> searchFlow
-    :<|> selectFlow
-    :<|> initFlow
-    :<|> confirmFlow
-    :<|> statusFlow
-    :<|> trackFlow
-    :<|> cancelFlow
-    :<|> updateFlow
-
-searchFlow :: FlowServer (SearchAPI VerifyAPIKey)
-searchFlow = HttpSig.withBecknAuth API.search lookup :<|> API.search
-
-selectFlow :: FlowServer (SelectAPI VerifyAPIKey)
-selectFlow = HttpSig.withBecknAuth API.select lookup :<|> API.select
-
-initFlow :: FlowServer (InitAPI VerifyAPIKey)
-initFlow = HttpSig.withBecknAuth API.init lookup :<|> API.init
-
-confirmFlow :: FlowServer (ConfirmAPI VerifyAPIKey)
-confirmFlow = HttpSig.withBecknAuth API.confirm lookup :<|> API.confirm
-
-statusFlow :: FlowServer (StatusAPI VerifyAPIKey)
-statusFlow = HttpSig.withBecknAuth API.status lookup :<|> API.status
-
-trackFlow :: FlowServer (TrackAPI VerifyAPIKey)
-trackFlow = HttpSig.withBecknAuth API.track lookup :<|> API.track
-
-cancelFlow :: FlowServer (CancelAPI VerifyAPIKey)
-cancelFlow = HttpSig.withBecknAuth API.cancel lookup :<|> API.cancel
-
-updateFlow :: FlowServer (UpdateAPI VerifyAPIKey)
-updateFlow = HttpSig.withBecknAuth API.update lookup :<|> API.update
+    :<|> HttpSig.withBecknAuth API.search lookup
+    :<|> HttpSig.withBecknAuth API.select lookup
+    :<|> HttpSig.withBecknAuth API.init lookup
+    :<|> HttpSig.withBecknAuth API.confirm lookup
+    :<|> HttpSig.withBecknAuth API.status lookup
+    :<|> HttpSig.withBecknAuth API.track lookup
+    :<|> HttpSig.withBecknAuth API.cancel lookup
+    :<|> HttpSig.withBecknAuth API.update lookup

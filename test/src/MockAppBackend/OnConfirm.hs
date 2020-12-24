@@ -17,5 +17,5 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_confirm" "dummy-txn-id" Nothing Nothing
       let onConfirmReq = buildOnConfirmReq ctx
-      eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow mockAppApiKey onConfirmReq
+      eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow onConfirmReq
       eitherConfirmCbRes `shouldSatisfy` isRight

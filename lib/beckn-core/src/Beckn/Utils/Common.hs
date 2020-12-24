@@ -315,7 +315,6 @@ throwDomainError err =
   where
     t errCode (ErrorMsg errMsg) = throwBecknError errCode errMsg
 
--- TODO: the @desc@ argument should become part of monadic context
 callClient ::
   (ET.JSONEx a, L.MonadFlow m) =>
   Text ->
@@ -323,9 +322,20 @@ callClient ::
   S.BaseUrl ->
   ET.EulerClient a ->
   m a
-callClient desc context baseUrl cli = do
+callClient = callClient' Nothing
+
+-- TODO: the @desc@ argument should become part of monadic context
+callClient' ::
+  (ET.JSONEx a, L.MonadFlow m) =>
+  Maybe String ->
+  Text ->
+  Context ->
+  S.BaseUrl ->
+  ET.EulerClient a ->
+  m a
+callClient' mbManager desc context baseUrl cli = do
   endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) desc
-  res <- L.callAPI baseUrl cli
+  res <- L.callAPI' mbManager baseUrl cli
   _ <- L.runUntracedIO $ endTracking $ getResponseCode res
   case res of
     Left err -> do

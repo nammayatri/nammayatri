@@ -2,7 +2,6 @@
 
 module Beckn.Types.FMD.API.Cancel where
 
-import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
@@ -11,26 +10,20 @@ import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
-type CancelAPI v =
-  BecknAuth
-    v
-    ( "cancel"
-        :> ReqBody '[JSON] CancelReq
-        :> Post '[JSON] CancelRes
-    )
+type CancelAPI =
+  "cancel"
+    :> ReqBody '[JSON] CancelReq
+    :> Post '[JSON] CancelRes
 
-cancelAPI :: Proxy (CancelAPI v)
+cancelAPI :: Proxy CancelAPI
 cancelAPI = Proxy
 
-type OnCancelAPI v =
-  BecknAuth
-    v
-    ( "on_cancel"
-        :> ReqBody '[JSON] OnCancelReq
-        :> Post '[JSON] OnCancelRes
-    )
+type OnCancelAPI =
+  "on_cancel"
+    :> ReqBody '[JSON] OnCancelReq
+    :> Post '[JSON] OnCancelRes
 
-onCancelAPI :: Proxy (OnCancelAPI v)
+onCancelAPI :: Proxy OnCancelAPI
 onCancelAPI = Proxy
 
 data CancelReq = CancelReq

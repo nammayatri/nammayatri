@@ -2,7 +2,6 @@
 
 module Beckn.Types.FMD.API.Search where
 
-import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
@@ -12,26 +11,20 @@ import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
-type SearchAPI v =
-  BecknAuth
-    v
-    ( "search"
-        :> ReqBody '[JSON] SearchReq
-        :> Post '[JSON] AckResponse
-    )
+type SearchAPI =
+  "search"
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
 
-searchAPI :: Proxy (SearchAPI v)
+searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
 
-type OnSearchAPI v =
-  BecknAuth
-    v
-    ( "on_search"
-        :> ReqBody '[JSON] OnSearchReq
-        :> Post '[JSON] OnSearchRes
-    )
+type OnSearchAPI =
+  "on_search"
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] OnSearchRes
 
-onSearchAPI :: Proxy (OnSearchAPI v)
+onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
 
 data SearchReq = SearchReq
@@ -56,16 +49,13 @@ newtype SearchIntent = SearchIntent
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-type OnSearchEndAPI v =
-  BecknAuth
-    v
-    ( "on_search"
-        :> "end"
-        :> ReqBody '[JSON] OnSearchEndReq
-        :> Post '[JSON] OnSearchEndRes
-    )
+type OnSearchEndAPI =
+  "on_search"
+    :> "end"
+    :> ReqBody '[JSON] OnSearchEndReq
+    :> Post '[JSON] OnSearchEndRes
 
-onSearchEndAPI :: Proxy (OnSearchEndAPI v)
+onSearchEndAPI :: Proxy OnSearchEndAPI
 onSearchEndAPI = Proxy
 
 newtype OnSearchEndReq = OnSearchEndReq {context :: Context}

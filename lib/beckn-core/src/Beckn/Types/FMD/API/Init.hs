@@ -2,7 +2,6 @@
 
 module Beckn.Types.FMD.API.Init where
 
-import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
@@ -11,26 +10,20 @@ import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
-type InitAPI v =
-  BecknAuth
-    v
-    ( "init"
-        :> ReqBody '[JSON] InitReq
-        :> Post '[JSON] InitRes
-    )
+type InitAPI =
+  "init"
+    :> ReqBody '[JSON] InitReq
+    :> Post '[JSON] InitRes
 
-initAPI :: Proxy (InitAPI v)
+initAPI :: Proxy InitAPI
 initAPI = Proxy
 
-type OnInitAPI v =
-  BecknAuth
-    v
-    ( "on_init"
-        :> ReqBody '[JSON] OnInitReq
-        :> Post '[JSON] OnInitRes
-    )
+type OnInitAPI =
+  "on_init"
+    :> ReqBody '[JSON] OnInitReq
+    :> Post '[JSON] OnInitRes
 
-onInitAPI :: Proxy (OnInitAPI v)
+onInitAPI :: Proxy OnInitAPI
 onInitAPI = Proxy
 
 data InitReq = InitReq
