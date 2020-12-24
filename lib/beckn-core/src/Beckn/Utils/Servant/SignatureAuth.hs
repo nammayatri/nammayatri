@@ -18,7 +18,9 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
+import qualified Data.Map.Strict as Map
 import qualified Data.Swagger as DS
+import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
@@ -189,20 +191,18 @@ signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
 signatureAuthManager ::
-  AuthenticatingEntity r =>
   R.FlowRuntime ->
-  r ->
+  Text ->
+  NominalDiffTime ->
   Text ->
   HttpSig.PrivateKey ->
   Text ->
   IO Http.Manager
-signatureAuthManager flowRt appEnv header key uniqueKeyId = do
+signatureAuthManager flowRt shortOrgId signatureExpiry header key uniqueKeyId = do
   Http.newManager
     Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = do
-      let shortOrgId = getSelfId appEnv
-      let signatureExpiry = getSignatureExpiry appEnv
       now <- L.runIO getPOSIXTime
       let params = HttpSig.mkSignatureParams shortOrgId uniqueKeyId now signatureExpiry HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
@@ -281,19 +281,40 @@ prepareAuthManager ::
   R.FlowRuntime ->
   r ->
   Text ->
+  Text ->
   Either Text (IO Http.Manager)
-prepareAuthManager flowRt appEnv header = do
-  let shortOrgId = getSelfId appEnv
+prepareAuthManager flowRt appEnv header shortOrgId = do
   let registry = getRegistry appEnv
   let signingKeys = getSigningKeys appEnv
   let mCred = Registry.lookupOrg shortOrgId registry
+  let signatureExpiry = getSignatureExpiry appEnv
   creds <- mCred & maybeToRight ("No credentials for: " <> shortOrgId)
   let uniqueKeyId = creds ^. #uniqueKeyId
   let mSigningKey = Registry.lookupSigningKey uniqueKeyId signingKeys
   encodedKey <- mSigningKey & maybeToRight ("No private key found for credential: " <> uniqueKeyId)
   let mPrivateKey = Registry.decodeKey $ encodedKey ^. #signPrivKey
   privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
-  Right $ signatureAuthManager flowRt appEnv header privateKey uniqueKeyId
+  Right $ signatureAuthManager flowRt shortOrgId signatureExpiry header privateKey uniqueKeyId
+
+makeManagerMap :: [String] -> [Http.Manager] -> Map String Http.Manager
+makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
+
+prepareAuthManagers ::
+  AuthenticatingEntity r =>
+  R.FlowRuntime ->
+  r ->
+  [Text] ->
+  Either Text (IO (Map String Http.Manager))
+prepareAuthManagers flowRt appEnv allShortIds = do
+  let allShortIdStrings = map T.unpack allShortIds
+  let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> shortId) allShortIdStrings
+  let managerCreationActionEithers = map (prepareAuthManager flowRt appEnv "Authorization") allShortIds
+  let managerCreationActionEither = sequence managerCreationActionEithers
+  do
+    managerCreationActions <- managerCreationActionEither
+    let managers = sequence managerCreationActions
+    let managerMap = fmap (makeManagerMap managerKeys) managers
+    Right managerMap
 
 instance
   ( S.HasSwagger api,

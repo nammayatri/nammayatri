@@ -57,7 +57,8 @@ runGateway configModifier = do
   threadId <- forkIO $
     E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
       let appEnv = mkAppEnv appCfg cache
-      case prepareAuthManager flowRt appEnv "Proxy-Authorization" of
+      let shortOrgId = appEnv ^. #gwId
+      case prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId of
         Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
         Right getManager -> do
           authManager <- getManager

@@ -47,7 +47,8 @@ runAppBackend' appEnv settings = do
   let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
-    case prepareAuthManager flowRt appEnv "Authorization" of
+    let shortOrgId = appEnv ^. #bapSelfId
+    case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
       Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
       Right getManager -> do
         authManager <- getManager

@@ -23,6 +23,8 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance B.HasSqlEqualityCheck Postgres Status
+
 instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 

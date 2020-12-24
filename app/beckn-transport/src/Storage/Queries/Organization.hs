@@ -76,6 +76,17 @@ listOrganizations mlimit moffset oType status = do
           _enabled ==. B.val_ True
         ]
 
+loadAllProviders :: Flow [Storage.Organization]
+loadAllProviders = do
+  dbTable <- getDbTable
+  DB.findAllOrErr dbTable predicate
+  where
+    predicate Storage.Organization {..} =
+      _status ==. B.val_ Storage.APPROVED
+        &&. _domain ==. B.val_ (Just Storage.MOBILITY)
+        &&. _type ==. B.val_ Storage.PROVIDER
+        &&. _enabled ==. B.val_ True
+
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
