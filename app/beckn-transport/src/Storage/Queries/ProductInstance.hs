@@ -394,8 +394,8 @@ findByStartTimeBuffer piType startTime buffer statuses = do
             &&. _startTime B.>=. B.val_ fromTime
             &&. _status `B.in_` inStatus
 
-getDriverRides :: PersonId -> UTCTime -> UTCTime -> Flow [Storage.ProductInstance]
-getDriverRides driverId fromTime toTime = do
+getDriverCompletedRides :: PersonId -> UTCTime -> UTCTime -> Flow [Storage.ProductInstance]
+getDriverCompletedRides driverId fromTime toTime = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate >>= checkDBError
   where

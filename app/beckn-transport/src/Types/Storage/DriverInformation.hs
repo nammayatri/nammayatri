@@ -6,7 +6,7 @@ import EulerHS.Prelude
 import Types.App (DriverId)
 
 data DriverInformationT f = DriverInformation
-  { _id :: B.C f DriverId,
+  { _driverId :: B.C f DriverId,
     _completedRidesNumber :: B.C f Int,
     _earnings :: B.C f Amount
   }
@@ -19,7 +19,7 @@ type DriverInformationPrimaryKey = B.PrimaryKey DriverInformationT Identity
 instance B.Table DriverInformationT where
   data PrimaryKey DriverInformationT f = DriverInformationPrimaryKey (B.C f DriverId)
     deriving (Generic, B.Beamable)
-  primaryKey = DriverInformationPrimaryKey . _id
+  primaryKey = DriverInformationPrimaryKey . _driverId
 
 instance ToJSON DriverInformation where
   toJSON = genericToJSON stripAllLensPrefixOptions
@@ -30,8 +30,9 @@ instance FromJSON DriverInformation where
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverInformationT)
 fieldEMod =
-  B.setEntityName "driver_information"
+  B.setEntityName "driver_information_cache"
     <> B.modifyTableFields
       B.tableModification
-        { _completedRidesNumber = "completed_rides_number"
+        { _driverId = "driver_id",
+          _completedRidesNumber = "completed_rides_number"
         }

@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Product.DriversInformation where
+module Product.DriverInformation where
 
 import qualified App.Types as App
-import Beckn.Types.App (PersonId)
+import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -13,15 +13,18 @@ import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude hiding (Handle)
 import qualified Models.ProductInstance as ModelPI
+import qualified Storage.Queries.DriverInformation as QueryDI
 import Storage.Queries.Person (findAllActiveDrivers)
 import qualified Storage.Queries.ProductInstance as QueryPI
-import Types.API.DriversInformation (ActiveDriversResponse (..), DriverInformation (..))
+import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
+import Types.App (DriverId (..))
+import qualified Types.Storage.DriverInformation as DI
 
 data Handle m = Handle
   { findActiveDrivers :: m [Person.Person],
     findRidesByStartTimeBuffer :: UTCTime -> NominalDiffTime -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
     getCurrentTime :: m UTCTime,
-    getDriverRidesInPeriod :: PersonId -> UTCTime -> UTCTime -> m [PI.ProductInstance]
+    fetchDriversInfo :: [DriverId] -> m [DI.DriverInformation]
   }
 
 handleActiveDrivers :: RegistrationToken -> App.FlowHandler ActiveDriversResponse
@@ -31,7 +34,7 @@ handleActiveDrivers _ = do
           { findActiveDrivers = findAllActiveDrivers,
             findRidesByStartTimeBuffer = ModelPI.findByStartTimeBuffer Case.RIDEORDER,
             getCurrentTime = getCurrTime,
-            getDriverRidesInPeriod = QueryPI.getDriverRides
+            fetchDriversInfo = QueryDI.findByIds
           }
   withFlowHandler $ execute handle
 
@@ -40,22 +43,34 @@ execute Handle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   now <- getCurrentTime
   freeDriversIds <- fetchFreeDriversIds activeDriversIds now
-  let fromTime = addUTCTime (- timePeriod) now
-  activeDriversInfo <- traverse (driverInfoById fromTime now) freeDriversIds
-  pure $ ActiveDriversResponse {time = timePeriod, active_drivers = activeDriversInfo}
+  driversInfo <- fetchDriversInfo $ map (DriverId . _getPersonId) freeDriversIds
+  pure $ ActiveDriversResponse {time = timePeriod, active_drivers = map mapToResp driversInfo}
   where
     fetchFreeDriversIds activeDriversIds time = do
       ridesBuffer <- findRidesByStartTimeBuffer time 1 [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
       let busyDriversIds = catMaybes $ PI._personId <$> ridesBuffer
       let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
       pure freeDriversIds
-    driverInfoById fromTime toTime driverId = do
-      rides <- getDriverRidesInPeriod driverId fromTime toTime
-      pure $
-        DriverInformation
-          { driver_id = driverId,
-            completed_rides_over_time = length rides,
-            earnings_over_time = foldr sumProductInstancesByPrice 0 rides
-          }
+    timePeriod = nominalDay -- Move into config if there will be a need
+    mapToResp DI.DriverInformation {..} =
+      DriverInformation
+        { driver_id = PersonId . _getDriverId $ _driverId,
+          completed_rides_over_time = _completedRidesNumber,
+          earnings_over_time = fromRational $ toRational _earnings
+        }
+
+updateDriverInfo :: Text -> App.FlowHandler ()
+updateDriverInfo _auth = withFlowHandler $ do
+  driversIdsWithInfo <- fmap DI._driverId <$> QueryDI.fetchAllInfo
+  now <- getCurrTime
+  let fromTime = addUTCTime (- timePeriod) now
+  driversInfo <- traverse (fetchDriverInfoById fromTime now) driversIdsWithInfo
+  traverse_ updateInfo driversInfo
+  where
+    fetchDriverInfoById fromTime toTime driverId = do
+      rides <- QueryPI.getDriverCompletedRides (PersonId $ driverId ^. #_getDriverId) fromTime toTime
+      let earnings = foldr sumProductInstancesByPrice 0 rides
+      pure (driverId, length rides, earnings)
     sumProductInstancesByPrice inst acc = acc + fromRational (toRational (inst ^. #_price))
+    updateInfo (driverId, completedRides, earnings) = QueryDI.update driverId completedRides earnings
     timePeriod = nominalDay -- Move into config if there will be a need

@@ -22,14 +22,21 @@ create Storage.DriverInformation {..} = do
   DB.createOne dbTable (Storage.Common.insertExpression Storage.DriverInformation {..})
     >>= either DB.throwDBError pure
 
-findById ::
-  DriverId -> Flow (Maybe Storage.DriverInformation)
+findById :: DriverId -> Flow (Maybe Storage.DriverInformation)
 findById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.DriverInformation {..} = _id ==. B.val_ id
+    predicate Storage.DriverInformation {..} = _driverId ==. B.val_ id
+
+findByIds :: [DriverId] -> Flow [Storage.DriverInformation]
+findByIds ids = do
+  dbTable <- getDbTable
+  DB.findAll dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.DriverInformation {..} = _driverId `B.in_` (B.val_ <$> ids)
 
 update :: DriverId -> Int -> Amount -> Flow ()
 update driverId completedRides earnings = do
@@ -42,4 +49,10 @@ update driverId completedRides earnings = do
         [ _completedRidesNumber <-. B.val_ cr,
           _earnings <-. B.val_ e
         ]
-    predicate id Storage.DriverInformation {..} = _id ==. B.val_ id
+    predicate id Storage.DriverInformation {..} = _driverId ==. B.val_ id
+
+fetchAllInfo :: Flow [Storage.DriverInformation]
+fetchAllInfo = do
+  dbTable <- getDbTable
+  DB.findAllRows dbTable
+    >>= either DB.throwDBError pure

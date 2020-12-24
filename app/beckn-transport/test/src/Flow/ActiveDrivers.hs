@@ -1,14 +1,16 @@
 module Flow.ActiveDrivers (runTests) where
 
+import qualified Beckn.Types.Amount as Amount
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import Data.Ratio ((%))
 import Data.Time (nominalDay)
 import EulerHS.Prelude hiding (Handle)
 import qualified Fixtures
-import Product.DriversInformation (Handle (..), execute)
+import Product.DriverInformation (Handle (..), execute)
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.API.DriversInformation (ActiveDriversResponse (..), DriverInformation (..))
+import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
 
 handle :: Handle Identity
 handle =
@@ -16,8 +18,8 @@ handle =
     { findActiveDrivers = pure [Fixtures.defaultDriver],
       findRidesByStartTimeBuffer = \fromTime timeBuffer statuses -> pure [],
       getCurrentTime = pure Fixtures.defaultTime,
-      getDriverRidesInPeriod = \driverId fromTime toTime ->
-        pure [Fixtures.defaultProductInstance, Fixtures.defaultProductInstance]
+      fetchDriversInfo = \driverId ->
+        pure [Fixtures.defaultDriverInformation]
     }
 
 runTests :: TestTree
@@ -46,7 +48,7 @@ successfulCaseWithNoRides =
   testCase "Successful case with drivers without completed rides" $
     execute handleCase @?= pure expectedResponse
   where
-    handleCase = handle {getDriverRidesInPeriod = \_ _ _ -> pure []}
+    handleCase = handle {fetchDriversInfo = \_ -> pure [Fixtures.mkDriverInfo "1" 0 0]}
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
@@ -58,7 +60,7 @@ successfulCaseWithNoDrivers =
   testCase "Successful case with no active drivers" $
     execute handleCase @?= pure expectedResponse
   where
-    handleCase = handle {findActiveDrivers = pure [], getDriverRidesInPeriod = \_ _ _ -> pure []}
+    handleCase = handle {findActiveDrivers = pure [], fetchDriversInfo = \_ -> pure []}
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
@@ -73,10 +75,10 @@ successfulCaseWithDriverOnTrip =
     handleCase =
       handle
         { findRidesByStartTimeBuffer = \_ _ _ -> pure [Fixtures.defaultProductInstance {PI._status = PI.INPROGRESS}],
-          getDriverRidesInPeriod = \_ _ _ -> pure []
+          fetchDriversInfo = \_ -> pure [Fixtures.mkDriverInfo "1" 0 0]
         }
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
-          active_drivers = []
+          active_drivers = [DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }

@@ -1,4 +1,4 @@
-module Types.API.DriversInformation
+module Types.API.DriverInformation
   ( ActiveDriversResponse (..),
     DriverInformation (..),
   )
