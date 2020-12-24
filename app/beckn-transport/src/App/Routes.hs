@@ -396,7 +396,7 @@ type DriverInformationAPI =
     :<|> "update_drivers_info"
     :> AdminTokenAuth
     :> Capture "quantity" Integer
-    :> Get '[JSON] ()
+    :> Post '[JSON] ()
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
