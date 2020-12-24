@@ -322,11 +322,13 @@ updateTrip piId newStatus request = do
     updateDriverInfo driverId earnings =
       DriverInfo.findById driverId >>= maybe (createDriverInfo driverId earnings) (addDriverInfo earnings)
     createDriverInfo driverId earnings = do
+      now <- getCurrTime
       let driverInfo =
             DriverInfo.DriverInformation
               { _driverId = driverId,
                 _completedRidesNumber = 1,
-                _earnings = earnings
+                _earnings = earnings,
+                _updatedAt = now
               }
       DriverInfo.create driverInfo
     addDriverInfo earnings DriverInfo.DriverInformation {..} =

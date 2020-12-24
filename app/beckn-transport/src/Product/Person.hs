@@ -79,11 +79,13 @@ createPerson orgId req = withFlowHandler $ do
               throwError400 "DRIVER_ALREADY_CREATED"
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
     createDriverInfo driverId = do
+      now <- getCurrTime
       let driverInfo =
             DriverInfo.DriverInformation
               { _driverId = driverId,
                 _completedRidesNumber = 0,
-                _earnings = 0.0
+                _earnings = 0.0,
+                _updatedAt = now
               }
       QueryDI.create driverInfo
 

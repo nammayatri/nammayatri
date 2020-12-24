@@ -59,9 +59,9 @@ execute Handle {..} = do
           earnings_over_time = fromRational $ toRational _earnings
         }
 
-updateDriverInfo :: Text -> App.FlowHandler ()
-updateDriverInfo _auth = withFlowHandler $ do
-  driversIdsWithInfo <- fmap DI._driverId <$> QueryDI.fetchAllInfo
+updateDriverInfo :: Text -> Integer -> App.FlowHandler ()
+updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
+  driversIdsWithInfo <- fmap DI._driverId <$> QueryDI.fetchMostOutdatedDriversInfo quantityToUpdate
   now <- getCurrTime
   let fromTime = addUTCTime (- timePeriod) now
   driversInfo <- traverse (fetchDriverInfoById fromTime now) driversIdsWithInfo

@@ -163,11 +163,13 @@ createPerson req = do
   pure person
   where
     createDriverInfo driverId = do
+      now <- getCurrTime
       let driverInfo =
             DriverInfo.DriverInformation
               { _driverId = driverId,
                 _completedRidesNumber = 0,
-                _earnings = 0.0
+                _earnings = 0.0,
+                _updatedAt = now
               }
       QueryDI.create driverInfo
 

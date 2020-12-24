@@ -1,6 +1,7 @@
 module Types.Storage.DriverInformation where
 
 import Beckn.Types.Amount (Amount)
+import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App (DriverId)
@@ -8,7 +9,8 @@ import Types.App (DriverId)
 data DriverInformationT f = DriverInformation
   { _driverId :: B.C f DriverId,
     _completedRidesNumber :: B.C f Int,
-    _earnings :: B.C f Amount
+    _earnings :: B.C f Amount,
+    _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -34,5 +36,6 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { _driverId = "driver_id",
-          _completedRidesNumber = "completed_rides_number"
+          _completedRidesNumber = "completed_rides_number",
+          _updatedAt = "updated_at"
         }

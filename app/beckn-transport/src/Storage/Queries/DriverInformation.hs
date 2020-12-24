@@ -4,7 +4,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount (Amount)
-import Beckn.Utils.Common (getSchemaName)
+import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -41,18 +41,22 @@ findByIds ids = do
 update :: DriverId -> Int -> Amount -> Flow ()
 update driverId completedRides earnings = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause completedRides earnings) (predicate driverId)
+  now <- getCurrTime
+  DB.update dbTable (setClause completedRides earnings now) (predicate driverId)
     >>= either DB.throwDBError pure
   where
-    setClause cr e Storage.DriverInformation {..} =
+    setClause cr e now Storage.DriverInformation {..} =
       mconcat
         [ _completedRidesNumber <-. B.val_ cr,
-          _earnings <-. B.val_ e
+          _earnings <-. B.val_ e,
+          _updatedAt <-. B.val_ now
         ]
     predicate id Storage.DriverInformation {..} = _driverId ==. B.val_ id
 
-fetchAllInfo :: Flow [Storage.DriverInformation]
-fetchAllInfo = do
+fetchMostOutdatedDriversInfo :: Integer -> Flow [Storage.DriverInformation]
+fetchMostOutdatedDriversInfo limit = do
   dbTable <- getDbTable
-  DB.findAllRows dbTable
+  let offset = 0
+  let orderByDesc Storage.DriverInformation {..} = B.desc_ _updatedAt
+  DB.findAllWithLimitOffset dbTable limit offset orderByDesc
     >>= either DB.throwDBError pure
