@@ -38,7 +38,6 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Person
 import Types.App (DriverId (..))
-import qualified Types.Storage.DriverInformation as DriverInfo
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
@@ -61,7 +60,7 @@ createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
-  createDriverInfo (DriverId . _getPersonId $ person ^. #_id)
+  QueryDI.createInitialDriverInfo (DriverId . _getPersonId $ person ^. #_id)
   org <- OQ.findOrganizationById (OrganizationId orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
@@ -78,16 +77,6 @@ createPerson orgId req = withFlowHandler $ do
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwError400 "DRIVER_ALREADY_CREATED"
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
-    createDriverInfo driverId = do
-      now <- getCurrTime
-      let driverInfo =
-            DriverInfo.DriverInformation
-              { _driverId = driverId,
-                _completedRidesNumber = 0,
-                _earnings = 0.0,
-                _updatedAt = now
-              }
-      QueryDI.create driverInfo
 
 listPerson :: Text -> [SP.Role] -> Maybe Bool -> Maybe UTCTime -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles availability pickupTime limitM offsetM = withFlowHandler $ do

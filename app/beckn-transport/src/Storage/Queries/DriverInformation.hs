@@ -22,6 +22,22 @@ create Storage.DriverInformation {..} = do
   DB.createOne dbTable (Storage.Common.insertExpression Storage.DriverInformation {..})
     >>= either DB.throwDBError pure
 
+createInitialDriverInfo :: DriverId -> Flow ()
+createInitialDriverInfo driverId = do
+  dbTable <- getDbTable
+  now <- getCurrTime
+  let driverInfo = mkDriverInfo driverId now
+  DB.createOne dbTable (Storage.Common.insertExpression driverInfo)
+    >>= either DB.throwDBError pure
+  where
+    mkDriverInfo id now =
+      Storage.DriverInformation
+        { _driverId = id,
+          _completedRidesNumber = 0,
+          _earnings = 0.0,
+          _updatedAt = now
+        }
+
 findById :: DriverId -> Flow (Maybe Storage.DriverInformation)
 findById id = do
   dbTable <- getDbTable
