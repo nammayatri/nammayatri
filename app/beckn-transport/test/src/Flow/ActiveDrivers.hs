@@ -5,16 +5,16 @@ import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.Ratio ((%))
 import Data.Time (nominalDay)
-import EulerHS.Prelude hiding (Handle)
+import EulerHS.Prelude
 import qualified Fixtures
-import Product.DriverInformation (Handle (..), execute)
+import Product.DriverInformation (ServiceHandle (..), execute)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
 
-handle :: Handle Identity
+handle :: ServiceHandle Identity
 handle =
-  Handle
+  ServiceHandle
     { findActiveDrivers = pure [Fixtures.defaultDriver],
       findRidesByStartTimeBuffer = \fromTime timeBuffer statuses -> pure [],
       getCurrentTime = pure Fixtures.defaultTime,

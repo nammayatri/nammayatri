@@ -12,26 +12,26 @@ import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
-import EulerHS.Prelude hiding (Handle)
+import EulerHS.Prelude
 import qualified Models.ProductInstance as ModelPI
 import qualified Storage.Queries.DriverInformation as QueryDI
 import Storage.Queries.Person (findAllActiveDrivers)
 import qualified Storage.Queries.ProductInstance as QueryPI
 import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
 import Types.App (DriverId (..))
-import qualified Types.Storage.DriverInformation as DI
+import qualified Types.Storage.DriverInformation as DriverInformation
 
-data Handle m = Handle
+data ServiceHandle m = ServiceHandle
   { findActiveDrivers :: m [Person.Person],
     findRidesByStartTimeBuffer :: UTCTime -> NominalDiffTime -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
     getCurrentTime :: m UTCTime,
-    fetchDriversInfo :: [DriverId] -> m [DI.DriverInformation]
+    fetchDriversInfo :: [DriverId] -> m [DriverInformation.DriverInformation]
   }
 
 handleActiveDrivers :: RegistrationToken -> App.FlowHandler ActiveDriversResponse
 handleActiveDrivers _ = do
   let handle =
-        Handle
+        ServiceHandle
           { findActiveDrivers = findAllActiveDrivers,
             findRidesByStartTimeBuffer = ModelPI.findByStartTimeBuffer Case.RIDEORDER,
             getCurrentTime = getCurrTime,
@@ -39,8 +39,8 @@ handleActiveDrivers _ = do
           }
   withFlowHandler $ execute handle
 
-execute :: (Monad m) => Handle m -> m ActiveDriversResponse
-execute Handle {..} = do
+execute :: (Monad m) => ServiceHandle m -> m ActiveDriversResponse
+execute ServiceHandle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   now <- getCurrentTime
   freeDriversIds <- fetchFreeDriversIds activeDriversIds now
@@ -53,7 +53,7 @@ execute Handle {..} = do
       let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
       pure freeDriversIds
     timePeriod = nominalDay -- Move into config if there will be a need
-    mapToResp DI.DriverInformation {..} =
+    mapToResp DriverInformation.DriverInformation {..} =
       DriverInformation
         { driver_id = PersonId . _getDriverId $ _driverId,
           completed_rides_over_time = _completedRidesNumber,
@@ -62,7 +62,7 @@ execute Handle {..} = do
 
 updateDriverInfo :: Text -> Integer -> App.FlowHandler Ack.Ack
 updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
-  driversIdsWithInfo <- fmap DI._driverId <$> QueryDI.fetchMostOutdatedDriversInfo quantityToUpdate
+  driversIdsWithInfo <- fmap DriverInformation._driverId <$> QueryDI.fetchMostOutdatedDriversInfo quantityToUpdate
   now <- getCurrTime
   let fromTime = addUTCTime (- timePeriod) now
   driversInfo <- traverse (fetchDriverInfoById fromTime now) driversIdsWithInfo
