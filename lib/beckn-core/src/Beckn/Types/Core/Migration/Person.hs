@@ -11,7 +11,7 @@ data Person = Person
     _dob :: Maybe Text, -- format: date
     _gender :: Maybe Text,
     _cred :: Maybe Text,
-    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
+    _tags :: Tags
   }
   deriving (Eq, Generic, Show)
 

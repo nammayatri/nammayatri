@@ -11,7 +11,7 @@ data Provider = Provider
     _descriptor :: Maybe Descriptor,
     _time :: Maybe Time,
     _locations :: [Location],
-    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
+    _tags :: Tags
   }
   deriving (Generic, Show)
 

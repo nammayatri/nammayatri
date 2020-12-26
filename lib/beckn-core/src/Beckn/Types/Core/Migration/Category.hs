@@ -10,7 +10,7 @@ data Category = Category
     _parent_category_id :: Maybe Text,
     _descriptor :: Maybe Descriptor,
     _time :: Maybe Time,
-    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
+    _tags :: Tags
   }
   deriving (Generic, Show)
 

@@ -21,7 +21,7 @@ data Fulfillment = Fulfillment
     _start :: Maybe FulfillmentDetails,
     _end :: Maybe FulfillmentDetails,
     _purpose :: Maybe Text,
-    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
+    _tags :: Tags
   }
   deriving (Generic, Show)
 

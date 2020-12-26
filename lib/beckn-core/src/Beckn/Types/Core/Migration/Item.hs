@@ -14,7 +14,7 @@ data Item = Item
     _category_id :: Maybe Text,
     _location_id :: Maybe Text,
     _time :: Maybe Time,
-    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
+    _tags :: Tags
   }
   deriving (Generic, Show)
 

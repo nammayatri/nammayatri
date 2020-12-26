@@ -16,7 +16,7 @@ data Intent = Intent
     _offer :: Maybe OfferInfo,
     _item :: Maybe ItemInfo,
     _purpose :: Maybe Text,
-    _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
+    _tags :: Tags
   }
   deriving (Generic, Show)
 
