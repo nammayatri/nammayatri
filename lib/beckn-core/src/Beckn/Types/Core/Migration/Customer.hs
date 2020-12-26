@@ -1,14 +1,20 @@
-module Beckn.Types.Core.Migration.Customer (Customer (..)) where
+module Beckn.Types.Core.Migration.Customer where
 
 import Beckn.Types.Core.Migration.Person (Person)
-import Data.Aeson (withObject, (.:))
-import EulerHS.Prelude
+import Data.Aeson (object, withObject, (.:), (.=))
+import EulerHS.Prelude hiding ((.=))
 
 -- allOf union
 data Customer
   = SingleCustomer Person
-  | GroupCustomer [Person]
-  deriving (Generic, Show)
+  | GroupCustomer GroupCustomer'
+  deriving (Eq, Generic, Show)
+
+data GroupCustomer' = GroupCustomer'
+  { primary :: Person,
+    count :: Integer
+  }
+  deriving (Eq, Generic, Show, FromJSON, ToJSON)
 
 instance FromJSON Customer where
   parseJSON = withObject "Customer" $ \v ->
@@ -17,7 +23,16 @@ instance FromJSON Customer where
       GROUP -> GroupCustomer <$> v .: "group"
 
 instance ToJSON Customer where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON (SingleCustomer person) =
+    object
+      [ "type" .= SINGLE,
+        "individual" .= person
+      ]
+  toJSON (GroupCustomer groupCustomer) =
+    object
+      [ "type" .= GROUP,
+        "group" .= groupCustomer
+      ]
 
 data CustomerType = SINGLE | GROUP
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Eq, Generic, Show, FromJSON, ToJSON)

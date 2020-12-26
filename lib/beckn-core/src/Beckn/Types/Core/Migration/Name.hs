@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Name (Name (..)) where
+module Beckn.Types.Core.Migration.Name where
 
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import EulerHS.Prelude hiding ((.=))
@@ -6,7 +6,7 @@ import EulerHS.Prelude hiding ((.=))
 data Name
   = Full Text
   | Deconstructed DeconstructedName
-  deriving (Show)
+  deriving (Eq, Show)
 
 instance FromJSON Name where
   parseJSON = withObject "Name" $ \o ->
@@ -25,7 +25,7 @@ data DeconstructedName = DeconstructedName
     _honorific_prefix :: Maybe Text,
     _honorific_suffix :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Eq, Show, Generic)
 
 instance FromJSON DeconstructedName where
   parseJSON = genericParseJSON stripLensPrefixOptions

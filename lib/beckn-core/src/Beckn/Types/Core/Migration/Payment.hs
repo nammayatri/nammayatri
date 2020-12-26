@@ -2,6 +2,7 @@ module Beckn.Types.Core.Migration.Payment
   ( Payment (..),
     PaymentType (..),
     TLMethod (..),
+    Params (..),
   )
 where
 
@@ -10,6 +11,7 @@ import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.JSON (constructorsWithHyphens, uniteObjects)
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
+import Data.HashMap.Strict (delete)
 import EulerHS.Prelude hiding (State, (.=))
 import Servant.Client (BaseUrl)
 
@@ -40,17 +42,18 @@ data Params = Params
     _amount :: Maybe DecimalValue,
     _additional :: HashMap Text Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Eq, Show)
 
 instance FromJSON Params where
   parseJSON = withObject "Params" $ \o ->
     Params
       <$> o .: "transaction_id"
       <*> o .: "amount"
-      <*> mapM f o
+      <*> mapM f (additional o)
     where
       f (String val) = pure val
       f e = typeMismatch "additional property of Params" e
+      additional = delete "transaction_id" . delete "amount"
 
 instance ToJSON Params where
   toJSON Params {..} = uniteObjects [object knownParams, Object (String <$> _additional)]

@@ -13,7 +13,7 @@ data Person = Person
     _cred :: Maybe Text,
     _tags :: [Tags] -- Fix after that https://github.com/beckn/protocol-specifications/pull/61
   }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show)
 
 instance FromJSON Person where
   parseJSON = genericParseJSON stripLensPrefixOptions
