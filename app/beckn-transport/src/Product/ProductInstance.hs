@@ -219,9 +219,11 @@ updateStatus user piId req = do
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
 notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
+  transporter <- OQ.findOrganizationById . OrganizationId $ searchPi ^. #_organizationId
+  let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl
+    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
     _ -> return ()
 
 updateInfo :: ProductInstanceId -> Flow ()
@@ -313,19 +315,19 @@ updateTrip piId newStatus request = do
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do
+  transporterOrg <- findOrganization
+  let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
   case status of
     Just k -> case k of
       PI.CANCELLED -> do
-        transporterOrg <- findOrganization
         admins <- getAdmins transporterOrg
-        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackUrl
+        BP.notifyCancelToGateway (_getProductInstanceId $ searchPi ^. #_id) callbackUrl bppShortId
         Notify.notifyCancelReqByBP searchPi admins
       PI.TRIP_REASSIGNMENT -> do
-        transporterOrg <- findOrganization
         admins <- getAdmins transporterOrg
         Notify.notifyDriverCancelledRideRequest searchPi admins
-        notifyStatusToGateway
-      _ -> notifyStatusToGateway
+        notifyStatusToGateway bppShortId
+      _ -> notifyStatusToGateway bppShortId
     Nothing -> return ()
   where
     findOrganization = OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
@@ -333,6 +335,6 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
       if transporterOrg ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
         else pure []
-    notifyStatusToGateway = do
+    notifyStatusToGateway bppShortId = do
       trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
-      BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl
+      BP.notifyServiceStatusToGateway (_getProductInstanceId $ searchPi ^. #_id) trackerPi callbackUrl bppShortId

@@ -298,9 +298,9 @@ INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, t
 
 -- Transporter entries. api_key, callback_url, callback_api_key are not needed to be populated. These are only looked up from id.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'Test Cabs', 'test-cabs', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '[A] Transporter #1', 'JUSPAY.MOBILITY.PROVIDER.UAT.1', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('e1f37274-f0aa-4bb3-93a0-2476349487b7', '[A] Transporter #1', 'JUSPAY.MOBILITY.PROVIDER.UAT.1', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9777777777', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+  ('e1f37274-f0aa-4bb3-93a0-2476349487b7', 'Another Test Cabs', 'another-test-cabs', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9777777777', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
 
 -- BAP app entry.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES

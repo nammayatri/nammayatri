@@ -81,15 +81,17 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
       transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
       when (transporterOrg ^. #_status /= Organization.APPROVED) $
         throwBecknError401 "Unauthorized"
+      transporter <- findOrganizationById . OrganizationId $ transporterOrgId
+      let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
       case _transporterChoice of
         "ACCEPTED" -> do
           prodInst <- createProductInstance c p _quote transporterOrgId PI.INSTOCK
-          notifyGateway c prodInst transporterOrgId PI.INSTOCK
+          notifyGateway c prodInst transporterOrgId PI.INSTOCK bppShortId
           Case.updateStatus (c ^. #_id) Case.CONFIRMED
           return c
         "DECLINED" -> do
           declinedProdInst <- createProductInstance c p _quote transporterOrgId PI.OUTOFSTOCK
-          notifyGateway c declinedProdInst transporterOrgId PI.OUTOFSTOCK
+          notifyGateway c declinedProdInst transporterOrgId PI.OUTOFSTOCK bppShortId
           Case.updateStatus (c ^. #_id) Case.CLOSED
           return c
         _ -> throwError400 "TRANSPORTER CHOICE INVALID"
@@ -135,8 +137,8 @@ createProductInstance cs prod price orgId status = do
           _updatedAt = currTime
         }
 
-notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Flow ()
-notifyGateway c prodInst transporterOrgId piStatus = do
+notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Text -> Flow ()
+notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
   L.logInfo @Text "notifyGateway" $ show c
   L.logInfo @Text "notifyGateway" $ show prodInst
   transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
@@ -144,7 +146,7 @@ notifyGateway c prodInst transporterOrgId piStatus = do
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg
   L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
-  _ <- Gateway.onSearch onSearchPayload
+  _ <- Gateway.onSearch onSearchPayload bppShortId
   return ()
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq

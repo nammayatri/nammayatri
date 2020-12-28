@@ -26,8 +26,6 @@ verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM401 "INVAL
 lookup :: LookupAction LookupRegistry AppEnv
 lookup = lookupRegistryAction Org.findOrganizationByShortId
 
-getHttpManagerKey :: Flow String
-getHttpManagerKey = do
-  config <- ask
-  let selfId = config ^. #selfId
-  pure $ signatureAuthManagerKey <> "-" <> T.unpack selfId
+getHttpManagerKey :: Text -> Flow String
+getHttpManagerKey keyId = do
+  pure $ signatureAuthManagerKey <> "-" <> T.unpack keyId
