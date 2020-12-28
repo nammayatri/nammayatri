@@ -38,7 +38,7 @@ main = do
     setConfigEnv app = do
       setEnv
         (T.unpack $ toEnvVar app <> "_CONFIG_PATH")
-        (T.unpack $ "../dev/config/" <> app <> ".dhall")
+        (T.unpack $ "../dhall-configs/dev/" <> app <> ".dhall")
       setEnv
         (T.unpack $ toEnvVar app <> "_MIGRATION_PATH")
         (T.unpack $ "../dev/migrations/" <> app)
