@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Utils.Auth where
 
 import App.Types
@@ -5,6 +7,7 @@ import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as Org
 
@@ -22,3 +25,9 @@ verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM401 "INVAL
 
 lookup :: LookupAction LookupRegistry AppEnv
 lookup = lookupRegistryAction Org.findOrganizationByShortId
+
+getHttpManagerKey :: Flow String
+getHttpManagerKey = do
+  config <- ask
+  let selfId = config ^. #selfId
+  pure $ signatureAuthManagerKey <> "-" <> T.unpack selfId

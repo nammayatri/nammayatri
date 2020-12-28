@@ -55,6 +55,7 @@ runTransporterBackendApp' appEnv settings = do
           Left err -> putStrLn @String ("Could not prepare authentication managers: " <> show err)
           Right getManagers -> do
             managerMap <- getManagers
+            putStrLn @Text $ "Loaded http managers - " <> show (keys managerMap)
             let flowRt' = flowRt {R._httpClientManagers = managerMap}
             putStrLn @String "Initializing Redis Connections..."
             try (runFlowR flowRt appEnv $ prepareRedisConnections $ redisCfg appEnv) >>= \case

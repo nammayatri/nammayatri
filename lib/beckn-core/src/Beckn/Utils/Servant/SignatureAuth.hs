@@ -294,7 +294,7 @@ prepareAuthManager flowRt appEnv header shortOrgId = do
   encodedKey <- mSigningKey & maybeToRight ("No private key found for credential: " <> uniqueKeyId)
   let mPrivateKey = Registry.decodeKey $ encodedKey ^. #signPrivKey
   privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
-  Right $ signatureAuthManager flowRt shortOrgId signatureExpiry header privateKey uniqueKeyId
+  pure $ signatureAuthManager flowRt shortOrgId signatureExpiry header privateKey uniqueKeyId
 
 makeManagerMap :: [String] -> [Http.Manager] -> Map String Http.Manager
 makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
@@ -306,15 +306,10 @@ prepareAuthManagers ::
   [Text] ->
   Either Text (IO (Map String Http.Manager))
 prepareAuthManagers flowRt appEnv allShortIds = do
-  let allShortIdStrings = map T.unpack allShortIds
-  let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> shortId) allShortIdStrings
+  let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> T.unpack shortId) allShortIds
   let managerCreationActionEithers = map (prepareAuthManager flowRt appEnv "Authorization") allShortIds
-  let managerCreationActionEither = sequence managerCreationActionEithers
-  do
-    managerCreationActions <- managerCreationActionEither
-    let managers = sequence managerCreationActions
-    let managerMap = fmap (makeManagerMap managerKeys) managers
-    Right managerMap
+  managerCreationActions <- sequence managerCreationActionEithers
+  pure $ makeManagerMap managerKeys <$> sequence managerCreationActions
 
 instance
   ( S.HasSwagger api,
