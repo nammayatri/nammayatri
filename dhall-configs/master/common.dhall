@@ -29,13 +29,13 @@ let credRegistry =
   -- BAP
   , globalCommon.mkCredential "juspay-mobility-bap-1-key" "JUSPAY.MOBILITY.APP.UAT.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   -- BPP
-  , globalCommon.mkCredential "juspay-mobility-bpp-1-key" "JUSPAY.MOBILITY.PROVIDER.UAT.1" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-  , globalCommon.mkCredential "juspay-mobility-bpp-2-key" "JUSPAY.MOBILITY.PROVIDER.UAT.2" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-  , globalCommon.mkCredential "juspay-mobility-bpp-3-key" "JUSPAY.MOBILITY.PROVIDER.UAT.3" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-  , globalCommon.mkCredential "juspay-mobility-bpp-4-key" "JUSPAY.MOBILITY.PROVIDER.UAT.4" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-  , globalCommon.mkCredential "juspay-mobility-bpp-5-key" "JUSPAY.MOBILITY.PROVIDER.UAT.5" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-  , globalCommon.mkCredential "juspay-mobility-bpp-6-key" "JUSPAY.MOBILITY.PROVIDER.UAT.6" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
-  , globalCommon.mkCredential "juspay-mobility-bpp-7-key" "JUSPAY.MOBILITY.PROVIDER.UAT.7" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
+  , globalCommon.mkCredential "juspay-mobility-bpp-1-key" "JUSPAY.MOBILITY.PROVIDER.UAT.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-2-key" "JUSPAY.MOBILITY.PROVIDER.UAT.2" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-3-key" "JUSPAY.MOBILITY.PROVIDER.UAT.3" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-4-key" "JUSPAY.MOBILITY.PROVIDER.UAT.4" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-5-key" "JUSPAY.MOBILITY.PROVIDER.UAT.5" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-6-key" "JUSPAY.MOBILITY.PROVIDER.UAT.6" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-7-key" "JUSPAY.MOBILITY.PROVIDER.UAT.7" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
