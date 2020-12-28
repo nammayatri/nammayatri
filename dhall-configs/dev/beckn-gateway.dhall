@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let globalCommon = ../generic/common.dhall
 let sec = ./secrets/beckn-gateway.dhall
 
 let postgresConfig =
@@ -13,7 +12,7 @@ let postgresConfig =
 let pgcfg =
   { connTag = "gatewayDb"
   , pgConfig = postgresConfig
-  , poolConfig = globalCommon.defaultPoolConfig
+  , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_gateway"
   }
 
@@ -40,11 +39,11 @@ in
 , migrationPath = Some (env:BECKN_GATEWAY_MIGRATION_PATH as Text ? "dev/migrations/beckn-gateway")
 , autoMigrate = True
 , searchTimeout = None Integer
-, traceFlag = globalCommon.TraceFlag.TRACE_ALL
-, loggerConfig = globalCommon.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
+, traceFlag = common.TraceFlag.TRACE_ALL
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
 , mobilityCoreVersion = "0.8.2"
 , mobilityDomainVersion = "0.8.2"
 , fmdCoreVersion = "0.8.0"
 , fmdDomainVersion = "0.8.3"
-, signatureExpiry = globalCommon.signatureExpiry
+, signatureExpiry = common.signatureExpiry
 }

@@ -14,7 +14,18 @@ let credRegistry =
   , globalCommon.mkCredential "nsdl_bg_1" "NSDL.BG.1" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
   ]
 
-in { smsUserName = sec.smsUserName
+in { defaultPoolConfig = globalCommon.defaultPoolConfig
+   , smsSessionConfig = globalCommon.smsSessionConfig
+   , autoMigrate = globalCommon.autoMigrate
+   , loggerConfig = globalCommon.loggerConfig
+   , TraceFlag = globalCommon.TraceFlag
+   , LogLevel = globalCommon.LogLevel
+   , ExotelCfg = globalCommon.ExotelCfg
+   , signatureExpiry = globalCommon.signatureExpiry
+   , mkCredential = globalCommon.mkCredential
+   , mkSigningKey = globalCommon.mkSigningKey
+
+   , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = None Text

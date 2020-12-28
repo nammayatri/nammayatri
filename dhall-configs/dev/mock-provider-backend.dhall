@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let globalCommon = ../generic/common.dhall
 let sec = ./secrets/mock-app-backend.dhall
 
 let postgresConfig =
@@ -13,7 +12,7 @@ let postgresConfig =
 let pgcfg =
   { connTag = "providerDb"
   , pgConfig = postgresConfig
-  , poolConfig = globalCommon.defaultPoolConfig
+  , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_mock_provider_backend"
   }
 
@@ -28,9 +27,9 @@ in
 , selfId = "JUSPAY.BPP.MOCK.1"
 , nwAddress = "http://localhost:8017/v1/"
 , migrationPath = None Text
-, autoMigrate = globalCommon.autoMigrate
-, loggerConfig = globalCommon.loggerConfig // {logFilePath = "/tmp/mock-provider-backend.log"}
+, autoMigrate = common.autoMigrate
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-provider-backend.log"}
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
-, signatureExpiry = globalCommon.signatureExpiry
+, signatureExpiry = common.signatureExpiry
 }

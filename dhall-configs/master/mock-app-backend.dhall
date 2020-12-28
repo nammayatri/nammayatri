@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let globalCommon = ../generic/common.dhall
 let sec = ./secrets/mock-app-backend.dhall
 
 let postgresConfig =
@@ -13,7 +12,7 @@ let postgresConfig =
 let pgcfg =
   { connTag = "providerDb"
   , pgConfig = postgresConfig
-  , poolConfig = globalCommon.defaultPoolConfig
+  , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_mock_app_backend"
   }
 
@@ -28,6 +27,6 @@ in
 , selfId = "JUSPAY.BAP.MOCK.1"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/dev/mock/app/v1/"
 , migrationPath = None Text
-, autoMigrate = globalCommon.autoMigrate
-, loggerConfig = globalCommon.loggerConfig // {logFilePath = "/tmp/mock-app-backend.log"}
+, autoMigrate = common.autoMigrate
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-app-backend.log"}
 }

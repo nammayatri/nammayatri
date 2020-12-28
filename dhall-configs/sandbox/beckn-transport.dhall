@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let globalCommon = ../generic/common.dhall
 let sec = ./secrets/beckn-transport.dhall
 
 let postgresConfig =
@@ -13,7 +12,7 @@ let postgresConfig =
 let pgcfg =
   { connTag = "transporterDb"
   , pgConfig = postgresConfig
-  , poolConfig = globalCommon.defaultPoolConfig
+  , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_transporter"
   }
 
@@ -28,7 +27,7 @@ let rcfg =
   }
 
 let smsConfig =
-  { sessionConfig = globalCommon.smsSessionConfig
+  { sessionConfig = common.smsSessionConfig
   , credConfig = {
       username = common.smsUserName
     , password = common.smsPassword
@@ -59,12 +58,12 @@ in
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
-, exotelCfg = None globalCommon.ExotelCfg
+, exotelCfg = None common.ExotelCfg
 , migrationPath = None Text
-, autoMigrate = globalCommon.autoMigrate
+, autoMigrate = common.autoMigrate
 , coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
-, traceFlag = globalCommon.TraceFlag.TRACE_ALL
-, loggerConfig = globalCommon.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
-, signatureExpiry = globalCommon.signatureExpiry
+, traceFlag = common.TraceFlag.TRACE_ALL
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
+, signatureExpiry = common.signatureExpiry
 }

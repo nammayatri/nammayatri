@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let globalCommon = ../generic/common.dhall
 let sec = ./secrets/fmd-wrapper.dhall
 
 let postgresConfig =
@@ -13,7 +12,7 @@ let postgresConfig =
 let pgcfg =
   { connTag = "fmdWrapperDb"
   , pgConfig = postgresConfig
-  , poolConfig = globalCommon.defaultPoolConfig
+  , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_fmd_wrapper"
   }
 
@@ -55,14 +54,14 @@ in
 , xGatewayUri = gwUri
 , xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = None Text
-, autoMigrate = globalCommon.autoMigrate
-, loggerConfig = globalCommon.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
+, autoMigrate = common.autoMigrate
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.3"
 , dzConfig = dunzoConfig
 , dlConfig = delhiveryConfig
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
-, signatureExpiry = globalCommon.signatureExpiry
+, signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.FMD.UAT.1"
 }
