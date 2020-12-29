@@ -20,7 +20,7 @@ data Cancellation = Cancellation
   }
   deriving (Generic, Show)
 
-data CancellationType = Full | Partial
+data CancellationType = FULL | PARTIAL
   deriving (Generic, Show)
 
 instance FromJSON Cancellation where

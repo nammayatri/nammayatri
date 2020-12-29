@@ -10,38 +10,13 @@ import Beckn.Types.Amount
     amountFromString,
     amountToString,
   )
-import Data.Aeson (withText)
-import Data.Text (split)
 import EulerHS.Prelude
 
-data DecimalValue = DecimalValue
-  { _integral :: Text,
-    _fractional :: Maybe Text
-  }
-  deriving (Eq, Generic, Show)
-
-instance FromJSON DecimalValue where
-  parseJSON = withText "DecimalValue" (maybe fail' pure . stringToDecimalValue)
-    where
-      fail' = fail "DecimalValue parsing error"
-
-instance ToJSON DecimalValue where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+newtype DecimalValue = DecimalValue Text
+  deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
 convertDecimalValueToAmount :: DecimalValue -> Maybe Amount
-convertDecimalValueToAmount (DecimalValue integral (Just fractional)) =
-  amountFromString $ integral <> "." <> fractional
-convertDecimalValueToAmount (DecimalValue integral Nothing) =
-  amountFromString integral
+convertDecimalValueToAmount (DecimalValue d) = amountFromString d
 
 convertAmountToDecimalValue :: Amount -> DecimalValue
-convertAmountToDecimalValue = fromMaybe fail' . stringToDecimalValue . amountToString -- FIXME
-  where
-    fail' = error "stringToDecimalValue conversion error"
-
-stringToDecimalValue :: Text -> Maybe DecimalValue
-stringToDecimalValue text =
-  case split (== '.') text of
-    [integral, fractional] -> Just $ DecimalValue integral (Just fractional)
-    [integral] -> Just $ DecimalValue integral Nothing
-    _ -> Nothing
+convertAmountToDecimalValue = DecimalValue . amountToString

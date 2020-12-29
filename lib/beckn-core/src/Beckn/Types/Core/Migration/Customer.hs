@@ -6,9 +6,12 @@ import EulerHS.Prelude hiding ((.=))
 
 -- allOf union
 data Customer
-  = SingleCustomer Person
+  = SingleCustomer SingleCustomer'
   | GroupCustomer GroupCustomer'
   deriving (Eq, Generic, Show)
+
+newtype SingleCustomer' = SingleCustomer' {info :: Person}
+  deriving (Eq, Generic, Show, FromJSON, ToJSON)
 
 data GroupCustomer' = GroupCustomer'
   { primary :: Person,
