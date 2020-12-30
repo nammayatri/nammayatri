@@ -35,6 +35,7 @@ createInitialDriverInfo driverId = do
         { _driverId = id,
           _completedRidesNumber = 0,
           _earnings = 0.0,
+          _createdAt = now,
           _updatedAt = now
         }
 

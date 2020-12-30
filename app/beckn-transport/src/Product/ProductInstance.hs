@@ -328,6 +328,7 @@ updateTrip piId newStatus request = do
               { _driverId = driverId,
                 _completedRidesNumber = 1,
                 _earnings = earnings,
+                _createdAt = now,
                 _updatedAt = now
               }
       DriverInfo.create driverInfo

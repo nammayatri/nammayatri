@@ -10,6 +10,7 @@ data DriverInformationT f = DriverInformation
   { _driverId :: B.C f DriverId,
     _completedRidesNumber :: B.C f Int,
     _earnings :: B.C f Amount,
+    _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -37,5 +38,6 @@ fieldEMod =
       B.tableModification
         { _driverId = "driver_id",
           _completedRidesNumber = "completed_rides_number",
+          _createdAt = "created_at",
           _updatedAt = "updated_at"
         }

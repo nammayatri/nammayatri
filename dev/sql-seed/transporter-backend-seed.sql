@@ -643,5 +643,6 @@ CREATE TABLE atlas_transporter.driver_information_cache (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
     completed_rides_number smallint NOT NULL,
     earnings numeric(30,10) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
