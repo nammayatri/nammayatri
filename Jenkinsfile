@@ -1,6 +1,14 @@
 pipeline {
   agent any
 
+  environment {
+      BUILD_VERSION="""${sh(
+            returnStdout: true,
+            script: 'git rev-parse --short HEAD'
+        )}"""
+      DEPLOY_VARIANT="${env.BRANCH_NAME}"
+  }
+
   stages {
     stage('Build & push dependency') {
       when {
@@ -8,6 +16,7 @@ pipeline {
           anyOf {
             branch "master"
             branch "sandbox"
+            branch "production"
           }
           anyOf {
             changeset "Jenkinsfile"
@@ -31,6 +40,7 @@ pipeline {
         anyOf {
           branch "master"
           branch "sandbox"
+          branch "production"
           changeRequest()
         }
       }
@@ -47,23 +57,24 @@ pipeline {
             anyOf {
               branch "master"
               branch "sandbox"
+              branch "production"
             }
           }
 
           stages {
+
             stage('Docker push') {
               steps {
                 sh 'make push -e VERSION=$(git rev-parse --short HEAD)'
               }
             }
 
-            stage('Deploy') {
-              environment {
-                  BUILD_VERSION="""${sh(
-                        returnStdout: true,
-                        script: 'git rev-parse --short HEAD'
-                    )}"""
-                  DEPLOY_VARIANT="${env.BRANCH_NAME}"
+            stage('Apply configs') {
+              when {
+                anyOf {
+                  branch "master"
+                  branch "sandbox"
+                }
               }
 
               steps {
@@ -83,6 +94,38 @@ pipeline {
                 kubernetesDeploy(
                       kubeconfigId: 'jenkins-staging-deployer',
                       configs: 'deployment-configs/*deploy.yaml',
+                      enableConfigSubstitution: true
+                    )
+              }
+            }
+
+            stage('Deploy master') {
+              when { branch "master" }
+              steps {
+                kubernetesDeploy(
+                      kubeconfigId: 'jenkins-staging-deployer',
+                      configs: 'deployment-configs/*deploy.yaml',
+                      enableConfigSubstitution: true
+                    )
+              }
+            }
+
+            stage('Deploy sandbox') {
+              when { branch "sandbox" }
+              steps {
+                kubernetesDeploy(
+                      kubeconfigId: 'jenkins-staging-deployer',
+                      configs: 'deployment-configs/app-backend-deploy.yaml',
+                      enableConfigSubstitution: true
+                    )
+                kubernetesDeploy(
+                      kubeconfigId: 'jenkins-staging-deployer',
+                      configs: 'deployment-configs/beckn-gateway-deploy.yaml',
+                      enableConfigSubstitution: true
+                    )
+                kubernetesDeploy(
+                      kubeconfigId: 'jenkins-staging-deployer',
+                      configs: 'deployment-configs/beckn-transport-deploy.yaml',
                       enableConfigSubstitution: true
                     )
               }
