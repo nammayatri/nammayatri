@@ -18,6 +18,7 @@ import Beckn.Utils.Common
 import Common
 import Control.Lens (Setter', _Just)
 import Control.Lens.At
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import External.Dunzo.Types
 import Fmd
@@ -25,6 +26,7 @@ import FmdWrapper.Common
 import FmdWrapper.Server
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Servant (Header, type (:>))
 import Servant.Client
 import Test.Hspec hiding (context, example)
 import Utils
@@ -48,8 +50,11 @@ numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
 
 runSearch :: ClientEnv -> Text -> Search.SearchReq -> IO (Either ClientError AckResponse)
-runSearch clientEnv _apiKey searchReq =
-  runClient clientEnv $ client Search.searchAPI searchReq
+runSearch clientEnv orgId searchReq = do
+  now <- getPOSIXTime
+  let signature = decodeUtf8 $ signRequest searchReq now orgId (orgId <> "-key")
+  let searchAPI = Proxy :: Proxy (Header "Authorization" Text :> Search.SearchAPI)
+  runClient clientEnv $ client searchAPI (Just signature) searchReq
 
 verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
@@ -123,7 +128,7 @@ dunzoLocationError pickupGps dropGps expectedError clientEnv callbackData =
             & setPickupGps .~ pickupGps
             & setDropGps .~ dropGps
 
-    gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+    gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResponse
 
     _ <- waitForCallback (onSearchEndMVar callbackData)
@@ -144,7 +149,7 @@ successfulSearch clientEnv callbackData =
             & setPickupGps .~ gps1
             & setDropGps .~ gps2
 
-    gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+    gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResponse
 
     searchEndResult <- waitForCallback (onSearchEndMVar callbackData)
@@ -190,15 +195,15 @@ incorrectApiKey clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
 
-  gatewayResponse <- runSearch clientEnv "some-key" searchReq
-  verifyError 401 "INVALID_API_KEY" gatewayResponse
+  gatewayResponse <- runSearch clientEnv "" searchReq
+  verifyError 401 "INVALID_KEY_ID" gatewayResponse
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
   ctx <- buildContext "" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_ACTION" gatewayResponse
 
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
@@ -206,7 +211,7 @@ incorrectCountry clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_country = Just ""}
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
 
 incorrectDomainVersion :: ClientEnv -> CallbackData -> IO ()
@@ -214,7 +219,7 @@ incorrectDomainVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_domain_version = Just "0.7.0"}
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
 
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
@@ -222,7 +227,7 @@ incorrectCoreVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_core_version = Just "0.7.0"}
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
 
 missingBapUri :: ClientEnv -> CallbackData -> IO ()
@@ -230,7 +235,7 @@ missingBapUri clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" Nothing Nothing
   let searchReq = buildFMDSearchReq ctx
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_BAP_URI" gatewayResponse
 
 missingCountry :: ClientEnv -> CallbackData -> IO ()
@@ -238,7 +243,7 @@ missingCountry clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_country = Nothing}
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
 
 missingDomainVersion :: ClientEnv -> CallbackData -> IO ()
@@ -246,7 +251,7 @@ missingDomainVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_domain_version = Nothing}
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
 
 missingCoreVersion :: ClientEnv -> CallbackData -> IO ()
@@ -254,7 +259,7 @@ missingCoreVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
   let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
 
-  gatewayResponse <- runSearch clientEnv "fmd-test-app-key" searchReq
+  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
 
 spec :: Spec

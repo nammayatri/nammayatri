@@ -1,8 +1,12 @@
 module Common where
 
+import Beckn.Utils.Registry (decodeKey)
+import qualified Beckn.Utils.SignatureAuth as HttpSig
+import qualified Data.Aeson as J
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.UTF8 as B
+import Data.Time.Clock.POSIX
 import EulerHS.Prelude
 import Network.HTTP.Types.Status
 import Servant.Client
@@ -25,3 +29,14 @@ verifyError expectedCode expectedMessage serverResponse = do
       BL.toStrict (responseBody response)
         `shouldSatisfy` (expectedMessage `B.isInfixOf`)
     _ -> expectationFailure ("Expected " <> B.toString expectedMessage <> " error.")
+
+privateKey :: ByteString
+privateKey = fromJust $ decodeKey "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
+
+signRequest :: ToJSON req => req -> POSIXTime -> Text -> Text -> ByteString
+signRequest req now orgId keyId =
+  let body = BL.toStrict $ J.encode req
+      headers = [("(created)", ""), ("(expires)", ""), ("digest", "")]
+      params = HttpSig.mkSignatureParams orgId keyId now 600 HttpSig.Ed25519
+      signature = fromJust $ HttpSig.sign privateKey params body headers
+   in HttpSig.encode $ HttpSig.SignaturePayload signature params

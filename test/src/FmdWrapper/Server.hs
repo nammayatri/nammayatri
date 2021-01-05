@@ -4,6 +4,7 @@ module FmdWrapper.Server where
 
 import Beckn.Types.Core.Ack
 import Beckn.Types.FMD.API.Search (OnSearchEndReq, OnSearchEndRes, OnSearchReq)
+import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Concurrent.Async
 import EulerHS.Prelude
 import FmdWrapper.Common
@@ -28,14 +29,14 @@ type CallbackAPI =
 
 type OnSearchAPI =
   "on_search"
-    :> Header "X-API-Key" Text
+    :> Header "Authorization" HttpSig.SignaturePayload
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] AckResponse
 
 type OnSearchEndAPI =
   "on_search"
     :> "end"
-    :> Header "X-API-Key" Text
+    :> Header "Authorization" HttpSig.SignaturePayload
     :> ReqBody '[JSON] OnSearchEndReq
     :> Post '[JSON] OnSearchEndRes
 
@@ -47,14 +48,14 @@ callbackServer callbackData =
   onSearch callbackData
     :<|> onSearchEnd callbackData
 
-onSearch :: CallbackData -> Maybe Text -> OnSearchReq -> Handler AckResponse
-onSearch callbackData token req = do
-  atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult token req :)
+onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> OnSearchReq -> Handler AckResponse
+onSearch callbackData sPayload req = do
+  atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (^. #params . #keyId . #subscriberId)) req :)
   pure $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
-onSearchEnd :: CallbackData -> Maybe Text -> OnSearchEndReq -> Handler AckResponse
-onSearchEnd callbackData token req = do
-  putMVar (onSearchEndMVar callbackData) $ CallbackResult token req
+onSearchEnd :: CallbackData -> Maybe HttpSig.SignaturePayload -> OnSearchEndReq -> Handler AckResponse
+onSearchEnd callbackData sPayload req = do
+  putMVar (onSearchEndMVar callbackData) $ CallbackResult (sPayload <&> (^. #params . #keyId . #subscriberId)) req
   pure $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 mkCallbackData :: IO CallbackData

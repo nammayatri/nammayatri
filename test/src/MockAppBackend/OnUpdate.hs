@@ -1,5 +1,7 @@
 module MockAppBackend.OnUpdate where
 
+import Common
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import Fmd
 import MockAppBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_update" "dummy-txn-id" Nothing Nothing
       let onUpdateReq = buildOnUpdateReq ctx
-      eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow onUpdateReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest onUpdateReq now mockAppSelfId mockAppApiKey
+      eitherUpdateCbRes <- runClient appClientEnv $ onUpdateFlow (Just signature) onUpdateReq
       eitherUpdateCbRes `shouldSatisfy` isRight

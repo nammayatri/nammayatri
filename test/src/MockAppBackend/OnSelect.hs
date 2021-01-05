@@ -1,5 +1,7 @@
 module MockAppBackend.OnSelect where
 
+import Common
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import Fmd
 import MockAppBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_select" "dummy-txn-id" Nothing Nothing
       let onSelectReq = buildOnSelectReq ctx
-      eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow onSelectReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest onSelectReq now mockAppSelfId mockAppApiKey
+      eitherSelectCbRes <- runClient appClientEnv $ onSelectFlow (Just signature) onSelectReq
       eitherSelectCbRes `shouldSatisfy` isRight

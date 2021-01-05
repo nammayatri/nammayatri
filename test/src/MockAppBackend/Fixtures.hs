@@ -40,20 +40,20 @@ triggerSearchReq
   :<|> triggerUpdateLast
   :<|> triggerUpdate = client (Proxy :: Proxy MockAppRoutes.TriggerAPI)
 
-onSearchFlow :: OnSearchReq -> ClientM AckResponse
-onSelectFlow :: OnSelectReq -> ClientM AckResponse
-onInitFlow :: OnInitReq -> ClientM AckResponse
-onConfirmFlow :: OnConfirmReq -> ClientM AckResponse
-onUpdateFlow :: OnUpdateReq -> ClientM AckResponse
-onSearchFlow
-  :<|> onSelectFlow
-  :<|> onInitFlow
-  :<|> onConfirmFlow
-  :<|> _
-  :<|> _
-  :<|> _
-  :<|> onUpdateFlow =
-    client (Proxy :: Proxy MockAppRoutes.BecknAPI)
+onSearchFlow :: Maybe Text -> OnSearchReq -> ClientM AckResponse
+onSearchFlow = client (Proxy :: Proxy (Header "Authorization" Text :> OnSearchAPI))
+
+onSelectFlow :: Maybe Text -> OnSelectReq -> ClientM AckResponse
+onSelectFlow = client (Proxy :: Proxy (Header "Authorization" Text :> OnSelectAPI))
+
+onInitFlow :: Maybe Text -> OnInitReq -> ClientM AckResponse
+onInitFlow = client (Proxy :: Proxy (Header "Authorization" Text :> OnInitAPI))
+
+onConfirmFlow :: Maybe Text -> OnConfirmReq -> ClientM AckResponse
+onConfirmFlow = client (Proxy :: Proxy (Header "Authorization" Text :> OnConfirmAPI))
+
+onUpdateFlow :: Maybe Text -> OnUpdateReq -> ClientM AckResponse
+onUpdateFlow = client (Proxy :: Proxy (Header "Authorization" Text :> OnUpdateAPI))
 
 buildOnSearchReq :: Context -> OnSearchReq
 buildOnSearchReq context =
@@ -91,4 +91,7 @@ buildOnUpdateReq context =
     }
 
 mockAppApiKey :: Text
-mockAppApiKey = "test-app-2-key"
+mockAppApiKey = "juspay-mock-bap-1-key"
+
+mockAppSelfId :: Text
+mockAppSelfId = "JUSPAY.BAP.MOCK.1"

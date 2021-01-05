@@ -1,5 +1,7 @@
 module MockAppBackend.OnSearch where
 
+import Common
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import Fmd
 import MockAppBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_search" "dummy-txn-id" Nothing Nothing
       let onSearchReq = buildOnSearchReq ctx
-      eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow onSearchReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest onSearchReq now mockAppSelfId mockAppApiKey
+      eitherSearchCbRes <- runClient appClientEnv $ onSearchFlow (Just signature) onSearchReq
       eitherSearchCbRes `shouldSatisfy` isRight

@@ -38,12 +38,11 @@ import Servant
     HasServer (..),
     ServerError (errBody),
     err401,
-    err404,
     type (:>),
   )
 import Servant.Client (BaseUrl (baseUrlHost), HasClient (..))
 import Servant.Server.Internal.Delayed (addAuthCheck)
-import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFail, delayedFailFatal, withRequest)
+import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withRequest)
 import qualified Servant.Swagger as S
 import qualified Servant.Swagger.Internal as S
 
@@ -140,14 +139,13 @@ instance
         let headerName = fromString $ symbolVal (Proxy @header)
         let mSignature = snd <$> find ((== headerName) . fst) headers
         liftIO $ runFlowR flowRt (appEnv env) $ L.logDebug @Text "authCheck" $ "Incoming headers: " +|| headers ||+ ""
-        -- FIXME: we 404 for now to allow a fallback to X-API-Key
         headerBs <-
           case mSignature of
             Just s -> pure s
             Nothing -> do
               let msg = fromString $ "Signature header " +|| headerName ||+ " missing"
               liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
-              delayedFail err404 {errBody = msg}
+              delayedFailFatal err401 {errBody = msg}
         sigBs <-
           case fromString <$> parseHeader @String headerBs of
             Right s -> pure s

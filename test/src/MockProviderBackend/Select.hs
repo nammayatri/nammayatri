@@ -1,5 +1,7 @@
 module MockProviderBackend.Select where
 
+import Common
+import Data.Time.Clock.POSIX
 import EulerHS.Prelude
 import Fmd
 import MockProviderBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "select" "dummy-txn-id" Nothing Nothing
       let selectReq = buildFMDSelectReq ctx
-      initiateSelectRes <- runClient providerClientEnv $ selectFlow selectReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest selectReq now mockProviderSelfId mockProviderApiKey
+      initiateSelectRes <- runClient providerClientEnv $ selectFlow (Just signature) selectReq
       initiateSelectRes `shouldSatisfy` isRight

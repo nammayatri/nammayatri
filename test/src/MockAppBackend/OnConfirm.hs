@@ -1,5 +1,7 @@
 module MockAppBackend.OnConfirm where
 
+import Common
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import Fmd
 import MockAppBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_confirm" "dummy-txn-id" Nothing Nothing
       let onConfirmReq = buildOnConfirmReq ctx
-      eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow onConfirmReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest onConfirmReq now mockAppSelfId mockAppApiKey
+      eitherConfirmCbRes <- runClient appClientEnv $ onConfirmFlow (Just signature) onConfirmReq
       eitherConfirmCbRes `shouldSatisfy` isRight

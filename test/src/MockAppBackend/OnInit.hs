@@ -1,5 +1,7 @@
 module MockAppBackend.OnInit where
 
+import Common
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import Fmd
 import MockAppBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "on_init" "dummy-txn-id" Nothing Nothing
       let onInitReq = buildOnInitReq ctx
-      eitherInitCbRes <- runClient appClientEnv $ onInitFlow onInitReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest onInitReq now mockAppSelfId mockAppApiKey
+      eitherInitCbRes <- runClient appClientEnv $ onInitFlow (Just signature) onInitReq
       eitherInitCbRes `shouldSatisfy` isRight

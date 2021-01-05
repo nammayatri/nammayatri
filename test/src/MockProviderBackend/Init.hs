@@ -1,5 +1,7 @@
 module MockProviderBackend.Init where
 
+import Common
+import Data.Time.Clock.POSIX
 import EulerHS.Prelude
 import Fmd
 import MockProviderBackend.Fixtures
@@ -18,5 +20,7 @@ spec = do
       ctx <- buildContext "init" "dummy-txn-id" Nothing Nothing
       let quoteId = "dummy-quote-id"
           initReq = buildFMDInitReq ctx quoteId
-      initiateInitRes <- runClient providerClientEnv $ initFlow initReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest initReq now mockProviderSelfId mockProviderApiKey
+      initiateInitRes <- runClient providerClientEnv $ initFlow (Just signature) initReq
       initiateInitRes `shouldSatisfy` isRight

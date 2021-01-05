@@ -11,6 +11,7 @@ let signingKeys =
 , globalCommon.mkSigningKey "juspay-mock-bap-1-key" "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 , globalCommon.mkSigningKey "juspay-mock-bpp-1-key" "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 , globalCommon.mkSigningKey "another-test-cabs" "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
+, globalCommon.mkSigningKey "juspay-fmd-1-key" "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 ]
 
 let exotelCfg =

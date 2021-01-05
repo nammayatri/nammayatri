@@ -1,5 +1,7 @@
 module MockProviderBackend.Search where
 
+import Common
+import Data.Time.Clock.POSIX
 import EulerHS.Prelude
 import Fmd
 import MockProviderBackend.Fixtures
@@ -18,5 +20,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "search" "dummy-txn-id" Nothing Nothing
       let searchReq = buildFMDSearchReq ctx
-      initiateSearchRes <- runClient providerClientEnv $ searchFlow searchReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest searchReq now mockProviderSelfId mockProviderApiKey
+      initiateSearchRes <- runClient providerClientEnv $ searchFlow (Just signature) searchReq
       initiateSearchRes `shouldSatisfy` isRight

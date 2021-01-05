@@ -28,7 +28,7 @@ fmdTestAppBaseUrl =
     }
 
 verifyApiKey :: Maybe Text -> IO ()
-verifyApiKey apiKey = apiKey `shouldBe` Just "gateway-key"
+verifyApiKey apiKey = apiKey `shouldSatisfy` isJust
 
 assertAck :: Either ClientError AckResponse -> IO ()
 assertAck response =

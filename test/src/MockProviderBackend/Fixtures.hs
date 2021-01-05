@@ -7,6 +7,7 @@ import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Update
 import EulerHS.Prelude
+import Servant
 import Servant.Client
 
 mockProviderBaseUrl :: BaseUrl
@@ -18,20 +19,23 @@ mockProviderBaseUrl =
       baseUrlPath = "/v1"
     }
 
-searchFlow :: SearchReq -> ClientM AckResponse
-searchFlow = client searchAPI
+searchFlow :: Maybe Text -> SearchReq -> ClientM AckResponse
+searchFlow = client (Proxy :: Proxy (Header "Authorization" Text :> SearchAPI))
 
-selectFlow :: SelectReq -> ClientM AckResponse
-selectFlow = client selectAPI
+selectFlow :: Maybe Text -> SelectReq -> ClientM AckResponse
+selectFlow = client (Proxy :: Proxy (Header "Authorization" Text :> SelectAPI))
 
-initFlow :: InitReq -> ClientM AckResponse
-initFlow = client initAPI
+initFlow :: Maybe Text -> InitReq -> ClientM AckResponse
+initFlow = client (Proxy :: Proxy (Header "Authorization" Text :> InitAPI))
 
-confirmFlow :: ConfirmReq -> ClientM AckResponse
-confirmFlow = client confirmAPI
+confirmFlow :: Maybe Text -> ConfirmReq -> ClientM AckResponse
+confirmFlow = client (Proxy :: Proxy (Header "Authorization" Text :> ConfirmAPI))
 
-updateFlow :: UpdateReq -> ClientM AckResponse
-updateFlow = client updateAPI
+updateFlow :: Maybe Text -> UpdateReq -> ClientM AckResponse
+updateFlow = client (Proxy :: Proxy (Header "Authorization" Text :> UpdateAPI))
 
 mockProviderApiKey :: Text
-mockProviderApiKey = "test-provider-2-key"
+mockProviderApiKey = "juspay-mock-bpp-1-key"
+
+mockProviderSelfId :: Text
+mockProviderSelfId = "JUSPAY.BPP.MOCK.1"

@@ -1,5 +1,7 @@
 module MockProviderBackend.Update where
 
+import Common
+import Data.Time.Clock.POSIX
 import EulerHS.Prelude
 import Fmd
 import MockProviderBackend.Fixtures
@@ -17,5 +19,7 @@ spec = do
     it "should return valid ack response" do
       ctx <- buildContext "update" "dummy-txn-id" Nothing Nothing
       let updateReq = buildFMDUpdateReq ctx
-      initiateUpdateRes <- runClient providerClientEnv $ updateFlow updateReq
+      now <- getPOSIXTime
+      let signature = decodeUtf8 $ signRequest updateReq now mockProviderSelfId mockProviderApiKey
+      initiateUpdateRes <- runClient providerClientEnv $ updateFlow (Just signature) updateReq
       initiateUpdateRes `shouldSatisfy` isRight
