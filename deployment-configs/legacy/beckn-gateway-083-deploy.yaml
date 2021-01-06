@@ -1,0 +1,267 @@
+# Sandbox
+# DEPLOY_VARIANT = sandbox
+# BUILD_VERSION = 7263006f
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beckn-gateway-083-$DEPLOY_VARIANT
+  namespace: atlas
+  labels:
+    version: latest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beckn-gateway-083-$DEPLOY_VARIANT
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
+        sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
+      labels:
+        app: beckn-gateway-083-$DEPLOY_VARIANT
+        version: latest
+    spec:
+      containers:
+        - command:
+            - /bin/bash
+            - -c
+          args:
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/beckn-gateway-exe'
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: BECKN_GATEWAY_CONFIG_PATH
+              value: /etc/beckn/config/beckn-gateway.dhall
+          image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
+          name: beckn-gateway-083-$DEPLOY_VARIANT
+          ports:
+            - containerPort: 8015
+              name: app-http
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /v1/
+              port: 8015
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 12
+          readinessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /v1/
+              port: 8015
+            initialDelaySeconds: 30
+            periodSeconds: 12
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+          securityContext:
+            privileged: false
+          volumeMounts:
+          - name: dhall-configs
+            mountPath: "/tmp/dhall-configs"
+            readOnly: true
+          - name: dhall-secrets
+            mountPath: "/tmp/dhall-secrets"
+            readOnly: true
+        - args:
+            - proxy
+            - sidecar
+            - --domain
+            - $(POD_NAMESPACE).svc.cluster.local
+            - --configPath
+            - /etc/istio/proxy
+            - --binaryPath
+            - /usr/local/bin/envoy
+            - --serviceCluster
+            - beckn-gateway-083-$DEPLOY_VARIANT.$(POD_NAMESPACE)
+            - --drainDuration
+            - 45s
+            - --parentShutdownDuration
+            - 1m0s
+            - --discoveryAddress
+            - istio-pilot.istio-system:15010
+            - --zipkinAddress
+            - zipkin.istio-system:9411
+            - --dnsRefreshRate
+            - 300s
+            - --connectTimeout
+            - 10s
+            - --proxyAdminPort
+            - "15000"
+            - --concurrency
+            - "2"
+            - --controlPlaneAuthPolicy
+            - NONE
+            - --statusPort
+            - "15020"
+            - --applicationPorts
+            - "8015"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ISTIO_META_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ISTIO_META_CONFIG_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ISTIO_META_INTERCEPTION_MODE
+              value: REDIRECT
+            - name: ISTIO_META_INCLUDE_INBOUND_PORTS
+              value: "8015"
+            - name: ISTIO_METAJSON_ANNOTATIONS
+              value: |
+                {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
+            - name: ISTIO_METAJSON_LABELS
+              value: |
+                {"app":"beckn-gateway-083-$DEPLOY_VARIANT","version":"latest"}
+          image: asia.gcr.io/jp-k8s-internal/proxyv2:1.2.2
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/bash", "-c", "sleep 60"]
+          name: istio-proxy
+          ports:
+            - containerPort: 15090
+              name: http-envoy-prom
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready
+              port: 15020
+            initialDelaySeconds: 1
+            periodSeconds: 2
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1337
+          volumeMounts:
+            - mountPath: /etc/istio/proxy
+              name: istio-envoy
+            - mountPath: /etc/certs/
+              name: istio-certs
+              readOnly: true
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+          - name: single-request-reopen
+      imagePullSecrets:
+        - name: jp-gcr-ec
+      initContainers:
+        - args:
+            - -p
+            - "15001"
+            - -u
+            - "1337"
+            - -m
+            - REDIRECT
+            - -i
+            - ""
+            - -x
+            - ""
+            - -b
+            - "8015"
+            - -d
+            - "15020"
+          image: asia.gcr.io/jp-k8s-internal/proxy_init:1.2.2
+          imagePullPolicy: IfNotPresent
+          name: istio-init
+          resources:
+            limits:
+              cpu: 100m
+              memory: 50Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+            runAsNonRoot: false
+            runAsUser: 0
+      terminationGracePeriodSeconds: 90
+      volumes:
+        - emptyDir:
+            medium: Memory
+          name: istio-envoy
+        - name: istio-certs
+          secret:
+            optional: true
+            secretName: istio.default
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-083-$DEPLOY_VARIANT
+            items:
+            - key: beckn-gateway.dhall
+              path: config/beckn-gateway.dhall
+            - key: common.dhall
+              path: generic/common.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-083-$DEPLOY_VARIANT
+            items:
+            - key: beckn-gateway.dhall
+              path: secrets/beckn-gateway.dhall
+            - key: common.dhall
+              path: generic/secrets/common.dhall
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: atlas
+  name: beckn-gateway-083-$DEPLOY_VARIANT
+  labels:
+    app: beckn-gateway-083-$DEPLOY_VARIANT
+spec:
+  ports:
+    - port: 8015
+      targetPort: 8015
+      name: app-http
+    - port: 9999
+      targetPort: 9999
+      name: http-prom
+  selector:
+    app: beckn-gateway-083-$DEPLOY_VARIANT

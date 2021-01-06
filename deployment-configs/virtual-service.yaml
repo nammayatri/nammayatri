@@ -84,9 +84,23 @@ spec:
         uri: /
       route:
         - destination:
-            host: beckn-fmd-wrapper-sandbox
+            host: beckn-fmd-wrapper-083-sandbox
             port:
               number: 8018
+      timeout: 40s
+    - match:
+        - headers:
+            "authorization":
+              prefix: "Signature"
+          uri:
+            prefix: /gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-sandbox
+            port:
+              number: 8015
       timeout: 40s
     - match:
         - uri:
@@ -95,7 +109,7 @@ spec:
         uri: /
       route:
         - destination:
-            host: beckn-gateway-sandbox
+            host: beckn-gateway-083-sandbox
             port:
               number: 8015
       timeout: 40s
