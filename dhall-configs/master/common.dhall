@@ -12,30 +12,30 @@ let credRegistry =
 
   -- FMD
   -- BAP
-  , globalCommon.mkCredential "juspay-mock-fmd-bap-key"  "JUSPAY.MOCK.FMD.BAP" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "beckn-fmd-bap-key"        "BECKN.FMD.BAP"       "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "shopx-fmd-bap-key"        "SHOPX.FMD.BAP"       "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "peppo-fmd-bap-key"        "PEPPO.FMD.BAP"       "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "peppo-local-fmd-bap-key"  "PEPPO.LOCAL.FMD.BAP" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "peppo-dev-fmd-bap-key"    "PEPPO.DEV.FMD.BAP"   "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-local-fmd-bap-key" "JUSPAY.FMD.BAP"      "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mock-fmd-bap-key-dev"  "JUSPAY.MOCK.FMD.BAP.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "beckn-fmd-bap-key-dev"        "BECKN.FMD.BAP.DEV"       "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "shopx-fmd-bap-key-dev"        "SHOPX.FMD.BAP.DEV"       "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "peppo-fmd-bap-key-dev"        "PEPPO.FMD.BAP.DEV"       "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "peppo-local-fmd-bap-key-dev"  "PEPPO.LOCAL.FMD.BAP.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "peppo-dev-fmd-bap-key-dev"    "PEPPO.DEV.FMD.BAP.DEV"   "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-local-fmd-bap-key-dev" "JUSPAY.FMD.BAP.DEV"      "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   -- BPP
-  , globalCommon.mkCredential "beckn-fmd-bpp-key"                "BECKN.FMD.BPP"                "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mock-fmd-bpp-key"          "JUSPAY.MOCK.FMD.BPP"          "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-dunzo-fmd-bpp-key"         "JUSPAY.DUNZO.FMD.BPP"         "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "lightening-logistics-fmd-bpp-key" "LIGHTENING.LOGISTICS.FMD.BPP" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "beckn-fmd-bpp-key-dev"                "BECKN.FMD.BPP.DEV"                "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mock-fmd-bpp-key-dev"          "JUSPAY.MOCK.FMD.BPP.DEV"          "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-dunzo-fmd-bpp-key-dev"         "JUSPAY.DUNZO.FMD.BPP.DEV"         "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "lightening-logistics-fmd-bpp-key-dev" "LIGHTENING.LOGISTICS.FMD.BPP.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
 
   -- Mobility
   -- BAP
-  , globalCommon.mkCredential "juspay-mobility-bap-1-key" "JUSPAY.MOBILITY.APP.UAT.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bap-1-key-dev" "JUSPAY.MOBILITY.APP.1.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   -- BPP
-  , globalCommon.mkCredential "juspay-mobility-bpp-1-key" "JUSPAY.MOBILITY.PROVIDER.UAT.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-2-key" "JUSPAY.MOBILITY.PROVIDER.UAT.2" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-3-key" "JUSPAY.MOBILITY.PROVIDER.UAT.3" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-4-key" "JUSPAY.MOBILITY.PROVIDER.UAT.4" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-5-key" "JUSPAY.MOBILITY.PROVIDER.UAT.5" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-6-key" "JUSPAY.MOBILITY.PROVIDER.UAT.6" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-7-key" "JUSPAY.MOBILITY.PROVIDER.UAT.7" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-1-key-dev" "JUSPAY.MOBILITY.PROVIDER.1.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-2-key-dev" "JUSPAY.MOBILITY.PROVIDER.2.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-3-key-dev" "JUSPAY.MOBILITY.PROVIDER.3.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-4-key-dev" "JUSPAY.MOBILITY.PROVIDER.4.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-5-key-dev" "JUSPAY.MOBILITY.PROVIDER.5.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-6-key-dev" "JUSPAY.MOBILITY.PROVIDER.6.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-7-key-dev" "JUSPAY.MOBILITY.PROVIDER.7.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
