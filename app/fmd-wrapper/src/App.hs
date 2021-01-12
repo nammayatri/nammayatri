@@ -18,7 +18,6 @@ import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
-import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
 import Network.Wai (Response)
 import Network.Wai.Handler.Warp
@@ -35,7 +34,7 @@ runFMDWrapper configModifier = do
   let settings =
         setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings
-  E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
     putStrLn @String "Initializing Redis Connections..."
     let shortOrgId = appEnv ^. #selfId
     case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
