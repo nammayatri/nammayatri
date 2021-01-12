@@ -18,7 +18,6 @@ import EulerHS.Prelude
 import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
@@ -26,8 +25,6 @@ import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
-import Types.App (DriverId (..))
-import qualified Types.Storage.DriverStats as DriverStats
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
@@ -308,9 +305,6 @@ updateTrip piId newStatus request = do
       return ()
     PI.COMPLETED -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) newStatus
-      personId <- prodInst ^. #_personId & fromMaybeM400 "INVALID_DRIVER_ID"
-      let driverId = DriverId $ _getPersonId personId
-      updateDriverInfo driverId (prodInst ^. #_price)
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       return ()
@@ -318,22 +312,6 @@ updateTrip piId newStatus request = do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) PI.TRIP_ASSIGNED
       pure ()
     _ -> return ()
-  where
-    updateDriverInfo driverId earnings =
-      QDriverStats.findById driverId >>= maybe (createDriverInfo driverId earnings) (addDriverInfo earnings)
-    createDriverInfo driverId earnings = do
-      now <- getCurrTime
-      let driverInfo =
-            DriverStats.DriverStats
-              { _driverId = driverId,
-                _completedRidesNumber = 1,
-                _earnings = earnings,
-                _createdAt = now,
-                _updatedAt = now
-              }
-      QDriverStats.create driverInfo
-    addDriverInfo earnings DriverStats.DriverStats {..} =
-      QDriverStats.update _driverId (_completedRidesNumber + 1) (_earnings + earnings)
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do
