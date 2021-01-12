@@ -13,7 +13,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified Storage.Queries.DriverInformation as QueryDI
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
@@ -158,7 +158,7 @@ createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
-  when (person ^. #_role == SP.DRIVER) $ QueryDI.createInitialDriverInfo (DriverId . _getPersonId $ person ^. #_id)
+  when (person ^. #_role == SP.DRIVER) $ QDriverStats.createInitialDriverInfo (DriverId . _getPersonId $ person ^. #_id)
   pure person
 
 checkPersonExists :: Text -> Flow SP.Person

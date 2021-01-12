@@ -1,4 +1,4 @@
-module Storage.Queries.DriverInformation where
+module Storage.Queries.DriverStats where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
@@ -10,16 +10,16 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.App (DriverId)
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.DriverInformation as Storage
+import qualified Types.Storage.DriverStats as Storage
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverInformationT))
+getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverStatsT))
 getDbTable =
-  DB._driverInformation . DB.transporterDb <$> getSchemaName
+  DB._driverStats . DB.transporterDb <$> getSchemaName
 
-create :: Storage.DriverInformation -> Flow ()
-create Storage.DriverInformation {..} = do
+create :: Storage.DriverStats -> Flow ()
+create Storage.DriverStats {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.Common.insertExpression Storage.DriverInformation {..})
+  DB.createOne dbTable (Storage.Common.insertExpression Storage.DriverStats {..})
     >>= either DB.throwDBError pure
 
 createInitialDriverInfo :: DriverId -> Flow ()
@@ -31,7 +31,7 @@ createInitialDriverInfo driverId = do
     >>= either DB.throwDBError pure
   where
     mkDriverInfo id now =
-      Storage.DriverInformation
+      Storage.DriverStats
         { _driverId = id,
           _completedRidesNumber = 0,
           _earnings = 0.0,
@@ -39,21 +39,21 @@ createInitialDriverInfo driverId = do
           _updatedAt = now
         }
 
-findById :: DriverId -> Flow (Maybe Storage.DriverInformation)
+findById :: DriverId -> Flow (Maybe Storage.DriverStats)
 findById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.DriverInformation {..} = _driverId ==. B.val_ id
+    predicate Storage.DriverStats {..} = _driverId ==. B.val_ id
 
-findByIds :: [DriverId] -> Flow [Storage.DriverInformation]
+findByIds :: [DriverId] -> Flow [Storage.DriverStats]
 findByIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate Storage.DriverInformation {..} = _driverId `B.in_` (B.val_ <$> ids)
+    predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
 
 update :: DriverId -> Int -> Amount -> Flow ()
 update driverId completedRides earnings = do
@@ -62,18 +62,18 @@ update driverId completedRides earnings = do
   DB.update dbTable (setClause completedRides earnings now) (predicate driverId)
     >>= either DB.throwDBError pure
   where
-    setClause cr e now Storage.DriverInformation {..} =
+    setClause cr e now Storage.DriverStats {..} =
       mconcat
         [ _completedRidesNumber <-. B.val_ cr,
           _earnings <-. B.val_ e,
           _updatedAt <-. B.val_ now
         ]
-    predicate id Storage.DriverInformation {..} = _driverId ==. B.val_ id
+    predicate id Storage.DriverStats {..} = _driverId ==. B.val_ id
 
-fetchMostOutdatedDriversInfo :: Integer -> Flow [Storage.DriverInformation]
+fetchMostOutdatedDriversInfo :: Integer -> Flow [Storage.DriverStats]
 fetchMostOutdatedDriversInfo limit = do
   dbTable <- getDbTable
   let offset = 0
-  let orderByDesc Storage.DriverInformation {..} = B.desc_ _updatedAt
+  let orderByDesc Storage.DriverStats {..} = B.desc_ _updatedAt
   DB.findAllWithLimitOffset dbTable limit offset orderByDesc
     >>= either DB.throwDBError pure

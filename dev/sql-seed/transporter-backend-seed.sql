@@ -639,7 +639,7 @@ ALTER TABLE ONLY atlas_transporter."external_trail"
 INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES 
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
-CREATE TABLE atlas_transporter.driver_information_cache (
+CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
     completed_rides_number smallint NOT NULL,
     earnings numeric(30,10) NOT NULL,
