@@ -8,10 +8,10 @@ module Types.API.Search
   )
 where
 
-import Beckn.Types.Core.API.Auth
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
+import Beckn.Utils.Servant.SignatureAuth
 import Data.Aeson (Value)
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -24,24 +24,20 @@ data SearchReq = SearchReq
 
 type OnSearchReq = CallbackReq Value
 
-type SearchAPI apiKey =
-  BecknAuth
-    apiKey
-    ( "search"
-        :> ReqBody '[JSON] SearchReq
-        :> Post '[JSON] AckResponse
-    )
+type SearchAPI =
+  SignatureAuth "Authorization"
+    :> "search"
+    :> ReqBody '[JSON] SearchReq
+    :> Post '[JSON] AckResponse
 
-searchAPI :: Proxy (SearchAPI apiKey)
+searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
 
-type OnSearchAPI apiKey =
-  BecknAuth
-    apiKey
-    ( "on_search"
-        :> ReqBody '[JSON] OnSearchReq
-        :> Post '[JSON] AckResponse
-    )
+type OnSearchAPI =
+  SignatureAuth "Authorization"
+    :> "on_search"
+    :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] AckResponse
 
-onSearchAPI :: Proxy (OnSearchAPI apiKey)
+onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy

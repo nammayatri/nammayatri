@@ -9,7 +9,7 @@ import App.Types
 import Beckn.Types.App (FlowServerR)
 import Beckn.Types.Core.API.Log
 import Beckn.Utils.Common (withFlowHandler)
-import Beckn.Utils.Servant.SignatureAuth
+import Beckn.Utils.Servant.SignatureAuth (lookupRegistryAction)
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -27,8 +27,8 @@ type HealthAPI =
 type GatewayAPI' =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SearchAPI VerifyAPIKey
-           :<|> OnSearchAPI VerifyAPIKey
+           :<|> SearchAPI
+           :<|> OnSearchAPI
            :<|> LogAPI VerifyAPIKey
        )
 
@@ -47,8 +47,8 @@ healthHandler = pure "UP"
 gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
-    :<|> (handleIfUp (HttpSig.withBecknAuth' (P.search . Just) lookup) :<|> handleIfUp (P.search Nothing))
-    :<|> (handleIfUp (HttpSig.withBecknAuth' (P.searchCb . Just) lookup) :<|> handleIfUp (P.searchCb Nothing))
+    :<|> handleIfUp (HttpSig.withBecknAuthProxy P.search lookup)
+    :<|> handleIfUp (HttpSig.withBecknAuthProxy P.searchCb lookup)
     :<|> handleIfUp P.log
   where
     handleIfUp :: (a -> b -> FlowHandler c) -> a -> b -> FlowHandler c

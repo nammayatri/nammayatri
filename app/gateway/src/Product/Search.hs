@@ -15,7 +15,7 @@ import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
-import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail', withClientTracing)
+import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail', withClientTracing)
 import Beckn.Utils.SignatureAuth (SignaturePayload)
 import Data.Aeson (encode)
 import qualified Data.Text as T
@@ -25,17 +25,16 @@ import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
-import Servant (type (:<|>) ((:<|>)))
 import Servant.Client (showBaseUrl)
 import qualified Types.API.Gateway.Search as GatewayAPI
 import Types.API.Search (OnSearchReq, SearchReq)
 
-search :: Maybe SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckResponse
-search mbAppSignature org req = withFlowHandler $ do
+search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckResponse
+search proxySign org req = withFlowHandler $ do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
     throwBecknError400 "INVALID_BAP_URI"
-  let gatewaySearchSignAuth :<|> gatewaySearchApiKey = ET.client $ withClientTracing GatewayAPI.searchAPI
+  let gatewaySearchSignAuth = ET.client $ withClientTracing GatewayAPI.searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of
@@ -48,12 +47,13 @@ search mbAppSignature org req = withFlowHandler $ do
       forM_ providers $ \provider -> fork "Provider search" $ do
         providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
         void $ BA.incrSearchReqCount messageId
-        let providerApiKey = fromMaybe "" $ provider ^. #_callbackApiKey
         -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
-        eRes <- do
-          case mbAppSignature of
-            Just sign -> callAPIWithTrail' (Just signatureAuthManagerKey) providerUrl (gatewaySearchSignAuth (Just sign) req) "search"
-            Nothing -> callAPIWithTrail providerUrl (gatewaySearchApiKey providerApiKey req) "search"
+        eRes <-
+          callAPIWithTrail'
+            (Just signatureAuthManagerKey)
+            providerUrl
+            (gatewaySearchSignAuth (Just proxySign) req)
+            "search"
         L.logDebug @Text "gateway_transaction" $
           messageId
             <> ", search_req: "
@@ -79,19 +79,20 @@ search mbAppSignature org req = withFlowHandler $ do
         L.runIO $ threadDelay $ maybe (86400 * 1000000) (* 1000000) $ appEnv ^. #searchTimeout
         checkEnd True bgSession
 
-searchCb :: Maybe SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb mbSign provider req@CallbackReq {context} = withFlowHandler $ do
+searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler AckResponse
+searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
   validateContext "on_search" context
-  let gatewayOnSearchSignAuth :<|> gatewayOnSearchApiKey = ET.client $ withClientTracing GatewayAPI.onSearchAPI
+  let gatewayOnSearchSignAuth = ET.client $ withClientTracing GatewayAPI.onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
   bgSession <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
   let baseUrl = bgSession ^. #cbUrl
-  let cbApiKey = bgSession ^. #cbApiKey
-  eRes <- do
-    case mbSign of
-      Just sign -> callAPIWithTrail' (Just signatureAuthManagerKey) baseUrl (gatewayOnSearchSignAuth (Just sign) req) "on_search"
-      Nothing -> callAPIWithTrail baseUrl (gatewayOnSearchApiKey cbApiKey req) "on_search"
+  eRes <-
+    callAPIWithTrail'
+      (Just signatureAuthManagerKey)
+      baseUrl
+      (gatewayOnSearchSignAuth (Just proxySign) req)
+      "on_search"
   providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
   L.logDebug @Text "gateway_transaction" $
     messageId

@@ -237,10 +237,14 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   isVerified <- performVerification key host body
   unless isVerified $ do
     L.logError @Text logTag "Signature is not valid."
-    throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
+    throwAuthError [HttpSig.mkSignatureRealm getRealm host] "RESTRICTED"
   pure lookupResult
   where
     logTag = "verifySignature-" <> headerName
+    getRealm = case headerName of
+      "Authorization" -> "WWW-Authenticate"
+      "Proxy-Authorization" -> "Proxy-Authenticate"
+      _ -> ""
     performVerification key host body = do
       let headers =
             [ ("(created)", maybe "" show (signPayload ^. #params . #created)),
@@ -265,13 +269,13 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
 
 withBecknAuth :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
 withBecknAuth handler lookupAction sign req = do
-  lookupResult <- withFlowHandler $ verifySignature "WWW-Authenticate" lookupAction sign req
+  lookupResult <- withFlowHandler $ verifySignature "Authorization" lookupAction sign req
   handler lookupResult req
 
 withBecknAuthProxy :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
 withBecknAuthProxy handler lookupAction sign proxySign req = do
-  lookupResult <- withFlowHandler $ verifySignature "WWW-Authenticate" lookupAction sign req
-  _ <- withFlowHandler $ verifySignature "Proxy-Authenticate" lookupAction proxySign req
+  lookupResult <- withFlowHandler $ verifySignature "Authorization" lookupAction sign req
+  _ <- withFlowHandler $ verifySignature "Proxy-Authorization" lookupAction proxySign req
   handler lookupResult req
 
 prepareAuthManager ::
