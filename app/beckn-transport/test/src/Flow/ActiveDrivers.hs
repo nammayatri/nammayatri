@@ -19,7 +19,7 @@ handle =
       findRidesByStartTimeBuffer = \fromTime timeBuffer statuses -> pure [],
       getCurrentTime = pure Fixtures.defaultTime,
       fetchDriversInfo = \driverId ->
-        pure [Fixtures.defaultDriverInformation]
+        pure [Fixtures.defaultDriverStats]
     }
 
 runTests :: TestTree
@@ -48,7 +48,7 @@ successfulCaseWithNoRides =
   testCase "Successful case with drivers without completed rides" $
     execute handleCase @?= pure expectedResponse
   where
-    handleCase = handle {fetchDriversInfo = \_ -> pure [Fixtures.mkDriverInfo "1" 0 0]}
+    handleCase = handle {fetchDriversInfo = \_ -> pure [Fixtures.mkDriverStats "1" 0 0]}
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
@@ -75,7 +75,7 @@ successfulCaseWithDriverOnTrip =
     handleCase =
       handle
         { findRidesByStartTimeBuffer = \_ _ _ -> pure [Fixtures.defaultProductInstance {PI._status = PI.INPROGRESS}],
-          fetchDriversInfo = \_ -> pure [Fixtures.mkDriverInfo "1" 0 0]
+          fetchDriversInfo = \_ -> pure [Fixtures.mkDriverStats "1" 0 0]
         }
     expectedResponse =
       ActiveDriversResponse
