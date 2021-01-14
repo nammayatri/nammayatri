@@ -401,5 +401,5 @@ type DriverInformationAPI =
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
-  DriverInformation.handleActiveDrivers
+  DriverInformation.getAvailableDriversInfo
     :<|> DriverInformation.updateDriverInfo

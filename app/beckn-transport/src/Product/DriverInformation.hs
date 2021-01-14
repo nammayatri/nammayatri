@@ -25,26 +25,26 @@ data ServiceHandle m = ServiceHandle
   { findActiveDrivers :: m [Person.Person],
     findRidesByStartTimeBuffer :: UTCTime -> NominalDiffTime -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
     getCurrentTime :: m UTCTime,
-    fetchDriversInfo :: [DriverId] -> m [DriverStats.DriverStats]
+    fetchDriversStats :: [DriverId] -> m [DriverStats.DriverStats]
   }
 
-handleActiveDrivers :: RegistrationToken -> App.FlowHandler ActiveDriversResponse
-handleActiveDrivers _ = do
+getAvailableDriversInfo :: RegistrationToken -> App.FlowHandler ActiveDriversResponse
+getAvailableDriversInfo _ = do
   let handle =
         ServiceHandle
           { findActiveDrivers = findAllActiveDrivers,
             findRidesByStartTimeBuffer = ModelPI.findByStartTimeBuffer Case.RIDEORDER,
             getCurrentTime = getCurrTime,
-            fetchDriversInfo = QDriverStats.findByIds
+            fetchDriversStats = QDriverStats.findByIds
           }
-  withFlowHandler $ execute handle
+  withFlowHandler $ handleGetAvailableDriversInfo handle
 
-execute :: (Monad m) => ServiceHandle m -> m ActiveDriversResponse
-execute ServiceHandle {..} = do
+handleGetAvailableDriversInfo :: (Monad m) => ServiceHandle m -> m ActiveDriversResponse
+handleGetAvailableDriversInfo ServiceHandle {..} = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   now <- getCurrentTime
   freeDriversIds <- fetchFreeDriversIds activeDriversIds now
-  driversInfo <- fetchDriversInfo $ map (DriverId . _getPersonId) freeDriversIds
+  driversInfo <- fetchDriversStats $ map (DriverId . _getPersonId) freeDriversIds
   pure $ ActiveDriversResponse {time = timePeriod, active_drivers = map mapToResp driversInfo}
   where
     fetchFreeDriversIds activeDriversIds time = do
