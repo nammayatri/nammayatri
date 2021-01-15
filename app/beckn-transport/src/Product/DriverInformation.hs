@@ -45,8 +45,8 @@ handleGetAvailableDriversInfo ServiceHandle {..} quantity = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   now <- getCurrentTime
   freeDriversIds <- fetchFreeDriversIds activeDriversIds now
-  driversInfo <- fetchDriversStats (map (DriverId . _getPersonId) freeDriversIds) quantity
-  pure $ ActiveDriversResponse {time = timePeriod, active_drivers = map mapToResp driversInfo}
+  driversStats <- fetchDriversStats (map (DriverId . _getPersonId) freeDriversIds) quantity
+  pure $ ActiveDriversResponse {time = timePeriod, active_drivers = map mapToResp driversStats}
   where
     fetchFreeDriversIds activeDriversIds time = do
       ridesBuffer <- findRidesByStartTimeBuffer time 1 [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
@@ -61,14 +61,14 @@ handleGetAvailableDriversInfo ServiceHandle {..} quantity = do
           earnings_over_time = fromRational $ toRational _earnings
         }
 
-updateDriverInfo :: Text -> Integer -> App.FlowHandler APIResult.APIResult
-updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
+updateDriversStats :: Text -> Integer -> App.FlowHandler APIResult.APIResult
+updateDriversStats _auth quantityToUpdate = withFlowHandler $ do
   _ <- createNewDriversStats
-  driversIdsWithInfo <- fmap DriverStats._driverId <$> QDriverStats.fetchMostOutdatedDriversStats quantityToUpdate
+  driversIdsWithOudatedStats <- fmap DriverStats._driverId <$> QDriverStats.fetchMostOutdatedDriversStats quantityToUpdate
   now <- getCurrTime
   let fromTime = addUTCTime (- timePeriod) now
-  driversInfo <- traverse (fetchDriverInfoById fromTime now) driversIdsWithInfo
-  traverse_ updateInfo driversInfo
+  driversStats <- traverse (fetchDriverStatsById fromTime now) driversIdsWithOudatedStats
+  traverse_ updateStats driversStats
   pure APIResult.Success
   where
     createNewDriversStats = do
@@ -76,10 +76,10 @@ updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
       driversStatsIds <- fmap DriverStats._driverId <$> QDriverStats.fetchAll
       let newDrivers = driversIds \\ driversStatsIds
       traverse_ QDriverStats.createInitialDriverStats newDrivers
-    fetchDriverInfoById fromTime toTime driverId = do
+    fetchDriverStatsById fromTime toTime driverId = do
       rides <- QueryPI.getDriverCompletedRides (PersonId $ driverId ^. #_getDriverId) fromTime toTime
       let earnings = foldr sumProductInstancesByPrice 0 rides
       pure (driverId, length rides, earnings)
     sumProductInstancesByPrice inst acc = acc + fromRational (toRational (inst ^. #_price))
-    updateInfo (driverId, completedRides, earnings) = QDriverStats.update driverId completedRides earnings
+    updateStats (driverId, completedRides, earnings) = QDriverStats.update driverId completedRides earnings
     timePeriod = nominalDay -- Move into config if there will be a need

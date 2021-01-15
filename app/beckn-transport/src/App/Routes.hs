@@ -392,7 +392,7 @@ type DriverInformationAPI =
     :> TokenAuth
     :> Capture "quantity" Integer
     :> Get '[JSON] ActiveDriversResponse
-    :<|> "update_drivers_info"
+    :<|> "update_drivers_stats"
     :> AdminTokenAuth
     :> Capture "quantity" Integer
     :> Post '[JSON] APIResult.APIResult
@@ -400,4 +400,4 @@ type DriverInformationAPI =
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
   DriverInformation.getAvailableDriversInfo
-    :<|> DriverInformation.updateDriverInfo
+    :<|> DriverInformation.updateDriversStats
