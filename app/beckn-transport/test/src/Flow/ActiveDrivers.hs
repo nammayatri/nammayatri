@@ -18,9 +18,12 @@ handle =
     { findActiveDrivers = pure [Fixtures.defaultDriver],
       findRidesByStartTimeBuffer = \fromTime timeBuffer statuses -> pure [],
       getCurrentTime = pure Fixtures.defaultTime,
-      fetchDriversStats = \driverId ->
+      fetchDriversStats = \driverId quantity ->
         pure [Fixtures.defaultDriverStats]
     }
+
+limit :: Integer
+limit = 100
 
 runTests :: TestTree
 runTests =
@@ -35,7 +38,7 @@ runTests =
 successfulCaseWithInfo :: TestTree
 successfulCaseWithInfo =
   testCase "Successful case with information" $
-    handleGetAvailableDriversInfo handle @?= pure expectedResponse
+    handleGetAvailableDriversInfo handle limit @?= pure expectedResponse
   where
     expectedResponse =
       ActiveDriversResponse
@@ -46,9 +49,9 @@ successfulCaseWithInfo =
 successfulCaseWithNoRides :: TestTree
 successfulCaseWithNoRides =
   testCase "Successful case with drivers without completed rides" $
-    handleGetAvailableDriversInfo handleCase @?= pure expectedResponse
+    handleGetAvailableDriversInfo handleCase limit @?= pure expectedResponse
   where
-    handleCase = handle {fetchDriversStats = \_ -> pure [Fixtures.mkDriverStats "1" 0 0]}
+    handleCase = handle {fetchDriversStats = \_ _ -> pure [Fixtures.mkDriverStats "1" 0 0]}
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
@@ -58,9 +61,9 @@ successfulCaseWithNoRides =
 successfulCaseWithNoDrivers :: TestTree
 successfulCaseWithNoDrivers =
   testCase "Successful case with no active drivers" $
-    handleGetAvailableDriversInfo handleCase @?= pure expectedResponse
+    handleGetAvailableDriversInfo handleCase limit @?= pure expectedResponse
   where
-    handleCase = handle {findActiveDrivers = pure [], fetchDriversStats = \_ -> pure []}
+    handleCase = handle {findActiveDrivers = pure [], fetchDriversStats = \_ _ -> pure []}
     expectedResponse =
       ActiveDriversResponse
         { time = nominalDay,
@@ -70,12 +73,12 @@ successfulCaseWithNoDrivers =
 successfulCaseWithDriverOnTrip :: TestTree
 successfulCaseWithDriverOnTrip =
   testCase "Should successfully filter drivers on a trip" $
-    handleGetAvailableDriversInfo handleCase @?= pure expectedResponse
+    handleGetAvailableDriversInfo handleCase limit @?= pure expectedResponse
   where
     handleCase =
       handle
         { findRidesByStartTimeBuffer = \_ _ _ -> pure [Fixtures.defaultProductInstance {PI._status = PI.INPROGRESS}],
-          fetchDriversStats = \_ -> pure [Fixtures.mkDriverStats "1" 0 0]
+          fetchDriversStats = \_ _ -> pure [Fixtures.mkDriverStats "1" 0 0]
         }
     expectedResponse =
       ActiveDriversResponse

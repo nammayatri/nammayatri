@@ -393,6 +393,7 @@ routeApiFlow = Location.getRoute
 type DriverInformationAPI =
   "active_drivers"
     :> TokenAuth
+    :> Capture "quantity" Integer
     :> Get '[JSON] ActiveDriversResponse
     :<|> "update_drivers_info"
     :> AdminTokenAuth

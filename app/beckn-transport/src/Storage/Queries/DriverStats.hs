@@ -33,10 +33,12 @@ createInitialDriverStats driverId = do
           _updatedAt = now
         }
 
-findByIds :: [DriverId] -> Flow [Storage.DriverStats]
-findByIds ids = do
+findByIdsInAscendingRidesOrder :: [DriverId] -> Integer -> Flow [Storage.DriverStats]
+findByIdsInAscendingRidesOrder ids limit = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  let offset = 0
+  let orderByAsc Storage.DriverStats {..} = B.asc_ _updatedAt
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByAsc
     >>= either DB.throwDBError pure
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
