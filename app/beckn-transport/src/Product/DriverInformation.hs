@@ -64,7 +64,7 @@ handleGetAvailableDriversInfo ServiceHandle {..} = do
 updateDriverInfo :: Text -> Integer -> App.FlowHandler APIResult.APIResult
 updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
   _ <- createNewDriversStats
-  driversIdsWithInfo <- fmap DriverStats._driverId <$> QDriverStats.fetchMostOutdatedDriversInfo quantityToUpdate
+  driversIdsWithInfo <- fmap DriverStats._driverId <$> QDriverStats.fetchMostOutdatedDriversStats quantityToUpdate
   now <- getCurrTime
   let fromTime = addUTCTime (- timePeriod) now
   driversInfo <- traverse (fetchDriverInfoById fromTime now) driversIdsWithInfo
@@ -75,7 +75,7 @@ updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
       driversIds <- fmap (DriverId . _getPersonId . Person._id) <$> findAllByRoles [Person.DRIVER]
       driversStatsIds <- fmap DriverStats._driverId <$> QDriverStats.fetchAll
       let newDrivers = driversIds \\ driversStatsIds
-      traverse_ QDriverStats.createInitialDriverInfo newDrivers
+      traverse_ QDriverStats.createInitialDriverStats newDrivers
     fetchDriverInfoById fromTime toTime driverId = do
       rides <- QueryPI.getDriverCompletedRides (PersonId $ driverId ^. #_getDriverId) fromTime toTime
       let earnings = foldr sumProductInstancesByPrice 0 rides

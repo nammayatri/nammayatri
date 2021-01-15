@@ -16,15 +16,15 @@ getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.
 getDbTable =
   DB._driverStats . DB.transporterDb <$> getSchemaName
 
-createInitialDriverInfo :: DriverId -> Flow ()
-createInitialDriverInfo driverId = do
+createInitialDriverStats :: DriverId -> Flow ()
+createInitialDriverStats driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
-  let driverInfo = mkDriverInfo driverId now
-  DB.createOne dbTable (Storage.Common.insertExpression driverInfo)
+  let driverStats = mkDriverStats driverId now
+  DB.createOne dbTable (Storage.Common.insertExpression driverStats)
     >>= either DB.throwDBError pure
   where
-    mkDriverInfo id now =
+    mkDriverStats id now =
       Storage.DriverStats
         { _driverId = id,
           _completedRidesNumber = 0,
@@ -62,8 +62,8 @@ fetchAll = do
   DB.findAllRows dbTable
     >>= either DB.throwDBError pure
 
-fetchMostOutdatedDriversInfo :: Integer -> Flow [Storage.DriverStats]
-fetchMostOutdatedDriversInfo limit = do
+fetchMostOutdatedDriversStats :: Integer -> Flow [Storage.DriverStats]
+fetchMostOutdatedDriversStats limit = do
   dbTable <- getDbTable
   let offset = 0
   let orderByDesc Storage.DriverStats {..} = B.desc_ _updatedAt
