@@ -30,14 +30,12 @@ import Data.Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Person
-import Types.App (DriverId (..))
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
@@ -60,7 +58,6 @@ createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
-  QDriverStats.createInitialDriverInfo (DriverId . _getPersonId $ person ^. #_id)
   org <- OQ.findOrganizationById (OrganizationId orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do

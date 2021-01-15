@@ -16,12 +16,6 @@ getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.
 getDbTable =
   DB._driverStats . DB.transporterDb <$> getSchemaName
 
-create :: Storage.DriverStats -> Flow ()
-create Storage.DriverStats {..} = do
-  dbTable <- getDbTable
-  DB.createOne dbTable (Storage.Common.insertExpression Storage.DriverStats {..})
-    >>= either DB.throwDBError pure
-
 createInitialDriverInfo :: DriverId -> Flow ()
 createInitialDriverInfo driverId = do
   dbTable <- getDbTable
@@ -38,14 +32,6 @@ createInitialDriverInfo driverId = do
           _createdAt = now,
           _updatedAt = now
         }
-
-findById :: DriverId -> Flow (Maybe Storage.DriverStats)
-findById id = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
-  where
-    predicate Storage.DriverStats {..} = _driverId ==. B.val_ id
 
 findByIds :: [DriverId] -> Flow [Storage.DriverStats]
 findByIds ids = do
@@ -69,6 +55,12 @@ update driverId completedRides earnings = do
           _updatedAt <-. B.val_ now
         ]
     predicate id Storage.DriverStats {..} = _driverId ==. B.val_ id
+
+fetchAll :: Flow [Storage.DriverStats]
+fetchAll = do
+  dbTable <- getDbTable
+  DB.findAllRows dbTable
+    >>= either DB.throwDBError pure
 
 fetchMostOutdatedDriversInfo :: Integer -> Flow [Storage.DriverStats]
 fetchMostOutdatedDriversInfo limit = do

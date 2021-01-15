@@ -83,6 +83,19 @@ findAllByOrgIds roles orgIds = do
           _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
+findAllByRoles ::
+  [Storage.Role] -> Flow [Storage.Person]
+findAllByRoles roles = do
+  dbTable <- getDbTable
+  DB.findAllOrErr dbTable predicate
+    >>= decrypt
+  where
+    predicate Storage.Person {..} =
+      foldl
+        (&&.)
+        (B.val_ True)
+        [_role `B.in_` (B.val_ <$> roles) ||. complementVal roles]
+
 findAllActiveDrivers :: Flow [Storage.Person]
 findAllActiveDrivers = do
   dbTable <- getDbTable

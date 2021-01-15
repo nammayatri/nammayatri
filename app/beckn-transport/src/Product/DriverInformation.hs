@@ -10,12 +10,13 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import Data.List ((\\))
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude
 import qualified Models.ProductInstance as ModelPI
 import qualified Storage.Queries.DriverStats as QDriverStats
-import Storage.Queries.Person (findAllActiveDrivers)
+import Storage.Queries.Person (findAllActiveDrivers, findAllByRoles)
 import qualified Storage.Queries.ProductInstance as QueryPI
 import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
 import Types.App (DriverId (..))
@@ -62,6 +63,7 @@ handleGetAvailableDriversInfo ServiceHandle {..} = do
 
 updateDriverInfo :: Text -> Integer -> App.FlowHandler APIResult.APIResult
 updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
+  _ <- createNewDriversStats
   driversIdsWithInfo <- fmap DriverStats._driverId <$> QDriverStats.fetchMostOutdatedDriversInfo quantityToUpdate
   now <- getCurrTime
   let fromTime = addUTCTime (- timePeriod) now
@@ -69,6 +71,11 @@ updateDriverInfo _auth quantityToUpdate = withFlowHandler $ do
   traverse_ updateInfo driversInfo
   pure APIResult.Success
   where
+    createNewDriversStats = do
+      driversIds <- fmap (DriverId . _getPersonId . Person._id) <$> findAllByRoles [Person.DRIVER]
+      driversStatsIds <- fmap DriverStats._driverId <$> QDriverStats.fetchAll
+      let newDrivers = driversIds \\ driversStatsIds
+      traverse_ QDriverStats.createInitialDriverInfo newDrivers
     fetchDriverInfoById fromTime toTime driverId = do
       rides <- QueryPI.getDriverCompletedRides (PersonId $ driverId ^. #_getDriverId) fromTime toTime
       let earnings = foldr sumProductInstancesByPrice 0 rides
