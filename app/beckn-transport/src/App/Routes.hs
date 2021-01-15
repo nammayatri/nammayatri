@@ -17,7 +17,6 @@ import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
-import Data.Time
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Product.BecknProvider.Feedback as BP
@@ -94,8 +93,6 @@ type PersonAPI =
            :<|> "list"
              :> AdminTokenAuth
              :> QueryParams "roles" SP.Role
-             :> QueryParam "availability" Bool
-             :> QueryParam "time" UTCTime
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes

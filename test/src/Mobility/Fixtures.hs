@@ -212,7 +212,7 @@ buildListPIs :: PI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
 buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Just 50) Nothing
 
 createPerson :: Text -> TbePerson.CreatePersonReq -> ClientM TbePerson.UpdatePersonRes
-listPerson :: Text -> [Person.Role] -> Maybe Bool -> Maybe UTCTime -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
+listPerson :: Text -> [Person.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
 updatePerson :: Text -> Text -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
 getPerson :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Person.IdentifierType -> ClientM TbePerson.PersonEntityRes
 deletePerson :: Text -> Text -> ClientM TbePerson.DeletePersonRes
