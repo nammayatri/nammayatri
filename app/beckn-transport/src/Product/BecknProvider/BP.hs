@@ -440,7 +440,7 @@ mkTrackerProductInstance piId caseId prodInst currTime = do
       }
 
 mkTrackerCase :: SC.Case -> Text -> UTCTime -> Text -> SC.Case
-mkTrackerCase case_ uuid now shortId =
+mkTrackerCase case_@SC.Case {..} uuid now shortId =
   SC.Case
     { _id = CaseId {_getCaseId = uuid},
       _name = Nothing,
@@ -448,26 +448,13 @@ mkTrackerCase case_ uuid now shortId =
       _shortId = shortId,
       _industry = SC.MOBILITY,
       _type = LOCATIONTRACKER,
-      _exchangeType = FULFILLMENT,
       _status = SC.NEW,
-      _startTime = case_ ^. #_startTime, --TODO: should we make it startTime - 30 mins?
-      _endTime = Nothing,
-      _validTill = case_ ^. #_validTill,
-      _provider = Nothing,
-      _providerType = Nothing, --TODO: Ensure to update when getting Driver Info
-      _requestor = Nothing,
-      _requestorType = Just CONSUMER,
       _parentCaseId = Just $ case_ ^. #_id,
       _fromLocationId = case_ ^. #_fromLocationId,
       _toLocationId = case_ ^. #_toLocationId,
-      _udf1 = Nothing,
-      _udf2 = Nothing,
-      _udf3 = Nothing,
-      _udf4 = Nothing,
-      _udf5 = Nothing,
-      _info = Nothing,
       _createdAt = now,
-      _updatedAt = now
+      _updatedAt = now,
+      ..
     }
 
 notifyGateway :: Case -> ProductInstance -> Case -> BaseUrl -> Text -> Flow ()
