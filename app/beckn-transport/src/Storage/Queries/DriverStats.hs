@@ -68,6 +68,6 @@ fetchMostOutdatedDriversStats :: Integer -> Flow [Storage.DriverStats]
 fetchMostOutdatedDriversStats limit = do
   dbTable <- getDbTable
   let offset = 0
-  let orderByDesc Storage.DriverStats {..} = B.desc_ _updatedAt
-  DB.findAllWithLimitOffset dbTable limit offset orderByDesc
+  let orderByAsc Storage.DriverStats {..} = B.asc_ _updatedAt
+  DB.findAllWithLimitOffset dbTable limit offset orderByAsc
     >>= either DB.throwDBError pure
