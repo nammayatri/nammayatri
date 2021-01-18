@@ -25,30 +25,27 @@ import qualified Types.Storage.DriverStats as DriverStats
 data ServiceHandle m = ServiceHandle
   { findActiveDrivers :: m [Person.Person],
     findRidesByStartTimeBuffer :: UTCTime -> NominalDiffTime -> [PI.ProductInstanceStatus] -> m [PI.ProductInstance],
-    getCurrentTime :: m UTCTime,
     fetchDriversStats :: [DriverId] -> Integer -> m [DriverStats.DriverStats]
   }
 
-getAvailableDriversInfo :: RegistrationToken -> Integer -> App.FlowHandler ActiveDriversResponse
-getAvailableDriversInfo _ quantity = do
+getAvailableDriversInfo :: RegistrationToken -> UTCTime -> Integer -> App.FlowHandler ActiveDriversResponse
+getAvailableDriversInfo _ time quantity = do
   let handle =
         ServiceHandle
           { findActiveDrivers = findAllActiveDrivers,
             findRidesByStartTimeBuffer = ModelPI.findByStartTimeBuffer Case.RIDEORDER,
-            getCurrentTime = getCurrTime,
             fetchDriversStats = QDriverStats.findByIdsInAscendingRidesOrder
           }
-  withFlowHandler $ handleGetAvailableDriversInfo handle quantity
+  withFlowHandler $ handleGetAvailableDriversInfo handle time quantity
 
-handleGetAvailableDriversInfo :: (Monad m) => ServiceHandle m -> Integer -> m ActiveDriversResponse
-handleGetAvailableDriversInfo ServiceHandle {..} quantity = do
+handleGetAvailableDriversInfo :: (Monad m) => ServiceHandle m -> UTCTime -> Integer -> m ActiveDriversResponse
+handleGetAvailableDriversInfo ServiceHandle {..} time quantity = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
-  now <- getCurrentTime
-  freeDriversIds <- fetchFreeDriversIds activeDriversIds now
+  freeDriversIds <- fetchFreeDriversIds activeDriversIds
   driversStats <- fetchDriversStats (map (DriverId . _getPersonId) freeDriversIds) quantity
   pure $ ActiveDriversResponse {time = timePeriod, active_drivers = map mapToResp driversStats}
   where
-    fetchFreeDriversIds activeDriversIds time = do
+    fetchFreeDriversIds activeDriversIds = do
       ridesBuffer <- findRidesByStartTimeBuffer time 1 [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
       let busyDriversIds = catMaybes $ PI._personId <$> ridesBuffer
       let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds

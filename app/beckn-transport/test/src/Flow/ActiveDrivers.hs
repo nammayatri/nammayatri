@@ -4,26 +4,28 @@ import qualified Beckn.Types.Amount as Amount
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.Ratio ((%))
-import Data.Time (nominalDay)
+import Data.Time (UTCTime, nominalDay)
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.DriverInformation (ServiceHandle (..), handleGetAvailableDriversInfo)
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
+import qualified Types.API.DriverInformation as API
 
 handle :: ServiceHandle Identity
 handle =
   ServiceHandle
     { findActiveDrivers = pure [Fixtures.defaultDriver],
       findRidesByStartTimeBuffer = \fromTime timeBuffer statuses -> pure [],
-      getCurrentTime = pure Fixtures.defaultTime,
       fetchDriversStats = \driverId quantity ->
         pure [Fixtures.defaultDriverStats]
     }
 
 limit :: Integer
 limit = 100
+
+time :: UTCTime
+time = Fixtures.defaultTime
 
 runTests :: TestTree
 runTests =
@@ -38,34 +40,34 @@ runTests =
 successfulCaseWithInfo :: TestTree
 successfulCaseWithInfo =
   testCase "Successful case with information" $
-    handleGetAvailableDriversInfo handle limit @?= pure expectedResponse
+    handleGetAvailableDriversInfo handle time limit @?= pure expectedResponse
   where
     expectedResponse =
-      ActiveDriversResponse
+      API.ActiveDriversResponse
         { time = nominalDay,
-          active_drivers = [DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
+          active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
         }
 
 successfulCaseWithNoRides :: TestTree
 successfulCaseWithNoRides =
   testCase "Successful case with drivers without completed rides" $
-    handleGetAvailableDriversInfo handleCase limit @?= pure expectedResponse
+    handleGetAvailableDriversInfo handleCase time limit @?= pure expectedResponse
   where
     handleCase = handle {fetchDriversStats = \_ _ -> pure [Fixtures.mkDriverStats "1" 0 0]}
     expectedResponse =
-      ActiveDriversResponse
+      API.ActiveDriversResponse
         { time = nominalDay,
-          active_drivers = [DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+          active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }
 
 successfulCaseWithNoDrivers :: TestTree
 successfulCaseWithNoDrivers =
   testCase "Successful case with no active drivers" $
-    handleGetAvailableDriversInfo handleCase limit @?= pure expectedResponse
+    handleGetAvailableDriversInfo handleCase time limit @?= pure expectedResponse
   where
     handleCase = handle {findActiveDrivers = pure [], fetchDriversStats = \_ _ -> pure []}
     expectedResponse =
-      ActiveDriversResponse
+      API.ActiveDriversResponse
         { time = nominalDay,
           active_drivers = []
         }
@@ -73,7 +75,7 @@ successfulCaseWithNoDrivers =
 successfulCaseWithDriverOnTrip :: TestTree
 successfulCaseWithDriverOnTrip =
   testCase "Should successfully filter drivers on a trip" $
-    handleGetAvailableDriversInfo handleCase limit @?= pure expectedResponse
+    handleGetAvailableDriversInfo handleCase time limit @?= pure expectedResponse
   where
     handleCase =
       handle
@@ -81,7 +83,7 @@ successfulCaseWithDriverOnTrip =
           fetchDriversStats = \_ _ -> pure [Fixtures.mkDriverStats "1" 0 0]
         }
     expectedResponse =
-      ActiveDriversResponse
+      API.ActiveDriversResponse
         { time = nominalDay,
-          active_drivers = [DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+          active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }

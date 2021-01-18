@@ -17,6 +17,7 @@ import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Product.BecknProvider.Feedback as BP
@@ -390,6 +391,7 @@ routeApiFlow = Location.getRoute
 type DriverInformationAPI =
   "active_drivers"
     :> TokenAuth
+    :> Capture "time" UTCTime
     :> Capture "quantity" Integer
     :> Get '[JSON] ActiveDriversResponse
     :<|> "update_drivers_stats"
