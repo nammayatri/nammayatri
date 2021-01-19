@@ -4,7 +4,7 @@ import qualified Beckn.Types.Amount as Amount
 import Beckn.Types.App (PersonId (..))
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.Ratio ((%))
-import Data.Time (UTCTime, nominalDay)
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.DriverInformation (ServiceHandle (..), handleGetAvailableDriversInfo)
@@ -44,8 +44,7 @@ successfulCaseWithInfo =
   where
     expectedResponse =
       API.ActiveDriversResponse
-        { time = nominalDay,
-          active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
+        { active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
         }
 
 successfulCaseWithNoRides :: TestTree
@@ -56,8 +55,7 @@ successfulCaseWithNoRides =
     handleCase = handle {fetchDriversStats = \_ _ -> pure [Fixtures.mkDriverStats "1" 0 0]}
     expectedResponse =
       API.ActiveDriversResponse
-        { time = nominalDay,
-          active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+        { active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }
 
 successfulCaseWithNoDrivers :: TestTree
@@ -68,8 +66,7 @@ successfulCaseWithNoDrivers =
     handleCase = handle {findActiveDrivers = pure [], fetchDriversStats = \_ _ -> pure []}
     expectedResponse =
       API.ActiveDriversResponse
-        { time = nominalDay,
-          active_drivers = []
+        { active_drivers = []
         }
 
 successfulCaseWithDriverOnTrip :: TestTree
@@ -84,6 +81,5 @@ successfulCaseWithDriverOnTrip =
         }
     expectedResponse =
       API.ActiveDriversResponse
-        { time = nominalDay,
-          active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+        { active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }

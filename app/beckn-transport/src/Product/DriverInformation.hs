@@ -43,14 +43,13 @@ handleGetAvailableDriversInfo ServiceHandle {..} time quantity = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   freeDriversIds <- fetchFreeDriversIds activeDriversIds
   driversStats <- fetchDriversStats (map (DriverId . _getPersonId) freeDriversIds) quantity
-  pure $ ActiveDriversResponse {time = timePeriod, active_drivers = map mapToResp driversStats}
+  pure $ ActiveDriversResponse {active_drivers = map mapToResp driversStats}
   where
     fetchFreeDriversIds activeDriversIds = do
       ridesBuffer <- findRidesByStartTimeBuffer time 1 [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
       let busyDriversIds = catMaybes $ PI._personId <$> ridesBuffer
       let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
       pure freeDriversIds
-    timePeriod = nominalDay -- Move into config if there will be a need
     mapToResp DriverStats.DriverStats {..} =
       DriverInformation
         { driver_id = PersonId . _getDriverId $ _driverId,
