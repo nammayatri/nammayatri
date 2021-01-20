@@ -33,12 +33,14 @@ createInitialDriverStats driverId = do
           _updatedAt = now
         }
 
+noOffset :: Integer -- to remove hint by hlint
+noOffset = 0
+
 findByIdsInAscendingRidesOrder :: [DriverId] -> Integer -> Flow [Storage.DriverStats]
 findByIdsInAscendingRidesOrder ids limit = do
   dbTable <- getDbTable
-  let offset = 0
-  let orderByAsc Storage.DriverStats {..} = B.asc_ _completedRidesNumber
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByAsc
+  let order Storage.DriverStats {..} = B.asc_ _completedRidesNumber
+  DB.findAllWithLimitOffsetWhere dbTable predicate limit noOffset order
     >>= either DB.throwDBError pure
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
@@ -67,7 +69,6 @@ fetchAll = do
 fetchMostOutdatedDriversStats :: Integer -> Flow [Storage.DriverStats]
 fetchMostOutdatedDriversStats limit = do
   dbTable <- getDbTable
-  let offset = 0
-  let orderByAsc Storage.DriverStats {..} = B.asc_ _updatedAt
-  DB.findAllWithLimitOffset dbTable limit offset orderByAsc
+  let order Storage.DriverStats {..} = B.asc_ _updatedAt
+  DB.findAllWithLimitOffset dbTable limit noOffset order
     >>= either DB.throwDBError pure
