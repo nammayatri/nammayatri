@@ -37,7 +37,7 @@ findByIdsInAscendingRidesOrder :: [DriverId] -> Integer -> Flow [Storage.DriverS
 findByIdsInAscendingRidesOrder ids limit = do
   dbTable <- getDbTable
   let offset = 0
-  let orderByAsc Storage.DriverStats {..} = B.asc_ _updatedAt
+  let orderByAsc Storage.DriverStats {..} = B.asc_ _completedRidesNumber
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByAsc
     >>= either DB.throwDBError pure
   where
