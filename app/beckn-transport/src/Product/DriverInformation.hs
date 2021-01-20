@@ -85,9 +85,13 @@ updateDriversStats _auth quantityToUpdate = withFlowHandler $ do
     fetchDriverStatsById fromTime toTime driverId = do
       rides <- QueryPI.getDriverCompletedRides (PersonId $ driverId ^. #_getDriverId) fromTime toTime
       let earnings = foldr sumProductInstancesByPrice 0 rides
-      pure (driverId, length rides, earnings)
+      let lastRideTime =
+            if null rides
+              then DriverStats.distantPast
+              else fromMaybe DriverStats.distantPast ((last rides) ^. #_endTime)
+      pure (driverId, length rides, earnings, lastRideTime)
     sumProductInstancesByPrice inst acc = acc + fromRational (toRational (inst ^. #_price))
-    updateStats (driverId, completedRides, earnings) = QDriverStats.update driverId completedRides earnings
+    updateStats (driverId, completedRides, earnings, lastRideTime) = QDriverStats.update driverId completedRides earnings lastRideTime
     timePeriod = nominalDay -- Move into config if there will be a need
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse

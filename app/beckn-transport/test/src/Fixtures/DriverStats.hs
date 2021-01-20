@@ -13,6 +13,7 @@ defaultDriverStats =
     { _driverId = DriverId "1",
       _completedRidesNumber = 2,
       _earnings = Amount.Amount $ 200 % 1,
+      _lastRideAt = Fixtures.defaultTime,
       _updatedAt = Fixtures.defaultTime,
       _createdAt = Fixtures.defaultTime
     }
@@ -23,6 +24,7 @@ mkDriverStats driverId completedRidesNum earnings =
     { _driverId = DriverId driverId,
       _completedRidesNumber = completedRidesNum,
       _earnings = Amount.Amount $ earnings % 1,
+      _lastRideAt = DriverStats.distantPast,
       _updatedAt = Fixtures.defaultTime,
       _createdAt = Fixtures.defaultTime
     }

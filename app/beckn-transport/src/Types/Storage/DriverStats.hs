@@ -1,7 +1,7 @@
 module Types.Storage.DriverStats where
 
 import Beckn.Types.Amount (Amount)
-import Data.Time (UTCTime)
+import Data.Time (Day (..), UTCTime (..))
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App (DriverId)
@@ -10,6 +10,7 @@ data DriverStatsT f = DriverStats
   { _driverId :: B.C f DriverId,
     _completedRidesNumber :: B.C f Int,
     _earnings :: B.C f Amount,
+    _lastRideAt :: B.C f UTCTime,
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }
@@ -38,6 +39,10 @@ fieldEMod =
       B.tableModification
         { _driverId = "driver_id",
           _completedRidesNumber = "completed_rides_number",
+          _lastRideAt = "last_ride_at",
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
+
+distantPast :: UTCTime
+distantPast = UTCTime (ModifiedJulianDay 0) 0 -- a long time ago in a galaxy far, far away

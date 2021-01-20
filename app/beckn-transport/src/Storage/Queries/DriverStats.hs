@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount (Amount)
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Data.Time (UTCTime (..))
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -29,6 +30,7 @@ createInitialDriverStats driverId = do
         { _driverId = id,
           _completedRidesNumber = 0,
           _earnings = 0.0,
+          _lastRideAt = Storage.distantPast, -- the driver never took any ride yet
           _createdAt = now,
           _updatedAt = now
         }
@@ -45,17 +47,19 @@ findByIdsInAscendingRidesOrder ids limit = do
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
 
-update :: DriverId -> Int -> Amount -> Flow ()
-update driverId completedRides earnings = do
+update :: DriverId -> Int -> Amount -> UTCTime -> Flow ()
+update driverId completedRides earnings lastRide = do
   dbTable <- getDbTable
   now <- getCurrTime
-  DB.update dbTable (setClause completedRides earnings now) (predicate driverId)
+  DB.update dbTable (setClause completedRides earnings lastRide now) (predicate driverId)
     >>= either DB.throwDBError pure
   where
-    setClause cr e now Storage.DriverStats {..} =
+    setClause cr e lr now Storage.DriverStats {..} =
       mconcat
         [ _completedRidesNumber <-. B.val_ cr,
           _earnings <-. B.val_ e,
+          _earnings <-. B.val_ e,
+          _lastRideAt <-. B.val_ lr,
           _updatedAt <-. B.val_ now
         ]
     predicate id Storage.DriverStats {..} = _driverId ==. B.val_ id
