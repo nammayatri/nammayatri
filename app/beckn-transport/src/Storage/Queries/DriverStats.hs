@@ -30,7 +30,7 @@ createInitialDriverStats driverId = do
         { _driverId = id,
           _completedRidesNumber = 0,
           _earnings = 0.0,
-          _lastRideAt = Storage.distantPast, -- the driver never took any ride yet
+          _lastRideAt = Nothing, -- the driver never took any ride yet
           _createdAt = now,
           _updatedAt = now
         }
@@ -47,7 +47,7 @@ findByIdsInAscendingRidesOrder ids limit = do
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
 
-update :: DriverId -> Int -> Amount -> UTCTime -> Flow ()
+update :: DriverId -> Int -> Amount -> Maybe UTCTime -> Flow ()
 update driverId completedRides earnings lastRide = do
   dbTable <- getDbTable
   now <- getCurrTime

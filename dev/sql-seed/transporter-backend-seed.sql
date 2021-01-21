@@ -647,6 +647,7 @@ CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
     completed_rides_number smallint NOT NULL,
     earnings numeric(30,10) NOT NULL,
+    last_ride_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
