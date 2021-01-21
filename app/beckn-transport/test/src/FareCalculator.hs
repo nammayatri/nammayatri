@@ -5,7 +5,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Product.FareCalculator.BusinessRule
 import Product.FareCalculator.Flow
@@ -18,13 +18,17 @@ import Utils.Time
 defaultFareConfig :: FareConfig
 defaultFareConfig =
   FareConfig
-    { id = ID "fare_config_id",
+    { id = "fare_config_id",
       vehicleType = Vehicle.SEDAN,
       organizationId = orgID,
-      minimumFare = Just 90.0,
-      perKmRate = 50.0,
-      minimumDistance = Just 1000.0,
-      multiplicationFactor = Nothing
+      baseFare = Just 120.0,
+      baseDistance = Just 5000.0,
+      perExtraKmRate = 12.0,
+      perDeadKmRate = 12.0,
+      minDeadKmThreshold = Just 5000.0,
+      nightShiftStart = undefined,
+      nightShiftEnd = undefined,
+      nightShiftRate = 1.0
     }
 
 defaultPickupLocation :: PickupLocation
@@ -67,10 +71,13 @@ defaultDropLocation =
         _updatedAt = mockTime
       }
 
+mockTime :: UTCTime
 mockTime = parseTime "2018-12-06T11:39:57.153Z"
 
-orgID = ID "organization_id"
+orgID :: ID Organization.Organization
+orgID = "organization_id"
 
+handle :: ServiceHandle IO
 handle =
   ServiceHandle
     { getFareConfig = \orgId vehicleType -> pure $ Just defaultFareConfig,
@@ -79,9 +86,9 @@ handle =
 
 -- Calculation tests
 
-calculate5KmFare :: TestTree
-calculate5KmFare = testCase "Calculate simple fare for 5km" $ do
-  totalFare <-
+calculate20KmFare :: TestTree
+calculate20KmFare = testCase "Calculate fare for 20km with FullReturnTrip" $ do
+  fareParams <-
     runBR $
       calculateFare
         handle
@@ -89,46 +96,16 @@ calculate5KmFare = testCase "Calculate simple fare for 5km" $ do
         Vehicle.SEDAN
         defaultPickupLocation
         defaultDropLocation
+        FullReturnTrip
         startTime
         distance
-  totalFare @?= Right (Amount 250.0)
+        deadDistance
+  let totalFare = fareSum <$> fareParams
+  totalFare @?= Right (Amount 540.0)
   where
     startTime = parseTime "2018-12-06T11:39:57.153Z"
-    distance = Just 5000.0
-
-calculate25KmFare :: TestTree
-calculate25KmFare = testCase "Calculate fare for 25km" $ do
-  totalFare <-
-    runBR $
-      calculateFare
-        handle
-        orgID
-        Vehicle.SEDAN
-        defaultPickupLocation
-        defaultDropLocation
-        startTime
-        distance
-  totalFare @?= Right (Amount 1250.0)
-  where
-    startTime = parseTime "2018-12-06T11:39:57.153Z"
-    distance = Just 25000.0
-
-calculate500MFare :: TestTree
-calculate500MFare = testCase "Calculate fare with minimum distance for 500m" $ do
-  totalFare <-
-    runBR $
-      calculateFare
-        handle
-        orgID
-        Vehicle.SEDAN
-        defaultPickupLocation
-        defaultDropLocation
-        startTime
-        distance
-  totalFare @?= Right (Amount 50)
-  where
-    startTime = parseTime "2018-12-06T11:39:57.153Z"
-    distance = Just 500.0
+    distance = Just 20000.0
+    deadDistance = 5000.0
 
 -- Effects tests
 
@@ -142,17 +119,20 @@ failOnMissingFareConfig = testCase "Fail on missing FareConfig" $ do
         Vehicle.SEDAN
         defaultPickupLocation
         defaultDropLocation
+        OneWayTrip
         startTime
         distance
+        deadDistance
   result
     @?= Left
       ( BusinessError
           "NO_FARE_CONFIG"
-          "No FareConfig found for ID \"organization_id\" with vehicle type SEDAN"
+          "FareConfig was not found."
       )
   where
     startTime = parseTime "2018-12-06T11:39:57.153Z"
     distance = Just 0.0
+    deadDistance = 5000.0
     handle' =
       handle
         { getFareConfig = \_orgId _vehicleType -> pure Nothing
@@ -162,8 +142,6 @@ fareCalculator :: TestTree
 fareCalculator =
   testGroup
     "Fare Calculator"
-    [ calculate25KmFare,
-      calculate5KmFare,
-      calculate500MFare,
+    [ calculate20KmFare,
       failOnMissingFareConfig
     ]

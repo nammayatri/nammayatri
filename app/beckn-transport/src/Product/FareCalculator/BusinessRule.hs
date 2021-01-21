@@ -27,5 +27,14 @@ data BusinessError = BusinessError
 runBR :: BusinessRule m a -> m (Either BusinessError a)
 runBR = runExceptT . runBusinessRule
 
-throwBusinessError :: Monad m => Text -> Text -> BusinessRule m a
+throwBusinessError :: (HasCallStack, Monad m) => Text -> Text -> BusinessRule m a
 throwBusinessError code msg = throwError $ BusinessError code msg
+
+fromMaybeBR :: (HasCallStack, Monad m) => Text -> Maybe a -> BusinessRule m a
+fromMaybeBR errCode = \case
+  Nothing -> throwBusinessError errCode $ getMsgFromCode errCode
+  Just a -> pure a
+
+getMsgFromCode :: Text -> Text
+getMsgFromCode "NO_FARE_CONFIG" = "FareConfig was not found."
+getMsgFromCode _ = "Something went wrong"
