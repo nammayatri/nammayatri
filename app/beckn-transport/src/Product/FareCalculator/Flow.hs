@@ -36,12 +36,12 @@ data FareParameters = FareParameters
   { baseFare :: Amount,
     distanceFare :: Amount,
     deadDistanceFare :: Amount,
-    nightShiftRatio :: Amount
+    nightShiftRate :: Amount
   }
   deriving stock (Show, Eq)
 
 fareSum :: FareParameters -> Amount
-fareSum FareParameters {..} = nightShiftRatio * (baseFare + distanceFare + deadDistanceFare)
+fareSum FareParameters {..} = nightShiftRate * (baseFare + distanceFare + deadDistanceFare)
 
 calculateFare ::
   Monad m =>
@@ -61,8 +61,8 @@ calculateFare sh@ServiceHandle {..} orgId vehicleVariant pickupLoc dropLoc journ
   baseFare <- calculateBaseFare sh fareConfig actualDistance
   distanceFare <- calculateDistanceFare sh fareConfig actualDistance journeyType
   deadDistanceFare <- calculateDeadDistanceFare sh fareConfig deadDistance
-  nightShiftRatio <- calculateNightShiftRatio sh fareConfig startTime
-  pure $ FareParameters baseFare distanceFare deadDistanceFare nightShiftRatio
+  nightShiftRate <- calculateNightShiftRate sh fareConfig startTime
+  pure $ FareParameters baseFare distanceFare deadDistanceFare nightShiftRate
 
 calculateBaseFare ::
   Monad m =>
@@ -109,10 +109,18 @@ calculateDeadDistanceFare ServiceHandle {..} fareConfig deadDistance = do
           else 0
   pure . Amount $ deadDistanceFare * perDeadKmRate
 
-calculateNightShiftRatio ::
+calculateNightShiftRate ::
   Monad m =>
   ServiceHandle m ->
   FareConfig ->
   TripStartTime ->
   BusinessRule m Amount
-calculateNightShiftRatio ServiceHandle {..} _fareConfig _startTime = pure 1
+calculateNightShiftRate ServiceHandle {..} fareConfig startTime = do
+  let timeOfDay = timeToTimeOfDay $ utctDayTime startTime
+  let nightShiftRate = fareConfig ^. #nightShiftRate
+  let nightShiftStart = fareConfig ^. #nightShiftStart
+  let nightShiftEnd = fareConfig ^. #nightShiftEnd
+  pure . Amount $
+    if timeOfDay > nightShiftStart || timeOfDay < nightShiftEnd
+      then nightShiftRate
+      else 1
