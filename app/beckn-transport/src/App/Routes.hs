@@ -399,15 +399,17 @@ type DriverInformationAPI =
     :> AdminTokenAuth
     :> Capture "quantity" Integer
     :> Post '[JSON] APIResult.APIResult
-    :<|> "get_activity"
-    :> TokenAuth
-    :> Capture "driverId" DriverId
-    :> Get '[JSON] DriverInformationAPI.GetActivityResponse
-    :<|> "set_activity"
-    :> TokenAuth
-    :> Capture "driverId" DriverId
-    :> Capture "active" Bool
-    :> Post '[JSON] APIResult.APIResult
+    :<|> "driver"
+    :> ( "get_activity"
+           :> TokenAuth
+           :> Capture "driverId" DriverId
+           :> Get '[JSON] DriverInformationAPI.GetActivityResponse
+           :<|> "set_activity"
+           :> TokenAuth
+           :> Capture "driverId" DriverId
+           :> Capture "active" Bool
+           :> Post '[JSON] APIResult.APIResult
+       )
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
