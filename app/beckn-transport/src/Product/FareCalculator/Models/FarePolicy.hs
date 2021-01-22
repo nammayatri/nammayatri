@@ -1,20 +1,18 @@
-module Product.FareCalculator.Models.FareConfig where
+module Product.FareCalculator.Models.FarePolicy where
 
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time
 import EulerHS.Prelude
-import Product.FareCalculator.Models.ID
 
-data FareConfig = FareConfig
-  { id :: ID FareConfig,
+data FarePolicy = FarePolicy
+  { id :: ID FarePolicy,
     vehicleType :: Vehicle.Variant,
     organizationId :: ID Organization.Organization,
     baseFare :: Maybe Rational,
     baseDistance :: Maybe Rational,
     perExtraKmRate :: Rational,
-    perDeadKmRate :: Rational,
-    minDeadKmThreshold :: Maybe Rational,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay,
     nightShiftRate :: Rational

@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Product.FareCalculator.BusinessRule where
+module Beckn.Product.BusinessRule where
 
 import Control.Monad.Except (MonadError, throwError)
 import EulerHS.Prelude
@@ -36,5 +36,5 @@ fromMaybeBR errCode = \case
   Just a -> pure a
 
 getMsgFromCode :: Text -> Text
-getMsgFromCode "NO_FARE_CONFIG" = "FareConfig was not found."
+getMsgFromCode "NO_FARE_POLICY" = "FarePolicy was not found."
 getMsgFromCode _ = "Something went wrong"

@@ -1,4 +1,4 @@
-module Product.FareCalculator.Models.ID where
+module Beckn.Types.ID where
 
 import qualified Data.Text as Text
 import EulerHS.Prelude

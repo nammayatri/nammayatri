@@ -1,31 +1,29 @@
 module FareCalculator where
 
+import Beckn.Product.BusinessRule
 import Beckn.Types.Amount
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time hiding (parseTime)
 import EulerHS.Prelude
-import Product.FareCalculator.BusinessRule
 import Product.FareCalculator.Flow
-import Product.FareCalculator.Models.FareConfig
-import Product.FareCalculator.Models.ID
+import Product.FareCalculator.Models.FarePolicy
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Time
 
-defaultFareConfig :: FareConfig
-defaultFareConfig =
-  FareConfig
+defaultFarePolicy :: FarePolicy
+defaultFarePolicy =
+  FarePolicy
     { id = "fare_config_id",
       vehicleType = Vehicle.HATCHBACK,
       organizationId = orgID,
       baseFare = Just 120.0,
       baseDistance = Just 5000.0,
       perExtraKmRate = 12.0,
-      perDeadKmRate = 12.0,
-      minDeadKmThreshold = Just 5000.0,
       nightShiftStart = midnight,
       nightShiftEnd = midnight,
       nightShiftRate = 1.0
@@ -80,7 +78,7 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFareConfig = \orgId vehicleType -> pure $ Just defaultFareConfig,
+    { getFarePolicy = \orgId vehicleType -> pure $ Just defaultFarePolicy,
       getDistance = \pickup drop -> pure 0
     }
 
@@ -99,13 +97,11 @@ hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchb
         FullReturnTrip
         startTime
         distance
-        deadDistance
   let totalFare = fareSum <$> fareParams
   totalFare @?= Right (Amount 540.0)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
-    deadDistance = 5000.0
 
 sedan20km :: TestTree
 sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ do
@@ -120,23 +116,21 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
         FullReturnTrip
         startTime
         distance
-        deadDistance
   let totalFare = fareSum <$> fareParams
   totalFare @?= Right (Amount 675.0)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
-    deadDistance = 5000.0
     handle' =
       handle
-        { getFareConfig = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleType ->
             pure $
               Just
-                defaultFareConfig
+                defaultFarePolicy
                   { vehicleType = Vehicle.SEDAN,
                     baseFare = Just 150.0,
-                    perExtraKmRate = 15.0,
-                    perDeadKmRate = 15.0
+                    perExtraKmRate = 15.0
+                    -- perDeadKmRate = Just 15.0
                   }
         }
 
@@ -153,24 +147,21 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
         FullReturnTrip
         startTime
         distance
-        deadDistance
   let totalFare = fareSum <$> fareParams
   totalFare @?= Right (Amount 800.0)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
-    deadDistance = 5000.0
     handle' =
       handle
-        { getFareConfig = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleType ->
             pure $
               Just
-                defaultFareConfig
+                defaultFarePolicy
                   { vehicleType = Vehicle.SUV,
                     baseFare = Just 0,
                     baseDistance = Just 0,
-                    perExtraKmRate = 20.0,
-                    perDeadKmRate = 20.0
+                    perExtraKmRate = 20.0
                   }
         }
 
@@ -189,25 +180,21 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
         OneWayTrip
         startTime
         distance
-        deadDistance
   let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 407.0)
+  totalFare @?= Right (Amount 347.6)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
-    deadDistance = 5000.0
     handle' =
       handle
-        { getFareConfig = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleType ->
             pure $
               Just
-                defaultFareConfig
+                defaultFarePolicy
                   { vehicleType = Vehicle.HATCHBACK,
                     baseFare = Just 100.0,
                     baseDistance = Just 4000.0,
                     perExtraKmRate = 13.5,
-                    perDeadKmRate = 13.5,
-                    minDeadKmThreshold = Just 1000,
                     nightShiftStart = TimeOfDay 20 0 0,
                     nightShiftEnd = TimeOfDay 5 30 0,
                     nightShiftRate = 1.1
@@ -227,25 +214,21 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
         OneWayTrip
         startTime
         distance
-        deadDistance
   let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 456.5)
+  totalFare @?= Right (Amount 390.5)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
-    deadDistance = 5000.0
     handle' =
       handle
-        { getFareConfig = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleType ->
             pure $
               Just
-                defaultFareConfig
+                defaultFarePolicy
                   { vehicleType = Vehicle.SEDAN,
                     baseFare = Just 100.0,
                     baseDistance = Just 3000.0,
                     perExtraKmRate = 15.0,
-                    perDeadKmRate = 15.0,
-                    minDeadKmThreshold = Just 1000,
                     nightShiftStart = TimeOfDay 20 0 0,
                     nightShiftEnd = TimeOfDay 5 30 0,
                     nightShiftRate = 1.1
@@ -265,25 +248,22 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
         OneWayTrip
         startTime
         distance
-        deadDistance
+
   let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 627.0)
+  totalFare @?= Right (Amount 539.0)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
-    deadDistance = 5000.0
     handle' =
       handle
-        { getFareConfig = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleType ->
             pure $
               Just
-                defaultFareConfig
+                defaultFarePolicy
                   { vehicleType = Vehicle.SUV,
                     baseFare = Just 150.0,
                     baseDistance = Just 3000.0,
                     perExtraKmRate = 20.0,
-                    perDeadKmRate = 20.0,
-                    minDeadKmThreshold = Just 1000,
                     nightShiftStart = TimeOfDay 20 0 0,
                     nightShiftEnd = TimeOfDay 5 30 0,
                     nightShiftRate = 1.1
@@ -293,7 +273,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
 -- Effects tests
 
 failOnMissingFareConfig :: TestTree
-failOnMissingFareConfig = testCase "Fail on missing FareConfig" $ do
+failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
   result <-
     runBR $
       calculateFare
@@ -305,20 +285,18 @@ failOnMissingFareConfig = testCase "Fail on missing FareConfig" $ do
         OneWayTrip
         startTime
         distance
-        deadDistance
   result
     @?= Left
       ( BusinessError
-          "NO_FARE_CONFIG"
-          "FareConfig was not found."
+          "NO_FARE_POLICY"
+          "FarePolicy was not found."
       )
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 0.0
-    deadDistance = 5000.0
     handle' =
       handle
-        { getFareConfig = \_orgId _vehicleType -> pure Nothing
+        { getFarePolicy = \_orgId _vehicleType -> pure Nothing
         }
 
 fareCalculator :: TestTree
