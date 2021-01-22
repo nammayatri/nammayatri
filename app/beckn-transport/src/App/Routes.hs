@@ -407,7 +407,7 @@ type DriverInformationAPI =
     :> TokenAuth
     :> Capture "driverId" DriverId
     :> Capture "active" Bool
-    :> Post '[JSON] ()
+    :> Post '[JSON] APIResult.APIResult
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =

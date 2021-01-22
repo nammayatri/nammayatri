@@ -86,7 +86,7 @@ getActivity _auth driverId = withFlowHandler $ do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM500 "INVALID_DRIVER_ID"
   pure $ DriverInformationAPI.GetActivityResponse {driver_active = driverInfo ^. #_active}
 
-setActivity :: RegistrationToken -> DriverId -> Bool -> App.FlowHandler ()
+setActivity :: RegistrationToken -> DriverId -> Bool -> App.FlowHandler APIResult.APIResult
 setActivity _auth driverId isActive = withFlowHandler $ do
   QDriverInformation.updateActivity driverId isActive
-  pure ()
+  pure APIResult.Success
