@@ -26,12 +26,15 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Person
+import Types.App (DriverId (..))
+import qualified Types.Storage.DriverInformation as DriverInformation
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
@@ -54,6 +57,7 @@ createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
+  when (person ^. #_role == SP.DRIVER) $ mkDriver (person ^. #_id) >>= QDriverInformation.create
   org <- OQ.findOrganizationById (OrganizationId orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
@@ -70,6 +74,15 @@ createPerson orgId req = withFlowHandler $ do
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwError400 "DRIVER_ALREADY_CREATED"
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
+    mkDriver personId = do
+      now <- getCurrTime
+      pure
+        DriverInformation.DriverInformation
+          { _id = DriverId $ _getPersonId personId,
+            _active = False,
+            _createdAt = now,
+            _updatedAt = now
+          }
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandler $ do
@@ -124,6 +137,7 @@ deletePerson orgId personId = withFlowHandler $ do
   if person ^. #_organizationId == Just orgId
     then do
       QP.deleteById (PersonId personId)
+      QDriverInformation.deleteById $ DriverId personId
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
     else throwError401 "Unauthorized"

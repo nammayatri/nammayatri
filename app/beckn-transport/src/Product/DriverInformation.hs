@@ -9,16 +9,17 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
-import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
 import Data.List ((\\))
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude
 import qualified Models.ProductInstance as ModelPI
+import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.Person (findAllActiveDrivers, findAllByRoles)
 import qualified Storage.Queries.ProductInstance as QueryPI
-import Types.API.DriverInformation (ActiveDriversResponse (..), DriverInformation (..))
+import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.App (DriverId (..))
 import qualified Types.Storage.DriverStats as DriverStats
 
@@ -28,7 +29,7 @@ data ServiceHandle m = ServiceHandle
     fetchDriversStats :: [DriverId] -> Integer -> m [DriverStats.DriverStats]
   }
 
-getAvailableDriversInfo :: RegistrationToken -> UTCTime -> Integer -> App.FlowHandler ActiveDriversResponse
+getAvailableDriversInfo :: RegistrationToken -> UTCTime -> Integer -> App.FlowHandler DriverInformationAPI.ActiveDriversResponse
 getAvailableDriversInfo _ time quantity = do
   let handle =
         ServiceHandle
@@ -38,12 +39,12 @@ getAvailableDriversInfo _ time quantity = do
           }
   withFlowHandler $ handleGetAvailableDriversInfo handle time quantity
 
-handleGetAvailableDriversInfo :: (Monad m) => ServiceHandle m -> UTCTime -> Integer -> m ActiveDriversResponse
+handleGetAvailableDriversInfo :: (Monad m) => ServiceHandle m -> UTCTime -> Integer -> m DriverInformationAPI.ActiveDriversResponse
 handleGetAvailableDriversInfo ServiceHandle {..} time quantity = do
   activeDriversIds <- fmap Person._id <$> findActiveDrivers
   freeDriversIds <- fetchFreeDriversIds activeDriversIds
   driversStats <- fetchDriversStats (map (DriverId . _getPersonId) freeDriversIds) quantity
-  pure $ ActiveDriversResponse {active_drivers = map mapToResp driversStats}
+  pure $ DriverInformationAPI.ActiveDriversResponse {active_drivers = map mapToResp driversStats}
   where
     fetchFreeDriversIds activeDriversIds = do
       ridesBuffer <- findRidesByStartTimeBuffer time 1 [PI.CONFIRMED, PI.INPROGRESS, PI.TRIP_ASSIGNED]
@@ -51,7 +52,7 @@ handleGetAvailableDriversInfo ServiceHandle {..} time quantity = do
       let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
       pure freeDriversIds
     mapToResp DriverStats.DriverStats {..} =
-      DriverInformation
+      DriverInformationAPI.DriverInformation
         { driver_id = PersonId . _getDriverId $ _driverId,
           completed_rides_over_time = _completedRidesNumber,
           earnings_over_time = fromRational $ toRational _earnings
@@ -79,3 +80,13 @@ updateDriversStats _auth quantityToUpdate = withFlowHandler $ do
     sumProductInstancesByPrice inst acc = acc + fromRational (toRational (inst ^. #_price))
     updateStats (driverId, completedRides, earnings) = QDriverStats.update driverId completedRides earnings
     timePeriod = nominalDay -- Move into config if there will be a need
+
+getActivity :: RegistrationToken -> DriverId -> App.FlowHandler DriverInformationAPI.GetActivityResponse
+getActivity _auth driverId = withFlowHandler $ do
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM500 "INVALID_DRIVER_ID"
+  pure $ DriverInformationAPI.GetActivityResponse {driver_active = driverInfo ^. #_active}
+
+setActivity :: RegistrationToken -> DriverId -> Bool -> App.FlowHandler ()
+setActivity _auth driverId isActive = withFlowHandler $ do
+  QDriverInformation.updateActivity driverId isActive
+  pure ()

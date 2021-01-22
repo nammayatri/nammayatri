@@ -1,6 +1,7 @@
 module Types.API.DriverInformation
   ( ActiveDriversResponse (..),
     DriverInformation (..),
+    GetActivityResponse (..),
   )
 where
 
@@ -18,3 +19,8 @@ data DriverInformation = DriverInformation
     earnings_over_time :: Float
   }
   deriving (Eq, Show, Generic, ToJSON)
+
+newtype GetActivityResponse = GetActivityResponse
+  { driver_active :: Bool
+  }
+  deriving (Generic, ToJSON)

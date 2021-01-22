@@ -636,7 +636,7 @@ CREATE TABLE atlas_transporter.external_trail (
 ALTER TABLE ONLY atlas_transporter."external_trail"
     ADD CONSTRAINT idx_external_trail_primary PRIMARY KEY (id);
 
-INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES 
+INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
 CREATE TABLE atlas_transporter.driver_stats (
@@ -654,5 +654,11 @@ CREATE TABLE atlas_transporter.transporter_config (
     value character varying(1024) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    UNIQUE (transporter_id, key)
+    UNIQUE (transporter_id, key);
+
+CREATE TABLE atlas_transporter.driver_information (
+    id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
+    active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

@@ -35,7 +35,7 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Types.API.Case
 import Types.API.Cron
-import Types.API.DriverInformation (ActiveDriversResponse)
+import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
@@ -43,6 +43,7 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
+import Types.App (DriverId)
 import Utils.Auth (lookup)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
@@ -393,13 +394,24 @@ type DriverInformationAPI =
     :> TokenAuth
     :> Capture "time" UTCTime
     :> Capture "quantity" Integer
-    :> Get '[JSON] ActiveDriversResponse
+    :> Get '[JSON] DriverInformationAPI.ActiveDriversResponse
     :<|> "update_drivers_stats"
     :> AdminTokenAuth
     :> Capture "quantity" Integer
     :> Post '[JSON] APIResult.APIResult
+    :<|> "get_activity"
+    :> TokenAuth
+    :> Capture "driverId" DriverId
+    :> Get '[JSON] DriverInformationAPI.GetActivityResponse
+    :<|> "set_activity"
+    :> TokenAuth
+    :> Capture "driverId" DriverId
+    :> Capture "active" Bool
+    :> Post '[JSON] ()
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
   DriverInformation.getAvailableDriversInfo
     :<|> DriverInformation.updateDriversStats
+    :<|> DriverInformation.getActivity
+    :<|> DriverInformation.setActivity
