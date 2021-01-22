@@ -400,10 +400,9 @@ type DriverInformationAPI =
     :> Capture "quantity" Integer
     :> Post '[JSON] APIResult.APIResult
     :<|> "driver"
-    :> ( "get_activity"
-           :> TokenAuth
+    :> ( TokenAuth
            :> Capture "driverId" DriverId
-           :> Get '[JSON] DriverInformationAPI.GetActivityResponse
+           :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
            :<|> "set_activity"
            :> TokenAuth
            :> Capture "driverId" DriverId
@@ -415,5 +414,5 @@ driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
   DriverInformation.getAvailableDriversInfo
     :<|> DriverInformation.updateDriversStats
-    :<|> DriverInformation.getActivity
+    :<|> DriverInformation.getInformation
     :<|> DriverInformation.setActivity

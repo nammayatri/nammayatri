@@ -44,7 +44,7 @@ successfulCaseWithInfo =
   where
     expectedResponse =
       API.ActiveDriversResponse
-        { active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
+        { active_drivers = [API.DriverRidesInformation {driver_id = PersonId "1", completed_rides_over_time = 2, earnings_over_time = 200.0}]
         }
 
 successfulCaseWithNoRides :: TestTree
@@ -55,7 +55,7 @@ successfulCaseWithNoRides =
     handleCase = handle {fetchDriversStats = \_ _ -> pure [Fixtures.mkDriverStats "1" 0 0]}
     expectedResponse =
       API.ActiveDriversResponse
-        { active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+        { active_drivers = [API.DriverRidesInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }
 
 successfulCaseWithNoDrivers :: TestTree
@@ -81,5 +81,5 @@ successfulCaseWithDriverOnTrip =
         }
     expectedResponse =
       API.ActiveDriversResponse
-        { active_drivers = [API.DriverInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
+        { active_drivers = [API.DriverRidesInformation {driver_id = PersonId "1", completed_rides_over_time = 0, earnings_over_time = 0.0}]
         }

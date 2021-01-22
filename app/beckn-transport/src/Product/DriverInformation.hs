@@ -4,12 +4,12 @@ module Product.DriverInformation where
 
 import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
-import Beckn.Types.App (PersonId (..))
+import Beckn.Types.App (OrganizationId (..), PersonId (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Types.Storage.RegistrationToken (RegistrationToken)
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
+import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime, throwError400, withFlowHandler)
 import Data.List ((\\))
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
@@ -17,7 +17,9 @@ import EulerHS.Prelude
 import qualified Models.ProductInstance as ModelPI
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Organization as QOrganization
 import Storage.Queries.Person (findAllActiveDrivers, findAllByRoles)
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.App (DriverId (..))
@@ -52,7 +54,7 @@ handleGetAvailableDriversInfo ServiceHandle {..} time quantity = do
       let freeDriversIds = filter (`notElem` busyDriversIds) activeDriversIds
       pure freeDriversIds
     mapToResp DriverStats.DriverStats {..} =
-      DriverInformationAPI.DriverInformation
+      DriverInformationAPI.DriverRidesInformation
         { driver_id = PersonId . _getDriverId $ _driverId,
           completed_rides_over_time = _completedRidesNumber,
           earnings_over_time = fromRational $ toRational _earnings
@@ -81,10 +83,19 @@ updateDriversStats _auth quantityToUpdate = withFlowHandler $ do
     updateStats (driverId, completedRides, earnings) = QDriverStats.update driverId completedRides earnings
     timePeriod = nominalDay -- Move into config if there will be a need
 
-getActivity :: RegistrationToken -> DriverId -> App.FlowHandler DriverInformationAPI.GetActivityResponse
-getActivity _auth driverId = withFlowHandler $ do
+getInformation :: RegistrationToken -> DriverId -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
+getInformation RegistrationToken {..} driverId = withFlowHandler $ do
+  when (driverId /= DriverId _EntityId) $ throwError400 "DRIVER_ID_MISMATCH"
+  person <- QPerson.findPersonById (PersonId _EntityId)
+  orgId <- person ^. #_organizationId & fromMaybeM500 "ORGANIZATION_ID_IS_NOT_PRESENT"
+  organization <- QOrganization.findOrganizationById $ OrganizationId orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM500 "INVALID_DRIVER_ID"
-  pure $ DriverInformationAPI.GetActivityResponse {driver_active = driverInfo ^. #_active}
+  pure $
+    DriverInformationAPI.DriverInformationResponse
+      { transporter = organization,
+        person = person,
+        driver_information = driverInfo
+      }
 
 setActivity :: RegistrationToken -> DriverId -> Bool -> App.FlowHandler APIResult.APIResult
 setActivity _auth driverId isActive = withFlowHandler $ do
