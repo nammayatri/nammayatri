@@ -10,7 +10,12 @@ import Beckn.Types.ID (ID)
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Data.Time (UTCTime (utctDayTime), timeToTimeOfDay)
+import Data.Time
+  ( LocalTime (localTimeOfDay),
+    UTCTime,
+    minutesToTimeZone,
+    utcToLocalTime,
+  )
 import EulerHS.Prelude
 import Product.FareCalculator.Models.FarePolicy (FarePolicy)
 
@@ -101,7 +106,8 @@ calculateNightShiftRate ::
   TripStartTime ->
   BusinessRule m Amount
 calculateNightShiftRate farePolicy startTime = do
-  let timeOfDay = timeToTimeOfDay $ utctDayTime startTime
+  let timeZone = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
+  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone startTime
   let nightShiftRate = farePolicy ^. #nightShiftRate
   let nightShiftStart = farePolicy ^. #nightShiftStart
   let nightShiftEnd = farePolicy ^. #nightShiftEnd
