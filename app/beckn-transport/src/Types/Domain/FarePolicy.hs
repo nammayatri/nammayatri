@@ -1,4 +1,4 @@
-module Product.FareCalculator.Models.FarePolicy where
+module Types.Domain.FarePolicy where
 
 import Beckn.Types.ID (ID)
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -13,8 +13,8 @@ data FarePolicy = FarePolicy
     baseFare :: Maybe Rational,
     baseDistance :: Maybe Rational,
     perExtraKmRate :: Rational,
-    nightShiftStart :: TimeOfDay,
-    nightShiftEnd :: TimeOfDay,
-    nightShiftRate :: Rational
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay,
+    nightShiftRate :: Maybe Rational
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)

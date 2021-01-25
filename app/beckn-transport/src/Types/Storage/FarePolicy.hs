@@ -10,7 +10,7 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
-import qualified Product.FareCalculator.Models.FarePolicy as D
+import qualified Types.Domain.FarePolicy as D
 
 data FarePolicyT f = FarePolicy
   { _id :: B.C f (ID D.FarePolicy),
@@ -19,9 +19,9 @@ data FarePolicyT f = FarePolicy
     _baseFare :: B.C f (Maybe Rational),
     _baseDistance :: B.C f (Maybe Rational),
     _perExtraKmRate :: B.C f Rational,
-    _nightShiftStart :: B.C f TimeOfDay,
-    _nightShiftEnd :: B.C f TimeOfDay,
-    _nightShiftRate :: B.C f Rational,
+    _nightShiftStart :: B.C f (Maybe TimeOfDay),
+    _nightShiftEnd :: B.C f (Maybe TimeOfDay),
+    _nightShiftRate :: B.C f (Maybe Rational),
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }

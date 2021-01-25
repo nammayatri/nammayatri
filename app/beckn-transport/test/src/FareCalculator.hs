@@ -10,9 +10,9 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time hiding (parseTime)
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
-import Product.FareCalculator.Models.FarePolicy
 import Test.Tasty
 import Test.Tasty.HUnit
+import Types.Domain.FarePolicy
 import Utils.Time
 
 defaultFarePolicy :: FarePolicy
