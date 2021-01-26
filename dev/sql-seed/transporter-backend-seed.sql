@@ -657,7 +657,7 @@ CREATE TABLE atlas_transporter.transporter_config (
     UNIQUE (transporter_id, key);
 
 CREATE TABLE atlas_transporter.driver_information (
-    id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
+    driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
     active boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL

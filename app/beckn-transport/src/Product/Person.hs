@@ -78,7 +78,7 @@ createPerson orgId req = withFlowHandler $ do
       now <- getCurrTime
       pure
         DriverInformation.DriverInformation
-          { _id = DriverId $ _getPersonId personId,
+          { _driverId = DriverId $ _getPersonId personId,
             _active = False,
             _createdAt = now,
             _updatedAt = now

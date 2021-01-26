@@ -27,7 +27,7 @@ findById driverId = do
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
   where
-    predicate DriverInformation.DriverInformation {..} = _id ==. B.val_ driverId
+    predicate DriverInformation.DriverInformation {..} = _driverId ==. B.val_ driverId
 
 updateActivity :: DriverId -> Bool -> Flow ()
 updateActivity driverId active = do
@@ -41,7 +41,7 @@ updateActivity driverId active = do
         [ _active <-. B.val_ a,
           _updatedAt <-. B.val_ now
         ]
-    predicate id DriverInformation.DriverInformation {..} = _id ==. B.val_ id
+    predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
 
 deleteById :: DriverId -> Flow ()
 deleteById driverId = do
@@ -49,4 +49,4 @@ deleteById driverId = do
   DB.delete dbTable (predicate driverId)
     >>= either DB.throwDBError pure
   where
-    predicate pid DriverInformation.DriverInformation {..} = _id ==. B.val_ pid
+    predicate pid DriverInformation.DriverInformation {..} = _driverId ==. B.val_ pid
