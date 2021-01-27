@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Product.Registration (initiateLogin, login, reInitiateLogin) where
+module Product.Registration (checkPersonExists, initiateLogin, login, reInitiateLogin) where
 
 import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF

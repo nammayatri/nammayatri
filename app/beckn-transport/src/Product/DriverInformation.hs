@@ -9,12 +9,13 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, throwError400, withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime, withFlowHandler)
 import Data.List ((\\))
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude
 import qualified Models.ProductInstance as ModelPI
+import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrganization
@@ -85,8 +86,8 @@ updateDriversStats _auth quantityToUpdate = withFlowHandler $ do
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandler $ do
+  _ <- Registration.checkPersonExists _EntityId
   let driverId = DriverId _EntityId
-  when (driverId /= DriverId _EntityId) $ throwError400 "DRIVER_ID_MISMATCH"
   person <- QPerson.findPersonById (PersonId _EntityId)
   orgId <- person ^. #_organizationId & fromMaybeM500 "ORGANIZATION_ID_IS_NOT_PRESENT"
   organization <- QOrganization.findOrganizationById $ OrganizationId orgId
@@ -100,6 +101,7 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
 
 setActivity :: RegistrationToken -> Bool -> App.FlowHandler APIResult.APIResult
 setActivity RegistrationToken {..} isActive = withFlowHandler $ do
+  _ <- Registration.checkPersonExists _EntityId
   let driverId = DriverId _EntityId
   QDriverInformation.updateActivity driverId isActive
   pure APIResult.Success
