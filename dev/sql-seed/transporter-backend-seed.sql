@@ -672,12 +672,12 @@ CREATE TABLE atlas_transporter.fare_policy (
     id character(36) NOT NULL,
     vehicle_variant character varying(255) NOT NULL,
     organization_id character varying(255) NOT NULL,
-    base_fare numeric(30,10),
-    base_distance numeric(30,10),
-    per_extra_km_rate numeric(30,10) NOT NULL,
+    base_fare double precision,
+    base_distance double precision,
+    per_extra_km_rate double precision NOT NULL,
     night_shift_start time,
     night_shift_end time,
-    night_shift_rate numeric(30,10),
+    night_shift_rate double precision,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

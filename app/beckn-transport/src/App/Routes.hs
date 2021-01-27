@@ -1,5 +1,6 @@
 module App.Routes where
 
+import App.Routes.FarePolicy
 import App.Types
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.App
@@ -62,6 +63,7 @@ type TransportAPI =
            :<|> CallAPIs
            :<|> RouteAPI
            :<|> DriverInformationAPI
+           :<|> FarePolicyAPI
        )
 
 ---- Registration Flow ------
@@ -321,6 +323,7 @@ transporterServer =
     :<|> callFlow
     :<|> routeApiFlow
     :<|> driverInformationFlow
+    :<|> farePolicyFlow
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId

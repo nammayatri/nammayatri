@@ -16,12 +16,12 @@ data FarePolicyT f = FarePolicy
   { _id :: B.C f (ID D.FarePolicy),
     _vehicleVariant :: B.C f Vehicle.Variant,
     _organizationId :: B.C f (ID Organization.Organization),
-    _baseFare :: B.C f (Maybe Rational),
-    _baseDistance :: B.C f (Maybe Rational),
-    _perExtraKmRate :: B.C f Rational,
+    _baseFare :: B.C f (Maybe Double),
+    _baseDistance :: B.C f (Maybe Double),
+    _perExtraKmRate :: B.C f Double,
     _nightShiftStart :: B.C f (Maybe TimeOfDay),
     _nightShiftEnd :: B.C f (Maybe TimeOfDay),
-    _nightShiftRate :: B.C f (Maybe Rational),
+    _nightShiftRate :: B.C f (Maybe Double),
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }
@@ -70,10 +70,10 @@ fromTable sFarePolicy =
     { id = sFarePolicy ^. #_id,
       vehicleVariant = sFarePolicy ^. #_vehicleVariant,
       organizationId = sFarePolicy ^. #_organizationId,
-      baseFare = sFarePolicy ^. #_baseFare,
-      baseDistance = sFarePolicy ^. #_baseDistance,
-      perExtraKmRate = sFarePolicy ^. #_perExtraKmRate,
+      baseFare = toRational <$> sFarePolicy ^. #_baseFare,
+      baseDistance = toRational <$> sFarePolicy ^. #_baseDistance,
+      perExtraKmRate = toRational $ sFarePolicy ^. #_perExtraKmRate,
       nightShiftStart = sFarePolicy ^. #_nightShiftStart,
       nightShiftEnd = sFarePolicy ^. #_nightShiftEnd,
-      nightShiftRate = sFarePolicy ^. #_nightShiftRate
+      nightShiftRate = toRational <$> sFarePolicy ^. #_nightShiftRate
     }

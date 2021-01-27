@@ -5,9 +5,14 @@ module Beckn.Types.ID where
 
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
-import Database.Beam.Postgres
-import Database.Beam.Query
+  ( BeamSqlBackend,
+    FromBackendRow (fromBackendRow),
+    HasSqlValueSyntax (..),
+  )
+import Database.Beam.Postgres (Postgres)
+import Database.Beam.Query (HasSqlEqualityCheck)
 import EulerHS.Prelude
+import Servant (FromHttpApiData (parseUrlPiece))
 
 newtype ID domain = ID Text
   deriving stock (Show, Eq)
@@ -26,3 +31,6 @@ instance FromBackendRow Postgres (ID a) where
   fromBackendRow = ID <$> fromBackendRow
 
 instance BeamSqlBackend be => HasSqlEqualityCheck be (ID a)
+
+instance FromHttpApiData (ID a) where
+  parseUrlPiece = pure . ID

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.FarePolicy where
 
 import App.Types (AppEnv (dbCfg), Flow)
@@ -5,10 +7,11 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.ID (ID)
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common (getSchemaName)
-import Database.Beam (SqlEq ((==.)), (&&.))
+import Beckn.Utils.Common
+import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
 
@@ -26,3 +29,39 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
     predicate Storage.FarePolicy {..} =
       _organizationId ==. B.val_ orgId
         &&. _vehicleVariant ==. B.val_ vehicleVariant
+
+findFarePoliciesByOrgId :: ID Organization.Organization -> Flow [Storage.FarePolicy]
+findFarePoliciesByOrgId orgId = do
+  dbTable <- getDbTable
+  DB.findAll dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.FarePolicy {..} = _organizationId ==. B.val_ orgId
+
+findFarePolicyById :: ID D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
+findFarePolicyById fpId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+  where
+    predicate Storage.FarePolicy {..} = _id ==. B.val_ fpId
+
+updateFarePolicy :: Storage.FarePolicy -> Flow ()
+updateFarePolicy farePolicy = do
+  dbTable <- getDbTable
+  now <- getCurrTime
+  let farePolicyId = farePolicy ^. #_id
+  DB.update dbTable (setClause farePolicy now) (predicate farePolicyId)
+    >>= either DB.throwDBError pure
+  where
+    setClause fp now Storage.FarePolicy {..} =
+      mconcat
+        [ _baseFare <-. B.val_ (fp ^. #_baseFare),
+          _baseDistance <-. B.val_ (fp ^. #_baseDistance),
+          _perExtraKmRate <-. B.val_ (fp ^. #_perExtraKmRate),
+          _nightShiftStart <-. B.val_ (fp ^. #_nightShiftStart),
+          _nightShiftEnd <-. B.val_ (fp ^. #_nightShiftEnd),
+          _nightShiftRate <-. B.val_ (fp ^. #_nightShiftRate),
+          _updatedAt <-. B.val_ now
+        ]
+    predicate id Storage.FarePolicy {..} = _id ==. B.val_ id
