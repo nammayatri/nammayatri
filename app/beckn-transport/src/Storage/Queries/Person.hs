@@ -1,4 +1,6 @@
+{-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 module Storage.Queries.Person where
 
@@ -8,12 +10,15 @@ import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import qualified Beckn.Types.Storage.Location as Storage
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
 import Data.Time
-import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((&&.), (<-.), (<.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.Location as Location
+import Types.API.Location (LatLong (..))
 import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
@@ -293,3 +298,73 @@ updateAverageRating personId newAverageRating = do
           _updatedAt <-. B.val_ now
         ]
     predicate pId Storage.Person {..} = _id ==. B.val_ pId
+
+getNearestDrivers :: LatLong -> Flow [(Storage.Person, Double)]
+getNearestDrivers point' = do
+  personTable <- getDbTable
+  locationTable <- Location.getDbTable
+  DB.findAllByJoinWithoutLimits orderBy (query personTable locationTable point')
+    >>= either DB.throwDBError pure
+  undefined
+  where
+    -- a = query
+    query personTable locationTable point = do
+      driver <- B.all_ personTable
+      location <- B.join_ locationTable $
+        \location ->
+          B.maybe_
+            (pure False)
+            ( (B.primaryKey location ==.)
+                . Storage.LocationPrimaryKey
+                . fmap LocationId
+            )
+            (driver ^. #_locationId)
+      dist <- distToPoint point location
+      driver' <- B.filter_ (predicate dist) (pure driver)
+      return (driver', dist)
+    orderBy (_, dist) = B.asc_ dist
+    predicate dist Storage.Person {..} =
+      _role ==. B.val_ Storage.DRIVER
+        &&. dist <. B.val_ radius
+    distToPoint' :: (Monoid a, IsString a) => a -> a -> a -> a
+    distToPoint' lat lon point =
+      point <> " <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry"
+    distToPoint LatLong {..} location =
+      B.customExpr_ distToPoint' lat lon (location ^. #_point)
+    radius = 3000 :: Double
+
+{-
+SELECT person, location.point <-> ST_Point(" <> lat <> ", " <> long <> ")::geometry as dist
+FROM person
+JOIN location ON person.location_id == location.id
+WHERE dist < radius && person.role == 'DRIVER'
+ORDER BY dist
+
+ORDER BY dist
+  "SELECT person, location.point <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry as dist"
+  <> " FROM person"
+  <> " JOIN location ON person.location_id == location.id"
+  <> " WHERE dist < " <> radius <> " && person.role == 'DRIVER'"
+  <> " ORDER BY dist"
+"
+
+containsPoint :: (Monoid a, IsString a) => a -> a
+containsPoint LatLong {..} = "st_contains(geom, ST_GeomFromText(" <> point <> "))"
+"ST_DWithin(location.point, ST_Point(" <> lat <> ", " <> long <> ")::geometry, " <> radius <> ")"
+
+containsPoint_ ::
+  B.QGenExpr ctxt Postgres s Text ->
+  B.QGenExpr ctxt Postgres s Bool
+containsPoint_ = B.customExpr_ containsPoint
+
+    -- (productInstancejoinQuery csTable prodTable dbTable csPred prodPred piPred)
+productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
+  i <- B.filter_ pred1 $ B.all_ tbl1
+  j <- B.filter_ pred2 $ B.all_ tbl2
+  k <- B.filter_ pred3 $
+    B.join_ tbl3 $
+      \line ->
+        CasePrimaryKey (Storage._caseId line) ==. B.primaryKey i
+          B.&&. ProductsPrimaryKey (Storage._productId line) ==. B.primaryKey j
+  pure (i, j, k)
+  -}

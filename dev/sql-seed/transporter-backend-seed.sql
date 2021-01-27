@@ -22,6 +22,7 @@ SET row_security = off;
 
 CREATE SCHEMA atlas_transporter;
 
+CREATE EXTENSION Postgis;
 
 ALTER SCHEMA atlas_transporter OWNER TO atlas;
 
@@ -111,6 +112,7 @@ CREATE TABLE atlas_transporter.location (
     location_type character varying(255),
     lat double precision,
     long double precision,
+    point geometry(POINT,4326),
     ward character varying(255),
     district character varying(255),
     city character varying(255),
