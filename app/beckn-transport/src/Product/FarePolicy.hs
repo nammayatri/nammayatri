@@ -3,21 +3,26 @@
 module Product.FarePolicy where
 
 import App.Types (FlowHandler)
+import Beckn.Types.App (PersonId (PersonId))
 import Beckn.Types.ID (ID (..))
+import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common (fromMaybeM400, withFlowHandler)
 import EulerHS.Prelude
-import qualified Storage.Queries.FarePolicy as S
+import qualified Storage.Queries.FarePolicy as SFarePolicy
+import qualified Storage.Queries.Person as SPerson
 import Types.API.FarePolicy
   ( FarePolicyResponse (..),
     ListFarePolicyResponse (ListFarePolicyResponse),
     UpdateFarePolicyRequest,
   )
-import qualified Types.Domain.FarePolicy as D
-import qualified Types.Storage.FarePolicy as S
+import qualified Types.Domain.FarePolicy as DFarePolicy
+import qualified Types.Storage.FarePolicy as SFarePolicy
 
-listFarePolicies :: Text -> FlowHandler ListFarePolicyResponse
-listFarePolicies orgId = withFlowHandler $ do
-  farePolicies <- S.findFarePoliciesByOrgId (ID orgId)
+listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
+listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandler $ do
+  person <- SPerson.findPersonById (PersonId _EntityId)
+  orgId <- person ^. #_organizationId & fromMaybeM400 "ORGANIZATION_ID_MISSING"
+  farePolicies <- SFarePolicy.findFarePoliciesByOrgId (ID orgId)
   pure $ ListFarePolicyResponse $ toResponse <$> farePolicies
   where
     toResponse fp =
@@ -32,17 +37,17 @@ listFarePolicies orgId = withFlowHandler $ do
           nightShiftRate = fp ^. #_nightShiftRate
         }
 
-updateFarePolicy :: Text -> ID D.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler ()
-updateFarePolicy _orgId fpId req = withFlowHandler $ do
-  farePolicy <- S.findFarePolicyById fpId >>= fromMaybeM400 "FARE_POLICY_NOT_FOUND"
+updateFarePolicy :: RegToken.RegistrationToken -> ID DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler ()
+updateFarePolicy _ fpId req = withFlowHandler $ do
+  farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM400 "FARE_POLICY_NOT_FOUND"
   let updatedFarePolicy =
         farePolicy
-          { S._baseFare = req ^. #baseFare,
-            S._baseDistance = req ^. #baseDistance,
-            S._perExtraKmRate = req ^. #perExtraKmRate,
-            S._nightShiftStart = req ^. #nightShiftStart,
-            S._nightShiftEnd = req ^. #nightShiftEnd,
-            S._nightShiftRate = req ^. #nightShiftRate
+          { SFarePolicy._baseFare = req ^. #baseFare,
+            SFarePolicy._baseDistance = req ^. #baseDistance,
+            SFarePolicy._perExtraKmRate = req ^. #perExtraKmRate,
+            SFarePolicy._nightShiftStart = req ^. #nightShiftStart,
+            SFarePolicy._nightShiftEnd = req ^. #nightShiftEnd,
+            SFarePolicy._nightShiftRate = req ^. #nightShiftRate
           }
-  _ <- S.updateFarePolicy updatedFarePolicy
+  _ <- SFarePolicy.updateFarePolicy updatedFarePolicy
   pure ()

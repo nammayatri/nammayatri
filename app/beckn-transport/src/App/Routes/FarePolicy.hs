@@ -9,15 +9,15 @@ import Types.API.FarePolicy
     UpdateFarePolicyRequest,
   )
 import Types.Domain.FarePolicy (FarePolicy)
-import Utils.Common (AdminTokenAuth)
+import Utils.Common
 
 type FarePolicyAPI =
   "farePolicy"
-    :> ( AdminTokenAuth :> Get '[JSON] ListFarePolicyResponse
-           :<|> AdminTokenAuth
+    :> ( TokenAuth :> Get '[JSON] ListFarePolicyResponse
+           :<|> TokenAuth
              :> Capture "farePolicyId" (ID FarePolicy)
              :> ReqBody '[JSON] UpdateFarePolicyRequest
-             :> Post '[JSON] () -- TODO Ack?
+             :> Post '[JSON] ()
        )
 
 farePolicyFlow :: FlowServer FarePolicyAPI
