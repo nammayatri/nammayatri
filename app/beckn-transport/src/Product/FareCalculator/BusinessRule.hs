@@ -24,5 +24,8 @@ data BusinessError = BusinessError
   }
   deriving (Show, Eq)
 
+runBR :: BusinessRule m a -> m (Either BusinessError a)
+runBR = runExceptT . runBusinessRule
+
 throwBusinessError :: Monad m => Text -> Text -> BusinessRule m a
 throwBusinessError code msg = throwError $ BusinessError code msg

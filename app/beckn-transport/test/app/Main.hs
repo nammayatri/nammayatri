@@ -1,6 +1,7 @@
 module Main where
 
 import EulerHS.Prelude
+import FareCalculator
 import qualified Flow.ActiveDrivers
 import Test.Tasty
 
@@ -9,7 +10,7 @@ main = defaultMain =<< specs
 
 specs :: IO TestTree
 specs = do
-  let unitTests = testGroup "Unit tests" [flowTests]
+  let unitTests = testGroup "Unit tests" [flowTests, fareCalculator]
   return $ testGroup "Tests" [unitTests]
 
 flowTests :: TestTree

@@ -9,8 +9,8 @@ data FareConfig = FareConfig
   { id :: ID FareConfig,
     vehicleType :: Vehicle.Variant,
     organizationId :: ID Organization.Organization,
-    minimumFare :: Maybe Float,
-    perKmRate :: Float,
+    minimumFare :: Maybe Rational,
+    perKmRate :: Rational,
     minimumDistance :: Maybe Float,
     multiplicationFactor :: Maybe Int
   }

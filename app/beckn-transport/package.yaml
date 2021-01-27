@@ -105,11 +105,13 @@ executables:
       - beckn-core
 
 tests:
-  beckn-core-tests:
+  beckn-transport-tests:
     main: Main.hs
     source-dirs:
       - test/app
       - test/src
-    dependencies:
+    dependencies: 
+      - tasty
+      - tasty-hunit
       - beckn-transport
       - beckn-core
