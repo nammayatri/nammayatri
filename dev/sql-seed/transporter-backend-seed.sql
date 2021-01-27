@@ -646,3 +646,13 @@ CREATE TABLE atlas_transporter.driver_stats (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+CREATE TABLE atlas_transporter.transporter_config (
+    id character(36) PRIMARY KEY NOT NULL,
+    transporter_id character(36) NOT NULL,
+    key character(36) NOT NULL,
+    value character varying(1024) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (transporter_id, key)
+);

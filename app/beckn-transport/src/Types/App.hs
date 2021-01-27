@@ -51,6 +51,20 @@ newtype TrackerId = TrackerId
 
 deriveIdentifierInstances ''TrackerId
 
+newtype TranposrterParameterId = TranposrterParameterId
+  { _getTranposrterParameterId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''TranposrterParameterId
+
+newtype ConfigKey = ConfigKey
+  { _getConfigKey :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''ConfigKey
+
 type Limit = Int
 
 type Offset = Int

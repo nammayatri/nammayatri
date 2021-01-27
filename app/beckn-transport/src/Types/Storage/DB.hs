@@ -19,6 +19,7 @@ import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
+import qualified Types.Storage.TransporterConfig as TransporterConfig
 import qualified Types.Storage.TripReference as TripReference
 
 data TransporterDb f = TransporterDb
@@ -36,7 +37,8 @@ data TransporterDb f = TransporterDb
     _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     _rating :: f (B.TableEntity Rating.RatingT),
-    _driverStats :: f (B.TableEntity DriverStats.DriverStatsT)
+    _driverStats :: f (B.TableEntity DriverStats.DriverStatsT),
+    _transporterConfig :: f (B.TableEntity TransporterConfig.TransporterConfigT)
   }
   deriving (Generic, B.Database be)
 
@@ -58,7 +60,8 @@ transporterDb dbSchemaName =
         _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
         _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         _rating = setSchema dbSchemaName <> Rating.fieldEMod,
-        _driverStats = setSchema dbSchemaName <> DriverStats.fieldEMod
+        _driverStats = setSchema dbSchemaName <> DriverStats.fieldEMod,
+        _transporterConfig = setSchema dbSchemaName <> TransporterConfig.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)
