@@ -642,6 +642,7 @@ ALTER TABLE ONLY atlas_transporter."external_trail"
 INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
+
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
     completed_rides_number smallint NOT NULL,
@@ -657,7 +658,8 @@ CREATE TABLE atlas_transporter.transporter_config (
     value character varying(1024) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    UNIQUE (transporter_id, key);
+    UNIQUE (transporter_id, key)
+);
 
 CREATE TABLE atlas_transporter.driver_information (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
@@ -666,5 +668,24 @@ CREATE TABLE atlas_transporter.driver_information (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+CREATE TABLE atlas_transporter.fare_policy (
+    id character(36) NOT NULL,
+    vehicle_variant character varying(255) NOT NULL,
+    organization_id character varying(255) NOT NULL,
+    base_fare numeric(30,10),
+    base_distance numeric(30,10),
+    per_extra_km_rate numeric(30,10) NOT NULL,
+    night_shift_start time NOT NULL,
+    night_shift_end time NOT NULL,
+    night_shift_rate numeric(30,10) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
 INSERT INTO atlas_transporter.driver_information (driver_id, active, created_at, updated_at) select id, False, now(), now() from atlas_transporter.person where role ='DRIVER';
 INSERT INTO atlas_transporter.driver_stats (driver_id, completed_rides_number, earnings, created_at, updated_at) select id, 0, 0, now(), now() from atlas_transporter.person where role ='DRIVER';
+
+ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas;
+
+INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
+  ('9a978cc8-584b-4bd1-ad7f-0c061e25b92d', 'SUV', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);

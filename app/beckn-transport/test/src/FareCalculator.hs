@@ -19,7 +19,7 @@ defaultFarePolicy :: FarePolicy
 defaultFarePolicy =
   FarePolicy
     { id = "fare_config_id",
-      vehicleType = Vehicle.HATCHBACK,
+      vehicleVariant = Vehicle.HATCHBACK,
       organizationId = orgID,
       baseFare = Just 120.0,
       baseDistance = Just 5000.0,
@@ -78,8 +78,8 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \orgId vehicleType -> pure $ Just defaultFarePolicy,
-      getDistance = \pickup drop -> pure 0
+    { getFarePolicy = \orgId vehicleVariant -> pure $ Just defaultFarePolicy,
+      getDistance = \pickup drop -> pure $ Just 0
     }
 
 -- Calculation tests
@@ -88,7 +88,7 @@ hatchback20km :: TestTree
 hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchback" $ do
   fareParams <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle
         orgID
         Vehicle.HATCHBACK
@@ -107,7 +107,7 @@ sedan20km :: TestTree
 sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ do
   fareParams <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle'
         orgID
         Vehicle.SEDAN
@@ -123,14 +123,13 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
-                  { vehicleType = Vehicle.SEDAN,
+                  { vehicleVariant = Vehicle.SEDAN,
                     baseFare = Just 150.0,
                     perExtraKmRate = 15.0
-                    -- perDeadKmRate = Just 15.0
                   }
         }
 
@@ -138,7 +137,7 @@ suv20km :: TestTree
 suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
   fareParams <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle'
         orgID
         Vehicle.SUV
@@ -154,11 +153,11 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
-                  { vehicleType = Vehicle.SUV,
+                  { vehicleVariant = Vehicle.SUV,
                     baseFare = Just 0,
                     baseDistance = Just 0,
                     perExtraKmRate = 20.0
@@ -171,7 +170,7 @@ nightHatchback20km :: TestTree
 nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTrip for Hatchback at 21:00" $ do
   fareParams <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle'
         orgID
         Vehicle.HATCHBACK
@@ -187,11 +186,11 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
-                  { vehicleType = Vehicle.HATCHBACK,
+                  { vehicleVariant = Vehicle.HATCHBACK,
                     baseFare = Just 100.0,
                     baseDistance = Just 4000.0,
                     perExtraKmRate = 13.5,
@@ -205,7 +204,7 @@ nightSedan20km :: TestTree
 nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip for Sedan" $ do
   fareParams <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle'
         orgID
         Vehicle.SEDAN
@@ -221,11 +220,11 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
-                  { vehicleType = Vehicle.SEDAN,
+                  { vehicleVariant = Vehicle.SEDAN,
                     baseFare = Just 100.0,
                     baseDistance = Just 3000.0,
                     perExtraKmRate = 15.0,
@@ -239,7 +238,7 @@ nightSuv20km :: TestTree
 nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for SUV" $ do
   fareParams <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle'
         orgID
         Vehicle.SUV
@@ -256,11 +255,11 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleType ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
-                  { vehicleType = Vehicle.SUV,
+                  { vehicleVariant = Vehicle.SUV,
                     baseFare = Just 150.0,
                     baseDistance = Just 3000.0,
                     perExtraKmRate = 20.0,
@@ -276,7 +275,7 @@ failOnMissingFareConfig :: TestTree
 failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
   result <-
     runBR $
-      calculateFare
+      doCalculateFare
         handle'
         orgID
         Vehicle.SEDAN
@@ -296,7 +295,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     distance = Just 0.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleType -> pure Nothing
+        { getFarePolicy = \_orgId _vehicleVariant -> pure Nothing
         }
 
 fareCalculator :: TestTree

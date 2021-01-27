@@ -4,15 +4,15 @@
 
 module Product.FareCalculator.Flow where
 
-import Beckn.Product.BusinessRule
-import Beckn.Types.Amount
-import Beckn.Types.ID
+import Beckn.Product.BusinessRule (BusinessRule, fromMaybeBR)
+import Beckn.Types.Amount (Amount (..))
+import Beckn.Types.ID (ID)
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Data.Time
+import Data.Time (UTCTime (utctDayTime), timeToTimeOfDay)
 import EulerHS.Prelude
-import Product.FareCalculator.Models.FarePolicy
+import Product.FareCalculator.Models.FarePolicy (FarePolicy)
 
 newtype PickupLocation = PickupLocation {getPickupLocation :: Location.Location}
   deriving newtype (Show, Eq)
@@ -29,7 +29,7 @@ data JourneyTrip = OneWayTrip | HalfReturnTrip | FullReturnTrip
 
 data ServiceHandle m = ServiceHandle
   { getFarePolicy :: ID Organization.Organization -> Vehicle.Variant -> BusinessRule m (Maybe FarePolicy),
-    getDistance :: PickupLocation -> DropLocation -> BusinessRule m Float
+    getDistance :: PickupLocation -> DropLocation -> BusinessRule m (Maybe Float)
   }
 
 data FareParameters = FareParameters
@@ -43,7 +43,7 @@ fareSum :: FareParameters -> Amount
 fareSum FareParameters {..} =
   nightShiftRate * (baseFare + distanceFare)
 
-calculateFare ::
+doCalculateFare ::
   Monad m =>
   ServiceHandle m ->
   ID Organization.Organization ->
@@ -54,10 +54,16 @@ calculateFare ::
   TripStartTime ->
   Maybe DistanceInM ->
   BusinessRule m FareParameters
-calculateFare ServiceHandle {..} orgId vehicleVariant pickupLoc dropLoc journeyType startTime mbDistance = do
+doCalculateFare ServiceHandle {..} orgId vehicleVariant pickupLoc dropLoc journeyType startTime mbDistance = do
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeBR "NO_FARE_POLICY"
-  actualDistance <- mbDistance & maybe (getDistance pickupLoc dropLoc) pure
-  baseFare <- calculateBaseFare farePolicy actualDistance
+  actualDistance <-
+    mbDistance
+      & maybe
+        ( getDistance pickupLoc dropLoc
+            >>= fromMaybeBR "CANT_CALCULATE_DISTANCE"
+        )
+        pure
+  baseFare <- calculateBaseFare farePolicy
   distanceFare <- calculateDistanceFare farePolicy actualDistance journeyType
   nightShiftRate <- calculateNightShiftRate farePolicy startTime
   pure $ FareParameters baseFare distanceFare nightShiftRate
@@ -65,9 +71,8 @@ calculateFare ServiceHandle {..} orgId vehicleVariant pickupLoc dropLoc journeyT
 calculateBaseFare ::
   Monad m =>
   FarePolicy ->
-  DistanceInM ->
   BusinessRule m Amount
-calculateBaseFare farePolicy _actualDistance = do
+calculateBaseFare farePolicy = do
   let baseFare = fromMaybe 0 $ farePolicy ^. #baseFare
   pure $ Amount baseFare
 
@@ -80,13 +85,13 @@ calculateDistanceFare ::
 calculateDistanceFare farePolicy actualDistance journeyType = do
   let baseDistance = fromMaybe 0 $ farePolicy ^. #baseDistance
   let perKmRate = farePolicy ^. #perExtraKmRate
-  let journeyRate = case journeyType of
+  let distanceMultiplier = case journeyType of
         OneWayTrip -> 1.0
         HalfReturnTrip -> 1.5
         FullReturnTrip -> 2.0
   let baseDistanceFare =
         if toRational actualDistance > baseDistance
-          then ((toRational actualDistance * journeyRate) - baseDistance) / 1000
+          then ((toRational actualDistance * distanceMultiplier) - baseDistance) / 1000
           else 0
   pure . Amount $ baseDistanceFare * perKmRate
 

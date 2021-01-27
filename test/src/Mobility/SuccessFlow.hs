@@ -64,6 +64,11 @@ spec = do
         let Right statusRes = statusResResult
         return . nonEmpty $ productInstances statusRes
       let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
+
+      -- check if calculated price is greater than 0
+      let prodPrice = productInstance ^. #_price
+      prodPrice `shouldBe` 1372.47075
+
       -- Confirm ride from app backend
       confirmResult <-
         runClient

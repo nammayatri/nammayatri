@@ -17,6 +17,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Customer as Customer
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
+import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
@@ -40,7 +41,8 @@ data TransporterDb f = TransporterDb
     _rating :: f (B.TableEntity Rating.RatingT),
     _driverStats :: f (B.TableEntity DriverStats.DriverStatsT),
     _transporterConfig :: f (B.TableEntity TransporterConfig.TransporterConfigT),
-    _driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT)
+    _driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
+    _farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT)
   }
   deriving (Generic, B.Database be)
 
@@ -64,7 +66,8 @@ transporterDb dbSchemaName =
         _rating = setSchema dbSchemaName <> Rating.fieldEMod,
         _driverStats = setSchema dbSchemaName <> DriverStats.fieldEMod,
         _transporterConfig = setSchema dbSchemaName <> TransporterConfig.fieldEMod,
-        _driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod
+        _driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod,
+        _farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)
