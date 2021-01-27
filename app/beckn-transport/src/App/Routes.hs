@@ -43,7 +43,6 @@ import Types.API.Products
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Types.App (DriverId)
 import Utils.Auth (lookup)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
@@ -401,11 +400,9 @@ type DriverInformationAPI =
     :> Post '[JSON] APIResult.APIResult
     :<|> "driver"
     :> ( TokenAuth
-           :> Capture "driverId" DriverId
            :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
            :<|> "set_activity"
            :> TokenAuth
-           :> Capture "driverId" DriverId
            :> Capture "active" Bool
            :> Post '[JSON] APIResult.APIResult
        )

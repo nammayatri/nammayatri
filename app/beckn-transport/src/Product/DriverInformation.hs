@@ -83,8 +83,9 @@ updateDriversStats _auth quantityToUpdate = withFlowHandler $ do
     updateStats (driverId, completedRides, earnings) = QDriverStats.update driverId completedRides earnings
     timePeriod = nominalDay -- Move into config if there will be a need
 
-getInformation :: RegistrationToken -> DriverId -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
-getInformation RegistrationToken {..} driverId = withFlowHandler $ do
+getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
+getInformation RegistrationToken {..} = withFlowHandler $ do
+  let driverId = DriverId _EntityId
   when (driverId /= DriverId _EntityId) $ throwError400 "DRIVER_ID_MISMATCH"
   person <- QPerson.findPersonById (PersonId _EntityId)
   orgId <- person ^. #_organizationId & fromMaybeM500 "ORGANIZATION_ID_IS_NOT_PRESENT"
@@ -97,7 +98,8 @@ getInformation RegistrationToken {..} driverId = withFlowHandler $ do
         driver_information = driverInfo
       }
 
-setActivity :: RegistrationToken -> DriverId -> Bool -> App.FlowHandler APIResult.APIResult
-setActivity _auth driverId isActive = withFlowHandler $ do
+setActivity :: RegistrationToken -> Bool -> App.FlowHandler APIResult.APIResult
+setActivity RegistrationToken {..} isActive = withFlowHandler $ do
+  let driverId = DriverId _EntityId
   QDriverInformation.updateActivity driverId isActive
   pure APIResult.Success
