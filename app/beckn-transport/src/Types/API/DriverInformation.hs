@@ -7,8 +7,8 @@ where
 
 import Beckn.Types.App (PersonId)
 import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude
+import qualified Types.API.Person as PersonAPI
 import Types.Storage.DriverInformation
 
 newtype ActiveDriversResponse = ActiveDriversResponse
@@ -25,7 +25,7 @@ data DriverRidesInformation = DriverRidesInformation
 
 data DriverInformationResponse = DriverInformationResponse
   { transporter :: Organization.Organization,
-    person :: Person.Person,
+    person :: PersonAPI.PersonEntityRes,
     driver_information :: DriverInformation
   }
   deriving (Generic, ToJSON)

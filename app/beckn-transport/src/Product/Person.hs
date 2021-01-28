@@ -9,6 +9,7 @@ module Product.Person
     deletePerson,
     linkEntity,
     calculateAverageRating,
+    mkPersonRes,
   )
 where
 

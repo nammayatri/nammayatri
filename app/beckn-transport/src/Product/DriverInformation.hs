@@ -15,6 +15,7 @@ import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Time.Clock (NominalDiffTime)
 import EulerHS.Prelude
 import qualified Models.ProductInstance as ModelPI
+import qualified Product.Person as Person
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -89,13 +90,14 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
   _ <- Registration.checkPersonExists _EntityId
   let driverId = DriverId _EntityId
   person <- QPerson.findPersonById (PersonId _EntityId)
+  personEntity <- Person.mkPersonRes person
   orgId <- person ^. #_organizationId & fromMaybeM500 "ORGANIZATION_ID_IS_NOT_PRESENT"
   organization <- QOrganization.findOrganizationById $ OrganizationId orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM500 "INVALID_DRIVER_ID"
   pure $
     DriverInformationAPI.DriverInformationResponse
       { transporter = organization,
-        person = person,
+        person = personEntity,
         driver_information = driverInfo
       }
 
