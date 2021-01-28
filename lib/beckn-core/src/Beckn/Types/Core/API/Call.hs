@@ -2,15 +2,12 @@
 
 module Beckn.Types.Core.API.Call where
 
-import Beckn.Types.Common (IdObject)
-import Beckn.Types.Core.Ack (AckResponse (..))
-import Beckn.Types.Core.Context
+import Beckn.Types.Core.Ack (Ack (..))
 import EulerHS.Prelude
 
-data CallReq = CallReq
-  { context :: Context,
-    message :: IdObject -- ProductInstance id
+newtype CallReq = CallReq
+  { productInstanceId :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-type CallRes = AckResponse
+type CallRes = Ack

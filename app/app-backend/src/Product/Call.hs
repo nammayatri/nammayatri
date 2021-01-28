@@ -9,11 +9,16 @@ import Beckn.External.Exotel.Flow
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
+import Beckn.Types.Core.Ack
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
+  ( decodeFromText,
+    throwBecknError404,
+    withFlowHandler,
+  )
 import Data.Maybe
 import Data.Semigroup
 import qualified Data.Text as T
@@ -26,18 +31,18 @@ import Types.ProductInfo as ProductInfo
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
 initiateCallToProvider _ req = withFlowHandler $ do
-  let piId = req ^. #message . #id
+  let piId = req ^. #productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ProductInstanceId piId
   initiateCall customerPhone providerPhone
-  mkAckResponse piId "initiateCallToProvider"
+  mkAckResponse
 
 -- | Try to initiate a call provider -> customer
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
 initiateCallToCustomer req = withFlowHandler $ do
-  let piId = req ^. #message . #id
+  let piId = req ^. #productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ProductInstanceId piId
   initiateCall providerPhone customerPhone
-  mkAckResponse piId "initiateCallToCustomer"
+  mkAckResponse
 
 -- | Get customer and driver pair by case ID
 getProductAndCustomerInfo :: ProductInstanceId -> Flow (Either String (Person, Driver.Driver))
@@ -101,3 +106,6 @@ getProductAndCustomerPhones piId = do
         (_, Left err) -> reportError err
   where
     reportError = throwBecknError404 . T.pack
+
+mkAckResponse :: Flow CallRes
+mkAckResponse = return $ Ack {_status = "ACK"}

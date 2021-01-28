@@ -7,7 +7,7 @@ import Beckn.Types.Core.API.Search (OnSearchReq, OnSearchRes, nsdlOnSearchAPI)
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
-import Beckn.Types.Core.Ack (AckResponse)
+import Beckn.Types.Core.Ack (Ack, AckResponse)
 import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -80,7 +80,7 @@ type CallAPI =
 callsAPI :: Proxy CallAPI
 callsAPI = Proxy
 
-initiateCall :: CallReq -> (RequestInfo, ET.EulerClient AckResponse)
+initiateCall :: CallReq -> (RequestInfo, ET.EulerClient Ack)
 initiateCall = ET.client $ withClientTracing callsAPI
 
 type UpdateAPI =

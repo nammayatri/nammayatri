@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module External.Gateway.Flow where
 
@@ -15,6 +16,7 @@ import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client (BaseUrl)
@@ -75,9 +77,13 @@ onStatus url req@CallbackReq {context} bppShortId = do
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
-initiateCall :: CallReq -> Flow AckResponse
-initiateCall req@CallReq {context} = do
+initiateCall :: CallReq -> Flow Ack
+initiateCall req = do
   url <- xAppUri <$> ask
   res <- callAPIWithTrail url (API.initiateCall req) "call_to_customer"
-  AckResponse {} <- checkClientError context res
-  mkOkResponse context
+  case res of
+    Right x -> return x
+    Left cliErr -> do
+      let err = fromClientError cliErr
+      L.logError @Text "client call error" $ (err ^. #_message) ?: "Some error"
+      L.throwException cliErr
