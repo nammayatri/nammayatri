@@ -103,6 +103,9 @@ searchReq tid utcTime futureTime =
       fare = AppCommon.DecimalValue "360" $ Just "50"
     }
 
+bppTransporterOrgId :: Text
+bppTransporterOrgId = "70c76e36-f035-46fd-98a7-572dc8934323"
+
 getFutureTime :: IO UTCTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail

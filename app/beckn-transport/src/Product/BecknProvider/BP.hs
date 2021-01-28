@@ -29,7 +29,9 @@ import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
+import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
+import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time
 import qualified EulerHS.Language as L
@@ -37,13 +39,18 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
+import qualified Models.ProductInstance as MPI
+import Product.FareCalculator
 import qualified Product.Location as Location
+import Servant.Client
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
-import Storage.Queries.ProductInstance as ProductInstance
+import qualified Storage.Queries.ProductInstance as ProductInstance
+import qualified Storage.Queries.Products as SProduct
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
+import qualified Types.API.Case as APICase
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -71,15 +78,111 @@ search transporterId bapOrg req = withFlowHandler $ do
     Loc.create toLocation
     let bapOrgId = bapOrg ^. #_id
     deadDistance <- calculateDeadDistance transporter fromLocation
-    let c = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
-    Case.create c
+    let productCase = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
+    Case.create productCase
     admins <-
       Person.findAllByOrgIds
         [Person.ADMIN]
         [_getOrganizationId transporterId]
-    Notify.notifyTransportersOnSearch c intent admins
+    Notify.notifyTransportersOnSearch productCase intent admins
+    --
+    fork "search" $ do
+      vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
+      price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
+      prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price
+      sendOnSearch productCase prodInst transporter
+      Case.updateStatus (productCase ^. #_id) SC.CONFIRMED
   mkAckResponse uuid "search"
   where
+    -- TODO :: need to isolate it from this module
+    sendOnSearch productCase productInstance transporterOrg = do
+      onSearchPayload <- mkOnSearchPayload productCase [productInstance] transporterOrg
+      let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
+      _ <- Gateway.onSearch onSearchPayload bppShortId
+      pure ()
+    mkOnSearchPayload productCase productInstances transporterOrg = do
+      currTime <- getCurrTime
+      appEnv <- ask
+      let context =
+            Context
+              { _domain = Domain.MOBILITY,
+                _country = Just "IND",
+                _city = Nothing,
+                _action = "on_search",
+                _core_version = Just "0.8.2",
+                _domain_version = Just "0.8.2",
+                _transaction_id = last $ T.split (== '_') $ productCase ^. #_shortId,
+                _message_id = productCase ^. #_shortId,
+                _bap_uri = Nothing,
+                _bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
+                _timestamp = currTime,
+                _ttl = Nothing
+              }
+      piCount <- MPI.getCountByStatus (_getOrganizationId $ transporterOrg ^. #_id) SC.RIDEORDER
+      let stats = mkProviderStats piCount
+      let provider = mkProviderInfo transporterOrg stats
+      catalog <- GT.mkCatalog productCase productInstances provider
+      return
+        CallbackReq
+          { context,
+            contents = Right $ OnSearchServices catalog
+          }
+      where
+        mkProviderInfo org stats =
+          APICase.ProviderInfo
+            { _id = _getOrganizationId $ org ^. #_id,
+              _name = org ^. #_name,
+              _stats = encodeToText stats,
+              _contacts = fromMaybe "" (org ^. #_mobileNumber)
+            }
+        mkProviderStats piCount =
+          APICase.ProviderStats
+            { _completed = List.lookup ProductInstance.COMPLETED piCount,
+              _inprogress = List.lookup ProductInstance.INPROGRESS piCount,
+              _confirmed = List.lookup ProductInstance.CONFIRMED piCount
+            }
+        makeBppUrl url =
+          let orgId = _getOrganizationId $ transporterOrg ^. #_id
+              newPath = baseUrlPath url <> "/" <> T.unpack orgId
+           in url {baseUrlPath = newPath}
+
+    createProductInstance productCase price = do
+      productInstanceId <- ProductInstanceId <$> L.generateGUID
+      now <- getCurrTime
+      shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
+      products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase ^. #_udf1)
+      let productInstance =
+            ProductInstance
+              { _id = productInstanceId,
+                _caseId = productCase ^. #_id,
+                _productId = products ^. #_id,
+                _personId = Nothing,
+                _personUpdatedAt = Nothing,
+                _shortId = shortId,
+                _entityType = ProductInstance.VEHICLE,
+                _entityId = Nothing,
+                _quantity = 1,
+                _type = SC.RIDESEARCH,
+                _price = fromMaybe 0 price,
+                _status = ProductInstance.INSTOCK,
+                _startTime = productCase ^. #_startTime,
+                _endTime = productCase ^. #_endTime,
+                _validTill = productCase ^. #_validTill,
+                _fromLocation = Just $ productCase ^. #_fromLocationId,
+                _toLocation = Just $ productCase ^. #_toLocationId,
+                _organizationId = _getOrganizationId transporterId,
+                _parentId = Nothing,
+                _udf1 = productCase ^. #_udf1,
+                _udf2 = productCase ^. #_udf2,
+                _udf3 = productCase ^. #_udf3,
+                _udf4 = productCase ^. #_udf4,
+                _udf5 = productCase ^. #_udf5,
+                _info = productCase ^. #_info,
+                _createdAt = now,
+                _updatedAt = now
+              }
+      ProductInstance.create productInstance
+      pure productInstance
     calculateDeadDistance organization fromLocation = do
       orgLocId <- LocationId <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
       mbOrgLocation <- Loc.findLocationById orgLocId

@@ -9,7 +9,6 @@ import Beckn.Types.App
   )
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Data.Text as Text
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude hiding (pi)
@@ -53,27 +52,11 @@ spec = do
       let Right searchResponse = searchACK
       let appCaseId = CaseId $ searchResponse ^. #message . #_message
 
-      theCase :| [] <- poll $ do
-        caseRequestResult <- runClient transporterClient F.buildListLeads
-        caseRequestResult `shouldSatisfy` isRight
-        let Right caseListResponse = caseRequestResult
-        let caseList =
-              caseListResponse
-                & filter \response -> _getCaseId appCaseId `elem` Text.splitOn "_" (response ^. #_case . #_shortId)
-        pure $ nonEmpty caseList
-
-      let transporterCaseId = _getCaseId $ theCase ^. #_case . #_id
-      acceptedRideResult <-
-        runClient transporterClient $
-          F.acceptOrDeclineRide F.appRegistrationToken transporterCaseId F.buildUpdateCaseReq
-      acceptedRideResult `shouldSatisfy` isRight
-
       productInstance :| [] <- poll $ do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (_getCaseId appCaseId)
         statusResult `shouldSatisfy` isRight
         let Right statusResponse = statusResult
-        pure . nonEmpty $ statusResponse ^. #_productInstance
-
+        pure . nonEmpty . filter (\p -> p ^. #_organizationId == F.bppTransporterOrgId) $ statusResponse ^. #_productInstance
       let appProductInstanceId = productInstance ^. #_id
       confirmResult <-
         runClient appClient

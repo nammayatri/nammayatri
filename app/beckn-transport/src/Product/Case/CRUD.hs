@@ -27,7 +27,6 @@ import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
 import Models.ProductInstance as MPI
-import Product.FareCalculator
 import Servant.Client (BaseUrl (..))
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
@@ -85,16 +84,8 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
       transporter <- findOrganizationById . OrganizationId $ transporterOrgId
       let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
       case _transporterChoice of
-        "ACCEPTED" -> do
-          fromLocation <- findLocationById (LocationId $ c ^. #_fromLocationId) >>= fromMaybeM500 "NO_FROM_LOCATION_SET"
-          toLocation <- findLocationById (LocationId $ c ^. #_toLocationId) >>= fromMaybeM500 "NO_TO_LOCATION_SET"
-          vehicleVariant <- (c ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
-          quote <- calculateFare (OrganizationId transporterOrgId) vehicleVariant fromLocation toLocation (c ^. #_startTime) (c ^. #_udf5)
-          prodInst <- createProductInstance c p quote transporterOrgId PI.INSTOCK
-          notifyGateway c prodInst transporterOrgId PI.INSTOCK bppShortId
-          Case.updateStatus (c ^. #_id) Case.CONFIRMED
-          return c
         "DECLINED" -> do
+          -- update existing prodInst?
           declinedProdInst <- createProductInstance c p _quote transporterOrgId PI.OUTOFSTOCK
           notifyGateway c declinedProdInst transporterOrgId PI.OUTOFSTOCK bppShortId
           Case.updateStatus (c ^. #_id) Case.CLOSED

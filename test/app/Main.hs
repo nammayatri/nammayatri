@@ -93,7 +93,7 @@ specs = do
     startServers servers = do
       threadIds <- traverse forkIO servers
       -- Wait for servers to start up and migrations to run
-      threadDelay 1e6
+      threadDelay 10e6
       return threadIds
 
     cleanupServers = traverse_ killThread

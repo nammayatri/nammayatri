@@ -3,7 +3,6 @@
 module Mobility.AppConfirmRide where
 
 import Beckn.Types.App
-import qualified Beckn.Types.Storage.Case as Case
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -13,7 +12,6 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Case as AppCase
-import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified "app-backend" Types.API.Common as AppCommon
 import Utils
 
@@ -27,9 +25,9 @@ spec = do
             baseUrlPort = 8013,
             baseUrlPath = "/v1"
           }
-      transporterBaseUrl = appBaseUrl {baseUrlPort = 8014}
+      -- transporterBaseUrl = appBaseUrl {baseUrlPort = 8014}
       appClientEnv = mkClientEnv appManager appBaseUrl
-      tbeClientEnv = mkClientEnv appManager transporterBaseUrl
+  -- tbeClientEnv = mkClientEnv appManager transporterBaseUrl
   describe "Testing App Backend APIs" $
     it "Testing API flow for App confirm ride" $
       hspec $
@@ -42,18 +40,6 @@ spec = do
           -- If we reach here, the 'Right' pattern match will always succeed
           let Right ackResponse = ackResult
               appCaseid = AppCommon._message $ ackResponse ^. #message
-          theCase :| [] <- poll $ do
-            -- Do a List Leads and retrieve transporter case id
-            caseReqResult <- runClient tbeClientEnv buildListLeads
-            caseReqResult `shouldSatisfy` isRight
-            -- If we reach here, the 'Right' pattern match will always succeed
-            let Right caseListRes = caseReqResult
-                caseList = filter (\caseRes -> (Case._shortId . TbeCase._case) caseRes == appCaseid) caseListRes
-            return $ nonEmpty caseList
-          let transporterCurrCaseid = (_getCaseId . Case._id . TbeCase._case) theCase
-          -- Transporter accepts the ride
-          accDecRideResult <- runClient tbeClientEnv (acceptOrDeclineRide appRegistrationToken transporterCurrCaseid buildUpdateCaseReq)
-          accDecRideResult `shouldSatisfy` isRight
 
           productInstance :| [] <- poll $ do
             -- Do a Case Status request for getting case product to confirm ride
@@ -61,7 +47,7 @@ spec = do
             statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
             statusResResult `shouldSatisfy` isRight
             let Right statusRes = statusResResult
-            return . nonEmpty $ productInstances statusRes
+            return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
           let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
           -- Confirm ride from app backend
           confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)

@@ -689,3 +689,6 @@ ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas;
 
 INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
   ('9a978cc8-584b-4bd1-ad7f-0c061e25b92d', 'SUV', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
+
+INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
+  ('f777fbfa-53a7-4f68-90b8-b55492f01b8b', 'SUV', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);

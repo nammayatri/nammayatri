@@ -5,7 +5,7 @@ module Mobility.SuccessFlow where
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Data.Text (isSuffixOf)
+-- import Data.Text (isSuffixOf)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -15,7 +15,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Case as AppCase
-import qualified "beckn-transport" Types.API.Case as TbeCase
+-- import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
@@ -38,23 +38,8 @@ spec = do
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right ackResponse = ackResult
           appCaseid = AppCommon._message $ ackResponse ^. #message
-      theCase :| [] <- poll $ do
-        -- Do a List Leads and retrieve transporter case id
-        caseReqResult <- runClient tbeClientEnv buildListLeads
-        caseReqResult `shouldSatisfy` isRight
-        -- If we reach here, the 'Right' pattern match will always succeed
-        let Right caseListRes = caseReqResult
-        return . nonEmpty $
-          filter
-            (\caseRes -> appCaseid `isSuffixOf` Case._shortId (TbeCase._case caseRes))
-            caseListRes
-      let transporterCurrCaseid = _getCaseId . Case._id $ TbeCase._case theCase
-      -- Transporter accepts the ride
-      accDecRideResult <-
-        runClient
-          tbeClientEnv
-          (acceptOrDeclineRide appRegistrationToken transporterCurrCaseid buildUpdateCaseReq)
-      accDecRideResult `shouldSatisfy` isRight
+
+      -- All rides are accepted by default and has fare calculated
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride
@@ -62,12 +47,13 @@ spec = do
         statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
-        return . nonEmpty $ productInstances statusRes
+        -- since all BPP can give quote for now we filter by orgId
+        return $ nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
       let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
 
       -- check if calculated price is greater than 0
       let prodPrice = productInstance ^. #_price
-      prodPrice `shouldBe` 1372.47075
+      prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
 
       -- Confirm ride from app backend
       confirmResult <-
