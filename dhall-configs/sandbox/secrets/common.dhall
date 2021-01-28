@@ -31,9 +31,17 @@ let signingKeys =
   , globalCommon.mkSigningKey "juspay-mobility-bpp-12-key-sandbox" "xxxxxxx"
 ]
 
+let exotelCfg =
+  { apiKey = "xxxxxxx"
+  , apiToken = "xxxxxxx"
+  , sid = "xxxxxxx"
+  , callerId = "xxxxxxx"
+  }
+
 in
 
 { signingKeys = signingKeys
 , smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
+, exotelCfg = exotelCfg
 }

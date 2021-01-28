@@ -70,7 +70,7 @@ in
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
-, exotelCfg = None common.ExotelCfg
+, exotelCfg = Some common.exotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.8.2"

@@ -13,9 +13,17 @@ let signingKeys =
 , globalCommon.mkSigningKey "another-test-cabs" "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 ]
 
+let exotelCfg =
+  { apiKey = "xxxxxxx"
+  , apiToken = "xxxxxxx"
+  , sid = "xxxxxxx"
+  , callerId = "xxxxxxx"
+  }
+
 in
 
 { signingKeys = signingKeys
 , smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
+, exotelCfg = exotelCfg
 }

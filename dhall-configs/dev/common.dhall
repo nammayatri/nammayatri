@@ -22,6 +22,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , TraceFlag = globalCommon.TraceFlag
    , LogLevel = globalCommon.LogLevel
    , ExotelCfg = globalCommon.ExotelCfg
+   , exotelCfg = sec.exotelCfg
    , signatureExpiry = globalCommon.signatureExpiry
    , mkCredential = globalCommon.mkCredential
    , mkSigningKey = globalCommon.mkSigningKey

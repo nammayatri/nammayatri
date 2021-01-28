@@ -67,7 +67,7 @@ in
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
-, exotelCfg = None common.ExotelCfg
+, exotelCfg = Some common.exotelCfg
 , migrationPath = Some (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
 , autoMigrate = True
 , coreVersion = "0.8.2"
