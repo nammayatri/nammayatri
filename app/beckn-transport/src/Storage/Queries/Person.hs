@@ -299,16 +299,16 @@ updateAverageRating personId newAverageRating = do
         ]
     predicate pId Storage.Person {..} = _id ==. B.val_ pId
 
-getNearestDrivers :: LatLong -> Flow [(Storage.Person, Double)]
-getNearestDrivers point' = do
+getNearestDrivers :: LatLong -> Double -> Maybe OrganizationId -> Flow [(Storage.Person, Double)]
+getNearestDrivers point' radius' orgId' = do
   personTable <- getDbTable
   locationTable <- Location.getDbTable
-  DB.findAllByJoinWithoutLimits orderBy (query personTable locationTable point')
-    >>= either DB.throwDBError pure
-  undefined
+  let orgId = _getOrganizationId <$> orgId'
+      e = either DB.throwDBError pure
+      q = (query personTable locationTable point' radius' orgId)
+  DB.findAllByJoinWithoutLimits orderBy q >>= e
   where
-    -- a = query
-    query personTable locationTable point = do
+    query personTable locationTable point radius orgId = do
       driver <- B.all_ personTable
       location <- B.join_ locationTable $
         \location ->
@@ -320,18 +320,19 @@ getNearestDrivers point' = do
             )
             (driver ^. #_locationId)
       dist <- distToPoint point location
-      driver' <- B.filter_ (predicate dist) (pure driver)
+      driver' <- B.filter_ (predicate orgId radius dist) (pure driver)
       return (driver', dist)
     orderBy (_, dist) = B.asc_ dist
-    predicate dist Storage.Person {..} =
+    predicate orgId radius dist Storage.Person {..} =
       _role ==. B.val_ Storage.DRIVER
+        &&. _organizationId ==. B.val_ orgId
         &&. dist <. B.val_ radius
+
     distToPoint' :: (Monoid a, IsString a) => a -> a -> a -> a
     distToPoint' lat lon point =
       point <> " <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry"
     distToPoint LatLong {..} location =
       B.customExpr_ distToPoint' lat lon (location ^. #_point)
-    radius = 3000 :: Double
 
 {-
 SELECT person, location.point <-> ST_Point(" <> lat <> ", " <> long <> ")::geometry as dist
