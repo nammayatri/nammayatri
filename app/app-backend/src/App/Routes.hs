@@ -24,6 +24,7 @@ import qualified Product.Cancel as Cancel
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
+import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
 import qualified Product.Location as Location
@@ -40,6 +41,7 @@ import qualified Types.API.Cancel as Cancel
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.Cron as Cron
+import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
 import Types.API.Product
@@ -74,6 +76,7 @@ type AppAPI =
            :<|> SupportAPI
            :<|> ServiceabilityAPI
            :<|> FeedbackAPI
+           :<|> CustomerSupportAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -98,6 +101,7 @@ appServer =
     :<|> supportFlow
     :<|> serviceabilityFlow
     :<|> feedbackFlow
+    :<|> customerSupportFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -353,3 +357,13 @@ type FeedbackAPI =
 
 feedbackFlow :: FlowServer FeedbackAPI
 feedbackFlow = Feedback.feedback
+
+-- Customer Support Flow --
+
+type CustomerSupportAPI =
+  "customer" :> "support"
+    :> MandatoryQueryParam "phone" Text
+    :> Get '[JSON] [CustomerSupport.Order]
+
+customerSupportFlow :: FlowServer CustomerSupportAPI
+customerSupportFlow = CS.listOrder

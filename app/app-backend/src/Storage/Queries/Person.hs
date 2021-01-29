@@ -81,6 +81,17 @@ findByRoleAndMobileNumber role countryCode mobileNumber = do
         &&. _mobileCountryCode ==. B.val_ (Just countryCode)
         &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
 
+findByRoleAndMobileNumberWithoutCC :: Storage.Role -> Text -> Flow (Maybe Storage.Person)
+findByRoleAndMobileNumberWithoutCC role mobileNumber = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= decrypt
+  where
+    predicate Storage.Person {..} =
+      _role ==. B.val_ role
+        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
+
 updateMultiple :: PersonId -> Storage.Person -> Flow ()
 updateMultiple personId person = do
   dbTable <- getDbTable
