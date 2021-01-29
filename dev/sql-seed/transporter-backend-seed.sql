@@ -22,8 +22,6 @@ SET row_security = off;
 
 CREATE SCHEMA atlas_transporter;
 
-CREATE EXTENSION Postgis;
-
 ALTER SCHEMA atlas_transporter OWNER TO atlas;
 
 SET default_tablespace = '';
@@ -323,6 +321,10 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
   ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw==', '\x0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', '91', '+919999999999', NULL, true, NULL, NULL, 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
+
+INSERT INFO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id) VALUES
+  ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', 'org1', 'furthest_driver'),
+  ('closest_driver',  'DRIVER', 'FEMALE', true, 'ACTIVE', 'org2', 'closest_driver');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
@@ -643,7 +645,12 @@ ALTER TABLE ONLY atlas_transporter."external_trail"
     ADD CONSTRAINT idx_external_trail_primary PRIMARY KEY (id);
 
 INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
-  ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
+  ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572),
+
+INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
+  ('pickup_loc',      'POINT', ST_Point()),
+  ('furthest_driver', 'POINT', ST_Point(13.005432, 77.593360)),
+  ('closest_driver',  'POINT', ST_Point(12.995477, 77.601921));
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),

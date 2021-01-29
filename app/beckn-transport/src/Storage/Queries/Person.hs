@@ -354,7 +354,7 @@ getNearestDrivers ::
   LatLong ->
   Double ->
   Maybe OrganizationId ->
-  Flow [(Text, Double)] -- (driverId, distance)
+  Flow [(PersonId, Double)]
 getNearestDrivers LatLong {..} radius orgId = do
   DBConfig {..} <- asks dbCfg
   pool <-
@@ -363,19 +363,22 @@ getNearestDrivers LatLong {..} radius orgId = do
       >>= \case
         PostgresPool _connTag pool -> pure pool
         _ -> throwError500 "NOT_POSTGRES_BACKEND"
-  runIO . withResource pool $ \conn ->
-    query
-      conn
-      [sql|
-        SELECT
-          person.id,
-          location.point <-> ST_Point(?, ?)::geometry as dist
-        FROM person
-        JOIN location ON person.location_id == location.id
-        WHERE
-             dist < ?
-          && person.role == 'DRIVER'
-          && person.organization_id  == ?
-        ORDER BY dist
-      |]
-      (lat, lon, radius, _getOrganizationId <$> orgId)
+  runIO $ withResource pool (fmap textsToPersonIds . runRawQuery)
+  where
+    textsToPersonIds = map (first PersonId)
+    runRawQuery conn =
+      query
+        conn
+        [sql|
+          SELECT
+            person.id,
+            location.point <-> ST_Point(?, ?)::geometry as dist
+          FROM person
+          JOIN location ON person.location_id == location.id
+          WHERE
+               dist < ?
+            && person.role == 'DRIVER'
+            && person.organization_id  == ?
+          ORDER BY dist
+        |]
+        (lat, lon, radius, _getOrganizationId <$> orgId)
