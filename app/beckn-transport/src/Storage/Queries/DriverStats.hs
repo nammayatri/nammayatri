@@ -72,3 +72,11 @@ fetchMostOutdatedDriversStats limit = do
   let order Storage.DriverStats {..} = B.asc_ _updatedAt
   DB.findAllWithLimitOffset dbTable limit noOffset order
     >>= either DB.throwDBError pure
+
+deleteById :: DriverId -> Flow ()
+deleteById driverId = do
+  dbTable <- getDbTable
+  DB.delete dbTable (predicate driverId)
+    >>= either DB.throwDBError pure
+  where
+    predicate dId Storage.DriverStats {..} = _driverId ==. B.val_ dId

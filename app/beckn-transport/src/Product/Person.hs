@@ -28,6 +28,7 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
@@ -58,7 +59,7 @@ createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
-  when (person ^. #_role == SP.DRIVER) $ mkDriver (person ^. #_id) >>= QDriverInformation.create
+  when (person ^. #_role == SP.DRIVER) $ createDriverStatsAndInfo (person ^. #_id)
   org <- OQ.findOrganizationById (OrganizationId orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
@@ -75,15 +76,18 @@ createPerson orgId req = withFlowHandler $ do
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwError400 "DRIVER_ALREADY_CREATED"
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
-    mkDriver personId = do
+    createDriverStatsAndInfo personId = do
       now <- getCurrTime
-      pure
-        DriverInformation.DriverInformation
-          { _driverId = DriverId $ _getPersonId personId,
-            _active = False,
-            _createdAt = now,
-            _updatedAt = now
-          }
+      let driverId = DriverId $ _getPersonId personId
+      let driverInfo =
+            DriverInformation.DriverInformation
+              { _driverId = driverId,
+                _active = False,
+                _createdAt = now,
+                _updatedAt = now
+              }
+      QDriverStats.createInitialDriverStats driverId
+      QDriverInformation.create driverInfo
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandler $ do
@@ -138,6 +142,7 @@ deletePerson orgId personId = withFlowHandler $ do
   if person ^. #_organizationId == Just orgId
     then do
       QP.deleteById (PersonId personId)
+      QDriverStats.deleteById $ DriverId personId
       QDriverInformation.deleteById $ DriverId personId
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
