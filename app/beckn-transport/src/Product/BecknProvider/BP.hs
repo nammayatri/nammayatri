@@ -250,6 +250,7 @@ mkFromStop _req uuid now stop =
           _locationType = SL.POINT,
           _lat = read . T.unpack . (^. #lat) <$> mgps,
           _long = read . T.unpack . (^. #lon) <$> mgps,
+          _point = Nothing,
           _ward = (^. #_ward) =<< maddress,
           _district = Nothing,
           _city = (^. #_city) <$> maddress,

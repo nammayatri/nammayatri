@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Storage.Queries.Person where
 
@@ -8,16 +9,20 @@ import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
+import Beckn.Storage.DB.Config (DBConfig (..))
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
-import qualified Beckn.Types.Storage.Location as Storage
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
+import Data.Pool (withResource)
 import Data.Time
-import Database.Beam ((&&.), (<-.), (<.), (==.), (||.))
+import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
+import Database.PostgreSQL.Simple (query)
+import Database.PostgreSQL.Simple.SqlQQ (sql)
+import EulerHS.Language (getSqlDBConnection, runIO)
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Location as Location
+import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import Types.API.Location (LatLong (..))
 import qualified Types.Storage.DB as DB
 
@@ -299,15 +304,25 @@ updateAverageRating personId newAverageRating = do
         ]
     predicate pId Storage.Person {..} = _id ==. B.val_ pId
 
-getNearestDrivers :: LatLong -> Double -> Maybe OrganizationId -> Flow [(Storage.Person, Double)]
+{-
+getNearestDrivers
+  :: LatLong
+  -> Double
+  -> Maybe OrganizationId
+  -> Flow [(Storage.Person, Double)]
 getNearestDrivers point' radius' orgId' = do
   personTable <- getDbTable
   locationTable <- Location.getDbTable
   let orgId = _getOrganizationId <$> orgId'
-      e = either DB.throwDBError pure
-      q = (query personTable locationTable point' radius' orgId)
-  DB.findAllByJoinWithoutLimits orderBy q >>= e
+  DB.findAllByJoinWithoutLimits orderBy
+    (query personTable locationTable point' radius' orgId)
+    >>= either DB.throwDBError pure
+    >>= decryptPerson
   where
+    decryptPerson
+      :: [(Storage.PersonT Identity, Double)]
+      -> Flow [(Storage.Person, Double)]
+    decryptPerson = traverse $ \(encper, dist) -> (, dist) <$> decrypt encper
     query personTable locationTable point radius orgId = do
       driver <- B.all_ personTable
       location <- B.join_ locationTable $
@@ -333,39 +348,34 @@ getNearestDrivers point' radius' orgId' = do
       point <> " <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry"
     distToPoint LatLong {..} location =
       B.customExpr_ distToPoint' lat lon (location ^. #_point)
+-}
 
-{-
-SELECT person, location.point <-> ST_Point(" <> lat <> ", " <> long <> ")::geometry as dist
-FROM person
-JOIN location ON person.location_id == location.id
-WHERE dist < radius && person.role == 'DRIVER'
-ORDER BY dist
-
-ORDER BY dist
-  "SELECT person, location.point <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry as dist"
-  <> " FROM person"
-  <> " JOIN location ON person.location_id == location.id"
-  <> " WHERE dist < " <> radius <> " && person.role == 'DRIVER'"
-  <> " ORDER BY dist"
-"
-
-containsPoint :: (Monoid a, IsString a) => a -> a
-containsPoint LatLong {..} = "st_contains(geom, ST_GeomFromText(" <> point <> "))"
-"ST_DWithin(location.point, ST_Point(" <> lat <> ", " <> long <> ")::geometry, " <> radius <> ")"
-
-containsPoint_ ::
-  B.QGenExpr ctxt Postgres s Text ->
-  B.QGenExpr ctxt Postgres s Bool
-containsPoint_ = B.customExpr_ containsPoint
-
-    -- (productInstancejoinQuery csTable prodTable dbTable csPred prodPred piPred)
-productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
-  i <- B.filter_ pred1 $ B.all_ tbl1
-  j <- B.filter_ pred2 $ B.all_ tbl2
-  k <- B.filter_ pred3 $
-    B.join_ tbl3 $
-      \line ->
-        CasePrimaryKey (Storage._caseId line) ==. B.primaryKey i
-          B.&&. ProductsPrimaryKey (Storage._productId line) ==. B.primaryKey j
-  pure (i, j, k)
-  -}
+getNearestDrivers ::
+  LatLong ->
+  Double ->
+  Maybe OrganizationId ->
+  Flow [(Text, Double)] -- (driverId, distance)
+getNearestDrivers LatLong {..} radius orgId = do
+  DBConfig {..} <- asks dbCfg
+  pool <-
+    getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
+      >>= either DB.throwDBError pure
+      >>= \case
+        PostgresPool _connTag pool -> pure pool
+        _ -> throwError500 "NOT_POSTGRES_BACKEND"
+  runIO . withResource pool $ \conn ->
+    query
+      conn
+      [sql|
+        SELECT
+          person.id,
+          location.point <-> ST_Point(?, ?)::geometry as dist
+        FROM person
+        JOIN location ON person.location_id == location.id
+        WHERE
+             dist < ?
+          && person.role == 'DRIVER'
+          && person.organization_id  == ?
+        ORDER BY dist
+      |]
+      (lat, lon, radius, _getOrganizationId <$> orgId)

@@ -76,6 +76,8 @@ dependencies:
   - random-strings
   - tasty
   - tasty-hunit
+  - postgresql-simple
+  - resource-pool
 
 ghc-options:
   - -fwrite-ide-info
