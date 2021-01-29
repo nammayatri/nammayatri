@@ -363,7 +363,7 @@ feedbackFlow = Feedback.feedback
 type CustomerSupportAPI =
   "customer" :> "support"
     :> MandatoryQueryParam "phone" Text
-    :> Get '[JSON] [CustomerSupport.Order]
+    :> Get '[JSON] [CustomerSupport.OrderResp]
 
 customerSupportFlow :: FlowServer CustomerSupportAPI
 customerSupportFlow = CS.listOrder
