@@ -645,10 +645,9 @@ ALTER TABLE ONLY atlas_transporter."external_trail"
     ADD CONSTRAINT idx_external_trail_primary PRIMARY KEY (id);
 
 INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
-  ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572),
+  ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
 INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
-  ('pickup_loc',      'POINT', ST_Point()),
   ('furthest_driver', 'POINT', ST_Point(13.005432, 77.593360)),
   ('closest_driver',  'POINT', ST_Point(12.995477, 77.601921));
 
