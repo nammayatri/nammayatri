@@ -26,6 +26,6 @@ data DriverRidesInformation = DriverRidesInformation
 data DriverInformationResponse = DriverInformationResponse
   { transporter :: Organization.Organization,
     person :: PersonAPI.PersonEntityRes,
-    driver_information :: DriverInformation
+    driverInformation :: DriverInformation
   }
   deriving (Generic, ToJSON)

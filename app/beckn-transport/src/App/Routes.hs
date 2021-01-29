@@ -401,7 +401,7 @@ type DriverInformationAPI =
     :<|> "driver"
     :> ( TokenAuth
            :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
-           :<|> "set_activity"
+           :<|> "setActivity"
            :> TokenAuth
            :> Capture "active" Bool
            :> Post '[JSON] APIResult.APIResult

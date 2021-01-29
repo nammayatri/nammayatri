@@ -98,7 +98,7 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
     DriverInformationAPI.DriverInformationResponse
       { transporter = organization,
         person = personEntity,
-        driver_information = driverInfo
+        driverInformation = driverInfo
       }
 
 setActivity :: RegistrationToken -> Bool -> App.FlowHandler APIResult.APIResult
