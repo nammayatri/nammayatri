@@ -651,10 +651,15 @@ INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
 INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
+<<<<<<< HEAD
                                                               -- lon        lat
   ('furthest_driver', 'POINT', public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326)),
   ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326)),
   ('other_driver',    'POINT', public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326));
+=======
+  ('furthest_driver', 'POINT', ST_Point(13.005432, 77.593360)),
+  ('closest_driver',  'POINT', ST_Point(12.995477, 77.601921));
+>>>>>>> b423c3e3 (add temp getNearestDrivers endpoint for manual testing)
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
