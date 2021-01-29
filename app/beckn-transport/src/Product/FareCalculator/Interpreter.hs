@@ -43,7 +43,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
         vehicleVariant
         (PickupLocation pickLoc)
         (DropLocation dropLoc)
-        OneWayTrip
+        OneWayTrip -- TODO :: determine the type of trip
         startTime
         (mbDistance >>= readMaybe . T.unpack)
   let totalFare = fareSum <$> fareParams

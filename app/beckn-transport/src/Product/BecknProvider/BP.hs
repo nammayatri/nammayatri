@@ -85,7 +85,6 @@ search transporterId bapOrg req = withFlowHandler $ do
         [Person.ADMIN]
         [_getOrganizationId transporterId]
     Notify.notifyTransportersOnSearch productCase intent admins
-    --
     fork "search" $ do
       vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
       price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)

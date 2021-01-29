@@ -85,7 +85,7 @@ update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ d
       let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
       case _transporterChoice of
         "DECLINED" -> do
-          -- update existing prodInst?
+          -- TODO :: update existing prodInst?
           declinedProdInst <- createProductInstance c p _quote transporterOrgId PI.OUTOFSTOCK
           notifyGateway c declinedProdInst transporterOrgId PI.OUTOFSTOCK bppShortId
           Case.updateStatus (c ^. #_id) Case.CLOSED
