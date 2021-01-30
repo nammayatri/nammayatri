@@ -52,6 +52,7 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
+  - generic-lens
   - beam-core
   - beam-postgres
   - bytestring
