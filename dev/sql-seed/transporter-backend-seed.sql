@@ -341,6 +341,9 @@ INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_i
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
+INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
+  ('c38562c2-3d58-4b08-8496-1f33b8352fe0', 'SMS', 'OTP', '3249', 'ca05cf3c-c88b-4a2f-8874-191659397e0d', true, 3, 365, 3, '6bc4bc84-2c43-425d-8853-22f47bd06691', 'USER', now(), now());
+
 --
 -- Data for Name: vehicle; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
@@ -662,3 +665,6 @@ CREATE TABLE atlas_transporter.driver_information (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+INSERT INTO atlas_transporter.driver_information (driver_id, active, created_at, updated_at) select id, False, now(), now() from atlas_transporter.person where role ='DRIVER';
+INSERT INTO atlas_transporter.driver_stats (driver_id, completed_rides_number, earnings, created_at, updated_at) select id, 0, 0, now(), now() from atlas_transporter.person where role ='DRIVER';

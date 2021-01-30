@@ -403,7 +403,7 @@ type DriverInformationAPI =
            :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
            :<|> "setActivity"
            :> TokenAuth
-           :> Capture "active" Bool
+           :> MandatoryQueryParam "active" Bool
            :> Post '[JSON] APIResult.APIResult
        )
 
