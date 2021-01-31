@@ -24,9 +24,9 @@ defaultFarePolicy =
       baseFare = Just 120.0,
       baseDistance = Just 5000.0,
       perExtraKmRate = 12.0,
-      nightShiftStart = midnight,
-      nightShiftEnd = midnight,
-      nightShiftRate = 1.0
+      nightShiftStart = Just midnight,
+      nightShiftEnd = Just midnight,
+      nightShiftRate = Just 1.0
     }
 
 defaultPickupLocation :: PickupLocation
@@ -194,9 +194,9 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
                     baseFare = Just 100.0,
                     baseDistance = Just 4000.0,
                     perExtraKmRate = 13.5,
-                    nightShiftStart = TimeOfDay 20 0 0,
-                    nightShiftEnd = TimeOfDay 5 30 0,
-                    nightShiftRate = 1.1
+                    nightShiftStart = Just $ TimeOfDay 20 0 0,
+                    nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                    nightShiftRate = Just 1.1
                   }
         }
 
@@ -228,9 +228,9 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
                     baseFare = Just 100.0,
                     baseDistance = Just 3000.0,
                     perExtraKmRate = 15.0,
-                    nightShiftStart = TimeOfDay 20 0 0,
-                    nightShiftEnd = TimeOfDay 5 30 0,
-                    nightShiftRate = 1.1
+                    nightShiftStart = Just $ TimeOfDay 20 0 0,
+                    nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                    nightShiftRate = Just 1.1
                   }
         }
 
@@ -263,9 +263,9 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
                     baseFare = Just 150.0,
                     baseDistance = Just 3000.0,
                     perExtraKmRate = 20.0,
-                    nightShiftStart = TimeOfDay 20 0 0,
-                    nightShiftEnd = TimeOfDay 5 30 0,
-                    nightShiftRate = 1.1
+                    nightShiftStart = Just $ TimeOfDay 20 0 0,
+                    nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                    nightShiftRate = Just 1.1
                   }
         }
 
