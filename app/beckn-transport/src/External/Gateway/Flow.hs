@@ -86,4 +86,4 @@ initiateCall req = do
     Left cliErr -> do
       let err = fromClientError cliErr
       L.logError @Text "client call error" $ (err ^. #_message) ?: "Some error"
-      L.throwException cliErr
+      throwError500 "Call API error"
