@@ -28,6 +28,8 @@ data OrderDetails
         _fromLocation :: Maybe L.Location,
         _toLocation :: Maybe L.Location,
         _vehicleVariant :: Maybe Text,
+        _travellerName :: Maybe Text,
+        _travellerPhone :: Maybe Text,
         _trip :: Maybe TripDetails
       }
   deriving (Show, Generic)

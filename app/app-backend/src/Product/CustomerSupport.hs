@@ -32,10 +32,10 @@ listOrder mobileNumber = withFlowHandler $ do
   -- Want to use this and create a Hashmap so we can modify in O(n)
   -- confiremedOrders <- Case.findAllByParentIdsAndCaseType serachIds C.RIDEORDER
   -- mapOrder <- foldl createhashMap  empty confiremedOrders empty
-  traverse makeCaseToOrder searchcases
+  traverse (makeCaseToOrder person) searchcases
 
-makeCaseToOrder :: C.Case -> Flow T.OrderResp
-makeCaseToOrder C.Case {..} = do
+makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
+makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
       >>= either DB.throwDBError pure
@@ -54,6 +54,8 @@ makeCaseToOrder C.Case {..} = do
             _endTime = _endTime,
             _fromLocation = fromLocation,
             _toLocation = toLocation,
+            _travellerName = _fullName,
+            _travellerPhone = _mobileNumber,
             _vehicleVariant = _udf1, -- Note: UDF1 Contain _vehicleVariant info
             _trip = trip
           }
