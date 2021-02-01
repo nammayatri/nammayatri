@@ -7,6 +7,7 @@ import Servant
 import Types.API.FarePolicy
   ( ListFarePolicyResponse,
     UpdateFarePolicyRequest,
+    UpdateFarePolicyResponse,
   )
 import Types.Domain.FarePolicy (FarePolicy)
 import Utils.Common
@@ -17,7 +18,7 @@ type FarePolicyAPI =
            :<|> TokenAuth
              :> Capture "farePolicyId" (ID FarePolicy)
              :> ReqBody '[JSON] UpdateFarePolicyRequest
-             :> Post '[JSON] ()
+             :> Post '[JSON] UpdateFarePolicyResponse
        )
 
 farePolicyFlow :: FlowServer FarePolicyAPI

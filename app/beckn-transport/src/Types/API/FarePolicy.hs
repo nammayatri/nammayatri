@@ -2,9 +2,11 @@ module Types.API.FarePolicy
   ( ListFarePolicyResponse (..),
     UpdateFarePolicyRequest (..),
     FarePolicyResponse (..),
+    UpdateFarePolicyResponse,
   )
 where
 
+import Beckn.Types.Core.Ack (Ack (..))
 import Beckn.Types.ID (ID)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
@@ -37,3 +39,5 @@ data UpdateFarePolicyRequest = UpdateFarePolicyRequest
     nightShiftRate :: Maybe Double
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+type UpdateFarePolicyResponse = Ack

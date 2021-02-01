@@ -4,6 +4,7 @@ module Product.FarePolicy where
 
 import App.Types (FlowHandler)
 import Beckn.Types.App (PersonId (PersonId))
+import Beckn.Types.Core.Ack
 import Beckn.Types.ID (ID (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common (fromMaybeM400, withFlowHandler)
@@ -14,6 +15,7 @@ import Types.API.FarePolicy
   ( FarePolicyResponse (..),
     ListFarePolicyResponse (ListFarePolicyResponse),
     UpdateFarePolicyRequest,
+    UpdateFarePolicyResponse,
   )
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import qualified Types.Storage.FarePolicy as SFarePolicy
@@ -37,7 +39,7 @@ listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandler $ do
           nightShiftRate = fp ^. #_nightShiftRate
         }
 
-updateFarePolicy :: RegToken.RegistrationToken -> ID DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler ()
+updateFarePolicy :: RegToken.RegistrationToken -> ID DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
 updateFarePolicy _ fpId req = withFlowHandler $ do
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM400 "FARE_POLICY_NOT_FOUND"
   let updatedFarePolicy =
@@ -50,4 +52,4 @@ updateFarePolicy _ fpId req = withFlowHandler $ do
             SFarePolicy._nightShiftRate = req ^. #nightShiftRate
           }
   _ <- SFarePolicy.updateFarePolicy updatedFarePolicy
-  pure ()
+  pure $ Ack {_status = "ACK"}
