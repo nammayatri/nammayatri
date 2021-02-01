@@ -39,15 +39,15 @@ initiateCallToProvider _ req = withFlowHandler $ do
 -- | Try to initiate a call provider -> customer
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
 initiateCallToCustomer req = withFlowHandler $ do
-  let piId = req ^. #productInstanceId
+  let piId = req ^. #productInstanceId -- RIDESEARCH PI
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ProductInstanceId piId
   initiateCall providerPhone customerPhone
   mkAckResponse
 
 -- | Get customer and driver pair by case ID
 getProductAndCustomerInfo :: ProductInstanceId -> Flow (Either String (Person, Driver.Driver))
-getProductAndCustomerInfo piId = do
-  prodInst <- ProductInstance.findById piId
+getProductAndCustomerInfo rideSearchPid = do
+  prodInst <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
   c <- Case.findById $ _caseId prodInst
   case Case._requestor c of
     Nothing -> pure $ Left "No person linked to case"
