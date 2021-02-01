@@ -62,22 +62,22 @@ makeCaseToOrder C.Case {..} = do
 makeTripDetails :: Maybe C.Case -> Flow (Maybe T.TripDetails)
 makeTripDetails caseM = case caseM of
   Nothing -> pure Nothing
-  Just C.Case {_id} -> do
+  Just _case -> do
     -- Note: In case of Confirmed Order only one Product Instance will be Present
-    ProductInstance.ProductInstance {_status, _info, _price} <-
+    ProductInstance.ProductInstance {_id, _status, _info, _price} <-
       head
-        <$> ( PI.findAllByCaseId _id
+        <$> ( PI.findAllByCaseId (_case ^. #_id)
                 >>= either DB.throwDBError pure
             )
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< _info
-        provider = maybe Nothing (\x -> x ^. #_provider) mproductInfo
-        mtracker = maybe Nothing (\x -> x ^. #_tracker) mproductInfo
-        mtrip = maybe Nothing (\x -> Just $ x ^. #_trip) mtracker
-        driver = maybe Nothing (\x -> x ^. #driver) mtrip
-        vehicle = maybe Nothing (\x -> x ^. #vehicle) mtrip
+        provider = (\x -> x ^. #_provider) =<< mproductInfo
+        mtracker = (\x -> x ^. #_tracker) =<< mproductInfo
+        mtrip = (\x -> Just $ x ^. #_trip) =<< mtracker
+        driver = (\x -> x ^. #driver) =<< mtrip
+        vehicle = (\x -> x ^. #vehicle) =<< mtrip
     pure $ Just $
       T.TripDetails
-        { _id = _getCaseId _id,
+        { _id = _getProductInstanceId _id,
           _status = _status,
           _driver = driver,
           _price = _price,
