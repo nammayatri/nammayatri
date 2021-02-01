@@ -370,15 +370,19 @@ getNearestDrivers LatLong {..} radius orgId = do
       query
         conn
         [sql|
-          SELECT
-            person.id,
-            location.point <-> ST_Point(?, ?)::geometry as dist
-          FROM person
-          JOIN location ON person.location_id == location.id
-          WHERE
-               dist < ?
-            && person.role == 'DRIVER'
-            && person.organization_id  == ?
-          ORDER BY dist
+          WITH a AS (
+            SELECT
+              person.id as id,
+              location.point <-> public.ST_SetSRID(ST_Point(?, ?), 4326)::geometry as dist
+            FROM atlas_transporter.person
+            JOIN atlas_transporter.location
+              ON person.location_id = location.id
+            WHERE person.role = 'DRIVER'
+              AND COALESCE(person.organization_id = ?, true)
+          )
+          SELECT id, dist
+          FROM a
+          WHERE dist < ?
+          ORDER BY dist ASC
         |]
-        (lat, lon, radius, _getOrganizationId <$> orgId)
+        (lat, lon, _getOrganizationId <$> orgId, radius)

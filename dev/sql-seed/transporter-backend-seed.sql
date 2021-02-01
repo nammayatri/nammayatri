@@ -24,6 +24,7 @@ CREATE SCHEMA atlas_transporter;
 
 ALTER SCHEMA atlas_transporter OWNER TO atlas;
 
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -110,7 +111,7 @@ CREATE TABLE atlas_transporter.location (
     location_type character varying(255),
     lat double precision,
     long double precision,
-    point geometry(POINT,4326),
+    point public.geometry(POINT,4326),
     ward character varying(255),
     district character varying(255),
     city character varying(255),
@@ -322,7 +323,7 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
-INSERT INFO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id) VALUES
+INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id) VALUES
   ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', 'org1', 'furthest_driver'),
   ('closest_driver',  'DRIVER', 'FEMALE', true, 'ACTIVE', 'org2', 'closest_driver');
 
@@ -648,8 +649,8 @@ INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
 INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
-  ('furthest_driver', 'POINT', ST_Point(13.005432, 77.593360)),
-  ('closest_driver',  'POINT', ST_Point(12.995477, 77.601921));
+  ('furthest_driver', 'POINT', public.ST_SetSRID(public.ST_Point(13.005432, 77.593360), 4326)),
+  ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(12.995477, 77.601921), 4326));
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
