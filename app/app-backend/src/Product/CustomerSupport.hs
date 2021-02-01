@@ -28,10 +28,6 @@ listOrder mobileNumber = withFlowHandler $ do
   searchcases <-
     Case.findAllByTypeAndStatuses personId C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] Nothing Nothing
       >>= either DB.throwDBError pure
-  -- let serachIds = map (\x-> x ^. #_id) searchcases
-  -- Want to use this and create a Hashmap so we can modify in O(n)
-  -- confiremedOrders <- Case.findAllByParentIdsAndCaseType serachIds C.RIDEORDER
-  -- mapOrder <- foldl createhashMap  empty confiremedOrders empty
   traverse (makeCaseToOrder person) searchcases
 
 makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
