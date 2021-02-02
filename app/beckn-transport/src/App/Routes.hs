@@ -37,7 +37,6 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Types.API.Case
 import Types.API.Cron
-import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
