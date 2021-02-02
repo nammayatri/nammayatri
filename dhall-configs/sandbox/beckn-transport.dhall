@@ -40,6 +40,11 @@ let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
 
 let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 
+let driverAllocationConfig =
+  { driverNotificationExpiry = +20
+  , rideAllocationExpiry = +180
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -66,5 +71,5 @@ in
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
-, driverAllocationConfig = common.driverAllocationConfig
+, driverAllocationConfig = driverAllocationConfig
 }

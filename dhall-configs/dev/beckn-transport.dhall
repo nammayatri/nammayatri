@@ -38,6 +38,11 @@ let smsConfig =
 
 let appUri = "http://localhost:8013/v1"
 
+let driverAllocationConfig =
+  { driverNotificationExpiry = +20
+  , rideAllocationExpiry = +180
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -64,5 +69,5 @@ in
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
-, driverAllocationConfig = common.driverAllocationConfig
+, driverAllocationConfig = driverAllocationConfig
 }
