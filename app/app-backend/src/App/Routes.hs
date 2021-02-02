@@ -146,9 +146,9 @@ type ConfirmAPI =
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] AckResponse
       :<|> SignatureAuth "Authorization"
-        :> "on_confirm"
-        :> ReqBody '[JSON] Confirm.OnConfirmReq
-        :> Post '[JSON] Confirm.OnConfirmRes
+      :> "on_confirm"
+      :> ReqBody '[JSON] Confirm.OnConfirmReq
+      :> Post '[JSON] Confirm.OnConfirmRes
   )
 
 confirmFlow :: FlowServer ConfirmAPI
@@ -198,9 +198,9 @@ type TrackTripAPI =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
     :<|> SignatureAuth "Authorization"
-      :> "on_track"
-      :> ReqBody '[JSON] OnTrackTripReq
-      :> Post '[JSON] OnTrackTripRes
+    :> "on_track"
+    :> ReqBody '[JSON] OnTrackTripReq
+    :> Post '[JSON] OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
@@ -246,9 +246,9 @@ type CancelAPI =
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
     :<|> SignatureAuth "Authorization"
-      :> "on_cancel"
-      :> ReqBody '[JSON] Cancel.OnCancelReq
-      :> Post '[JSON] Cancel.OnCancelRes
+    :> "on_cancel"
+    :> ReqBody '[JSON] Cancel.OnCancelReq
+    :> Post '[JSON] Cancel.OnCancelRes
 
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
@@ -304,9 +304,9 @@ type StatusAPI =
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
     :<|> SignatureAuth "Authorization"
-      :> "on_status"
-      :> ReqBody '[JSON] Status.OnStatusReq
-      :> Post '[JSON] Status.OnStatusRes
+    :> "on_status"
+    :> ReqBody '[JSON] Status.OnStatusReq
+    :> Post '[JSON] Status.OnStatusRes
 
 statusFlow :: FlowServer StatusAPI
 statusFlow =
@@ -361,9 +361,12 @@ feedbackFlow = Feedback.feedback
 -- Customer Support Flow --
 
 type CustomerSupportAPI =
-  "customer" :> "support"
-    :> MandatoryQueryParam "phone" Text
-    :> Get '[JSON] [CustomerSupport.OrderResp]
+  "customer"
+    :> ( "support"
+           :> QueryParam "caseid" Text
+           :> QueryParam "phone" Text
+           :> Get '[JSON] [CustomerSupport.OrderResp]
+       )
 
 customerSupportFlow :: FlowServer CustomerSupportAPI
 customerSupportFlow = CS.listOrder

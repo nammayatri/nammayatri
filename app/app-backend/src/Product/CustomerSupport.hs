@@ -19,26 +19,43 @@ import Storage.Queries.ProductInstance as PI
 import Types.API.CustomerSupport as T
 import Types.ProductInfo as ProductInfo
 
-listOrder :: Text -> FlowHandler [T.OrderResp]
-listOrder mobileNumber = withFlowHandler $ do
-  person <-
-    Person.findByRoleAndMobileNumberWithoutCC SP.ADMIN mobileNumber --TODO: Change ADMIN to USER
-      >>= fromMaybeM400 "Invalid MobileNumber"
-  let personId = person ^. #_id
-  searchcases <-
-    Case.findAllByTypeAndStatuses personId C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] Nothing Nothing
-      >>= either DB.throwDBError pure
-  traverse (makeCaseToOrder person) searchcases
+listOrder :: Maybe Text -> Maybe Text -> FlowHandler [T.OrderResp]
+listOrder mCaseId mMobile = withFlowHandler $ do
+  T.OrderInfo {person, searchcases, expand} <- case mCaseId of
+    Just caseId -> getByCaseId caseId
+    Nothing -> case mMobile of
+      Just mobileNumber -> getByMobileNumber mobileNumber
+      Nothing -> throwError400 "No CaseId or Mobile Number in Request"
+  traverse (makeCaseToOrder expand person) searchcases
+  where
+    getByMobileNumber number = do
+      person <-
+        Person.findByRoleAndMobileNumberWithoutCC SP.ADMIN number --TODO: Change ADMIN to USER
+          >>= fromMaybeM400 "Invalid MobileNumber"
+      searchcases <-
+        Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] Nothing Nothing
+          >>= either DB.throwDBError pure
+      return $ T.OrderInfo person searchcases False
+    getByCaseId caseId = do
+      (_case :: C.Case) <-
+        Case.findByIdAndType (CaseId caseId) C.RIDESEARCH
+          >>= either DB.throwDBError pure
+          >>= fromMaybeM400 "Invalid OrderId"
+      let personId = fromMaybe "_ID" (_case ^. #_requestor)
+      person <-
+        Person.findById (PersonId personId)
+          >>= fromMaybeM400 "Invalid CustomerId"
+      return $ T.OrderInfo person [_case] True
 
-makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
-makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
+makeCaseToOrder :: Bool -> SP.Person -> C.Case -> Flow T.OrderResp
+makeCaseToOrder expand SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
       >>= either DB.throwDBError pure
   let (status :: Maybe CaseStatus) = maybe Nothing (\x -> Just $ x ^. #_status) confiremedOrder <|> (Just _status)
   fromLocation <- Location.findLocationById $ LocationId _fromLocationId
   toLocation <- Location.findLocationById $ LocationId _toLocationId
-  trip <- makeTripDetails confiremedOrder
+  trip <- if expand then makeTripDetails confiremedOrder else pure Nothing
   --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails

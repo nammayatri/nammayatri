@@ -3,6 +3,7 @@ module Types.API.CustomerSupport where
 import Beckn.Types.Amount
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Location as L
+import Beckn.Types.Storage.Person as P
 import Beckn.Types.Storage.ProductInstance as SP
 import Data.Time
 import EulerHS.Prelude
@@ -56,3 +57,11 @@ instance FromJSON TripDetails where
 
 instance ToJSON TripDetails where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+data OrderInfo
+  = OrderInfo
+      { person :: P.Person,
+        searchcases :: [C.Case],
+        expand :: Bool
+      }
+  deriving (Show, Generic)
