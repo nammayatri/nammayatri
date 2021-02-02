@@ -37,7 +37,14 @@ data AppEnv = AppEnv
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     traceFlag :: TraceFlag,
-    signatureExpiry :: NominalDiffTime
+    signatureExpiry :: NominalDiffTime,
+    driverAllocationCfg :: DriverAllocationConfig
+  }
+  deriving (Generic, FromDhall)
+
+data DriverAllocationConfig = DriverAllocationConfig
+  { driverNotificationExpiry :: NominalDiffTime,
+    rideAllocationExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 

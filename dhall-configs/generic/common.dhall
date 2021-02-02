@@ -44,6 +44,11 @@ let loggerConfig =
   , logRawSql = True
   }
 
+let driverAllocationConfig =
+  { driverNotificationExpiry = +20
+  , rideAllocationExpiry = +180
+  }
+
 in { defaultPoolConfig = defaultPoolConfig
    , smsSessionConfig = smsSessionConfig
    , autoMigrate = False
@@ -54,4 +59,5 @@ in { defaultPoolConfig = defaultPoolConfig
    , signatureExpiry = +600 -- in seconds
    , mkCredential = mkCredential
    , mkSigningKey = mkSigningKey
+   , driverAllocationConfig = driverAllocationConfig
    }

@@ -66,4 +66,5 @@ in
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
+, driverAllocationConfig = common.driverAllocationConfig
 }
