@@ -79,6 +79,7 @@ CREATE TABLE atlas_mock_provider_backend.location (
     location_type character varying(255),
     lat double precision,
     long double precision,
+    point public.geography(POINT,4326),
     ward character varying(255),
     district character varying(255),
     city character varying(255),
@@ -151,15 +152,15 @@ ALTER TABLE atlas_mock_provider_backend.organization OWNER TO atlas;
 -- Data for Name: organization; Type: TABLE DATA; Schema: atlas_mock_provider_backend; Owner: atlas
 --
 
-INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
-    ('test-provider-2                     ', 'Test provider 1', 'JUSPAY.BPP.MOCK.1', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-provider-1-key', 'http://localhost:8017/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'test-provider-1-key', NULL);
-INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
+    ('test-provider-2                     ', 'Test provider 2', 'test-provider-2', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-provider-2-key', 'http://localhost:8017/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', 'test-provider-2-key', NULL);
+INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
     ('mobility-provider                   ', 'Mobility provider', 'mobility-provider', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-provider-key', 'http://localhost:8014/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL, NULL);
-INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
-    ('provider-wrapper                    ', 'Fmd wrapper', 'fmd-test-app', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'fmd-wrapper-key', 'http://localhost:8018/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'test-bpp-key', NULL);
-INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
-    ('test-app-2                          ', 'Test App 1', 'JUSPAY.BAP.MOCK.1', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-app-1-key', 'http://localhost:8016/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL, NULL);
-INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES 
+INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
+    ('provider-wrapper                    ', 'Fmd wrapper', 'fmd-wrapper', NULL, 'APPROVED', 'PROVIDER', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'fmd-wrapper-key', 'http://localhost:8018/v1', NULL, '2020-08-01 18:37:00+00', '2020-08-01 18:37:00+00', 'test-bpp-key', NULL);
+INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
+    ('test-app-2                          ', 'Test App 2', 'test-app-2', NULL, 'APPROVED', 'APP', 'FINAL_MILE_DELIVERY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'test-app-2-key', 'http://localhost:8016/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL, NULL);
+INSERT INTO atlas_mock_provider_backend.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
     ('mobility-app                        ', 'Mobility app', 'mobility-app', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'mobility-app-key', 'http://localhost:8013/v1', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL, NULL);
 
 

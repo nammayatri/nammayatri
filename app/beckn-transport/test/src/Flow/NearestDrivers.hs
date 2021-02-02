@@ -22,7 +22,10 @@ runTests :: TestTree
 runTests =
   testGroup
     "Test getNearestDriversFunction"
-    [testOrder]
+    [ testOrder,
+      testFiltrationByOrganization,
+      testInRadius
+    ]
 
 testOrder :: TestTree
 testOrder =

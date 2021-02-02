@@ -111,7 +111,7 @@ CREATE TABLE atlas_transporter.location (
     location_type character varying(255),
     lat double precision,
     long double precision,
-    point public.geometry(POINT,4326),
+    point public.geography(POINT,4326),
     ward character varying(255),
     district character varying(255),
     city character varying(255),
@@ -124,6 +124,7 @@ CREATE TABLE atlas_transporter.location (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+CREATE INDEX location_idx ON atlas_transporter.location USING gist (point);
 
 ALTER TABLE atlas_transporter.location OWNER TO atlas;
 
@@ -649,8 +650,9 @@ INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
 INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
-  ('furthest_driver', 'POINT', public.ST_SetSRID(public.ST_Point(13.005432, 77.593360), 4326)),
-  ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(12.995477, 77.601921), 4326));
+                                                              -- lon        lat
+  ('furthest_driver', 'POINT', public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326)),
+  ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326));
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),

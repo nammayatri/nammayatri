@@ -79,6 +79,7 @@ CREATE TABLE atlas_gateway.location (
     location_type character varying(255),
     lat double precision,
     long double precision,
+    point public.geography(POINT,4326),
     ward character varying(255),
     district character varying(255),
     city character varying(255),

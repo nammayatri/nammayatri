@@ -211,6 +211,7 @@ mkLocation BS.Stop {..} = do
         _locationType = Location.POINT,
         _lat = read . T.unpack . (^. #lat) <$> mgps,
         _long = read . T.unpack . (^. #lon) <$> mgps,
+        _point = Nothing,
         _ward = Nothing,
         _district = Nothing,
         _city = (^. #name) <$> loc ^. #_city,
