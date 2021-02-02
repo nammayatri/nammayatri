@@ -19,8 +19,8 @@ import Storage.Queries.ProductInstance as PI
 import Types.API.CustomerSupport as T
 import Types.ProductInfo as ProductInfo
 
-listOrder :: Maybe Text -> Maybe Text -> FlowHandler [T.OrderResp]
-listOrder mCaseId mMobile = withFlowHandler $ do
+listOrder :: Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
+listOrder mCaseId mMobile mlimit moffset = withFlowHandler $ do
   T.OrderInfo {person, searchcases, expand} <- case (mCaseId, mMobile) of
     (Just caseId, _) -> getByCaseId caseId
     (_, Just mobileNumber) -> getByMobileNumber mobileNumber
@@ -32,7 +32,7 @@ listOrder mCaseId mMobile = withFlowHandler $ do
         Person.findByRoleAndMobileNumberWithoutCC SP.ADMIN number --TODO: Change ADMIN to USER
           >>= fromMaybeM400 "Invalid MobileNumber"
       searchcases <-
-        Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] Nothing Nothing
+        Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] mlimit moffset
           >>= either DB.throwDBError pure
       return $ T.OrderInfo person searchcases False
     getByCaseId caseId = do

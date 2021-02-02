@@ -363,8 +363,10 @@ feedbackFlow = Feedback.feedback
 type CustomerSupportAPI =
   "customer"
     :> ( "support"
-           :> QueryParam "caseid" Text
+           :> QueryParam "id" Text
            :> QueryParam "phone" Text
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
            :> Get '[JSON] [CustomerSupport.OrderResp]
        )
 
