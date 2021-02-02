@@ -21,11 +21,10 @@ import Types.ProductInfo as ProductInfo
 
 listOrder :: Maybe Text -> Maybe Text -> FlowHandler [T.OrderResp]
 listOrder mCaseId mMobile = withFlowHandler $ do
-  T.OrderInfo {person, searchcases, expand} <- case mCaseId of
-    Just caseId -> getByCaseId caseId
-    Nothing -> case mMobile of
-      Just mobileNumber -> getByMobileNumber mobileNumber
-      Nothing -> throwError400 "No CaseId or Mobile Number in Request"
+  T.OrderInfo {person, searchcases, expand} <- case (mCaseId, mMobile) of
+    (Just caseId, _) -> getByCaseId caseId
+    (_, Just mobileNumber) -> getByMobileNumber mobileNumber
+    (_, _) -> throwError400 "No CaseId or Mobile Number in Request"
   traverse (makeCaseToOrder expand person) searchcases
   where
     getByMobileNumber number = do
