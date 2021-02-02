@@ -2,9 +2,10 @@ module App.Routes where
 
 import App.Routes.FarePolicy
 import App.Types
-import qualified Beckn.Types.APIResult as APIResult
+import Beckn.Types.APIResult (APIResult)
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
+import qualified Types.API.DriverInformation as DriverInformationAPI
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.API.Feedback as API
@@ -18,7 +19,6 @@ import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
-import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Product.BecknProvider.Feedback as BP
@@ -38,7 +38,6 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Types.API.Case
 import Types.API.Cron
-import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
@@ -397,22 +396,13 @@ routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoute
 
 type DriverInformationAPI =
-  "active_drivers"
-    :> TokenAuth
-    :> Capture "time" UTCTime
-    :> Capture "quantity" Integer
-    :> Get '[JSON] DriverInformationAPI.ActiveDriversResponse
-    :<|> "update_drivers_stats"
-    :> AdminTokenAuth
-    :> Capture "quantity" Integer
-    :> Post '[JSON] APIResult.APIResult
-    :<|> "driver"
+  "driver"
     :> ( TokenAuth
            :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
            :<|> "setActivity"
            :> TokenAuth
            :> MandatoryQueryParam "active" Bool
-           :> Post '[JSON] APIResult.APIResult
+           :> Post '[JSON] APIResult
            :<|> "notification"
            :> TokenAuth
            :> QueryParam "productInstanceId" ProductInstanceId
@@ -421,9 +411,7 @@ type DriverInformationAPI =
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
-  DriverInformation.getAvailableDriversInfo
-    :<|> DriverInformation.updateDriversStats
-    :<|> DriverInformation.getInformation
+         DriverInformation.getInformation
     :<|> DriverInformation.setActivity
     :<|> DriverInformation.getRideInfo
 

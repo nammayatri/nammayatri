@@ -1,11 +1,11 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Storage.Queries.DriverStats where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Amount (Amount)
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
-import Data.Time (UTCTime (..))
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -21,46 +21,38 @@ createInitialDriverStats :: DriverId -> Flow ()
 createInitialDriverStats driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
-  let driverStats = mkDriverStats driverId now
+  let driverStats =
+        Storage.DriverStats
+          { _driverId = driverId,
+            _idleSince = now
+          }
   DB.createOne dbTable (Storage.Common.insertExpression driverStats)
     >>= either DB.throwDBError pure
-  where
-    mkDriverStats id now =
-      Storage.DriverStats
-        { _driverId = id,
-          _completedRidesNumber = 0,
-          _earnings = 0.0,
-          _lastRideAt = Nothing, -- the driver never took any ride yet
-          _createdAt = now,
-          _updatedAt = now
-        }
 
-noOffset :: Integer -- to remove hint by hlint
+noOffset, noLimit :: Integer -- to remove hint by hlint
 noOffset = 0
+noLimit = 0
 
-findByIdsInAscendingRidesOrder :: [DriverId] -> Integer -> Flow [Storage.DriverStats]
-findByIdsInAscendingRidesOrder ids limit = do
+sortByIdleTime :: [DriverId] -> Flow [DriverId]
+sortByIdleTime ids = do
   dbTable <- getDbTable
-  let order Storage.DriverStats {..} = B.asc_ _completedRidesNumber
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit noOffset order
+  let order Storage.DriverStats {..} = B.asc_ _idleSince
+  DB.findAllWithLimitOffsetWhere dbTable predicate noLimit noOffset order
     >>= either DB.throwDBError pure
+    <&> map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
 
-update :: DriverId -> Int -> Amount -> Maybe UTCTime -> Flow ()
-update driverId completedRides earnings lastRide = do
+update :: DriverId -> Flow ()
+update driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
-  DB.update dbTable (setClause completedRides earnings lastRide now) (predicate driverId)
+  DB.update dbTable (setClause now) (predicate driverId)
     >>= either DB.throwDBError pure
   where
-    setClause cr e lr now Storage.DriverStats {..} =
+    setClause now Storage.DriverStats {..} =
       mconcat
-        [ _completedRidesNumber <-. B.val_ cr,
-          _earnings <-. B.val_ e,
-          _earnings <-. B.val_ e,
-          _lastRideAt <-. B.val_ lr,
-          _updatedAt <-. B.val_ now
+        [ _idleSince <-. B.val_ now
         ]
     predicate id Storage.DriverStats {..} = _driverId ==. B.val_ id
 
@@ -68,13 +60,6 @@ fetchAll :: Flow [Storage.DriverStats]
 fetchAll = do
   dbTable <- getDbTable
   DB.findAllRows dbTable
-    >>= either DB.throwDBError pure
-
-fetchMostOutdatedDriversStats :: Integer -> Flow [Storage.DriverStats]
-fetchMostOutdatedDriversStats limit = do
-  dbTable <- getDbTable
-  let order Storage.DriverStats {..} = B.asc_ _updatedAt
-  DB.findAllWithLimitOffset dbTable limit noOffset order
     >>= either DB.throwDBError pure
 
 deleteById :: DriverId -> Flow ()

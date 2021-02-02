@@ -2,7 +2,6 @@ module Main where
 
 import EulerHS.Prelude
 import FareCalculator
-import qualified Flow.ActiveDrivers
 import Flow.Allocation
 import Test.Tasty
 
@@ -18,4 +17,4 @@ flowTests :: TestTree
 flowTests =
   testGroup
     "Flow tests"
-    [Flow.ActiveDrivers.runTests]
+    []

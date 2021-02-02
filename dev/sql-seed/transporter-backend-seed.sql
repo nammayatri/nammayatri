@@ -645,11 +645,7 @@ INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
-    completed_rides_number smallint NOT NULL,
-    earnings numeric(30,10) NOT NULL,
-    last_ride_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    idle_since timestamp with time zone
 );
 
 CREATE TABLE atlas_transporter.transporter_config (
@@ -685,7 +681,7 @@ CREATE TABLE atlas_transporter.fare_policy (
 );
 
 INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where role ='DRIVER';
-INSERT INTO atlas_transporter.driver_stats (driver_id, completed_rides_number, earnings, created_at, updated_at) select id, 0, 0, now(), now() from atlas_transporter.person where role ='DRIVER';
+INSERT INTO atlas_transporter.driver_stats (driver_id, idle_since) SELECT id, now() FROM atlas_transporter.person WHERE role ='DRIVER';
 
 ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas;
 
