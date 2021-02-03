@@ -79,10 +79,10 @@ data ServiceHandle m = ServiceHandle
     getDriversWithNotification :: m [DriverId],
     -- Get the driver that has been idle the most.
     -- Can be done as a select from the DriverStats table
-    getFirstDriverInTheQueue :: [DriverId] -> m DriverId,
-    -- Check which drivers of the ones provided are available (online and doesn't have a ride assigned)
+    getFirstDriverInTheQueue :: NonEmpty DriverId -> m DriverId,
+    -- Check which drivers of the ones provided are available (online and don't have a ride assigned)
     -- Can be done as a select query from the Driver table
-    checkAvailability :: [DriverId] -> m [DriverId],
+    checkAvailability :: NonEmpty DriverId -> m [DriverId],
     -- Get the response if it was registered for this ride by this driver
     -- Can be done as a Redis lookup
     getDriverResponse :: RideId -> DriverId -> m (Maybe DriverResponse),
@@ -147,28 +147,34 @@ processRejection handle@ServiceHandle {..} ignored rideId driverId = do
 proceedToNextDriver :: Monad m => ServiceHandle m -> RideId -> m ()
 proceedToNextDriver handle@ServiceHandle {..} rideId = do
   driverPool <- getDriverPool rideId
-  availableDrivers <- checkAvailability driverPool
-  attemptedDrivers <- getAttemptedDrivers rideId
-  driversWithNotification <- getDriversWithNotification
-  sortMode <- getDriverSortMode
 
-  let canNotify driver =
-        driver `elem` availableDrivers
-          && driver `notElem` attemptedDrivers
-          && driver `notElem` driversWithNotification
+  case driverPool of
+    driverId : driverIds -> do
+      availableDrivers <- checkAvailability $ driverId :| driverIds
+      attemptedDrivers <- getAttemptedDrivers rideId
+      driversWithNotification <- getDriversWithNotification
 
-  let filteredPool = filter canNotify driverPool
+      let canNotify driver =
+            driver `elem` availableDrivers
+              && driver `notElem` attemptedDrivers
+              && driver `notElem` driversWithNotification
 
-  case filteredPool of
-    driverId : _ -> do
-      firstDriver <-
-        case sortMode of
-          ETA -> pure driverId
-          IdleTime -> getFirstDriverInTheQueue filteredPool
-      time <- getCurrentTime
-      sendNotification rideId firstDriver
-      addNotificationStatus rideId firstDriver $ Notified time
+      let filteredPool = filter canNotify driverPool
+      processFilteredPool handle rideId filteredPool
     [] -> cancel handle rideId
+
+processFilteredPool :: Monad m => ServiceHandle m -> RideId -> [DriverId] -> m ()
+processFilteredPool handle@ServiceHandle {..} rideId = \case
+  driverId : driverIds -> do
+    sortMode <- getDriverSortMode
+    firstDriver <-
+      case sortMode of
+        ETA -> pure driverId
+        IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
+    time <- getCurrentTime
+    sendNotification rideId firstDriver
+    addNotificationStatus rideId firstDriver $ Notified time
+  [] -> cancel handle rideId
 
 cancel :: Monad m => ServiceHandle m -> RideId -> m ()
 cancel ServiceHandle {..} rideId = do

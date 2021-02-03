@@ -1,6 +1,7 @@
 module Flow.Allocation where
 
 import qualified Control.Concurrent.MVar as MVar
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Time as Time
 import EulerHS.Prelude
@@ -139,8 +140,8 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
           cleanupRide = \rideId -> do
             _ <- atomically $ modifyTVar rideRequest $ Map.delete rideId
             pure (),
-          getFirstDriverInTheQueue = \driverPool -> pure $ head driverPool,
-          checkAvailability = \driverPool -> pure driverPool
+          getFirstDriverInTheQueue = \driverPool -> pure $ NonEmpty.head driverPool,
+          checkAvailability = \driverPool -> pure $ NonEmpty.toList driverPool
         }
 
 allocation :: TestTree
