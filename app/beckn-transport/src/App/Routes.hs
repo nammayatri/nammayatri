@@ -28,6 +28,7 @@ import qualified Product.Cron as Cron
 import qualified Product.DriverInformation as DriverInformation
 import qualified Product.Location as Location
 import qualified Product.Person as Person
+import qualified Product.Ride as Ride
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
@@ -41,6 +42,7 @@ import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
 import Types.API.Products
+import Types.API.Ride
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
@@ -416,3 +418,13 @@ driverInformationFlow =
     :<|> DriverInformation.updateDriversStats
     :<|> DriverInformation.getInformation
     :<|> DriverInformation.setActivity
+
+type RideAPI = 
+  "ride" :> "respond" 
+     :> TokenAuth
+     :> Capture "productInstanceId" ProductInstanceId
+     :> Capture "response" NotificationStatus
+     :> Post '[JSON] APIResult.APIResult
+
+rideFlow :: FlowServer RideAPI
+rideFlow = Ride.setDriverAcceptance
