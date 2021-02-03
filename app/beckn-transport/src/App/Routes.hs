@@ -43,7 +43,7 @@ import Types.API.Person
 import Types.API.ProductInstance
 import Types.API.Products
 import Types.API.Registration
-import Types.API.Ride
+import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (lookup)
@@ -422,9 +422,8 @@ driverInformationFlow =
 type RideAPI =
   "ride" :> "respond"
     :> TokenAuth
-    :> Capture "productInstanceId" ProductInstanceId
-    :> Capture "response" NotificationStatus
-    :> Post '[JSON] APIResult.APIResult
+    :> ReqBody '[JSON] RideAPI.SetDriverAcceptanceReq
+    :> Post '[JSON] RideAPI.SetDriverAcceptanceRes
 
 rideFlow :: FlowServer RideAPI
 rideFlow = Ride.setDriverAcceptance

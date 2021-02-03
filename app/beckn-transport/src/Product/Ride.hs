@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Ride
   ( setDriverAcceptance,
   )
@@ -6,15 +8,14 @@ where
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import qualified Beckn.Types.APIResult as APIResult
-import Beckn.Types.App (ProductInstanceId (ProductInstanceId))
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
 import EulerHS.Prelude
-import Types.API.Ride (NotificationStatus)
+import Types.API.Ride
 
-setDriverAcceptance :: SR.RegistrationToken -> ProductInstanceId -> NotificationStatus -> FlowHandler APIResult.APIResult
-setDriverAcceptance _ (ProductInstanceId productInstanceId) response = withFlowHandler $ do
-  Redis.setExRedis redisKey response 600
+setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
+setDriverAcceptance _ SetDriverAcceptanceReq {..} = withFlowHandler $ do
+  Redis.setExRedis redisKey _response 600
   return APIResult.Success
   where
-    redisKey = "beckn:" <> productInstanceId <> ":response"
+    redisKey = "beckn:" <> _productInstanceId ^. #_getProductInstanceId <> ":response"
