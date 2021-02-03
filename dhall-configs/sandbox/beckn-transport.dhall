@@ -52,11 +52,11 @@ in
 , smsCfg = smsConfig
 , port = +8014
 , metricsPort = +9999
-, xGatewaySelector = Some "JUSPAY"
+, xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xAppUri = appUri
 , selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/transport/v1/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/transport/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , caseExpiry = Some +7200

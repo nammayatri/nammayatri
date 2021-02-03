@@ -33,7 +33,7 @@ in
 , port = +8015
 , metricsPort = +9999
 , selfId = "JUSPAY.BG.1"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/gateway/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , migrationPath = None Text

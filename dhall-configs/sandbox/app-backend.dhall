@@ -56,11 +56,11 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = Some "JUSPAY"
+, xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xProviderUri = providerUri
 , bapSelfId = "JUSPAY.MOBILITY.APP.1.SANDBOX"
-, bapNwAddress = "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
+, bapNwAddress = "https://api.sandbox.beckn.juspay.in/app/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +7200
