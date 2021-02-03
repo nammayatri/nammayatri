@@ -19,17 +19,21 @@ import Storage.Queries.ProductInstance as PI
 import Types.API.CustomerSupport as T
 import Types.ProductInfo as ProductInfo
 
-listOrder :: Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
-listOrder mCaseId mMobile mlimit moffset = withFlowHandler $ do
-  T.OrderInfo {person, searchcases, expand} <- case (mCaseId, mMobile) of
-    (Just caseId, _) -> getByCaseId caseId
-    (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-    (_, _) -> throwError400 "No CaseId or Mobile Number in Request"
-  traverse (makeCaseToOrder expand person) searchcases
+listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
+listOrder supportP mCaseId mMobile mlimit moffset =
+  withFlowHandler $
+    if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
+      then throwError400 "Unauthenticated"
+      else do
+        T.OrderInfo {person, searchcases, expand} <- case (mCaseId, mMobile) of
+          (Just caseId, _) -> getByCaseId caseId
+          (_, Just mobileNumber) -> getByMobileNumber mobileNumber
+          (_, _) -> throwError400 "No CaseId or Mobile Number in Request"
+        traverse (makeCaseToOrder expand person) searchcases
   where
     getByMobileNumber number = do
       person <-
-        Person.findByRoleAndMobileNumberWithoutCC SP.ADMIN number --TODO: Change ADMIN to USER
+        Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM400 "Invalid MobileNumber"
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] mlimit moffset

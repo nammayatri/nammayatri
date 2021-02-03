@@ -363,6 +363,7 @@ feedbackFlow = Feedback.feedback
 type CustomerSupportAPI =
   "customer"
     :> ( "support"
+           :> TokenAuth
            :> QueryParam "id" Text
            :> QueryParam "phone" Text
            :> QueryParam "limit" Integer

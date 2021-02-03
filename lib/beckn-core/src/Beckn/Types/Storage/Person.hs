@@ -49,6 +49,7 @@ data Role
   | DISTRICTLEVEL
   | CITYLEVEL
   | STATELEVEL
+  | CUSTOMER_SUPPORT
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
@@ -112,31 +113,32 @@ instance FromHttpApiData Gender where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data PersonTE e f = Person
-  { _id :: B.C f PersonId,
-    _firstName :: B.C f (Maybe Text),
-    _middleName :: B.C f (Maybe Text),
-    _lastName :: B.C f (Maybe Text),
-    _fullName :: B.C f (Maybe Text),
-    _role :: B.C f Role,
-    _gender :: B.C f Gender,
-    _identifierType :: B.C f IdentifierType,
-    _email :: B.C f (Maybe Text),
-    _mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
-    _mobileCountryCode :: B.C f (Maybe Text),
-    _identifier :: B.C f (Maybe Text),
-    _rating :: B.C f (Maybe Text),
-    _verified :: B.C f Bool,
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _status :: B.C f Status,
-    _organizationId :: B.C f (Maybe Text),
-    _locationId :: B.C f (Maybe Text),
-    _deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
-    _description :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
-  }
+data PersonTE e f
+  = Person
+      { _id :: B.C f PersonId,
+        _firstName :: B.C f (Maybe Text),
+        _middleName :: B.C f (Maybe Text),
+        _lastName :: B.C f (Maybe Text),
+        _fullName :: B.C f (Maybe Text),
+        _role :: B.C f Role,
+        _gender :: B.C f Gender,
+        _identifierType :: B.C f IdentifierType,
+        _email :: B.C f (Maybe Text),
+        _mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
+        _mobileCountryCode :: B.C f (Maybe Text),
+        _identifier :: B.C f (Maybe Text),
+        _rating :: B.C f (Maybe Text),
+        _verified :: B.C f Bool,
+        _udf1 :: B.C f (Maybe Text),
+        _udf2 :: B.C f (Maybe Text),
+        _status :: B.C f Status,
+        _organizationId :: B.C f (Maybe Text),
+        _locationId :: B.C f (Maybe Text),
+        _deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
+        _description :: B.C f (Maybe Text),
+        _createdAt :: B.C f UTCTime,
+        _updatedAt :: B.C f UTCTime
+      }
   deriving (Generic)
 
 type Person = PersonTE 'AsUnencrypted Identity
