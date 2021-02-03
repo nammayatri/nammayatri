@@ -38,7 +38,7 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     traceFlag :: TraceFlag,
     signatureExpiry :: NominalDiffTime,
-    driverAllocationCfg :: DriverAllocationConfig
+    driverAllocationConfig :: DriverAllocationConfig
   }
   deriving (Generic, FromDhall)
 
