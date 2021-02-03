@@ -28,7 +28,7 @@ data NotificationStatusT f = NotificationStatus
     _driverId :: B.C f DriverId,
     _allocationRequestId :: B.C f AllocationRequestId,
     _status :: B.C f AnswerStatus,
-    _notifiedAt :: B.C f UTCTime,
+    _notifiedAt :: B.C f (Maybe UTCTime),
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }
