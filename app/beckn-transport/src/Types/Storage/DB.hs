@@ -20,6 +20,7 @@ import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.Leads as Leads
+import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TransporterConfig as TransporterConfig
@@ -44,7 +45,8 @@ data TransporterDb f = TransporterDb
     _transporterConfig :: f (B.TableEntity TransporterConfig.TransporterConfigT),
     _driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
     _farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
-    _allocationRequest :: f (B.TableEntity AllocationRequest.AllocationRequestT)
+    _allocationRequest :: f (B.TableEntity AllocationRequest.AllocationRequestT),
+    _notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT)
   }
   deriving (Generic, B.Database be)
 
@@ -70,7 +72,8 @@ transporterDb dbSchemaName =
         _transporterConfig = setSchema dbSchemaName <> TransporterConfig.fieldEMod,
         _driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod,
         _farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod,
-        _allocationRequest = setSchema dbSchemaName <> AllocationRequest.fieldEMod
+        _allocationRequest = setSchema dbSchemaName <> AllocationRequest.fieldEMod,
+        _notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

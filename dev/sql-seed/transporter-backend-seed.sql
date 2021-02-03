@@ -699,3 +699,12 @@ CREATE TABLE atlas_transporter.allocation_request (
     ordered_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     status character varying(20) NOT NULL
 );
+
+CREATE TABLE atlas_transporter.notification_status (
+    id character(36) PRIMARY KEY NOT NULL,
+    ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id),
+    driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id),
+    allocation_request_id character(36) NOT NULL,
+    status character varying(20) NOT NULL,
+    notified_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
