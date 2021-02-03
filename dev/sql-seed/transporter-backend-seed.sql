@@ -691,3 +691,10 @@ INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id,
 
 INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
   ('f777fbfa-53a7-4f68-90b8-b55492f01b8b', 'SUV', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
+
+CREATE TABLE atlas_transporter.allocation_request (
+    id character(36) PRIMARY KEY NOT NULL,
+    ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id),
+    ordered_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    status character varying(20) NOT NULL
+);

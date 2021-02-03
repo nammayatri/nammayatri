@@ -65,6 +65,20 @@ newtype ConfigKey = ConfigKey
 
 deriveIdentifierInstances ''ConfigKey
 
+newtype RideId = RideId
+  { _getRideId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''RideId
+
+newtype AllocationRequestId = AllocationRequestId
+  { _getAllocationRequestId :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''AllocationRequestId
+
 type Limit = Int
 
 type Offset = Int

@@ -43,6 +43,7 @@ import qualified Models.ProductInstance as MPI
 import Product.FareCalculator
 import qualified Product.Location as Location
 import Servant.Client
+import Storage.Queries.AllocationRequest as AllocationRequest
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -51,6 +52,8 @@ import qualified Storage.Queries.Products as SProduct
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
+import Types.App (AllocationRequestId (..), RideId (..))
+import Types.Storage.AllocationRequest as SAllocationRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -270,7 +273,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       _industry = SC.MOBILITY,
       _type = RIDESEARCH,
       _exchangeType = FULFILLMENT,
-      _status = NEW,
+      _status = SC.NEW,
       _startTime = startTime,
       _endTime = Nothing,
       _validTill = validity,
@@ -309,6 +312,7 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
+  AllocationRequest.create =<< mkAllocationReq (orderProductInstance ^. #_id) (orderProductInstance ^. #_createdAt)
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
   _ <- ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
@@ -387,6 +391,18 @@ mkOrderProductInstance caseId prodInst = do
         _udf5 = prodInst ^. #_udf5
       }
 
+mkAllocationReq :: ProductInstanceId -> UTCTime -> Flow SAllocationRequest.AllocationRequest
+mkAllocationReq pId currTime = do
+  guid <- generateGUID
+  let rideId = RideId $ _getProductInstanceId pId
+  pure
+    SAllocationRequest.AllocationRequest
+      { _id = AllocationRequestId guid,
+        _rideId = rideId,
+        _orderedAt = currTime,
+        _status = SAllocationRequest.NEW
+      }
+
 -- TODO : Add notifying transporter admin with FCM
 
 mkTrackerProductInstance :: Text -> CaseId -> ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
@@ -433,7 +449,7 @@ mkTrackerCase case_ uuid now shortId =
       _industry = SC.MOBILITY,
       _type = LOCATIONTRACKER,
       _exchangeType = FULFILLMENT,
-      _status = NEW,
+      _status = SC.NEW,
       _startTime = case_ ^. #_startTime, --TODO: should we make it startTime - 30 mins?
       _endTime = Nothing,
       _validTill = case_ ^. #_validTill,
