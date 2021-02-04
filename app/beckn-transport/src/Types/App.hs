@@ -5,6 +5,7 @@
 
 module Types.App where
 
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.TH
 import EulerHS.Prelude
 import Servant
@@ -84,3 +85,8 @@ type Limit = Int
 type Offset = Int
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
+
+data SortMode
+  = ETA
+  | IdleTime
+  deriving (Eq, Generic, FromDhall)

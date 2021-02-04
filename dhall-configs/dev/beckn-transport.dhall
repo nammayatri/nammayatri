@@ -38,8 +38,11 @@ let smsConfig =
 
 let appUri = "http://localhost:8013/v1"
 
+let SortMode = < ETA | IdleTime >
+
 let driverAllocationConfig =
-  { driverNotificationExpiry = +20
+  { defaultSortMode = SortMode.IdleTime
+  , driverNotificationExpiry = +20
   , rideAllocationExpiry = +180
   }
 

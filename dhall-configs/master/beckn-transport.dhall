@@ -40,8 +40,11 @@ let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
 
 let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 
+let SortMode = < ETA | IdleTime >
+
 let driverAllocationConfig =
-  { driverNotificationExpiry = +20
+  { defaultSortMode = SortMode.IdleTime
+  , driverNotificationExpiry = +20
   , rideAllocationExpiry = +180
   }
 

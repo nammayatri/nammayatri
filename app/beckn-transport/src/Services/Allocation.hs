@@ -21,10 +21,6 @@ data DriverResponse
   | Reject
   deriving (Show)
 
-data SortMode
-  = ETA
-  | IdleTime
-
 data NotificationStatus
   = Notified UTCTime
   | Rejected

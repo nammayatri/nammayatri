@@ -96,7 +96,7 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
     handle Repository {..} =
       Allocation.ServiceHandle
         { getCurrentTime = pure $ parseTime "2018-12-06T11:39:57.153Z",
-          getDriverSortMode = pure Allocation.ETA,
+          getDriverSortMode = pure ETA,
           getConfiguredNotificationTime = pure 120,
           getConfiguredAllocationTime = pure 15,
           getTopRidesToAllocate = \nmbOfRides -> do

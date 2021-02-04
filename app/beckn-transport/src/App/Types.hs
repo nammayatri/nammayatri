@@ -12,6 +12,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Types.App (SortMode)
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
@@ -43,7 +44,8 @@ data AppEnv = AppEnv
   deriving (Generic, FromDhall)
 
 data DriverAllocationConfig = DriverAllocationConfig
-  { driverNotificationExpiry :: NominalDiffTime,
+  { defaultSortMode :: SortMode,
+    driverNotificationExpiry :: NominalDiffTime,
     rideAllocationExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
