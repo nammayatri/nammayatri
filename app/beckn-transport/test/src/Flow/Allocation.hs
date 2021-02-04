@@ -75,15 +75,19 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
           )
         ]
 
-  _ <- Allocation.process $ handle r
-  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride01Id, DriverId "driver01") Allocation.Accept
-  _ <- Allocation.process $ handle r
-  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride02Id, DriverId "driver05") Allocation.Accept
-  _ <- Allocation.process $ handle r
+  _ <- Allocation.process (handle r) >>= (@?=) 2
+  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride01Id, DriverId "driver01") Allocation.Reject
+  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride02Id, DriverId "driver05") Allocation.Reject
+  _ <- Allocation.process (handle r) >>= (@?=) 2
+  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride01Id, DriverId "driver02") Allocation.Reject
+  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride02Id, DriverId "driver07") Allocation.Reject
+  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride01Id, DriverId "driver03") Allocation.Accept
+  _ <- Allocation.process (handle r) >>= (@?=) 2
+  _ <- atomically $ modifyTVar acceptReject $ Map.insert (ride02Id, DriverId "driver08") Allocation.Accept
+  _ <- Allocation.process (handle r) >>= (@?=) 2
+
   found <- readTVarIO hasFound
-  ns <- readTVarIO notificationStatus
-  rides <- readTVarIO rideRequest
-  found @?= [(ride02Id, DriverId "driver05"), (ride01Id, DriverId "driver01")]
+  found @?= [(ride02Id, DriverId "driver08"), (ride01Id, DriverId "driver03")]
   where
     handle :: Repository -> Allocation.ServiceHandle IO
     handle Repository {..} =
@@ -112,11 +116,11 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
             atomically $ modifyTVar notificationStatus $ Map.insert (rideId, driverId) Allocation.Notified,
           updateNotificationStatus = \rideId driverId nStatus -> do
             now <- Time.getCurrentTime
-            atomically $ modifyTVar notificationStatus $ Map.update (const $ Just nStatus) (rideId, driverId),
+            atomically $ modifyTVar notificationStatus $ Map.insert (rideId, driverId) nStatus,
           resetLastRejectionTime = \rideId -> pure (),
           getAttemptedDrivers = \rideId -> do
             ns <- readTVarIO notificationStatus
-            let filtered = fmap snd $ Map.keys $ Map.filterWithKey (\(r, _) s -> r == rideId && s == Allocation.Notified) ns
+            let filtered = fmap snd $ Map.keys $ Map.filterWithKey (\(r, _) _ -> r == rideId) ns
             pure filtered,
           getDriversWithNotification = do
             ns <- readTVarIO notificationStatus

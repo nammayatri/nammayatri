@@ -19,6 +19,7 @@ data Ride = Ride
 data DriverResponse
   = Accept
   | Reject
+  deriving (Show)
 
 data SortMode
   = ETA
@@ -93,12 +94,13 @@ data ServiceHandle m = ServiceHandle
     cleanupRide :: RideId -> m ()
   }
 
-process :: Monad m => ServiceHandle m -> m ()
+process :: (Monad m) => ServiceHandle m -> m Int
 process handle@ServiceHandle {..} = do
   rides <- getTopRidesToAllocate ridesPerIteration
   traverse_ (processRide handle) rides
+  pure $ length rides
 
-processRide :: Monad m => ServiceHandle m -> Ride -> m ()
+processRide :: (Monad m) => ServiceHandle m -> Ride -> m ()
 processRide handle@ServiceHandle {..} ride = do
   let rideId = ride ^. #id
   allocationTimeFinished <- isAllocationTimeFinished handle ride
@@ -113,7 +115,7 @@ processRide handle@ServiceHandle {..} ride = do
           proceedToNextDriver handle rideId
 
 processCurrentNotification ::
-  Monad m =>
+  (Monad m) =>
   ServiceHandle m ->
   RideId ->
   CurrentNotification ->
@@ -135,14 +137,14 @@ processCurrentNotification
           Just Reject -> processRejection handle False rideId driverId
           Nothing -> pure ()
 
-processRejection :: Monad m => ServiceHandle m -> Bool -> RideId -> DriverId -> m ()
+processRejection :: (Monad m) => ServiceHandle m -> Bool -> RideId -> DriverId -> m ()
 processRejection handle@ServiceHandle {..} ignored rideId driverId = do
   let status = if ignored then Ignored else Rejected
   resetLastRejectionTime driverId
   updateNotificationStatus rideId driverId status
   proceedToNextDriver handle rideId
 
-proceedToNextDriver :: Monad m => ServiceHandle m -> RideId -> m ()
+proceedToNextDriver :: (Monad m) => ServiceHandle m -> RideId -> m ()
 proceedToNextDriver handle@ServiceHandle {..} rideId = do
   driverPool <- getDriverPool rideId >>= pure . fromMaybe []
   availableDrivers <- checkAvailability driverPool
