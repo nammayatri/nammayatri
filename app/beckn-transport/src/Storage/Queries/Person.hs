@@ -353,7 +353,7 @@ getNearestDrivers point' radius' orgId' = do
 getNearestDrivers ::
   LatLong ->
   Double ->
-  Maybe OrganizationId ->
+  OrganizationId ->
   Flow [(PersonId, Double)]
 getNearestDrivers LatLong {..} radius orgId = do
   DBConfig {..} <- asks dbCfg
@@ -378,11 +378,11 @@ getNearestDrivers LatLong {..} radius orgId = do
             JOIN atlas_transporter.location
               ON person.location_id = location.id
             WHERE person.role = 'DRIVER'
-              AND COALESCE(person.organization_id = ?, true)
+              AND person.organization_id = ?
           )
           SELECT id, dist
           FROM a
           WHERE dist < ?
           ORDER BY dist ASC
         |]
-        (lon, lat, _getOrganizationId <$> orgId, radius)
+        (lon, lat, _getOrganizationId orgId, radius)

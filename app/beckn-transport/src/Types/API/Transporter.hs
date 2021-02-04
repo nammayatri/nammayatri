@@ -85,7 +85,6 @@ transformToLocation req = do
         SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
         SL._lat = req ^. #_lat,
         SL._long = req ^. #_long,
-        SL._point = Nothing,
         SL._ward = req ^. #_ward,
         SL._district = req ^. #_district,
         SL._city = req ^. #_city,

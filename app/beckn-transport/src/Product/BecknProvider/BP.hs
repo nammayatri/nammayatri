@@ -42,6 +42,7 @@ import Models.Case as Case
 import qualified Models.ProductInstance as MPI
 import Product.FareCalculator
 import qualified Product.Location as Location
+import Product.Person (calculateDriverPool)
 import Servant.Client
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import Storage.Queries.Location as Loc
@@ -95,6 +96,7 @@ search transporterId bapOrg req = withFlowHandler $ do
       prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price
       sendOnSearch productCase prodInst transporter
       Case.updateStatus (productCase ^. #_id) SC.CONFIRMED
+      calculateDriverPool (fromLocation ^. #_id) transporterId (prodInst ^. #_id)
   mkAckResponse uuid "search"
   where
     -- TODO :: need to isolate it from this module
@@ -250,7 +252,6 @@ mkFromStop _req uuid now stop =
           _locationType = SL.POINT,
           _lat = read . T.unpack . (^. #lat) <$> mgps,
           _long = read . T.unpack . (^. #lon) <$> mgps,
-          _point = Nothing,
           _ward = (^. #_ward) =<< maddress,
           _district = Nothing,
           _city = (^. #_city) <$> maddress,
@@ -328,6 +329,9 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
+
+  pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
+  calculateDriverPool (LocationId pickupPoint) transporterId prodInstId
 
   -- Send callback to BAP
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"

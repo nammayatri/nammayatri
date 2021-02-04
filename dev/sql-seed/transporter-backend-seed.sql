@@ -326,7 +326,8 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
 
 INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id) VALUES
   ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', 'org1', 'furthest_driver'),
-  ('closest_driver',  'DRIVER', 'FEMALE', true, 'ACTIVE', 'org2', 'closest_driver');
+  ('closest_driver',  'DRIVER', 'MALE',   true, 'ACTIVE', 'org1', 'closest_driver'),
+  ('other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'org2', 'other_driver');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
@@ -652,7 +653,8 @@ INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
 INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
                                                               -- lon        lat
   ('furthest_driver', 'POINT', public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326)),
-  ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326));
+  ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326)),
+  ('other_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326));
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),

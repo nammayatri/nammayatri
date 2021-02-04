@@ -121,7 +121,6 @@ createLocation UpdatePersonReq {..} = do
     SL.Location
       { _locationType = fromMaybe SL.PINCODE _locationType,
         _updatedAt = _createdAt,
-        _point = Nothing,
         ..
       }
 

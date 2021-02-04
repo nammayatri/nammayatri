@@ -39,7 +39,6 @@ data LocationT f = Location
     _locationType :: B.C f LocationType,
     _lat :: B.C f (Maybe Double),
     _long :: B.C f (Maybe Double),
-    _point :: B.C f (Maybe Text),
     _ward :: B.C f (Maybe Text),
     _district :: B.C f (Maybe Text),
     _city :: B.C f (Maybe Text),

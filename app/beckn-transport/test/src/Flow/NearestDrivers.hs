@@ -23,28 +23,21 @@ runTests =
   testGroup
     "Test getNearestDriversFunction"
     [ testOrder,
-      testFiltrationByOrganization,
       testInRadius
     ]
 
 testOrder :: TestTree
 testOrder =
   testCase "Test ordering" $
-    (getNearestDrivers pickupPoint 5000 Nothing <&> map (_getPersonId . fst))
+    (getNearestDrivers pickupPoint 5000 org1 <&> map (_getPersonId . fst))
       @@?= ["closest_driver", "furthest_driver"]
-
-testFiltrationByOrganization :: TestTree
-testFiltrationByOrganization =
-  testCase "Test filtration by organization" $
-    (getNearestDrivers pickupPoint 5000 orgId <&> map (_getPersonId . fst))
-      @@?= ["furthest_driver"]
-  where
-    orgId = Just $ OrganizationId "org1"
 
 testInRadius :: TestTree
 testInRadius =
   testCase "Test radius filtration" $
-    (getNearestDrivers pickupPoint 800 Nothing <&> map (_getPersonId . fst))
-      @@?= ["closest_driver"]
+    (getNearestDrivers pickupPoint 800 org1 <&> map (_getPersonId . fst))
+      @@?= ["other_driver"]
 
 pickupPoint = LatLong 12.994927 77.596386
+
+org1 = OrganizationId "org1"

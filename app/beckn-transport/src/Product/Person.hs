@@ -10,6 +10,8 @@ module Product.Person
     linkEntity,
     calculateAverageRating,
     mkPersonRes,
+    getDriverPool,
+    calculateDriverPool,
   )
 where
 
@@ -17,6 +19,7 @@ import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
@@ -29,13 +32,16 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
+import Types.API.Location (LatLong (..))
 import Types.API.Person
-import Types.App (DriverId (..))
+import Types.App (ConfigKey (..), DriverId (..))
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -238,3 +244,33 @@ calculateAverageRating personId = do
     let newAverage = ratings `div` ratingCount
     L.logInfo @Text "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     QP.updateAverageRating personId $ encodeToText newAverage
+
+driverPoolKey :: ProductInstanceId -> Text
+driverPoolKey = ("beckn:driverpool:" <>) . _getProductInstanceId
+
+getDriverPool :: ProductInstanceId -> Flow [PersonId]
+getDriverPool piId =
+  map PersonId
+    . fromMaybe []
+    <$> Redis.getKeyRedis (driverPoolKey piId)
+
+calculateDriverPool :: LocationId -> OrganizationId -> ProductInstanceId -> Flow ()
+calculateDriverPool locId orgId piId = do
+  location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
+  lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"
+  long <- location ^. #_long & fromMaybeM500 "NO_LONGITUDE"
+  radius <- getRadius >>= fromMaybeM500 "THE_RADIUS_IS_NOT_A_NUMBER"
+  driverPool <-
+    map (_getPersonId . fst)
+      <$> QP.getNearestDrivers
+        (LatLong lat long)
+        radius
+        orgId
+  Redis.setExRedis (driverPoolKey piId) driverPool (60 * 10)
+  where
+    getRadius =
+      readMaybe
+        . toString
+        . fromMaybe ("1000" :: Text) -- default radius 1km
+        . fmap (^. #_value)
+        <$> QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")
