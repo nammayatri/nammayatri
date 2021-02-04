@@ -61,7 +61,6 @@ instance ToJSON TripDetails where
 data OrderInfo
   = OrderInfo
       { person :: P.Person,
-        searchcases :: [C.Case],
-        expand :: Bool
+        searchcases :: [C.Case]
       }
   deriving (Show, Generic)
