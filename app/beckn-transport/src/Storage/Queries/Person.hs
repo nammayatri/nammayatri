@@ -305,6 +305,9 @@ updateAverageRating personId newAverageRating = do
     predicate pId Storage.Person {..} = _id ==. B.val_ pId
 
 {-
+-- This is an attempt to implement custom postgis query using beam.
+-- Eventually it was implemented with postgis-simple (see below)
+-- and this version was left for proper beam implementation in the future:
 getNearestDrivers
   :: LatLong
   -> Double
