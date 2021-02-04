@@ -15,15 +15,13 @@ import EulerHS.Prelude
 import Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import Storage.Queries.Person as Person
-import Beckn.External.Encryption
-import qualified EulerHS.Language as L
 import Storage.Queries.ProductInstance as PI
 import Types.API.CustomerSupport as T
 import Types.ProductInfo as ProductInfo
 
 listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
 listOrder supportP mCaseId mMobile mlimit moffset =
-  withFlowHandler $ 
+  withFlowHandler $
     if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
       then throwError403 "Forbidden"
       else do
@@ -34,12 +32,12 @@ listOrder supportP mCaseId mMobile mlimit moffset =
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
-      --TODO: Limit max value should be 10
+      let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM400 "Invalid MobileNumber"
       searchcases <-
-        Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] mlimit moffset
+        Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
           >>= either DB.throwDBError pure
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
@@ -61,7 +59,7 @@ makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   let (status :: Maybe CaseStatus) = maybe Nothing (\x -> Just $ x ^. #_status) confiremedOrder <|> (Just _status)
   fromLocation <- Location.findLocationById $ LocationId _fromLocationId
   toLocation <- Location.findLocationById $ LocationId _toLocationId
-  trip <-  makeTripDetails confiremedOrder
+  trip <- makeTripDetails confiremedOrder
   --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
