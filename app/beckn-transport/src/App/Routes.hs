@@ -52,7 +52,8 @@ import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
   "v1"
-    :> ( HealthCheckAPI
+    :> ( Get '[JSON] Text
+           :<|> HealthCheckAPI
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
@@ -313,7 +314,8 @@ transporterAPI = Proxy
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =
-  healthCheckFlow
+  pure "App is UP"
+    :<|> healthCheckFlow
     :<|> registrationFlow
     :<|> personFlow
     :<|> organizationFlow
