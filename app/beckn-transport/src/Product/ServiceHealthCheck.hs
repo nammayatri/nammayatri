@@ -1,4 +1,4 @@
-module Product.HealthCheck (healthCheck) where
+module Product.ServiceHealthCheck (serviceHealthCheck) where
 
 import qualified App.Types as App
 import qualified Beckn.Storage.Redis.Queries as Redis
@@ -6,8 +6,8 @@ import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 
-healthCheck :: Text -> App.FlowHandler Text
-healthCheck _ = withFlowHandler $ do
+serviceHealthCheck :: Text -> App.FlowHandler Text
+serviceHealthCheck _ = withFlowHandler $ do
   mbTime <- Redis.getKeyRedis "beckn:allocation:service"
   maybe markAsDead checkLastUpdateTime mbTime
   where
