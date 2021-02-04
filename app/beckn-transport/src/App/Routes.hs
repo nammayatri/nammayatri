@@ -66,6 +66,7 @@ type TransportAPI =
            :<|> RouteAPI
            :<|> DriverInformationAPI
            :<|> FarePolicyAPI
+           :<|> RideAPI
        )
 
 ---- Registration Flow ------
@@ -326,6 +327,7 @@ transporterServer =
     :<|> routeApiFlow
     :<|> driverInformationFlow
     :<|> farePolicyFlow
+    :<|> rideFlow
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId

@@ -4,7 +4,6 @@ import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.App
 import Data.Time
 import EulerHS.Prelude
-import Types.App
 
 data SetDriverAcceptanceReq = SetDriverAcceptanceReq
   { _productInstanceId :: ProductInstanceId,
@@ -20,9 +19,7 @@ data NotificationStatus
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data DriverResponse = DriverResponse
-  { _driverId :: DriverId,
-    _productInstanceId :: ProductInstanceId,
-    _status :: NotificationStatus,
+  { _status :: NotificationStatus,
     _respondedAt :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON)

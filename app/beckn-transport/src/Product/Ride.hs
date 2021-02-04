@@ -12,14 +12,13 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import Types.API.Ride
-import Types.App
 
 setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
 setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandler $ do
   now <- getCurrTime
-  Redis.setExRedis redisKey (redisValue now) 600
+  Redis.setExRedis redisKey (driverResponse now) 600
   return APIResult.Success
   where
-    driverId = DriverId _EntityId
-    redisKey = "beckn:" <> _productInstanceId ^. #_getProductInstanceId <> ":response"
-    redisValue now = DriverResponse {_driverId = driverId, _productInstanceId = _productInstanceId, _status = _response, _respondedAt = now}
+    productInstanceId = _productInstanceId ^. #_getProductInstanceId
+    redisKey = "beckn:" <> productInstanceId <> ":" <> _EntityId <> ":response"
+    driverResponse now = DriverResponse {_status = _response, _respondedAt = now}
