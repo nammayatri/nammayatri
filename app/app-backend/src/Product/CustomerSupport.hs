@@ -23,7 +23,7 @@ listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Int
 listOrder supportP mCaseId mMobile mlimit moffset =
   withFlowHandler $
     if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError400 "Unauthenticated"
+      then throwError403 "Forbidden"
       else do
         T.OrderInfo {person, searchcases, expand} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId

@@ -256,6 +256,7 @@ throwError500,
   throwError503,
   throwError400,
   throwError401,
+  throwError403,
   throwError404 ::
     (HasCallStack, L.MonadFlow m) => Text -> m a
 throwError500 = throwHttpError S.err500
@@ -263,6 +264,7 @@ throwError501 = throwHttpError S.err501
 throwError503 = throwHttpError S.err503
 throwError400 = throwHttpError S.err400
 throwError401 = throwHttpError S.err401
+throwError403 = throwHttpError S.err403
 throwError404 = throwHttpError S.err404
 
 throwBecknError500,
