@@ -96,6 +96,7 @@ search transporterId bapOrg req = withFlowHandler $ do
       prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price
       sendOnSearch productCase prodInst transporter
       Case.updateStatus (productCase ^. #_id) SC.CONFIRMED
+      calculateDriverPool (fromLocation ^. #_id) transporterId (prodInst ^. #_id)
   mkAckResponse uuid "search"
   where
     -- TODO :: need to isolate it from this module
