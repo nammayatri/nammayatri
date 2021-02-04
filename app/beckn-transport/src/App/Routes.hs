@@ -438,7 +438,7 @@ type RideAPI =
 rideFlow :: FlowServer RideAPI
 rideFlow = Ride.setDriverAcceptance
 
-type HealthCheckAPI = AdminTokenAuth :> Get '[JSON] Text
+type HealthCheckAPI = "service_health" :> AdminTokenAuth :> Get '[JSON] Text
 
 healthCheckFlow :: FlowServer HealthCheckAPI
 healthCheckFlow = HealthCheck.healthCheck
