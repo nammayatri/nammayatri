@@ -12,11 +12,11 @@ import Test.Tasty.HUnit
 import Types.App
 import Utils.Time
 
-ride01Id :: Allocation.RideId
-ride01Id = Allocation.RideId "ride01"
+ride01Id :: RideId
+ride01Id = RideId "ride01"
 
-ride02Id :: Allocation.RideId
-ride02Id = Allocation.RideId "ride02"
+ride02Id :: RideId
+ride02Id = RideId "ride02"
 
 availableRides :: [Allocation.Ride]
 availableRides =
@@ -36,18 +36,18 @@ driverPool1 = [DriverId "driver01", DriverId "driver02", DriverId "driver03"]
 driverPool2 :: [DriverId]
 driverPool2 = [DriverId "driver05", DriverId "driver07", DriverId "driver08"]
 
-driverPoolPerRide :: Map Allocation.RideId [DriverId]
+driverPoolPerRide :: Map RideId [DriverId]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
 
 data Repository = Repository
-  { driverPool :: TVar (Map Allocation.RideId [DriverId]),
-    rideRequest :: TVar (Map Allocation.RideId Allocation.Ride),
-    notificationStatus :: TVar (Map (Allocation.RideId, DriverId) Allocation.NotificationStatus),
-    hasFound :: TVar [(Allocation.RideId, DriverId)],
-    acceptReject :: TVar (Map (Allocation.RideId, DriverId) Allocation.DriverResponse)
+  { driverPool :: TVar (Map RideId [DriverId]),
+    rideRequest :: TVar (Map RideId Allocation.Ride),
+    notificationStatus :: TVar (Map (RideId, DriverId) Allocation.NotificationStatus),
+    hasFound :: TVar [(RideId, DriverId)],
+    acceptReject :: TVar (Map (RideId, DriverId) Allocation.DriverResponse)
   }
 
-initRepository :: Map Allocation.RideId Allocation.Ride -> IO Repository
+initRepository :: Map RideId Allocation.Ride -> IO Repository
 initRepository rides = do
   initDriverPool <- newTVarIO driverPoolPerRide
   initRideRequest <- newTVarIO rides
@@ -95,7 +95,7 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
           getTopRidesToAllocate = \nmbOfRides -> do
             rideMap <- readTVarIO rideRequest
             let rides = Map.elems rideMap
-            pure $ take nmbOfRides rides,
+            pure $ take (fromIntegral nmbOfRides) rides,
           getDriverPool = \rideId -> do
             poolMap <- readTVarIO driverPool
             pure $ Map.lookup rideId poolMap,
