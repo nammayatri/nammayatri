@@ -380,8 +380,12 @@ getNearestDrivers LatLong {..} radius orgId = do
             FROM atlas_transporter.person
             JOIN atlas_transporter.location
               ON person.location_id = location.id
+            JOIN atlas_transporter.driver_information
+              ON person.id = driver_information.driver_id
             WHERE person.role = 'DRIVER'
               AND person.organization_id = ?
+              AND driver_information.active
+              AND NOT driver_information.on_ride
           )
           SELECT id, dist
           FROM a
