@@ -1,7 +1,7 @@
 module Types.API.Ride where
 
-import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.App
+import Beckn.Types.Core.Ack (Ack (..))
 import Data.Time
 import EulerHS.Prelude
 
@@ -11,7 +11,7 @@ data SetDriverAcceptanceReq = SetDriverAcceptanceReq
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-type SetDriverAcceptanceRes = APIResult.APIResult
+type SetDriverAcceptanceRes = Ack
 
 data NotificationStatus
   = ACCEPT
