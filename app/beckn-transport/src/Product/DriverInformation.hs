@@ -4,7 +4,7 @@ module Product.DriverInformation where
 
 import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
-import Beckn.Types.App (OrganizationId (..), PersonId (..))
+import Beckn.Types.App (OrganizationId (..), PersonId (..), ProductInstanceId (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -107,3 +107,7 @@ setActivity RegistrationToken {..} isActive = withFlowHandler $ do
   let driverId = DriverId _EntityId
   QDriverInformation.updateActivity driverId isActive
   pure APIResult.Success
+
+getRideInfo :: RegistrationToken -> Maybe ProductInstanceId -> App.FlowHandler ()
+getRideInfo _ _ = withFlowHandler $ do
+  return ()
