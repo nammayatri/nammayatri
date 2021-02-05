@@ -11,6 +11,7 @@ module Product.Person
     calculateAverageRating,
     mkPersonRes,
     getDriverPool,
+    setDriverPool,
     calculateDriverPool,
   )
 where
@@ -254,19 +255,21 @@ getDriverPool piId =
     . fromMaybe []
     <$> Redis.getKeyRedis (driverPoolKey piId)
 
-calculateDriverPool :: LocationId -> OrganizationId -> ProductInstanceId -> Flow ()
-calculateDriverPool locId orgId piId = do
+setDriverPool :: ProductInstanceId -> [PersonId] -> Flow ()
+setDriverPool piId ids =
+  Redis.setExRedis (driverPoolKey piId) (map _getPersonId ids) (60 * 10)
+
+calculateDriverPool :: LocationId -> OrganizationId -> Flow [PersonId]
+calculateDriverPool locId orgId = do
   location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
   lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"
   long <- location ^. #_long & fromMaybeM500 "NO_LONGITUDE"
   radius <- getRadius >>= fromMaybeM500 "THE_RADIUS_IS_NOT_A_NUMBER"
-  driverPool <-
-    map (_getPersonId . fst)
-      <$> QP.getNearestDrivers
-        (LatLong lat long)
-        radius
-        orgId
-  Redis.setExRedis (driverPoolKey piId) driverPool (60 * 10)
+  map fst
+    <$> QP.getNearestDrivers
+      (LatLong lat long)
+      radius
+      orgId
   where
     getRadius =
       readMaybe

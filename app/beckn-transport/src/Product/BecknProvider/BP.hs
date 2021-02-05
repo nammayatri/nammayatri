@@ -42,7 +42,7 @@ import Models.Case as Case
 import qualified Models.ProductInstance as MPI
 import Product.FareCalculator
 import qualified Product.Location as Location
-import Product.Person (calculateDriverPool)
+import Product.Person (calculateDriverPool, setDriverPool)
 import Servant.Client
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import Storage.Queries.Location as Loc
@@ -330,7 +330,8 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
 
   pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
-  calculateDriverPool (LocationId pickupPoint) transporterId prodInstId
+  calculateDriverPool (LocationId pickupPoint) transporterId
+    >>= setDriverPool prodInstId
 
   -- Send callback to BAP
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
