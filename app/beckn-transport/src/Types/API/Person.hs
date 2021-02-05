@@ -12,7 +12,6 @@ import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -21,7 +20,7 @@ import Servant.API
 import qualified Storage.Queries.Location as QL
 
 data EntityType = VEHICLE | PASS | TICKET
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance FromHttpApiData EntityType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -55,7 +54,7 @@ data UpdatePersonReq = UpdatePersonReq
     _address :: Maybe Text,
     _bound :: Maybe Text
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic)
 
 instance FromJSON UpdatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -133,7 +132,7 @@ ifJustExtract a b = fromMaybe b a
 
 newtype UpdatePersonRes = UpdatePersonRes
   {user :: SP.Person}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON)
 
 -- Create Person request and response
 data CreatePersonReq = CreatePersonReq
@@ -165,7 +164,7 @@ data CreatePersonReq = CreatePersonReq
     _address :: Maybe Text,
     _bound :: Maybe Text
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic)
 
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -189,6 +188,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
           SP._role = ifJustExtract (req ^. #_role) SP.USER,
           SP._gender = ifJustExtract (req ^. #_gender) SP.UNKNOWN,
           SP._email = req ^. #_email,
+          SP._passwordHash = Nothing,
           SP._identifier = req ^. #_identifier,
           SP._identifierType = fromMaybe SP.MOBILENUMBER $ req ^. #_identifierType,
           SP._mobileNumber = req ^. #_mobileNumber,
@@ -221,21 +221,21 @@ createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {_organi
 
 newtype ListPersonRes = ListPersonRes
   {users :: [PersonEntityRes]}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON)
 
 newtype PersonRes = PersonRes
   {user :: SP.Person}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON)
 
 newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON)
 
 data LinkReq = LinkReq
   { _entityId :: Text,
     _entityType :: EntityType
   }
-  deriving (Show, Generic, ToSchema)
+  deriving (Show, Generic)
 
 instance FromJSON LinkReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -247,7 +247,7 @@ data LinkedEntity = LinkedEntity
   { _entityType :: EntityType,
     _entityValue :: Maybe Text
   }
-  deriving (Show, Generic, ToSchema)
+  deriving (Show, Generic)
 
 instance FromJSON LinkedEntity where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -281,7 +281,7 @@ data PersonEntityRes = PersonEntityRes
     _updatedAt :: UTCTime,
     _linkedEntity :: Maybe LinkedEntity
   }
-  deriving (Show, Generic, ToSchema)
+  deriving (Show, Generic)
 
 instance FromJSON PersonEntityRes where
   parseJSON = genericParseJSON stripAllLensPrefixOptions

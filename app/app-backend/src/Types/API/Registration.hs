@@ -3,7 +3,6 @@ module Types.API.Registration where
 import Beckn.External.FCM.Types
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
-import Data.Swagger
 import EulerHS.Prelude
 
 data InitiateLoginReq = InitiateLoginReq
@@ -14,7 +13,7 @@ data InitiateLoginReq = InitiateLoginReq
     _role :: Maybe Role,
     _deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic)
 
 instance FromJSON InitiateLoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -29,7 +28,7 @@ data ReInitiateLoginReq = ReInitiateLoginReq
     _mobileCountryCode :: Text,
     _deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic)
 
 instance FromJSON ReInitiateLoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -41,7 +40,7 @@ data InitiateLoginRes = InitiateLoginRes
   { tokenId :: Text,
     attempts :: Int
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 ---------- Verify Login --------
 data LoginReq = LoginReq
@@ -52,7 +51,7 @@ data LoginReq = LoginReq
     _mobileCountryCode :: Text,
     _deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic)
 
 instance FromJSON LoginReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -64,4 +63,4 @@ data LoginRes = LoginRes
   { registrationToken :: Text,
     user :: Person
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)

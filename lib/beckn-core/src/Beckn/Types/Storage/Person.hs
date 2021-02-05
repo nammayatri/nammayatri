@@ -125,6 +125,7 @@ data PersonTE e f = Person
     _email :: B.C f (Maybe Text),
     _mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
     _mobileCountryCode :: B.C f (Maybe Text),
+    _passwordHash :: B.C f (Maybe DbHash),
     _identifier :: B.C f (Maybe Text),
     _rating :: B.C f (Maybe Text),
     _verified :: B.C f Bool,
@@ -163,7 +164,7 @@ instance ToJSON Person where
 instance FromJSON Person where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
-instance ToSchema Person
+-- instance ToSchema Person
 
 instance ToJSON (PersonT Identity)
 

@@ -10,7 +10,6 @@ import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Common
-import Data.Swagger
 import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.Location as QL
@@ -38,7 +37,7 @@ data TransporterReq = TransporterReq
     _address :: Maybe Text,
     _bound :: Maybe Text
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic)
 
 instance FromJSON TransporterReq where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
@@ -102,12 +101,12 @@ data TransporterRes = TransporterRes
   { user :: SP.Person,
     organization :: SO.Organization
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON)
 
 newtype TransporterRec = TransporterRec
   { organization :: SO.Organization
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON)
 
 type GatewayRes = TransporterRec
 
@@ -117,7 +116,7 @@ data UpdateTransporterReq = UpdateTransporterReq
     headCount :: Maybe Int,
     enabled :: Maybe Bool
   }
-  deriving (Generic, ToSchema, Show, FromJSON)
+  deriving (Generic, Show, FromJSON)
 
 instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
   modifyTransform req org = do

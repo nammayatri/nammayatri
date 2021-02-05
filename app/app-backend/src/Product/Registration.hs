@@ -67,6 +67,7 @@ makePerson req = do
         _gender = SP.UNKNOWN,
         _identifierType = SP.MOBILENUMBER,
         _email = Nothing,
+        _passwordHash = Nothing,
         _mobileNumber = Just $ req ^. #_mobileNumber,
         _mobileCountryCode = Just $ req ^. #_mobileCountryCode,
         _identifier = Nothing,
