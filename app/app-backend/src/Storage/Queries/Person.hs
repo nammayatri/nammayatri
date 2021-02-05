@@ -68,6 +68,18 @@ findByIdentifier idType mb = do
       _identifierType ==. B.val_ idType
         &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mb)
 
+findByUsernameAndPassword ::
+  Text -> Text -> Flow (Maybe Storage.Person)
+findByUsernameAndPassword email password = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= either DB.throwDBError pure
+    >>= decrypt
+  where
+    predicate Storage.Person {..} =
+      _email ==. B.val_ (Just email)
+        &&. _passwordHash ==. B.val_ (Just $ evalDbHash password)
+
 findByRoleAndMobileNumber ::
   Storage.Role -> Text -> Text -> Flow (Maybe Storage.Person)
 findByRoleAndMobileNumber role countryCode mobileNumber = do

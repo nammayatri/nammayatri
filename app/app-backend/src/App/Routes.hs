@@ -362,14 +362,17 @@ feedbackFlow = Feedback.feedback
 
 type CustomerSupportAPI =
   "customerSupport"
-    :> ( "orders"
-           :> TokenAuth
-           :> QueryParam "id" Text
-           :> QueryParam "phone" Text
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> Get '[JSON] [CustomerSupport.OrderResp]
+    :> ( "login"
+           :> ReqBody '[JSON] CustomerSupport.LoginReq
+           :> Post '[JSON] CustomerSupport.LoginRes
+           :<|> "orders"
+             :> TokenAuth
+             :> QueryParam "id" Text
+             :> QueryParam "phone" Text
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] [CustomerSupport.OrderResp]
        )
 
 customerSupportFlow :: FlowServer CustomerSupportAPI
-customerSupportFlow = CS.listOrder
+customerSupportFlow = CS.login :<|> CS.listOrder
