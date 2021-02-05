@@ -361,8 +361,8 @@ feedbackFlow = Feedback.feedback
 -- Customer Support Flow --
 
 type CustomerSupportAPI =
-  "customer"
-    :> ( "support"
+  "customerSupport"
+    :> ( "orders"
            :> TokenAuth
            :> QueryParam "id" Text
            :> QueryParam "phone" Text
