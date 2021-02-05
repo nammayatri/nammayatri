@@ -17,7 +17,6 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
-import Beckn.Utils.Common (withFlowHandler)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
@@ -37,7 +36,6 @@ import qualified Product.Ride as Ride
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
-import Storage.Queries.Person (getNearestDrivers)
 import Types.API.Case
 import Types.API.Cron
 import Types.API.Location as Location
@@ -68,7 +66,10 @@ type TransportAPI =
            :<|> RouteAPI
            :<|> DriverInformationAPI
            :<|> FarePolicyAPI
+<<<<<<< HEAD
            :<|> RideAPI
+=======
+>>>>>>> ad8382b6 (remove temp getNearestDrivers endpoint)
        )
 
 ---- Registration Flow ------
@@ -329,7 +330,10 @@ transporterServer =
     :<|> routeApiFlow
     :<|> driverInformationFlow
     :<|> farePolicyFlow
+<<<<<<< HEAD
     :<|> rideFlow
+=======
+>>>>>>> ad8382b6 (remove temp getNearestDrivers endpoint)
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId
