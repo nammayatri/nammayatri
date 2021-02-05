@@ -90,3 +90,12 @@ instance FromJSON LoginRes where
 
 instance ToJSON LoginRes where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+newtype LogoutRes = LogoutRes {_message :: Text}
+  deriving (Show, Generic)
+
+instance FromJSON LogoutRes where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON LogoutRes where
+  toJSON = genericToJSON stripAllLensPrefixOptions

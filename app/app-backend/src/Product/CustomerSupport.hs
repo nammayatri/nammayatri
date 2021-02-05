@@ -43,6 +43,15 @@ generateToken SP.Person {..} = do
   RegistrationToken.create regToken
   pure $ regToken ^. #_token
 
+logout :: SP.Person -> FlowHandler T.LogoutRes
+logout person =
+  withFlowHandler $
+    if person ^. #_role /= SP.CUSTOMER_SUPPORT
+      then throwError401 "Unauthorized request. Please try again" -- Do we need this Check?
+      else do
+        RegistrationToken.deleteByPersonId (_getPersonId $ person ^. #_id)
+        pure $ T.LogoutRes "Logged out successfully"
+
 createSupportRegToken :: Text -> Flow SR.RegistrationToken
 createSupportRegToken entityId = do
   rtid <- L.generateGUID

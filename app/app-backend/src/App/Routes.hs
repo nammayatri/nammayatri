@@ -365,6 +365,9 @@ type CustomerSupportAPI =
     :> ( "login"
            :> ReqBody '[JSON] CustomerSupport.LoginReq
            :> Post '[JSON] CustomerSupport.LoginRes
+           :<|> "logout"
+             :> TokenAuth
+             :> Post '[JSON] CustomerSupport.LogoutRes
            :<|> "orders"
              :> TokenAuth
              :> QueryParam "id" Text
@@ -375,4 +378,4 @@ type CustomerSupportAPI =
        )
 
 customerSupportFlow :: FlowServer CustomerSupportAPI
-customerSupportFlow = CS.login :<|> CS.listOrder
+customerSupportFlow = CS.login :<|> CS.logout :<|> CS.listOrder
