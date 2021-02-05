@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation where
 
 import qualified Control.Concurrent.MVar as MVar
@@ -38,6 +36,10 @@ driverPool2 = [DriverId "driver05", DriverId "driver07", DriverId "driver08"]
 
 driverPoolPerRide :: Map RideId [DriverId]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
+
+isNotified :: Allocation.NotificationStatus -> Bool
+isNotified (Allocation.Notified _) = True
+isNotified _ = False
 
 data Repository = Repository
   { driverPool :: TVar (Map RideId [DriverId]),
@@ -102,18 +104,19 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
             pure $ take (fromIntegral nmbOfRides) rides,
           getDriverPool = \rideId -> do
             poolMap <- readTVarIO driverPool
-            pure $ Map.lookup rideId poolMap,
+            let pool = fromMaybe [] $ Map.lookup rideId poolMap
+            pure pool,
           sendNotification = \rideId driverId -> do
             pure (),
           getCurrentNotification = \rideId -> do
             ns <- readTVarIO notificationStatus
-            let filtered = fmap snd $ Map.keys $ Map.filterWithKey (\(r, _) s -> s == Allocation.Notified && r == rideId) ns
+            let filtered = fmap snd $ Map.keys $ Map.filterWithKey (\(r, _) s -> isNotified s && r == rideId) ns
             case filtered of
               [a] -> pure $ Just $ Allocation.CurrentNotification a $ parseTime "2018-12-06T11:39:57.153Z"
               _ -> pure Nothing,
-          addNotificationStatus = \rideId driverId nStatus _ -> do
+          addNotificationStatus = \rideId driverId nStatus -> do
             now <- Time.getCurrentTime
-            atomically $ modifyTVar notificationStatus $ Map.insert (rideId, driverId) Allocation.Notified,
+            atomically $ modifyTVar notificationStatus $ Map.insert (rideId, driverId) (Allocation.Notified now),
           updateNotificationStatus = \rideId driverId nStatus -> do
             now <- Time.getCurrentTime
             atomically $ modifyTVar notificationStatus $ Map.insert (rideId, driverId) nStatus,
@@ -124,7 +127,7 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
             pure filtered,
           getDriversWithNotification = do
             ns <- readTVarIO notificationStatus
-            let filtered = fmap snd $ Map.keys $ Map.filter (Allocation.Notified ==) ns
+            let filtered = fmap snd $ Map.keys $ Map.filter isNotified ns
             pure filtered,
           getDriverResponse = \rideId driverId -> do
             ar <- readTVarIO acceptReject

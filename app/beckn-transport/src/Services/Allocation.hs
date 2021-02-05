@@ -26,7 +26,7 @@ data SortMode
   | IdleTime
 
 data NotificationStatus
-  = Notified
+  = Notified UTCTime
   | Rejected
   | Ignored
   | NotAvailable
@@ -55,7 +55,7 @@ data ServiceHandle m = ServiceHandle
     -- Can be done as a select query from the AllocationRequest table.
     getTopRidesToAllocate :: Integer -> m [Ride],
     -- Get driver pool for this ride from Redis
-    getDriverPool :: RideId -> m (Maybe [DriverId]),
+    getDriverPool :: RideId -> m [DriverId],
     -- Get the driver that is currently being notified about this ride,
     -- and the time when the notification was sent.
     -- Can be done as a select from the NotificationStatus table.
@@ -64,7 +64,7 @@ data ServiceHandle m = ServiceHandle
     sendNotification :: RideId -> DriverId -> m (),
     -- Add notification status
     -- Can be done as an insert to the NotificationStatus table.
-    addNotificationStatus :: RideId -> DriverId -> NotificationStatus -> UTCTime -> m (),
+    addNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
     -- Update notification status
     -- Can be done as an update of the NotificationStatus table.
     updateNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
@@ -146,7 +146,7 @@ processRejection handle@ServiceHandle {..} ignored rideId driverId = do
 
 proceedToNextDriver :: (Monad m) => ServiceHandle m -> RideId -> m ()
 proceedToNextDriver handle@ServiceHandle {..} rideId = do
-  driverPool <- getDriverPool rideId >>= pure . fromMaybe []
+  driverPool <- getDriverPool rideId
   availableDrivers <- checkAvailability driverPool
   attemptedDrivers <- getAttemptedDrivers rideId
   driversWithNotification <- getDriversWithNotification
@@ -167,7 +167,7 @@ proceedToNextDriver handle@ServiceHandle {..} rideId = do
           IdleTime -> getFirstDriverInTheQueue filteredPool
       time <- getCurrentTime
       sendNotification rideId firstDriver
-      addNotificationStatus rideId firstDriver Notified time
+      addNotificationStatus rideId firstDriver $ Notified time
     [] -> cancel handle rideId
 
 cancel :: Monad m => ServiceHandle m -> RideId -> m ()
