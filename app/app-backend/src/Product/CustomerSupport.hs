@@ -150,13 +150,13 @@ makeTripDetails caseM = case caseM of
         mtrip = (\x -> Just $ x ^. #_trip) =<< mtracker
         driver = (\x -> x ^. #driver) =<< mtrip
         vehicle = (\x -> x ^. #vehicle) =<< mtrip
-    pure
-      $ Just
-      $ T.TripDetails
-        { _id = _getProductInstanceId _id,
-          _status = _status,
-          _driver = driver,
-          _price = _price,
-          _provider = provider,
-          _vehicle = vehicle
-        }
+    pure $
+      Just $
+        T.TripDetails
+          { _id = _getProductInstanceId _id,
+            _status = _status,
+            _driver = driver,
+            _price = _price,
+            _provider = provider,
+            _vehicle = vehicle
+          }

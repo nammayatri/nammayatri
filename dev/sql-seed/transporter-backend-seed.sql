@@ -172,6 +172,7 @@ CREATE TABLE atlas_transporter.person (
     gender character varying(255) NOT NULL,
     identifier_type character varying(255),
     email character varying(255),
+    password_hash bytea,
     mobile_number_encrypted character varying(255),
     mobile_number_hash bytea,
     mobile_country_code character varying(255),

@@ -18,21 +18,20 @@ instance FromJSON OrderResp where
 instance ToJSON OrderResp where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data OrderDetails
-  = OrderDetails
-      { _id :: Text,
-        _status :: Maybe CaseStatus,
-        _createdAt :: UTCTime,
-        _updatedAt :: UTCTime,
-        _startTime :: UTCTime,
-        _endTime :: Maybe UTCTime,
-        _fromLocation :: Maybe L.Location,
-        _toLocation :: Maybe L.Location,
-        _vehicleVariant :: Maybe Text,
-        _travellerName :: Maybe Text,
-        _travellerPhone :: Maybe Text,
-        _trip :: Maybe TripDetails
-      }
+data OrderDetails = OrderDetails
+  { _id :: Text,
+    _status :: Maybe CaseStatus,
+    _createdAt :: UTCTime,
+    _updatedAt :: UTCTime,
+    _startTime :: UTCTime,
+    _endTime :: Maybe UTCTime,
+    _fromLocation :: Maybe L.Location,
+    _toLocation :: Maybe L.Location,
+    _vehicleVariant :: Maybe Text,
+    _travellerName :: Maybe Text,
+    _travellerPhone :: Maybe Text,
+    _trip :: Maybe TripDetails
+  }
   deriving (Show, Generic)
 
 instance FromJSON OrderDetails where
@@ -41,15 +40,14 @@ instance FromJSON OrderDetails where
 instance ToJSON OrderDetails where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data TripDetails
-  = TripDetails
-      { _id :: Text, -- Product Instance ID
-        _status :: SP.ProductInstanceStatus,
-        _driver :: Maybe Driver, -- _info -> driver
-        _vehicle :: Maybe Vehicle,
-        _provider :: Maybe Provider,
-        _price :: Amount
-      }
+data TripDetails = TripDetails
+  { _id :: Text, -- Product Instance ID
+    _status :: SP.ProductInstanceStatus,
+    _driver :: Maybe Driver, -- _info -> driver
+    _vehicle :: Maybe Vehicle,
+    _provider :: Maybe Provider,
+    _price :: Amount
+  }
   deriving (Show, Generic)
 
 instance FromJSON TripDetails where
@@ -58,18 +56,16 @@ instance FromJSON TripDetails where
 instance ToJSON TripDetails where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data OrderInfo
-  = OrderInfo
-      { person :: P.Person,
-        searchcases :: [C.Case]
-      }
+data OrderInfo = OrderInfo
+  { person :: P.Person,
+    searchcases :: [C.Case]
+  }
   deriving (Show, Generic)
 
-data LoginReq
-  = LoginReq
-      { _email :: Text,
-        _password :: Text
-      }
+data LoginReq = LoginReq
+  { _email :: Text,
+    _password :: Text
+  }
   deriving (Show, Generic)
 
 instance FromJSON LoginReq where
@@ -78,11 +74,10 @@ instance FromJSON LoginReq where
 instance ToJSON LoginReq where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
-data LoginRes
-  = LoginRes
-      { _auth_token :: Text,
-        _message :: Text
-      }
+data LoginRes = LoginRes
+  { _auth_token :: Text,
+    _message :: Text
+  }
   deriving (Show, Generic)
 
 instance FromJSON LoginRes where
