@@ -85,7 +85,7 @@ findAllByParentIdsAndCaseType caseIds caseType = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
   where
-    predicate Storage.Case {..} = _parentCaseId `B.in_` ((B.val_ . Just) <$> caseIds) &&. (_type ==. B.val_ caseType)
+    predicate Storage.Case {..} = _parentCaseId `B.in_` (B.val_ . Just <$> caseIds) &&. (_type ==. B.val_ caseType)
 
 findOneByParentIdAndCaseType :: CaseId -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
 findOneByParentIdAndCaseType caseId caseType = do

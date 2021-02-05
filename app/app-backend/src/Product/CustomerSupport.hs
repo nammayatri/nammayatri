@@ -56,14 +56,14 @@ makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
       >>= either DB.throwDBError pure
-  let (status :: Maybe CaseStatus) = maybe Nothing (\x -> Just $ x ^. #_status) confiremedOrder <|> (Just _status)
+  let (status :: Maybe CaseStatus) = ((\x -> Just $ x ^. #_status) =<< confiremedOrder) <|> Just _status
   fromLocation <- Location.findLocationById $ LocationId _fromLocationId
   toLocation <- Location.findLocationById $ LocationId _toLocationId
   trip <- makeTripDetails confiremedOrder
   --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
-          { _id = (_getCaseId _id),
+          { _id = _getCaseId _id,
             _status = status,
             _createdAt = _createdAt,
             _updatedAt = _updatedAt,
@@ -94,12 +94,13 @@ makeTripDetails caseM = case caseM of
         mtrip = (\x -> Just $ x ^. #_trip) =<< mtracker
         driver = (\x -> x ^. #driver) =<< mtrip
         vehicle = (\x -> x ^. #vehicle) =<< mtrip
-    pure $ Just $
-      T.TripDetails
-        { _id = _getProductInstanceId _id,
-          _status = _status,
-          _driver = driver,
-          _price = _price,
-          _provider = provider,
-          _vehicle = vehicle
-        }
+    pure $
+      Just $
+        T.TripDetails
+          { _id = _getProductInstanceId _id,
+            _status = _status,
+            _driver = driver,
+            _price = _price,
+            _provider = provider,
+            _vehicle = vehicle
+          }
