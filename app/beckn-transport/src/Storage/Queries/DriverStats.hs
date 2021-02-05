@@ -5,7 +5,7 @@ module Storage.Queries.DriverStats where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -29,19 +29,15 @@ createInitialDriverStats driverId = do
   DB.createOne dbTable (Storage.Common.insertExpression driverStats)
     >>= either DB.throwDBError pure
 
-noOffset, noLimit :: Integer -- to remove hint by hlint
-noOffset = 0
-noLimit = 0
-
-sortByIdleTime :: [DriverId] -> Flow [DriverId]
-sortByIdleTime ids = do
+getFirstDriverInTheQueue :: [DriverId] -> Flow DriverId
+getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
-  let order Storage.DriverStats {..} = B.asc_ _idleSince
-  DB.findAllWithLimitOffsetWhere dbTable predicate noLimit noOffset order
+  DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
     >>= either DB.throwDBError pure
-    <&> map (^. #_driverId)
+    >>= fromMaybeM400 "NO_DRIVERS_NEARBY" . listToMaybe . map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
+    order Storage.DriverStats {..} = B.asc_ _idleSince
 
 update :: DriverId -> Flow ()
 update driverId = do
