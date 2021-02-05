@@ -164,8 +164,6 @@ instance ToJSON Person where
 instance FromJSON Person where
   parseJSON = genericParseJSON stripAllLensPrefixOptions
 
--- instance ToSchema Person
-
 instance ToJSON (PersonT Identity)
 
 instance FromJSON (PersonT Identity)

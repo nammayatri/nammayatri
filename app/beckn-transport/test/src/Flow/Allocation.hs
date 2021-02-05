@@ -140,8 +140,8 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
           cleanupRide = \rideId -> do
             _ <- atomically $ modifyTVar rideRequest $ Map.delete rideId
             pure (),
-          getFirstDriverInTheQueue = \driverPool -> pure $ NonEmpty.head driverPool,
-          checkAvailability = \driverPool -> pure $ NonEmpty.toList driverPool
+          getFirstDriverInTheQueue = pure . NonEmpty.head,
+          checkAvailability = pure . NonEmpty.toList
         }
 
 allocation :: TestTree
