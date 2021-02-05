@@ -18,6 +18,7 @@ import EulerHS.Prelude
 import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Case as QCase
+import qualified Storage.Queries.DriverInformation as DriverInformation
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
@@ -25,6 +26,7 @@ import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
+import Types.App (DriverId (..))
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
@@ -174,6 +176,7 @@ updateDriverDetails user piList req = case req ^. #_personId of
         [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
         p : _ -> do
           PIQ.updateDriver (PI._id <$> piList) (Just $ PersonId driverId)
+          DriverInformation.updateOnRide (DriverId driverId) True
           driver <- PersQ.findPersonById (PersonId driverId)
           Notify.notifyDriver notificationType notificationTitle (message p) driver
           return ()
@@ -289,7 +292,7 @@ updateTrip piId newStatus request = do
       _ <- PIQ.updateStatus (PI._id searchPi) PI.CANCELLED
       CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
       CQ.updateStatus (Case._id orderCase_) Case.CLOSED
-      pure ()
+      updateOnRide (PI._personId orderPi) False
     -- Sent by Driver for order reassignment
     PI.TRIP_REASSIGNMENT -> do
       trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
@@ -307,11 +310,16 @@ updateTrip piId newStatus request = do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) newStatus
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
+      orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
+      updateOnRide (PI._personId orderPi) False
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) PI.TRIP_ASSIGNED
       pure ()
     _ -> return ()
+  where
+    updateOnRide Nothing _ = pure ()
+    updateOnRide (Just personId) status = DriverInformation.updateOnRide (DriverId $ _getPersonId personId) status
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do

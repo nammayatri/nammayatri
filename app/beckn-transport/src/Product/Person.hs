@@ -83,6 +83,7 @@ createPerson orgId req = withFlowHandler $ do
             DriverInformation.DriverInformation
               { _driverId = driverId,
                 _active = False,
+                _onRide = False,
                 _createdAt = now,
                 _updatedAt = now
               }

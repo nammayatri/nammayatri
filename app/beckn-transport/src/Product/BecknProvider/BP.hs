@@ -44,6 +44,7 @@ import Product.FareCalculator
 import qualified Product.Location as Location
 import Servant.Client
 import Storage.Queries.AllocationRequest as AllocationRequest
+import qualified Storage.Queries.DriverInformation as DriverInformation
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
@@ -52,7 +53,7 @@ import qualified Storage.Queries.Products as SProduct
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
-import Types.App (AllocationRequestId (..), RideId (..))
+import Types.App (AllocationRequestId (..), DriverId (..), RideId (..))
 import Types.Storage.AllocationRequest as SAllocationRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -224,6 +225,7 @@ cancel transporterId bapOrg req = withFlowHandler $ do
       case prdInst ^. #_personId of
         Just driverId -> do
           driver <- Person.findPersonById driverId
+          DriverInformation.updateOnRide (DriverId $ _getPersonId driverId) False
           Notify.notifyTransportersOnCancel c (driver : admins)
         Nothing -> Notify.notifyTransportersOnCancel c admins
   mkAckResponse uuid "cancel"

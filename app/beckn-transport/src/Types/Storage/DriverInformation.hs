@@ -8,6 +8,7 @@ import Types.App (DriverId)
 data DriverInformationT f = DriverInformation
   { _driverId :: B.C f DriverId,
     _active :: B.C f Bool,
+    _onRide :: B.C f Bool,
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
   }
@@ -35,6 +36,7 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { _driverId = "driver_id",
+          _onRide = "on_ride",
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }

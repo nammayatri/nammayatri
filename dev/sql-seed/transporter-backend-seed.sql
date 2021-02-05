@@ -664,6 +664,7 @@ CREATE TABLE atlas_transporter.transporter_config (
 CREATE TABLE atlas_transporter.driver_information (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
     active boolean DEFAULT false NOT NULL,
+    on_ride boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -682,7 +683,7 @@ CREATE TABLE atlas_transporter.fare_policy (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-INSERT INTO atlas_transporter.driver_information (driver_id, active, created_at, updated_at) select id, False, now(), now() from atlas_transporter.person where role ='DRIVER';
+INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where role ='DRIVER';
 INSERT INTO atlas_transporter.driver_stats (driver_id, completed_rides_number, earnings, created_at, updated_at) select id, 0, 0, now(), now() from atlas_transporter.person where role ='DRIVER';
 
 ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas;
