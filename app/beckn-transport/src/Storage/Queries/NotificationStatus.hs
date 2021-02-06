@@ -3,7 +3,7 @@ module Storage.Queries.NotificationStatus where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Beckn.Utils.Common (getSchemaName)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -24,15 +24,10 @@ create NotificationStatus.NotificationStatus {..} = do
 updateStatus :: RideId -> DriverId -> NotificationStatus.AnswerStatus -> Flow ()
 updateStatus rideId driverId status = do
   dbTable <- getDbTable
-  now <- getCurrTime
-  DB.update dbTable (setClause status now) (predicate rideId driverId)
+  DB.update dbTable (setClause status) (predicate rideId driverId)
     >>= either DB.throwDBError pure
   where
-    setClause s now NotificationStatus.NotificationStatus {..} =
-      mconcat
-        [ _status <-. B.val_ s,
-          _updatedAt <-. B.val_ now
-        ]
+    setClause s NotificationStatus.NotificationStatus {..} = _status <-. B.val_ s
     predicate rId dId NotificationStatus.NotificationStatus {..} =
       _rideId ==. B.val_ rId
         &&. _driverId ==. B.val_ dId

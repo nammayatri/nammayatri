@@ -706,7 +706,5 @@ CREATE TABLE atlas_transporter.notification_status (
     driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id),
     allocation_request_id character(36) NOT NULL REFERENCES atlas_transporter.allocation_request (id),
     status character varying(20) NOT NULL,
-    notified_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    notified_at timestamp with time zone
 );

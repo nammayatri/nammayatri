@@ -28,9 +28,7 @@ data NotificationStatusT f = NotificationStatus
     _driverId :: B.C f DriverId,
     _allocationRequestId :: B.C f AllocationRequestId,
     _status :: B.C f AnswerStatus,
-    _notifiedAt :: B.C f (Maybe UTCTime),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+    _notifiedAt :: B.C f (Maybe UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -58,7 +56,5 @@ fieldEMod =
         { _rideId = "ride_id",
           _driverId = "driver_id",
           _allocationRequestId = "allocation_request_id",
-          _notifiedAt = "notified_at",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+          _notifiedAt = "notified_at"
         }
