@@ -1,50 +1,27 @@
 module Types.API.Location where
 
 import Beckn.Types.MapSearch as MapSearch
-import qualified Beckn.Types.Storage.Location as SL
-import Data.Swagger
 import EulerHS.Prelude
 
 data UpdateLocationReq = UpdateLocationReq
-  { locationType :: Maybe SL.LocationType,
-    lat :: Maybe Double,
-    long :: Maybe Double,
-    ward :: Maybe Text,
-    district :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    pincode :: Maybe Text,
-    address :: Maybe Text
+  { lat :: Double,
+    long :: Double
   }
-  deriving (Generic, ToSchema, ToJSON, Show, FromJSON)
+  deriving (Generic, ToJSON, Show, FromJSON)
 
 newtype UpdateLocationRes = UpdateLocationRes
   { status :: Text
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON)
 
 data LocationInfo = LocationInfo
-  { locationType :: Maybe SL.LocationType,
-    lat :: Maybe Double,
-    long :: Maybe Double,
-    ward :: Maybe Text,
-    district :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    pincode :: Maybe Text,
-    address :: Maybe Text,
-    durationInS :: Maybe Integer, -- seconds
-    distanceInM :: Maybe Float, -- meters
-    bbox :: Maybe BoundingBoxWithoutCRS,
-    waypoints :: Maybe GeospatialGeometry,
-    snapped_waypoints :: Maybe GeospatialGeometry
+  { lat :: Double,
+    long :: Double
   }
   deriving (Generic, ToJSON, Show, FromJSON)
 
 newtype GetLocationRes = GetLocationRes
-  { location :: Maybe LocationInfo
+  { location :: LocationInfo
   }
   deriving (Generic, ToJSON, FromJSON)
 

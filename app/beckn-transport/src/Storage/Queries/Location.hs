@@ -62,3 +62,18 @@ findAllByLocIds fromIds toIds = do
     predicate pFromIds pToIds Storage.Location {..} =
       B.in_ _id (B.val_ <$> pFromIds)
         ||. B.in_ _id (B.val_ <$> pToIds)
+
+updateGpsCoord :: LocationId -> Double -> Double -> Flow ()
+updateGpsCoord locationId lat long = do
+  dbTable <- getDbTable
+  now <- getCurrTime
+  DB.update dbTable (setClause lat long now) (predicate locationId)
+    >>= either DB.throwDBError pure
+  where
+    setClause lLat lLong n Storage.Location {..} =
+      mconcat
+        [ _lat <-. B.val_ (Just lLat),
+          _long <-. B.val_ (Just lLong),
+          _updatedAt <-. B.val_ n
+        ]
+    predicate id Storage.Location {..} = _id ==. B.val_ id
