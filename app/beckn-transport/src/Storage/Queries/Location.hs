@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
@@ -20,6 +21,35 @@ create Storage.Location {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
     >>= either DB.throwDBError pure
+
+createDriverLoc :: Flow Storage.Location
+createDriverLoc = do
+  dbTable <- getDbTable
+  location <- mkLoc
+  DB.createOne dbTable (Storage.insertExpression location)
+    >>= either DB.throwDBError (\_ -> pure location)
+  where
+    mkLoc = do
+      uuid <- L.generateGUID
+      now <- getCurrTime
+      let n = Nothing
+      return $
+        Storage.Location
+          { _id = LocationId uuid,
+            _locationType = Storage.POINT,
+            _lat = n,
+            _long = n,
+            _ward = n,
+            _district = n,
+            _city = n,
+            _state = n,
+            _country = n,
+            _pincode = n,
+            _address = n,
+            _bound = n,
+            _createdAt = now,
+            _updatedAt = now
+          }
 
 findLocationById ::
   LocationId -> Flow (Maybe Storage.Location)

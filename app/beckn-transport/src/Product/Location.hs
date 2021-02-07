@@ -52,6 +52,34 @@ getLocation caseId = withFlowHandler $ do
   long <- currLocation ^. #_long & fromMaybeM500 "Gps coord not set"
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
+getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
+getRoute' fromLat fromLon toLat toLon = do
+  routeE <- MapSearch.getRoute getRouteRequest
+
+  case routeE of
+    Left err -> do
+      L.logInfo @Text "GetRoute" (show err)
+
+      return Nothing
+    Right MapSearch.Response {..} ->
+      pure $
+        if null routes
+          then Nothing
+          else Just $ head routes
+  where
+    getRouteRequest = do
+      let from = MapSearch.LatLong $ MapSearch.PointXY fromLat fromLon
+
+      let to = MapSearch.LatLong $ MapSearch.PointXY toLat toLon
+
+      MapSearch.Request
+        { waypoints = [from, to],
+          mode = Just MapSearch.CAR,
+          departureTime = Nothing,
+          arrivalTime = Nothing,
+          calcPoints = Just True
+        }
+
 getRoute :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
 getRoute _ Location.Request {..} =
   withFlowHandler $
