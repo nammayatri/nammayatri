@@ -3,6 +3,7 @@
 
 module Product.Person
   ( createPerson,
+    createDriverDetails,
     listPerson,
     updatePerson,
     getPerson,
@@ -69,7 +70,7 @@ createPerson orgId req = withFlowHandler $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
-  when (person ^. #_role == SP.DRIVER) $ createDriverStatsAndInfo (person ^. #_id)
+  when (person ^. #_role == SP.DRIVER) $ createDriverDetails (person ^. #_id)
   org <- OQ.findOrganizationById (OrganizationId orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
@@ -86,19 +87,23 @@ createPerson orgId req = withFlowHandler $ do
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwError400 "DRIVER_ALREADY_CREATED"
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
-    createDriverStatsAndInfo personId = do
-      now <- getCurrTime
-      let driverId = DriverId $ _getPersonId personId
-      let driverInfo =
-            DriverInformation.DriverInformation
-              { _driverId = driverId,
-                _active = False,
-                _onRide = False,
-                _createdAt = now,
-                _updatedAt = now
-              }
-      QDriverStats.createInitialDriverStats driverId
-      QDriverInformation.create driverInfo
+
+createDriverDetails :: PersonId -> Flow ()
+createDriverDetails personId = do
+  now <- getCurrTime
+  let driverId = DriverId $ _getPersonId personId
+  let driverInfo =
+        DriverInformation.DriverInformation
+          { _driverId = driverId,
+            _active = False,
+            _onRide = False,
+            _createdAt = now,
+            _updatedAt = now
+          }
+  QDriverStats.createInitialDriverStats driverId
+  QDriverInformation.create driverInfo
+  location <- QL.createDriverLoc
+  QP.updateLocationId personId (location ^. #_id)
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandler $ do

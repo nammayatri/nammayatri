@@ -13,14 +13,10 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified Storage.Queries.DriverInformation as QDriverInformation
-import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Location as QLoc
+import qualified Product.Person as Person
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
-import Types.App (DriverId (..))
-import qualified Types.Storage.DriverInformation as DriverInformation
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -162,24 +158,8 @@ createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
-  when (person ^. #_role == SP.DRIVER) $ createDriverDetails (person ^. #_id)
+  when (person ^. #_role == SP.DRIVER) $ Person.createDriverDetails (person ^. #_id)
   pure person
-  where
-    createDriverDetails personId = do
-      now <- getCurrTime
-      let driverId = DriverId $ _getPersonId personId
-      let driverInfo =
-            DriverInformation.DriverInformation
-              { _driverId = driverId,
-                _active = False,
-                _onRide = False,
-                _createdAt = now,
-                _updatedAt = now
-              }
-      QDriverStats.createInitialDriverStats driverId
-      QDriverInformation.create driverInfo
-      location <- QLoc.createDriverLoc
-      QP.updateLocationId personId (location ^. #_id)
 
 checkPersonExists :: Text -> Flow SP.Person
 checkPersonExists _EntityId =
