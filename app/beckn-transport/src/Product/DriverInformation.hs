@@ -136,7 +136,7 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
           { _productInstanceId = Just productInstanceId,
             _pickupLoc = fromLocation,
             _dropLoc = toLocation,
-            _etaForPickupLoc = durationInS <$> mbRoute,
+            _etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
             _distanceToPickupLoc = distanceInM <$> mbRoute,
             _notificationExpiryTime = addUTCTime driverNotificationExpiry <$> notificationTime
           }
