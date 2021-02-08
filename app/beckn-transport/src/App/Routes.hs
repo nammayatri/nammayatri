@@ -5,7 +5,6 @@ import App.Types
 import Beckn.Types.APIResult (APIResult)
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
-import qualified Types.API.DriverInformation as DriverInformationAPI
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.API.Feedback as API
@@ -38,6 +37,7 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Types.API.Case
 import Types.API.Cron
+import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.API.Location as Location
 import Types.API.Person
 import Types.API.ProductInstance
@@ -66,10 +66,7 @@ type TransportAPI =
            :<|> RouteAPI
            :<|> DriverInformationAPI
            :<|> FarePolicyAPI
-<<<<<<< HEAD
            :<|> RideAPI
-=======
->>>>>>> ad8382b6 (remove temp getNearestDrivers endpoint)
        )
 
 ---- Registration Flow ------
@@ -330,10 +327,7 @@ transporterServer =
     :<|> routeApiFlow
     :<|> driverInformationFlow
     :<|> farePolicyFlow
-<<<<<<< HEAD
     :<|> rideFlow
-=======
->>>>>>> ad8382b6 (remove temp getNearestDrivers endpoint)
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId
@@ -417,7 +411,7 @@ type DriverInformationAPI =
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
-         DriverInformation.getInformation
+  DriverInformation.getInformation
     :<|> DriverInformation.setActivity
     :<|> DriverInformation.getRideInfo
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.DriverInformation where
 
 import qualified App.Types as App
@@ -12,8 +14,6 @@ import EulerHS.Prelude hiding (unzip)
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Registration as Registration
-import Beckn.Utils.Common (withFlowHandler)
-import EulerHS.Prelude
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
@@ -22,7 +22,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.App
-
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandler $ do
