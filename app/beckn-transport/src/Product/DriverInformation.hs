@@ -124,7 +124,6 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
           notificationTime = notification ^. #_notifiedAt
       driverNotificationExpiry <- getDriverNotificationExpiry
       productInstance <- QueryPI.findById productInstanceId
-      let personId = PersonId $ _getDriverId driverId
       driver <- QPerson.findPersonById personId
       driverLocation <- findLocationById $ driver ^. #_locationId
       fromLocation <- findLocationById $ productInstance ^. #_fromLocation
@@ -143,6 +142,7 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
           }
   where
     driverId = DriverId _EntityId
+    personId = PersonId $ _getDriverId driverId
     rideIdToProductInstanceId rideId = ProductInstanceId $ rideId ^. #_getRideId
     getDriverNotificationExpiry = App.driverNotificationExpiry . App.driverAllocationConfig <$> ask
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ LocationId <$> mbId
