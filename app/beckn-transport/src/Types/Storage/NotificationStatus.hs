@@ -11,7 +11,7 @@ import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import Types.App (DriverId, RideId, RideRequestId)
 
-data AnswerStatus = ACCEPTED | REJECTED | NOTIFIED | IGNORED
+data AnswerStatus = ACCEPTED | REJECTED | NOTIFIED | IGNORED | RECEIVED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerStatus where

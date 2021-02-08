@@ -32,6 +32,16 @@ updateStatus rideId driverId status = do
       _rideId ==. B.val_ rId
         &&. _driverId ==. B.val_ dId
 
+fetchByRideIdAndDriverId :: RideId -> DriverId -> Flow (Maybe NotificationStatus.NotificationStatus)
+fetchByRideIdAndDriverId rideId driverId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable (predicate rideId driverId)
+    >>= either DB.throwDBError pure
+  where
+    predicate rId dId NotificationStatus.NotificationStatus {..} =
+      _rideId ==. B.val_ rId
+        &&. _driverId ==. B.val_ dId
+
 fetchRefusedNotificationsByRideId :: RideId -> Flow [NotificationStatus.NotificationStatus]
 fetchRefusedNotificationsByRideId rideId = do
   dbTable <- getDbTable

@@ -161,3 +161,21 @@ notifyDriver notificationType notificationTitle message driver =
     title = FCM.FCMNotificationTitle notificationTitle
     body =
       FCMNotificationBody message
+
+notifyDriverNewAllocation :: ProductInstance -> Person -> Flow ()
+notifyDriverNewAllocation productInstance = notifyPerson title body notificationData
+  where
+    title = FCM.FCMNotificationTitle "New allocation request."
+    body =
+      FCM.FCMNotificationBody $
+        unwords
+          [ "New allocation request.",
+            "Check the app for more details."
+          ]
+    notificationData =
+      FCM.FCMData
+        { _fcmNotificationType = FCM.ALLOCATION_REQUEST,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityType = FCM.Product,
+          _fcmEntityIds = _getProductInstanceId $ productInstance ^. #_id
+        }
