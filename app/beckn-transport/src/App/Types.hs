@@ -44,9 +44,10 @@ data AppEnv = AppEnv
   deriving (Generic, FromDhall)
 
 data DriverAllocationConfig = DriverAllocationConfig
-  { defaultSortMode :: SortMode,
-    driverNotificationExpiry :: NominalDiffTime,
-    rideAllocationExpiry :: NominalDiffTime
+  { driverNotificationExpiry :: NominalDiffTime,
+    rideAllocationExpiry :: NominalDiffTime,
+    defaultSortMode :: SortMode,
+    defaultRadiusOfSearch :: Integer
   }
   deriving (Generic, FromDhall)
 

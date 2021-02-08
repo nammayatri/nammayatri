@@ -356,7 +356,7 @@ getNearestDrivers point' radius' orgId' = do
 
 getNearestDrivers ::
   LatLong ->
-  Double ->
+  Integer ->
   OrganizationId ->
   Vehicle.Variant ->
   Flow [(PersonId, Double)]

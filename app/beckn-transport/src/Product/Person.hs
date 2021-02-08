@@ -282,7 +282,7 @@ calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
   lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"
   long <- location ^. #_long & fromMaybeM500 "NO_LONGITUDE"
-  radius <- getRadius >>= fromMaybeM500 "THE_RADIUS_IS_NOT_A_NUMBER"
+  radius <- getRadius
   map fst
     <$> QP.getNearestDrivers
       (LatLong lat long)
@@ -291,8 +291,12 @@ calculateDriverPool locId orgId variant = do
       variant
   where
     getRadius =
-      readMaybe
+      QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")
+        >>= maybe
+          (asks (defaultRadiusOfSearch . driverAllocationConfig))
+          radiusFromTransporterConfig
+    radiusFromTransporterConfig conf =
+      fromMaybeM500 "THE_RADIUS_IS_NOT_A_NUMBER"
+        . readMaybe
         . toString
-        . fromMaybe ("1000" :: Text) -- default radius 1km
-        . fmap (^. #_value)
-        <$> QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")
+        $ conf ^. #_value
