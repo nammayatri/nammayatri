@@ -2,11 +2,14 @@ module Types.API.DriverInformation
   ( ActiveDriversResponse (..),
     DriverRidesInformation (..),
     DriverInformationResponse (..),
+    GetRideInfoRes (..),
   )
 where
 
-import Beckn.Types.App (PersonId)
+import Beckn.Types.App (PersonId, ProductInstanceId)
+import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Organization
+import Data.Time
 import EulerHS.Prelude
 import qualified Types.API.Person as PersonAPI
 import Types.Storage.DriverInformation
@@ -27,5 +30,15 @@ data DriverInformationResponse = DriverInformationResponse
   { transporter :: Organization.Organization,
     person :: PersonAPI.PersonEntityRes,
     driverInformation :: DriverInformation
+  }
+  deriving (Generic, ToJSON)
+
+data GetRideInfoRes = GetRideInfoRes
+  { _productInstanceId :: Maybe ProductInstanceId,
+    _pickupLoc :: Maybe Loc.Location,
+    _dropLoc :: Maybe Loc.Location,
+    _etaForPickupLoc :: Maybe Integer,
+    _distanceToPickupLoc :: Maybe Float,
+    _notificationExpiryTime :: Maybe UTCTime
   }
   deriving (Generic, ToJSON)

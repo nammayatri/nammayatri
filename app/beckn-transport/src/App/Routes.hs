@@ -412,10 +412,10 @@ type DriverInformationAPI =
            :> TokenAuth
            :> MandatoryQueryParam "active" Bool
            :> Post '[JSON] APIResult.APIResult
-           :<|> "getRideInfo"
+           :<|> "notification"
            :> TokenAuth
-           :> QueryParam "rideId" ProductInstanceId
-           :> Get '[JSON] ()
+           :> QueryParam "productInstanceId" ProductInstanceId
+           :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
        )
 
 driverInformationFlow :: FlowServer DriverInformationAPI
