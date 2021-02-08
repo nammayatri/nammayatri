@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.DriverInformation where
 
 import qualified App.Types as App

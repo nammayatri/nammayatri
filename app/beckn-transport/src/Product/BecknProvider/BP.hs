@@ -92,11 +92,20 @@ search transporterId bapOrg req = withFlowHandler $ do
     Notify.notifyTransportersOnSearch productCase intent admins
     fork "search" $ do
       vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
+      (piStatus, caseStatus) <- do
+        pool <-
+          calculateDriverPool
+            (fromLocation ^. #_id)
+            transporterId
+            vehicleVariant
+        return $
+          if null pool
+            then (ProductInstance.OUTOFSTOCK, SC.CLOSED)
+            else (ProductInstance.INSTOCK, SC.CONFIRMED)
       price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
-      prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price
+      prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price piStatus
       sendOnSearch productCase prodInst transporter
-      Case.updateStatus (productCase ^. #_id) SC.CONFIRMED
-      calculateDriverPool (fromLocation ^. #_id) transporterId (prodInst ^. #_id)
+      Case.updateStatus (productCase ^. #_id) caseStatus
   mkAckResponse uuid "search"
   where
     -- TODO :: need to isolate it from this module
@@ -151,7 +160,7 @@ search transporterId bapOrg req = withFlowHandler $ do
               newPath = baseUrlPath url <> "/" <> T.unpack orgId
            in url {baseUrlPath = newPath}
 
-    createProductInstance productCase price = do
+    createProductInstance productCase price status = do
       productInstanceId <- ProductInstanceId <$> L.generateGUID
       now <- getCurrTime
       shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -169,7 +178,7 @@ search transporterId bapOrg req = withFlowHandler $ do
                 _quantity = 1,
                 _type = SC.RIDESEARCH,
                 _price = fromMaybe 0 price,
-                _status = ProductInstance.INSTOCK,
+                _status = status,
                 _startTime = productCase ^. #_startTime,
                 _endTime = productCase ^. #_endTime,
                 _validTill = productCase ^. #_validTill,
