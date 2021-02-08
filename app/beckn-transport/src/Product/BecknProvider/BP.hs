@@ -43,18 +43,18 @@ import qualified Models.ProductInstance as MPI
 import Product.FareCalculator
 import qualified Product.Location as Location
 import Servant.Client
-import Storage.Queries.AllocationRequest as AllocationRequest
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
+import Storage.Queries.RideRequest as RideRequest
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
-import Types.App (AllocationRequestId (..), DriverId (..), RideId (..))
-import Types.Storage.AllocationRequest as SAllocationRequest
+import Types.App (DriverId (..), RideId (..), RideRequestId (..))
+import Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -208,6 +208,7 @@ cancel transporterId bapOrg req = withFlowHandler $ do
       orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
       _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
       _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+      RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION (orderPi ^. #_createdAt)
       return ()
   _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
   transporter <- findOrganizationById transporterId
@@ -314,7 +315,8 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
-  AllocationRequest.create =<< mkAllocationReq (orderProductInstance ^. #_id) (orderProductInstance ^. #_createdAt)
+  RideRequest.create
+    =<< mkRideReq (orderProductInstance ^. #_id) SRideRequest.ALLOCATION (orderProductInstance ^. #_createdAt)
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
   _ <- ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
@@ -393,16 +395,17 @@ mkOrderProductInstance caseId prodInst = do
         _udf5 = prodInst ^. #_udf5
       }
 
-mkAllocationReq :: ProductInstanceId -> UTCTime -> Flow SAllocationRequest.AllocationRequest
-mkAllocationReq pId currTime = do
+mkRideReq :: ProductInstanceId -> SRideRequest.AllocationType -> UTCTime -> Flow SRideRequest.RideRequest
+mkRideReq pId allocationType currTime = do
   guid <- generateGUID
   let rideId = RideId $ _getProductInstanceId pId
   pure
-    SAllocationRequest.AllocationRequest
-      { _id = AllocationRequestId guid,
+    SRideRequest.RideRequest
+      { _id = RideRequestId guid,
         _rideId = rideId,
-        _orderedAt = currTime,
-        _status = SAllocationRequest.NEW
+        _requestTime = currTime,
+        _type = allocationType,
+        _status = SRideRequest.NEW
       }
 
 -- TODO : Add notifying transporter admin with FCM

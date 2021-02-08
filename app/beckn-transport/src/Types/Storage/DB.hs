@@ -14,7 +14,6 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.AllocationRequest as AllocationRequest
 import qualified Types.Storage.Customer as Customer
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
@@ -22,6 +21,7 @@ import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.Quotation as Quotation
+import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 import qualified Types.Storage.TripReference as TripReference
@@ -45,7 +45,7 @@ data TransporterDb f = TransporterDb
     _transporterConfig :: f (B.TableEntity TransporterConfig.TransporterConfigT),
     _driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
     _farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
-    _allocationRequest :: f (B.TableEntity AllocationRequest.AllocationRequestT),
+    _rideRequest :: f (B.TableEntity RideRequest.RideRequestT),
     _notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT)
   }
   deriving (Generic, B.Database be)
@@ -72,7 +72,7 @@ transporterDb dbSchemaName =
         _transporterConfig = setSchema dbSchemaName <> TransporterConfig.fieldEMod,
         _driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod,
         _farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod,
-        _allocationRequest = setSchema dbSchemaName <> AllocationRequest.fieldEMod,
+        _rideRequest = setSchema dbSchemaName <> RideRequest.fieldEMod,
         _notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod
       }
   where

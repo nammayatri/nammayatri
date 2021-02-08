@@ -73,12 +73,12 @@ newtype RideId = RideId
 
 deriveIdentifierInstances ''RideId
 
-newtype AllocationRequestId = AllocationRequestId
-  { _getAllocationRequestId :: Text
+newtype RideRequestId = RideRequestId
+  { _getRideRequestId :: Text
   }
   deriving (Generic, Show)
 
-deriveIdentifierInstances ''AllocationRequestId
+deriveIdentifierInstances ''RideRequestId
 
 type Limit = Int
 
