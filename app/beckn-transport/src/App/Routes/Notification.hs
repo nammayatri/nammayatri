@@ -11,7 +11,7 @@ type NotificationAPI =
   "notification"
     :> ( TokenAuth
            :> Capture "rideId" RideId
-           :> Get '[JSON] NotificationDetailResponse
+           :> Post '[JSON] NotificationDetailResponse
        )
 
 notificationFlow :: FlowServer NotificationAPI
