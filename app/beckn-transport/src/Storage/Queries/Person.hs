@@ -13,6 +13,7 @@ import Beckn.Storage.DB.Config (DBConfig (..))
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
+import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import Data.Pool (withResource)
 import Data.Time
@@ -357,8 +358,9 @@ getNearestDrivers ::
   LatLong ->
   Double ->
   OrganizationId ->
+  Vehicle.Variant ->
   Flow [(PersonId, Double)]
-getNearestDrivers LatLong {..} radius orgId = do
+getNearestDrivers LatLong {..} radius orgId variant = do
   DBConfig {..} <- asks dbCfg
   pool <-
     getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
@@ -382,14 +384,17 @@ getNearestDrivers LatLong {..} radius orgId = do
               ON person.location_id = location.id
             JOIN atlas_transporter.driver_information
               ON person.id = driver_information.driver_id
+            JOIN atlas_transporter.vehicle
+              ON person.udf1 = vehicle.id
             WHERE person.role = 'DRIVER'
               AND person.organization_id = ?
               AND driver_information.active
               AND NOT driver_information.on_ride
+              AND vehicle.variant = ?
           )
           SELECT id, dist
           FROM a
           WHERE dist < ?
           ORDER BY dist ASC
         |]
-        (lon, lat, _getOrganizationId orgId, radius)
+        (lon, lat, _getOrganizationId orgId, toJSON variant, radius)

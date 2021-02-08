@@ -2,6 +2,8 @@ module Flow.NearestDrivers (runTests) where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Storage.Vehicle
+import Beckn.Types.Storage.Vehicle (Variant (..))
 import EulerHS.Prelude
 import Storage.Queries.Person (getNearestDrivers)
 import Test.Tasty
@@ -29,13 +31,13 @@ runTests =
 testOrder :: TestTree
 testOrder =
   testCase "Test ordering" $
-    (getNearestDrivers pickupPoint 5000 org1 <&> map (_getPersonId . fst))
+    (getNearestDrivers pickupPoint 5000 org1 SUV <&> map (_getPersonId . fst))
       @@?= ["closest_driver", "furthest_driver"]
 
 testInRadius :: TestTree
 testInRadius =
   testCase "Test radius filtration" $
-    (getNearestDrivers pickupPoint 800 org1 <&> map (_getPersonId . fst))
+    (getNearestDrivers pickupPoint 800 org1 SUV <&> map (_getPersonId . fst))
       @@?= ["closest_driver"]
 
 pickupPoint = LatLong 12.994927 77.596386

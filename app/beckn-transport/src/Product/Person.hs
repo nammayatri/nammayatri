@@ -26,11 +26,13 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.Case as Case
 import qualified Models.ProductInstance as PI
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -257,18 +259,26 @@ getDriverPool piId =
   where
     calcDriverPool = do
       prodInst <- PI.findById piId
+      case_ <- Case.findById (prodInst ^. #_caseId)
+      vehicleVariant :: SV.Variant <-
+        (case_ ^. #_udf1 >>= readMaybe . T.unpack)
+          & fromMaybeM500 "NO_VEHICLE_VARIANT"
       pickupPoint <-
         LocationId <$> prodInst ^. #_fromLocation
           & fromMaybeM500 "NO_FROM_LOCATION"
       let orgId = OrganizationId (prodInst ^. #_organizationId)
-      calculateDriverPool pickupPoint orgId
+      calculateDriverPool pickupPoint orgId vehicleVariant
 
 setDriverPool :: ProductInstanceId -> [PersonId] -> Flow ()
 setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map _getPersonId ids) (60 * 10)
 
-calculateDriverPool :: LocationId -> OrganizationId -> Flow [PersonId]
-calculateDriverPool locId orgId = do
+calculateDriverPool ::
+  LocationId ->
+  OrganizationId ->
+  SV.Variant ->
+  Flow [PersonId]
+calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
   lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"
   long <- location ^. #_long & fromMaybeM500 "NO_LONGITUDE"
@@ -278,6 +288,7 @@ calculateDriverPool locId orgId = do
       (LatLong lat long)
       radius
       orgId
+      variant
   where
     getRadius =
       readMaybe

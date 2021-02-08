@@ -330,7 +330,10 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
 
   pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
-  calculateDriverPool (LocationId pickupPoint) transporterId
+  vehicleVariant :: Vehicle.Variant <-
+    (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
+      & fromMaybeM500 "NO_VEHICLE_VARIANT"
+  calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
     >>= setDriverPool prodInstId
 
   -- Send callback to BAP
