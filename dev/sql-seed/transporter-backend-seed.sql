@@ -325,9 +325,9 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
   ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
 INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id) VALUES
-  ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', 'org1', 'furthest_driver'),
-  ('closest_driver',  'DRIVER', 'MALE',   true, 'ACTIVE', 'org1', 'closest_driver'),
-  ('other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'org2', 'other_driver');
+  ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'furthest_driver'),
+  ('closest_driver',  'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'closest_driver'),
+  ('other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'other_driver');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
@@ -654,7 +654,7 @@ INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
                                                               -- lon        lat
   ('furthest_driver', 'POINT', public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326)),
   ('closest_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326)),
-  ('other_driver',  'POINT', public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326));
+  ('other_driver',    'POINT', public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326));
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),

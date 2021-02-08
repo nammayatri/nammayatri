@@ -31,6 +31,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Models.ProductInstance as PI
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
@@ -251,9 +252,16 @@ driverPoolKey = ("beckn:driverpool:" <>) . _getProductInstanceId
 
 getDriverPool :: ProductInstanceId -> Flow [PersonId]
 getDriverPool piId =
-  map PersonId
-    . fromMaybe []
-    <$> Redis.getKeyRedis (driverPoolKey piId)
+  Redis.getKeyRedis (driverPoolKey piId)
+    >>= maybe calcDriverPool (pure . map PersonId)
+  where
+    calcDriverPool = do
+      prodInst <- PI.findById piId
+      pickupPoint <-
+        LocationId <$> prodInst ^. #_fromLocation
+          & fromMaybeM500 "NO_FROM_LOCATION"
+      let orgId = OrganizationId (prodInst ^. #_organizationId)
+      calculateDriverPool pickupPoint orgId
 
 setDriverPool :: ProductInstanceId -> [PersonId] -> Flow ()
 setDriverPool piId ids =

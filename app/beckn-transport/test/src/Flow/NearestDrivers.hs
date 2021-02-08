@@ -36,8 +36,8 @@ testInRadius :: TestTree
 testInRadius =
   testCase "Test radius filtration" $
     (getNearestDrivers pickupPoint 800 org1 <&> map (_getPersonId . fst))
-      @@?= ["other_driver"]
+      @@?= ["closest_driver"]
 
 pickupPoint = LatLong 12.994927 77.596386
 
-org1 = OrganizationId "org1"
+org1 = OrganizationId "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f"
