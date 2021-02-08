@@ -56,9 +56,8 @@ confirm url req@ConfirmReq {context} = do
 
 location :: BaseUrl -> Text -> Flow (Either Text GetLocationRes)
 location url req = do
-  res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.location req) "location"
-  whenLeft res $ \err ->
-    L.logError @Text "error occurred while confirm: " (show err)
+  -- TODO: fix authentication
+  res <- callAPIWithTrail' Nothing url (API.location req) "location"
   whenLeft res $ \err ->
     L.logError @Text "Location" ("error occurred while getting location: " <> show err)
   return $ first show res

@@ -13,18 +13,14 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
-import qualified Models.Case as Case
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.API.Location as Location
 
 updateLocation :: SR.RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
-updateLocation _ caseId req = withFlowHandler $ do
-  orderC <-
-    Case.findByParentCaseIdAndType (CaseId caseId) Case.RIDEORDER
-      >>= fromMaybeM400 "Case not found"
-  orderProductInstance <- ProductInstance.findByTypeCaseId Case.RIDEORDER (orderC ^. #_id)
+updateLocation _ piId req = withFlowHandler $ do
+  orderProductInstance <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) Case.RIDEORDER
   driver <-
     orderProductInstance ^. #_personId & fromMaybeM400 "Driver not assigned"
       >>= Person.findPersonById
@@ -35,11 +31,8 @@ updateLocation _ caseId req = withFlowHandler $ do
   return $ UpdateLocationRes "ACK"
 
 getLocation :: Text -> FlowHandler GetLocationRes
-getLocation caseId = withFlowHandler $ do
-  orderCase <-
-    Case.findByParentCaseIdAndType (CaseId caseId) Case.RIDEORDER
-      >>= fromMaybeM400 "Case not found"
-  orderProductInstance <- ProductInstance.findByTypeCaseId Case.RIDEORDER (orderCase ^. #_id)
+getLocation piId = withFlowHandler $ do
+  orderProductInstance <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) Case.RIDEORDER
   driver <-
     orderProductInstance ^. #_personId & fromMaybeM400 "Driver not assigned"
       >>= Person.findPersonById
@@ -55,11 +48,9 @@ getLocation caseId = withFlowHandler $ do
 getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = do
   routeE <- MapSearch.getRoute getRouteRequest
-
   case routeE of
     Left err -> do
       L.logInfo @Text "GetRoute" (show err)
-
       return Nothing
     Right MapSearch.Response {..} ->
       pure $
@@ -69,9 +60,7 @@ getRoute' fromLat fromLon toLat toLon = do
   where
     getRouteRequest = do
       let from = MapSearch.LatLong $ MapSearch.PointXY fromLat fromLon
-
       let to = MapSearch.LatLong $ MapSearch.PointXY toLat toLon
-
       MapSearch.Request
         { waypoints = [from, to],
           mode = Just MapSearch.CAR,
