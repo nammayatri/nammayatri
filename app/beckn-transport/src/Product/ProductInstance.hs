@@ -203,9 +203,11 @@ updateStatus :: SP.Person -> ProductInstanceId -> ProdInstUpdateReq -> Flow ()
 updateStatus user piId req = do
   prodInst <- PIQ.findById piId
   _ <- case (req ^. #_status, prodInst ^. #_entityId, prodInst ^. #_personId) of
-    (Just PI.CANCELLED, _, _) ->
+    (Just PI.CANCELLED, _, _) -> do
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
         updateTrip (prodInst ^. #_id) PI.CANCELLED req
+      when (user ^. #_role == SP.DRIVER) $
+        DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
     (Just PI.INPROGRESS, Just _, Just _) ->
       when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
         inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
@@ -313,7 +315,7 @@ updateTrip piId newStatus request = do
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       updateOnRide (PI._personId orderPi) False
-      whenJust (orderPi ^. #_personId) (DSQ.update . DriverId . _getPersonId)
+      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime . DriverId . _getPersonId)
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) PI.TRIP_ASSIGNED

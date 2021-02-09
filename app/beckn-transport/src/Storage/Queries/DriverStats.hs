@@ -39,8 +39,8 @@ getFirstDriverInTheQueue ids = do
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ _idleSince
 
-update :: DriverId -> Flow ()
-update driverId = do
+updateIdleTime :: DriverId -> Flow ()
+updateIdleTime driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause now) (predicate driverId)
