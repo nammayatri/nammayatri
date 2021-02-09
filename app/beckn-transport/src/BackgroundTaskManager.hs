@@ -16,6 +16,7 @@ import qualified EulerHS.Runtime as R
 -- import Network.Wai.Handler.Warp
 -- import Servant
 import qualified Services.Runner as Runner
+import System.Posix.Signals
 
 runBackgroundTaskManager :: (AppEnv -> AppEnv) -> IO ()
 runBackgroundTaskManager configModifier = do
@@ -25,10 +26,33 @@ runBackgroundTaskManager configModifier = do
   let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   let redisCfg = appEnv ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
-  R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
-    try (runFlowR flowRt appEnv checkConnections) >>= \case
-      Left (e :: SomeException) -> putStrLn @Text ("Connections check failed. Exception thrown: " <> show e)
-      Right _ -> do
-        -- setPort (port appEnv) defaultSettings
-        -- runSettings defaultSettings $ Server.run undefined undefined EmptyContext (App.EnvR flowRt appEnv) -- Need ServiceHealthCheckAPI
-        runFlowR flowRt appEnv $ fork "Background Task Manager" Runner.run
+
+  shutdown <- newEmptyTMVarIO
+  activeTask <- newEmptyTMVarIO
+
+  void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
+  void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
+
+  appThreadId <- forkIO $
+    R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+      try (runFlowR flowRt appEnv checkConnections) >>= \case
+        Left (e :: SomeException) -> putStrLn @Text ("Connections check failed. Exception thrown: " <> show e)
+        Right _ -> do
+          -- setPort (port appEnv) defaultSettings
+          -- runSettings defaultSettings $ Server.run undefined undefined EmptyContext (App.EnvR flowRt appEnv) -- Need ServiceHealthCheckAPI
+          runFlowR flowRt appEnv $ Runner.run shutdown activeTask
+
+  atomically $ readTMVar shutdown
+  putStrLn @Text "Shutting down..."
+  waitForTaskToComplete activeTask
+  killThread appThreadId
+  exitSuccess
+  where
+    handleShutdown shutdown = do
+      putStrLn @Text "Received shutdown signal. Handling..."
+      liftIO . atomically $ putTMVar shutdown ()
+    waitForTaskToComplete activeTask = do
+      putStrLn @Text "Waiting for active task to complete."
+      _ <- atomically $ putTMVar activeTask ()
+      putStrLn @Text "Active task is complete. Shutting down..."
+      pure ()
