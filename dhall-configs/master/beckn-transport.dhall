@@ -43,7 +43,7 @@ let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 let SortMode = < ETA | IdleTime >
 
 let driverAllocationConfig =
-  { defaultSortMode = SortMode.IdleTime
+  { defaultSortMode = SortMode.ETA
   , driverNotificationExpiry = +20
   , rideAllocationExpiry = +180
   }

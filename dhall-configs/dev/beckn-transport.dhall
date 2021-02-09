@@ -41,7 +41,7 @@ let appUri = "http://localhost:8013/v1"
 let SortMode = < ETA | IdleTime >
 
 let driverAllocationConfig =
-  { defaultSortMode = SortMode.IdleTime
+  { defaultSortMode = SortMode.ETA
   , driverNotificationExpiry = +20
   , rideAllocationExpiry = +180
   }
