@@ -63,7 +63,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   isAllowed ordPi req
   updateVehicleDetails user piList req
-  updateDriverDetails user piList req
+  assignDriverIfAdmin user piList req
   updateStatus user piId req
   updateInfo piId
 
@@ -168,8 +168,8 @@ isAllowed prodInst req = do
       (0, Just _, Just _, Just PI.TRIP_ASSIGNED) -> return ()
       _ -> throwError400 "INVALID UPDATE OPERATION"
 
-updateDriverDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-updateDriverDetails user piList req = case req ^. #_personId of
+assignDriverIfAdmin :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+assignDriverIfAdmin user piList req = case req ^. #_personId of
   Just driverId ->
     when (user ^. #_role == SP.ADMIN) $
       case piList of
