@@ -26,13 +26,13 @@ import qualified Product.Call as Call
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron
 import qualified Product.DriverInformation as DriverInformation
+import qualified Product.HealthCheck as HealthCheck
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
-import qualified Product.ServiceHealthCheck as ServiceHealthCheck
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
@@ -52,8 +52,7 @@ import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
 
 type TransportAPI =
   "v1"
-    :> ( Get '[JSON] Text
-           :<|> ServiceHealthCheckAPI
+    :> ( HealthCheckAPI
            :<|> RegistrationAPI
            :<|> PersonAPI
            :<|> OrganizationAPI --Transporter
@@ -314,8 +313,7 @@ transporterAPI = Proxy
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =
-  pure "App is UP"
-    :<|> serviceHealthCheckFlow
+  healthCheckFlow
     :<|> registrationFlow
     :<|> personFlow
     :<|> organizationFlow
@@ -438,7 +436,7 @@ type RideAPI =
 rideFlow :: FlowServer RideAPI
 rideFlow = Ride.setDriverAcceptance
 
-type ServiceHealthCheckAPI = "service_health" :> AdminTokenAuth :> Get '[JSON] Text
+type HealthCheckAPI = Get '[JSON] Text
 
-serviceHealthCheckFlow :: FlowServer ServiceHealthCheckAPI
-serviceHealthCheckFlow = ServiceHealthCheck.serviceHealthCheck
+healthCheckFlow :: FlowServer HealthCheckAPI
+healthCheckFlow = HealthCheck.healthCheck
