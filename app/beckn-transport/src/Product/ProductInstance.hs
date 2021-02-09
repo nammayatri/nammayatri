@@ -19,6 +19,7 @@ import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverStats as DSQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
@@ -312,6 +313,7 @@ updateTrip piId newStatus request = do
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       updateOnRide (PI._personId orderPi) False
+      whenJust (orderPi ^. #_personId) (DSQ.update . DriverId . _getPersonId)
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIds (PI._id <$> piList) PI.TRIP_ASSIGNED
