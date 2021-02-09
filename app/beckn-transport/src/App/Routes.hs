@@ -1,6 +1,7 @@
 module App.Routes where
 
 import App.Routes.FarePolicy
+import qualified App.Routes.Notification as NotificationAPI
 import App.Types
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.App
