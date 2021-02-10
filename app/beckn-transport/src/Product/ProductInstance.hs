@@ -63,9 +63,14 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
     Nothing -> throwError400 "INVALID FLOW"
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   isAllowed ordPi req
-  updateVehicleDetails user piList req
-  assignDriverIfAdmin user piList req
-  updateStatus user piId req
+  when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
+    updateVehicleDetails piList req
+  when (user ^. #_role == SP.ADMIN) $
+    assignDriver piList req
+  when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
+    when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
+      DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
+    updateStatus piId req
   updateInfo piId
 
   -- Send callback to BAP
@@ -169,18 +174,17 @@ isAllowed prodInst req = do
       (0, Just _, Just _, Just PI.TRIP_ASSIGNED) -> return ()
       _ -> throwError400 "INVALID UPDATE OPERATION"
 
-assignDriverIfAdmin :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-assignDriverIfAdmin user piList req = case req ^. #_personId of
+assignDriver :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+assignDriver piList req = case req ^. #_personId of
   Just driverId ->
-    when (user ^. #_role == SP.ADMIN) $
-      case piList of
-        [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
-        p : _ -> do
-          PIQ.updateDriver (PI._id <$> piList) (Just $ PersonId driverId)
-          DriverInformation.updateOnRide (DriverId driverId) True
-          driver <- PersQ.findPersonById (PersonId driverId)
-          Notify.notifyDriver notificationType notificationTitle (message p) driver
-          return ()
+    case piList of
+      [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
+      p : _ -> do
+        PIQ.updateDriver (PI._id <$> piList) (Just $ PersonId driverId)
+        DriverInformation.updateOnRide (DriverId driverId) True
+        driver <- PersQ.findPersonById (PersonId driverId)
+        Notify.notifyDriver notificationType notificationTitle (message p) driver
+        return ()
   Nothing -> return ()
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -192,32 +196,26 @@ assignDriverIfAdmin user piList req = case req ^. #_personId of
           "Check the app for more details."
         ]
 
-updateVehicleDetails :: SP.Person -> [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-updateVehicleDetails user piList req = case req ^. #_vehicleId of
+updateVehicleDetails :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
+updateVehicleDetails piList req = case req ^. #_vehicleId of
   Just _ ->
-    when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-      PIQ.updateVehicle (PI._id <$> piList) (req ^. #_vehicleId)
+    PIQ.updateVehicle (PI._id <$> piList) (req ^. #_vehicleId)
   Nothing -> return ()
 
-updateStatus :: SP.Person -> ProductInstanceId -> ProdInstUpdateReq -> Flow ()
-updateStatus user piId req = do
+updateStatus :: ProductInstanceId -> ProdInstUpdateReq -> Flow ()
+updateStatus piId req = do
   prodInst <- PIQ.findById piId
   _ <- case (req ^. #_status, prodInst ^. #_entityId, prodInst ^. #_personId) of
-    (Just PI.CANCELLED, _, _) -> do
-      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        updateTrip (prodInst ^. #_id) PI.CANCELLED req
-      when (user ^. #_role == SP.DRIVER) $
-        DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
-    (Just PI.INPROGRESS, Just _, Just _) ->
-      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
-        inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
-        tripOtpCode <- req ^. #_otpCode & fromMaybeM400 "TRIP_OTP_MISSING"
-        if inAppOtpCode == tripOtpCode
-          then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
-          else throwBecknError400 "INCORRECT_TRIP_OTP"
+    (Just PI.CANCELLED, _, _) ->
+      updateTrip (prodInst ^. #_id) PI.CANCELLED req
+    (Just PI.INPROGRESS, Just _, Just _) -> do
+      inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
+      tripOtpCode <- req ^. #_otpCode & fromMaybeM400 "TRIP_OTP_MISSING"
+      if inAppOtpCode == tripOtpCode
+        then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
+        else throwBecknError400 "INCORRECT_TRIP_OTP"
     (Just c, Just _, Just _) ->
-      when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-        updateTrip (prodInst ^. #_id) c req
+      updateTrip (prodInst ^. #_id) c req
     (Nothing, Just _, Just _) -> return ()
     _ -> throwError400 "DRIVER_VEHICLE_UNASSIGNED"
   return ()
