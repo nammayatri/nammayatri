@@ -662,8 +662,8 @@ INSERT INTO atlas_transporter.location (id, location_type, point) VALUES
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
   ('0202b94d-dbf0-4e95-bbf9-25cafc888173', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
-INSERT INTO atlas_transporter.location (id, location_type, lat, long, point) VALUES
-  ('9db237f9-3061-4bad-a616-42e91f092407', 'POINT', 10.08272, 76.268572, public.ST_SetSRID(public.ST_Point(10.08272, 76.268572), 4326));
+INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
+  ('9db237f9-3061-4bad-a616-42e91f092407', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
 
 CREATE TABLE atlas_transporter.driver_stats (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),

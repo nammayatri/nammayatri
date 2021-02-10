@@ -1,15 +1,27 @@
+{-# LANGUAGE NamedWildCards #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 module Storage.Queries.Location where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import Beckn.Storage.DB.Config (DBConfig (..))
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
+import Data.Pool (withResource)
+import Data.Time (UTCTime)
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
+import Database.PostgreSQL.Simple (query)
+import Database.PostgreSQL.Simple.Internal (Connection)
+import Database.PostgreSQL.Simple.SqlQQ (sql)
+import EulerHS.Language (generateGUID, getSqlDBConnection, runIO)
 import EulerHS.Prelude hiding (id)
+import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
@@ -30,7 +42,7 @@ createDriverLoc = do
     >>= either DB.throwDBError (\_ -> pure location)
   where
     mkLoc = do
-      uuid <- L.generateGUID
+      uuid <- generateGUID
       now <- getCurrTime
       let n = Nothing
       return $
@@ -95,15 +107,33 @@ findAllByLocIds fromIds toIds = do
 
 updateGpsCoord :: LocationId -> Double -> Double -> Flow ()
 updateGpsCoord locationId lat long = do
-  dbTable <- getDbTable
+  let id = _getLocationId locationId
+  DBConfig {..} <- asks dbCfg
   now <- getCurrTime
-  DB.update dbTable (setClause lat long now) (predicate locationId)
-    >>= either DB.throwDBError pure
+  pool <-
+    getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
+      >>= either DB.throwDBError pure
+      >>= \case
+        PostgresPool _connTag pool -> pure pool
+        _ -> throwError500 "NOT_POSTGRES_BACKEND"
+  void $ runIO $ withResource pool (runRawQuery id now)
   where
-    setClause lLat lLong n Storage.Location {..} =
-      mconcat
-        [ _lat <-. B.val_ (Just lLat),
-          _long <-. B.val_ (Just lLong),
-          _updatedAt <-. B.val_ n
-        ]
-    predicate id Storage.Location {..} = _id ==. B.val_ id
+    runRawQuery :: Text -> UTCTime -> Connection -> IO [String]
+    runRawQuery locId now conn = do
+      let sqlQuery =
+            [sql|
+              UPDATE
+                atlas_transporter.location
+              SET
+                point = public.ST_SetSRID(ST_Point(?, ?)::geography, 4326),
+                long = ?,
+                lat = ?,
+                updated_at = ?
+              WHERE
+                id = ?
+            |]
+      print @String ("DriverUpdateQuery" <> " " <> show sqlQuery)
+      query
+        conn
+        sqlQuery
+        (long, lat, long, lat, now, locId)
