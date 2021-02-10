@@ -205,27 +205,35 @@ search transporterId bapOrg req = withFlowHandler $ do
         Just orgLocation -> Location.calculateDistance orgLocation fromLocation
 
 cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
-cancel transporterId bapOrg req = withFlowHandler $ do
+cancel _transporterId _bapOrg req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
-  uuid <- L.generateGUID
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
   prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
+  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
+  RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION (orderPi ^. #_createdAt)
+  uuid <- L.generateGUID
+  mkAckResponse uuid "cancel"
+
+cancelRide :: RideId -> Flow ()
+cancelRide rideId = do
+  orderPi <- ProductInstance.findById . ProductInstanceId $ _getRideId rideId
+  searchPiId <- ProductInstance._parentId orderPi & fromMaybeM500 "RIDEORDER_DOESNT_HAVE_PARENT"
+  piList <- ProductInstance.findAllByParentId (Just searchPiId)
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) SC.CLOSED
-  case piList of
-    [] -> return ()
-    _ -> do
-      trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
-      orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
-      _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
-      _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
-      RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION (orderPi ^. #_createdAt)
-      return ()
-  _ <- ProductInstance.updateStatus (ProductInstanceId prodInstId) ProductInstance.CANCELLED
-  transporter <- findOrganizationById transporterId
+  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+  _ <- ProductInstance.updateStatus searchPiId ProductInstance.CANCELLED
+  _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
+  _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+
+  bapOrgId <- ProductInstance._udf4 orderPi & fromMaybeM500 "BAP_ORG_ID_NOT_PRESENT"
+  bapOrg <- findOrganizationById $ OrganizationId bapOrgId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  let transporterId = OrganizationId $ ProductInstance._organizationId orderPi
+  transporter <- findOrganizationById transporterId
   let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
-  notifyCancelToGateway prodInstId callbackUrl bppShortId
+  notifyCancelToGateway (_getProductInstanceId searchPiId) callbackUrl bppShortId
+
   admins <-
     if transporter ^. #_enabled
       then Person.findAllByOrgIds [Person.ADMIN] [_getOrganizationId transporterId]
@@ -240,7 +248,7 @@ cancel transporterId bapOrg req = withFlowHandler $ do
           DriverInformation.updateOnRide (DriverId $ _getPersonId driverId) False
           Notify.notifyTransportersOnCancel c (driver : admins)
         Nothing -> Notify.notifyTransportersOnCancel c admins
-  mkAckResponse uuid "cancel"
+  pure ()
 
 -- TODO: Move this to core Utils.hs
 getValidTime :: UTCTime -> UTCTime -> Flow UTCTime
