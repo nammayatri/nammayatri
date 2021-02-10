@@ -19,7 +19,6 @@ run env =
     context =
       verifyApiKey
         :. verifyTokenAction
-        :. verifyOrgAction
         :. validateAdminAction
         :. validateDriverAction
         :. EmptyContext

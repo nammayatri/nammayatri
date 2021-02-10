@@ -5,7 +5,6 @@ module Utils.Common where
 
 import App.Types
 import Beckn.Types.App
-import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -16,19 +15,12 @@ import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant
-import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 
 instance
   SanitizedUrl (sub :: Type) =>
   SanitizedUrl (TokenAuth :> sub)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
-
-instance
-  SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (OrgTokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
@@ -57,20 +49,6 @@ instance VerificationMethod VerifyToken where
 
 verifyTokenAction :: VerificationAction VerifyToken AppEnv
 verifyTokenAction = VerificationAction QR.verifyToken
-
--- | Verifies org's token
-type OrgTokenAuth = HeaderAuth "token" OrgVerifyToken
-
-data OrgVerifyToken = OrgVerifyToken
-
-instance VerificationMethod OrgVerifyToken where
-  type VerificationResult OrgVerifyToken = SO.Organization
-  verificationDescription =
-    "Checks whether token is registered.\
-    \If you don't have a token, use registration endpoints."
-
-verifyOrgAction :: VerificationAction OrgVerifyToken AppEnv
-verifyOrgAction = VerificationAction QO.verifyToken
 
 -- | Verifies admin's token.
 type AdminTokenAuth = HeaderAuth "token" AdminVerifyToken

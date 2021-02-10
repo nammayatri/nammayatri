@@ -49,7 +49,7 @@ import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (lookup)
-import Utils.Common (AdminTokenAuth, DriverTokenAuth, OrgTokenAuth, TokenAuth)
+import Utils.Common (AdminTokenAuth, DriverTokenAuth, TokenAuth)
 
 type TransportAPI =
   "v1"
@@ -180,10 +180,6 @@ type OrganizationAPI =
            :<|> TokenAuth
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
-           :<|> "gateway"
-           :> OrgTokenAuth
-           :> ReqBody '[JSON] TransporterReq
-           :> Post '[JSON] GatewayRes
            :<|> TokenAuth
            :> Capture "orgId" Text
            :> ReqBody '[JSON] UpdateTransporterReq
@@ -194,7 +190,6 @@ organizationFlow :: FlowServer OrganizationAPI
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.createTransporter
-    :<|> Transporter.createGateway
     :<|> Transporter.updateTransporter
 
 -----------------------------

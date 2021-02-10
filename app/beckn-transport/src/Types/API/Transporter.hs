@@ -108,8 +108,6 @@ newtype TransporterRec = TransporterRec
   }
   deriving (Generic, ToJSON)
 
-type GatewayRes = TransporterRec
-
 data UpdateTransporterReq = UpdateTransporterReq
   { name :: Maybe Text,
     description :: Maybe Text,

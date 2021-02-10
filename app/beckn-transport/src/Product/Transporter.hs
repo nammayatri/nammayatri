@@ -36,12 +36,6 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
         throwError400 "missing mandatory fields"
 
-createGateway :: SO.Organization -> TransporterReq -> FlowHandler GatewayRes
-createGateway _ req = withFlowHandler $ do
-  organization <- createTransform req
-  QO.create organization
-  return $ TransporterRec organization
-
 updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
