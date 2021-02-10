@@ -9,6 +9,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L
@@ -18,12 +19,10 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.API.Location as Location
 
-updateLocation :: SR.RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes
-updateLocation _ piId req = withFlowHandler $ do
-  orderProductInstance <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) Case.RIDEORDER
-  driver <-
-    orderProductInstance ^. #_personId & fromMaybeM400 "Driver not assigned"
-      >>= Person.findPersonById
+updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
+updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
+  person <- Person.findPersonById $ PersonId _EntityId
+  driver <- if person ^. #_role == Person.DRIVER then return person else throwError400 "Only driver can update location."
   locationId <-
     driver ^. #_locationId & (LocationId <$>)
       & fromMaybeM500 "Driver location not found"

@@ -290,17 +290,16 @@ productFlow =
 -- Location update and get for tracking is as follows
 type LocationAPI =
   "location"
-    :> ( Capture "caseId" Text
+    :> ( Capture "productInstanceId" Text -- TODO: add auth
            :> Get '[JSON] GetLocationRes
            :<|> TokenAuth
-             :> Capture "caseId" Text
              :> ReqBody '[JSON] UpdateLocationReq
              :> Post '[JSON] UpdateLocationRes
        )
 
 locationFlow ::
   (Text -> FlowHandler GetLocationRes)
-    :<|> (RegistrationToken -> Text -> UpdateLocationReq -> FlowHandler UpdateLocationRes)
+    :<|> (RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes)
 locationFlow =
   Location.getLocation
     :<|> Location.updateLocation
