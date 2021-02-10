@@ -25,7 +25,7 @@ fetchOldest :: Integer -> Flow [RideRequest.RideRequest]
 fetchOldest limit = do
   dbTable <- getDbTable
   let noOffset = 0
-  let order RideRequest.RideRequest {..} = B.asc_ _requestTime
+  let order RideRequest.RideRequest {..} = B.asc_ _lastProcessTime
   DB.findAllWithLimitOffsetWhere dbTable predicate limit noOffset order
     >>= either DB.throwDBError pure
   where
@@ -47,5 +47,5 @@ updateRequestTime rideReqId = do
   DB.update dbTable (setClause now) (predicate rideReqId)
     >>= either DB.throwDBError pure
   where
-    setClause now RideRequest.RideRequest {..} = _requestTime <-. B.val_ now
+    setClause now RideRequest.RideRequest {..} = _lastProcessTime <-. B.val_ now
     predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id

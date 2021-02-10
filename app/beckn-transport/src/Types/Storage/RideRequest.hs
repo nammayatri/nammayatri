@@ -35,8 +35,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 data RideRequestT f = RideRequest
   { _id :: B.C f RideRequestId,
     _rideId :: B.C f RideId,
-    _orderedAt :: B.C f (Maybe UTCTime),
-    _requestTime :: B.C f UTCTime,
+    _createdAt :: B.C f UTCTime,
+    _lastProcessTime :: B.C f UTCTime,
     _type :: B.C f RideRequestType,
     _status :: B.C f AllocationStatus
   }
@@ -64,6 +64,6 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { _rideId = "ride_id",
-          _orderedAt = "ordered_at",
-          _requestTime = "request_time"
+          _createdAt = "created_at",
+          _lastProcessTime = "last_process_time"
         }

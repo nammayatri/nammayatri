@@ -417,16 +417,12 @@ mkRideReq :: ProductInstanceId -> SRideRequest.RideRequestType -> UTCTime -> Flo
 mkRideReq pId rideRequestType currTime = do
   guid <- generateGUID
   let rideId = RideId $ _getProductInstanceId pId
-  let orderedAt =
-        case rideRequestType of
-          SRideRequest.ALLOCATION -> Just currTime
-          SRideRequest.CANCELLATION -> Nothing
   pure
     SRideRequest.RideRequest
       { _id = RideRequestId guid,
         _rideId = rideId,
-        _orderedAt = orderedAt,
-        _requestTime = currTime,
+        _createdAt = currTime,
+        _lastProcessTime = currTime,
         _type = rideRequestType,
         _status = SRideRequest.NEW
       }
