@@ -26,7 +26,7 @@ assignDriver rideId driverId = do
   PI.updateInfo productInstanceId
   where
     personId = PersonId $ driverId ^. #_getDriverId
-    productInstanceId = ProductInstanceId . _getRideId $ rideId
+    productInstanceId = ProductInstanceId $ rideId ^. #_getRideId
     buildProdInstUpdateReq vehicleId =
       ProdInstUpdateReq
         { _status = Just PI.TRIP_ASSIGNED,
