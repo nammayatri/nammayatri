@@ -16,7 +16,7 @@ import Data.Pool (withResource)
 import Data.Time (UTCTime)
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Database.PostgreSQL.Simple (query)
+import Database.PostgreSQL.Simple (execute)
 import Database.PostgreSQL.Simple.Internal (Connection)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Language (generateGUID, getSqlDBConnection, runIO)
@@ -118,7 +118,7 @@ updateGpsCoord locationId lat long = do
         _ -> throwError500 "NOT_POSTGRES_BACKEND"
   void $ runIO $ withResource pool (runRawQuery id now)
   where
-    runRawQuery :: Text -> UTCTime -> Connection -> IO [String]
+    runRawQuery :: Text -> UTCTime -> Connection -> IO Int64
     runRawQuery locId now conn = do
       let sqlQuery =
             [sql|
@@ -133,7 +133,7 @@ updateGpsCoord locationId lat long = do
                 id = ?
             |]
       print @String ("DriverUpdateQuery" <> " " <> show sqlQuery)
-      query
+      execute
         conn
         sqlQuery
         (long, lat, long, lat, now, locId)
