@@ -312,7 +312,7 @@ transporterAPI = Proxy
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =
-  healthCheckFlow
+  pure "App is UP"
     :<|> registrationFlow
     :<|> personFlow
     :<|> organizationFlow
@@ -426,5 +426,8 @@ rideFlow = Ride.setDriverAcceptance
 
 type HealthCheckAPI = Get '[JSON] Text
 
-healthCheckFlow :: FlowServer HealthCheckAPI
-healthCheckFlow = HealthCheck.healthCheck
+healthCheckServer :: TMVar () -> FlowServer HealthCheckAPI
+healthCheckServer = HealthCheck.healthCheck
+
+healthCheckAPI :: Proxy HealthCheckAPI
+healthCheckAPI = Proxy

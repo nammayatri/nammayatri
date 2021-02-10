@@ -53,6 +53,7 @@ in
 , redisCfg = rcfg
 , smsCfg = smsConfig
 , port = +8014
+, bgtmPort = +8114
 , metricsPort = +9997
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text

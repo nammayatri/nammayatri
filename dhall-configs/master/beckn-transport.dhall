@@ -55,6 +55,7 @@ in
 , redisCfg = rcfg
 , smsCfg = smsConfig
 , port = +8014
+, bgtmPort = +8114
 , metricsPort = +9999
 , xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl

@@ -19,6 +19,7 @@ data AppEnv = AppEnv
     redisCfg :: T.RedisConfig,
     smsCfg :: SmsConfig,
     port :: Int,
+    bgtmPort :: Int,
     metricsPort :: Int,
     xGatewaySelector :: Maybe Text,
     xGatewayNsdlUrl :: Maybe BaseUrl,
