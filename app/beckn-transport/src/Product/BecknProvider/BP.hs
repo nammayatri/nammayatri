@@ -413,16 +413,21 @@ mkOrderProductInstance caseId prodInst = do
         _udf5 = prodInst ^. #_udf5
       }
 
-mkRideReq :: ProductInstanceId -> SRideRequest.AllocationType -> UTCTime -> Flow SRideRequest.RideRequest
-mkRideReq pId allocationType currTime = do
+mkRideReq :: ProductInstanceId -> SRideRequest.RideRequestType -> UTCTime -> Flow SRideRequest.RideRequest
+mkRideReq pId rideRequestType currTime = do
   guid <- generateGUID
   let rideId = RideId $ _getProductInstanceId pId
+  let orderedAt =
+        case rideRequestType of
+          SRideRequest.ALLOCATION -> Just currTime
+          SRideRequest.CANCELLATION -> Nothing
   pure
     SRideRequest.RideRequest
       { _id = RideRequestId guid,
         _rideId = rideId,
+        _orderedAt = orderedAt,
         _requestTime = currTime,
-        _type = allocationType,
+        _type = rideRequestType,
         _status = SRideRequest.NEW
       }
 

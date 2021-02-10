@@ -707,6 +707,7 @@ INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id,
 CREATE TABLE atlas_transporter.ride_request (
     id character(36) PRIMARY KEY NOT NULL,
     ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id),
+    ordered_at timestamp with time zone,
     request_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     type character varying(20) NOT NULL,
     status character varying(20) NOT NULL
