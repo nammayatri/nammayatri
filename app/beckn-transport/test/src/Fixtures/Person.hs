@@ -19,6 +19,7 @@ defaultDriver =
       _email = Just "driverson@cool-drivers.com",
       _mobileNumber = Nothing,
       _mobileCountryCode = Nothing,
+      _passwordHash = Nothing,
       _identifier = Nothing,
       _rating = Nothing,
       _verified = False,
