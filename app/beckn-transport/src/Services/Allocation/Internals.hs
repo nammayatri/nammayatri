@@ -5,7 +5,6 @@ module Services.Allocation.Internals where
 import App.Types
 import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Product.ProductInstance as PI
 import qualified Storage.Queries.Person as QPerson
@@ -13,8 +12,8 @@ import qualified Storage.Queries.ProductInstance as PIQ
 import Types.API.ProductInstance
 import Types.App
 
-assignDriver :: RideId -> DriverId -> FlowHandler ()
-assignDriver rideId driverId = withFlowHandler $ do
+assignDriver :: RideId -> DriverId -> Flow ()
+assignDriver rideId driverId = do
   ordPi <- PIQ.findById productInstanceId
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   person <- QPerson.findPersonById personId
