@@ -3,7 +3,6 @@ module Flow.NearestDrivers (runTests) where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Storage.Vehicle
-import Beckn.Types.Storage.Vehicle (Variant (..))
 import EulerHS.Prelude
 import Storage.Queries.Person (getNearestDrivers)
 import Test.Tasty
