@@ -40,8 +40,8 @@ markComplete rideReqId = do
     setClause RideRequest.RideRequest {..} = _status <-. B.val_ RideRequest.COMPLETED
     predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id
 
-updateRequestTime :: RideRequestId -> Flow ()
-updateRequestTime rideReqId = do
+updateLastProcessTime :: RideRequestId -> Flow ()
+updateLastProcessTime rideReqId = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause now) (predicate rideReqId)
