@@ -128,6 +128,11 @@ pipeline {
                       configs: 'deployment-configs/beckn-transport-deploy.yaml',
                       enableConfigSubstitution: true
                     )
+                kubernetesDeploy(
+                      kubeconfigId: 'jenkins-staging-deployer',
+                      configs: 'deployment-configs/beckn-transport-allocation-service-deploy.yaml',
+                      enableConfigSubstitution: true
+                    )
               }
             }
 
