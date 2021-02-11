@@ -9,7 +9,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
-import Types.App (DriverId, RideId, RideRequestId)
+import Types.App (DriverId, RideId)
 
 data AnswerStatus = ACCEPTED | REJECTED | NOTIFIED | IGNORED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -26,7 +26,6 @@ data NotificationStatusT f = NotificationStatus
   { _id :: B.C f (ID NotificationStatus),
     _rideId :: B.C f RideId,
     _driverId :: B.C f DriverId,
-    _rideRequestId :: B.C f RideRequestId,
     _status :: B.C f AnswerStatus,
     _notifiedAt :: B.C f (Maybe UTCTime)
   }
@@ -55,6 +54,5 @@ fieldEMod =
       B.tableModification
         { _rideId = "ride_id",
           _driverId = "driver_id",
-          _rideRequestId = "ride_request_id",
           _notifiedAt = "notified_at"
         }

@@ -107,7 +107,6 @@ addNotificationStatus' rideId driverId status = do
       { _id = ID uuid,
         _rideId = rideId,
         _driverId = driverId,
-        _rideRequestId = error "FIXME", -- FIXME
         _status = allocNotifStatusToStorageStatus status,
         _notifiedAt = notifiedAt
       }
