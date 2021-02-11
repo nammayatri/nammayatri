@@ -24,7 +24,7 @@ in
 , port = +8017
 , metricsPort = +9999
 , xGatewayUri = gwUri
-, selfId = "JUSPAY.BPP.MOCK.1"
+, selfId = "JUSPAY.MOCK.FMD.BPP.SANDBOX"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/dev/mock/provider/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate

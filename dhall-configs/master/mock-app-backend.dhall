@@ -24,9 +24,12 @@ in
 , port = +8016
 , metricsPort = +9999
 , xGatewayUri = gwUri
-, selfId = "JUSPAY.BAP.MOCK.1"
+, selfId = "JUSPAY.MOCK.FMD.BAP.DEV"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/dev/mock/app/v1/"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-app-backend.log"}
+, credRegistry = common.credRegistry
+, signingKeys = common.signingKeys
+, signatureExpiry = common.signatureExpiry
 }
