@@ -25,6 +25,5 @@ run shutdown activeTask = do
       Redis.setExRedis "beckn:allocation:is_running" False 60
       L.runIO $ atomically $ takeTMVar activeTask
       L.logInfo @Text "Runner" "Iteration of task runner is complete."
-  isShuttingDOwn <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
-  let canRun = not isShuttingDOwn
-  when canRun $ run shutdown activeTask
+  isRunning <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
+  when isRunning $ run shutdown activeTask
