@@ -52,8 +52,8 @@ handle =
       getDriverResponse = error "BKN-519",
       assignDriver = error "BKN-520",
       cancelRide = BP.cancelRide,
-      completeRequest = QRR.markComplete . RideRequestId . getRequestId,
-      resetRequestTime = QRR.updateLastProcessTime . RideRequestId . getRequestId
+      completeRequest = QRR.markComplete,
+      resetRequestTime = QRR.updateLastProcessTime
     }
 
 -- TODO: move these somewhere else:
@@ -63,7 +63,7 @@ rideRequestToRideRequest SRR.RideRequest {..} =
   Alloc.RideRequest
     { requestHeader =
         RequestHeader
-          { requestId = RequestId (_getRideRequestId _id),
+          { requestId = _id,
             rideId = _rideId,
             requestTime = _createdAt
           },

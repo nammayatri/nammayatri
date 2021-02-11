@@ -7,11 +7,6 @@ import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
 import EulerHS.Prelude
 import Types.App
 
-newtype RequestId = RequestId
-  { getRequestId :: Text
-  }
-  deriving (Show)
-
 newtype OrderTime = OrderTime
   { utcTime :: UTCTime
   }
@@ -23,7 +18,7 @@ data RequestData
   deriving (Show)
 
 data RequestHeader = RequestHeader
-  { requestId :: RequestId,
+  { requestId :: RideRequestId,
     rideId :: RideId,
     requestTime :: UTCTime
   }
@@ -106,9 +101,9 @@ data ServiceHandle m = ServiceHandle
     cancelRide :: RideId -> m (),
     -- Reset request time to match the current time
     -- Can be done as update of the RideRequest table
-    resetRequestTime :: RequestId -> m (),
+    resetRequestTime :: RideRequestId -> m (),
     -- Set the status of the request in the RideRequest table to completed.
-    completeRequest :: RequestId -> m ()
+    completeRequest :: RideRequestId -> m ()
   }
 
 process :: Monad m => ServiceHandle m -> m Int
