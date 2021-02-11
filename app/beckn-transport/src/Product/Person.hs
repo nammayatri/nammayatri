@@ -102,8 +102,6 @@ createDriverDetails personId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
-  location <- QL.createDriverLoc
-  QP.updateLocationId personId (location ^. #_id)
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandler $ do

@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import Database.PostgreSQL.Simple (execute)
 import Database.PostgreSQL.Simple.Internal (Connection)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import EulerHS.Language (generateGUID, getSqlDBConnection, runIO)
+import EulerHS.Language (getSqlDBConnection, runIO)
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import qualified Types.Storage.DB as DB
@@ -33,35 +33,6 @@ create Storage.Location {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
     >>= either DB.throwDBError pure
-
-createDriverLoc :: Flow Storage.Location
-createDriverLoc = do
-  dbTable <- getDbTable
-  location <- mkLoc
-  DB.createOne dbTable (Storage.insertExpression location)
-    >>= either DB.throwDBError (\_ -> pure location)
-  where
-    mkLoc = do
-      uuid <- generateGUID
-      now <- getCurrTime
-      let n = Nothing
-      return $
-        Storage.Location
-          { _id = LocationId uuid,
-            _locationType = Storage.POINT,
-            _lat = n,
-            _long = n,
-            _ward = n,
-            _district = n,
-            _city = n,
-            _state = n,
-            _country = n,
-            _pincode = n,
-            _address = n,
-            _bound = n,
-            _createdAt = now,
-            _updatedAt = now
-          }
 
 findLocationById ::
   LocationId -> Flow (Maybe Storage.Location)
