@@ -397,4 +397,4 @@ getNearestDrivers LatLong {..} radius orgId variant = do
           WHERE dist < ?
           ORDER BY dist ASC
         |]
-        (lon, lat, _getOrganizationId orgId, toJSON variant, radius)
+        (lon, lat, _getOrganizationId orgId, show variant :: Text, radius)
