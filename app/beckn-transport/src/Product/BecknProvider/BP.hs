@@ -111,10 +111,11 @@ search transporterId bapOrg req = withFlowHandler $ do
     -- TODO :: need to isolate it from this module
     sendOnSearch productCase productInstance transporterOrg = do
       let piStatus = productInstance ^. #_status
-      onSearchPayload <-
-        case piStatus of
-          ProductInstance.OUTOFSTOCK -> mkOnSearchPayload productCase [] transporterOrg
-          _ -> mkOnSearchPayload productCase [productInstance] transporterOrg
+      let productInstances =
+            case piStatus of
+              ProductInstance.OUTOFSTOCK -> []
+              _ -> [productInstance]
+      onSearchPayload <- mkOnSearchPayload productCase productInstances transporterOrg
       let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
       _ <- Gateway.onSearch onSearchPayload bppShortId
       pure ()
