@@ -132,7 +132,6 @@ updateGpsCoord locationId lat long = do
               WHERE
                 id = ?
             |]
-      print @String ("DriverUpdateQuery" <> " " <> show sqlQuery)
       execute
         conn
         sqlQuery
