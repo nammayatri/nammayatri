@@ -33,7 +33,8 @@ handle =
       assignDriver = I.assignDriver,
       cancelRide = I.cancelRide,
       completeRequest = I.completeRequest,
-      resetRequestTime = I.resetRequestTime
+      resetRequestTime = I.resetRequestTime,
+      logInfo = I.logInfo
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

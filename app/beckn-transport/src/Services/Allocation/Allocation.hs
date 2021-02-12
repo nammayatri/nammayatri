@@ -103,14 +103,26 @@ data ServiceHandle m = ServiceHandle
     -- Can be done as update of the RideRequest table
     resetRequestTime :: RideRequestId -> m (),
     -- Set the status of the request in the RideRequest table to completed.
-    completeRequest :: RideRequestId -> m ()
+    completeRequest :: RideRequestId -> m (),
+    logInfo :: Text -> m ()
   }
 
 process :: Monad m => ServiceHandle m -> m Int
 process handle@ServiceHandle {..} = do
+  getRequestsStartTime <- getCurrentTime
   rides <- getRequests requestsPerIteration
+  getRequestsEndTime <- getCurrentTime
+  let getRequestsTime = diffUTCTime getRequestsEndTime getRequestsStartTime
+  logInfo $ show getRequestsTime <> " time spent for getRequests"
+
+  reqsHandlingStartTime <- getCurrentTime
+  let ridesNum = length rides
+  logInfo $ "Starting handle " <> show ridesNum <> " ride requests"
   traverse_ (processRequest handle) rides
-  pure $ length rides
+  reqsHandlingEndTime <- getCurrentTime
+  let reqsHandlingTime = diffUTCTime reqsHandlingEndTime reqsHandlingStartTime
+  logInfo $ "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
+  pure ridesNum
 
 processRequest :: Monad m => ServiceHandle m -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} rideRequest = do
