@@ -16,7 +16,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
 import Servant
-import qualified Services.Runner as Runner
+import qualified Services.Allocation.Runner as Runner
 import System.Posix.Signals
 
 runBackgroundTaskManager :: (AppEnv -> AppEnv) -> IO ()

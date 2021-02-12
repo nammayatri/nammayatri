@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Services.Allocation where
+module Services.Allocation.Allocation where
 
 import Data.Generics.Labels ()
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
