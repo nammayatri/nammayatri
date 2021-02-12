@@ -5,6 +5,7 @@ module BackgroundTaskManager where
 
 import App.Routes
 import App.Types
+import Beckn.External.FCM.Utils (createFCMTokenRefreshThread)
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -50,10 +51,13 @@ runBackgroundTaskManager configModifier = do
               putStrLn @String "Initializing Redis Connections..."
               try (runFlowR flowRt appEnv checkConnections) >>= \case
                 Left (e :: SomeException) -> putStrLn @Text ("Connections check failed. Exception thrown: " <> show e)
-                Right _ -> do
-                  let settings = setPort (bgtmPort appEnv) defaultSettings
-                  _bgtmThreadId <- forkIO $ runFlowR flowRt' appEnv $ Runner.run shutdown activeTask
-                  runSettings settings $ Server.run healthCheckAPI (healthCheckServer shutdown) EmptyContext (App.EnvR flowRt' appEnv)
+                Right _ ->
+                  try (runFlowR flowRt appEnv createFCMTokenRefreshThread) >>= \case
+                    Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+                    Right _ -> do
+                      let settings = setPort (bgtmPort appEnv) defaultSettings
+                      _bgtmThreadId <- forkIO $ runFlowR flowRt' appEnv $ Runner.run shutdown activeTask
+                      runSettings settings $ Server.run healthCheckAPI (healthCheckServer shutdown) EmptyContext (App.EnvR flowRt' appEnv)
 
   atomically $ readTMVar shutdown
   putStrLn @Text "Shutting down..."
