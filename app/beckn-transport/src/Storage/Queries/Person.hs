@@ -398,18 +398,3 @@ getNearestDrivers LatLong {..} radius orgId variant = do
           ORDER BY dist ASC
         |]
         (lon, lat, _getOrganizationId orgId, show variant :: Text, radius)
-
-updateLocationId :: PersonId -> LocationId -> Flow ()
-updateLocationId personId locationId = do
-  dbTable <- getDbTable
-  now <- getCurrTime
-  let locationId' = _getLocationId locationId
-  DB.update dbTable (setClause locationId' now) (predicate personId)
-    >>= either DB.throwDBError pure
-  where
-    setClause locId now Storage.Person {..} =
-      mconcat
-        [ _locationId <-. B.val_ (Just locId),
-          _updatedAt <-. B.val_ now
-        ]
-    predicate pId Storage.Person {..} = _id ==. B.val_ pId

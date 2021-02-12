@@ -63,15 +63,6 @@ findByCaseId id = do
   where
     predicate Storage.ProductInstance {..} = _caseId ==. B.val_ id
 
-findByTypeCaseId :: Storage.ProductInstanceType -> CaseId -> Flow Storage.ProductInstance
-findByTypeCaseId piType caseId = do
-  dbTable <- getDbTable
-  DB.findOneWithErr dbTable predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      _caseId ==. B.val_ caseId
-        &&. _type ==. B.val_ piType
-
 findById' :: ProductInstanceId -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findById' productInstanceId = do
   dbTable <- getDbTable
