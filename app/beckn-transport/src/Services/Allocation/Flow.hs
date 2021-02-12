@@ -7,6 +7,7 @@ import App.Types
 
 -- import qualified Product.Person as Person
 
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Common (generateGUID)
 import Beckn.Types.ID (ID (..))
@@ -16,12 +17,14 @@ import qualified Product.BecknProvider.BP as BP (cancelRide)
 import qualified Product.Person as Person
 import Services.Allocation as Alloc
 import qualified Services.Allocation.Internals as Internals
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
 import Types.App
+import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Notifications (notifyDriverNewAllocation)
@@ -53,8 +56,11 @@ handle =
         QNS.fetchRefusedNotificationsByRideId rideId <&> map (^. #_driverId),
       getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (^. #_driverId),
       getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList,
-      checkAvailability = error "BKN-518",
-      getDriverResponse = error "BKN-519",
+      checkAvailability = \driversIds -> do
+        driversInfo <- QDriverInfo.findAllByIds $ toList driversIds
+        pure $ foldr addAvailableDriver [] driversInfo,
+      getDriverResponse = \rideId driverId ->
+        Redis.getKeyRedis $ "beckn:" <> _getRideId rideId <> ":" <> _getDriverId driverId <> ":response",
       assignDriver = Internals.assignDriver,
       cancelRide = BP.cancelRide,
       completeRequest = QRR.markComplete,
@@ -120,6 +126,12 @@ addNotificationStatus' rideId driverId status = do
       case status of
         Alloc.Notified time -> Just time
         _ -> Nothing
+
+addAvailableDriver :: SDriverInfo.DriverInformation -> [DriverId] -> [DriverId]
+addAvailableDriver driverInfo availableDriversIds =
+  if driverInfo ^. #_active && not (driverInfo ^. #_onRide)
+    then driverInfo ^. #_driverId : availableDriversIds
+    else availableDriversIds
 
 toDriverId :: PersonId -> DriverId
 toDriverId = DriverId . _getPersonId

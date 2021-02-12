@@ -29,6 +29,13 @@ findById driverId = do
   where
     predicate DriverInformation.DriverInformation {..} = _driverId ==. B.val_ driverId
 
+findAllByIds :: [DriverId] -> Flow [DriverInformation.DriverInformation]
+findAllByIds driversIds = do
+  dbTable <- getDbTable
+  DB.findAllOrErr dbTable predicate
+  where
+    predicate DriverInformation.DriverInformation {..} = _driverId `B.in_` (B.val_ <$> driversIds)
+
 updateActivity :: DriverId -> Bool -> Flow ()
 updateActivity driverId active = do
   dbTable <- getDbTable

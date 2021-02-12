@@ -33,7 +33,7 @@ data RideRequest = RideRequest
 data DriverResponse
   = Accept
   | Reject
-  deriving (Show)
+  deriving (Generic, Show, FromJSON)
 
 data NotificationStatus
   = Notified UTCTime
