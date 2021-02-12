@@ -4,7 +4,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
-import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.App (DriverId)
@@ -43,7 +43,7 @@ fetchAllAvailableByIds driversIds = do
       foldr
         (&&.)
         (B.val_ True)
-        [ _driverId `B.in_` (B.val_ <$> driversIds) ||. complementVal driversIds,
+        [ _driverId `B.in_` (B.val_ <$> driversIds),
           _active ==. B.val_ True,
           _onRide ==. B.val_ False
         ]
