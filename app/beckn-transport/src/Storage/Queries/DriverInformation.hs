@@ -4,7 +4,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
-import Database.Beam ((<-.), (==.))
+import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.App (DriverId)
@@ -29,12 +29,24 @@ findById driverId = do
   where
     predicate DriverInformation.DriverInformation {..} = _driverId ==. B.val_ driverId
 
-findAllByIds :: [DriverId] -> Flow [DriverInformation.DriverInformation]
-findAllByIds driversIds = do
+complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
+complementVal l
+  | null l = B.val_ True
+  | otherwise = B.val_ False
+
+fetchAllAvailableByIds :: [DriverId] -> Flow [DriverInformation.DriverInformation]
+fetchAllAvailableByIds driversIds = do
   dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
   where
-    predicate DriverInformation.DriverInformation {..} = _driverId `B.in_` (B.val_ <$> driversIds)
+    predicate DriverInformation.DriverInformation {..} =
+      foldr
+        (&&.)
+        (B.val_ True)
+        [ _driverId `B.in_` (B.val_ <$> driversIds) ||. complementVal driversIds,
+          _active ==. B.val_ True,
+          _onRide ==. B.val_ False
+        ]
 
 updateActivity :: DriverId -> Bool -> Flow ()
 updateActivity driverId active = do

@@ -57,8 +57,8 @@ handle =
       getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (^. #_driverId),
       getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList,
       checkAvailability = \driversIds -> do
-        driversInfo <- QDriverInfo.findAllByIds $ toList driversIds
-        pure $ foldr addAvailableDriver [] driversInfo,
+        driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driversIds
+        pure $ map SDriverInfo._driverId driversInfo,
       getDriverResponse = \rideId driverId ->
         Redis.getKeyRedis $ "beckn:" <> _getRideId rideId <> ":" <> _getDriverId driverId <> ":response",
       assignDriver = Internals.assignDriver,
@@ -126,12 +126,6 @@ addNotificationStatus' rideId driverId status = do
       case status of
         Alloc.Notified time -> Just time
         _ -> Nothing
-
-addAvailableDriver :: SDriverInfo.DriverInformation -> [DriverId] -> [DriverId]
-addAvailableDriver driverInfo availableDriversIds =
-  if driverInfo ^. #_active && not (driverInfo ^. #_onRide)
-    then driverInfo ^. #_driverId : availableDriversIds
-    else availableDriversIds
 
 toDriverId :: PersonId -> DriverId
 toDriverId = DriverId . _getPersonId
