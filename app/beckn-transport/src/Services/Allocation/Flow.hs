@@ -15,6 +15,7 @@ import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP (cancelRide)
 import qualified Product.Person as Person
 import Services.Allocation as Alloc
+import qualified Services.Allocation.Internals as Internals
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
@@ -54,7 +55,7 @@ handle =
       getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList,
       checkAvailability = error "BKN-518",
       getDriverResponse = error "BKN-519",
-      assignDriver = error "BKN-520",
+      assignDriver = Internals.assignDriver,
       cancelRide = BP.cancelRide,
       completeRequest = QRR.markComplete,
       resetRequestTime = QRR.updateLastProcessTime
