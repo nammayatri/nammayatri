@@ -24,6 +24,7 @@ import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop as BS
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
+import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Case as SC
 import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
@@ -231,7 +232,8 @@ cancelRide rideId = do
   _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
   _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
 
-  bapOrgId <- ProductInstance._udf4 orderPi & fromMaybeM500 "BAP_ORG_ID_NOT_PRESENT"
+  orderCase <- Case.findById (orderPi ^. #_caseId)
+  bapOrgId <- Case._udf4 orderCase & fromMaybeM500 "BAP_ORG_ID_NOT_PRESENT"
   bapOrg <- findOrganizationById $ OrganizationId bapOrgId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   let transporterId = OrganizationId $ ProductInstance._organizationId orderPi
