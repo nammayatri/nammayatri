@@ -13,6 +13,7 @@ import Beckn.Types.ID (ID (..))
 import Beckn.Utils.Common (fromMaybeM500, getCurrTime)
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP (cancelRide)
+import qualified Product.Person as Person
 import Services.Allocation as Alloc
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
@@ -34,7 +35,10 @@ handle =
       getConfiguredAllocationTime =
         asks (rideAllocationExpiry . driverAllocationConfig),
       getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest,
-      getDriverPool = error "Person.getDriverPool . ProductInstanceId . _getRideId",
+      getDriverPool = \(RideId rideId) -> do
+        personIds <- Person.getDriverPool (ProductInstanceId rideId)
+        let driverIds = fmap toDriverId personIds
+        pure driverIds,
       getCurrentNotification = getCurrentNotification',
       sendNotification = \(RideId rideId) (DriverId driverId) -> do
         prodInst <- QPI.findById (ProductInstanceId rideId)
@@ -115,3 +119,6 @@ addNotificationStatus' rideId driverId status = do
       case status of
         Alloc.Notified time -> Just time
         _ -> Nothing
+
+toDriverId :: PersonId -> DriverId
+toDriverId = DriverId . _getPersonId
