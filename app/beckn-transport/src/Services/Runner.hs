@@ -8,8 +8,8 @@ import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-
--- import qualified Services.Runner.Allocation as Allocation
+import qualified Services.Allocation as Allocation
+import Services.Allocation.Flow
 
 run :: TMVar () -> TMVar () -> Flow ()
 run shutdown activeTask = do
@@ -21,7 +21,7 @@ run shutdown activeTask = do
       Redis.setKeyRedis "beckn:allocation:service" now
       L.runIO $ atomically $ putTMVar activeTask ()
       L.logInfo @Text "Runner" "Start new iteration of task runner."
-      -- _ <- Allocation.runAllocation
+      _ <- Allocation.process handle
       Redis.setExRedis "beckn:allocation:is_running" False 60
       L.runIO $ atomically $ takeTMVar activeTask
       L.logInfo @Text "Runner" "Iteration of task runner is complete."
