@@ -72,13 +72,16 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
       DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
     updateStatus piId req
   updateInfo piId
-
-  -- Send callback to BAP
-  bapOrg <- fetchBapOrganization $ ordPi ^. #_caseId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  notifyTripDetailsToGateway searchPi ordPi callbackUrl
-  notifyStatusUpdateReq searchPi (req ^. #_status) callbackUrl
+  notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
+
+notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
+notifyUpdateToBAP searchPi orderPi updatedStatus = do
+  -- Send callback to BAP
+  bapOrg <- fetchBapOrganization $ orderPi ^. #_caseId
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  notifyTripDetailsToGateway searchPi orderPi callbackUrl
+  notifyStatusUpdateReq searchPi updatedStatus callbackUrl
   where
     fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM500 "PRODUCT_INSTANCE_WITH_CASE_NOT_PRESENT"

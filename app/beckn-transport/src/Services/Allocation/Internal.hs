@@ -56,6 +56,7 @@ getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 assignDriver :: RideId -> DriverId -> Flow ()
 assignDriver rideId driverId = do
   ordPi <- PIQ.findById productInstanceId
+  searchPi <- PIQ.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   person <- QPerson.findPersonById personId
   let vehicleId = person ^. #_udf1
@@ -65,6 +66,7 @@ assignDriver rideId driverId = do
   PI.assignDriver piList req
   PI.updateStatus productInstanceId req
   PI.updateInfo productInstanceId
+  PI.notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   where
     personId = PersonId $ driverId ^. #_getDriverId
     productInstanceId = ProductInstanceId $ rideId ^. #_getRideId
