@@ -9,7 +9,13 @@ data SetDriverAcceptanceReq = SetDriverAcceptanceReq
   { _productInstanceId :: ProductInstanceId,
     _response :: NotificationStatus
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
+
+instance FromJSON SetDriverAcceptanceReq where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON SetDriverAcceptanceReq where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 type SetDriverAcceptanceRes = Ack
 
@@ -22,4 +28,10 @@ data DriverResponse = DriverResponse
   { _status :: NotificationStatus,
     _respondedAt :: UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
+
+instance FromJSON DriverResponse where
+  parseJSON = genericParseJSON stripLensPrefixOptions
+
+instance ToJSON DriverResponse where
+  toJSON = genericToJSON stripLensPrefixOptions

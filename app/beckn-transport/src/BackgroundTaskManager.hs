@@ -49,10 +49,10 @@ runBackgroundTaskManager configModifier = do
               putStrLn @Text $ "Loaded http managers - " <> show (keys managerMap)
               let flowRt' = flowRt {R._httpClientManagers = managerMap}
               putStrLn @String "Initializing Redis Connections..."
-              try (runFlowR flowRt appEnv checkConnections) >>= \case
+              try (runFlowR flowRt' appEnv checkConnections) >>= \case
                 Left (e :: SomeException) -> putStrLn @Text ("Connections check failed. Exception thrown: " <> show e)
                 Right _ ->
-                  try (runFlowR flowRt appEnv createFCMTokenRefreshThread) >>= \case
+                  try (runFlowR flowRt' appEnv createFCMTokenRefreshThread) >>= \case
                     Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
                     Right _ -> do
                       let settings = setPort (bgtmPort appEnv) defaultSettings

@@ -25,6 +25,7 @@ import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
 import Types.API.ProductInstance
+import Types.API.Ride (DriverResponse (..))
 import Types.App
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS

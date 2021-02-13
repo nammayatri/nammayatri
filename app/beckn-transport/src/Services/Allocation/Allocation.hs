@@ -5,6 +5,7 @@ module Services.Allocation.Allocation where
 import Data.Generics.Labels ()
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
 import EulerHS.Prelude
+import qualified Types.API.Ride as DriverResponse (DriverResponse (..), NotificationStatus (..))
 import Types.App
 
 newtype OrderTime = OrderTime
@@ -29,11 +30,6 @@ data RideRequest = RideRequest
     requestData :: RequestData
   }
   deriving (Generic, Show)
-
-data DriverResponse
-  = Accept
-  | Reject
-  deriving (Generic, Show, FromJSON)
 
 data NotificationStatus
   = Notified UTCTime
@@ -95,7 +91,7 @@ data ServiceHandle m = ServiceHandle
     checkAvailability :: NonEmpty DriverId -> m [DriverId],
     -- Get the response if it was registered for this ride by this driver
     -- Can be done as a Redis lookup
-    getDriverResponse :: RideId -> DriverId -> m (Maybe DriverResponse),
+    getDriverResponse :: RideId -> DriverId -> m (Maybe DriverResponse.DriverResponse),
     -- Assign a ride to a driver
     assignDriver :: RideId -> DriverId -> m (),
     -- Cancel the ride
@@ -178,13 +174,15 @@ processCurrentNotification
         mResponse <- getDriverResponse rideId driverId
         svcLog ("getDriverResponse " <> show mResponse)
         case mResponse of
-          Just Accept -> do
-            svcLog ("assigning driver" <> show driverId)
-            assignDriver rideId driverId
-            updateNotificationStatus rideId driverId Accepted
-            completeRequest $ requestHeader ^. #requestId
-          Just Reject ->
-            processRejection handle False requestHeader driverId
+          Just driverResponse ->
+            case driverResponse ^. #_status of
+              DriverResponse.ACCEPT -> do
+                svcLog ("assigning driver" <> show driverId)
+                assignDriver rideId driverId
+                updateNotificationStatus rideId driverId Accepted
+                completeRequest $ requestHeader ^. #requestId
+              DriverResponse.REJECT ->
+                processRejection handle False requestHeader driverId
           Nothing ->
             processRideLater handle requestHeader
 
