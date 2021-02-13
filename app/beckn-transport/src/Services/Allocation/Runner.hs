@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Services.Allocation.Runner where
 
 import App.Types
@@ -46,11 +44,9 @@ run shutdown activeTask = do
       now <- getCurrTime
       Redis.setKeyRedis "beckn:allocation:service" now
       L.runIO $ atomically $ putTMVar activeTask ()
-      L.logInfo @Text "Runner" "Start new iteration of task runner."
       _ <- Allocation.process handle
       Redis.setExRedis "beckn:allocation:is_running" False 60
       L.runIO $ atomically $ takeTMVar activeTask
-      L.logInfo @Text "Runner" "Iteration of task runner is complete."
       L.runIO $ threadDelay 5000000 -- Adding delay to limit number of getTasks requests to DB per sec. TODO: modify with better impl.
   isRunning <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
   when isRunning $ run shutdown activeTask

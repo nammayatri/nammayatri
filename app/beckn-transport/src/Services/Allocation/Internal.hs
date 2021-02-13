@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Services.Allocation.Internal where
 
@@ -145,8 +144,8 @@ completeRequest = QRR.markComplete
 resetRequestTime :: RideRequestId -> Flow ()
 resetRequestTime = QRR.updateLastProcessTime
 
-logInfo :: Text -> Flow ()
-logInfo = L.logInfo @Text "Ride requests handler"
+logInfo :: Text -> Text -> Flow ()
+logInfo = L.logInfo
 
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->
