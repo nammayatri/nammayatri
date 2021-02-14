@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Services.Allocation.Runner where
 
 import App.Types
