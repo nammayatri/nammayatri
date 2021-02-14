@@ -4,6 +4,7 @@ module Beckn.External.FCM.Utils where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.Types.Common
+import Beckn.Utils.Common (throwError500)
 import qualified Beckn.Utils.JWT as JWT
 import qualified Control.Exception as E (try)
 import qualified Data.Aeson as Aeson
@@ -16,9 +17,9 @@ import GHC.Records (HasField (..))
 createFCMTokenRefreshThread :: HasField "fcmJsonPath" r (Maybe Text) => FlowR r ()
 createFCMTokenRefreshThread =
   getField @"fcmJsonPath" <$> ask
-    >>= maybe (pure ()) withFJP -- report error here if FCM is crucial
+    >>= maybe (throwError500 "fcmJsonPath not configured") withFJP
   where
-    withFJP f = L.runIO (readAndDecode f) >>= either logIt doIt
+    withFJP f = L.runIO (readAndDecode f) >>= either logAndThrowIt doIt
     readAndDecode f = either (Left . excText f) (first fromString . Aeson.eitherDecode) <$> E.try (BL.readFile $ toString f)
     excText f e = "Error on reading FCM json file [" <> f <> "]: " <> fromString (displayException (e :: SomeException))
     doIt sa = lift . L.forkFlow forkDesc $ do
@@ -41,4 +42,6 @@ createFCMTokenRefreshThread =
                   then fromInteger x - 300
                   else 10
               _ -> 10 -- just a caution, it should be valid by this moment
-    logIt = L.logInfo ("fcm" :: Text)
+    logAndThrowIt err = do
+      L.logInfo ("fcm" :: Text) err
+      throwError500 "Unable to read fcmJson file"
