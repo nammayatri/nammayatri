@@ -11,6 +11,7 @@ import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error (Error (..))
 import Beckn.Types.Error
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
+import Control.Monad.Reader
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
@@ -388,6 +389,11 @@ fork desc f = do
         Left e ->
           L.logWarning @Text "Thread" $
             "Thread " <> show desc <> " died with error: " <> show e
+
+runSafeFlow :: (FromJSON a, ToJSON a) => FlowR r a -> FlowR r (Either Text a)
+runSafeFlow flow = do
+  env <- ask
+  lift $ L.runSafeFlow $ runReaderT flow env
 
 class Example a where
   -- | Sample value of a thing.
