@@ -66,12 +66,12 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
       mbRoute <- getRoute driverLat driverLong fromLat fromLong
       return
         DriverInformationAPI.GetRideInfoRes
-          { _productInstanceId = Just productInstanceId,
-            _pickupLoc = fromLocation,
-            _dropLoc = toLocation,
-            _etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
-            _distanceToPickupLoc = distanceInM <$> mbRoute,
-            _notificationExpiryTime = addUTCTime driverNotificationExpiry <$> notificationTime
+          { productInstanceId = Just productInstanceId,
+            pickupLoc = fromLocation,
+            dropLoc = toLocation,
+            etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
+            distanceToPickupLoc = distanceInM <$> mbRoute,
+            notificationExpiryTime = addUTCTime driverNotificationExpiry <$> notificationTime
           }
   where
     driverId = DriverId _EntityId
@@ -83,10 +83,10 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
     getRoute fromLat fromLong toLat toLong = fromMaybe (return Nothing) $ Location.getRoute' <$> fromLat <*> fromLong <*> toLat <*> toLong
     emptyGetRideInfoRes =
       DriverInformationAPI.GetRideInfoRes
-        { _productInstanceId = mbProductInstanceId,
-          _pickupLoc = Nothing,
-          _dropLoc = Nothing,
-          _etaForPickupLoc = Nothing,
-          _distanceToPickupLoc = Nothing,
-          _notificationExpiryTime = Nothing
+        { productInstanceId = mbProductInstanceId,
+          pickupLoc = Nothing,
+          dropLoc = Nothing,
+          etaForPickupLoc = Nothing,
+          distanceToPickupLoc = Nothing,
+          notificationExpiryTime = Nothing
         }

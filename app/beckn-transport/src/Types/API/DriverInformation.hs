@@ -34,11 +34,11 @@ data DriverInformationResponse = DriverInformationResponse
   deriving (Generic, ToJSON)
 
 data GetRideInfoRes = GetRideInfoRes
-  { _productInstanceId :: Maybe ProductInstanceId,
-    _pickupLoc :: Maybe Loc.Location,
-    _dropLoc :: Maybe Loc.Location,
-    _etaForPickupLoc :: Maybe Integer,
-    _distanceToPickupLoc :: Maybe Float,
-    _notificationExpiryTime :: Maybe UTCTime
+  { productInstanceId :: Maybe ProductInstanceId,
+    pickupLoc :: Maybe Loc.Location,
+    dropLoc :: Maybe Loc.Location,
+    etaForPickupLoc :: Maybe Integer,
+    distanceToPickupLoc :: Maybe Float,
+    notificationExpiryTime :: Maybe UTCTime
   }
   deriving (Generic, ToJSON)
