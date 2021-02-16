@@ -45,4 +45,5 @@ in
 , smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
+, googleMapsKey = ""
 }

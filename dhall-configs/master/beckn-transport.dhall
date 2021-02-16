@@ -77,4 +77,6 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
 , driverAllocationConfig = driverAllocationConfig
+, googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+, googleMapsKey = common.googleMapsKey
 }

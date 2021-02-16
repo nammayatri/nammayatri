@@ -79,4 +79,6 @@ in
 , traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , signatureExpiry = common.signatureExpiry
+, googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+, googleMapsKey = common.googleMapsKey
 }
