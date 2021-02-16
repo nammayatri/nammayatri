@@ -31,8 +31,8 @@ newtype Geometry = Geometry
   deriving (Generic, ToJSON, FromJSON)
 
 data LocationS = LocationS
-  { lat :: Int,
-    lng :: Int
+  { lat :: Double,
+    lng :: Double
   }
   deriving (Generic, ToJSON, FromJSON)
 
