@@ -34,4 +34,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , fcmJsonPath = None Text
    , credRegistry = credRegistry
    , signingKeys = sec.signingKeys
+   , googleMapsKey = sec.googleMapsKey
    }

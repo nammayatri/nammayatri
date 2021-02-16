@@ -46,4 +46,6 @@ in
 , fmdCoreVersion = "0.8.0"
 , fmdDomainVersion = "0.8.3"
 , signatureExpiry = common.signatureExpiry
+, googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+, googleMapsKey = common.googleMapsKey
 }

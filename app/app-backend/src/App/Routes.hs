@@ -4,6 +4,7 @@
 module App.Routes where
 
 import App.Types
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
@@ -32,6 +33,7 @@ import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
 import qualified Product.Serviceability as Serviceability
+import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Status as Status
 import qualified Product.Support as Support
 import qualified Product.TrackTrip as TrackTrip
@@ -77,6 +79,7 @@ type AppAPI =
            :<|> ServiceabilityAPI
            :<|> FeedbackAPI
            :<|> CustomerSupportAPI
+           :<|> GoogleMapsProxyAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -102,6 +105,7 @@ appServer =
     :<|> serviceabilityFlow
     :<|> feedbackFlow
     :<|> customerSupportFlow
+    :<|> googleMapsProxyFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -379,3 +383,27 @@ type CustomerSupportAPI =
 
 customerSupportFlow :: FlowServer CustomerSupportAPI
 customerSupportFlow = CS.login :<|> CS.logout :<|> CS.listOrder
+
+type GoogleMapsProxyAPI =
+  "googleMaps"
+    :> ( "autoComplete"
+           :> TokenAuth
+           :> MandatoryQueryParam "input" Text
+           :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
+           :> MandatoryQueryParam "radius" Integer
+           :> Get '[JSON] GoogleMaps.SearchLocationResp
+           :<|> "placeDetails"
+             :> TokenAuth
+             :> MandatoryQueryParam "place_id" Text
+             :> Get '[JSON] GoogleMaps.PlaceDetailsResp
+           :<|> "getPlaceName"
+             :> TokenAuth
+             :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
+             :> Get '[JSON] GoogleMaps.GetPlaceNameResp
+       )
+
+googleMapsProxyFlow :: FlowServer GoogleMapsProxyAPI
+googleMapsProxyFlow =
+  GoogleMapsFlow.autoComplete
+    :<|> GoogleMapsFlow.placeDetails
+    :<|> GoogleMapsFlow.getPlaceName

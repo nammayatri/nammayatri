@@ -40,7 +40,9 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     traceFlag :: TraceFlag,
     signatureExpiry :: NominalDiffTime,
-    driverAllocationConfig :: DriverAllocationConfig
+    driverAllocationConfig :: DriverAllocationConfig,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text
   }
   deriving (Generic, FromDhall)
 

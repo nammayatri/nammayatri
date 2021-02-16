@@ -42,7 +42,9 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     geofencingConfig :: GeofencingConfig,
     traceFlag :: TraceFlag,
-    signatureExpiry :: NominalDiffTime
+    signatureExpiry :: NominalDiffTime,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text
   }
   deriving (Generic, FromDhall)
 

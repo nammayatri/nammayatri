@@ -27,4 +27,5 @@ in
 , smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
+, googleMapsKey = "AIzaSyCcqulEJglG2NxGOcebOBVm-yvx-z9GTGM"
 }

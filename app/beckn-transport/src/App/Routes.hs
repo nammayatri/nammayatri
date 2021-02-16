@@ -2,6 +2,7 @@ module App.Routes where
 
 import App.Routes.FarePolicy
 import App.Types
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.APIResult (APIResult)
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
@@ -32,6 +33,7 @@ import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
+import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
@@ -67,6 +69,7 @@ type TransportAPI =
            :<|> DriverInformationAPI
            :<|> FarePolicyAPI
            :<|> RideAPI
+           :<|> GoogleMapsProxyAPI
        )
 
 ---- Registration Flow ------
@@ -327,6 +330,7 @@ transporterServer =
     :<|> driverInformationFlow
     :<|> farePolicyFlow
     :<|> rideFlow
+    :<|> googleMapsProxyFlow
 
 type OrgBecknAPI =
   Capture "orgId" OrganizationId
@@ -430,3 +434,27 @@ healthCheckServer = HealthCheck.healthCheck
 
 healthCheckAPI :: Proxy HealthCheckAPI
 healthCheckAPI = Proxy
+
+type GoogleMapsProxyAPI =
+  "googleMaps"
+    :> ( "autoComplete"
+           :> TokenAuth
+           :> MandatoryQueryParam "input" Text
+           :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
+           :> MandatoryQueryParam "radius" Integer
+           :> Get '[JSON] GoogleMaps.SearchLocationResp
+           :<|> "placeDetails"
+             :> TokenAuth
+             :> MandatoryQueryParam "place_id" Text
+             :> Get '[JSON] GoogleMaps.PlaceDetailsResp
+           :<|> "getPlaceName"
+             :> TokenAuth
+             :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
+             :> Get '[JSON] GoogleMaps.GetPlaceNameResp
+       )
+
+googleMapsProxyFlow :: FlowServer GoogleMapsProxyAPI
+googleMapsProxyFlow =
+  GoogleMapsFlow.autoComplete
+    :<|> GoogleMapsFlow.placeDetails
+    :<|> GoogleMapsFlow.getPlaceName
