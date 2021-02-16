@@ -57,4 +57,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
    , credRegistry = credRegistry
    , signingKeys = sec.signingKeys
+   , googleMapsKey = sec.googleMapsKey
    }
