@@ -666,7 +666,7 @@ INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VAL
   ('9db237f9-3061-4bad-a616-42e91f092407', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
 
 CREATE TABLE atlas_transporter.driver_stats (
-    driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
+    driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
     idle_since timestamp with time zone
 );
 
@@ -681,7 +681,7 @@ CREATE TABLE atlas_transporter.transporter_config (
 );
 
 CREATE TABLE atlas_transporter.driver_information (
-    driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id),
+    driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
     active boolean DEFAULT false NOT NULL,
     on_ride boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -715,7 +715,7 @@ INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id,
 
 CREATE TABLE atlas_transporter.ride_request (
     id character(36) PRIMARY KEY NOT NULL,
-    ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id),
+    ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id) on delete cascade,
     created_at timestamp with time zone,
     last_process_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     type character varying(20) NOT NULL,
@@ -724,8 +724,8 @@ CREATE TABLE atlas_transporter.ride_request (
 
 CREATE TABLE atlas_transporter.notification_status (
     id character(36) PRIMARY KEY NOT NULL,
-    ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id),
-    driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id),
+    ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id) on delete cascade,
+    driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
     status character varying(20) NOT NULL,
     notified_at timestamp with time zone
 );
