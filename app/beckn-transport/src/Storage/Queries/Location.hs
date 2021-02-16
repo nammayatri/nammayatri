@@ -7,22 +7,16 @@ module Storage.Queries.Location where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import Beckn.Storage.DB.Config (DBConfig (..))
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
-import Data.Pool (withResource)
-import Data.Time (UTCTime)
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Database.PostgreSQL.Simple (execute)
-import Database.PostgreSQL.Simple.Internal (Connection)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import EulerHS.Language (getSqlDBConnection, runIO)
 import EulerHS.Prelude hiding (id)
-import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import qualified Types.Storage.DB as DB
+import Utils.PostgreSQLSimple (postgreSQLSimpleExecute)
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
 getDbTable =
@@ -77,33 +71,19 @@ findAllByLocIds fromIds toIds = do
         ||. B.in_ _id (B.val_ <$> pToIds)
 
 updateGpsCoord :: LocationId -> Double -> Double -> Flow ()
-updateGpsCoord locationId lat long = do
-  let id = _getLocationId locationId
-  DBConfig {..} <- asks dbCfg
+updateGpsCoord (LocationId locId) lat long = do
   now <- getCurrTime
-  pool <-
-    getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
-      >>= either DB.throwDBError pure
-      >>= \case
-        PostgresPool _connTag pool -> pure pool
-        _ -> throwError500 "NOT_POSTGRES_BACKEND"
-  void $ runIO $ withResource pool (runRawQuery id now)
-  where
-    runRawQuery :: Text -> UTCTime -> Connection -> IO Int64
-    runRawQuery locId now conn = do
-      let sqlQuery =
-            [sql|
-              UPDATE
-                atlas_transporter.location
-              SET
-                point = public.ST_SetSRID(ST_Point(?, ?)::geography, 4326),
-                long = ?,
-                lat = ?,
-                updated_at = ?
-              WHERE
-                id = ?
-            |]
-      execute
-        conn
-        sqlQuery
-        (long, lat, long, lat, now, locId)
+  void $
+    postgreSQLSimpleExecute
+      [sql|
+      UPDATE
+        atlas_transporter.location
+      SET
+        point = public.ST_SetSRID(ST_Point(?, ?)::geography, 4326),
+        long = ?,
+        lat = ?,
+        updated_at = ?
+      WHERE
+        id = ?
+    |]
+      (long, lat, long, lat, now, locId)

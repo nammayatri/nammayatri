@@ -9,23 +9,19 @@ import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
-import Beckn.Storage.DB.Config (DBConfig (..))
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Storage
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
-import Data.Pool (withResource)
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Database.PostgreSQL.Simple (query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import EulerHS.Language (getSqlDBConnection, runIO)
 import EulerHS.Prelude hiding (id)
-import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import Types.API.Location (LatLong (..))
 import qualified Types.Storage.DB as DB
+import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
 getDbTable =
@@ -360,41 +356,30 @@ getNearestDrivers ::
   OrganizationId ->
   Vehicle.Variant ->
   Flow [(PersonId, Double)]
-getNearestDrivers LatLong {..} radius orgId variant = do
-  DBConfig {..} <- asks dbCfg
-  pool <-
-    getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
-      >>= either DB.throwDBError pure
-      >>= \case
-        PostgresPool _connTag pool -> pure pool
-        _ -> throwError500 "NOT_POSTGRES_BACKEND"
-  runIO $ withResource pool (fmap textsToPersonIds . runRawQuery)
-  where
-    textsToPersonIds = map (first PersonId)
-    runRawQuery conn =
-      query
-        conn
-        [sql|
-          WITH a AS (
-            SELECT
-              person.id as id,
-              location.point <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
-            FROM atlas_transporter.person
-            JOIN atlas_transporter.location
-              ON person.location_id = location.id
-            JOIN atlas_transporter.driver_information
-              ON person.id = driver_information.driver_id
-            JOIN atlas_transporter.vehicle
-              ON person.udf1 = vehicle.id
-            WHERE person.role = 'DRIVER'
-              AND person.organization_id = ?
-              AND driver_information.active
-              AND NOT driver_information.on_ride
-              AND vehicle.variant = ?
-          )
-          SELECT id, dist
-          FROM a
-          WHERE dist < ?
-          ORDER BY dist ASC
-        |]
-        (lon, lat, _getOrganizationId orgId, show variant :: Text, radius)
+getNearestDrivers LatLong {..} radius orgId variant =
+  map (first PersonId)
+    <$> postgreSQLSimpleQuery
+      [sql|
+      WITH a AS (
+        SELECT
+          person.id as id,
+          location.point <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
+        FROM atlas_transporter.person
+        JOIN atlas_transporter.location
+          ON person.location_id = location.id
+        JOIN atlas_transporter.driver_information
+          ON person.id = driver_information.driver_id
+        JOIN atlas_transporter.vehicle
+          ON person.udf1 = vehicle.id
+        WHERE person.role = 'DRIVER'
+          AND person.organization_id = ?
+          AND driver_information.active
+          AND NOT driver_information.on_ride
+          AND vehicle.variant = ?
+      )
+      SELECT id, dist
+      FROM a
+      WHERE dist < ?
+      ORDER BY dist ASC
+    |]
+      (lon, lat, _getOrganizationId orgId, show variant :: Text, radius)
