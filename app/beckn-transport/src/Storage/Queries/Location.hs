@@ -76,14 +76,14 @@ updateGpsCoord (LocationId locId) lat long = do
   void $
     postgreSQLSimpleExecute
       [sql|
-      UPDATE
-        atlas_transporter.location
-      SET
-        point = public.ST_SetSRID(ST_Point(?, ?)::geography, 4326),
-        long = ?,
-        lat = ?,
-        updated_at = ?
-      WHERE
-        id = ?
-    |]
+        UPDATE
+          atlas_transporter.location
+        SET
+          point = public.ST_SetSRID(ST_Point(?, ?)::geography, 4326),
+          long = ?,
+          lat = ?,
+          updated_at = ?
+        WHERE
+          id = ?
+      |]
       (long, lat, long, lat, now, locId)

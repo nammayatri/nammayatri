@@ -43,13 +43,9 @@ withPostgreSQLSimple f = do
       >>= \case
         PostgresPool _connTag pool -> pure pool
         _ -> throwError500 "NOT_POSTGRES_BACKEND"
-  Either' res <-
-    L.runIO
-      . withResource pool
-      $ fmap Either'
-        . runPostgresqlSimple
-        . fmap Right
-        . f
+  res <-
+    L.runUntracedIO . withResource pool $
+      runPostgresqlSimple . fmap Right . f
   either throwError500 pure res
 
 runPostgresqlSimple :: IO (Either Text a) -> IO (Either Text a)
@@ -71,21 +67,7 @@ showResultError (Incompatible sqlType _ _ hType msg) = "sql incompatible: " <> m
 showResultError (UnexpectedNull _ _ field _ msg) = "sql unexpected null: " <> msg <> " @ " <> field
 showResultError (ConversionFailed sqlType _ _ hType msg) = "sql conversion failed" <> msg <> " (" <> hType <> " ~ " <> sqlType <> ")"
 
-logQuery :: ToRow q => Query -> q -> ReaderT AppEnv L.Flow ()
+logQuery :: ToRow q => Query -> q -> Flow ()
 logQuery q qargs =
   withPostgreSQLSimple (\conn -> decodeUtf8 <$> formatQuery conn q qargs)
     >>= L.logDebug @Text "raw sql query" -- TODO: replace with Beckn.Utils.Logging.logDebug
-
--- Need this for L.runIO
-newtype Either' a b = Either' (Either a b)
-
-instance (FromJSON a, FromJSON b) => FromJSON (Either' a b) where
-  parseJSON = withObject "Either'" $ \o ->
-    fmap Either' $
-      (Right <$> o .: "Right")
-        <|> (Left <$> o .: "Left")
-
-instance (ToJSON a, ToJSON b) => ToJSON (Either' a b) where
-  toJSON (Either' ei) = either (f "Left") (f "Right") ei
-    where
-      f field val = object [field .= val]

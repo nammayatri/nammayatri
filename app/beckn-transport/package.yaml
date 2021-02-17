@@ -115,7 +115,7 @@ tests:
     source-dirs:
       - test/app
       - test/src
-    dependencies: 
+    dependencies:
       - tasty
       - tasty-hunit
       - beckn-transport
