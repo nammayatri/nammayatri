@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
+import Data.Time (diffUTCTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import EulerHS.Language ()
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -47,10 +48,18 @@ run shutdown activeTask = do
       now <- getCurrTime
       Redis.setKeyRedis "beckn:allocation:service" now
       L.runIO $ atomically $ putTMVar activeTask ()
+      processStartTime <- getCurrTime
       eres <- runSafeFlow $ Allocation.process handle
       whenLeft eres $ L.logError @Text "Allocation service"
       Redis.setExRedis "beckn:allocation:is_running" False 60
+      processEndTime <- getCurrTime
+      let processTime = diffUTCTime processEndTime processStartTime
+      let oneSec = secondsToNominalDiffTime 1
       L.runIO $ atomically $ takeTMVar activeTask
-      L.runIO $ threadDelay 5000000 -- Adding delay to limit number of getTasks requests to DB per sec. TODO: modify with better impl.
+      -- If process handling took less than 1 second we delay for remain to 1 second time
+      L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (oneSec - processTime)
   isRunning <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
   when isRunning $ run shutdown activeTask
+  where
+    requestsPerIteration = 50
+    fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds
