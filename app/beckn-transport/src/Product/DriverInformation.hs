@@ -8,12 +8,13 @@ import Beckn.Types.App
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
-import Data.List.NonEmpty (unzip)
 import Data.Time (addUTCTime)
-import EulerHS.Prelude hiding (unzip)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Registration as Registration
+import Servant (ServerError (..), err404)
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
@@ -49,44 +50,35 @@ setActivity RegistrationToken {..} isActive = withFlowHandler $ do
 getRideInfo :: RegistrationToken -> Maybe ProductInstanceId -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
 getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
   let rideId = RideId . _getProductInstanceId <$> mbProductInstanceId
-  mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
-  case mbNotification of
-    Nothing -> return emptyGetRideInfoRes
-    Just notification -> do
+  arrNotification <- QNotificationStatus.findNotificationByDriverId driverId rideId
+  case arrNotification of
+    notification : _ -> do
       let productInstanceId = rideIdToProductInstanceId $ notification ^. #_rideId
-          notificationTime = notification ^. #_notifiedAt
+      notificationTime <- notification ^. #_notifiedAt & fromMaybeM500 "UNKNOWN_NOTIFIED_TIME"
       driverNotificationExpiry <- getDriverNotificationExpiry
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById personId
-      driverLocation <- findLocationById $ driver ^. #_locationId
-      fromLocation <- findLocationById $ productInstance ^. #_fromLocation
-      toLocation <- findLocationById $ productInstance ^. #_toLocation
-      let (fromLat, fromLong) = extractLatLong fromLocation
-          (driverLat, driverLong) = extractLatLong driverLocation
-      mbRoute <- getRoute driverLat driverLong fromLat fromLong
+      driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM500 "DRIVER_LOCATION_NOT_FOUND"
+      fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM500 "PICKUP_LOCATION_NOT_FOUND"
+      toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM500 "DROP_LOCATION_NOT_FOUND"
+      (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM500 "GPS_COORD_NOT_FOUND"
+      (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM500 "GPS_COORD_NOT_FOUND"
+      route <- Location.getRoute' driverLat driverLong fromLat fromLong >>= fromMaybeM500 "UNABLE_TO_GET_ROUTE"
       return
         DriverInformationAPI.GetRideInfoRes
-          { productInstanceId = Just productInstanceId,
+          { productInstanceId = productInstanceId,
             pickupLoc = fromLocation,
             dropLoc = toLocation,
-            etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
-            distanceToPickupLoc = distanceInM <$> mbRoute,
-            notificationExpiryTime = addUTCTime driverNotificationExpiry <$> notificationTime
+            etaForPickupLoc = durationInS route `div` 60,
+            distanceToPickupLoc = distanceInM route,
+            notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime,
+            notificationStatus = notification ^. #_status
           }
+    _ -> L.throwException $ err404 {errBody = "NOTIFICATION_NOT_FOUND"}
   where
     driverId = DriverId _EntityId
     personId = PersonId $ _getDriverId driverId
     rideIdToProductInstanceId rideId = ProductInstanceId $ rideId ^. #_getRideId
     getDriverNotificationExpiry = App.driverNotificationExpiry . App.driverAllocationConfig <$> ask
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ LocationId <$> mbId
-    extractLatLong location = unzip (location >>= (\loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long))
-    getRoute fromLat fromLong toLat toLong = fromMaybe (return Nothing) $ Location.getRoute' <$> fromLat <*> fromLong <*> toLat <*> toLong
-    emptyGetRideInfoRes =
-      DriverInformationAPI.GetRideInfoRes
-        { productInstanceId = mbProductInstanceId,
-          pickupLoc = Nothing,
-          dropLoc = Nothing,
-          etaForPickupLoc = Nothing,
-          distanceToPickupLoc = Nothing,
-          notificationExpiryTime = Nothing
-        }
+    extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long

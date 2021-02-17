@@ -13,6 +13,7 @@ import Data.Time
 import EulerHS.Prelude
 import qualified Types.API.Person as PersonAPI
 import Types.Storage.DriverInformation
+import Types.Storage.NotificationStatus
 
 newtype ActiveDriversResponse = ActiveDriversResponse
   { active_drivers :: [DriverRidesInformation]
@@ -34,11 +35,12 @@ data DriverInformationResponse = DriverInformationResponse
   deriving (Generic, ToJSON)
 
 data GetRideInfoRes = GetRideInfoRes
-  { productInstanceId :: Maybe ProductInstanceId,
-    pickupLoc :: Maybe Loc.Location,
-    dropLoc :: Maybe Loc.Location,
-    etaForPickupLoc :: Maybe Integer,
-    distanceToPickupLoc :: Maybe Float,
-    notificationExpiryTime :: Maybe UTCTime
+  { productInstanceId :: ProductInstanceId,
+    pickupLoc :: Loc.Location,
+    dropLoc :: Loc.Location,
+    etaForPickupLoc :: Integer,
+    distanceToPickupLoc :: Float,
+    notificationExpiryTime :: UTCTime,
+    notificationStatus :: AnswerStatus
   }
   deriving (Generic, ToJSON)

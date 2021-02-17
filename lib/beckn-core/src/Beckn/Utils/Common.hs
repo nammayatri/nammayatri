@@ -139,11 +139,13 @@ fromMaybeM _ (Just a) = return a
 
 fromMaybeM400,
   fromMaybeM401,
+  fromMaybeM404,
   fromMaybeM500,
   fromMaybeM503 ::
     (HasCallStack, L.MonadFlow m) => BSL.ByteString -> Maybe a -> m a
 fromMaybeM400 a = fromMaybeM (S.err400 {errBody = a})
 fromMaybeM401 a = fromMaybeM (S.err401 {errBody = a})
+fromMaybeM404 a = fromMaybeM (S.err404 {errBody = a})
 fromMaybeM500 a = fromMaybeM (S.err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (S.err503 {errBody = a})
 
