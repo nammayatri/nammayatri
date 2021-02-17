@@ -7,7 +7,7 @@ import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.App (RideRequestId)
+import Types.App (RideId, RideRequestId)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.RideRequest as RideRequest
 
@@ -26,19 +26,16 @@ fetchOldest limit = do
   dbTable <- getDbTable
   let noOffset = 0
   let order RideRequest.RideRequest {..} = B.asc_ _lastProcessTime
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit noOffset order
+  DB.findAllWithLimitOffset dbTable limit noOffset order
     >>= either DB.throwDBError pure
-  where
-    predicate RideRequest.RideRequest {..} = _status ==. B.val_ RideRequest.NEW
 
-markComplete :: RideRequestId -> Flow ()
-markComplete rideReqId = do
+removeRide :: RideId -> Flow ()
+removeRide rideId = do
   dbTable <- getDbTable
-  DB.update dbTable setClause (predicate rideReqId)
+  DB.delete dbTable (predicate rideId)
     >>= either DB.throwDBError pure
   where
-    setClause RideRequest.RideRequest {..} = _status <-. B.val_ RideRequest.COMPLETED
-    predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id
+    predicate id RideRequest.RideRequest {..} = _rideId ==. B.val_ id
 
 updateLastProcessTime :: RideRequestId -> Flow ()
 updateLastProcessTime rideReqId = do

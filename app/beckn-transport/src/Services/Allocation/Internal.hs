@@ -141,8 +141,10 @@ getDriverResponse rideId driverId =
 cancelRide :: RideId -> Flow ()
 cancelRide = BP.cancelRide
 
-completeRequest :: RideRequestId -> Flow ()
-completeRequest = QRR.markComplete
+cleanupRide :: RideId -> Flow ()
+cleanupRide rideId = do
+  QRR.removeRide rideId
+  QNS.removeRide rideId
 
 resetRequestTime :: RideRequestId -> Flow ()
 resetRequestTime = QRR.updateLastProcessTime
@@ -157,7 +159,6 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Notified _ -> SNS.NOTIFIED
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
-  Alloc.Accepted -> SNS.ACCEPTED
 
 addNotificationStatus ::
   RideId ->

@@ -438,8 +438,7 @@ mkRideReq pId rideRequestType currTime = do
         _rideId = rideId,
         _createdAt = currTime,
         _lastProcessTime = currTime,
-        _type = rideRequestType,
-        _status = SRideRequest.NEW
+        _type = rideRequestType
       }
 
 -- TODO : Add notifying transporter admin with FCM

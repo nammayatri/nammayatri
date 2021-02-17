@@ -32,7 +32,7 @@ handle =
       getDriverResponse = I.getDriverResponse,
       assignDriver = I.assignDriver,
       cancelRide = I.cancelRide,
-      completeRequest = I.completeRequest,
+      cleanupRide = I.cleanupRide,
       resetRequestTime = I.resetRequestTime,
       logInfo = I.logInfo
     }

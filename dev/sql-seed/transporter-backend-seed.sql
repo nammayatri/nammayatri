@@ -719,7 +719,6 @@ CREATE TABLE atlas_transporter.ride_request (
     created_at timestamp with time zone,
     last_process_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     type character varying(20) NOT NULL,
-    status character varying(20) NOT NULL
 );
 
 CREATE TABLE atlas_transporter.notification_status (

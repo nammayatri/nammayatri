@@ -35,7 +35,6 @@ data NotificationStatus
   = Notified UTCTime
   | Rejected
   | Ignored
-  | Accepted
   deriving (Eq, Show)
 
 data CurrentNotification
@@ -93,11 +92,11 @@ data ServiceHandle m = ServiceHandle
     assignDriver :: RideId -> DriverId -> m (),
     -- Cancel the ride
     cancelRide :: RideId -> m (),
+    -- Remove the ride from RideRequest and NotificationStatus tables
+    cleanupRide :: RideId -> m (),
     -- Reset request time to match the current time
     -- Can be done as update of the RideRequest table
     resetRequestTime :: RideRequestId -> m (),
-    -- Set the status of the request in the RideRequest table to completed.
-    completeRequest :: RideRequestId -> m (),
     logInfo :: Text -> Text -> m ()
   }
 
@@ -176,8 +175,7 @@ processCurrentNotification
               DriverResponse.ACCEPT -> do
                 svcLog ("assigning driver" <> show driverId)
                 assignDriver rideId driverId
-                updateNotificationStatus rideId driverId Accepted
-                completeRequest $ requestHeader ^. #requestId
+                cleanupRide $ requestHeader ^. #rideId
               DriverResponse.REJECT ->
                 processRejection handle False requestHeader driverId
           Nothing ->
@@ -234,7 +232,7 @@ cancel :: Monad m => RideRequestHandle m -> RequestHeader -> m ()
 cancel RideRequestHandle {svcHandle = ServiceHandle {..}, ..} requestHeader = do
   svcLog "Cancelling ride"
   cancelRide $ requestHeader ^. #rideId
-  completeRequest $ requestHeader ^. #requestId
+  cleanupRide $ requestHeader ^. #rideId
 
 processRideLater :: Monad m => RideRequestHandle m -> RequestHeader -> m ()
 processRideLater RideRequestHandle {svcHandle = ServiceHandle {..}, ..} requestHeader = do

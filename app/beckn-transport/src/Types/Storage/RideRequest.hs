@@ -10,17 +10,6 @@ import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import Types.App (RideId, RideRequestId)
 
-data AllocationStatus = NEW | COMPLETED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be AllocationStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres AllocationStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be AllocationStatus
-
 data RideRequestType = ALLOCATION | CANCELLATION
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
@@ -37,8 +26,7 @@ data RideRequestT f = RideRequest
     _rideId :: B.C f RideId,
     _createdAt :: B.C f UTCTime,
     _lastProcessTime :: B.C f UTCTime,
-    _type :: B.C f RideRequestType,
-    _status :: B.C f AllocationStatus
+    _type :: B.C f RideRequestType
   }
   deriving (Generic, B.Beamable)
 
