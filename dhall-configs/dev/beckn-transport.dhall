@@ -42,9 +42,9 @@ let SortMode = < ETA | IdleTime >
 
 let driverAllocationConfig =
   { defaultSortMode = SortMode.ETA
-  , driverNotificationExpiry = +20
-  , rideAllocationExpiry = +180
-  , defaultRadiusOfSearch = +1000
+  , driverNotificationExpiry = +25 -- seconds
+  , rideAllocationExpiry = +180 -- seconds
+  , defaultRadiusOfSearch = +5000 -- meters
   }
 
 in
