@@ -6,7 +6,6 @@ import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
-import Beckn.Types.Mobility.Intent as Intent
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -14,26 +13,6 @@ import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common (showTimeIst)
 import qualified Data.Text as T
 import EulerHS.Prelude
-
--- | Send FCM "search" notification to provider admins
-notifyTransportersOnSearch :: Case -> Intent -> [Person] -> Flow ()
-notifyTransportersOnSearch c intent =
-  traverse_ (notifyPerson title body notificationData)
-  where
-    notificationData =
-      FCMData SEARCH_REQUEST SHOW FCM.Organization $
-        show (_getCaseId $ c ^. #_id)
-    title = FCMNotificationTitle $ T.pack "New ride request!"
-    variant =
-      fromMaybe "Unknown" $ Just $ intent ^. #_vehicle . #variant
-    body =
-      FCMNotificationBody $
-        unwords
-          [ "You have a new ride request (" <> variant <> ")",
-            "for",
-            showTimeIst (Case._startTime c) <> ".",
-            "Visit the app to accept or decline the request."
-          ]
 
 -- | Send FCM "confirm" notification to provider admins
 notifyTransportersOnConfirm :: Case -> ProductInstance -> [Person] -> Flow ()

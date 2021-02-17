@@ -188,32 +188,3 @@ notifyOnTrackCb personId tracker c =
           notifyPerson title body notificationData p
         _ -> pure ()
     else pure ()
-
-notifyOnSearchCb :: PersonId -> Case -> [ProductInstance] -> Flow ()
-notifyOnSearchCb personId c productInstances = do
-  let caseId = Case._id c
-  mperson <- Person.findById personId
-  case mperson of
-    Just p -> do
-      let notificationData =
-            FCMData SEARCH_CALLBACK SHOW FCM.Case $
-              show caseId
-          title = FCMNotificationTitle $ T.pack "New ride options available!"
-          body =
-            FCMNotificationBody $
-              if length productInstances == 1
-                then
-                  unwords
-                    [ "You have a new reply for your ride request dated",
-                      showTimeIst (Case._startTime c) <> "!",
-                      "Check the app for details."
-                    ]
-                else
-                  unwords
-                    [ "You have",
-                      show (length productInstances),
-                      "new ride offers!",
-                      "Check your options in the beckn app."
-                    ]
-      notifyPerson title body notificationData p
-    _ -> pure ()

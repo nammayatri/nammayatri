@@ -45,7 +45,6 @@ import qualified Types.Common as Common
 import Types.ProductInfo
 import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
-import qualified Utils.Notifications as Notify
 
 search :: Person.Person -> API.SearchReq -> FlowHandler API.AckResponse
 search person req = withFlowHandler $ do
@@ -129,7 +128,6 @@ searchCbService req catalog = do
         productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
         traverse_ MPI.create productInstances
         extendCaseExpiry case_
-        Notify.notifyOnSearchCb personId case_ productInstances
     piList <- MPI.findAllByCaseId (case_ ^. #_id)
     let piStatusCount = Map.fromListWith (+) $ zip (PI._status <$> piList) $ repeat (1 :: Integer)
         accepted = Map.lookup PI.INSTOCK piStatusCount

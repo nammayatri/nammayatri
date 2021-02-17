@@ -86,11 +86,6 @@ search transporterId bapOrg req = withFlowHandler $ do
     deadDistance <- calculateDeadDistance transporter fromLocation
     let productCase = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
     Case.create productCase
-    admins <-
-      Person.findAllByOrgIds
-        [Person.ADMIN]
-        [_getOrganizationId transporterId]
-    Notify.notifyTransportersOnSearch productCase intent admins
     fork "search" $ do
       vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
       (piStatus, caseStatus) <- do
