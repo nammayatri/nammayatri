@@ -31,7 +31,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , passetto = { _1 = "localhost", _2 = 8021 }
-   , fcmJsonPath = None Text
+   , fcmJsonPath = Some "dummy-fcm.json"
    , credRegistry = credRegistry
    , signingKeys = sec.signingKeys
    , googleMapsKey = sec.googleMapsKey
