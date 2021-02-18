@@ -63,8 +63,8 @@ in
 , bapNwAddress = "https://api.sandbox.beckn.juspay.in/app/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
-, searchConfirmExpiry = Some +7200
-, searchCaseExpiry = Some +7200
+, searchConfirmExpiry = Some +600
+, searchCaseExpiry = Some +600
 , cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
