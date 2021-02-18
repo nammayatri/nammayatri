@@ -9,12 +9,10 @@ import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
 import Data.Time (addUTCTime)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Registration as Registration
-import Servant (ServerError (..), err404)
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
@@ -50,7 +48,7 @@ setActivity RegistrationToken {..} isActive = withFlowHandler $ do
 getRideInfo :: RegistrationToken -> Maybe ProductInstanceId -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
 getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
   let rideId = RideId . _getProductInstanceId <$> mbProductInstanceId
-  arrNotification <- QNotificationStatus.findNotificationByDriverId driverId rideId
+  arrNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
   case arrNotification of
     notification : _ -> do
       let productInstanceId = rideIdToProductInstanceId $ notification ^. #_rideId
@@ -63,18 +61,19 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
       toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM500 "DROP_LOCATION_NOT_FOUND"
       (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM500 "GPS_COORD_NOT_FOUND"
       (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM500 "GPS_COORD_NOT_FOUND"
-      route <- Location.getRoute' driverLat driverLong fromLat fromLong >>= fromMaybeM500 "UNABLE_TO_GET_ROUTE"
-      return
+      mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
+      return $
         DriverInformationAPI.GetRideInfoRes
-          { productInstanceId = productInstanceId,
-            pickupLoc = fromLocation,
-            dropLoc = toLocation,
-            etaForPickupLoc = durationInS route `div` 60,
-            distanceToPickupLoc = distanceInM route,
-            notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime,
-            notificationStatus = notification ^. #_status
-          }
-    _ -> L.throwException $ err404 {errBody = "NOTIFICATION_NOT_FOUND"}
+          [ DriverInformationAPI.RideInfo
+              { productInstanceId = productInstanceId,
+                pickupLoc = fromLocation,
+                dropLoc = toLocation,
+                etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
+                distanceToPickupLoc = distanceInM <$> mbRoute,
+                notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime
+              }
+          ]
+    _ -> return $ DriverInformationAPI.GetRideInfoRes []
   where
     driverId = DriverId _EntityId
     personId = PersonId $ _getDriverId driverId

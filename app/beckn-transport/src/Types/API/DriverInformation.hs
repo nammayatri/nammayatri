@@ -3,6 +3,7 @@ module Types.API.DriverInformation
     DriverRidesInformation (..),
     DriverInformationResponse (..),
     GetRideInfoRes (..),
+    RideInfo (..),
   )
 where
 
@@ -13,7 +14,6 @@ import Data.Time
 import EulerHS.Prelude
 import qualified Types.API.Person as PersonAPI
 import Types.Storage.DriverInformation
-import Types.Storage.NotificationStatus
 
 newtype ActiveDriversResponse = ActiveDriversResponse
   { active_drivers :: [DriverRidesInformation]
@@ -34,13 +34,17 @@ data DriverInformationResponse = DriverInformationResponse
   }
   deriving (Generic, ToJSON)
 
-data GetRideInfoRes = GetRideInfoRes
+newtype GetRideInfoRes = GetRideInfoRes
+  { rideRequests :: [RideInfo]
+  }
+  deriving (Generic, ToJSON)
+
+data RideInfo = RideInfo
   { productInstanceId :: ProductInstanceId,
     pickupLoc :: Loc.Location,
     dropLoc :: Loc.Location,
-    etaForPickupLoc :: Integer,
-    distanceToPickupLoc :: Float,
-    notificationExpiryTime :: UTCTime,
-    notificationStatus :: AnswerStatus
+    etaForPickupLoc :: Maybe Integer,
+    distanceToPickupLoc :: Maybe Float,
+    notificationExpiryTime :: UTCTime
   }
   deriving (Generic, ToJSON)
