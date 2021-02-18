@@ -4,6 +4,7 @@ module Product.DriverInformation where
 
 import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
+import Beckn.Types.Amount (amountToString)
 import Beckn.Types.App
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
@@ -70,7 +71,8 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
                 dropLoc = toLocation,
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
-                notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime
+                notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime,
+                estimatedPrice = amountToString $ productInstance ^. #_price
               }
           ]
     _ -> return $ DriverInformationAPI.GetRideInfoRes []

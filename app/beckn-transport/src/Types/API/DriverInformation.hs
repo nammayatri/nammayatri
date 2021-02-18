@@ -45,6 +45,7 @@ data RideInfo = RideInfo
     dropLoc :: Loc.Location,
     etaForPickupLoc :: Maybe Integer,
     distanceToPickupLoc :: Maybe Float,
-    notificationExpiryTime :: UTCTime
+    notificationExpiryTime :: UTCTime,
+    estimatedPrice :: Text
   }
   deriving (Generic, ToJSON)
