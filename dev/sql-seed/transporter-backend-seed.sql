@@ -172,7 +172,7 @@ CREATE TABLE atlas_transporter.person (
     full_name character varying(255),
     role character varying(255) NOT NULL,
     gender character varying(255) NOT NULL,
-    identifier_type character varying(255),
+    identifier_type character varying(255) NOT NULL,
     email character varying(255),
     password_hash bytea,
     mobile_number_encrypted character varying(255),
@@ -326,10 +326,10 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
 
-INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id, udf1, udf2) VALUES
-  ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'furthest_driver', '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE'),
-  ('closest_driver',  'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'closest_driver',  '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE'),
-  ('other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'other_driver',    '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE');
+INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id, udf1, udf2, identifier_type) VALUES
+  ('furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'furthest_driver', '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
+  ('closest_driver',  'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'closest_driver',  '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
+  ('other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'other_driver',    '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
