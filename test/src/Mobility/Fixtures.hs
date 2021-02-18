@@ -198,8 +198,7 @@ buildAppConfirmReq cid pid =
     }
 
 listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> ClientM [TbeCase.CaseRes]
-acceptOrDeclineRide :: Text -> Text -> TbeCase.UpdateCaseReq -> ClientM Case.Case
-listLeads :<|> acceptOrDeclineRide = client (Proxy :: Proxy TbeRoutes.CaseAPI)
+listLeads = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
 buildListLeads :: ClientM [TbeCase.CaseRes]
 buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing

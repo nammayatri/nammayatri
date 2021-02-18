@@ -12,7 +12,6 @@ import Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Types.Storage.Products as Product
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -31,7 +30,6 @@ import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.ProductInstance as QPI
-import Storage.Queries.Products as PQ
 import qualified Test.RandomStrings as RS
 import Types.API.Case
 import qualified Utils.Defaults as Default
@@ -66,31 +64,6 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
               _fromLocation = from,
               _toLocation = to
             }
-
--- Update Case
--- Transporter Accepts a Ride with Quote
--- TODO fromLocation toLocation getCreatedTimeFromInput
-update :: SR.RegistrationToken -> Text -> UpdateCaseReq -> FlowHandler Case
-update SR.RegistrationToken {..} caseId UpdateCaseReq {..} = withFlowHandler $ do
-  person <- QP.findPersonById (PersonId _EntityId)
-  c <- Case.findById $ CaseId caseId
-  p <- PQ.findByName $ fromMaybe "DONT MATCH" (c ^. #_udf1)
-  case SP._organizationId person of
-    Just transporterOrgId -> do
-      transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
-      when (transporterOrg ^. #_status /= Organization.APPROVED) $
-        throwBecknError401 "Unauthorized"
-      transporter <- findOrganizationById . OrganizationId $ transporterOrgId
-      let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
-      case _transporterChoice of
-        "DECLINED" -> do
-          -- TODO :: update existing prodInst?
-          declinedProdInst <- createProductInstance c p _quote transporterOrgId PI.OUTOFSTOCK
-          notifyGateway c declinedProdInst transporterOrgId PI.OUTOFSTOCK bppShortId
-          Case.updateStatus (c ^. #_id) Case.CLOSED
-          return c
-        _ -> throwError400 "TRANSPORTER CHOICE INVALID"
-    Nothing -> throwError400 "ORG_ID MISSING"
 
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do

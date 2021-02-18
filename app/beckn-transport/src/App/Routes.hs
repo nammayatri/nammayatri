@@ -207,18 +207,11 @@ type CaseAPI =
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> Get '[JSON] CaseListRes
-           :<|> TokenAuth
-           :> Capture "caseId" Text
-           :> ReqBody '[JSON] UpdateCaseReq
-           :> Post '[JSON] Case
        )
 
 caseFlow ::
   (RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes)
-    :<|> (RegistrationToken -> Text -> UpdateCaseReq -> FlowHandler Case)
-caseFlow =
-  Case.list
-    :<|> Case.update
+caseFlow = Case.list
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =

@@ -54,6 +54,8 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 
 update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
+  when (req ^. #_status == Just PI.TRIP_ASSIGNED) $
+    throwError400 "CANNOT_ASSIGN_TRIP_MANUALLY"
   user <- PersQ.findPersonById (PersonId _EntityId)
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
@@ -170,7 +172,7 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed prodInst req = do
   piList <- PIQ.findAllByStatusParentId [PI.COMPLETED, PI.INPROGRESS, PI.TRIP_ASSIGNED] (prodInst ^. #_parentId)
-  when ((req ^. #_status == Just PI.TRIP_ASSIGNED) || isJust (req ^. #_personId) || isJust (req ^. #_vehicleId)) $ do
+  when (isJust (req ^. #_personId) || isJust (req ^. #_vehicleId)) $ do
     case (length piList, req ^. #_personId, req ^. #_vehicleId, req ^. #_status) of
       (0, Just _, Just _, Just PI.TRIP_ASSIGNED) -> return ()
       _ -> throwError400 "INVALID UPDATE OPERATION"
