@@ -42,7 +42,8 @@ data AppEnv = AppEnv
     signatureExpiry :: NominalDiffTime,
     driverAllocationConfig :: DriverAllocationConfig,
     googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text
+    googleMapsKey :: Text,
+    fcmUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 

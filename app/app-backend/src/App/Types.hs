@@ -44,7 +44,8 @@ data AppEnv = AppEnv
     traceFlag :: TraceFlag,
     signatureExpiry :: NominalDiffTime,
     googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text
+    googleMapsKey :: Text,
+    fcmUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 

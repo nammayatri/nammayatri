@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- |
 -- Module      : FCM.Flow
@@ -20,6 +21,7 @@ import Beckn.External.FCM.Types
 import Beckn.Types.App (_getPersonId)
 import Beckn.Types.Common
 import Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Common (fork)
 import qualified Beckn.Utils.JWT as JWT
 import Control.Lens
 import Data.Default.Class
@@ -27,6 +29,7 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding ((^.))
 import qualified EulerHS.Types as ET
+import GHC.Records (HasField (..))
 import Servant
 import Servant.Client
 
@@ -56,7 +59,7 @@ createAndroidConfig title body tag =
         & fcmdTag ?~ tag
 
 -- | Send FCM message to a person
-notifyPerson :: FCMNotificationTitle -> FCMNotificationBody -> FCMData -> Person -> FlowR r ()
+notifyPerson :: HasField "fcmUrl" r BaseUrl => FCMNotificationTitle -> FCMNotificationBody -> FCMData -> Person -> FlowR r ()
 notifyPerson title body msgData person =
   let pid = _getPersonId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
@@ -76,22 +79,14 @@ type FCMSendMessageAPI =
 fcmSendMessageAPI :: Proxy FCMSendMessageAPI
 fcmSendMessageAPI = Proxy
 
-defaultBaseUrl :: BaseUrl
-defaultBaseUrl =
-  BaseUrl
-    { baseUrlScheme = Https,
-      baseUrlHost = "fcm.googleapis.com",
-      baseUrlPort = 443,
-      baseUrlPath = "/v1/projects/jp-beckn-dev/messages:send"
-    }
-
 -- | Send FCM message to a registered device
-sendMessage :: FCMRequest -> T.Text -> FlowR r ()
-sendMessage fcmMsg toWhom = lift . L.forkFlow desc $ do
+sendMessage :: HasField "fcmUrl" r BaseUrl => FCMRequest -> T.Text -> FlowR r ()
+sendMessage fcmMsg toWhom = fork desc $ do
   authToken <- getTokenText
   case authToken of
     Right token -> do
-      res <- L.callAPI defaultBaseUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
+      fcmUrl <- getField @"fcmUrl" <$> ask
+      res <- L.callAPI fcmUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
       L.logInfo fcm $ case res of
         Right _ -> "message sent successfully to a person with id = " <> toWhom
         Left x -> "error: " <> show x

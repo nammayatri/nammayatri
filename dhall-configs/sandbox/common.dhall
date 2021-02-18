@@ -64,4 +64,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , credRegistry = credRegistry
    , signingKeys = sec.signingKeys
    , googleMapsKey = sec.googleMapsKey
+   , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
    }
