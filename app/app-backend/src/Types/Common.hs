@@ -69,8 +69,11 @@ data VehicleCategory = CAR | MOTORCYCLE | BICYCLE | TRUCK | AUTO_RICKSHAW | OTHE
 data Vehicle = Vehicle
   { category :: Maybe VehicleCategory,
     capacity :: Maybe Int,
+    make :: Maybe Text,
     model :: Maybe Text,
+    size :: Maybe Text,
     variant :: Text,
+    color :: Maybe Text,
     registrationNumber :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -155,8 +158,11 @@ instance FromBeckn Vehicle.Vehicle Vehicle where
     Vehicle
       { category = fromBeckn <$> vehicle ^. #category,
         capacity = vehicle ^. #capacity,
+        make = vehicle ^. #make,
         model = vehicle ^. #model,
+        size = vehicle ^. #size,
         variant = vehicle ^. #variant,
+        color = vehicle ^. #color,
         registrationNumber = Vehicle.number <$> (vehicle ^. #registration)
       }
 
@@ -165,11 +171,11 @@ instance ToBeckn Vehicle.Vehicle Vehicle where
     Vehicle.Vehicle
       { category = toBeckn <$> vehicle ^. #category,
         capacity = vehicle ^. #capacity,
-        make = Nothing,
+        make = vehicle ^. #make,
         model = vehicle ^. #model,
-        size = Nothing,
+        size = vehicle ^. #size,
         variant = vehicle ^. #variant,
-        color = Nothing,
+        color = vehicle ^. #color,
         energy_type = Nothing,
         registration = Nothing
       }

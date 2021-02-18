@@ -55,8 +55,11 @@ vehicle =
   AppCommon.Vehicle
     { category = Just AppCommon.CAR,
       capacity = Nothing,
+      make = Nothing,
       model = Nothing,
+      size = Nothing,
       variant = "SUV",
+      color = Just "Black",
       registrationNumber = Nothing
     }
 
