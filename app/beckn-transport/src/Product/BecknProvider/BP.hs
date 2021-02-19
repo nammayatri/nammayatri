@@ -199,11 +199,17 @@ search transporterId bapOrg req = withFlowHandler $ do
       ProductInstance.create productInstance
       pure productInstance
     calculateDeadDistance organization fromLocation = do
-      orgLocId <- LocationId <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
-      mbOrgLocation <- Loc.findLocationById orgLocId
-      case mbOrgLocation of
-        Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
-        Just orgLocation -> Location.calculateDistance orgLocation fromLocation
+      eres <- runSafeFlow do
+        orgLocId <- LocationId <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
+        mbOrgLocation <- Loc.findLocationById orgLocId
+        case mbOrgLocation of
+          Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
+          Just orgLocation -> Location.calculateDistance orgLocation fromLocation
+      case eres of
+        Left err -> do
+          L.logWarning @Text "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
+          pure Nothing
+        Right mDistance -> return mDistance
 
 cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
 cancel _transporterId _bapOrg req = withFlowHandler $ do
