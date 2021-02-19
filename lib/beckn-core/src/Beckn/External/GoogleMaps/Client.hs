@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.External.GoogleMaps.Client where
 
 import qualified Beckn.External.GoogleMaps.API as API

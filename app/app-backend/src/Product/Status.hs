@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Product.Status (status, onStatus) where
 

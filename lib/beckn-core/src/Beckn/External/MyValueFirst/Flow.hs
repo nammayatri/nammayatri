@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.External.MyValueFirst.Flow where
 
 import qualified Beckn.External.MyValueFirst.API as API

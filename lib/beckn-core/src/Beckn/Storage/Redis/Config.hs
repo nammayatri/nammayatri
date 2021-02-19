@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Storage.Redis.Config where
 
 import Beckn.Utils.Logging (Log (..))

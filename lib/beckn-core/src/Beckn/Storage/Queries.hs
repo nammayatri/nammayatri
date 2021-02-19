@@ -1,6 +1,5 @@
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Beckn.Storage.Queries where
