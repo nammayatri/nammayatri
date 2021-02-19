@@ -46,5 +46,4 @@ in
 , fmdCoreVersion = "0.8.0"
 , fmdDomainVersion = "0.8.3"
 , signatureExpiry = common.signatureExpiry
-, logContext = [] : List Text
 }
