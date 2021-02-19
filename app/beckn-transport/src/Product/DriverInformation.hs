@@ -49,9 +49,10 @@ setActivity RegistrationToken {..} isActive = withFlowHandler $ do
 getRideInfo :: RegistrationToken -> Maybe ProductInstanceId -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
 getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
   let rideId = RideId . _getProductInstanceId <$> mbProductInstanceId
-  arrNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
-  case arrNotification of
-    notification : _ -> do
+  mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
+  case mbNotification of
+    Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
+    Just notification -> do
       let productInstanceId = rideIdToProductInstanceId $ notification ^. #_rideId
       notificationTime <- notification ^. #_notifiedAt & fromMaybeM500 "UNKNOWN_NOTIFIED_TIME"
       driverNotificationExpiry <- getDriverNotificationExpiry
@@ -64,8 +65,9 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
       (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM500 "GPS_COORD_NOT_FOUND"
       mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
       return $
-        DriverInformationAPI.GetRideInfoRes
-          [ DriverInformationAPI.RideInfo
+        DriverInformationAPI.GetRideInfoRes $
+          Just $
+            DriverInformationAPI.RideInfo
               { productInstanceId = productInstanceId,
                 pickupLoc = fromLocation,
                 dropLoc = toLocation,
@@ -74,8 +76,6 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
                 notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime,
                 estimatedPrice = amountToString $ productInstance ^. #_price
               }
-          ]
-    _ -> return $ DriverInformationAPI.GetRideInfoRes []
   where
     driverId = DriverId _EntityId
     personId = PersonId $ _getDriverId driverId

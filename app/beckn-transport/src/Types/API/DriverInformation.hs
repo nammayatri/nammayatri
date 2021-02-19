@@ -35,7 +35,7 @@ data DriverInformationResponse = DriverInformationResponse
   deriving (Generic, ToJSON)
 
 newtype GetRideInfoRes = GetRideInfoRes
-  { rideRequests :: [RideInfo]
+  { rideRequest :: Maybe RideInfo
   }
   deriving (Generic, ToJSON)
 
