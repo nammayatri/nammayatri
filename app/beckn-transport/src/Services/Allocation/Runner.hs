@@ -7,7 +7,6 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
-import EulerHS.Language ()
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
