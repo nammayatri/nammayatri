@@ -42,9 +42,6 @@ data CurrentNotification
   = CurrentNotification DriverId UTCTime
   deriving (Show)
 
-requestsPerIteration :: Integer
-requestsPerIteration = 50
-
 data ServiceHandle m = ServiceHandle
   { -- Get current time
     getCurrentTime :: m UTCTime,
@@ -109,10 +106,10 @@ data RideRequestHandle m = RideRequestHandle
     svcLog :: Text -> m ()
   }
 
-process :: Monad m => ServiceHandle m -> m Int
-process handle@ServiceHandle {..} = do
+process :: Monad m => ServiceHandle m -> Integer -> m Int
+process handle@ServiceHandle {..} requestsNum = do
   getRequestsStartTime <- getCurrentTime
-  rides <- getRequests requestsPerIteration
+  rides <- getRequests requestsNum
   getRequestsEndTime <- getCurrentTime
   let getRequestsTime = diffUTCTime getRequestsEndTime getRequestsStartTime
   logInfo "AllocationService" $ show getRequestsTime <> " time spent for getRequests"

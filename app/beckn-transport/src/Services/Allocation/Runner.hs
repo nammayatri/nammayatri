@@ -49,7 +49,7 @@ run shutdown activeTask = do
       Redis.setKeyRedis "beckn:allocation:service" now
       L.runIO $ atomically $ putTMVar activeTask ()
       processStartTime <- getCurrTime
-      eres <- runSafeFlow $ Allocation.process handle
+      eres <- runSafeFlow $ Allocation.process handle requestsPerIteration
       whenLeft eres $ L.logError @Text "Allocation service"
       Redis.setExRedis "beckn:allocation:is_running" False 60
       processEndTime <- getCurrTime
