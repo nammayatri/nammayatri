@@ -51,7 +51,9 @@ data DriverAllocationConfig = DriverAllocationConfig
   { driverNotificationExpiry :: NominalDiffTime,
     rideAllocationExpiry :: NominalDiffTime,
     defaultSortMode :: SortMode,
-    defaultRadiusOfSearch :: Integer
+    defaultRadiusOfSearch :: Integer,
+    requestsNumPerIteration :: Integer,
+    processDelay :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 

@@ -47,6 +47,8 @@ let driverAllocationConfig =
   , driverNotificationExpiry = +25 -- seconds
   , rideAllocationExpiry = +180 -- seconds
   , defaultRadiusOfSearch = +5000 -- meters
+  , requestsNumPerIteration = 50
+  , processDelay = +1 -- seconds
   }
 
 in
