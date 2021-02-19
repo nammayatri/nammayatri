@@ -80,4 +80,5 @@ in
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
+, logContext = [] : List Text
 }

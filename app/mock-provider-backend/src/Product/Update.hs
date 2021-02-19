@@ -13,6 +13,7 @@ import Beckn.Types.Core.FmdError
 import qualified Beckn.Types.FMD.API.Update as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (Log (..))
 import Beckn.Utils.Mock
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified Data.Map as M
@@ -29,7 +30,7 @@ update _org req = withFlowHandler $ do
           { _bpp_uri = Just bppNwAddr
           }
   case mAppUrl of
-    Nothing -> L.logError @Text "mock_provider_backend" "Bad bap_nw_address"
+    Nothing -> logError "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl -> case context ^. #_transaction_id of
       tId
         | tId == locationTooFarId ->

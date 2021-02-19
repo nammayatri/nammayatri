@@ -1,4 +1,8 @@
-module App.Types where
+module App.Types
+  ( module App.Types,
+    Log (..),
+  )
+where
 
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
@@ -7,7 +11,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Logging
+import Beckn.Utils.Logging (HasLogContext (..), Log (..), LoggerConfig)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
@@ -43,7 +47,8 @@ data AppEnv = AppEnv
     driverAllocationConfig :: DriverAllocationConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
-    fcmUrl :: BaseUrl
+    fcmUrl :: BaseUrl,
+    logContext :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -71,3 +76,7 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasLogContext AppEnv where
+  getLogContext = logContext
+  setLogContext ctx env = env {logContext = ctx}

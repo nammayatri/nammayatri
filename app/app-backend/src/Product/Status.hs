@@ -11,6 +11,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, withFlowHandler)
+import Beckn.Utils.Logging (Log (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -44,7 +45,7 @@ onStatus _org req = withFlowHandler $ do
       let prodInstId = ProductInstanceId $ msg ^. #order . #_id
           orderState = fromBeckn $ msg ^. #order . #_state
       updateProductInstanceStatus prodInstId orderState
-    Left err -> L.logError @Text "on_status req" $ "on_status error: " <> show err
+    Left err -> logError "on_status req" $ "on_status error: " <> show err
   mkAckResponse txnId "status"
   where
     updateProductInstanceStatus prodInstId piStatus = do

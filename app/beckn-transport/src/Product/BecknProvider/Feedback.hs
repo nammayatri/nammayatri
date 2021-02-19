@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Product.BecknProvider.Feedback where
 
-import App.Types (Flow, FlowHandler)
+import App.Types (Flow, FlowHandler, Log (..))
 import Beckn.Types.App
   ( OrganizationId,
     ProductInstanceId (ProductInstanceId),
@@ -35,7 +34,7 @@ import qualified Storage.Queries.Rating as Rating
 
 feedback :: OrganizationId -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
 feedback _transporterId _organization request = withFlowHandler $ do
-  L.logInfo @Text "FeedbackAPI" "Received feedback API call."
+  logInfo "FeedbackAPI" "Received feedback API call."
   BP.validateContext "feedback" $ request ^. #context
   let productInstanceId = ProductInstanceId $ request ^. #message . #order_id
   productInstances <- ProductInstance.findAllByParentId $ Just productInstanceId
@@ -50,12 +49,12 @@ feedback _transporterId _organization request = withFlowHandler $ do
   mbRating <- Rating.findByProductInstanceId orderId
   case mbRating of
     Nothing -> do
-      L.logInfo @Text "FeedbackAPI" $
+      logInfo "FeedbackAPI" $
         "Creating a new record for " +|| orderId ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- mkRating orderId ratingValue
       Rating.create newRating
     Just rating -> do
-      L.logInfo @Text "FeedbackAPI" $
+      logInfo "FeedbackAPI" $
         "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
       Rating.updateRatingValue (rating ^. #_id) ratingValue
   Person.calculateAverageRating personId

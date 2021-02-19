@@ -5,21 +5,22 @@ module Beckn.Product.BusinessRule where
 
 import Beckn.Types.Common
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Logging as Log
 import Control.Monad.Except (MonadError, throwError)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
+-- TODO: replace with Log.Log
 class BusinessLog m where
   logDebug :: Text -> Text -> m ()
   logInfo :: Text -> Text -> m ()
   logWarning :: Text -> Text -> m ()
   logError :: Text -> Text -> m ()
 
-instance BusinessLog (FlowR r) where
-  logDebug = L.logDebug
-  logInfo = L.logInfo
-  logWarning = L.logWarning
-  logError = L.logError
+instance Log.HasLogContext r => BusinessLog (FlowR r) where
+  logDebug = Log.logDebug
+  logInfo = Log.logInfo
+  logWarning = Log.logWarning
+  logError = Log.logError
 
 instance (Monad m, BusinessLog m) => BusinessLog (BusinessRule m) where
   logDebug code msg = lift $ logDebug code msg
@@ -48,7 +49,7 @@ data BusinessError = BusinessError
 runBR :: BusinessRule m a -> m (Either BusinessError a)
 runBR = runExceptT . runBusinessRule
 
-runBRFlowFatal :: HasCallStack => BusinessRule (FlowR r) a -> FlowR r a
+runBRFlowFatal :: (HasCallStack, Log.HasLogContext r) => BusinessRule (FlowR r) a -> FlowR r a
 runBRFlowFatal br =
   runBR br >>= \case
     Left be@BusinessError {errorCode} -> do

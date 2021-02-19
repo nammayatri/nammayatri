@@ -16,7 +16,6 @@ import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client (BaseUrl)
@@ -85,5 +84,5 @@ initiateCall req = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      L.logError @Text "client call error" $ (err ^. #_message) ?: "Some error"
+      logError "client call error" $ (err ^. #_message) ?: "Some error"
       throwError500 "Call API error"

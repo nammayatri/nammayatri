@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.RegistrationToken where
 
@@ -11,7 +10,6 @@ import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
@@ -49,7 +47,7 @@ updateVerified id verified = do
 
 verifyToken :: RegToken -> Flow Storage.RegistrationToken
 verifyToken regToken = do
-  L.logInfo @Text "verifying token" $ show regToken
+  logInfo "verifying token" $ show regToken
   findRegistrationTokenByToken regToken
 
 findRegistrationTokenByToken :: RegToken -> Flow Storage.RegistrationToken

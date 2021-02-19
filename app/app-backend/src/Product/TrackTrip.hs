@@ -15,6 +15,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Logging (Log (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -72,7 +73,7 @@ trackCb _org req = withFlowHandler $ do
         Left err -> return $ AckResponse context (ack "NACK") $ Just $ domainError err
         Right _ -> return $ AckResponse context (ack "ACK") Nothing
     Left err -> do
-      L.logError @Text "on_track_trip req" $ "on_track_trip error: " <> show err
+      logError "on_track_trip req" $ "on_track_trip error: " <> show err
       return $ AckResponse context (ack "ACK") Nothing
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)

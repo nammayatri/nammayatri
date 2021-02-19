@@ -9,8 +9,8 @@ import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Logging (Log (..))
 import Data.Aeson (encode)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
 log :: Org.Organization -> LogReq -> FlowHandler AckResponse
@@ -21,7 +21,7 @@ log _org req = withFlowHandler $ do
       action = req ^. #_context . #_action
   if action == "log"
     then do
-      L.logDebug @Text "gateway" $
+      logDebug "gateway" $
         "transaction_id: " <> transactionId
           <> "message_id: "
           <> messageId

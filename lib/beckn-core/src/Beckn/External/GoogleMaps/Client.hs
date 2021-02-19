@@ -8,14 +8,17 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App (TraceFlag)
 import Beckn.Types.Common
 import Beckn.Utils.Common (fromClientError, throwError500)
+import Beckn.Utils.Logging (HasLogContext, Log (..))
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records (HasField)
 import Servant.Client.Core (BaseUrl)
 
 autoComplete ::
-  (HasField "dbCfg" r DBConfig, HasField "traceFlag" r TraceFlag) =>
+  ( HasField "dbCfg" r DBConfig,
+    HasField "traceFlag" r TraceFlag,
+    HasLogContext r
+  ) =>
   BaseUrl ->
   Text ->
   Text ->
@@ -29,11 +32,14 @@ autoComplete url apiKey input location radius components = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      L.logError @Text "client Google maps API autoComplete call error" $ (err ^. #_message) ?: "Some error"
+      logError "client Google maps API autoComplete call error" $ (err ^. #_message) ?: "Some error"
       throwError500 "Google maps API autoComplete error"
 
 placeDetails ::
-  (HasField "dbCfg" r DBConfig, HasField "traceFlag" r TraceFlag) =>
+  ( HasField "dbCfg" r DBConfig,
+    HasField "traceFlag" r TraceFlag,
+    HasLogContext r
+  ) =>
   BaseUrl ->
   Text ->
   Text ->
@@ -45,11 +51,14 @@ placeDetails url apiKey placeId fields = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      L.logError @Text "client Google maps API placeDetails call error" $ (err ^. #_message) ?: "Some error"
+      logError "client Google maps API placeDetails call error" $ (err ^. #_message) ?: "Some error"
       throwError500 "Google maps API placeDetails error"
 
 getPlaceName ::
-  (HasField "dbCfg" r DBConfig, HasField "traceFlag" r TraceFlag) =>
+  ( HasField "dbCfg" r DBConfig,
+    HasField "traceFlag" r TraceFlag,
+    HasLogContext r
+  ) =>
   BaseUrl ->
   Text ->
   Text ->
@@ -60,5 +69,5 @@ getPlaceName url latLng apiKey = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      L.logError @Text "client Google maps API getPlaceName call error" $ (err ^. #_message) ?: "Some error"
+      logError "client Google maps API getPlaceName call error" $ (err ^. #_message) ?: "Some error"
       throwError500 "Google maps API getPlaceName error"

@@ -7,6 +7,7 @@ import Beckn.Types.Common (FlowR)
 import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import qualified Beckn.Types.Storage.Trail as Trail
 import Beckn.Utils.Dhall (FromDhall (..))
+import Beckn.Utils.Logging (HasLogContext)
 import qualified Database.Beam as B
 import Database.Beam.Postgres (Pg)
 import qualified Database.Beam.Schema.Tables as B
@@ -26,7 +27,7 @@ data DBConfig = DBConfig
 -- Make the compiler generate instances for us!
 type HasDbCfg r = (HasField "dbCfg" r DBConfig)
 
-type FlowWithDb r a = HasDbCfg r => FlowR r a
+type FlowWithDb r a = (HasDbCfg r, HasLogContext r) => FlowR r a
 
 handleIt ::
   (T.DBConfig Pg -> FlowR r (T.DBResult (T.SqlConn Pg))) ->

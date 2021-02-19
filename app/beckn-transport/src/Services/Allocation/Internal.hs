@@ -9,8 +9,8 @@ import Beckn.Types.Common
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Logging as Log
 import Data.Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.Person as Person
@@ -148,7 +148,7 @@ resetRequestTime :: RideRequestId -> Flow ()
 resetRequestTime = QRR.updateLastProcessTime
 
 logInfo :: Text -> Text -> Flow ()
-logInfo = L.logInfo
+logInfo = Log.logInfo
 
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->

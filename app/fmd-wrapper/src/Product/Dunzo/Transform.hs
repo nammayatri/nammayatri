@@ -42,12 +42,12 @@ import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwBecknError400)
 import Beckn.Utils.JSON
+import Beckn.Utils.Logging (Log (..))
 import Control.Lens (element, (?~))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (State, drop)
 import External.Dunzo.Types
 import Types.Error
@@ -511,7 +511,7 @@ fromMaybeM500' :: BSL.ByteString -> Maybe a -> Flow a
 fromMaybeM500' errMsg m = do
   when
     (isNothing m)
-    (L.logError @Text "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg))
+    (logError "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg))
   fromMaybeM500 errMsg m
 
 mapTaskState :: TaskState -> Maybe State

@@ -7,6 +7,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import Beckn.Utils.Common (encodeToText', fork, getTraceFlag)
+import Beckn.Utils.Logging (HasLogContext (..), Log (..))
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Servant.Trail.Types as TT
 import qualified Data.Aeson as A
@@ -94,7 +95,7 @@ instance
 data TrailInfo
   = TrailInfo (Either ClientError LByteString) RequestInfo
 
-saveClientTrailFlow :: TrailInfo -> FlowWithTraceFlag r ()
+saveClientTrailFlow :: HasLogContext r => TrailInfo -> FlowWithTraceFlag r ()
 saveClientTrailFlow (TrailInfo res req) = do
   fork "save trail" do
     _id <- generateGUID
@@ -106,7 +107,7 @@ saveClientTrailFlow (TrailInfo res req) = do
           }
     case dbResult of
       Left err -> do
-        L.logError @Text "client_trace" $
+        logError "client_trace" $
           "Failed to save request from gateway to " <> toText _endpointId <> ": " <> show err
       Right () -> pure ()
   where
@@ -137,8 +138,8 @@ callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
         Left (ConnectionError _) -> "Connection error"
   _ <- L.runUntracedIO $ endTracking status
   case res of
-    Right r -> L.logInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
-    Left err -> L.logInfo serviceName $ "Error occured during client call: " <> show err
+    Right r -> logInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
+    Left err -> logInfo serviceName $ "Error occured during client call: " <> show err
   traceFlag <- getTraceFlag
   case traceFlag of
     TRACE_OUTGOING -> trace res

@@ -5,6 +5,7 @@ module Services.Allocation.Runner where
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 import qualified EulerHS.Language as L
@@ -50,7 +51,7 @@ run shutdown activeTask = do
       processStartTime <- getCurrTime
       requestsNum <- asks (requestsNumPerIteration . driverAllocationConfig)
       eres <- runSafeFlow $ Allocation.process handle requestsNum
-      whenLeft eres $ L.logError @Text "Allocation service"
+      whenLeft eres $ Log.logError "Allocation service"
       Redis.setExRedis "beckn:allocation:is_running" False 60
       processEndTime <- getCurrTime
       let processTime = diffUTCTime processEndTime processStartTime

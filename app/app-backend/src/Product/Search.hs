@@ -22,6 +22,7 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (Log (..))
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map as Map
@@ -95,7 +96,7 @@ searchCb _bppOrg req = withFlowHandler $ do
       let catalog = msg ^. #catalog
       _ <- searchCbService req catalog
       return ()
-    Left err -> L.logError @Text "on_search req" $ "on_search error: " <> show err
+    Left err -> logError "on_search req" $ "on_search error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes

@@ -14,7 +14,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common (decodeFromText, encodeToText, withFlowHandler)
-import qualified EulerHS.Language as L
+import Beckn.Utils.Logging (Log (..))
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
 import qualified Types.ProductInfo as ProdInfo
@@ -23,7 +23,7 @@ import Utils.Common (validateContext)
 onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
 onUpdate _org req = withFlowHandler $ do
   -- TODO: Verify api key here
-  L.logInfo @Text "on_update req" (show req)
+  logInfo "on_update req" (show req)
   validateContext "on_update" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
@@ -37,7 +37,7 @@ onUpdate _org req = withFlowHandler $ do
               { SPI._info = encodeToText <$> uInfo
               }
       MPI.updateMultiple (orderPi ^. #_id) uPrd
-    Left err -> L.logError @Text "on_update req" $ "on_update error: " <> show err
+    Left err -> logError "on_update req" $ "on_update error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo

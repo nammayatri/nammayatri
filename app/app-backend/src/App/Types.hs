@@ -45,7 +45,8 @@ data AppEnv = AppEnv
     signatureExpiry :: NominalDiffTime,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
-    fcmUrl :: BaseUrl
+    fcmUrl :: BaseUrl,
+    logContext :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -63,3 +64,7 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasLogContext AppEnv where
+  getLogContext = logContext
+  setLogContext ctx env = env {logContext = ctx}

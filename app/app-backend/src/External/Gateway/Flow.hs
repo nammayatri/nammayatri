@@ -13,9 +13,9 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (Log (..))
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail')
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
 import Servant.Client
@@ -37,19 +37,19 @@ search url req = do
     _ -> throwError500 "gateway not configured"
   case res of
     Left err -> do
-      L.logError @Text "Search" ("error occurred while search: " <> show err)
+      logError "Search" ("error occurred while search: " <> show err)
       return $ Left $ show err
     Right _ -> do
-      L.logInfo @Text "Search" "Search successfully delivered"
+      logInfo "Search" "Search successfully delivered"
       return $ Right ()
 
 confirm :: BaseUrl -> ConfirmReq -> Flow AckResponse
 confirm url req@ConfirmReq {context} = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.confirm req) "confirm"
   whenLeft res $ \err ->
-    L.logError @Text "error occurred while confirm: " (show err)
+    logError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    L.logError @Text "Confirm" ("error occurred while confirm: " <> show err)
+    logError "Confirm" ("error occurred while confirm: " <> show err)
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
@@ -59,15 +59,15 @@ location url req = do
   -- TODO: fix authentication
   res <- callAPIWithTrail' Nothing url (API.location req) "location"
   whenLeft res $ \err ->
-    L.logError @Text "Location" ("error occurred while getting location: " <> show err)
+    logError "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
 track :: BaseUrl -> TrackTripReq -> Flow AckResponse
 track url req@TrackTripReq {context} = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.trackTrip req) "track"
   case res of
-    Left err -> L.logError @Text "error occurred while track trip: " (show err)
-    Right _ -> L.logInfo @Text "Track" "Track successfully delivered"
+    Left err -> logError "error occurred while track trip: " (show err)
+    Right _ -> logInfo "Track" "Track successfully delivered"
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
@@ -77,18 +77,18 @@ cancel url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.cancel req) "cancel"
   case res of
     Left err -> do
-      L.logError @Text "error occurred while cancel trip: " (show err)
+      logError "error occurred while cancel trip: " (show err)
       return $ Left $ show err
     Right _ -> do
-      L.logInfo @Text "Cancel" "Cancel successfully delivered"
+      logInfo "Cancel" "Cancel successfully delivered"
       return $ Right ()
 
 status :: BaseUrl -> StatusReq -> Flow AckResponse
 status url req@StatusReq {context} = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.status req) "status"
   case res of
-    Left err -> L.logError @Text "error occurred while getting status: " (show err)
-    Right _ -> L.logInfo @Text "Status" "Status successfully delivered"
+    Left err -> logError "error occurred while getting status: " (show err)
+    Right _ -> logInfo "Status" "Status successfully delivered"
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
@@ -99,8 +99,8 @@ feedback url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.feedback req) "feedback"
   case res of
     Left err -> do
-      L.logError @Text "Gateway" $ "Error occurred when sending feedback: " <> show err
+      logError "Gateway" $ "Error occurred when sending feedback: " <> show err
       pure $ AckResponse context (ack "ACK") $ Just (domainError $ show err)
     Right _ -> do
-      L.logInfo @Text "Gateway" "Feedback successfully sent."
+      logInfo "Gateway" "Feedback successfully sent."
       pure $ AckResponse context (ack "ACK") Nothing

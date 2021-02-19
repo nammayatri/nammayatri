@@ -10,6 +10,7 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error (Error (..))
 import Beckn.Types.Error
+import Beckn.Utils.Logging (HasLogContext (..), Log (..), addLogTagToEnv)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Control.Monad.Reader
 import qualified Data.Aeson as A
@@ -66,24 +67,24 @@ fromClientError err =
       InvalidContentTypeHeader resp -> decodeUtf8 $ responseBody resp
       ConnectionError exc -> show exc
 
-checkClientError :: L.MonadFlow m => Context -> Either S.ClientError a -> m a
+checkClientError :: (Log m, L.MonadFlow m) => Context -> Either S.ClientError a -> m a
 checkClientError context = \case
   Right x -> pure x
   Left cliErr -> do
     let err = fromClientError cliErr
-    L.logError @Text "client call error" $ (err ^. #_message) ?: "Some error"
+    logError "client call error" $ (err ^. #_message) ?: "Some error"
     L.throwException $ mkErrResponse context err500 err
 
 -- | Get rid of database error
 -- convert it into UnknownDomainError
-checkDBError :: (HasCallStack, L.MonadFlow m) => ET.DBResult a -> m a
+checkDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> m a
 checkDBError dbres = checkDBError' dbres DatabaseError
 
 -- | Get rid of database error
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
 checkDBError' ::
-  (HasCallStack, L.MonadFlow m) =>
+  (HasCallStack, L.MonadFlow m, Log m) =>
   ET.DBResult a ->
   (ET.DBError -> DomainError) ->
   m a
@@ -95,7 +96,7 @@ checkDBError' dbres f =
 -- | Get rid of database error and empty result
 -- convert it into UnknownDomainError
 checkDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m) =>
+  (HasCallStack, L.MonadFlow m, Log m) =>
   ET.DBResult (Maybe a) ->
   DomainError ->
   m a
@@ -105,7 +106,7 @@ checkDBErrorOrEmpty dbres = checkDBErrorOrEmpty' dbres DatabaseError
 -- convert it into specified DomainError
 -- f converts DBError to DomainError
 checkDBErrorOrEmpty' ::
-  (HasCallStack, L.MonadFlow m) =>
+  (HasCallStack, L.MonadFlow m, Log m) =>
   ET.DBResult (Maybe a) ->
   (ET.DBError -> DomainError) ->
   DomainError ->
@@ -118,13 +119,13 @@ checkDBErrorOrEmpty' dbres f domainErrOnEmpty =
       Just x -> pure x
 
 -- | Throw DomainError if DBError occurs
-throwOnDBError :: (HasCallStack, L.MonadFlow m) => ET.DBResult a -> DomainError -> m a
+throwOnDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> DomainError -> m a
 throwOnDBError dbres domainError =
   checkDBError' dbres $ const domainError
 
 -- Throw DomainErrors if DBError occurs or the result is empty
 throwOnDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m) =>
+  (HasCallStack, L.MonadFlow m, Log m) =>
   ET.DBResult (Maybe a) ->
   DomainError ->
   DomainError ->
@@ -215,7 +216,12 @@ encodeToText' s =
         then DT.decodeUtf8 $ BSL.toStrict s'
         else DT.decodeUtf8 $ BSL.toStrict $ BSL.tail $ BSL.init s'
 
-authenticate :: HasField "cronAuthKey" r (Maybe CronAuthKey) => Maybe CronAuthKey -> FlowR r ()
+authenticate ::
+  ( HasField "cronAuthKey" r (Maybe CronAuthKey),
+    HasLogContext r
+  ) =>
+  Maybe CronAuthKey ->
+  FlowR r ()
 authenticate = check handleKey
   where
     handleKey rauth = do
@@ -223,16 +229,17 @@ authenticate = check handleKey
       check (flip when throw401 . (key /=)) $
         DT.decodeUtf8 <$> (rightToMaybe . DBB.decode . DT.encodeUtf8 =<< T.stripPrefix "Basic " rauth)
     check = maybe throw401
+    throw401 :: HasLogContext r => FlowR r a
     throw401 =
-      throwError401 "Invalid Auth" :: FlowR r a
+      throwError401 "Invalid Auth"
 
 throwHttpError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> m a
 throwHttpError err errMsg =
   L.throwException err {errBody = BSL.fromStrict (DT.encodeUtf8 errMsg)}
 
-throwBecknError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> m a
+throwBecknError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Text -> m a
 throwBecknError err errMsg = do
-  L.logError @Text "Beckn error" errMsg
+  logError "Beckn error" errMsg
   L.throwException
     err
       { errBody = A.encode $ getBecknError err errMsg,
@@ -259,7 +266,7 @@ throwError500,
   throwError401,
   throwError403,
   throwError404 ::
-    (HasCallStack, L.MonadFlow m) => Text -> m a
+    (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
 throwError500 = throwHttpError S.err500
 throwError501 = throwHttpError S.err501
 throwError503 = throwHttpError S.err503
@@ -273,14 +280,14 @@ throwBecknError500,
   throwBecknError400,
   throwBecknError401,
   throwBecknError404 ::
-    (HasCallStack, L.MonadFlow m) => Text -> m a
+    (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
 throwBecknError500 = throwBecknError S.err500
 throwBecknError501 = throwBecknError S.err501
 throwBecknError400 = throwBecknError S.err400
 throwBecknError401 = throwBecknError S.err401
 throwBecknError404 = throwBecknError S.err404
 
-throwAuthError :: (HasCallStack, L.MonadFlow m) => [Header] -> Text -> m a
+throwAuthError :: (HasCallStack, L.MonadFlow m, Log m) => [Header] -> Text -> m a
 throwAuthError headers = throwBecknError (S.err401 {errHeaders = headers})
 
 -- | Format time in IST and return it as text
@@ -290,7 +297,7 @@ throwAuthError headers = throwBecknError (S.err401 {errHeaders = headers})
 showTimeIst :: UTCTime -> Text
 showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addUTCTime (60 * 330)
 
-throwDomainError :: (HasCallStack, L.MonadFlow m) => DomainError -> m a
+throwDomainError :: (HasCallStack, L.MonadFlow m, Log m) => DomainError -> m a
 throwDomainError err =
   case err of
     UnknownDomainError msg -> t S.err500 msg
@@ -317,7 +324,7 @@ throwDomainError err =
     t errCode (ErrorMsg errMsg) = throwBecknError errCode errMsg
 
 callClient ::
-  (ET.JSONEx a, L.MonadFlow m) =>
+  (ET.JSONEx a, L.MonadFlow m, Log m) =>
   Text ->
   Context ->
   S.BaseUrl ->
@@ -327,7 +334,7 @@ callClient = callClient' Nothing
 
 -- TODO: the @desc@ argument should become part of monadic context
 callClient' ::
-  (ET.JSONEx a, L.MonadFlow m) =>
+  (ET.JSONEx a, L.MonadFlow m, Log m) =>
   Maybe String ->
   Text ->
   Context ->
@@ -340,7 +347,7 @@ callClient' mbManager desc context baseUrl cli = do
   _ <- L.runUntracedIO $ endTracking $ getResponseCode res
   case res of
     Left err -> do
-      L.logError @Text "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err
+      logError "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err
       L.throwException $ mkErrResponse context err500 (fromClientError err)
     Right x -> pure x
   where
@@ -365,30 +372,21 @@ callClient' mbManager desc context baseUrl cli = do
 --
 -- NOTE: this function is temporary, use of bare forking is bad and should be
 -- removed one day.
-forkAsync :: Text -> FlowR (EnvR r) () -> FlowR (EnvR r) ()
-forkAsync desc action =
-  void . ReaderT $ \env@(EnvR flowRt _) ->
-    L.runUntracedIO . forkIO $
-      I.runFlow flowRt (runReaderT action env)
-        `catchAny` \e -> I.runFlow flowRt (logErr e)
-  where
-    logErr e =
-      L.logWarning @Text "Thread" $
-        "Thread " <> show desc <> " died with error: " <> show e
 
 -- I know it is looking similar to forkAsync but I found it simpler to
 -- be able to use (FlowR r) instead of (FlowR (EnvR r))
-fork :: Text -> FlowR r () -> FlowR r ()
+fork :: HasLogContext r => Text -> FlowR r () -> FlowR r ()
 fork desc f = do
   env <- ask
-  lift $ L.forkFlow desc $ handleExc $ runReaderT f env
+  lift $ L.forkFlow desc $ handleExc env $ runReaderT f env
   where
-    handleExc a =
+    handleExc env a =
       L.runSafeFlow a >>= \case
         Right () -> pass
-        Left e ->
-          L.logWarning @Text "Thread" $
-            "Thread " <> show desc <> " died with error: " <> show e
+        Left e -> runReaderT (err e) env
+    err e =
+      logWarning "Thread" $
+        "Thread " <> show desc <> " died with error: " <> show e
 
 runSafeFlow :: (FromJSON a, ToJSON a) => FlowR r a -> FlowR r (Either Text a)
 runSafeFlow flow = do
@@ -471,8 +469,12 @@ type family HasFields (r :: Type) (fields :: [(Symbol, Type)]) :: Constraint whe
 type HasFlowEnv m r fields =
   ( L.MonadFlow m,
     MonadReader r m,
-    HasFields r fields
+    HasFields r fields,
+    HasLogContext r
   )
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
 foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
+
+addLogTag :: HasLogContext env => Text -> FlowR env a -> FlowR env a
+addLogTag = local . addLogTagToEnv

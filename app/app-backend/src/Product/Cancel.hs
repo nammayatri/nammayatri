@@ -11,6 +11,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, mkAckResponse', withFlowHandler)
+import Beckn.Utils.Logging (Log (..))
 import Data.Time (getCurrentTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -132,5 +133,5 @@ onCancel _org req = withFlowHandler $ do
             Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
             MC.updateStatus caseId Case.CLOSED
         )
-    Left err -> L.logError @Text "on_cancel req" $ "on_cancel error: " <> show err
+    Left err -> logError "on_cancel req" $ "on_cancel error: " <> show err
   mkAckResponse txnId "cancel"

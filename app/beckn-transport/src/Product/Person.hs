@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Product.Person
   ( createPerson,
@@ -32,7 +31,6 @@ import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as PI
@@ -242,15 +240,15 @@ mapEntityType entityType = case entityType of
 
 calculateAverageRating :: PersonId -> Flow ()
 calculateAverageRating personId = do
-  L.logInfo @Text "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
+  logInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- Rating.findAllRatingsForPerson personId
   let ratings = sum $ Rating._ratingValue <$> allRatings
   let ratingCount = length allRatings
   when (ratingCount == 0) $
-    L.logInfo @Text "PersonAPI" "No rating found to calculate"
+    logInfo "PersonAPI" "No rating found to calculate"
   when (ratingCount > 0) $ do
     let newAverage = ratings `div` ratingCount
-    L.logInfo @Text "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
+    logInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     QP.updateAverageRating personId $ encodeToText newAverage
 
 driverPoolKey :: ProductInstanceId -> Text
@@ -297,7 +295,7 @@ calculateDriverPool locId orgId variant = do
         variant
   getNearestDriversEndTime <- getCurrTime
   let getNearestDriversTime = diffUTCTime getNearestDriversEndTime getNearestDriversStartTime
-  L.logInfo @Text "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"
+  logInfo "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"
   pure driverPool
   where
     getRadius =

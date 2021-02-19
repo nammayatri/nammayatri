@@ -1,8 +1,6 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Product.FareCalculator.Interpreter (calculateFare) where
 
-import App.Types (Flow)
+import App.Types (Flow, Log (..))
 import Beckn.Product.BusinessRule (runBRFlowMaybe)
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.App (OrganizationId (_getOrganizationId))
@@ -11,7 +9,6 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Data.Text as T
 import Data.Time (UTCTime)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
   ( DropLocation (DropLocation),
@@ -34,7 +31,7 @@ calculateFare ::
   Maybe Text ->
   Flow (Maybe Amount)
 calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
-  L.logInfo @Text "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
+  logInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
     runBRFlowMaybe $
       doCalculateFare
@@ -47,7 +44,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
         startTime
         (mbDistance >>= readMaybe . T.unpack)
   let totalFare = fareSum <$> fareParams
-  L.logInfo @Text
+  logInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ". Total fare: " +|| totalFare ||+ ""
   pure totalFare

@@ -14,6 +14,7 @@ import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (Log (..))
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail', withClientTracing)
 import Beckn.Utils.SignatureAuth (SignaturePayload)
@@ -54,7 +55,7 @@ search proxySign org req = withFlowHandler $ do
             providerUrl
             (gatewaySearchSignAuth (Just proxySign) req)
             "search"
-        L.logDebug @Text "gateway_transaction" $
+        logDebug "gateway_transaction" $
           messageId
             <> ", search_req: "
             <> T.pack (showBaseUrl providerUrl)
@@ -94,7 +95,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
       (gatewayOnSearchSignAuth (Just proxySign) req)
       "on_search"
   providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
-  L.logDebug @Text "gateway_transaction" $
+  logDebug "gateway_transaction" $
     messageId
       <> ", search_cb: "
       <> T.pack (showBaseUrl providerUrl)
@@ -127,7 +128,7 @@ checkEnd isTimeout bgSession = do
   where
     sendCb messageId searchReqCount onSearchReqCount = do
       let tag = messageId <> "_on_search/end" <> if isTimeout then "_timeout" else ""
-      L.logInfo @Text tag $
+      logInfo tag $
         "Sent to " <> show searchReqCount <> ", "
           <> show onSearchReqCount
           <> " responded, "
@@ -137,7 +138,7 @@ checkEnd isTimeout bgSession = do
       BA.cleanup messageId
     noop messageId = do
       let tag = messageId <> "_on_search/end" <> if isTimeout then "_timeout" else ""
-      L.logInfo @Text tag "Noop"
+      logInfo tag "Noop"
 
 sendSearchEndCb :: BA.GwSession -> Flow ()
 sendSearchEndCb bgSession = do
@@ -147,7 +148,7 @@ sendSearchEndCb bgSession = do
   let onSearchEndReq = Core.OnSearchEndReq context
   let baseUrl = bgSession ^. #cbUrl
   eRes <- callAPIWithTrail' (Just signatureAuthManagerKey) baseUrl (onSearchEnd onSearchEndReq) "on_search"
-  L.logDebug @Text "gateway_transaction" $
+  logDebug "gateway_transaction" $
     messageId
       <> ", on_search/end: "
       <> T.pack (showBaseUrl baseUrl)

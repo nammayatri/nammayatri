@@ -8,7 +8,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
+import Beckn.Utils.Logging (Log (..))
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as External
 import qualified Models.ProductInstance as MPI
@@ -35,7 +35,7 @@ getProductInfo _person prodInstId = withFlowHandler $ do
                 product = productInstance
               }
     Nothing ->
-      L.logInfo @Text "get Product info" "No info found in products table"
+      logInfo "get Product info" "No info found in products table"
         >> throwError400 "NO_DETAILS_FOUND"
 
 -- TODO: fetch tracking URL from tracker info

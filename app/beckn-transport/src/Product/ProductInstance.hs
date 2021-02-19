@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Product.ProductInstance where
 
@@ -13,7 +12,6 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
@@ -257,7 +255,7 @@ unAssignDriverInfo :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 unAssignDriverInfo productInstances request = do
   when (null productInstances) $
     do
-      L.logError @Text
+      logError
         "unAssignDriverInfo"
         "Can't unassign driver info for null ProductInstance."
       throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"

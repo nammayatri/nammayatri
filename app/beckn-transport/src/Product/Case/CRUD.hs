@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Product.Case.CRUD where
 
@@ -135,13 +134,13 @@ createProductInstance cs prod price orgId status = do
 
 notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Text -> Flow ()
 notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
-  L.logInfo @Text "notifyGateway" $ show c
-  L.logInfo @Text "notifyGateway" $ show prodInst
+  logInfo "notifyGateway" $ show c
+  logInfo "notifyGateway" $ show prodInst
   transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
   onSearchPayload <- case piStatus of
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg
-  L.logInfo @Text "notifyGateway Request" $ show onSearchPayload
+  logInfo "notifyGateway Request" $ show onSearchPayload
   _ <- Gateway.onSearch onSearchPayload bppShortId
   return ()
 

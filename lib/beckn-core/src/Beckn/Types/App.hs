@@ -14,6 +14,7 @@ where
 import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
+import Beckn.Utils.Logging (HasLogContext (..))
 import Beckn.Utils.TH
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
@@ -144,7 +145,12 @@ data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING
 
 type HasTraceFlag r = HasField "traceFlag" r TraceFlag
 
-type FlowWithTraceFlag r a = (HasTraceFlag r, HasDbCfg r) => FlowR r a
+type FlowWithTraceFlag r a =
+  ( HasTraceFlag r,
+    HasDbCfg r,
+    HasLogContext r
+  ) =>
+  FlowR r a
 
 instance S.ToSchema Servant.BaseUrl where
   declareNamedSchema _ = do

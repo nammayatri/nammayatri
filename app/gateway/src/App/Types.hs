@@ -2,7 +2,7 @@ module App.Types where
 
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Logging
@@ -51,7 +51,8 @@ data AppEnv = AppEnv
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
     fmdDomainVersion :: Text,
-    signatureExpiry :: NominalDiffTime
+    signatureExpiry :: NominalDiffTime,
+    logContext :: [Text]
   }
   deriving (Generic)
 
@@ -61,6 +62,7 @@ mkAppEnv AppCfg {..} c =
     { gwId = selfId,
       gwNwAddress = nwAddress,
       cache = c,
+      logContext = [],
       ..
     }
 
@@ -76,3 +78,11 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasLogContext AppCfg where
+  getLogContext = const []
+  setLogContext _ = id
+
+instance HasLogContext AppEnv where
+  getLogContext = logContext
+  setLogContext ctx env = env {logContext = ctx}

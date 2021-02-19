@@ -7,6 +7,7 @@ module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.DB.Config as DB
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (Log (..))
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
@@ -201,11 +202,14 @@ delete' ::
 delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
 
 throwDBError ::
-  (HasCallStack, L.MonadFlow mFlow) =>
+  ( HasCallStack,
+    L.MonadFlow mFlow,
+    Log mFlow
+  ) =>
   T.DBError ->
   mFlow a
 throwDBError err =
-  L.logError @Text "DB error: " (show err)
+  logError "DB error: " (show err)
     >> L.throwException err500
 
 type Scope2 = BI.QNested (BI.QNested B.QBaseScope)

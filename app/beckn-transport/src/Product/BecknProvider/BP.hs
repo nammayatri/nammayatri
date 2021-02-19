@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Product.BecknProvider.BP where
 
@@ -207,7 +206,7 @@ search transporterId bapOrg req = withFlowHandler $ do
           Just orgLocation -> Location.calculateDistance orgLocation fromLocation
       case eres of
         Left err -> do
-          L.logWarning @Text "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
+          logWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
           pure Nothing
         Right mDistance -> return mDistance
 
@@ -326,7 +325,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 
 confirm :: OrganizationId -> Organization -> ConfirmReq -> FlowHandler AckResponse
 confirm transporterId bapOrg req = withFlowHandler $ do
-  L.logInfo @Text "confirm API Flow" "Reached"
+  logInfo "confirm API Flow" "Reached"
   validateContext "confirm" $ req ^. #context
   let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
@@ -499,10 +498,10 @@ mkTrackerCase case_@SC.Case {..} uuid now shortId =
 
 notifyGateway :: Case -> ProductInstance -> Case -> BaseUrl -> Text -> Flow ()
 notifyGateway c orderPi trackerCase callbackUrl bppShortId = do
-  L.logInfo @Text "notifyGateway" $ show c
+  logInfo "notifyGateway" $ show c
   allPis <- ProductInstance.findAllByCaseId (c ^. #_id)
   onConfirmPayload <- mkOnConfirmPayload c [orderPi] allPis trackerCase
-  L.logInfo @Text "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
+  logInfo "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
   _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
   return ()
 
@@ -538,7 +537,7 @@ mkOnConfirmPayload c pis _allPis trackerCase = do
 
 serviceStatus :: OrganizationId -> Organization -> StatusReq -> FlowHandler StatusRes
 serviceStatus transporterId bapOrg req = withFlowHandler $ do
-  L.logInfo @Text "serviceStatus API Flow" $ show req
+  logInfo "serviceStatus API Flow" $ show req
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ ProductInstanceId piId) SC.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
@@ -552,7 +551,7 @@ serviceStatus transporterId bapOrg req = withFlowHandler $ do
 notifyServiceStatusToGateway :: Text -> ProductInstance -> BaseUrl -> Text -> Flow ()
 notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
-  L.logInfo @Text "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
+  logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   _ <- Gateway.onStatus callbackUrl onServiceStatusPayload bppShortId
   return ()
 
@@ -584,7 +583,7 @@ mkOnServiceStatusPayload piId trackerPi = do
 
 trackTrip :: OrganizationId -> Organization -> TrackTripReq -> FlowHandler TrackTripRes
 trackTrip transporterId org req = withFlowHandler $ do
-  L.logInfo @Text "track trip API Flow" $ show req
+  logInfo "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id
   case_ <- Case.findById (CaseId tripId)
@@ -603,21 +602,21 @@ trackTrip transporterId org req = withFlowHandler $ do
 notifyTripUrlToGateway :: Case -> Case -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
-  L.logInfo @Text "notifyTripUrlToGateway Request" $ show onTrackTripPayload
+  logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   _ <- Gateway.onTrackTrip callbackUrl onTrackTripPayload bppShortId
   return ()
 
 notifyTripInfoToGateway :: ProductInstance -> Case -> Case -> BaseUrl -> Text -> Flow ()
 notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl bppShortId = do
   onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
-  L.logInfo @Text "notifyTripInfoToGateway Request" $ show onUpdatePayload
+  logInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
   _ <- Gateway.onUpdate callbackUrl onUpdatePayload bppShortId
   return ()
 
 notifyCancelToGateway :: Text -> BaseUrl -> Text -> Flow ()
 notifyCancelToGateway prodInstId callbackUrl bppShortId = do
   onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
-  L.logInfo @Text "notifyGateway Request" $ show onCancelPayload
+  logInfo "notifyGateway Request" $ show onCancelPayload
   _ <- Gateway.onCancel callbackUrl onCancelPayload bppShortId
   return ()
 
@@ -638,7 +637,7 @@ mkTrip c orderPi = do
   driver <- mapM mkDriverInfo $ prodInst ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (prodInst ^. #_entityId)
   tripCode <- orderPi ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
-  L.logInfo @Text "vehicle" $ show vehicle
+  logInfo "vehicle" $ show vehicle
   return $
     Trip
       { id = tripCode,

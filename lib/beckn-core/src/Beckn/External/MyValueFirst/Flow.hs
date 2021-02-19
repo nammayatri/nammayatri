@@ -5,15 +5,16 @@ module Beckn.External.MyValueFirst.Flow where
 import qualified Beckn.External.MyValueFirst.API as API
 import Beckn.External.MyValueFirst.Types
 import Beckn.Types.Common
+import Beckn.Utils.Logging (HasLogContext, Log (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.Client
 
-submitSms :: BaseUrl -> SubmitSms -> FlowR r (Either Text ())
+submitSms :: HasLogContext r => BaseUrl -> SubmitSms -> FlowR r (Either Text ())
 submitSms url params = do
   res <- L.callAPI url $ API.submitSms params
   whenRight res $ \_ ->
-    L.logInfo @Text "SMS" $ "Submitted sms successfully to " <> show (_to params)
+    logInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
   return $ first show res
 
 defaultBaseUrl :: BaseUrl

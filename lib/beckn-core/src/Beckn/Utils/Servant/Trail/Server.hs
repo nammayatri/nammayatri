@@ -13,12 +13,12 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Storage.Trail as Trail
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (HasLogContext (..), Log (..))
 import Beckn.Utils.Servant.Trail.Types
 import qualified Beckn.Utils.Servant.Trail.Types as T
 import qualified Data.Binary.Builder as B
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
 import qualified Network.HTTP.Types as HTTP
@@ -156,7 +156,7 @@ mkTrail reqId now req =
       _processDuration = Nothing
     }
 
-traceHandler :: HasDbCfg r => TraceHandler (FlowR r)
+traceHandler :: (HasDbCfg r, HasLogContext r) => TraceHandler (FlowR r)
 traceHandler = TraceHandler {..}
   where
     _preAction req = do
@@ -175,23 +175,23 @@ traceHandler = TraceHandler {..}
       fork "save trail" $ do
         Trail.create trail >>= \case
           Left err -> do
-            L.logError @Text "trace" $
+            logError "trace" $
               "Saving request failed: " <> show err
           Right () -> pass
         dbres <- Trail.setResponseInfo reqId duration res
         case dbres of
           Left err ->
-            L.logError @Text "trace" $
+            logError "trace" $
               "Saving response on " <> show reqId <> " failed: " <> show err
           Right () -> pass
       pass
 
-traceHandler' :: HasDbCfg r => EnvR r -> TraceHandler IO
+traceHandler' :: (HasDbCfg r, HasLogContext r) => EnvR r -> TraceHandler IO
 traceHandler' env =
   hoistTraceHandler (runFlowR (runTime env) (appEnv env)) traceHandler
 
 toTraceOrNotToTrace ::
-  (HasTraceFlag r, HasDbCfg r) =>
+  (HasTraceFlag r, HasDbCfg r, HasLogContext r) =>
   EnvR r ->
   Wai.Application ->
   Wai.Application

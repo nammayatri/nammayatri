@@ -4,6 +4,8 @@ module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types
 import Beckn.Types.Common
+import Beckn.Utils.Common (fork)
+import Beckn.Utils.Logging (HasLogContext, Log (..))
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -36,10 +38,14 @@ defaultBaseUrl sid =
             <> "/Calls/connect.json"
     }
 
-initiateCall :: HasField "exotelCfg" r (Maybe ExotelCfg) => T.Text -> T.Text -> FlowR r ()
+initiateCall ::
+  (HasField "exotelCfg" r (Maybe ExotelCfg), HasLogContext r) =>
+  T.Text ->
+  T.Text ->
+  FlowR r ()
 initiateCall from to = do
   mbExotelCfg <- getField @"exotelCfg" <$> ask
-  lift . L.forkFlow forkDesc $
+  fork forkDesc $
     case mbExotelCfg of
       Just ExotelCfg {..} -> do
         let apiKey_ = ExotelApiKey apiKey
@@ -53,10 +59,10 @@ initiateCall from to = do
         res <-
           L.callAPI (defaultBaseUrl sid_) $
             callExotel authData exoRequest
-        L.logInfo exotel $ case res of
+        logInfo exotel $ case res of
           Right _ -> "call initiated from " <> from <> " to " <> to
           Left x -> "error: " <> show x
-      _ -> L.logError exotel "exotel ENV vars are not properly set"
+      _ -> logError exotel "exotel ENV vars are not properly set"
   where
     callExotel authData exoRequest = void $ ET.client exotelConnectAPI authData exoRequest
     forkDesc = "Exotel initiate call forked flow " <> from <> " " <> to

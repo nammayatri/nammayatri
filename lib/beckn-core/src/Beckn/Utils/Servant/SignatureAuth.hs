@@ -9,6 +9,7 @@ import Beckn.Types.Common (FlowR)
 import Beckn.Types.Credentials
 import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (HasLogContext, Log (..))
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (HasEnvEntry (..))
@@ -91,27 +92,27 @@ instance LookupMethod LookupRegistry where
     "Looks up the given key ID in the Beckn registry."
 
 lookupRegistryAction ::
-  AuthenticatingEntity r =>
+  (AuthenticatingEntity r, HasLogContext r) =>
   (ShortOrganizationId -> FlowR r (Maybe Organization)) ->
   LookupAction LookupRegistry r
 lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
   appEnv <- ask
   let selfUrl = getSelfUrl appEnv
   let registry = getRegistry appEnv
-  L.logDebug @Text "SignatureAuth" $ "Got Signature: " <> show signaturePayload
+  logDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   let uniqueKeyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
   let mCred = Registry.lookupKey uniqueKeyId registry
   cred <- case mCred of
     Just c -> return c
     Nothing -> do
-      L.logError @Text "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
+      logError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
       throwError401 "INVALID_KEY_ID"
   org <-
     findOrgByShortId (ShortOrganizationId $ cred ^. #shortOrgId)
       >>= maybe (throwError401 "ORG_NOT_FOUND") pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
-      L.logError @Text "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
+      logError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
       throwError401 "INVALID_PUBLIC_KEY"
     Just key -> return key
   return (org, pk, selfUrl)
@@ -121,7 +122,8 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
-    KnownSymbol header
+    KnownSymbol header,
+    HasLogContext r
   ) =>
   HasServer (SignatureAuth header :> api) ctx
   where
@@ -138,26 +140,26 @@ instance
         let headers = Wai.requestHeaders req
         let headerName = fromString $ symbolVal (Proxy @header)
         let mSignature = snd <$> find ((== headerName) . fst) headers
-        liftIO $ runFlowR flowRt (appEnv env) $ L.logDebug @Text "authCheck" $ "Incoming headers: " +|| headers ||+ ""
+        liftIO $ runFlowR flowRt (appEnv env) $ logDebug "authCheck" $ "Incoming headers: " +|| headers ||+ ""
         headerBs <-
           case mSignature of
             Just s -> pure s
             Nothing -> do
               let msg = fromString $ "Signature header " +|| headerName ||+ " missing"
-              liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
+              liftIO $ runFlowR flowRt appConfig $ logError "authCheck" $ decodeUtf8 msg
               delayedFailFatal err401 {errBody = msg}
         sigBs <-
           case fromString <$> parseHeader @String headerBs of
             Right s -> pure s
             Left err -> do
               let msg = fromString $ "Invalid signature header. Error: " +|| err ||+ ""
-              liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
+              liftIO $ runFlowR flowRt appConfig $ logError "authCheck" $ decodeUtf8 msg
               delayedFailFatal err401 {errBody = msg}
         case HttpSig.decode sigBs of
           Right res -> pure res
           Left err -> do
             let msg = fromString $ "Could not decode signature: " +|| err ||+ ""
-            liftIO $ runFlowR flowRt appConfig $ L.logError @Text "authCheck" $ decodeUtf8 msg
+            liftIO $ runFlowR flowRt appConfig $ logError "authCheck" $ decodeUtf8 msg
             delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
       flowRt = runTime env
@@ -189,14 +191,16 @@ signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
 signatureAuthManager ::
+  HasLogContext r =>
   R.FlowRuntime ->
+  r ->
   Text ->
   NominalDiffTime ->
   Text ->
   HttpSig.PrivateKey ->
   Text ->
   IO Http.Manager
-signatureAuthManager flowRt shortOrgId signatureExpiry header key uniqueKeyId = do
+signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueKeyId = do
   Http.newManager
     Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
@@ -206,8 +210,8 @@ signatureAuthManager flowRt shortOrgId signatureExpiry header key uniqueKeyId = 
       body <- getBody $ Http.requestBody req
       let headers = Http.requestHeaders req
       let signatureMsg = HttpSig.makeSignatureString params body headers
-      L.logDebug @Text "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
-      L.logDebug @Text "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
+      logDebug "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
+      logDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
       case addSignature body params headers req of
         Just signedReq -> pure signedReq
         Nothing -> throwError500 $ "Could not add signature: " <> show params
@@ -229,14 +233,22 @@ signatureAuthManager flowRt shortOrgId signatureExpiry header key uniqueKeyId = 
               let headerVal = HttpSig.encode $ HttpSig.SignaturePayload signature params
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
-verifySignature :: ToJSON body => Text -> LookupAction lookup r -> HttpSig.SignaturePayload -> body -> FlowR r (LookupResult lookup)
+verifySignature ::
+  ( ToJSON body,
+    HasLogContext r
+  ) =>
+  Text ->
+  LookupAction lookup r ->
+  HttpSig.SignaturePayload ->
+  body ->
+  FlowR r (LookupResult lookup)
 verifySignature headerName (LookupAction runLookup) signPayload req = do
   (lookupResult, key, selfUrl) <- runLookup signPayload
   let host = fromString $ baseUrlHost selfUrl
   let body = BSL.toStrict . J.encode $ req -- TODO: we should be able to receive raw body without using Aeson encoders. Maybe use WAI middleware to catch a raw body before handling a req by Servant?
   isVerified <- performVerification key host body
   unless isVerified $ do
-    L.logError @Text logTag "Signature is not valid."
+    logError logTag "Signature is not valid."
     throwAuthError [HttpSig.mkSignatureRealm getRealm host] "RESTRICTED"
   pure lookupResult
   where
@@ -254,7 +266,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       let signatureParams = signPayload ^. #params
       let signature = signPayload ^. #signature
       let signatureMsg = HttpSig.makeSignatureString signatureParams body headers
-      L.logDebug @Text logTag $
+      logDebug logTag $
         "Start verifying. Signature: " +|| HttpSig.encode signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ", Body: " +|| body ||+ ""
       either (throwVerificationFail host) pure $
         HttpSig.verify
@@ -264,22 +276,35 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
           headers
           signature
     throwVerificationFail host err = do
-      L.logError @Text logTag $ "Failed to verify the signature. Error: " <> show err
+      logError logTag $ "Failed to verify the signature. Error: " <> show err
       throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
 
-withBecknAuth :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
+withBecknAuth ::
+  (ToJSON req, HasLogContext r) =>
+  (LookupResult lookup -> req -> FlowHandlerR r b) ->
+  LookupAction lookup r ->
+  HttpSig.SignaturePayload ->
+  req ->
+  FlowHandlerR r b
 withBecknAuth handler lookupAction sign req = do
   lookupResult <- withFlowHandler $ verifySignature "Authorization" lookupAction sign req
   handler lookupResult req
 
-withBecknAuthProxy :: ToJSON req => (LookupResult lookup -> req -> FlowHandlerR r b) -> LookupAction lookup r -> HttpSig.SignaturePayload -> HttpSig.SignaturePayload -> req -> FlowHandlerR r b
+withBecknAuthProxy ::
+  (ToJSON req, HasLogContext r) =>
+  (LookupResult lookup -> req -> FlowHandlerR r b) ->
+  LookupAction lookup r ->
+  HttpSig.SignaturePayload ->
+  HttpSig.SignaturePayload ->
+  req ->
+  FlowHandlerR r b
 withBecknAuthProxy handler lookupAction sign proxySign req = do
   lookupResult <- withFlowHandler $ verifySignature "Authorization" lookupAction sign req
   _ <- withFlowHandler $ verifySignature "Proxy-Authorization" lookupAction proxySign req
   handler lookupResult req
 
 prepareAuthManager ::
-  AuthenticatingEntity r =>
+  (AuthenticatingEntity r, HasLogContext r) =>
   R.FlowRuntime ->
   r ->
   Text ->
@@ -296,13 +321,13 @@ prepareAuthManager flowRt appEnv header shortOrgId = do
   encodedKey <- mSigningKey & maybeToRight ("No private key found for credential: " <> uniqueKeyId)
   let mPrivateKey = Registry.decodeKey $ encodedKey ^. #signPrivKey
   privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
-  pure $ signatureAuthManager flowRt shortOrgId signatureExpiry header privateKey uniqueKeyId
+  pure $ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header privateKey uniqueKeyId
 
 makeManagerMap :: [String] -> [Http.Manager] -> Map String Http.Manager
 makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
 
 prepareAuthManagers ::
-  AuthenticatingEntity r =>
+  (AuthenticatingEntity r, HasLogContext r) =>
   R.FlowRuntime ->
   r ->
   [Text] ->

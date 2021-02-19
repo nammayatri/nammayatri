@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Organization where
 
@@ -12,7 +11,6 @@ import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
@@ -30,7 +28,7 @@ create Storage.Organization {..} = do
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
   dbTable <- getDbTable
-  L.logInfo @Text "verifying token" $ show regToken
+  logInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
     >>= fromMaybeM400 "UNAUTHENTICATED_ORGANIZATION"

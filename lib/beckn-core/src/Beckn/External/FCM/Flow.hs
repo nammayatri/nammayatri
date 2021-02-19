@@ -23,6 +23,7 @@ import Beckn.Types.Common
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fork)
 import qualified Beckn.Utils.JWT as JWT
+import Beckn.Utils.Logging (HasLogContext, Log (..))
 import Control.Lens
 import Data.Default.Class
 import qualified Data.Text as T
@@ -59,13 +60,19 @@ createAndroidConfig title body tag =
         & fcmdTag ?~ tag
 
 -- | Send FCM message to a person
-notifyPerson :: HasField "fcmUrl" r BaseUrl => FCMNotificationTitle -> FCMNotificationBody -> FCMData -> Person -> FlowR r ()
+notifyPerson ::
+  (HasLogContext r, HasField "fcmUrl" r BaseUrl) =>
+  FCMNotificationTitle ->
+  FCMNotificationBody ->
+  FCMData ->
+  Person ->
+  FlowR r ()
 notifyPerson title body msgData person =
   let pid = _getPersonId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
    in case Person._deviceToken person of
         Nothing -> do
-          L.logInfo (T.pack "FCM") tokenNotFound
+          logInfo (T.pack "FCM") tokenNotFound
           pure ()
         Just token ->
           sendMessage (FCMRequest (createMessage title body msgData token)) pid
@@ -80,19 +87,23 @@ fcmSendMessageAPI :: Proxy FCMSendMessageAPI
 fcmSendMessageAPI = Proxy
 
 -- | Send FCM message to a registered device
-sendMessage :: HasField "fcmUrl" r BaseUrl => FCMRequest -> T.Text -> FlowR r ()
+sendMessage ::
+  (HasLogContext r, HasField "fcmUrl" r BaseUrl) =>
+  FCMRequest ->
+  T.Text ->
+  FlowR r ()
 sendMessage fcmMsg toWhom = fork desc $ do
   authToken <- getTokenText
   case authToken of
     Right token -> do
       fcmUrl <- getField @"fcmUrl" <$> ask
       res <- L.callAPI fcmUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
-      L.logInfo fcm $ case res of
+      logInfo fcm $ case res of
         Right _ -> "message sent successfully to a person with id = " <> toWhom
         Left x -> "error: " <> show x
       pure ()
     Left err -> do
-      L.logError fcm $ "error: " <> show err
+      logError fcm $ "error: " <> show err
       pure ()
   where
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
@@ -100,7 +111,7 @@ sendMessage fcmMsg toWhom = fork desc $ do
     fcm = T.pack "FCM"
 
 -- | try to get FCM text token
-getTokenText :: L.MonadFlow m => m (Either String Text)
+getTokenText :: (L.MonadFlow m, Log m) => m (Either String Text)
 getTokenText = do
   token <- getToken
   pure $ case token of
@@ -108,7 +119,10 @@ getTokenText = do
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
 -- | check FCM token and refresh if it is invalid
-checkAndGetToken :: L.MonadFlow m => JWT.ServiceAccount -> m (Either String JWT.JWToken)
+checkAndGetToken ::
+  (L.MonadFlow m, Log m) =>
+  JWT.ServiceAccount ->
+  m (Either String JWT.JWToken)
 checkAndGetToken sa = do
   token <- L.getOption FCMTokenKey
   case token of
@@ -121,29 +135,29 @@ checkAndGetToken sa = do
             then pure $ Right t -- do nothing, token is ok
             else do
               -- close to expiration, start trying to refresh token
-              L.logInfo fcm "Token is about to be expiried, trying to refresh it"
+              logInfo fcm "Token is about to be expiried, trying to refresh it"
               refreshToken
         JWT.JWTExpired x -> do
           -- token expired
-          L.logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
+          logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
           L.delOption FCMTokenKey
           refreshToken
         JWT.JWTInvalid -> do
           -- token is invalid
-          L.logInfo fcm "Token is invalid, trying to refresh it"
+          logInfo fcm "Token is invalid, trying to refresh it"
           L.delOption FCMTokenKey
           refreshToken
   where
     fcm = T.pack "FCM"
     refreshToken = do
-      L.logInfo fcm "Refreshing token"
+      logInfo fcm "Refreshing token"
       t <- L.runIO $ JWT.doRefreshToken sa
       case t of
         Left err -> do
-          L.logInfo fcm $ T.pack err
+          logInfo fcm $ T.pack err
           pure $ Left err
         Right token -> do
-          L.logInfo fcm $ T.pack "Success"
+          logInfo fcm $ T.pack "Success"
           L.setOption FCMTokenKey token
           pure $ Right token
 

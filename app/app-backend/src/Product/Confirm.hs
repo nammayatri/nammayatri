@@ -15,6 +15,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common
+import Beckn.Utils.Logging (Log (..))
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -71,7 +72,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
 onConfirm _org req = withFlowHandler $ do
   -- TODO: Verify api key here
-  L.logInfo @Text "on_confirm req" (show req)
+  logInfo "on_confirm req" (show req)
   validateContext "on_confirm" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
@@ -92,7 +93,7 @@ onConfirm _org req = withFlowHandler $ do
       MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
       MPI.updateMultiple pid uPrd
       MPI.updateStatus pid SPI.CONFIRMED
-    Left err -> L.logError @Text "on_confirm req" $ "on_confirm error: " <> show err
+    Left err -> logError "on_confirm req" $ "on_confirm error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
