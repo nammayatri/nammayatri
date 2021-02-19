@@ -245,4 +245,4 @@ isNotificationTimeFinished ServiceHandle {..} notificationTime = do
   pure $ elapsedNotificationTime > configuredNotificationTime
 
 logRequest :: Monad m => ServiceHandle m -> RequestHeader -> Text -> m ()
-logRequest ServiceHandle {..} header = logInfo ("RideRequest_" <> show (header ^. #rideId))
+logRequest ServiceHandle {..} header = logInfo ("RideRequest_" <> _getRideId (header ^. #rideId))
