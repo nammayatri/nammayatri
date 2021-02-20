@@ -89,6 +89,7 @@ mkFromStop now stop = do
         _pincode = (^. #_area_code) <$> maddress,
         _address = encodeToText <$> maddress,
         _bound = Nothing,
+        _point = Location.Point,
         _createdAt = now,
         _updatedAt = now
       }

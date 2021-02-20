@@ -1,7 +1,5 @@
 {-# LANGUAGE NamedWildCards #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE QuasiQuotes #-}
 
 module Storage.Queries.Location where
 
@@ -15,10 +13,8 @@ import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
-import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import Utils.PostgreSQLSimple (postgreSQLSimpleExecute)
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
 getDbTable =
@@ -77,19 +73,18 @@ findAllByLocIds fromIds toIds = do
         ||. B.in_ _id (B.val_ <$> pToIds)
 
 updateGpsCoord :: Id Storage.Location -> Double -> Double -> Flow ()
-updateGpsCoord (Id locId) lat long = do
+updateGpsCoord locationId lat long = do
+  locTable <- getDbTable
   now <- getCurrentTime
-  void $
-    postgreSQLSimpleExecute
-      [sql|
-        UPDATE
-          atlas_transporter.location
-        SET
-          point = public.ST_SetSRID(ST_Point(?, ?)::geography, 4326),
-          long = ?,
-          lat = ?,
-          updated_at = ?
-        WHERE
-          id = ?
-      |]
-      (long, lat, long, lat, now, locId)
+  DB.update locTable (setClause lat long now) (predicate locationId)
+    >>= either throwDBError pure
+  where
+    setClause mLat mLong now Storage.Location {..} =
+      let point = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
+       in mconcat
+            [ _lat <-. B.val_ (Just mLat),
+              _long <-. B.val_ (Just mLong),
+              _updatedAt <-. B.val_ now,
+              _point <-. point
+            ]
+    predicate locId Storage.Location {..} = _id B.==. B.val_ locId

@@ -12,7 +12,10 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
+import qualified Database.Beam.Backend.SQL.AST as B
 import Database.Beam.Postgres
+import qualified Database.Beam.Postgres.Syntax as B
+import qualified Database.PostgreSQL.Simple.FromField as Pg
 import EulerHS.Prelude
 import Servant.API
 
@@ -39,6 +42,7 @@ data LocationT f = Location
     _locationType :: B.C f LocationType,
     _lat :: B.C f (Maybe Double),
     _long :: B.C f (Maybe Double),
+    _point :: B.C f Point,
     _ward :: B.C f (Maybe Text),
     _district :: B.C f (Maybe Text),
     _city :: B.C f (Maybe Text),
@@ -83,3 +87,18 @@ fieldEMod =
           _updatedAt = "updated_at",
           _locationType = "location_type"
         }
+
+data Point = Point
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, ToSchema)
+
+instance HasSqlValueSyntax B.Value Point where
+  sqlValueSyntax _ = sqlValueSyntax SqlNull
+
+instance HasSqlValueSyntax B.PgValueSyntax Point where
+  sqlValueSyntax _ = sqlValueSyntax SqlNull
+
+instance FromBackendRow Postgres Point
+
+instance Pg.FromField Point where
+  fromField _ Nothing = return Point
+  fromField _ (Just _) = return Point

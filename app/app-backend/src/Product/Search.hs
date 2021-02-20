@@ -211,6 +211,7 @@ mkLocation BS.Stop {..} = do
         _pincode = Nothing,
         _address = T.decodeUtf8 . BSL.toStrict . encode <$> loc ^. #_address,
         _bound = Nothing,
+        _point = Location.Point,
         _createdAt = now,
         _updatedAt = now
       }

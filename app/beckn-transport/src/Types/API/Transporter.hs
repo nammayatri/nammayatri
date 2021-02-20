@@ -86,6 +86,7 @@ transformToLocation req = do
         SL._pincode = req ^. #_pincode,
         SL._address = req ^. #_address,
         SL._bound = Nothing,
+        SL._point = SL.Point,
         SL._createdAt = now,
         SL._updatedAt = now
       }

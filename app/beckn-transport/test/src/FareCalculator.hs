@@ -49,6 +49,7 @@ defaultPickupLocation =
         _pincode = Nothing,
         _address = Nothing,
         _bound = Nothing,
+        _point = Location.Point,
         _createdAt = mockTime,
         _updatedAt = mockTime
       }
@@ -69,6 +70,7 @@ defaultDropLocation =
         _pincode = Nothing,
         _address = Nothing,
         _bound = Nothing,
+        _point = Location.Point,
         _createdAt = mockTime,
         _updatedAt = mockTime
       }
