@@ -34,7 +34,9 @@ handle =
       cancelRide = I.cancelRide,
       cleanupRide = I.cleanupRide,
       resetRequestTime = I.resetRequestTime,
-      logInfo = I.logInfo
+      runSafely = I.runSafely,
+      logInfo = I.logInfo,
+      logError = I.logError
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

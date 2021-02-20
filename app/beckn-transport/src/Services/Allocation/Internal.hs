@@ -152,6 +152,12 @@ resetRequestTime = QRR.updateLastProcessTime
 logInfo :: Text -> Text -> Flow ()
 logInfo = Log.logInfo
 
+logError :: Text -> Text -> Flow ()
+logError = Log.logError
+
+runSafely :: (FromJSON a, ToJSON a) => Flow a -> Flow (Either Text a)
+runSafely = runSafeFlow
+
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->
   SNS.AnswerStatus
