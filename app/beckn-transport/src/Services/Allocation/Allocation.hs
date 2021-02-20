@@ -3,6 +3,7 @@
 module Services.Allocation.Allocation where
 
 import Data.Generics.Labels ()
+import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.Ride as DriverResponse (DriverResponse (..), NotificationStatus (..))
@@ -186,6 +187,7 @@ proceedToNextDriver handle@ServiceHandle {..} requestHeader = do
   logRequest handle requestHeader "proceed to next driver"
   let rideId = requestHeader ^. #rideId
   driverPool <- getDriverPool rideId
+  logRequest handle requestHeader ("DriverPool " <> T.concat (_getDriverId <$> driverPool))
 
   case driverPool of
     driverId : driverIds -> do

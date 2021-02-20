@@ -93,6 +93,7 @@ search transporterId bapOrg req = withFlowHandler $ do
             (fromLocation ^. #_id)
             transporterId
             vehicleVariant
+        logInfo ("Search_DriverPool_" <> _getOrganizationId transporterId) (T.concat $ _getPersonId <$> pool)
         return $
           if null pool
             then (ProductInstance.OUTOFSTOCK, SC.CLOSED)
@@ -358,8 +359,9 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   vehicleVariant :: Vehicle.Variant <-
     (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
       & fromMaybeM500 "NO_VEHICLE_VARIANT"
-  calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
-    >>= setDriverPool prodInstId
+  driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
+  logInfo ("Confirm_DriverPool_" <> _getProductInstanceId prodInstId) (T.concat $ _getPersonId <$> driverPool)
+  setDriverPool prodInstId driverPool
 
   -- Send callback to BAP
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
