@@ -74,6 +74,7 @@ data FCMNotificationType
   | TRIP_STARTED
   | TRIP_FINISHED
   | ALLOCATION_REQUEST
+  | ALLOCATION_REQUEST_UNASSIGNED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types

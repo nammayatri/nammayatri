@@ -107,7 +107,7 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
             poolMap <- readTVarIO driverPool
             let pool = fromMaybe [] $ Map.lookup rideId poolMap
             pure pool,
-          sendNotification = \rideId driverId -> do
+          sendNewRideNotification = \rideId driverId -> do
             pure (),
           getCurrentNotification = \rideId -> do
             ns <- readTVarIO notificationStatus

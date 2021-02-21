@@ -106,11 +106,17 @@ getCurrentNotification rideId =
       let driverId = notificationStatus ^. #_driverId
       return (Alloc.CurrentNotification driverId notifiedAt)
 
-sendNotification :: RideId -> DriverId -> Flow ()
-sendNotification (RideId rideId) (DriverId driverId) = do
+sendNewRideNotification :: RideId -> DriverId -> Flow ()
+sendNewRideNotification (RideId rideId) (DriverId driverId) = do
   prodInst <- QPI.findById (ProductInstanceId rideId)
   person <- QP.findPersonById (PersonId driverId)
   notifyDriverNewAllocation prodInst person
+
+sendRideNotAssignedNotification :: RideId -> DriverId -> Flow ()
+sendRideNotAssignedNotification (RideId rideId) (DriverId driverId) = do
+  prodInst <- QPI.findById (ProductInstanceId rideId)
+  person <- QP.findPersonById (PersonId driverId)
+  notifyDriverUnassigned prodInst person
 
 updateNotificationStatus :: RideId -> DriverId -> NotificationStatus -> Flow ()
 updateNotificationStatus rideId driverId =

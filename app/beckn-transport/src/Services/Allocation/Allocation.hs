@@ -64,7 +64,9 @@ data ServiceHandle m = ServiceHandle
     -- Can be done as a select from the NotificationStatus table.
     getCurrentNotification :: RideId -> m (Maybe CurrentNotification),
     -- Send notification to a driver about a ride
-    sendNotification :: RideId -> DriverId -> m (),
+    sendNewRideNotification :: RideId -> DriverId -> m (),
+    -- Send notification to a driver about the ride he didn't get assigned to
+    sendRideNotAssignedNotification :: RideId -> DriverId -> m (),
     -- Add notification status
     -- Can be done as an insert to the NotificationStatus table.
     addNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
@@ -166,7 +168,10 @@ processCurrentNotification
     notificationTimeFinished <- isNotificationTimeFinished handle notificationTime
     logRequestInfo handle requestHeader $ "isNotificationTimeFinished " <> show notificationTimeFinished
     if notificationTimeFinished
-      then processRejection handle True requestHeader driverId
+      then do
+        logRequestInfo handle requestHeader $ "Notified ride not assigned to driver " <> _getDriverId driverId
+        sendRideNotAssignedNotification rideId driverId
+        processRejection handle True requestHeader driverId
       else do
         mResponse <- getDriverResponse rideId driverId
         logRequestInfo handle requestHeader ("getDriverResponse " <> show mResponse)
@@ -221,7 +226,7 @@ processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
           ETA -> pure driverId
           IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
       time <- getCurrentTime
-      sendNotification rideId firstDriver
+      sendNewRideNotification rideId firstDriver
       addNotificationStatus rideId firstDriver $ Notified time
       logRequestInfo handle requestHeader $ "Notified driver " <> _getDriverId firstDriver
     [] -> cancel handle requestHeader

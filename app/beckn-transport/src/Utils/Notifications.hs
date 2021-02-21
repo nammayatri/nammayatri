@@ -158,3 +158,19 @@ notifyDriverNewAllocation productInstance = notifyPerson title body notification
           _fcmEntityType = FCM.Product,
           _fcmEntityIds = _getProductInstanceId $ productInstance ^. #_id
         }
+
+notifyDriverUnassigned :: ProductInstance -> Person -> Flow ()
+notifyDriverUnassigned productInstance = notifyPerson title body notificationData
+  where
+    title = FCM.FCMNotificationTitle "Ride not assigned."
+    body =
+      FCM.FCMNotificationBody $
+        unwords
+          ["Ride could not be assigned."]
+    notificationData =
+      FCM.FCMData
+        { _fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityType = FCM.Product,
+          _fcmEntityIds = _getProductInstanceId $ productInstance ^. #_id
+        }
