@@ -198,7 +198,7 @@ proceedToNextDriver handle@ServiceHandle {..} requestHeader = do
   logRequestInfo handle requestHeader "proceed to next driver"
   let rideId = requestHeader ^. #rideId
   driverPool <- getDriverPool rideId
-  logRequestInfo handle requestHeader ("DriverPool " <> T.concat (_getDriverId <$> driverPool))
+  logRequestInfo handle requestHeader ("DriverPool " <> T.intercalate ", " (_getDriverId <$> driverPool))
 
   case driverPool of
     driverId : driverIds -> do
