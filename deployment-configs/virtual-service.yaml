@@ -57,6 +57,19 @@ spec:
       timeout: 40s
     - match:
         - uri:
+            prefix: /app/support/
+        - uri:
+            prefix: /app/support
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-app-customer-support-sandbox
+            port:
+              number: 3000
+      timeout: 40s
+    - match:
+        - uri:
             prefix: /app/
       rewrite:
         uri: /
@@ -90,8 +103,8 @@ spec:
       timeout: 40s
     - match:
         - headers:
-            "authorization":
-              prefix: "Signature"
+            authorization:
+              prefix: Signature
           uri:
             prefix: /gateway/
       rewrite:

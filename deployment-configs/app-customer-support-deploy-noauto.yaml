@@ -1,0 +1,211 @@
+# App repository - https://github.com/beckn-dev/yatri_customer_support/ (private repo)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beckn-app-customer-support-$DEPLOY_VARIANT
+  namespace: atlas
+  labels:
+    version: latest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beckn-app-customer-support-$DEPLOY_VARIANT
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: beckn-app-customer-support-$DEPLOY_VARIANT
+        version: latest
+    spec:
+      containers:
+        - env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          image: asia.gcr.io/jp-dev-chaos/beckn-customer-support-dashboard:$BUILD_VERSION
+          name: beckn-app-customer-support-$DEPLOY_VARIANT
+          ports:
+            - containerPort: 3000
+              name: app-http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 3Gi
+          securityContext:
+            privileged: false
+        - args:
+            - proxy
+            - sidecar
+            - --domain
+            - $(POD_NAMESPACE).svc.cluster.local
+            - --configPath
+            - /etc/istio/proxy
+            - --binaryPath
+            - /usr/local/bin/envoy
+            - --serviceCluster
+            - beckn-app-customer-support-$DEPLOY_VARIANT.$(POD_NAMESPACE)
+            - --drainDuration
+            - 45s
+            - --parentShutdownDuration
+            - 1m0s
+            - --discoveryAddress
+            - istio-pilot.istio-system:15010
+            - --zipkinAddress
+            - zipkin.istio-system:9411
+            - --dnsRefreshRate
+            - 300s
+            - --connectTimeout
+            - 10s
+            - --proxyAdminPort
+            - "15000"
+            - --concurrency
+            - "2"
+            - --controlPlaneAuthPolicy
+            - NONE
+            - --statusPort
+            - "15020"
+            - --applicationPorts
+            - "3000"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ISTIO_META_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ISTIO_META_CONFIG_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ISTIO_META_INTERCEPTION_MODE
+              value: REDIRECT
+            - name: ISTIO_META_INCLUDE_INBOUND_PORTS
+              value: "3000"
+            - name: ISTIO_METAJSON_ANNOTATIONS
+              value: |
+                {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
+            - name: ISTIO_METAJSON_LABELS
+              value: |
+                {"app":"beckn-app-customer-support-$DEPLOY_VARIANT","version":"latest"}
+          image: asia.gcr.io/jp-k8s-internal/proxyv2:1.2.2
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/bash", "-c", "sleep 60"]
+          name: istio-proxy
+          ports:
+            - containerPort: 15090
+              name: http-envoy-prom
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready
+              port: 15020
+            initialDelaySeconds: 1
+            periodSeconds: 2
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1337
+          volumeMounts:
+            - mountPath: /etc/istio/proxy
+              name: istio-envoy
+            - mountPath: /etc/certs/
+              name: istio-certs
+              readOnly: true
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+          - name: single-request-reopen
+      imagePullSecrets:
+        - name: gpay-gcr
+      initContainers:
+        - args:
+            - -p
+            - "15001"
+            - -u
+            - "1337"
+            - -m
+            - REDIRECT
+            - -i
+            - ""
+            - -x
+            - ""
+            - -b
+            - "3000"
+            - -d
+            - "15020"
+          image: asia.gcr.io/jp-k8s-internal/proxy_init:1.2.2
+          imagePullPolicy: IfNotPresent
+          name: istio-init
+          resources:
+            limits:
+              cpu: 100m
+              memory: 50Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+            runAsNonRoot: false
+            runAsUser: 0
+      terminationGracePeriodSeconds: 90
+      volumes:
+        - emptyDir:
+            medium: Memory
+          name: istio-envoy
+        - name: istio-certs
+          secret:
+            optional: true
+            secretName: istio.default
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: atlas
+  name: beckn-app-customer-support-$DEPLOY_VARIANT
+  labels:
+    app: beckn-app-customer-support-$DEPLOY_VARIANT
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: app-http
+  selector:
+    app: beckn-app-customer-support-$DEPLOY_VARIANT
