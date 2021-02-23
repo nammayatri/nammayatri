@@ -339,6 +339,9 @@ instance HasDbCfg r => HasSchemaName (FlowR r) where
   getSchemaName =
     asks (schemaName <$> getField @"dbCfg")
 
+getSchemaName' :: (MonadReader r m, HasField "schemaName" r Text) => m Text
+getSchemaName' = asks (getField @"schemaName")
+
 -- | Get trace flag from ENV var
 getTraceFlag :: HasTraceFlag r => FlowR r TraceFlag
 getTraceFlag =

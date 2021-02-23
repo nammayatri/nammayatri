@@ -43,9 +43,6 @@ data DBEnv = DBEnv
 
 type SqlDB = ReaderT DBEnv (L.SqlDB Pg)
 
-instance HasSchemaName SqlDB where
-  getSchemaName = asks schemaName
-
 runSqlDB' ::
   (HasCallStack, T.JSONEx a) =>
   ( T.SqlConn Pg ->
@@ -61,17 +58,13 @@ runSqlDB' runSqlDBFunction query = do
   let env = DBEnv {..}
   runSqlDBFunction connection (runReaderT query env)
 
-runSqlDB ::
-  (HasCallStack, T.JSONEx a) =>
-  SqlDB a ->
-  DB.FlowWithDb r (T.DBResult a)
+runSqlDB,
+  runSqlDBTransaction ::
+    (HasCallStack, T.JSONEx a) =>
+    SqlDB a ->
+    DB.FlowWithDb r (T.DBResult a)
+runSqlDBTransaction = runSqlDB' L.runTransaction
 runSqlDB = runSqlDB' L.runDB
-
-runSqlDBTransaction ::
-  (HasCallStack, T.JSONEx a) =>
-  SqlDB a ->
-  DB.FlowWithDb r a
-runSqlDBTransaction = runSqlDB' L.runTransaction >=> either throwDBError pure
 
 run :: (HasCallStack, T.JSONEx a) => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
 run query = do
