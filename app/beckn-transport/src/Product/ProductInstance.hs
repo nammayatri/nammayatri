@@ -54,8 +54,8 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 
 update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
-  when (req ^. #_status == Just PI.TRIP_ASSIGNED) $
-    throwError400 "CANNOT_ASSIGN_TRIP_MANUALLY"
+  when (maybe False (`elem` forbiddenStatuses) (req ^. #_status)) $
+    throwError400 "BAD_STATUS"
   user <- PersQ.findPersonById (PersonId _EntityId)
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
@@ -74,6 +74,8 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   updateInfo piId
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
+  where
+    forbiddenStatuses = [PI.TRIP_ASSIGNED, PI.TRIP_REASSIGNMENT]
 
 notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
