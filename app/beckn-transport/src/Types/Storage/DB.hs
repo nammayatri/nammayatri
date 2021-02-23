@@ -14,6 +14,7 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Types.Storage.Customer as Customer
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
@@ -46,7 +47,8 @@ data TransporterDb f = TransporterDb
     _driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
     _farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
     _rideRequest :: f (B.TableEntity RideRequest.RideRequestT),
-    _notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT)
+    _notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
+    _allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT)
   }
   deriving (Generic, B.Database be)
 
@@ -73,7 +75,8 @@ transporterDb dbSchemaName =
         _driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod,
         _farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod,
         _rideRequest = setSchema dbSchemaName <> RideRequest.fieldEMod,
-        _notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod
+        _notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod,
+        _allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

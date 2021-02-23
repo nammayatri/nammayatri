@@ -37,7 +37,8 @@ handle =
       resetRequestTime = I.resetRequestTime,
       runSafely = I.runSafely,
       logInfo = I.logInfo,
-      logError = I.logError
+      logError = I.logError,
+      logEvent = I.logEvent
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

@@ -16,6 +16,7 @@ import qualified Product.BecknProvider.BP as BP
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as PI
 import Services.Allocation.Allocation as Alloc
+import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
@@ -27,6 +28,7 @@ import qualified Storage.Queries.RideRequest as QRR
 import Types.API.ProductInstance
 import Types.API.Ride (DriverResponse (..))
 import Types.App
+import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
 import qualified Types.Storage.RideRequest as SRR
@@ -201,3 +203,6 @@ addAvailableDriver driverInfo availableDriversIds =
 
 toDriverId :: PersonId -> DriverId
 toDriverId = DriverId . _getPersonId
+
+logEvent :: AllocationEventType -> RideId -> Flow ()
+logEvent = logAllocationEvent

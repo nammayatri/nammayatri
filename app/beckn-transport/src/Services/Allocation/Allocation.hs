@@ -8,6 +8,7 @@ import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.Ride as DriverResponse (DriverResponse (..), NotificationStatus (..))
 import Types.App
+import Types.Storage.AllocationEvent (AllocationEventType (..))
 
 newtype OrderTime = OrderTime
   { utcTime :: UTCTime
@@ -102,7 +103,8 @@ data ServiceHandle m = ServiceHandle
     resetRequestTime :: RideRequestId -> m (),
     runSafely :: forall a. (FromJSON a, ToJSON a) => m a -> m (Either Text a),
     logInfo :: Text -> Text -> m (),
-    logError :: Text -> Text -> m ()
+    logError :: Text -> Text -> m (),
+    logEvent :: AllocationEventType -> RideId -> m ()
   }
 
 process :: Monad m => ServiceHandle m -> Integer -> m Int
@@ -130,9 +132,10 @@ processRequest handle@ServiceHandle {..} rideRequest = do
     logRequestInfo handle requestHeader "Start processing request"
     case rideRequest ^. #requestData of
       Allocation orderTime ->
-        processAllocation handle (rideRequest ^. #requestHeader) orderTime
-      Cancellation ->
-        cancel handle $ rideRequest ^. #requestHeader
+        processAllocation handle requestHeader orderTime
+      Cancellation -> do
+        cancel handle requestHeader
+        logEvent ConsumerCancelled (requestHeader ^. #rideId)
     logRequestInfo handle requestHeader "End processing request"
   whenLeft eres $
     \err -> do
@@ -144,7 +147,9 @@ processAllocation handle@ServiceHandle {..} requestHeader orderTime = do
   allocationTimeFinished <- isAllocationTimeFinished handle orderTime
   logRequestInfo handle requestHeader $ "isAllocationTimeFinished " <> show allocationTimeFinished
   if allocationTimeFinished
-    then cancel handle requestHeader
+    then do
+      cancel handle requestHeader
+      logEvent AllocationTimeFinished (requestHeader ^. #rideId)
     else do
       mCurrentNotification <- getCurrentNotification (requestHeader ^. #rideId)
       logRequestInfo handle requestHeader ("getCurrentNotification " <> show mCurrentNotification)
@@ -181,6 +186,7 @@ processCurrentNotification
               logRequestInfo handle requestHeader ("assigning driver" <> show driverId)
               assignDriver rideId driverId
               cleanupRide $ requestHeader ^. #rideId
+              logEvent AcceptedByDriver (requestHeader ^. #rideId)
             DriverResponse.REJECT ->
               processRejection handle False requestHeader driverId
 
@@ -189,8 +195,10 @@ processRejection handle@ServiceHandle {..} ignored requestHeader driverId = do
   logRequestInfo handle requestHeader "processing rejection"
   let rideId = requestHeader ^. #rideId
   let status = if ignored then Ignored else Rejected
+  let event = if ignored then IgnoredByDriver else RejectedByDriver
   resetLastRejectionTime driverId
   updateNotificationStatus rideId driverId status
+  logEvent event (requestHeader ^. #rideId)
   proceedToNextDriver handle requestHeader
 
 proceedToNextDriver :: Monad m => ServiceHandle m -> RequestHeader -> m ()
@@ -229,7 +237,10 @@ processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
       sendNewRideNotification rideId firstDriver
       addNotificationStatus rideId firstDriver $ Notified time
       logRequestInfo handle requestHeader $ "Notified driver " <> _getDriverId firstDriver
-    [] -> cancel handle requestHeader
+      logEvent NotificationSent (requestHeader ^. #rideId)
+    [] -> do
+      cancel handle requestHeader
+      logEvent EmptyDriverPool (requestHeader ^. #rideId)
 
 cancel :: Monad m => ServiceHandle m -> RequestHeader -> m ()
 cancel handle@ServiceHandle {..} requestHeader = do

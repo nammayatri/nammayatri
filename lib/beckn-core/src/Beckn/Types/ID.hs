@@ -3,6 +3,7 @@
 
 module Beckn.Types.ID where
 
+import Beckn.Types.Common (GuidLike (..))
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
   ( BeamSqlBackend,
@@ -34,3 +35,6 @@ instance BeamSqlBackend be => HasSqlEqualityCheck be (ID a)
 
 instance FromHttpApiData (ID a) where
   parseUrlPiece = pure . ID
+
+instance GuidLike (ID a) where
+  generateGUID = ID <$> generateGUID
