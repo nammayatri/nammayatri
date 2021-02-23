@@ -30,6 +30,7 @@ let signingKeys =
   , globalCommon.mkSigningKey "juspay-mobility-bpp-11-key-sandbox" "xxxxxxx"
   , globalCommon.mkSigningKey "juspay-mobility-bpp-12-key-sandbox" "xxxxxxx"
   , globalCommon.mkSigningKey "juspay-mobility-bpp-13-key-sandbox" "xxxxxxx"
+  , globalCommon.mkSigningKey "juspay-mobility-bpp-14-key-sandbox" "xxxxxxx"
 ]
 
 let exotelCfg =

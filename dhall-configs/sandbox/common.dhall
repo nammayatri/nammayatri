@@ -42,6 +42,7 @@ let credRegistry =
   , globalCommon.mkCredential "juspay-mobility-bpp-11-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.11.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "juspay-mobility-bpp-12-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.12.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "juspay-mobility-bpp-13-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.13.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "juspay-mobility-bpp-14-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.14.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
