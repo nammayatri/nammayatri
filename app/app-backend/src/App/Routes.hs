@@ -5,6 +5,7 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
@@ -29,6 +30,7 @@ import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
 import qualified Product.Location as Location
+import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
 import qualified Product.Search as Search
@@ -46,6 +48,7 @@ import qualified Types.API.Cron as Cron
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
+import qualified Types.API.Person as Person
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
@@ -80,6 +83,7 @@ type AppAPI =
            :<|> FeedbackAPI
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
+           :<|> PersonAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -106,6 +110,7 @@ appServer =
     :<|> feedbackFlow
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
+    :<|> personFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -407,3 +412,18 @@ googleMapsProxyFlow =
   GoogleMapsFlow.autoComplete
     :<|> GoogleMapsFlow.placeDetails
     :<|> GoogleMapsFlow.getPlaceName
+
+type PersonAPI =
+  "person"
+    :> ( TokenAuth
+           :> Get '[JSON] Person.GetPersonDetailsRes
+           :<|> "update"
+             :> TokenAuth
+             :> ReqBody '[JSON] Person.UpdateReq
+             :> Post '[JSON] APIResult.APIResult
+       )
+
+personFlow :: FlowServer PersonAPI
+personFlow =
+  Person.getPersonDetails
+    :<|> Person.updatePerson

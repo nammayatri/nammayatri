@@ -4,6 +4,7 @@ module Storage.Queries.Person where
 
 import App.Types
 import Beckn.External.Encryption
+import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
@@ -174,6 +175,25 @@ updatePersonOrgId orgId personId = do
     setClause a n Storage.Person {..} =
       mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i Storage.Person {..} = _id ==. B.val_ i
+
+updatePersonalInfo :: PersonId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe FCM.FCMRecipientToken -> Flow ()
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbDeviceToken = do
+  dbTable <- getDbTable
+  now <- getCurrTime
+  DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbFullName mbGender mbDeviceToken) (predicate personId)
+    >>= either DB.throwDBError pure
+  where
+    setClause now mbFirstN mbMiddleN mbLastN mbFullN mbG mbDToken Storage.Person {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ now,
+          maybe mempty (\x -> _firstName <-. B.val_ (Just x)) mbFirstN,
+          maybe mempty (\x -> _middleName <-. B.val_ (Just x)) mbMiddleN,
+          maybe mempty (\x -> _lastName <-. B.val_ (Just x)) mbLastN,
+          maybe mempty (\x -> _fullName <-. B.val_ (Just x)) mbFullN,
+          maybe mempty (\x -> _gender <-. B.val_ x) mbG,
+          maybe mempty (\x -> _deviceToken <-. B.val_ (Just x)) mbDToken
+        ]
+    predicate id Storage.Person {..} = _id ==. B.val_ id
 
 findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> Flow [Storage.Person]
 findAllWithLimitOffsetByRole mlimit moffset roles = do
