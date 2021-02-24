@@ -151,3 +151,31 @@ getKeyRedisText key = do
     case resp of
       Right (Just v) -> Just $ DTE.decodeUtf8 v
       _ -> Nothing
+
+tryLockRedis ::
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
+  mFlow Bool
+tryLockRedis = do
+  resp <- runKV (L.rawRequest ["SET", lockResourceName, "1", "NX", "EX", maxLockTime])
+  return $
+    case resp of
+      Right (Just ("OK" :: ByteString)) -> True
+      _ -> False
+  where
+    lockResourceName = "redis:locker"
+    maxLockTime = "10"
+
+unlockRedis ::
+  ( HasCallStack,
+    L.MonadFlow mFlow
+  ) =>
+  mFlow Bool
+unlockRedis = do
+  resp <- deleteKeyRedis lockResourceName
+  return $ case resp of
+    (-1) -> False
+    _ -> True
+  where
+    lockResourceName = "redis:locker"
