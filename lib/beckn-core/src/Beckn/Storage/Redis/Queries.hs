@@ -165,17 +165,15 @@ tryLockRedis = do
       _ -> False
   where
     lockResourceName = "redis:locker"
-    maxLockTime = "10"
+    maxLockTime = "60"
 
 unlockRedis ::
   ( HasCallStack,
     L.MonadFlow mFlow
   ) =>
-  mFlow Bool
+  mFlow ()
 unlockRedis = do
-  resp <- deleteKeyRedis lockResourceName
-  return $ case resp of
-    (-1) -> False
-    _ -> True
+  _ <- deleteKeyRedis lockResourceName
+  return ()
   where
     lockResourceName = "redis:locker"
