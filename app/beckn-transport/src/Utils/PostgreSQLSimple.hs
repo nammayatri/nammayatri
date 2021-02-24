@@ -46,7 +46,7 @@ withPostgreSQLSimple f = do
   res <-
     L.runUntracedIO . withResource pool $
       runPostgresqlSimple . fmap Right . f
-  either throwError500 pure res
+  either (throwError500 . encode) pure res
 
 runPostgresqlSimple :: IO (Either Text a) -> IO (Either Text a)
 runPostgresqlSimple = (`catches` handlers)

@@ -11,6 +11,7 @@ import Beckn.Types.Common as BC
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import qualified Data.Aeson as Aeson
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.Person as Person
@@ -123,7 +124,7 @@ sendOTP SmsCredConfig {..} phoneNumber otpCode = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructOtpSms otpCode otpHash
         }
-  whenLeft res $ \err -> throwError503 $ encodeToText err
+  whenLeft res $ \err -> throwError503 $ Aeson.encode err
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =

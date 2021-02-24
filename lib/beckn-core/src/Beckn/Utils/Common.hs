@@ -235,9 +235,9 @@ authenticate = check handleKey
     throw401 =
       throwError401 "Invalid Auth"
 
-throwHttpError :: (HasCallStack, L.MonadFlow m) => ServerError -> Text -> m a
+throwHttpError :: (HasCallStack, L.MonadFlow m) => ServerError -> BSL.ByteString -> m a
 throwHttpError err errMsg =
-  L.throwException err {errBody = BSL.fromStrict (DT.encodeUtf8 errMsg)}
+  L.throwException err {errBody = errMsg}
 
 throwBecknError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Text -> m a
 throwBecknError err errMsg = do
@@ -268,7 +268,7 @@ throwError500,
   throwError401,
   throwError403,
   throwError404 ::
-    (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
+    (HasCallStack, L.MonadFlow m, Log m) => BSL.ByteString -> m a
 throwError500 = throwHttpError S.err500
 throwError501 = throwHttpError S.err501
 throwError503 = throwHttpError S.err503

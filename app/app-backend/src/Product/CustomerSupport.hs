@@ -12,6 +12,8 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as BSL
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Storage.Queries.Case as Case
@@ -26,10 +28,10 @@ login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandler $ do
   personM <- Person.findByUsernameAndPassword _email _password
   case personM of
-    Nothing -> throwError401 "Invalid credentials. Please try again."
+    Nothing -> throwError401 $ makeJSONErrorMsg "Invalid credentials. Please try again."
     Just person ->
       if person ^. #_status /= SP.ACTIVE && person ^. #_role /= SP.CUSTOMER_SUPPORT
-        then throwError401 "Invalid credentials. Please try again."
+        then throwError401 $ makeJSONErrorMsg "Invalid credentials. Please try again."
         else do
           token <- generateToken person
           pure $ T.LoginRes token "Logged in successfully"
@@ -47,10 +49,13 @@ logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
   withFlowHandler $
     if person ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError401 "Unauthorized request. Please try again" -- Do we need this Check?
+      then throwError401 $ makeJSONErrorMsg "Unauthorized request. Please try again" -- Do we need this Check?
       else do
         RegistrationToken.deleteByPersonId (_getPersonId $ person ^. #_id)
         pure $ T.LogoutRes "Logged out successfully"
+
+makeJSONErrorMsg :: Text -> BSL.ByteString
+makeJSONErrorMsg msg = Aeson.encode $ Aeson.object ["message" Aeson..= msg]
 
 createSupportRegToken :: Text -> Flow SR.RegistrationToken
 createSupportRegToken entityId = do
@@ -79,19 +84,19 @@ listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Int
 listOrder supportP mCaseId mMobile mlimit moffset =
   withFlowHandler $
     if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError403 "Forbidden"
+      then throwError403 $ makeJSONErrorMsg "Forbidden"
       else do
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwError400 "No CaseId or Mobile Number in Request"
+          (_, _) -> throwError400 $ makeJSONErrorMsg "No CaseId or Mobile Number in Request"
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
-          >>= fromMaybeM400 "Invalid MobileNumber"
+          >>= fromMaybeM400 (makeJSONErrorMsg "Invalid MobileNumber")
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
           >>= either DB.throwDBError pure
@@ -100,11 +105,11 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       (_case :: C.Case) <-
         Case.findByIdAndType (CaseId caseId) C.RIDESEARCH
           >>= either DB.throwDBError pure
-          >>= fromMaybeM400 "Invalid OrderId"
+          >>= fromMaybeM400 (makeJSONErrorMsg "Invalid OrderId")
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
         Person.findById (PersonId personId)
-          >>= fromMaybeM400 "Invalid CustomerId"
+          >>= fromMaybeM400 (makeJSONErrorMsg "Invalid CustomerId")
       return $ T.OrderInfo person [_case]
 
 makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
