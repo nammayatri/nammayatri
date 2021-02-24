@@ -44,7 +44,7 @@ withPostgreSQLSimple f = do
         PostgresPool _connTag pool -> pure pool
         _ -> throwError500 "NOT_POSTGRES_BACKEND"
   res <-
-    L.runUntracedIO . withResource pool $
+    L.runIO . withResource pool $
       runPostgresqlSimple . fmap Right . f
   either (throwError500 . encode) pure res
 

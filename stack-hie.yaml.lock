@@ -32,15 +32,15 @@ packages:
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
 - completed:
     name: euler-hs
-    version: 2.0.1.1
+    version: 2.0.3.2
     git: git@bitbucket.org:juspay/euler-hs.git
     pantry-tree:
-      size: 7889
-      sha256: 5593b0fbb1e8bf75b7288bc04e893e17629210fce3c3b7eddee91a854d65b810
-    commit: 5603de3f3f148850be4ef21e03a9623f3b7f8d73
+      size: 7950
+      sha256: 6c75def3a493115015643b59a6e2dbd8da58c97eac1160618d842aed9d3cbdb1
+    commit: fefa3f72c8026ec0cf367569c1d1132f0cde44c5
   original:
     git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 5603de3f3f148850be4ef21e03a9623f3b7f8d73
+    commit: fefa3f72c8026ec0cf367569c1d1132f0cde44c5
 - completed:
     name: hedis
     version: 0.12.8.1
@@ -54,15 +54,15 @@ packages:
     commit: 46ea0ea78e6d8d1a2b1a66e6f08078a37864ad80
 - completed:
     name: beam-mysql
-    version: 1.2.0.0
+    version: 1.2.1.0
     git: https://github.com/juspay/beam-mysql
     pantry-tree:
-      size: 2683
-      sha256: 04a54665c45bdb7b3e8ad4e94908d4e90231831deee1127c22b3c1d36d4b74f0
-    commit: c1fe205aa411d9d73cbc2037710399649a2f5c77
+      size: 3064
+      sha256: c612aef440faa9a9278858c8a52b952c20240555c3d7e84ac8bfc1e94eb35c61
+    commit: 4c876ea2eae60bf3402d6f5c1ecb60a386fe3ace
   original:
     git: https://github.com/juspay/beam-mysql
-    commit: c1fe205aa411d9d73cbc2037710399649a2f5c77
+    commit: 4c876ea2eae60bf3402d6f5c1ecb60a386fe3ace
 - completed:
     name: mysql-haskell
     version: 0.8.4.2
@@ -93,11 +93,11 @@ packages:
     pantry-tree:
       size: 2623
       sha256: 365f420adf34642df7ffac56f80a578da48b3bebfac140748f3e163f83b4e37c
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
   original:
     subdir: beam-core
     git: https://github.com/juspay/beam
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
 - completed:
     subdir: beam-migrate
     name: beam-migrate
@@ -106,11 +106,11 @@ packages:
     pantry-tree:
       size: 1825
       sha256: 3ef904145e6e05e2f1cf6558e40f109f2751f08d2f8ce446f4e43ab70675936b
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
   original:
     subdir: beam-migrate
     git: https://github.com/juspay/beam
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
 - completed:
     subdir: beam-sqlite
     name: beam-sqlite
@@ -119,24 +119,24 @@ packages:
     pantry-tree:
       size: 859
       sha256: d28565e631ed326b35719b4f0b1825dbdda0daed39618bff3506b70f45b9d2e8
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
   original:
     subdir: beam-sqlite
     git: https://github.com/juspay/beam
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
 - completed:
     subdir: beam-postgres
     name: beam-postgres
     version: 0.5.0.0
     git: https://github.com/juspay/beam
     pantry-tree:
-      size: 2507
-      sha256: 704819878bd1e02b745ca12ae53e061103dafaa00eba94bb41747447fadea7cd
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+      size: 2594
+      sha256: 4d11e99a86be3ce5067479308bec2a541fa60a88ffbb1f95c316017646ed4c57
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
   original:
     subdir: beam-postgres
     git: https://github.com/juspay/beam
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
 - completed:
     name: sequelize
     version: 1.1.0.0
@@ -155,6 +155,62 @@ packages:
       sha256: 33e1509b7d786d816a0974f08cfb6208a7d02c7d45937bec2c91586523b14440
   original:
     hackage: generic-lens-1.1.0.0
+- completed:
+    hackage: servant-0.18.1@sha256:d322da8a5033203b3da510fdd41c949f61d25b7a2e3ab707035aef5484bbeb13,5273
+    pantry-tree:
+      size: 2594
+      sha256: 59fe629e1b6e92571e1b54a7028c09abfff655077361bedc0689bcaca30c7240
+  original:
+    hackage: servant-0.18.1
+- completed:
+    hackage: servant-mock-0.8.7@sha256:64cb3e52bbd51ab6cb25e3f412a99ea712c6c26f1efd117f01a8d1664df49c67,2306
+    pantry-tree:
+      size: 555
+      sha256: b263e932ec6b151e52987054ec0a4cd692fa787f856c79e51498302eb0d6c388
+  original:
+    hackage: servant-mock-0.8.7
+- completed:
+    hackage: servant-server-0.18.1@sha256:f0824cfa57b23b6b698dbd93e11598c4c5355aaa26121f48c091f6e5f03623fc,5665
+    pantry-tree:
+      size: 2614
+      sha256: afba7a901c86dfe0c65d18470bca144b371cbff13d4fb516247b200fbd62597b
+  original:
+    hackage: servant-server-0.18.1
+- completed:
+    hackage: servant-client-0.18.1@sha256:03d5628829331eaa72402e7c5cc059cff72cb91c34c5f10042fe09fd05454eb4,4745
+    pantry-tree:
+      size: 1300
+      sha256: a8e23be4307bef89466b4dd60035980820566cf6142b74b29b120a60490dd851
+  original:
+    hackage: servant-client-0.18.1
+- completed:
+    hackage: servant-client-core-0.18.1@sha256:a116901bf2aa8b6ff63b1c8e24b34c4fe7c505682e9862f314c5bcd2f9279312,3763
+    pantry-tree:
+      size: 1444
+      sha256: 8a47f39a046ba959fc150c44a95cec46f41feec28970e11ec6397604e785d36f
+  original:
+    hackage: servant-client-core-0.18.1
+- completed:
+    hackage: servant-docs-0.11.7@sha256:ef9179713f99a3025cd300df7d2fe7f4895b0483c8fe4d3fb7550b6128bd460a,3282
+    pantry-tree:
+      size: 702
+      sha256: a86b3885b2f3a41266c2944647d520fdbe23469c4a69c2384579e65c567ed913
+  original:
+    hackage: servant-docs-0.11.7
+- completed:
+    hackage: servant-foreign-0.15.2@sha256:b009c6731459477396908c8b5c1a712792bbfeda4813eb96c5110507b41946b4,2784
+    pantry-tree:
+      size: 590
+      sha256: c0dc5da3feeba2116a645ed7fef559e3704bd4bdef6e9e1e0f14682816345d77
+  original:
+    hackage: servant-foreign-0.15.2
+- completed:
+    hackage: servant-swagger-1.1.10@sha256:ca3237516f11cb4d28fff6ec0991b9dc765456a3985df3fb469641fb5c742c5a,4623
+    pantry-tree:
+      size: 1636
+      sha256: 83536669b525e5c6ff3368698bcdbeec55858b713642575f88d3c3b52d0bf380
+  original:
+    hackage: servant-swagger-1.1.10
 - completed:
     hackage: named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
     pantry-tree:
@@ -254,12 +310,12 @@ packages:
   original:
     hackage: random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
 - completed:
-    hackage: servant-multipart-0.11.6@sha256:1863862e507dd6f672b4c9d2c6d87d4faec19686ced3d828d712ada07536cddb,2655
+    hackage: servant-multipart-0.12@sha256:aa81dd0478270ade4a21b75611d5bc9cce8107df2e89c37b9964a3421629825d,2761
     pantry-tree:
       size: 386
-      sha256: 3d45dc52822a30de2ee524358bf91ad77c041c4385ab75d636effa17e02e351e
+      sha256: 51c4e9e8be3ee80689bb6df46aee484a4f434dbeb33f4379ed8d1741fe4631cd
   original:
-    hackage: servant-multipart-0.11.6@sha256:1863862e507dd6f672b4c9d2c6d87d4faec19686ced3d828d712ada07536cddb,2655
+    hackage: servant-multipart-0.12@sha256:aa81dd0478270ade4a21b75611d5bc9cce8107df2e89c37b9964a3421629825d,2761
 - completed:
     hackage: time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
     pantry-tree:

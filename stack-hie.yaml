@@ -59,17 +59,17 @@ extra-deps:
       - core
       - client
   - git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 5603de3f3f148850be4ef21e03a9623f3b7f8d73
+    commit: fefa3f72c8026ec0cf367569c1d1132f0cde44c5
   - git: https://github.com/juspay/hedis
     commit: 46ea0ea78e6d8d1a2b1a66e6f08078a37864ad80
   - git: https://github.com/juspay/beam-mysql
-    commit: c1fe205aa411d9d73cbc2037710399649a2f5c77
+    commit: 4c876ea2eae60bf3402d6f5c1ecb60a386fe3ace
   - git: https://github.com/juspay/mysql-haskell
     commit: 788022d65538db422b02ecc0be138b862d2e5cee
   - git: https://github.com/juspay/bytestring-lexing
     commit: 0a46db1139011736687cb50bbd3877d223bcb737
   - git: https://github.com/juspay/beam
-    commit: 47f62de4cbfafe13891846ef795609b6f8050729
+    commit: 185ff060e63ab0b8a72775ee2742621dd6fefeb1
     subdirs:
       - beam-core
       - beam-migrate
@@ -78,6 +78,16 @@ extra-deps:
   - git: git@bitbucket.org:juspay/haskell-sequelize.git
     commit: bcbf4481372d77491896a5d2051ddb2eb90640ca
   - generic-lens-1.1.0.0 # Random breakage without this
+
+  - servant-0.18.1
+  - servant-mock-0.8.7
+  - servant-server-0.18.1
+  - servant-client-0.18.1
+  - servant-client-core-0.18.1
+
+  - servant-docs-0.11.7
+  - servant-foreign-0.15.2
+  - servant-swagger-1.1.10
 
   # Needed for sequelize
   - named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
@@ -97,7 +107,7 @@ extra-deps:
   - prometheus-metrics-ghc-1.0.1.1@sha256:d378a7186a967140fe0e09d325fe5e3bfd7b77a1123934b40f81fdfed2eacbdc,1233
   - prometheus-proc-0.1.3.0@sha256:84f56e9c886be777d5afd14fc57fff156137a611f0db0fe080b97fc602103c23,1058
   - random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
-  - servant-multipart-0.11.6@sha256:1863862e507dd6f672b4c9d2c6d87d4faec19686ced3d828d712ada07536cddb,2655
+  - servant-multipart-0.12@sha256:aa81dd0478270ade4a21b75611d5bc9cce8107df2e89c37b9964a3421629825d,2761
   - time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
   - wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
   - unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269

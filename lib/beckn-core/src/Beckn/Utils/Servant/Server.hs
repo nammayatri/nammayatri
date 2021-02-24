@@ -24,7 +24,9 @@ instance {-# OVERLAPPING #-} HasEnvEntry r (EnvR r ': xs) where
 
 run ::
   forall a r ctx.
-  HasServer a (EnvR r ': ctx) =>
+  ( HasContextEntry (ctx .++ '[ErrorFormatters]) ErrorFormatters,
+    HasServer a (EnvR r ': ctx)
+  ) =>
   Proxy (a :: Type) ->
   FlowServerR r a ->
   Context ctx ->

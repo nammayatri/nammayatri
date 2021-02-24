@@ -379,9 +379,9 @@ callClient' ::
   ET.EulerClient a ->
   m a
 callClient' mbManager desc context baseUrl cli = do
-  endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) desc
+  endTracking <- L.runIO $ Metrics.startTracking (encodeToText' baseUrl) desc
   res <- L.callAPI' mbManager baseUrl cli
-  _ <- L.runUntracedIO $ endTracking $ getResponseCode res
+  _ <- L.runIO $ endTracking $ getResponseCode res
   case res of
     Left err -> do
       logError "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err

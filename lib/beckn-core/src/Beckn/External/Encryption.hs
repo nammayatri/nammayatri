@@ -203,7 +203,7 @@ type FlowWithEnc r a = HasField "encService" r (String, Word16) => FlowR r a
 withPassettoCtx :: ReaderT PassettoContext IO a -> FlowWithEnc r a
 withPassettoCtx action = do
   (host, port) <- getField @"encService" <$> ask
-  L.runUntracedIO (mkDefPassettoContext host port) >>= L.runUntracedIO . runReaderT action
+  L.runIO (mkDefPassettoContext host port) >>= L.runIO . runReaderT action
 
 -- | Encrypt given value.
 --

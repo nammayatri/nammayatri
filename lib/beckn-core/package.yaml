@@ -87,7 +87,6 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-multipart
-  - servant-purescript
   - servant-server
   - servant-swagger
   - swagger2

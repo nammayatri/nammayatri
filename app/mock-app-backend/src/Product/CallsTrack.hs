@@ -25,8 +25,8 @@ callsTrack = unsafePerformIO . newTVarIO $ CallsTrack mempty Nothing
 
 readingCallsTrack :: Getter CallsTrack a -> Flow a
 readingCallsTrack getter =
-  fmap (view getter) $ L.runUntracedIO $ readTVarIO callsTrack
+  fmap (view getter) $ L.runIO $ readTVarIO callsTrack
 
 updateCallsTrack :: State CallsTrack () -> Flow ()
 updateCallsTrack st =
-  L.runUntracedIO . atomically $ modifyTVar callsTrack (execState st)
+  L.runIO . atomically $ modifyTVar callsTrack (execState st)

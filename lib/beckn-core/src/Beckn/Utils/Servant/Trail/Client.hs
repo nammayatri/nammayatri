@@ -127,7 +127,7 @@ callAPIWithTrail' ::
   Text ->
   FlowWithTraceFlag r (Either ClientError a)
 callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
-  endTracking <- L.runUntracedIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
+  endTracking <- L.runIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
   res <- L.callAPI' mbManager baseUrl req
   let status = case res of
         Right _ -> "200"
@@ -136,7 +136,7 @@ callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
         Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
-  _ <- L.runUntracedIO $ endTracking status
+  _ <- L.runIO $ endTracking status
   case res of
     Right r -> logInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
     Left err -> logInfo serviceName $ "Error occured during client call: " <> show err
