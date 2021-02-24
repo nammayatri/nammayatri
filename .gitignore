@@ -21,6 +21,7 @@ cabal.sandbox.config
 *.hp
 *.eventlog
 .vscode/
+*.vim
 cabal.project.local
 cabal.project.local~
 .HTF/
