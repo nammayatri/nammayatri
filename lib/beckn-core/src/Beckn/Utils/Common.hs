@@ -14,6 +14,7 @@ import Beckn.Utils.Logging (HasLogContext (..), Log (..), addLogTagToEnv)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Control.Monad.Reader
 import qualified Data.Aeson as A
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Generics.Labels as GL
@@ -149,6 +150,18 @@ fromMaybeM404 a = fromMaybeM (S.err404 {errBody = a})
 fromMaybeM500 a = fromMaybeM (S.err500 {errBody = a})
 fromMaybeM503 a = fromMaybeM (S.err503 {errBody = a})
 
+fromMaybeMJSON400,
+  fromMaybeMJSON401,
+  fromMaybeMJSON404,
+  fromMaybeMJSON500,
+  fromMaybeMJSON503 ::
+    (HasCallStack, L.MonadFlow m) => Text -> Maybe a -> m a
+fromMaybeMJSON400 a = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg a})
+fromMaybeMJSON401 a = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg a})
+fromMaybeMJSON404 a = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg a})
+fromMaybeMJSON500 a = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg a})
+fromMaybeMJSON503 a = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg a})
+
 mkOkResponse :: L.MonadFlow m => Context -> m AckResponse
 mkOkResponse context = do
   currTime <- getCurrTime
@@ -276,6 +289,25 @@ throwError400 = throwHttpError S.err400
 throwError401 = throwHttpError S.err401
 throwError403 = throwHttpError S.err403
 throwError404 = throwHttpError S.err404
+
+throwErrorJSON500,
+  throwErrorJSON501,
+  throwErrorJSON503,
+  throwErrorJSON400,
+  throwErrorJSON401,
+  throwErrorJSON403,
+  throwErrorJSON404 ::
+    (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
+throwErrorJSON500 = throwHttpError S.err500 . makeErrorJSONMsg
+throwErrorJSON501 = throwHttpError S.err501 . makeErrorJSONMsg
+throwErrorJSON503 = throwHttpError S.err503 . makeErrorJSONMsg
+throwErrorJSON400 = throwHttpError S.err400 . makeErrorJSONMsg
+throwErrorJSON401 = throwHttpError S.err401 . makeErrorJSONMsg
+throwErrorJSON403 = throwHttpError S.err403 . makeErrorJSONMsg
+throwErrorJSON404 = throwHttpError S.err404 . makeErrorJSONMsg
+
+makeErrorJSONMsg :: Text -> BSL.ByteString
+makeErrorJSONMsg msg = Aeson.encode $ Aeson.object ["message" Aeson..= msg]
 
 throwBecknError500,
   throwBecknError501,
