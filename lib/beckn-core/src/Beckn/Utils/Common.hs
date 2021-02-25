@@ -30,6 +30,7 @@ import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
 import GHC.TypeLits (Symbol)
 import Network.HTTP.Types (Header, hContentType)
+import Network.HTTP.Types.Header (HeaderName)
 import Network.HTTP.Types.Status
 import Servant (ServerError (..), err500)
 import qualified Servant.Client as S
@@ -156,11 +157,14 @@ fromMaybeMJSON400,
   fromMaybeMJSON500,
   fromMaybeMJSON503 ::
     (HasCallStack, L.MonadFlow m) => Text -> Maybe a -> m a
-fromMaybeMJSON400 a = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg a})
-fromMaybeMJSON401 a = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg a})
-fromMaybeMJSON404 a = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg a})
-fromMaybeMJSON500 a = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg a})
-fromMaybeMJSON503 a = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg a})
+fromMaybeMJSON400 a = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
+fromMaybeMJSON401 a = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
+fromMaybeMJSON404 a = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
+fromMaybeMJSON500 a = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
+fromMaybeMJSON503 a = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
+
+jsonHeader :: (HeaderName, ByteString)
+jsonHeader = (hContentType, "application/json;charset=utf-8")
 
 mkOkResponse :: L.MonadFlow m => Context -> m AckResponse
 mkOkResponse context = do
@@ -252,6 +256,10 @@ throwHttpError :: (HasCallStack, L.MonadFlow m) => ServerError -> BSL.ByteString
 throwHttpError err errMsg =
   L.throwException err {errBody = errMsg}
 
+throwHttpErrorJSON :: (HasCallStack, L.MonadFlow m) => ServerError -> BSL.ByteString -> m a
+throwHttpErrorJSON err errMsg =
+  L.throwException err {errBody = errMsg, errHeaders = [jsonHeader]}
+
 throwBecknError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Text -> m a
 throwBecknError err errMsg = do
   logError "Beckn error" errMsg
@@ -260,11 +268,6 @@ throwBecknError err errMsg = do
       { errBody = A.encode $ getBecknError err errMsg,
         errHeaders = jsonHeader : errHeaders err
       }
-  where
-    jsonHeader =
-      ( hContentType,
-        "application/json;charset=utf-8"
-      )
 
 getBecknError :: S.ServerError -> Text -> BecknError
 getBecknError err msg =
@@ -298,13 +301,13 @@ throwErrorJSON500,
   throwErrorJSON403,
   throwErrorJSON404 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
-throwErrorJSON500 = throwHttpError S.err500 . makeErrorJSONMsg
-throwErrorJSON501 = throwHttpError S.err501 . makeErrorJSONMsg
-throwErrorJSON503 = throwHttpError S.err503 . makeErrorJSONMsg
-throwErrorJSON400 = throwHttpError S.err400 . makeErrorJSONMsg
-throwErrorJSON401 = throwHttpError S.err401 . makeErrorJSONMsg
-throwErrorJSON403 = throwHttpError S.err403 . makeErrorJSONMsg
-throwErrorJSON404 = throwHttpError S.err404 . makeErrorJSONMsg
+throwErrorJSON500 = throwHttpErrorJSON S.err500 . makeErrorJSONMsg
+throwErrorJSON501 = throwHttpErrorJSON S.err501 . makeErrorJSONMsg
+throwErrorJSON503 = throwHttpErrorJSON S.err503 . makeErrorJSONMsg
+throwErrorJSON400 = throwHttpErrorJSON S.err400 . makeErrorJSONMsg
+throwErrorJSON401 = throwHttpErrorJSON S.err401 . makeErrorJSONMsg
+throwErrorJSON403 = throwHttpErrorJSON S.err403 . makeErrorJSONMsg
+throwErrorJSON404 = throwHttpErrorJSON S.err404 . makeErrorJSONMsg
 
 makeErrorJSONMsg :: Text -> BSL.ByteString
 makeErrorJSONMsg msg = Aeson.encode $ Aeson.object ["message" Aeson..= msg]
