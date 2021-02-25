@@ -17,6 +17,7 @@ import qualified Storage.Queries.FarePolicy as QFarePolicy
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Types.API.Transporter
+import qualified Types.Domain.FarePolicy as DFarePolicy
 import qualified Types.Storage.FarePolicy as SFarePolicy
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
@@ -49,11 +50,11 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       pure $
         SFarePolicy.FarePolicy
           { _id = ID farePolicyId,
-            _vehicleVariant = vehicleVariant,
+            _vehicleVariant = vehicleVariant, -- TODO: variants should be looked up from DB
             _organizationId = ID $ _getOrganizationId orgId,
-            _baseFare = Just 120.0,
-            _baseDistance = Just 5000.0,
-            _perExtraKmRate = 12.0,
+            _baseFare = Just DFarePolicy.defaultBaseFare,
+            _baseDistance = Just DFarePolicy.defaultBaseDistance,
+            _perExtraKmRate = DFarePolicy.defaultPerExtraKmRate,
             _nightShiftStart = Nothing,
             _nightShiftEnd = Nothing,
             _nightShiftRate = Nothing,

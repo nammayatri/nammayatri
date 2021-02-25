@@ -18,3 +18,12 @@ data FarePolicy = FarePolicy
     nightShiftRate :: Maybe Rational
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+defaultBaseFare :: Double
+defaultBaseFare = 120.0
+
+defaultBaseDistance :: Double
+defaultBaseDistance = 5000.0
+
+defaultPerExtraKmRate :: Double
+defaultPerExtraKmRate = 12.0
