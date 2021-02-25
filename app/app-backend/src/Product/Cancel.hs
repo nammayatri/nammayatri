@@ -67,7 +67,7 @@ searchCancel person req = do
     then do
       Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
       piList <- MPI.findAllByCaseId (case_ ^. #_id)
-      traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> piList)
+      traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> filter isProductInstanceCancellable piList)
       MC.updateStatus (case_ ^. #_id) Case.CLOSED
       mkAckResponse txnId "cancel"
     else do
