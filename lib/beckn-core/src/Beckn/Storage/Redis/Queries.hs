@@ -156,24 +156,27 @@ tryLockRedis ::
   ( HasCallStack,
     L.MonadFlow mFlow
   ) =>
+  Text ->
+  Int ->
   mFlow Bool
-tryLockRedis = do
+tryLockRedis key expire = do
   resp <- runKV (L.rawRequest ["SET", lockResourceName, "1", "NX", "EX", maxLockTime])
   return $
     case resp of
       Right (Just ("OK" :: ByteString)) -> True
       _ -> False
   where
-    lockResourceName = "redis:locker"
-    maxLockTime = "60"
+    lockResourceName = "redis:locker:" <> DTE.encodeUtf8 key
+    maxLockTime = show expire
 
 unlockRedis ::
   ( HasCallStack,
     L.MonadFlow mFlow
   ) =>
+  Text ->
   mFlow ()
-unlockRedis = do
+unlockRedis key = do
   _ <- deleteKeyRedis lockResourceName
   return ()
   where
-    lockResourceName = "redis:locker"
+    lockResourceName = "redis:locker:" <> key

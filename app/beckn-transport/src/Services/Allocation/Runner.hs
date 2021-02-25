@@ -43,7 +43,7 @@ handle =
 
 run :: TMVar () -> TMVar () -> Flow ()
 run shutdown activeTask = do
-  Redis.tryLockRedis >>= \case
+  Redis.tryLockRedis "allocation" 60 >>= \case
     False -> L.runIO $ threadDelay 5000000 -- sleep for a bit
     _ -> do
       now <- getCurrTime
@@ -53,7 +53,7 @@ run shutdown activeTask = do
       requestsNum <- asks (requestsNumPerIteration . driverAllocationConfig)
       eres <- runSafeFlow $ Allocation.process handle requestsNum
       whenLeft eres $ Log.logError "Allocation service"
-      Redis.unlockRedis
+      Redis.unlockRedis "allocation"
       processEndTime <- getCurrTime
       let processTime = diffUTCTime processEndTime processStartTime
       L.runIO $ atomically $ takeTMVar activeTask
