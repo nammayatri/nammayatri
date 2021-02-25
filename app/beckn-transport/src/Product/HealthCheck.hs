@@ -13,7 +13,7 @@ healthCheck shutdown = withFlowHandler $ do
   isNotShuttingDown <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
   if isNotShuttingDown
     then do
-      mbTime <- Redis.getKeyRedis "beckn:allocation:service"
+      mbTime <- Redis.lockedSinceRedis "allocation"
       maybe markAsDead checkLastUpdateTime mbTime
     else markAsDead
   where
