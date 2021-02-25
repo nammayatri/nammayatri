@@ -1,7 +1,23 @@
-module Beckn.Storage.Redis.Queries where
+module Beckn.Storage.Redis.Queries
+  ( setKeyRedis,
+    setExRedis,
+    getKeyRedis,
+    getKeyRedisWithError,
+    setHashRedis,
+    expireRedis,
+    getHashKeyRedis,
+    deleteKeyRedis,
+    deleteKeysRedis,
+    incrementKeyRedis,
+    getKeyRedisText,
+    tryLockRedis,
+    unlockRedis,
+  )
+where
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as DT
 import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -160,13 +176,12 @@ tryLockRedis ::
   Int ->
   mFlow Bool
 tryLockRedis key expire = do
-  resp <- runKV (L.rawRequest ["SET", lockResourceName, "1", "NX", "EX", maxLockTime])
+  resp <- runKV (L.rawRequest ["SET", buildLockResourceName key, "1", "NX", "EX", maxLockTime])
   return $
     case resp of
       Right (Just ("OK" :: ByteString)) -> True
       _ -> False
   where
-    lockResourceName = "redis:locker:" <> DTE.encodeUtf8 key
     maxLockTime = show expire
 
 unlockRedis ::
@@ -176,7 +191,8 @@ unlockRedis ::
   Text ->
   mFlow ()
 unlockRedis key = do
-  _ <- deleteKeyRedis lockResourceName
+  _ <- deleteKeyRedis $ buildLockResourceName key
   return ()
-  where
-    lockResourceName = "redis:locker:" <> key
+
+buildLockResourceName :: (IsString a) => Text -> a
+buildLockResourceName key = fromString $ "beckn:locker:" <> DT.unpack key

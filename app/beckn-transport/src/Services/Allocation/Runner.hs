@@ -43,7 +43,7 @@ handle =
 
 run :: TMVar () -> TMVar () -> Flow ()
 run shutdown activeTask = do
-  Redis.tryLockRedis "allocation" 60 >>= \case
+  Redis.tryLockRedis "allocation" 10 >>= \case
     False -> L.runIO $ threadDelay 5000000 -- sleep for a bit
     _ -> do
       now <- getCurrTime
