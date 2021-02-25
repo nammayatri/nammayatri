@@ -176,14 +176,14 @@ updatePersonOrgId orgId personId = do
       mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i Storage.Person {..} = _id ==. B.val_ i
 
-updatePersonalInfo :: PersonId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe FCM.FCMRecipientToken -> Flow ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbDeviceToken = do
+updatePersonalInfo :: PersonId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe Text -> Maybe FCM.FCMRecipientToken -> Flow ()
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken = do
   dbTable <- getDbTable
   now <- getCurrTime
-  DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbFullName mbGender mbDeviceToken) (predicate personId)
+  DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken) (predicate personId)
     >>= either DB.throwDBError pure
   where
-    setClause now mbFirstN mbMiddleN mbLastN mbFullN mbG mbDToken Storage.Person {..} =
+    setClause now mbFirstN mbMiddleN mbLastN mbFullN mbG mbE mbDToken Storage.Person {..} =
       mconcat
         [ _updatedAt <-. B.val_ now,
           maybe mempty (\x -> _firstName <-. B.val_ (Just x)) mbFirstN,
@@ -191,6 +191,7 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGen
           maybe mempty (\x -> _lastName <-. B.val_ (Just x)) mbLastN,
           maybe mempty (\x -> _fullName <-. B.val_ (Just x)) mbFullN,
           maybe mempty (\x -> _gender <-. B.val_ x) mbG,
+          maybe mempty (\x -> _email <-. B.val_ (Just x)) mbE,
           maybe mempty (\x -> _deviceToken <-. B.val_ (Just x)) mbDToken
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id

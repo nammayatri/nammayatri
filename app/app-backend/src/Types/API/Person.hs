@@ -10,7 +10,8 @@ data GetPersonDetailsRes = GetPersonDetailsRes
     lastName :: Maybe Text,
     fullName :: Maybe Text,
     role :: SPerson.Role,
-    gender :: SPerson.Gender
+    gender :: SPerson.Gender,
+    email :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON)
 
@@ -20,6 +21,7 @@ data UpdateReq = UpdateReq
     lastName :: Maybe Text,
     fullName :: Maybe Text,
     gender :: Maybe SPerson.Gender,
+    email :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken
   }
   deriving (Generic, ToJSON, FromJSON)

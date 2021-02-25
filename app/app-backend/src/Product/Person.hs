@@ -19,7 +19,8 @@ getPersonDetails auth =
         lastName = auth ^. #_lastName,
         fullName = auth ^. #_fullName,
         role = auth ^. #_role,
-        gender = auth ^. #_gender
+        gender = auth ^. #_gender,
+        email = auth ^. #_email
       }
 
 updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APIResult.APIResult
@@ -31,5 +32,6 @@ updatePerson auth req = withFlowHandler $ do
     (req ^. #lastName)
     (req ^. #fullName)
     (req ^. #gender)
+    (req ^. #email)
     (req ^. #deviceToken)
   pure APIResult.Success
