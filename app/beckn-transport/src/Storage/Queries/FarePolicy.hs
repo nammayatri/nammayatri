@@ -3,6 +3,7 @@
 module Storage.Queries.FarePolicy where
 
 import App.Types (AppEnv (dbCfg), Flow)
+import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.ID (ID)
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -18,6 +19,12 @@ import qualified Types.Storage.FarePolicy as Storage
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =
   DB._farePolicy . DB.transporterDb <$> getSchemaName
+
+create :: Storage.FarePolicy -> Flow ()
+create Storage.FarePolicy {..} = do
+  dbTable <- getDbTable
+  DB.createOne dbTable (Storage.insertExpression Storage.FarePolicy {..})
+    >>= either DB.throwDBError pure
 
 findFarePolicyByOrgAndVehicleVariant ::
   ID Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)

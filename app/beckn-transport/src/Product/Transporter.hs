@@ -5,14 +5,19 @@ module Product.Transporter where
 import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
+import Beckn.Types.ID (ID (..))
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Vehicle as SVehicle
 import Beckn.Utils.Common
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified Storage.Queries.FarePolicy as QFarePolicy
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Types.API.Transporter
+import qualified Types.Storage.FarePolicy as SFarePolicy
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
@@ -20,7 +25,11 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   validate person
   organization <- createTransform req
   validateReq req
+  sedanFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.SEDAN (organization ^. #_createdAt)
+  suvFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.SUV (organization ^. #_createdAt)
+  hatchbackFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.HATCHBACK (organization ^. #_createdAt)
   QO.create organization
+  traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
   QP.updateOrganizationIdAndMakeAdmin (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
   updatedPerson <- QP.findPersonById (PersonId _EntityId)
   return $ TransporterRes updatedPerson organization
@@ -35,6 +44,22 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
         throwError400 "missing mandatory fields"
+    mkFarePolicy orgId vehicleVariant now = do
+      farePolicyId <- L.generateGUID
+      pure $
+        SFarePolicy.FarePolicy
+          { _id = ID farePolicyId,
+            _vehicleVariant = vehicleVariant,
+            _organizationId = ID $ _getOrganizationId orgId,
+            _baseFare = Just 120.0,
+            _baseDistance = Just 5000.0,
+            _perExtraKmRate = 12.0,
+            _nightShiftStart = Nothing,
+            _nightShiftEnd = Nothing,
+            _nightShiftRate = Nothing,
+            _createdAt = now,
+            _updatedAt = now
+          }
 
 updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
