@@ -148,24 +148,24 @@ fromMaybeM400,
   fromMaybeM404,
   fromMaybeM500,
   fromMaybeM503 ::
-    (HasCallStack, L.MonadFlow m, Log m) => BSL.ByteString -> Maybe a -> m a
-fromMaybeM400 a = fromMaybeM (S.err400 {errBody = a})
-fromMaybeM401 a = fromMaybeM (S.err401 {errBody = a})
-fromMaybeM404 a = fromMaybeM (S.err404 {errBody = a})
-fromMaybeM500 a = fromMaybeM (S.err500 {errBody = a})
-fromMaybeM503 a = fromMaybeM (S.err503 {errBody = a})
-
-fromMaybeMJSON400,
-  fromMaybeMJSON401,
-  fromMaybeMJSON404,
-  fromMaybeMJSON500,
-  fromMaybeMJSON503 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> Maybe a -> m a
-fromMaybeMJSON400 a = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
-fromMaybeMJSON401 a = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
-fromMaybeMJSON404 a = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
-fromMaybeMJSON500 a = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
-fromMaybeMJSON503 a = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
+fromMaybeM400 code = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
+fromMaybeM401 code = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
+fromMaybeM404 code = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
+fromMaybeM500 code = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
+fromMaybeM503 code = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
+
+fromMaybeMWithMsg400,
+  fromMaybeMWithMsg401,
+  fromMaybeMWithMsg404,
+  fromMaybeMWithMsg500,
+  fromMaybeMWithMsg503 ::
+    (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> Maybe a -> m a
+fromMaybeMWithMsg400 code msg = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg401 code msg = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg404 code msg = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg500 code msg = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg503 code msg = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
 
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
@@ -290,33 +290,36 @@ throwError500,
   throwError401,
   throwError403,
   throwError404 ::
-    (HasCallStack, L.MonadFlow m, Log m) => BSL.ByteString -> m a
-throwError500 = throwHttpError S.err500
-throwError501 = throwHttpError S.err501
-throwError503 = throwHttpError S.err503
-throwError400 = throwHttpError S.err400
-throwError401 = throwHttpError S.err401
-throwError403 = throwHttpError S.err403
-throwError404 = throwHttpError S.err404
-
-throwErrorJSON500,
-  throwErrorJSON501,
-  throwErrorJSON503,
-  throwErrorJSON400,
-  throwErrorJSON401,
-  throwErrorJSON403,
-  throwErrorJSON404 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
-throwErrorJSON500 = throwHttpErrorJSON S.err500 . makeErrorJSONMsg
-throwErrorJSON501 = throwHttpErrorJSON S.err501 . makeErrorJSONMsg
-throwErrorJSON503 = throwHttpErrorJSON S.err503 . makeErrorJSONMsg
-throwErrorJSON400 = throwHttpErrorJSON S.err400 . makeErrorJSONMsg
-throwErrorJSON401 = throwHttpErrorJSON S.err401 . makeErrorJSONMsg
-throwErrorJSON403 = throwHttpErrorJSON S.err403 . makeErrorJSONMsg
-throwErrorJSON404 = throwHttpErrorJSON S.err404 . makeErrorJSONMsg
+throwError500 code = throwHttpErrorJSON S.err500 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError501 code = throwHttpErrorJSON S.err501 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError503 code = throwHttpErrorJSON S.err503 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError400 code = throwHttpErrorJSON S.err400 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError401 code = throwHttpErrorJSON S.err401 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError403 code = throwHttpErrorJSON S.err403 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError404 code = throwHttpErrorJSON S.err404 . makeErrorJSONMsg code $ buildErrorMessage code
 
-makeErrorJSONMsg :: Text -> BSL.ByteString
-makeErrorJSONMsg msg = Aeson.encode $ Aeson.object ["message" Aeson..= msg]
+throwErrorMsg500,
+  throwErrorMsg501,
+  throwErrorMsg503,
+  throwErrorMsg400,
+  throwErrorMsg401,
+  throwErrorMsg403,
+  throwErrorMsg404 ::
+    (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> m a
+throwErrorMsg500 code msg = throwHttpErrorJSON S.err500 $ makeErrorJSONMsg code msg
+throwErrorMsg501 code msg = throwHttpErrorJSON S.err501 $ makeErrorJSONMsg code msg
+throwErrorMsg503 code msg = throwHttpErrorJSON S.err503 $ makeErrorJSONMsg code msg
+throwErrorMsg400 code msg = throwHttpErrorJSON S.err400 $ makeErrorJSONMsg code msg
+throwErrorMsg401 code msg = throwHttpErrorJSON S.err401 $ makeErrorJSONMsg code msg
+throwErrorMsg403 code msg = throwHttpErrorJSON S.err403 $ makeErrorJSONMsg code msg
+throwErrorMsg404 code msg = throwHttpErrorJSON S.err404 $ makeErrorJSONMsg code msg
+
+buildErrorMessage :: Text -> Text
+buildErrorMessage = T.toLower . T.replace "_" " "
+
+makeErrorJSONMsg :: Text -> Text -> BSL.ByteString
+makeErrorJSONMsg code msg = Aeson.encode $ Aeson.object ["code" Aeson..= code, "message" Aeson..= msg]
 
 throwBecknError500,
   throwBecknError501,

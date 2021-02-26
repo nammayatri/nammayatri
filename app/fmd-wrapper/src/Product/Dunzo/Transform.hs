@@ -43,9 +43,7 @@ import Beckn.Utils.Common (foldWIndex, fromMaybeM500, getCurrTime, headMaybe, th
 import Beckn.Utils.JSON
 import Beckn.Utils.Logging (Log (..))
 import Control.Lens (element, (?~))
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Data.Time
 import EulerHS.Prelude hiding (State, drop)
 import External.Dunzo.Types
@@ -507,11 +505,11 @@ mkOnUpdateErrReq context = do
         }
 
 -- TODO: replace this with proper err logging for forked threads
-fromMaybeM500' :: BSL.ByteString -> Maybe a -> Flow a
+fromMaybeM500' :: Text -> Maybe a -> Flow a
 fromMaybeM500' errMsg m = do
   when
     (isNothing m)
-    (logError "Error" (DT.decodeUtf8 $ BSL.toStrict errMsg))
+    (logError "Error" errMsg)
   fromMaybeM500 errMsg m
 
 mapTaskState :: TaskState -> Maybe State

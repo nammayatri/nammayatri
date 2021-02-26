@@ -172,7 +172,7 @@ isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed orderPi req = do
   newStatus <- fromMaybeM400 "INVALID_UPDATE_OPERATION" (req ^. #_status)
   case PI.validateStatusTransition (orderPi ^. #_status) newStatus of
-    Left _ -> throwErrorJSON400 "INVALID_UPDATE_OPERATION"
+    Left _ -> throwError400 "INVALID_UPDATE_OPERATION"
     Right _ -> return ()
 
 assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()

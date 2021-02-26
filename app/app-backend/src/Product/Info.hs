@@ -8,7 +8,6 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common
 import Beckn.Utils.Logging (Log (..))
-import qualified Data.Aeson as Aeson
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as External
 import qualified Models.ProductInstance as MPI
@@ -47,5 +46,5 @@ getLocation person caseId = withFlowHandler $ do
   let pI = head productInstances
   resp <- External.location baseUrl (getId $ pI ^. #_id)
   case resp of
-    Left err -> throwError500 $ Aeson.encode err
+    Left err -> throwError500 err
     Right r -> return r
