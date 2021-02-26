@@ -25,7 +25,7 @@ createVehicle orgId req = withFlowHandler $ do
     validateVehicle = do
       mVehicle <- QV.findByRegistrationNo $ req ^. #_registrationNo
       when (isJust mVehicle) $
-        throwError400 "RegistrationNo already exists"
+        throwError400 "REGISTRATION_NO_ALREADY_EXISTS"
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
 listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandler $ do
@@ -53,23 +53,23 @@ deleteVehicle orgId vehicleId = withFlowHandler $ do
     then do
       QV.deleteById (Id vehicleId)
       return $ DeleteVehicleRes vehicleId
-    else throwError401 "Unauthorized"
+    else throwError401 "UNAUTHORIZED"
 
 getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
   user <- QP.findPersonById (Id _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
-    (Nothing, Nothing) -> throwError400 "Invalid Request"
+    (Nothing, Nothing) -> throwError400 "INVALID_REQUEST"
     _ ->
       QV.findByAnyOf registrationNoM vehicleIdM
-        >>= fromMaybeM400 "VEHICLE NOT FOUND"
+        >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
   hasAccess user vehicle
   return $ CreateVehicleRes vehicle
   where
     hasAccess :: SP.Person -> SV.Vehicle -> Flow ()
     hasAccess user vehicle =
       when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
-        throwError401 "Unauthorized"
+        throwError401 "UNAUTHORIZED"
 
 addOrgId :: Text -> SV.Vehicle -> Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}

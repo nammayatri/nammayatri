@@ -24,10 +24,10 @@ status person caseId = withFlowHandler $ do
   case_ <- Case.findIdByPerson person caseId
   prodInstRes <- getProdInstances case_
   fromLocation <-
-    fromMaybeM500 "Could not find from location"
+    fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Could not find from location"
       =<< Location.findLocationById (Id $ case_ ^. #_fromLocationId)
   toLocation <-
-    fromMaybeM500 "Could not find to location"
+    fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Could not find to location"
       =<< Location.findLocationById (Id $ case_ ^. #_toLocationId)
   return $ StatusRes case_ prodInstRes fromLocation toLocation
 

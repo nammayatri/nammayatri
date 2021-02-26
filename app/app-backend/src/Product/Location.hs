@@ -13,7 +13,7 @@ getRoute _person Location.Request {..} =
   withFlowHandler $
     MapSearch.getRoute getRouteRequest
       >>= either
-        (throwError400 . show)
+        (throwErrorMsg400 "UNABLE_TO_GET_ROUTE" . show)
         return
   where
     getRouteRequest = do

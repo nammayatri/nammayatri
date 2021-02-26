@@ -151,7 +151,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ throwError401 "Unauthorized"
+        $ throwError401 "UNAUTHORIZED"
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do
@@ -163,7 +163,7 @@ deletePerson orgId personId = withFlowHandler $ do
       QDriverInformation.deleteById $ Id personId
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
-    else throwError401 "Unauthorized"
+    else throwError401 "UNAUTHORIZED"
 
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
@@ -175,7 +175,7 @@ linkEntity orgId personId req = withFlowHandler $ do
     _ -> throwError400 "UNSUPPORTED ENTITY TYPE"
   when
     (person ^. #_organizationId /= Just orgId)
-    (throwError401 "Unauthorized")
+    (throwError401 "UNAUTHORIZED")
   prevPerson <- QP.findByEntityId (req ^. #_entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
   QP.updateEntity (Id personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)

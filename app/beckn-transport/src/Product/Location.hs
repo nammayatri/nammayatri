@@ -20,10 +20,10 @@ import Types.API.Location as Location
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- Person.findPersonById $ Id _EntityId
-  driver <- if person ^. #_role == Person.DRIVER then return person else throwError400 "Only driver can update location."
+  driver <- if person ^. #_role == Person.DRIVER then return person else throwErrorMsg400 "INVALID_ROLE" "Only driver can update location."
   locationId <-
     driver ^. #_locationId & (Id <$>)
-      & fromMaybeM500 "Driver location not found"
+      & fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Driver location not found"
   Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
   return $ UpdateLocationRes "ACK"
 
@@ -31,15 +31,15 @@ getLocation :: Text -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandler $ do
   orderProductInstance <- ProductInstance.findByParentIdType (Just $ Id piId) Case.RIDEORDER
   driver <-
-    orderProductInstance ^. #_personId & fromMaybeM400 "Driver not assigned"
+    orderProductInstance ^. #_personId & fromMaybeM400 "DRIVER_NOT_ASSIGNED"
       >>= Person.findPersonById
   currLocation <-
     driver ^. #_locationId & (Id <$>)
-      & fromMaybeM500 "Driver location not found"
+      & fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Driver location not found"
       >>= Location.findLocationById
-      >>= fromMaybeM500 "Driver location not found"
-  lat <- currLocation ^. #_lat & fromMaybeM500 "Gps coord not set"
-  long <- currLocation ^. #_long & fromMaybeM500 "Gps coord not set"
+      >>= fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Driver location not found"
+  lat <- currLocation ^. #_lat & fromMaybeM500 "GPS_COORDS_NOT_SET"
+  long <- currLocation ^. #_long & fromMaybeM500 "GPS_COORDS_NOT_SET"
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
 getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
@@ -71,7 +71,7 @@ getRoute _ Location.Request {..} =
   withFlowHandler $
     MapSearch.getRoute getRouteRequest
       >>= either
-        (throwError400 . show)
+        (throwErrorMsg400 "UNABLE_TO_GET_ROUTE" . show)
         return
   where
     mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long

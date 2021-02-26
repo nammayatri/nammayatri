@@ -14,5 +14,5 @@ import qualified Storage.Queries.ProductInstance as PI
 initiateCall :: SR.RegistrationToken -> CallReq -> FlowHandler CallRes
 initiateCall _ req = withFlowHandler $ do
   prdInstance <- PI.findById $ Id $ req ^. #productInstanceId -- RIDEORDER PI
-  Id rideSearchProductInstanceId <- prdInstance ^. #_parentId & fromMaybeM500 "ParentId not found"
+  Id rideSearchProductInstanceId <- prdInstance ^. #_parentId & fromMaybeMWithMsg500 "PARENT_ID_NOT_FOUND" "ParentId not found"
   Gateway.initiateCall $ CallReq rideSearchProductInstanceId -- RIDESEARCH PI

@@ -75,17 +75,17 @@ search person req = withFlowHandler $ do
       currTime <- getCurrTime
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
-        throwError400 "Invalid start time"
+        throwError400 "INVALID_START_TIME"
     validateServiceability sreq = do
       originGps <-
         sreq ^. #origin . #location . #gps
-          & fromMaybeM400 "GPS coordinates required for the origin location"
+          & fromMaybeMWithMsg400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the origin location"
       destinationGps <-
         req ^. #destination . #location . #gps
-          & fromMaybeM400 "GPS coordinates required for the destination location"
+          & fromMaybeMWithMsg400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the destination location"
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
-        throwError400 "Ride not serviceable due to georestrictions"
+        throwErrorMsg400 "RIDE_NOT_SERVICEABLE" "Ride not serviceable due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _bppOrg req = withFlowHandler $ do
@@ -108,11 +108,11 @@ searchCbService req catalog = do
         >>= fromMaybeM400 "INVALID_PROVIDER_URI"
     personId <-
       maybe
-        (throwError500 "No person linked to case")
+        (throwErrorMsg500 "PERSON_ID_NOT_FOUND" "No person linked to case")
         (return . Id)
         (Case._requestor case_)
     case (catalog ^. #_categories, catalog ^. #_items) of
-      ([], _) -> throwError400 "missing provider"
+      ([], _) -> throwError400 "MISSING_PROVIDER"
       (category : _, []) -> do
         let provider = fromBeckn category
         declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
@@ -121,7 +121,7 @@ searchCbService req catalog = do
       (category : _, items) -> do
         when
           (case_ ^. #_status == Case.CLOSED)
-          (throwError400 "Case expired")
+          (throwErrorMsg400 "EXPIRED_CASE" "Case expired")
         let provider = fromBeckn category
         products <- traverse (mkProduct case_) items
         traverse_ Products.create products
@@ -226,7 +226,7 @@ mkProduct case_ item = do
   now <- getCurrTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwError400 "Invalid price"
+      Nothing -> throwError400 "INVALID_PRICE"
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -260,7 +260,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   let info = ProductInfo (Just provider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwError400 "Invalid price"
+      Nothing -> throwError400 "INVALID_PRICE"
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend

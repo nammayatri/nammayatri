@@ -36,14 +36,14 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   where
     validate person = do
       unless (SP._verified person) $
-        throwError400 "user not verified"
+        throwError400 "USER_NOT_VERIFIED"
       when (isJust $ SP._organizationId person) $
-        throwError400 "user already registered an organization"
+        throwErrorMsg400 "ORG_ALREADY_EXISTS" "user already registered an organization"
       when (SP._role person /= SP.ADMIN) $
-        throwError401 "unauthorized"
+        throwError401 "UNAUTHORIZED"
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
-        throwError400 "missing mandatory fields"
+        throwError400 "MISSING_MANDATORY_FIELDS"
     mkFarePolicy orgId vehicleVariant now = do
       farePolicyId <- L.generateGUID
       pure $
@@ -75,10 +75,10 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
           else modifyTransform req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
-    Nothing -> throwError400 "user not eligible"
+    Nothing -> throwError400 "USER_NOT_ELIGIBLE"
   where
     validate person =
-      unless (SP._verified person) $ throwError400 "user not verified"
+      unless (SP._verified person) $ throwError400 "USER_NOT_VERIFIED"
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
@@ -88,10 +88,10 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
-    Nothing -> throwError400 "user not registered an organization"
+    Nothing -> throwErrorMsg400 "ORG_NOT_EXISTS" "user not registered an organization"
   where
     validate person =
-      unless (SP._verified person) $ throwError400 "user not verified"
+      unless (SP._verified person) $ throwError400 "USER_NOT_VERIFIED"
 
 transporterMandatoryFields :: TransporterReq -> [Maybe Text]
 transporterMandatoryFields req =

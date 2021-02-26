@@ -65,7 +65,7 @@ updateAttempts attemps id = do
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
-  findRegistrationToken id >>= fromMaybeM500 "token not found"
+  findRegistrationToken id >>= fromMaybeM500 "TOKEN_NOT_FOUND"
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =

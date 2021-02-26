@@ -34,7 +34,7 @@ onSearch req@CallbackReq {context} bppShortId = do
     "JUSPAY.BG.1" -> do
       callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM500 "CALLBACK_URL_NOT_CONFIGURED"
       callAPIWithTrail' (Just authKey) callbackUrl (API.onSearch req) "on_search"
-    _ -> throwError500 "gateway not configured"
+    _ -> throwError500 "GATEWAY_NOT_CONFIGURED"
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
@@ -84,4 +84,4 @@ initiateCall req = do
     Left cliErr -> do
       let err = fromClientError cliErr
       logError "client call error" $ (err ^. #_message) ?: "Some error"
-      throwError500 "Call API error"
+      throwError500 "CALL_API_ERROR"

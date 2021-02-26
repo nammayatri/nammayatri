@@ -49,7 +49,7 @@ verifyPerson :: RegToken -> Flow Person.Person
 verifyPerson token = do
   sr <- Utils.Common.verifyToken token
   Person.findById (Id $ SR._EntityId sr)
-    >>= Utils.fromMaybeM500 "Could not find user"
+    >>= Utils.fromMaybeMWithMsg500 "USER_NOT_FOUND" "Could not find user"
 
 verifyPersonAction :: VerificationAction VerifyToken AppEnv
 verifyPersonAction = VerificationAction Utils.Common.verifyPerson

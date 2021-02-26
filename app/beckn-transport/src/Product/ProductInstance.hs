@@ -41,7 +41,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
-      throwError400 "organisation id is missing"
+      throwErrorMsg400 "MISSING_ORG_ID" "organisation id is missing"
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM
@@ -104,7 +104,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ throwError401 "Unauthorized"
+        $ throwError401 "UNAUTHORIZED"
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (getId (Loc._id x))) locList
         >>= buildResponse
@@ -131,7 +131,7 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
         ( isNothing (SP._organizationId user)
             || (SP._organizationId user /= (V._organizationId <$> vehicle))
         )
-        $ throwError401 "Unauthorized"
+        $ throwError401 "UNAUTHORIZED"
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (getId (Loc._id x))) locList
         >>= buildResponse

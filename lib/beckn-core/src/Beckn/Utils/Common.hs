@@ -316,7 +316,7 @@ throwErrorMsg403 code msg = throwHttpErrorJSON S.err403 $ makeErrorJSONMsg code 
 throwErrorMsg404 code msg = throwHttpErrorJSON S.err404 $ makeErrorJSONMsg code msg
 
 buildErrorMessage :: Text -> Text
-buildErrorMessage = T.toLower . T.replace "_" " "
+buildErrorMessage = T.toTitle . T.replace "_" " "
 
 makeErrorJSONMsg :: Text -> Text -> BSL.ByteString
 makeErrorJSONMsg code msg = Aeson.encode $ Aeson.object ["code" Aeson..= code, "message" Aeson..= msg]

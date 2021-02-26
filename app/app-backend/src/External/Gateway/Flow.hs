@@ -30,10 +30,10 @@ search url req = do
       case mNsdlUrl of
         Just nsdlBaseUrl ->
           callAPIWithTrail' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlSearch req) "search"
-        Nothing -> throwError500 "invalid nsdl gateway url"
+        Nothing -> throwError500 "INVALID_NSDL_GATEWAY_URL"
     Just "JUSPAY.BG.1" ->
       callAPIWithTrail' (Just signatureAuthManagerKey) url (API.search req) "search"
-    _ -> throwError500 "gateway not configured"
+    _ -> throwError500 "GATEWAY_NOT_CONFIGURED"
   case res of
     Left err -> do
       logError "Search" ("error occurred while search: " <> show err)

@@ -90,8 +90,8 @@ findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
-    Right Nothing -> throwError500 "No rec found"
-    Left err -> throwError500 $ "DBError: " <> show err
+    Right Nothing -> throwError500 "NO_REC_FOUND"
+    Left err -> throwErrorMsg500 "DB_ERROR" $ "DBError: " <> show err
 
 findOne ::
   ( HasCallStack,
@@ -123,7 +123,7 @@ findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
     Right val -> return val
-    Left err -> throwError500 $ "DBError: " <> show err
+    Left err -> throwErrorMsg500 "DB_ERROR" $ "DBError: " <> show err
 
 findAll ::
   ( HasCallStack,
