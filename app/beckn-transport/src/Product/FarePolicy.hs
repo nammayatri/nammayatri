@@ -3,7 +3,6 @@
 module Product.FarePolicy where
 
 import App.Types (FlowHandler)
-import Beckn.Types.App (PersonId (PersonId))
 import Beckn.Types.Core.Ack
 import Beckn.Types.ID (ID (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
@@ -22,7 +21,7 @@ import qualified Types.Storage.FarePolicy as SFarePolicy
 
 listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
 listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandler $ do
-  person <- SPerson.findPersonById (PersonId _EntityId)
+  person <- SPerson.findPersonById (ID _EntityId)
   orgId <- person ^. #_organizationId & fromMaybeM400 "ORGANIZATION_ID_MISSING"
   farePolicies <- SFarePolicy.findFarePoliciesByOrgId (ID orgId)
   pure $ ListFarePolicyResponse $ toResponse <$> farePolicies

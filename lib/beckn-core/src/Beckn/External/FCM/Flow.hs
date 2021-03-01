@@ -18,8 +18,8 @@
 module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
-import Beckn.Types.App (_getPersonId)
 import Beckn.Types.Common
+import Beckn.Types.ID
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fork)
 import qualified Beckn.Utils.JWT as JWT
@@ -79,7 +79,7 @@ notifyPerson ::
   Person ->
   FlowR r ()
 notifyPerson title body msgData person =
-  let pid = _getPersonId $ Person._id person
+  let pid = getId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
    in case Person._deviceToken person of
         Nothing -> do

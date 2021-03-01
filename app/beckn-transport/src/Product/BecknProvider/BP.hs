@@ -26,12 +26,14 @@ import Beckn.Types.Core.Order
   ( Order (..),
     OrderItem (OrderItem),
   )
+import Beckn.Types.ID
 import Beckn.Types.Mobility.Driver (Driver)
 import Beckn.Types.Mobility.Payload (Payload (..))
 import Beckn.Types.Mobility.Trip (Trip (..))
 import qualified Beckn.Types.Mobility.Vehicle as BVehicle
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
+import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
   ( fromMaybeM500,
@@ -55,7 +57,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
-import Types.App (DriverId (..), RideId (..), RideRequestId (..))
+import Types.App (RideId (..), RideRequestId (..))
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
@@ -98,7 +100,7 @@ cancelRide rideId = do
         Nothing -> pure ()
         Just driverId -> do
           driver <- Person.findPersonById driverId
-          DriverInformation.updateOnRideFlow (DriverId $ App._getPersonId driverId) False
+          DriverInformation.updateOnRideFlow driverId False
           Notify.notifyDriverOnCancel c driver
 
 -- TODO : Add notifying transporter admin with FCM
@@ -249,7 +251,7 @@ mkOnUpdatePayload prodInst case_ pCase = do
         contents = Right $ API.OnUpdateOrder order
       }
 
-mkDriverInfo :: App.PersonId -> Flow Driver
+mkDriverInfo :: ID Person.Person -> Flow Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
   return $ GT.mkDriverObj person

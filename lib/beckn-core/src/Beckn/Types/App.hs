@@ -14,6 +14,8 @@ where
 import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
+import Beckn.Types.ID
+import Beckn.Types.Storage.Person (Person)
 import Beckn.Utils.Logging (HasLogContext (..))
 import Beckn.Utils.TH
 import Control.Lens ((?~))
@@ -52,13 +54,6 @@ newtype ProductsId = ProductsId
   deriving (Generic, Show)
 
 deriveIdentifierInstances ''ProductsId
-
-newtype PersonId = PersonId
-  { _getPersonId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''PersonId
 
 newtype OrganizationId = OrganizationId
   { _getOrganizationId :: Text
@@ -137,7 +132,7 @@ type DomainResult a = Either DomainError a
 data ListById
   = ByApplicationId CaseId
   | ById ProductsId
-  | ByCustomerId PersonId
+  | ByCustomerId (ID Person)
 
 -- | Requests / responses track condiguration flag
 data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING

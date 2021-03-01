@@ -10,6 +10,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
+import Beckn.Types.ID
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -66,7 +67,7 @@ getProductAndCustomerInfo rideSearchPid = do
                   case driver_ of
                     Nothing -> pure $ Left "No driver info"
                     Just driver -> do
-                      person_ <- Person.findById $ PersonId personId
+                      person_ <- Person.findById $ ID personId
                       case person_ of
                         Nothing -> pure $ Left "Customer not found"
                         Just person -> pure $ Right (person, toBeckn driver)

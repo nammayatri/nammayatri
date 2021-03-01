@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
@@ -26,7 +27,7 @@ create Storage.Case {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
 
 findAllByTypeAndStatuses ::
-  PersonId ->
+  ID Person.Person ->
   Storage.CaseType ->
   [Storage.CaseStatus] ->
   Maybe Integer ->
@@ -45,7 +46,7 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
         (B.val_ True)
         [ _type ==. B.val_ caseType,
           B.in_ _status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
-          _requestor ==. B.val_ (Just $ _getPersonId personId)
+          _requestor ==. B.val_ (Just $ getId personId)
         ]
 
 findById :: CaseId -> Flow (T.DBResult (Maybe Storage.Case))
@@ -67,7 +68,7 @@ findByIdAndType caseId caseType = do
 findIdByPerson :: Person.Person -> CaseId -> Flow (T.DBResult (Maybe Storage.Case))
 findIdByPerson person caseId = do
   dbTable <- getDbTable
-  let personId = _getPersonId $ person ^. #_id
+  let personId = getId $ person ^. #_id
   DB.findOne dbTable (predicate personId)
   where
     predicate personId Storage.Case {..} =

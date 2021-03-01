@@ -38,13 +38,6 @@ newtype TripReferenceId = TripReferenceId
 
 deriveIdentifierInstances ''TripReferenceId
 
-newtype DriverId = DriverId
-  { _getDriverId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''DriverId
-
 newtype TrackerId = TrackerId
   { _getTrackerId :: Text
   }

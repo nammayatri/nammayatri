@@ -8,7 +8,7 @@ module Beckn.Types.Storage.Person where
 
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.App
+import Beckn.Types.ID
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -114,7 +114,7 @@ instance FromHttpApiData Gender where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data PersonTE e f = Person
-  { _id :: B.C f PersonId,
+  { _id :: B.C f (ID Person),
     _firstName :: B.C f (Maybe Text),
     _middleName :: B.C f (Maybe Text),
     _lastName :: B.C f (Maybe Text),
@@ -150,7 +150,7 @@ instance B.Beamable PersonT
 type PersonPrimaryKey = B.PrimaryKey PersonT Identity
 
 instance B.Table PersonT where
-  data PrimaryKey PersonT f = PersonPrimaryKey (B.C f PersonId)
+  data PrimaryKey PersonT f = PersonPrimaryKey (B.C f (ID Person))
     deriving (Generic, B.Beamable)
   primaryKey = PersonPrimaryKey . _id
 
@@ -167,6 +167,8 @@ instance FromJSON Person where
 instance ToJSON (PersonT Identity)
 
 instance FromJSON (PersonT Identity)
+
+type Driver = Person
 
 deriveTableEncryption ''PersonTE
 

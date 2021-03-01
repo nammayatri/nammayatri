@@ -6,6 +6,7 @@ import App.Types
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as BC
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
@@ -27,13 +28,12 @@ import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
-import Types.App (DriverId (..))
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $ do
-  person <- PersQ.findPersonById (PersonId _EntityId)
+  person <- PersQ.findPersonById (ID _EntityId)
   case SP._organizationId person of
     Just orgId -> do
       result <- PIQ.productInstanceJoin limit offset csTypes orgId status
@@ -58,7 +58,7 @@ update :: SR.RegistrationToken -> ProductInstanceId -> ProdInstUpdateReq -> Flow
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   when (maybe False (`elem` forbiddenStatuses) (req ^. #_status)) $
     throwError400 "BAD_STATUS"
-  user <- PersQ.findPersonById (PersonId _EntityId)
+  user <- PersQ.findPersonById (ID _EntityId)
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
     Just pid -> PIQ.findById pid
@@ -66,7 +66,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   isAllowed ordPi req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
-      DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
+      DSQ.updateIdleTime . ID . getId $ user ^. #_id
     updateStatus piId req
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
@@ -91,8 +91,8 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
-  user <- PersQ.findPersonById (PersonId _EntityId)
-  person <- PersQ.findPersonById (PersonId personId)
+  user <- PersQ.findPersonById (ID _EntityId)
+  person <- PersQ.findPersonById (ID personId)
   hasAccess user person
   rideList <- PIQ.findAllByPersonId (SP._id person)
   locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
@@ -118,7 +118,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
 
 listVehicleRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
-  user <- PersQ.findPersonById (PersonId _EntityId)
+  user <- PersQ.findPersonById (ID _EntityId)
   vehicle <- VQ.findVehicleById (VehicleId vehicleId)
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
@@ -174,7 +174,7 @@ isAllowed orderPi req = do
     Left _ -> throwErrorJSON400 "INVALID_UPDATE_OPERATION"
     Right _ -> return ()
 
-assignDriver :: ProductInstanceId -> DriverId -> Flow ()
+assignDriver :: ProductInstanceId -> ID SP.Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
   searchPi <- PIQ.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
@@ -182,7 +182,7 @@ assignDriver productInstanceId driverId = do
   headPi <- case piList of
     p : _ -> pure p
     [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
-  driver <- PersQ.findPersonById personId
+  driver <- PersQ.findPersonById driverId
   vehicleId <-
     driver ^. #_udf1
       & fromMaybeM400 "DRIVER_HAS_NO_VEHICLE"
@@ -197,7 +197,6 @@ assignDriver productInstanceId driverId = do
   notifyUpdateToBAP searchPi ordPi (Just PI.TRIP_ASSIGNED)
   Notify.notifyDriver notificationType notificationTitle (message headPi) driver
   where
-    personId = PersonId $ driverId ^. #_getDriverId
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
     message p' =
@@ -256,7 +255,7 @@ unAssignDriverInfo productInstances request = do
               [ "You have refused the ride.",
                 "Check the app for more details."
               ]
-      driver <- PersQ.findPersonById (PersonId driverId)
+      driver <- PersQ.findPersonById (ID driverId)
       Notify.notifyDriver notificationType notificationTitle message driver
 
 updateTrip :: ProductInstanceId -> PI.ProductInstanceStatus -> ProdInstUpdateReq -> Flow ()
@@ -298,7 +297,7 @@ updateTrip piId newStatus request = do
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       updateOnRide (PI._personId orderPi) False
-      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime . DriverId . _getPersonId)
+      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime . ID . getId)
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) PI.TRIP_ASSIGNED
@@ -306,7 +305,7 @@ updateTrip piId newStatus request = do
     _ -> return ()
   where
     updateOnRide Nothing _ = pure ()
-    updateOnRide (Just personId) status = DriverInformation.updateOnRideFlow (DriverId $ _getPersonId personId) status
+    updateOnRide (Just personId) status = DriverInformation.updateOnRideFlow personId status
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do

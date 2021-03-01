@@ -8,7 +8,8 @@ where
 
 import qualified App.Types as App
 import qualified Beckn.SesConfig as SesConfig
-import Beckn.Types.App (IssueId (..), _getPersonId)
+import Beckn.Types.App (IssueId (..))
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
@@ -22,7 +23,7 @@ import qualified Utils.SES as SES
 
 sendIssue :: Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
 sendIssue person request@SendIssueReq {..} = withFlowHandler $ do
-  let personId = _getPersonId $ person ^. #_id
+  let personId = getId $ person ^. #_id
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
   utcNow <- getCurrTime

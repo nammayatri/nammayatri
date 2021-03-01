@@ -11,6 +11,7 @@ import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as Storage
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
@@ -35,7 +36,7 @@ create person = do
     >>= either DB.throwDBError pure
 
 findPersonById ::
-  PersonId -> Flow Storage.Person
+  ID Storage.Person -> Flow Storage.Person
 findPersonById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -45,7 +46,7 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
 
-findPersonByIdAndRoleAndOrgId :: PersonId -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId :: ID Storage.Person -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
 findPersonByIdAndRoleAndOrgId id role orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -156,7 +157,7 @@ findByEmail email = do
     predicate Storage.Person {..} =
       _email ==. B.val_ (Just email)
 
-updateOrganizationIdAndMakeAdmin :: PersonId -> Text -> Flow ()
+updateOrganizationIdAndMakeAdmin :: ID Storage.Person -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -171,7 +172,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePersonRec :: PersonId -> Storage.Person -> Flow ()
+updatePersonRec :: ID Storage.Person -> Storage.Person -> Flow ()
 updatePersonRec personId uperson = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -200,7 +201,7 @@ updatePersonRec personId uperson = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePerson :: PersonId -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
+updatePerson :: ID Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -222,7 +223,7 @@ updatePerson personId verified identifier identifierType mobileNumber = do
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
 update ::
-  PersonId ->
+  ID Storage.Person ->
   Storage.Status ->
   Bool ->
   Maybe FCM.FCMRecipientToken ->
@@ -245,7 +246,7 @@ update id status verified deviceTokenM = do
         ]
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
-deleteById :: PersonId -> Flow ()
+deleteById :: ID Storage.Person -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
@@ -253,7 +254,7 @@ deleteById id = do
   where
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
-updateEntity :: PersonId -> Text -> Text -> Flow ()
+updateEntity :: ID Storage.Person -> Text -> Text -> Flow ()
 updateEntity personId entityId entityType = do
   dbTable <- getDbTable
   let mEntityId =
@@ -287,7 +288,7 @@ findByEntityId entityId = do
     predicate Storage.Person {..} =
       _udf1 ==. B.val_ (Just entityId)
 
-updateAverageRating :: PersonId -> Text -> Flow ()
+updateAverageRating :: ID Storage.Person -> Text -> Flow ()
 updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -355,9 +356,9 @@ getNearestDrivers ::
   Integer ->
   OrganizationId ->
   Vehicle.Variant ->
-  Flow [(PersonId, Double)]
+  Flow [(ID Storage.Person, Double)]
 getNearestDrivers LatLong {..} radius orgId variant =
-  map (first PersonId)
+  map (first ID)
     <$> postgreSQLSimpleQuery
       [sql|
         WITH a AS (

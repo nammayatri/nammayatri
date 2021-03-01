@@ -4,6 +4,8 @@
 
 module Flow.Allocation where
 
+import Beckn.Types.ID
+import Beckn.Types.Storage.Person
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
@@ -36,7 +38,7 @@ isNotified _ _ = False
 
 attemptedNotification ::
   RideId ->
-  (RideId, DriverId) ->
+  (RideId, ID Driver) ->
   (NotificationStatus, UTCTime) ->
   Bool
 attemptedNotification rideId (id, _) (status, _) =
@@ -71,7 +73,7 @@ addRequest requestData Repository {..} rideId = do
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> RideId -> DriverId -> Ride.NotificationStatus -> IO ()
+addResponse :: Repository -> RideId -> ID Driver -> Ride.NotificationStatus -> IO ()
 addResponse Repository {..} rideId driverId status = do
   currentTime <- Time.getCurrentTime
   let response = Ride.DriverResponse status currentTime
@@ -158,23 +160,23 @@ handle repository@Repository {..} =
       logOutput = \_ _ _ -> pure ()
     }
 
-driverPool1 :: [DriverId]
-driverPool1 = [DriverId "driver01", DriverId "driver02", DriverId "driver03"]
+driverPool1 :: [ID Driver]
+driverPool1 = [ID "driver01", ID "driver02", ID "driver03"]
 
-driverPool2 :: [DriverId]
-driverPool2 = [DriverId "driver05", DriverId "driver07", DriverId "driver08"]
+driverPool2 :: [ID Driver]
+driverPool2 = [ID "driver05", ID "driver07", ID "driver08"]
 
-driverPoolPerRide :: Map RideId [DriverId]
+driverPoolPerRide :: Map RideId [ID Driver]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map RideId [DriverId]),
+    driverPoolVar :: IORef (Map RideId [ID Driver]),
     ridesVar :: IORef (Map RideId RideInfo),
     rideRequestsVar :: IORef (Map RideRequestId RideRequest),
-    notificationStatusVar :: IORef (Map (RideId, DriverId) (NotificationStatus, UTCTime)),
-    assignmentsVar :: IORef [(RideId, DriverId)],
-    responsesVar :: IORef (Map (RideId, DriverId) Ride.DriverResponse)
+    notificationStatusVar :: IORef (Map (RideId, ID Driver) (NotificationStatus, UTCTime)),
+    assignmentsVar :: IORef [(RideId, ID Driver)],
+    responsesVar :: IORef (Map (RideId, ID Driver) Ride.DriverResponse)
   }
 
 initRepository :: IO Repository
@@ -210,18 +212,18 @@ twoAllocations = testCase "Two allocations" $ do
   addRequest Allocation r ride02Id
 
   process (handle r) numRequestsToProcess
-  addResponse r ride01Id (DriverId "driver01") Ride.REJECT
-  addResponse r ride02Id (DriverId "driver05") Ride.REJECT
+  addResponse r ride01Id (ID "driver01") Ride.REJECT
+  addResponse r ride02Id (ID "driver05") Ride.REJECT
   process (handle r) numRequestsToProcess
-  addResponse r ride01Id (DriverId "driver02") Ride.REJECT
-  addResponse r ride02Id (DriverId "driver07") Ride.REJECT
+  addResponse r ride01Id (ID "driver02") Ride.REJECT
+  addResponse r ride02Id (ID "driver07") Ride.REJECT
   process (handle r) numRequestsToProcess
-  addResponse r ride01Id (DriverId "driver03") Ride.ACCEPT
-  addResponse r ride02Id (DriverId "driver08") Ride.ACCEPT
+  addResponse r ride01Id (ID "driver03") Ride.ACCEPT
+  addResponse r ride02Id (ID "driver08") Ride.ACCEPT
   process (handle r) numRequestsToProcess
 
   assignments <- readIORef assignmentsVar
-  assignments @?= [(ride02Id, DriverId "driver08"), (ride01Id, DriverId "driver03")]
+  assignments @?= [(ride02Id, ID "driver08"), (ride01Id, ID "driver03")]
 
   checkRideStatus r ride01Id Assigned
   checkRideStatus r ride02Id Assigned
@@ -235,7 +237,7 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   addRequest Allocation r ride01Id
 
   process (handle r) numRequestsToProcess
-  addResponse r ride01Id (DriverId "driver01") Ride.ACCEPT
+  addResponse r ride01Id (ID "driver01") Ride.ACCEPT
 
   process (handle r) numRequestsToProcess
   checkRideStatus r ride01Id Assigned

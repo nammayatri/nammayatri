@@ -4,6 +4,7 @@ module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.Ack as Ack
@@ -83,7 +84,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
         & fromMaybeM500 "NO_VEHICLE_VARIANT"
     driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
-    logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (_getPersonId <$> driverPool) ||+ ""
+    logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
   case result of

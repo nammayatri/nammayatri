@@ -7,6 +7,7 @@ module Product.CustomerSupport where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -36,7 +37,7 @@ login T.LoginReq {..} = withFlowHandler $ do
 
 generateToken :: SP.Person -> Flow Text
 generateToken SP.Person {..} = do
-  let personId = _getPersonId _id
+  let personId = getId _id
   regToken <- createSupportRegToken personId
   -- Clean Old Login Session
   RegistrationToken.deleteByPersonId personId
@@ -49,7 +50,7 @@ logout person =
     if person ^. #_role /= SP.CUSTOMER_SUPPORT
       then throwErrorJSON401 "Unauthorized request. Please try again" -- Do we need this Check?
       else do
-        RegistrationToken.deleteByPersonId (_getPersonId $ person ^. #_id)
+        RegistrationToken.deleteByPersonId (getId $ person ^. #_id)
         pure $ T.LogoutRes "Logged out successfully"
 
 createSupportRegToken :: Text -> Flow SR.RegistrationToken
@@ -103,7 +104,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
           >>= fromMaybeMJSON400 "Invalid OrderId"
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
-        Person.findById (PersonId personId)
+        Person.findById (ID personId)
           >>= fromMaybeMJSON400 "Invalid CustomerId"
       return $ T.OrderInfo person [_case]
 

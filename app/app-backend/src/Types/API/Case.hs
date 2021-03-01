@@ -2,8 +2,10 @@ module Types.API.Case where
 
 import Beckn.Types.Amount
 import Beckn.Types.App
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
+import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
 import Data.Swagger
@@ -56,7 +58,7 @@ data ProdInstRes = ProdInstRes
   { _id :: ProductInstanceId,
     _caseId :: CaseId,
     _productId :: ProductsId,
-    _personId :: Maybe PersonId,
+    _personId :: Maybe (ID Person),
     _shortId :: Text,
     _entityType :: EntityType,
     _entityId :: Maybe Text,

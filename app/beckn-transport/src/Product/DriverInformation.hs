@@ -6,6 +6,7 @@ import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.App
+import Beckn.Types.ID
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
@@ -25,8 +26,8 @@ import Types.App
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandler $ do
   _ <- Registration.checkPersonExists _EntityId
-  let driverId = DriverId _EntityId
-  person <- QPerson.findPersonById (PersonId _EntityId)
+  let driverId = ID _EntityId
+  person <- QPerson.findPersonById (ID _EntityId)
   personEntity <- Person.mkPersonRes person
   orgId <- person ^. #_organizationId & fromMaybeM500 "ORGANIZATION_ID_IS_NOT_PRESENT"
   organization <- QOrganization.findOrganizationById $ OrganizationId orgId
@@ -41,7 +42,7 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
 setActivity :: RegistrationToken -> Bool -> App.FlowHandler APIResult.APIResult
 setActivity RegistrationToken {..} isActive = withFlowHandler $ do
   _ <- Registration.checkPersonExists _EntityId
-  let driverId = DriverId _EntityId
+  let driverId = ID _EntityId
   QDriverInformation.updateActivity driverId isActive
   pure APIResult.Success
 
@@ -75,8 +76,8 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
                 estimatedPrice = amountToString $ productInstance ^. #_price
               }
   where
-    driverId = DriverId _EntityId
-    personId = PersonId $ _getDriverId driverId
+    driverId = ID _EntityId
+    personId = cast driverId
     rideIdToProductInstanceId rideId = ProductInstanceId $ rideId ^. #_getRideId
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ LocationId <$> mbId
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long

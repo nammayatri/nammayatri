@@ -9,6 +9,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.ID
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Storage.Person as Person
@@ -47,7 +48,7 @@ instance VerificationMethod VerifyToken where
 verifyPerson :: RegToken -> Flow Person.Person
 verifyPerson token = do
   sr <- Utils.Common.verifyToken token
-  Person.findById (PersonId $ SR._EntityId sr)
+  Person.findById (ID $ SR._EntityId sr)
     >>= Utils.fromMaybeM500 "Could not find user"
 
 verifyPersonAction :: VerificationAction VerifyToken AppEnv

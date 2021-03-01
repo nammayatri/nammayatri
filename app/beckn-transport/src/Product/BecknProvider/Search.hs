@@ -12,6 +12,7 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Core
 import qualified Beckn.Types.Core.Tag as Tag
+import Beckn.Types.ID
 import qualified Beckn.Types.Mobility.Stop as Stop
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
@@ -151,7 +152,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
     logInfo "OnSearchCallback" $
-      "Calculated Driver Pool for organization " +|| _getOrganizationId transporterId ||+ " with drivers " +| T.intercalate ", " (_getPersonId <$> pool) |+ ""
+      "Calculated Driver Pool for organization " +|| _getOrganizationId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
     let piStatus =
           if null pool
             then ProductInstance.OUTOFSTOCK

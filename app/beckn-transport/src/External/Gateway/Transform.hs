@@ -157,7 +157,7 @@ mkTracking method dataUrl =
       _metadata = Nothing
     }
 
-mkDriverObj :: Person.Person -> Driver
+mkDriverObj :: Person.Person -> Mobility.Driver
 mkDriverObj person =
   let bPerson = mkPerson person
    in Driver

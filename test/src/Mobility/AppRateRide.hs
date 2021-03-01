@@ -4,9 +4,9 @@ module Mobility.AppRateRide where
 
 import Beckn.Types.App
   ( CaseId (CaseId, _getCaseId),
-    PersonId (PersonId),
     ProductInstanceId (_getProductInstanceId),
   )
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -124,7 +124,7 @@ spec = do
       appFeedbackResponse ^. #_error `shouldSatisfy` isNothing
 
       driverInfoResult <-
-        runClient transporterClient $ F.callGetPerson (PersonId F.testDriverId)
+        runClient transporterClient $ F.callGetPerson (ID F.testDriverId)
       driverInfoResult `shouldSatisfy` isRight
       let Right driverInfoResponse = driverInfoResult
       let driverRating = driverInfoResponse ^. #_rating

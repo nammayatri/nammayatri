@@ -6,8 +6,10 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
@@ -294,14 +296,14 @@ findById pid = do
   where
     predicate Storage.ProductInstance {..} = _id ==. B.val_ pid
 
-updateDriverFlow :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
+updateDriverFlow :: [ProductInstanceId] -> Maybe (ID Person) -> Flow ()
 updateDriverFlow ids driverId =
   DB.runSqlDB (updateDriver ids driverId)
     >>= either DB.throwDBError pure
 
 updateDriver ::
   [ProductInstanceId] ->
-  Maybe PersonId ->
+  Maybe (ID Person) ->
   DB.SqlDB ()
 updateDriver ids driverId = do
   dbTable <- getDbTable
@@ -364,7 +366,7 @@ findAllByVehicleId id = do
   where
     predicate Storage.ProductInstance {..} = B.val_ (isJust id) &&. _entityId ==. B.val_ id
 
-findAllByPersonId :: PersonId -> Flow [Storage.ProductInstance]
+findAllByPersonId :: ID Person -> Flow [Storage.ProductInstance]
 findAllByPersonId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -431,7 +433,7 @@ findByStartTimeBuffer piType startTime buffer statuses = do
             &&. _startTime B.>=. B.val_ fromTime
             &&. _status `B.in_` inStatus
 
-getDriverCompletedRides :: PersonId -> UTCTime -> UTCTime -> Flow [Storage.ProductInstance]
+getDriverCompletedRides :: ID Person -> UTCTime -> UTCTime -> Flow [Storage.ProductInstance]
 getDriverCompletedRides driverId fromTime toTime = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate >>= checkDBError

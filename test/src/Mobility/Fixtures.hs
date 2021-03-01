@@ -8,6 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
+import Beckn.Types.ID
 import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -239,11 +240,11 @@ createPerson
   :<|> deletePerson
   :<|> linkEntity = client (Proxy :: Proxy TbeRoutes.PersonAPI)
 
-callGetPerson :: PersonId -> ClientM TbePerson.PersonEntityRes
+callGetPerson :: ID Person.Person -> ClientM TbePerson.PersonEntityRes
 callGetPerson personId =
   getPerson
     appRegistrationToken
-    (Just $ _getPersonId personId)
+    (Just $ getId personId)
     Nothing
     Nothing
     Nothing

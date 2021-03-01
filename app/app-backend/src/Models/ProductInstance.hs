@@ -3,6 +3,7 @@ module Models.ProductInstance where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
@@ -110,7 +111,7 @@ findByParentIdType mparentId csType = do
   result <- Q.findByParentIdType mparentId csType
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
-findAllByPerson :: PersonId -> Flow [ProductInstance]
+findAllByPerson :: ID Person.Person -> Flow [ProductInstance]
 findAllByPerson perId = do
   result <- Q.findAllByPerson perId
   checkDBError result

@@ -23,6 +23,7 @@ import Beckn.Sms.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -45,16 +46,16 @@ import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Location (LatLong (..))
 import Types.API.Person
-import Types.App (ConfigKey (..), DriverId (..))
+import Types.App (ConfigKey (..))
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   verifyPerson _EntityId
-  person <- QP.findPersonById (PersonId _EntityId)
+  person <- QP.findPersonById (ID _EntityId)
   isValidUpdate person
   updatedPerson <- modifyTransform req person
-  QP.updatePersonRec (PersonId _EntityId) updatedPerson
+  QP.updatePersonRec (ID _EntityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
   where
     verifyPerson entityId =
@@ -87,10 +88,10 @@ createPerson orgId req = withFlowHandler $ do
               throwError400 "DRIVER_ALREADY_CREATED"
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
 
-createDriverDetails :: PersonId -> Flow ()
+createDriverDetails :: ID SP.Person -> Flow ()
 createDriverDetails personId = do
   now <- getCurrTime
-  let driverId = DriverId $ _getPersonId personId
+  let driverId = cast personId
   let driverInfo =
         DriverInformation.DriverInformation
           { _driverId = driverId,
@@ -119,12 +120,12 @@ getPerson ::
   FlowHandler PersonEntityRes
 getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM identifierTypeM =
   withFlowHandler $ do
-    user <- QP.findPersonById (PersonId _EntityId)
+    user <- QP.findPersonById (ID _EntityId)
     -- TODO: fix this to match based on identifierType
     -- And maybe have a way to handle the case when ID is
     -- passed and identifierType is null. Throw validation errors
     person <- case identifierTypeM of
-      Nothing -> QP.findPersonById (PersonId $ fromJust idM)
+      Nothing -> QP.findPersonById (ID $ fromJust idM)
       Just SP.MOBILENUMBER -> do
         countryCode <- fromMaybeM400 "MOBILE_COUNTRY_CODE_REQUIRED" countryCodeM
         mobile <- fromMaybeM400 "MOBILE_NUMBER_REQUIRED" mobileM
@@ -151,19 +152,19 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do
-  person <- QP.findPersonById (PersonId personId)
+  person <- QP.findPersonById (ID personId)
   if person ^. #_organizationId == Just orgId
     then do
-      QP.deleteById (PersonId personId)
-      QDriverStats.deleteById $ DriverId personId
-      QDriverInformation.deleteById $ DriverId personId
+      QP.deleteById (ID personId)
+      QDriverStats.deleteById $ ID personId
+      QDriverInformation.deleteById $ ID personId
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
     else throwError401 "Unauthorized"
 
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
-  person <- QP.findPersonById (PersonId personId)
+  person <- QP.findPersonById (ID personId)
   _ <- case req ^. #_entityType of
     VEHICLE ->
       QV.findVehicleById (VehicleId (req ^. #_entityId))
@@ -174,7 +175,7 @@ linkEntity orgId personId req = withFlowHandler $ do
     (throwError401 "Unauthorized")
   prevPerson <- QP.findByEntityId (req ^. #_entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
-  QP.updateEntity (PersonId personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
+  QP.updateEntity (ID personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
   updatedPerson <- QP.findPersonById $ person ^. #_id
   mkPersonRes updatedPerson
 
@@ -238,7 +239,7 @@ mapEntityType entityType = case entityType of
   "VEHICLE" -> Just VEHICLE
   _ -> Nothing
 
-calculateAverageRating :: PersonId -> Flow ()
+calculateAverageRating :: ID SP.Person -> Flow ()
 calculateAverageRating personId = do
   logInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- Rating.findAllRatingsForPerson personId
@@ -254,10 +255,10 @@ calculateAverageRating personId = do
 driverPoolKey :: ProductInstanceId -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . _getProductInstanceId
 
-getDriverPool :: ProductInstanceId -> Flow [PersonId]
+getDriverPool :: ProductInstanceId -> Flow [ID SP.Person]
 getDriverPool piId =
   Redis.getKeyRedis (driverPoolKey piId)
-    >>= maybe calcDriverPool (pure . map PersonId)
+    >>= maybe calcDriverPool (pure . map ID)
   where
     calcDriverPool = do
       prodInst <- PI.findById piId
@@ -271,15 +272,15 @@ getDriverPool piId =
       let orgId = OrganizationId (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
-setDriverPool :: ProductInstanceId -> [PersonId] -> Flow ()
+setDriverPool :: ProductInstanceId -> [ID SP.Person] -> Flow ()
 setDriverPool piId ids =
-  Redis.setExRedis (driverPoolKey piId) (map _getPersonId ids) (60 * 10)
+  Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
   LocationId ->
   OrganizationId ->
   SV.Variant ->
-  Flow [PersonId]
+  Flow [ID SP.Person]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
   lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"

@@ -7,9 +7,11 @@ module Types.API.DriverInformation
   )
 where
 
-import Beckn.Types.App (PersonId, ProductInstanceId)
+import Beckn.Types.App (ProductInstanceId)
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Organization
+import Beckn.Types.Storage.Person (Person)
 import Data.Time
 import EulerHS.Prelude
 import qualified Types.API.Person as PersonAPI
@@ -21,7 +23,7 @@ newtype ActiveDriversResponse = ActiveDriversResponse
   deriving (Eq, Show, Generic, ToJSON)
 
 data DriverRidesInformation = DriverRidesInformation
-  { driver_id :: PersonId,
+  { driver_id :: ID Person,
     completed_rides_over_time :: Int,
     earnings_over_time :: Float
   }

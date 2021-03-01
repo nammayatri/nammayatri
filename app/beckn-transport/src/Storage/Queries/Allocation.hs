@@ -12,7 +12,6 @@ import EulerHS.Prelude
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.ProductInstance (DriverVehicleInfo (..))
-import Types.App
 
 assignDriver ::
   ProductInstanceId ->
@@ -22,13 +21,12 @@ assignDriver ::
   DB.SqlDB ()
 assignDriver productInstanceId piIdList vehicle driver = do
   QPI.updateVehicle piIdList (Just $ vehicle ^. #_id)
-  QPI.updateDriver piIdList (Just personId)
+  QPI.updateDriver piIdList (Just driverId)
   QDI.updateOnRide driverId True
   QPI.updateStatusByIds piIdList SPI.TRIP_ASSIGNED
   updateInfo productInstanceId driver vehicle
   where
-    personId = driver ^. #_id
-    driverId = DriverId $ _getPersonId personId
+    driverId = driver ^. #_id
 
 updateInfo ::
   ProductInstanceId ->

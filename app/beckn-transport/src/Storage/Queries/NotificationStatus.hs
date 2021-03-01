@@ -3,11 +3,13 @@ module Storage.Queries.NotificationStatus where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.ID
+import Beckn.Types.Storage.Person (Driver)
 import Beckn.Utils.Common (getSchemaName)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.App (DriverId, RideId)
+import Types.App (RideId)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 
@@ -21,7 +23,7 @@ create NotificationStatus.NotificationStatus {..} = do
   DB.createOne dbTable (Storage.insertExpression NotificationStatus.NotificationStatus {..})
     >>= either DB.throwDBError pure
 
-updateStatus :: RideId -> DriverId -> NotificationStatus.AnswerStatus -> Flow ()
+updateStatus :: RideId -> ID Driver -> NotificationStatus.AnswerStatus -> Flow ()
 updateStatus rideId driverId status = do
   dbTable <- getDbTable
   DB.update dbTable (setClause status) (predicate rideId driverId)
@@ -59,7 +61,7 @@ findActiveNotificationByRideId rideId = do
       _rideId ==. B.val_ rideId
         &&. _status ==. B.val_ NotificationStatus.NOTIFIED
 
-findActiveNotificationByDriverId :: DriverId -> Maybe RideId -> Flow (Maybe NotificationStatus.NotificationStatus)
+findActiveNotificationByDriverId :: ID Driver -> Maybe RideId -> Flow (Maybe NotificationStatus.NotificationStatus)
 findActiveNotificationByDriverId driverId rideId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

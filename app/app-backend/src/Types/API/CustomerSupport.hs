@@ -3,7 +3,7 @@ module Types.API.CustomerSupport where
 import Beckn.Types.Amount
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Location as L
-import Beckn.Types.Storage.Person as P
+import qualified Beckn.Types.Storage.Person as P
 import Beckn.Types.Storage.ProductInstance as SP
 import Data.Time
 import EulerHS.Prelude

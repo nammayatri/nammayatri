@@ -3,6 +3,8 @@
 module Services.Allocation.Allocation where
 
 import Beckn.Utils.Logging (LogLevel (..))
+import Beckn.Types.ID
+import Beckn.Types.Storage.Person (Driver)
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
@@ -41,7 +43,7 @@ data NotificationStatus
   deriving (Eq, Show)
 
 data CurrentNotification
-  = CurrentNotification DriverId UTCTime
+  = CurrentNotification (ID Driver) UTCTime
   deriving (Show)
 
 data RideStatus
@@ -65,19 +67,19 @@ data ServiceHandle m = ServiceHandle
     getConfiguredNotificationTime :: m NominalDiffTime,
     getConfiguredAllocationTime :: m NominalDiffTime,
     getRequests :: Integer -> m [RideRequest],
-    getDriverPool :: RideId -> m [DriverId],
+    getDriverPool :: RideId -> m [ID Driver],
     getCurrentNotification :: RideId -> m (Maybe CurrentNotification),
-    sendNewRideNotification :: RideId -> DriverId -> m (),
-    sendRideNotAssignedNotification :: RideId -> DriverId -> m (),
-    addNotificationStatus :: RideId -> DriverId -> UTCTime -> m (),
-    updateNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
-    resetLastRejectionTime :: DriverId -> m (),
-    getAttemptedDrivers :: RideId -> m [DriverId],
-    getDriversWithNotification :: m [DriverId],
-    getFirstDriverInTheQueue :: NonEmpty DriverId -> m DriverId,
-    checkAvailability :: NonEmpty DriverId -> m [DriverId],
-    getDriverResponse :: RideId -> DriverId -> m (Maybe DriverResponse.DriverResponse),
-    assignDriver :: RideId -> DriverId -> m (),
+    sendNewRideNotification :: RideId -> ID Driver -> m (),
+    sendRideNotAssignedNotification :: RideId -> ID Driver -> m (),
+    addNotificationStatus :: RideId -> ID Driver -> UTCTime -> m (),
+    updateNotificationStatus :: RideId -> ID Driver -> NotificationStatus -> m (),
+    resetLastRejectionTime :: ID Driver -> m (),
+    getAttemptedDrivers :: RideId -> m [ID Driver],
+    getDriversWithNotification :: m [ID Driver],
+    getFirstDriverInTheQueue :: NonEmpty (ID Driver) -> m (ID Driver),
+    checkAvailability :: NonEmpty (ID Driver) -> m [ID Driver],
+    getDriverResponse :: RideId -> ID Driver -> m (Maybe DriverResponse.DriverResponse),
+    assignDriver :: RideId -> ID Driver -> m (),
     cancelRide :: RideId -> m (),
     cleanupNotifications :: RideId -> m (),
     addAllocationRequest :: RideId -> m (),
@@ -174,7 +176,7 @@ processCurrentNotification
     logInfoText handle $ "isNotificationTimeFinished " <> show notificationTimeFinished
     if notificationTimeFinished
       then do
-        logInfoText handle $ "Notified ride not assigned to driver " <> _getDriverId driverId
+        logInfoText handle $ "Notified ride not assigned to driver " <> getId driverId
         sendRideNotAssignedNotification rideId driverId
         processRejection handle True requestHeader driverId
       else do
@@ -193,7 +195,7 @@ processCurrentNotification
           Nothing ->
             checkRideLater handle requestHeader
 
-processRejection :: Monad m => ServiceHandle m -> Bool -> RequestHeader -> DriverId -> m ()
+processRejection :: Monad m => ServiceHandle m -> Bool -> RequestHeader -> ID Driver -> m ()
 processRejection handle@ServiceHandle {..} ignored requestHeader driverId = do
   logInfoText handle "processing rejection"
   let rideId = requestHeader ^. #rideId
@@ -209,7 +211,7 @@ proceedToNextDriver handle@ServiceHandle {..} requestHeader = do
   logInfoText handle "proceed to next driver"
   let rideId = requestHeader ^. #rideId
   driverPool <- getDriverPool rideId
-  logInfoText handle $ "DriverPool " <> T.intercalate ", " (_getDriverId <$> driverPool)
+  logInfoText handle $ "DriverPool " <> T.intercalate ", " (getId <$> driverPool)
 
   case driverPool of
     driverId : driverIds -> do
@@ -226,7 +228,7 @@ proceedToNextDriver handle@ServiceHandle {..} requestHeader = do
       processFilteredPool handle requestHeader filteredPool
     [] -> cancel handle requestHeader
 
-processFilteredPool :: Monad m => ServiceHandle m -> RequestHeader -> [DriverId] -> m ()
+processFilteredPool :: Monad m => ServiceHandle m -> RequestHeader -> [ID Driver] -> m ()
 processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
   let rideId = requestHeader ^. #rideId
   case driverPool of
@@ -241,7 +243,7 @@ processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
       let expiryTime = addUTCTime notificationTime currentTime
       sendNewRideNotification rideId firstDriver
       addNotificationStatus rideId firstDriver expiryTime
-      logInfoText handle $ "Notified driver " <> _getDriverId firstDriver
+      logInfoText handle $ "Notified driver " <> getId firstDriver
       logEvent NotificationSent (requestHeader ^. #rideId)
       checkRideLater handle requestHeader
     [] -> do

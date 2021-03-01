@@ -6,6 +6,7 @@ import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.App
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -112,7 +113,7 @@ notifyDriver notificationType notificationTitle message driver =
       FCM.FCMData
         { _fcmNotificationType = notificationType,
           _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getPersonId $ driver ^. #_id,
+          _fcmEntityIds = show . getId $ driver ^. #_id,
           _fcmEntityType = FCM.Person
         }
     title = FCM.FCMNotificationTitle notificationTitle

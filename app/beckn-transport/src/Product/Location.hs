@@ -5,6 +5,7 @@ module Product.Location where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
@@ -19,7 +20,7 @@ import Types.API.Location as Location
 
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
-  person <- Person.findPersonById $ PersonId _EntityId
+  person <- Person.findPersonById $ ID _EntityId
   driver <- if person ^. #_role == Person.DRIVER then return person else throwError400 "Only driver can update location."
   locationId <-
     driver ^. #_locationId & (LocationId <$>)

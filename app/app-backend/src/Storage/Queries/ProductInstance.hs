@@ -4,6 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as Storage
@@ -48,7 +49,7 @@ findByProductId pId = do
     predicate Storage.ProductInstance {..} =
       _productId ==. B.val_ pId
 
-findAllByPerson :: PersonId -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByPerson :: ID Person.Person -> Flow (T.DBResult [Storage.ProductInstance])
 findAllByPerson perId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate

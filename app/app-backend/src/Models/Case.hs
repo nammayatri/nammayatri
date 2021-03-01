@@ -3,7 +3,9 @@ module Models.Case where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import Data.Time
@@ -27,7 +29,7 @@ create c = do
 
 -- | Find Cases
 findAllByTypeAndStatuses ::
-  PersonId ->
+  ID Person ->
   CaseType ->
   [CaseStatus] ->
   Maybe Integer ->

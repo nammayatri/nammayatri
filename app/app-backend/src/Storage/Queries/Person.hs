@@ -8,6 +8,7 @@ import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Data.Time
@@ -28,7 +29,7 @@ create person = do
     >>= either DB.throwDBError pure
 
 findById ::
-  PersonId -> Flow (Maybe Storage.Person)
+  ID Storage.Person -> Flow (Maybe Storage.Person)
 findById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -105,7 +106,7 @@ findByRoleAndMobileNumberWithoutCC role mobileNumber = do
       _role ==. B.val_ role
         &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
 
-updateMultiple :: PersonId -> Storage.Person -> Flow ()
+updateMultiple :: ID Storage.Person -> Storage.Person -> Flow ()
 updateMultiple personId person = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -135,7 +136,7 @@ updateMultiple personId person = do
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
 update ::
-  PersonId ->
+  ID Storage.Person ->
   Maybe Storage.Status ->
   Maybe Text ->
   Maybe Text ->
@@ -165,7 +166,7 @@ update id statusM nameM emailM roleM identTypeM identM = do
         )
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
-updatePersonOrgId :: Text -> PersonId -> Flow ()
+updatePersonOrgId :: Text -> ID Storage.Person -> Flow ()
 updatePersonOrgId orgId personId = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -176,7 +177,7 @@ updatePersonOrgId orgId personId = do
       mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
     predicate i Storage.Person {..} = _id ==. B.val_ i
 
-updatePersonalInfo :: PersonId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe Text -> Maybe FCM.FCMRecipientToken -> Flow ()
+updatePersonalInfo :: ID Storage.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe Text -> Maybe FCM.FCMRecipientToken -> Flow ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -225,7 +226,7 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
       _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> pOrgIds) &&. _role `B.in_` (B.val_ <$> pRoles)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
-deleteById :: PersonId -> Flow ()
+deleteById :: ID Storage.Person -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)

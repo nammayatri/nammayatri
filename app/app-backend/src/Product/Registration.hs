@@ -6,8 +6,8 @@ import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
-import Beckn.Types.App
 import qualified Beckn.Types.Common as BC
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -34,7 +34,7 @@ initiateFlow req smsCfg = do
   person <-
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
       >>= maybe (createPerson req) clearOldRegToken
-  let entityId = _getPersonId . SP._id $ person
+  let entityId = getId . SP._id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   regToken <- case useFakeOtpM of
@@ -172,7 +172,7 @@ createPerson req = do
 
 checkPersonExists :: Text -> Flow SP.Person
 checkPersonExists _EntityId =
-  Person.findById (PersonId _EntityId) >>= fromMaybeM400 "INVALID_DATA"
+  Person.findById (ID _EntityId) >>= fromMaybeM400 "INVALID_DATA"
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
@@ -191,5 +191,5 @@ reInitiateLogin tokenId req =
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do
-  RegistrationToken.deleteByPersonId $ _getPersonId $ person ^. #_id
+  RegistrationToken.deleteByPersonId $ getId $ person ^. #_id
   pure person

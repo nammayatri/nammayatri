@@ -5,6 +5,7 @@ module Product.Vehicle where
 import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
@@ -57,7 +58,7 @@ deleteVehicle orgId vehicleId = withFlowHandler $ do
 
 getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
-  user <- QP.findPersonById (PersonId _EntityId)
+  user <- QP.findPersonById (ID _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError400 "Invalid Request"
     _ ->
@@ -90,7 +91,7 @@ mkVehicleRes personList vehicle =
 mkDriverObj :: SP.Person -> Driver
 mkDriverObj person =
   Driver
-    { _id = _getPersonId $ person ^. #_id,
+    { _id = getId $ person ^. #_id,
       _firstName = person ^. #_firstName,
       _middleName = person ^. #_middleName,
       _lastName = person ^. #_lastName,

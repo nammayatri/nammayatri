@@ -3,11 +3,12 @@ module Storage.Queries.DriverInformation where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.ID
 import Beckn.Utils.Common (HasSchemaName (..), getCurrTime)
+import Beckn.Types.Storage.Person (Driver)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.App (DriverId)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
 
@@ -20,7 +21,7 @@ create DriverInformation.DriverInformation {..} = do
   DB.createOne dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
     >>= either DB.throwDBError pure
 
-findById :: DriverId -> Flow (Maybe DriverInformation.DriverInformation)
+findById :: ID Driver -> Flow (Maybe DriverInformation.DriverInformation)
 findById driverId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -33,7 +34,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-fetchAllAvailableByIds :: [DriverId] -> Flow [DriverInformation.DriverInformation]
+fetchAllAvailableByIds :: [ID Driver] -> Flow [DriverInformation.DriverInformation]
 fetchAllAvailableByIds driversIds = do
   dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
@@ -47,7 +48,7 @@ fetchAllAvailableByIds driversIds = do
           _onRide ==. B.val_ False
         ]
 
-updateActivity :: DriverId -> Bool -> Flow ()
+updateActivity :: ID Driver -> Bool -> Flow ()
 updateActivity driverId active = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -61,13 +62,13 @@ updateActivity driverId active = do
         ]
     predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
 
-updateOnRideFlow :: DriverId -> Bool -> Flow ()
+updateOnRideFlow :: ID Driver -> Bool -> Flow ()
 updateOnRideFlow driverId onRide =
   DB.runSqlDB (updateOnRide driverId onRide)
     >>= either DB.throwDBError pure
 
 updateOnRide ::
-  DriverId ->
+  ID Driver ->
   Bool ->
   DB.SqlDB ()
 updateOnRide driverId onRide = do
@@ -82,7 +83,7 @@ updateOnRide driverId onRide = do
         ]
     predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
 
-deleteById :: DriverId -> Flow ()
+deleteById :: ID Driver -> Flow ()
 deleteById driverId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate driverId)

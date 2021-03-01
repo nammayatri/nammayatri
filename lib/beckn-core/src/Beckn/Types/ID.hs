@@ -4,6 +4,7 @@
 module Beckn.Types.ID where
 
 import Beckn.Types.Common (GuidLike (..))
+import Data.Swagger
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
   ( BeamSqlBackend,
@@ -15,12 +16,13 @@ import Database.Beam.Query (HasSqlEqualityCheck)
 import EulerHS.Prelude
 import Servant (FromHttpApiData (parseUrlPiece))
 
-newtype ID domain = ID Text
-  deriving stock (Show, Eq)
-  deriving newtype (ToJSON, FromJSON)
+newtype ID domain = ID
+  {getId :: Text}
+  deriving stock (Generic, Show, Eq, Ord)
+  deriving newtype (ToJSON, FromJSON, ToSchema)
 
-getId :: ID a -> Text
-getId (ID a) = a
+cast :: ID a -> ID b
+cast = ID . getId
 
 instance IsString (ID d) where
   fromString = ID . Text.pack

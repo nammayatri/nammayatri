@@ -9,6 +9,7 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
@@ -36,7 +37,7 @@ import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
 list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ do
-  person <- QP.findPersonById (PersonId _EntityId)
+  person <- QP.findPersonById (ID _EntityId)
   now <- getCurrTime
   case person ^. #_organizationId of
     Just orgId -> do

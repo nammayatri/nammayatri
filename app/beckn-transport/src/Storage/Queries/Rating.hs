@@ -3,7 +3,9 @@ module Storage.Queries.Rating where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Query
-import Beckn.Types.App (PersonId, ProductInstanceId, RatingId)
+import Beckn.Types.App (ProductInstanceId, RatingId)
+import Beckn.Types.ID
+import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Rating as Storage
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
@@ -46,7 +48,7 @@ findByProductInstanceId productInsId = do
   where
     predicate Storage.Rating {..} = _productInstanceId ==. B.val_ productInsId
 
-findAllRatingsForPerson :: PersonId -> Flow [Storage.Rating]
+findAllRatingsForPerson :: ID Person -> Flow [Storage.Rating]
 findAllRatingsForPerson personId = do
   ratingTable <- getDbTable
   productInstanceTable <- PI.getDbTable

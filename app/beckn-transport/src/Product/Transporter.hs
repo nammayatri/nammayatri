@@ -22,7 +22,7 @@ import qualified Types.Storage.FarePolicy as SFarePolicy
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
-  person <- QP.findPersonById (PersonId _EntityId)
+  person <- QP.findPersonById (ID _EntityId)
   validate person
   organization <- createTransform req
   validateReq req
@@ -31,8 +31,8 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   hatchbackFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.HATCHBACK (organization ^. #_createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
-  QP.updateOrganizationIdAndMakeAdmin (PersonId _EntityId) (_getOrganizationId $ SO._id organization)
-  updatedPerson <- QP.findPersonById (PersonId _EntityId)
+  QP.updateOrganizationIdAndMakeAdmin (ID _EntityId) (_getOrganizationId $ SO._id organization)
+  updatedPerson <- QP.findPersonById (ID _EntityId)
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
@@ -64,7 +64,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
 
 updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
-  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (PersonId _EntityId) SP.ADMIN orgId
+  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (ID _EntityId) SP.ADMIN orgId
   now <- getCurrTime
   case maybePerson of
     Just person -> do
@@ -85,7 +85,7 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
 
 getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
 getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
-  person <- QP.findPersonById (PersonId _EntityId)
+  person <- QP.findPersonById (ID _EntityId)
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (OrganizationId orgId)
