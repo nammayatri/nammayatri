@@ -1,8 +1,8 @@
 module Main where
 
-import App
+import BackgroundTaskManager
 import EulerHS.Prelude
 import System.Environment
 
 main :: IO ()
-main = runTransporterBackendApp id
+main = runBackgroundTaskManager id

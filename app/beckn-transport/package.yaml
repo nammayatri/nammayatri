@@ -100,11 +100,22 @@ executables:
   beckn-transport-exe:
     main: Main.hs
     source-dirs: server
+    other-modules: []
     ghc-options:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
-
+    dependencies:
+      - beckn-transport
+      - beckn-core
+  beckn-transport-btm-exe:
+    main: BackgroundTaskManagerMain.hs
+    source-dirs: server
+    other-modules: []
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
     dependencies:
       - beckn-transport
       - beckn-core

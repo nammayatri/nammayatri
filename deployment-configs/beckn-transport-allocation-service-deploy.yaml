@@ -26,7 +26,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/beckn-transport-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/beckn-transport-btm-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -38,8 +38,6 @@ spec:
                   fieldPath: status.podIP
             - name: BECKN_TRANSPORT_CONFIG_PATH
               value: /etc/beckn/config/beckn-transport.dhall
-            - name: APP_MODE
-              value: BACKGROUND_TASK_MANAGER
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: beckn-transport-$DEPLOY_VARIANT
           ports:
