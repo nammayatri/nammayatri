@@ -5,8 +5,8 @@ module Storage.Queries.ProductInstance where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
 import Beckn.Types.ID
+import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as Storage
@@ -38,7 +38,7 @@ create Storage.ProductInstance {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.ProductInstance {..})
     >>= either DB.throwDBError pure
 
-findAllByIds :: Integer -> Integer -> [ProductsId] -> Flow [Storage.ProductInstance]
+findAllByIds :: Integer -> Integer -> [ID Product.Products] -> Flow [Storage.ProductInstance]
 findAllByIds limit offset ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
@@ -86,7 +86,7 @@ findAllByIds' ids = do
     predicate Storage.ProductInstance {..} =
       B.in_ _id (B.val_ <$> ids)
 
-updateStatusForProducts :: ProductsId -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
+updateStatusForProducts :: ID Product.Products -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateStatusForProducts productId status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
@@ -176,7 +176,7 @@ updateCaseId prodInstId caseId = do
           _caseId <-. B.val_ scCaseId
         ]
 
-findAllByProdId :: ProductsId -> Flow [Storage.ProductInstance]
+findAllByProdId :: ID Product.Products -> Flow [Storage.ProductInstance]
 findAllByProdId id = do
   dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
@@ -202,7 +202,7 @@ complementVal l
 productInstancejoinQuery ::
   ( B.Database be db,
     B.HasSqlEqualityCheck be (ID Case.Case),
-    B.HasSqlEqualityCheck be ProductsId
+    B.HasSqlEqualityCheck be (ID Product)
   ) =>
   B.DatabaseEntity be db (B.TableEntity Case.CaseT) ->
   B.DatabaseEntity be db (B.TableEntity ProductsT) ->

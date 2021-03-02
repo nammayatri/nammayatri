@@ -6,6 +6,7 @@ module Beckn.Types.Storage.Inventory where
 import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Organization (Organization)
+import Beckn.Types.Storage.Products (Products)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -36,7 +37,7 @@ instance FromHttpApiData InventoryStatus where
 
 data InventoryT f = Inventory
   { _id :: B.C f InventoryId,
-    _productId :: B.C f ProductsId,
+    _productId :: B.C f (ID Products),
     _organizationId :: B.C f (ID Organization),
     _status :: B.C f InventoryStatus,
     _quantity :: B.C f Int,

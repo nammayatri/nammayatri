@@ -3,7 +3,6 @@
 module Product.Info where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
@@ -43,7 +42,7 @@ getProductInfo _person prodInstId = withFlowHandler $ do
 getLocation :: Person.Person -> Text -> FlowHandler GetLocationRes
 getLocation person caseId = withFlowHandler $ do
   baseUrl <- xProviderUri <$> ask
-  productInstances <- MPI.listAllProductInstanceByPerson person (ByApplicationId $ ID caseId) [SPI.CONFIRMED]
+  productInstances <- MPI.listAllProductInstanceByPerson person (SPI.ByApplicationId $ ID caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError400 "INVALID_CASE"
   let pI = head productInstances
   resp <- External.location baseUrl (getId $ pI ^. #_id)

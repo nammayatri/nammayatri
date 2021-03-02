@@ -4,11 +4,11 @@
 module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.Amount
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person (Person)
+import Beckn.Types.Storage.Products (Products)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -68,7 +68,7 @@ instance FromBackendRow Postgres EntityType where
 data ProductInstanceT f = ProductInstance
   { _id :: B.C f (ID ProductInstance),
     _caseId :: B.C f (ID Case.Case),
-    _productId :: B.C f ProductsId,
+    _productId :: B.C f (ID Products),
     _personId :: B.C f (Maybe (ID Person)),
     _personUpdatedAt :: B.C f (Maybe UTCTime),
     _shortId :: B.C f Text,
@@ -215,3 +215,11 @@ instance ToBeckn Text ProductInstanceStatus where
       EXPIRED -> "EXPIRED"
       TRIP_ASSIGNED -> "TRIP_ASSIGNED"
       TRIP_REASSIGNMENT -> "TRIP_REASSIGNMENT"
+
+-- TODO: Add this later if required
+
+-- | ByOrganizationId OrganizationId
+data ListById
+  = ByApplicationId (ID Case.Case)
+  | ById (ID Products)
+  | ByCustomerId (ID Person)

@@ -3,7 +3,6 @@
 module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
@@ -60,7 +59,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
             _state = Nothing,
             _created_at = now,
             _updated_at = now,
-            _items = [OrderItem (_getProductsId $ productInstance ^. #_productId) Nothing],
+            _items = [OrderItem (getId $ productInstance ^. #_productId) Nothing],
             _billing = Nothing,
             _payment = Nothing,
             _trip = Nothing,

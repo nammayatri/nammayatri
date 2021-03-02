@@ -3,11 +3,11 @@ module Storage.Queries.ProductInstance where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as Storage
+import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -41,7 +41,7 @@ findAllByCaseId caseId = do
     predicate Storage.ProductInstance {..} =
       _caseId ==. B.val_ caseId
 
-findByProductId :: ProductsId -> Flow (T.DBResult (Maybe Storage.ProductInstance))
+findByProductId :: ID Products -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findByProductId pId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -110,41 +110,41 @@ updateAllProductInstancesByCaseId caseId status = do
           _status <-. B.val_ scStatus
         ]
 
-listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [Storage.ProductInstanceStatus] -> [Case.CaseType] -> Flow (T.DBResult [Storage.ProductInstance])
+listAllProductInstanceWithOffset :: Integer -> Integer -> Storage.ListById -> [Storage.ProductInstanceStatus] -> [Case.CaseType] -> Flow (T.DBResult [Storage.ProductInstance])
 listAllProductInstanceWithOffset limit offset id stats csTypes = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
   where
-    predicate (ByApplicationId i) s Storage.ProductInstance {..} =
+    predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} =
       _caseId ==. B.val_ i
         &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s)
         &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
-    predicate (ByCustomerId i) s Storage.ProductInstance {..} =
+    predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} =
       _personId ==. B.val_ (Just i)
         &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s)
         &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
-    predicate (ById i) s Storage.ProductInstance {..} =
+    predicate (Storage.ById i) s Storage.ProductInstance {..} =
       _productId ==. B.val_ i
         &&. (_status `B.in_` (B.val_ <$> s) ||. complementVal s)
         &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
     orderBy Storage.ProductInstance {..} = B.desc_ _updatedAt
 
-listAllProductInstance :: ListById -> [Storage.ProductInstanceStatus] -> Flow (T.DBResult [Storage.ProductInstance])
+listAllProductInstance :: Storage.ListById -> [Storage.ProductInstanceStatus] -> Flow (T.DBResult [Storage.ProductInstance])
 listAllProductInstance id status = do
   dbTable <- getDbTable
   DB.findAll dbTable (predicate id status)
   where
-    predicate (ByApplicationId i) [] Storage.ProductInstance {..} = _caseId ==. B.val_ i
-    predicate (ByApplicationId i) s Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
-    predicate (ByCustomerId i) [] Storage.ProductInstance {..} = _personId ==. B.val_ (Just i)
-    predicate (ByCustomerId i) s Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s)
-    predicate (ById i) [] Storage.ProductInstance {..} = _productId ==. B.val_ i
-    predicate (ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
+    predicate (Storage.ByApplicationId i) [] Storage.ProductInstance {..} = _caseId ==. B.val_ i
+    predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
+    predicate (Storage.ByCustomerId i) [] Storage.ProductInstance {..} = _personId ==. B.val_ (Just i)
+    predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} = _personId ==. B.val_ (Just i) &&. B.in_ _status (B.val_ <$> s)
+    predicate (Storage.ById i) [] Storage.ProductInstance {..} = _productId ==. B.val_ i
+    predicate (Storage.ById i) s Storage.ProductInstance {..} = _productId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
 
-listAllProductInstanceByPerson :: Person.Person -> ListById -> [Storage.ProductInstanceStatus] -> Flow (T.DBResult [Storage.ProductInstance])
+listAllProductInstanceByPerson :: Person.Person -> Storage.ListById -> [Storage.ProductInstanceStatus] -> Flow (T.DBResult [Storage.ProductInstance])
 listAllProductInstanceByPerson person id status =
   case id of
-    ByApplicationId caseId ->
+    Storage.ByApplicationId caseId ->
       Case.findIdByPerson person caseId >> listAllProductInstance id status
     _ -> listAllProductInstance id status
 

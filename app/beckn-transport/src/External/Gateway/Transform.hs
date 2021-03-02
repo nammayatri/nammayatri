@@ -3,7 +3,6 @@
 module External.Gateway.Transform where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Core.Brand
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
@@ -135,7 +134,7 @@ mkOrder _c pri trip = do
   return
     Mobility.Order
       { _id = getId searchPiId,
-        _items = [OrderItem (_getProductsId $ pri ^. #_productId) Nothing],
+        _items = [OrderItem (getId $ pri ^. #_productId) Nothing],
         _created_at = now,
         _updated_at = now,
         _state = Nothing,

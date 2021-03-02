@@ -14,9 +14,6 @@ where
 import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
-import Beckn.Types.ID
-import Beckn.Types.Storage.Case (Case)
-import Beckn.Types.Storage.Person (Person)
 import Beckn.Utils.Logging (HasLogContext (..))
 import Beckn.Utils.TH
 import Control.Lens ((?~))
@@ -41,13 +38,6 @@ type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
 type FlowServerR r api = ServerT api (FlowHandlerR r)
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
-
-newtype ProductsId = ProductsId
-  { _getProductsId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''ProductsId
 
 newtype ShortOrganizationId = ShortOrganizationId
   { _getShortOrganizationId :: Text
@@ -105,14 +95,6 @@ type CronAuthKey = Text
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
 
 type DomainResult a = Either DomainError a
-
--- TODO: Add this later if required
-
--- | ByOrganizationId OrganizationId
-data ListById
-  = ByApplicationId (ID Case)
-  | ById ProductsId
-  | ByCustomerId (ID Person)
 
 -- | Requests / responses track condiguration flag
 data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING

@@ -147,7 +147,7 @@ notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId = do
 mkOnServiceStatusPayload :: Text -> ProductInstance.ProductInstance -> Flow API.OnStatusReq
 mkOnServiceStatusPayload piId trackerPi = do
   context <- mkContext "on_status" "" -- FIXME: transaction id?
-  order <- mkOrderRes piId (App._getProductsId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
+  order <- mkOrderRes piId (getId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
   let onStatusMessage = API.OnStatusReqMessage order
   return $
     API.CallbackReq

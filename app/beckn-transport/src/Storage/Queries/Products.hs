@@ -3,7 +3,7 @@ module Storage.Queries.Products where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Products as Storage
 import Beckn.Utils.Common
 import Database.Beam ((==.))
@@ -22,7 +22,7 @@ create Storage.Products {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
     >>= either DB.throwDBError pure
 
-findAllById :: [ProductsId] -> Flow [Storage.Products]
+findAllById :: [ID Storage.Products] -> Flow [Storage.Products]
 findAllById ids = do
   dbTable <- getDbTable
   DB.findAllOrErr dbTable (predicate ids)
@@ -30,14 +30,14 @@ findAllById ids = do
     predicate pids Storage.Products {..} =
       B.in_ _id (B.val_ <$> pids)
 
-findById :: ProductsId -> Flow Storage.Products
+findById :: ID Storage.Products -> Flow Storage.Products
 findById pid = do
   dbTable <- getDbTable
   DB.findOneWithErr dbTable predicate
   where
     predicate Storage.Products {..} = _id ==. B.val_ pid
 
-findById' :: ProductsId -> Flow (T.DBResult (Maybe Storage.Products))
+findById' :: ID Storage.Products -> Flow (T.DBResult (Maybe Storage.Products))
 findById' pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

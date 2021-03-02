@@ -3,7 +3,6 @@
 module Product.TrackTrip where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack
@@ -56,7 +55,7 @@ trackCb _org req = withFlowHandler $ do
       let tracking = msg ^. #tracking
           caseId = ID $ context ^. #_transaction_id
       case_ <- MC.findById caseId
-      prodInst <- MPI.listAllProductInstance (ByApplicationId caseId) [ProductInstance.CONFIRMED]
+      prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
       let confirmedProducts = prodInst
       res <-
         case length confirmedProducts of

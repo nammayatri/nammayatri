@@ -1,7 +1,6 @@
 module Types.API.Case where
 
 import Beckn.Types.Amount
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
@@ -57,7 +56,7 @@ type CaseListRes = [CaseRes]
 data ProdInstRes = ProdInstRes
   { _id :: ID ProductInstance,
     _caseId :: ID Case,
-    _productId :: ProductsId,
+    _productId :: ID Products,
     _personId :: Maybe (ID Person),
     _shortId :: Text,
     _entityType :: EntityType,

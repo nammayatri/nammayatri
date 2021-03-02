@@ -1,12 +1,12 @@
 module Models.ProductInstance where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
+import Beckn.Types.Storage.Products (Products)
 import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
@@ -57,7 +57,7 @@ findAllByCaseId caseId = do
   checkDBError result
 
 -- | Find Product Instance by Product Id
-findByProductId :: ProductsId -> Flow ProductInstance
+findByProductId :: ID Products -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId pId
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
