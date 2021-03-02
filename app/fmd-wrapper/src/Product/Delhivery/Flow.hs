@@ -3,7 +3,7 @@
 module Product.Delhivery.Flow where
 
 import App.Types
-import Beckn.Types.App (CaseId (..), _getOrganizationId)
+import Beckn.Types.App (_getOrganizationId)
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Confirm as API
@@ -11,6 +11,7 @@ import qualified Beckn.Types.FMD.API.Init as API
 import qualified Beckn.Types.FMD.API.Search as API
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.FMD.Order
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
@@ -149,7 +150,7 @@ init org req = do
 
     createCaseIfNotPresent orgId order quote = do
       now <- getCurrTime
-      let caseId = CaseId $ fromJust $ order ^. #_id
+      let caseId = ID $ fromJust $ order ^. #_id
       let case_ =
             Case
               { _id = caseId,
@@ -191,7 +192,7 @@ confirm org req = do
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) ctx $ reqOrder ^. #_id
-  case_ <- Storage.findById (CaseId orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
+  case_ <- Storage.findById (ID orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
   let order = orderDetails ^. #order
   verifyPayment reqOrder order

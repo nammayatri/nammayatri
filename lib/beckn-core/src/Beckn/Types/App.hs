@@ -15,6 +15,7 @@ import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
 import Beckn.Types.ID
+import Beckn.Types.Storage.Case (Case)
 import Beckn.Types.Storage.Person (Person)
 import Beckn.Utils.Logging (HasLogContext (..))
 import Beckn.Utils.TH
@@ -40,13 +41,6 @@ type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
 type FlowServerR r api = ServerT api (FlowHandlerR r)
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
-
-newtype CaseId = CaseId
-  { _getCaseId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''CaseId
 
 newtype ProductsId = ProductsId
   { _getProductsId :: Text
@@ -130,7 +124,7 @@ type DomainResult a = Either DomainError a
 
 -- | ByOrganizationId OrganizationId
 data ListById
-  = ByApplicationId CaseId
+  = ByApplicationId (ID Case)
   | ById ProductsId
   | ByCustomerId (ID Person)
 

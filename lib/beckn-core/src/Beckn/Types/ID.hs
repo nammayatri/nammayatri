@@ -14,12 +14,12 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Query (HasSqlEqualityCheck)
 import EulerHS.Prelude
-import Servant (FromHttpApiData (parseUrlPiece))
+import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData)
 
 newtype ID domain = ID
   {getId :: Text}
   deriving stock (Generic, Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON, ToSchema)
+  deriving newtype (ToJSON, FromJSON, ToSchema, ToHttpApiData)
 
 cast :: ID a -> ID b
 cast = ID . getId

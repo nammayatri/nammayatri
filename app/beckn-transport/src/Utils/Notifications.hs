@@ -23,7 +23,7 @@ notifyDriverOnCancel c =
     caseId = Case._id c
     notificationData =
       FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-        show (_getCaseId caseId)
+        show (getId caseId)
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body =
       FCMNotificationBody $
@@ -55,7 +55,7 @@ notifyTransporterOnExpiration c =
   where
     notificationData =
       FCMData EXPIRED_CASE SHOW FCM.Case $
-        show (_getCaseId $ c ^. #_id)
+        show (getId $ c ^. #_id)
     title = FCMNotificationTitle $ T.pack "Ride expired!"
     body =
       FCMNotificationBody $

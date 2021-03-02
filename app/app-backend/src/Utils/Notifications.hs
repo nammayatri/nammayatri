@@ -126,7 +126,7 @@ notifyOnExpiration caseObj = do
         Just p -> do
           let notificationData =
                 FCMData EXPIRED_CASE SHOW FCM.Case $
-                  show (_getCaseId caseId)
+                  show (getId caseId)
               title = FCMNotificationTitle $ T.pack "Ride expired!"
               body =
                 FCMNotificationBody $

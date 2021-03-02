@@ -3,7 +3,7 @@
 
 module Beckn.Types.Storage.Case where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -95,7 +95,7 @@ instance FromHttpApiData CaseType where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data CaseT f = Case
-  { _id :: B.C f CaseId,
+  { _id :: B.C f (ID Case),
     _name :: B.C f (Maybe Text),
     _description :: B.C f (Maybe Text),
     _shortId :: B.C f Text,
@@ -110,7 +110,7 @@ data CaseT f = Case
     _providerType :: B.C f (Maybe ProviderType),
     _requestor :: B.C f (Maybe Text),
     _requestorType :: B.C f (Maybe RequestorType),
-    _parentCaseId :: B.C f (Maybe CaseId),
+    _parentCaseId :: B.C f (Maybe (ID Case)),
     _fromLocationId :: B.C f Text,
     _toLocationId :: B.C f Text,
     _udf1 :: B.C f (Maybe Text),
@@ -137,7 +137,7 @@ type Case = CaseT Identity
 type CasePrimaryKey = B.PrimaryKey CaseT Identity
 
 instance B.Table CaseT where
-  data PrimaryKey CaseT f = CasePrimaryKey (B.C f CaseId)
+  data PrimaryKey CaseT f = CasePrimaryKey (B.C f (ID Case))
     deriving (Generic, B.Beamable)
   primaryKey = CasePrimaryKey . _id
 

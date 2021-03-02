@@ -85,7 +85,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwErrorJSON400 "No CaseId or Mobile Number in Request"
+          (_, _) -> throwErrorJSON400 "No Case Id or Mobile Number in Request"
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
@@ -99,7 +99,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
-        Case.findByIdAndType (CaseId caseId) C.RIDESEARCH
+        Case.findByIdAndType (ID caseId) C.RIDESEARCH
           >>= either DB.throwDBError pure
           >>= fromMaybeMJSON400 "Invalid OrderId"
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
@@ -120,7 +120,7 @@ makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
-          { _id = _getCaseId _id,
+          { _id = getId _id,
             _status = status,
             _createdAt = _createdAt,
             _updatedAt = _updatedAt,

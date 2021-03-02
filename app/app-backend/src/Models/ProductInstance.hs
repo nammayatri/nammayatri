@@ -32,7 +32,7 @@ updateStatus piid status = do
   checkDBError result
 
 -- | Bulk validate and update Case's ProductInstances statuses
-updateAllProductInstancesByCaseId :: CaseId -> ProductInstanceStatus -> Flow ()
+updateAllProductInstancesByCaseId :: ID Case.Case -> ProductInstanceStatus -> Flow ()
 updateAllProductInstancesByCaseId caseId status = do
   validatePIStatusesChange status caseId
   result <- Q.updateAllProductInstancesByCaseId caseId status
@@ -51,7 +51,7 @@ findById caseProductId = do
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: CaseId -> Flow [ProductInstance]
+findAllByCaseId :: ID Case.Case -> Flow [ProductInstance]
 findAllByCaseId caseId = do
   result <- Q.findAllByCaseId caseId
   checkDBError result
@@ -69,7 +69,7 @@ validatePIStatusChange newStatus productInstanceId = do
   validateStatusChange newStatus cp
 
 -- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange :: ProductInstanceStatus -> CaseId -> Flow ()
+validatePIStatusesChange :: ProductInstanceStatus -> ID Case.Case -> Flow ()
 validatePIStatusesChange newStatus caseId = do
   cps <- findAllByCaseId caseId
   validatePIStatusesChange' newStatus cps

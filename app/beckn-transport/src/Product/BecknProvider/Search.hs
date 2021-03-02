@@ -102,7 +102,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
   let tId = _getOrganizationId transporterId
   let bapId = _getOrganizationId bapOrgId
   Case.Case
-    { _id = CaseId {_getCaseId = uuid},
+    { _id = ID uuid,
       _name = Nothing,
       _description = Just "Case to search for a Ride",
       _shortId = tId <> "_" <> req ^. #context . #_transaction_id,

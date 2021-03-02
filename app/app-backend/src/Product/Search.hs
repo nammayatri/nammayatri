@@ -62,15 +62,15 @@ search person req = withFlowHandler $ do
   msgId <- L.generateGUID
   env <- ask
   let bapNwAddr = env ^. #bapNwAddress
-      context = mkContext "search" (_getCaseId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
+      context = mkContext "search" (getId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
       intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
   eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
   let sAck =
         case eres of
           Left err -> API.Ack "Error" (show err)
-          Right _ -> API.Ack "Successful" (_getCaseId $ case_ ^. #_id)
-  return $ API.AckResponse (_getCaseId (case_ ^. #_id)) sAck Nothing
+          Right _ -> API.Ack "Successful" (getId $ case_ ^. #_id)
+  return $ API.AckResponse (getId (case_ ^. #_id)) sAck Nothing
   where
     validateDateTime sreq = do
       currTime <- getCurrTime
@@ -101,7 +101,7 @@ searchCb _bppOrg req = withFlowHandler $ do
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do
-  let caseId = CaseId $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+  let caseId = ID $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
   when (case_ ^. #_status /= Case.CLOSED) $ do
     bpp <-

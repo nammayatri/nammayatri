@@ -6,6 +6,7 @@ import App.Types
 import Beckn.Types.App
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -25,7 +26,7 @@ status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandler $ do
   prodInst <- QPI.findById (ProductInstanceId productInstanceId)
   case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
-  let caseId = _getCaseId $ case_ ^. #_id
+  let caseId = getId $ case_ ^. #_id
   msgId <- L.generateGUID
   context <- buildContext "status" caseId msgId
   organization <-

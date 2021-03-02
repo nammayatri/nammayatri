@@ -9,6 +9,7 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -31,7 +32,7 @@ track person req = withFlowHandler $ do
   prodInst <- MPI.findById $ ProductInstanceId prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
   msgId <- L.generateGUID
-  let txnId = _getCaseId $ case_ ^. #_id
+  let txnId = getId $ case_ ^. #_id
   let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
   organization <-
     OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
@@ -53,7 +54,7 @@ trackCb _org req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let tracking = msg ^. #tracking
-          caseId = CaseId $ context ^. #_transaction_id
+          caseId = ID $ context ^. #_transaction_id
       case_ <- MC.findById caseId
       prodInst <- MPI.listAllProductInstance (ByApplicationId caseId) [ProductInstance.CONFIRMED]
       let confirmedProducts = prodInst

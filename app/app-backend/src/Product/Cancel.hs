@@ -5,6 +5,7 @@ module Product.Cancel (cancel, onCancel) where
 import App.Types
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Cancel as API
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -41,7 +42,7 @@ cancelProductInstance person req = do
     else errResp (show (orderPI ^. #_status)) cs
   where
     sendCancelReq prodInst cs = do
-      let txnId = _getCaseId $ cs ^. #_id
+      let txnId = getId $ cs ^. #_id
       let prodInstId = _getProductInstanceId $ prodInst ^. #_id
       currTime <- L.runIO getCurrentTime
       msgId <- L.generateGUID
@@ -56,14 +57,14 @@ cancelProductInstance person req = do
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)
         Right _ -> mkAckResponse txnId "cancel"
     errResp pStatus cs = do
-      let txnId = _getCaseId $ cs ^. #_id
+      let txnId = getId $ cs ^. #_id
       mkAckResponse' txnId "cancel" ("Err: Cannot CANCEL product in " <> pStatus <> " status")
 
 searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
 searchCancel person req = do
   let caseId = req ^. #message . #entityId
   let txnId = caseId
-  case_ <- MC.findIdByPerson person (CaseId caseId)
+  case_ <- MC.findIdByPerson person (ID caseId)
   if isCaseCancellable case_
     then do
       Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH

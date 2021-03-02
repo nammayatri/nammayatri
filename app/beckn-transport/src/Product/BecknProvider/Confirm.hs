@@ -152,7 +152,7 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: CaseId -> ProductInstance.ProductInstance -> Flow ProductInstance.ProductInstance
+mkOrderProductInstance :: ID Case.Case -> ProductInstance.ProductInstance -> Flow ProductInstance.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   (now, pid, shortId) <- BP.getIdShortIdAndTime
   inAppOtpCode <- generateOTPCode
@@ -190,7 +190,7 @@ mkOrderProductInstance caseId prodInst = do
 mkTrackerCase :: Case.Case -> Text -> UTCTime -> Text -> Case.Case
 mkTrackerCase case_@Case.Case {..} uuid now shortId =
   Case.Case
-    { _id = CaseId {_getCaseId = uuid},
+    { _id = ID uuid,
       _name = Nothing,
       _description = Just "Case to track a Ride",
       _shortId = shortId,
@@ -205,7 +205,7 @@ mkTrackerCase case_@Case.Case {..} uuid now shortId =
       ..
     }
 
-mkTrackerProductInstance :: Text -> CaseId -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
+mkTrackerProductInstance :: Text -> ID Case.Case -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
 mkTrackerProductInstance piId caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $

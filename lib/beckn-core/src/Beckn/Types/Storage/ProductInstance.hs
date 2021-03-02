@@ -67,7 +67,7 @@ instance FromBackendRow Postgres EntityType where
 
 data ProductInstanceT f = ProductInstance
   { _id :: B.C f ProductInstanceId,
-    _caseId :: B.C f CaseId,
+    _caseId :: B.C f (ID Case.Case),
     _productId :: B.C f ProductsId,
     _personId :: B.C f (Maybe (ID Person)),
     _personUpdatedAt :: B.C f (Maybe UTCTime),

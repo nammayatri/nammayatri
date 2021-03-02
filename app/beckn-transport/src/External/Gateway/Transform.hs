@@ -15,6 +15,7 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
 import Beckn.Types.Core.Tag
 import qualified Beckn.Types.Core.Tracking as CoreTracking
+import Beckn.Types.ID
 import Beckn.Types.Mobility.Catalog as Mobility
 import Beckn.Types.Mobility.Driver as Mobility
 import Beckn.Types.Mobility.Order as Mobility
@@ -34,7 +35,7 @@ mkCatalog :: Case -> [ProductInstance] -> ProviderInfo -> Flow Mobility.Catalog
 mkCatalog c prodInsts provider =
   return
     Mobility.Catalog
-      { _id = _getCaseId $ c ^. #_id,
+      { _id = getId $ c ^. #_id,
         _categories = [mkCategory provider],
         _brands = [mkBrand provider],
         _models = [],

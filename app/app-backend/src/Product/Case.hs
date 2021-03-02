@@ -5,6 +5,7 @@ module Product.Case where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -18,7 +19,7 @@ import Types.API.Case as API
 
 status ::
   Person.Person ->
-  CaseId ->
+  ID Case.Case ->
   FlowHandler StatusRes
 status person caseId = withFlowHandler $ do
   case_ <- Case.findIdByPerson person caseId

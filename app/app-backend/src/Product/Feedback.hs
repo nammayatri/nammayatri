@@ -4,13 +4,13 @@ module Product.Feedback where
 
 import qualified App.Types as App
 import Beckn.Types.App
-  ( CaseId (_getCaseId),
-    OrganizationId (OrganizationId),
+  ( OrganizationId (OrganizationId),
     ProductInstanceId (ProductInstanceId),
   )
 import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
   ( fromMaybeM500,
@@ -34,7 +34,7 @@ feedback person request = withFlowHandler $ do
   product <- ProductInstance.findById $ ProductInstanceId prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
   messageId <- L.generateGUID
-  let txnId = _getCaseId $ order ^. #_id
+  let txnId = getId $ order ^. #_id
   context <- buildContext "feedback" txnId messageId
   organization <-
     Organization.findOrganizationById (OrganizationId $ product ^. #_organizationId)

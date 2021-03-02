@@ -4,9 +4,9 @@
 
 module Mobility.DriverCancelRideAfterStart where
 
+import Beckn.Types.ID
 import Beckn.Types.App
-  ( CaseId (CaseId, _getCaseId),
-    ProductInstanceId (_getProductInstanceId),
+  ( ProductInstanceId (_getProductInstanceId),
   )
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -52,10 +52,10 @@ spec = do
       searchACK `shouldSatisfy` isRight
 
       let Right searchResponse = searchACK
-      let appCaseId = CaseId $ searchResponse ^. #message . #_message
+      let appCaseId = ID $ searchResponse ^. #message . #_message
 
       productInstance :| [] <- poll $ do
-        statusResult <- runClient appClient $ F.buildCaseStatusRes (_getCaseId appCaseId)
+        statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)
         statusResult `shouldSatisfy` isRight
         let Right statusResponse = statusResult
         pure . nonEmpty . filter (\p -> p ^. #_organizationId == F.bppTransporterOrgId) $ statusResponse ^. #_productInstance
@@ -63,7 +63,7 @@ spec = do
       confirmResult <-
         runClient appClient
           . F.appConfirmRide F.appRegistrationToken
-          $ F.buildAppConfirmReq (_getCaseId appCaseId) (_getProductInstanceId appProductInstanceId)
+          $ F.buildAppConfirmReq (getId appCaseId) (_getProductInstanceId appProductInstanceId)
       confirmResult `shouldSatisfy` isRight
 
       transporterOrder :| [] <- poll $ do

@@ -3,7 +3,7 @@ module Storage.Queries.Case where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
@@ -21,7 +21,7 @@ create Storage.Case {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
     >>= checkDBError
 
-findById :: CaseId -> Flow (Maybe Storage.Case)
+findById :: ID Storage.Case -> Flow (Maybe Storage.Case)
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -29,7 +29,7 @@ findById caseId = do
   where
     predicate Storage.Case {..} = _id ==. B.val_ caseId
 
-update :: CaseId -> Storage.Case -> Flow ()
+update :: ID Storage.Case -> Storage.Case -> Flow ()
 update id case_@Storage.Case {..} = do
   dbTable <- getDbTable
   currTime <- getCurrTime

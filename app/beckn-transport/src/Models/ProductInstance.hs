@@ -3,6 +3,8 @@ module Models.ProductInstance where
 import App.Types
 import Beckn.Types.App
 import Beckn.Types.Error
+import Beckn.Types.ID
+import Beckn.Types.Storage.Case (Case)
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Common
 import Data.Time
@@ -38,7 +40,7 @@ findById caseProductId = do
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: CaseId -> Flow [ProductInstance]
+findAllByCaseId :: ID Case -> Flow [ProductInstance]
 findAllByCaseId caseId = do
   result <- Q.findAllByCaseId' caseId
   checkDBError result

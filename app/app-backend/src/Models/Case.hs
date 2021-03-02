@@ -1,7 +1,6 @@
 module Models.Case where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case
@@ -40,25 +39,25 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
   checkDBError result
 
 -- | Find Case by id
-findById :: CaseId -> Flow Case
+findById :: ID Case -> Flow Case
 findById caseId = do
   result <- Q.findById caseId
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Case by id and type
-findByIdAndType :: CaseId -> CaseType -> Flow Case
+findByIdAndType :: ID Case -> CaseType -> Flow Case
 findByIdAndType caseId caseType = do
   result <- Q.findByIdAndType caseId caseType
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Case by id and a requestor id
-findIdByPerson :: Person.Person -> CaseId -> Flow Case
+findIdByPerson :: Person.Person -> ID Case -> Flow Case
 findIdByPerson person caseId = do
   result <- Q.findIdByPerson person caseId
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Cases by list of ids
-findAllByIds :: [CaseId] -> Flow [Case]
+findAllByIds :: [ID Case] -> Flow [Case]
 findAllByIds caseIds =
   if null caseIds
     then pure []
@@ -79,13 +78,13 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
   checkDBError result
 
 -- | Update Case validity date
-updateValidTill :: CaseId -> UTCTime -> Flow ()
+updateValidTill :: ID Case -> UTCTime -> Flow ()
 updateValidTill cid validTill = do
   result <- Q.updateValidTill cid validTill
   checkDBError result
 
 -- | Validate and update Case status
-updateStatus :: CaseId -> CaseStatus -> Flow ()
+updateStatus :: ID Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
   validateStatusChange status cid
   result <- Q.updateStatus cid status
@@ -93,7 +92,7 @@ updateStatus cid status = do
 
 -- | Validate and update Case status and its udfs
 updateStatusAndUdfs ::
-  CaseId ->
+  ID Case ->
   CaseStatus ->
   Maybe Text ->
   Maybe Text ->
@@ -121,14 +120,14 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
   checkDBError result
 
 -- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> CaseId -> Flow ()
+validateStatusChange :: CaseStatus -> ID Case -> Flow ()
 validateStatusChange newStatus caseId = do
   c <- findById caseId
   case validateStatusTransition (_status c) newStatus of
     Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()
 
-updateInfo :: CaseId -> Text -> Flow ()
+updateInfo :: ID Case -> Text -> Flow ()
 updateInfo cId info = do
   result <- Q.updateInfo cId info
   checkDBError result

@@ -56,7 +56,7 @@ type CaseListRes = [CaseRes]
 
 data ProdInstRes = ProdInstRes
   { _id :: ProductInstanceId,
-    _caseId :: CaseId,
+    _caseId :: ID Case,
     _productId :: ProductsId,
     _personId :: Maybe (ID Person),
     _shortId :: Text,

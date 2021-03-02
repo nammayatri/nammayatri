@@ -8,6 +8,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
+import Beckn.Types.ID
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -33,7 +34,7 @@ import Utils.Routes
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
 confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrTime
-  case_ <- QCase.findIdByPerson person $ CaseId caseId
+  case_ <- QCase.findIdByPerson person $ ID caseId
   when ((case_ ^. #_validTill) < lt) $
     throwError400 "Case has expired"
   orderCase_ <- mkOrderCase case_
@@ -119,7 +120,7 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: CaseId -> SPI.ProductInstance -> Flow SPI.ProductInstance
+mkOrderProductInstance :: ID Case.Case -> SPI.ProductInstance -> Flow SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   now <- getCurrTime
   piid <- generateGUID

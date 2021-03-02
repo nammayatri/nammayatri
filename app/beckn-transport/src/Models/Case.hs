@@ -1,8 +1,8 @@
 module Models.Case where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Error
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case
 import Beckn.Utils.Common
 import Data.Maybe
@@ -27,19 +27,19 @@ create c = do
   checkDBError result
 
 -- | Find Case by id
-findById :: CaseId -> Flow Case
+findById :: ID Case -> Flow Case
 findById caseId = do
   result <- Q.findById caseId
   checkDBErrorOrEmpty result $ CaseErr CaseNotFound
 
 -- | Find Cases by id list
-findAllByIds :: [CaseId] -> Flow [Case]
+findAllByIds :: [ID Case] -> Flow [Case]
 findAllByIds ids = do
   result <- Q.findAllByIds ids
   checkDBError result
 
 -- | Find Case by parent case id and type
-findByParentCaseIdAndType :: CaseId -> CaseType -> Flow (Maybe Case)
+findByParentCaseIdAndType :: ID Case -> CaseType -> Flow (Maybe Case)
 findByParentCaseIdAndType pCaseId cType = do
   result <- Q.findByParentCaseIdAndType pCaseId cType
   checkDBError result
@@ -51,14 +51,14 @@ findBySid sid = do
   checkDBErrorOrEmpty result $ CaseErr CaseNotFound
 
 -- | Validate and update Case status
-updateStatus :: CaseId -> CaseStatus -> Flow ()
+updateStatus :: ID Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
   validateCaseStatuseChange status cid
   result <- Q.updateStatus cid status
   checkDBError result
 
 -- | Validate and update Cases statuses
-updateStatusByIds :: [CaseId] -> CaseStatus -> Flow ()
+updateStatusByIds :: [ID Case] -> CaseStatus -> Flow ()
 updateStatusByIds ids status = do
   cases <- findAllByIds ids
   validateCasesStatusesChange' status cases
@@ -66,13 +66,13 @@ updateStatusByIds ids status = do
   checkDBError result
 
 -- | Find Case by id and type
-findByIdType :: [CaseId] -> CaseType -> Flow Case
+findByIdType :: [ID Case] -> CaseType -> Flow Case
 findByIdType ids type_ = do
   result <- Q.findByIdType ids type_
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Cases by id and type
-findAllByIdType :: [CaseId] -> CaseType -> Flow [Case]
+findAllByIdType :: [ID Case] -> CaseType -> Flow [Case]
 findAllByIdType ids type_ = do
   result <- Q.findAllByIdType ids type_
   checkDBError result
@@ -111,13 +111,13 @@ findAllExpiredByStatus statuses csType from to = do
   checkDBError result
 
 -- | Get Case and validate its status change
-validateCaseStatuseChange :: CaseStatus -> CaseId -> Flow ()
+validateCaseStatuseChange :: CaseStatus -> ID Case -> Flow ()
 validateCaseStatuseChange newStatus caseId = do
   case_ <- findById caseId
   validateStatusChange newStatus case_
 
 -- | Bulk validation of Case statuses change
-validateCasesStatusesChange :: CaseStatus -> [CaseId] -> Flow ()
+validateCasesStatusesChange :: CaseStatus -> [ID Case] -> Flow ()
 validateCasesStatusesChange newStatus caseIds = do
   cps <- findAllByIds caseIds
   validateCasesStatusesChange' newStatus cps

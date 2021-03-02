@@ -175,7 +175,7 @@ trackTrip transporterId org req = withFlowHandler $ do
   logInfo "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id
-  case_ <- Case.findById (App.CaseId tripId)
+  case_ <- Case.findById $ ID tripId
   case case_ ^. #_parentCaseId of
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
@@ -212,7 +212,7 @@ notifyCancelToGateway prodInstId callbackUrl bppShortId = do
 mkOnTrackTripPayload :: Case.Case -> Case.Case -> Flow API.OnTrackTripReq
 mkOnTrackTripPayload trackerCase parentCase = do
   context <- mkContext "on_track" $ last $ T.split (== '_') $ parentCase ^. #_shortId
-  let data_url = GT.baseTrackingUrl <> "/" <> App._getCaseId (trackerCase ^. #_id)
+  let data_url = GT.baseTrackingUrl <> "/" <> getId (trackerCase ^. #_id)
   let tracking = GT.mkTracking "PULL" data_url
   return
     API.CallbackReq

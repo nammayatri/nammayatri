@@ -7,7 +7,6 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.ID
-import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as Storage
@@ -49,14 +48,14 @@ findAllByIds limit offset ids = do
     predicate Storage.ProductInstance {..} =
       B.in_ _productId (B.val_ <$> ids)
 
-findAllByCaseId :: CaseId -> Flow [Storage.ProductInstance]
+findAllByCaseId :: ID Case.Case -> Flow [Storage.ProductInstance]
 findAllByCaseId id = do
   dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate
   where
     predicate Storage.ProductInstance {..} = _caseId ==. B.val_ id
 
-findByCaseId :: CaseId -> Flow Storage.ProductInstance
+findByCaseId :: ID Case.Case -> Flow Storage.ProductInstance
 findByCaseId id = do
   dbTable <- getDbTable
   DB.findOneWithErr dbTable predicate
@@ -71,7 +70,7 @@ findById' productInstanceId = do
     predicate Storage.ProductInstance {..} =
       _id ==. B.val_ productInstanceId
 
-findAllByCaseId' :: CaseId -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByCaseId' :: ID Case.Case -> Flow (T.DBResult [Storage.ProductInstance])
 findAllByCaseId' caseId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -123,7 +122,7 @@ updateStatus prodInstId status = do
           _status <-. B.val_ scStatus
         ]
 
-findAllByCaseIds :: [CaseId] -> Flow [Storage.ProductInstance]
+findAllByCaseIds :: [ID Case.Case] -> Flow [Storage.ProductInstance]
 findAllByCaseIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -160,7 +159,7 @@ updateStatusByIds ids status = do
 
 updateCaseId ::
   ProductInstanceId ->
-  CaseId ->
+  ID Case.Case ->
   Flow (T.DBResult ())
 updateCaseId prodInstId caseId = do
   dbTable <- getDbTable
@@ -202,20 +201,20 @@ complementVal l
 
 productInstancejoinQuery ::
   ( B.Database be db,
-    B.HasSqlEqualityCheck be CaseId,
+    B.HasSqlEqualityCheck be (ID Case.Case),
     B.HasSqlEqualityCheck be ProductsId
   ) =>
-  B.DatabaseEntity be db (B.TableEntity CaseT) ->
+  B.DatabaseEntity be db (B.TableEntity Case.CaseT) ->
   B.DatabaseEntity be db (B.TableEntity ProductsT) ->
   B.DatabaseEntity be db (B.TableEntity Storage.ProductInstanceT) ->
-  (CaseT (B.QExpr be s) -> B.QExpr be s Bool) ->
+  (Case.CaseT (B.QExpr be s) -> B.QExpr be s Bool) ->
   (ProductsT (B.QExpr be s) -> B.QExpr be s Bool) ->
   (Storage.ProductInstanceT (B.QExpr be s) -> B.QExpr be s Bool) ->
   B.Q
     be
     db
     s
-    ( CaseT (B.QExpr be s),
+    ( Case.CaseT (B.QExpr be s),
       ProductsT (B.QExpr be s),
       Storage.ProductInstanceT (B.QExpr be s)
     )
@@ -225,7 +224,7 @@ productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
   k <- B.filter_ pred3 $
     B.join_ tbl3 $
       \line ->
-        CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
+        Case.CasePrimaryKey (Storage._caseId line) B.==. B.primaryKey i
           B.&&. ProductsPrimaryKey (Storage._productId line) B.==. B.primaryKey j
   pure (i, j, k)
 

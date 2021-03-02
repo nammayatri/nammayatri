@@ -15,6 +15,7 @@ import qualified Beckn.Types.Core.API.Status as Status
 import Beckn.Types.Core.API.Track
 import qualified Beckn.Types.Core.API.Update as Update
 import Beckn.Types.Core.Ack (AckResponse (..))
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
@@ -175,7 +176,7 @@ type CaseAPI =
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
            :> Get '[JSON] Case.CaseListRes
-           :<|> Capture "caseId" CaseId
+           :<|> Capture "caseId" (ID Case.Case)
            :> Get '[JSON] Case.StatusRes
        )
 

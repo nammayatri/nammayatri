@@ -33,7 +33,7 @@ findById pid = do
   where
     predicate piid Storage.ProductInstance {..} = _id ==. B.val_ piid
 
-findAllByCaseId :: CaseId -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByCaseId :: ID Case.Case -> Flow (T.DBResult [Storage.ProductInstance])
 findAllByCaseId caseId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -58,7 +58,7 @@ findAllByPerson perId = do
 
 updateCaseId ::
   ProductInstanceId ->
-  CaseId ->
+  ID Case.Case ->
   Flow (T.DBResult ())
 updateCaseId id caseId = do
   dbTable <- getDbTable
@@ -94,7 +94,7 @@ updateStatus id status = do
           _status <-. B.val_ scStatus
         ]
 
-updateAllProductInstancesByCaseId :: CaseId -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
+updateAllProductInstancesByCaseId :: ID Case.Case -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateAllProductInstancesByCaseId caseId status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime

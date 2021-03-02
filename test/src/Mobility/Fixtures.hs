@@ -158,7 +158,7 @@ data CaseClient = CaseClient
       Maybe Integer ->
       Maybe Integer ->
       ClientM AppCase.CaseListRes,
-    getCaseStatusRes :: CaseId -> ClientM AppCase.StatusRes
+    getCaseStatusRes :: ID Case.Case -> ClientM AppCase.StatusRes
   }
 
 getCase :: CaseAPIClient
@@ -175,14 +175,11 @@ buildCaseListRes regToken = do
       CaseClient {..} = mkCaseClient regToken
   getCaseListRes Case.RIDESEARCH [Case.NEW] (Just 10) (Just 0)
 
-buildCaseId :: Text -> CaseId
-buildCaseId = CaseId
-
 buildCaseStatusRes :: Text -> ClientM AppCase.StatusRes
 buildCaseStatusRes caseId = do
   let CaseAPIClient {..} = getCase
       CaseClient {..} = mkCaseClient appRegistrationToken
-      appCaseId = buildCaseId caseId
+      appCaseId = ID caseId
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
@@ -191,11 +188,11 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM AckResponse
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> ProductInstanceId -> CaseId -> ClientM AckResponse
+callAppFeedback :: Int -> ProductInstanceId -> ID Case.Case -> ClientM AckResponse
 callAppFeedback ratingValue productInstanceId caseId =
   let request =
         AppFeedback.FeedbackReq
-          { caseId = _getCaseId caseId,
+          { caseId = getId caseId,
             productInstanceId = _getProductInstanceId productInstanceId,
             rating = ratingValue
           }
