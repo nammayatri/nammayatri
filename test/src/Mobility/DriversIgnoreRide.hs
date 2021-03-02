@@ -2,7 +2,7 @@
 
 module Mobility.DriversIgnoreRide where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -50,7 +50,7 @@ spec = do
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
         return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
+      let productInstanceId = getId $ AppCase._id productInstance
       -- Confirm ride from app backend
       confirmResult <-
         runClient
@@ -66,7 +66,7 @@ spec = do
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
             tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
       let transporterOrderPiId = PI._id transporterOrderPi
 
@@ -91,5 +91,5 @@ spec = do
     checkPiInResult piListResult productInstanceId =
       let Right piListRes = piListResult
           appPiList = AppPI._productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) appPiList
+          appOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) appPiList
        in length appOrderPI `shouldBe` 0

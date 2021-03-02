@@ -55,7 +55,7 @@ instance ToJSON CaseRes where
 type CaseListRes = [CaseRes]
 
 data ProdInstRes = ProdInstRes
-  { _id :: ProductInstanceId,
+  { _id :: ID ProductInstance,
     _caseId :: ID Case,
     _productId :: ProductsId,
     _personId :: Maybe (ID Person),
@@ -71,7 +71,7 @@ data ProdInstRes = ProdInstRes
     _fromLocation :: Maybe Text,
     _toLocation :: Maybe Text,
     _organizationId :: Text,
-    _parentId :: Maybe ProductInstanceId,
+    _parentId :: Maybe (ID ProductInstance),
     _udf1 :: Maybe Text,
     _udf2 :: Maybe Text,
     _udf3 :: Maybe Text,

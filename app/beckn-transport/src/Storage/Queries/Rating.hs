@@ -3,7 +3,7 @@ module Storage.Queries.Rating where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Query
-import Beckn.Types.App (ProductInstanceId, RatingId)
+import Beckn.Types.App (RatingId)
 import Beckn.Types.ID
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -40,7 +40,7 @@ updateRatingValue ratingId newRatingValue = do
     (\Storage.Rating {..} -> _id ==. B.val_ ratingId)
     >>= either Query.throwDBError pure
 
-findByProductInstanceId :: ProductInstanceId -> Flow (Maybe Storage.Rating)
+findByProductInstanceId :: ID PI.ProductInstance -> Flow (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
   Query.findOne dbTable predicate

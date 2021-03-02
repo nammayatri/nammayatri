@@ -5,9 +5,6 @@
 module Mobility.DriverCancelRideAfterStart where
 
 import Beckn.Types.ID
-import Beckn.Types.App
-  ( ProductInstanceId (_getProductInstanceId),
-  )
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -63,7 +60,7 @@ spec = do
       confirmResult <-
         runClient appClient
           . F.appConfirmRide F.appRegistrationToken
-          $ F.buildAppConfirmReq (getId appCaseId) (_getProductInstanceId appProductInstanceId)
+          $ F.buildAppConfirmReq (getId appCaseId) (getId appProductInstanceId)
       confirmResult `shouldSatisfy` isRight
 
       transporterOrder :| [] <- poll $ do

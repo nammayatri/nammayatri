@@ -3,7 +3,9 @@
 
 module Beckn.Types.Storage.Rating where
 
-import Beckn.Types.App (ProductInstanceId, RatingId)
+import Beckn.Types.App (RatingId)
+import Beckn.Types.ID
+import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -11,7 +13,7 @@ import EulerHS.Prelude
 
 data RatingT f = Rating
   { _id :: B.C f RatingId,
-    _productInstanceId :: B.C f ProductInstanceId,
+    _productInstanceId :: B.C f (ID ProductInstance),
     _ratingValue :: B.C f Int,
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime

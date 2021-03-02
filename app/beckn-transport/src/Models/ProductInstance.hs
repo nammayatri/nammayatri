@@ -1,7 +1,6 @@
 module Models.ProductInstance where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case (Case)
@@ -19,14 +18,14 @@ import qualified Storage.Queries.ProductInstance as Q
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update ProductInstance status
-updateStatus :: ProductInstanceId -> ProductInstanceStatus -> Flow ()
+updateStatus :: ID ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus prodInstId newStatus = do
   validatePIStatusChange newStatus prodInstId
   result <- Q.updateStatus prodInstId newStatus
   checkDBError result
 
 -- | Validate and update ProductInstances statusses
-updateStatusByIds :: [ProductInstanceId] -> ProductInstanceStatus -> Flow ()
+updateStatusByIds :: [ID ProductInstance] -> ProductInstanceStatus -> Flow ()
 updateStatusByIds ids status = do
   productInstances <- findAllByIds ids
   validatePIStatusesChange' status productInstances
@@ -34,7 +33,7 @@ updateStatusByIds ids status = do
   checkDBError result
 
 -- | Find Product Instance by id
-findById :: ProductInstanceId -> Flow ProductInstance
+findById :: ID ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
@@ -46,13 +45,13 @@ findAllByCaseId caseId = do
   checkDBError result
 
 -- | Find Product Instances
-findAllByIds :: [ProductInstanceId] -> Flow [ProductInstance]
+findAllByIds :: [ID ProductInstance] -> Flow [ProductInstance]
 findAllByIds ids = do
   result <- Q.findAllByIds' ids
   checkDBError result
 
 -- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> ProductInstanceId -> Flow ()
+validatePIStatusChange :: ProductInstanceStatus -> ID ProductInstance -> Flow ()
 validatePIStatusChange newStatus productInstanceId = do
   cp <- findById productInstanceId
   validateStatusChange newStatus cp

@@ -20,6 +20,6 @@ setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = with
   pure $ Ack {_status = "ACK"}
   where
     driverId = _EntityId
-    productInstanceId = _productInstanceId ^. #_getProductInstanceId
+    productInstanceId = _productInstanceId ^. #getId
     redisKey = "beckn:" <> productInstanceId <> ":" <> driverId <> ":response"
     driverResponse now = DriverResponse {_status = _response, _respondedAt = now}

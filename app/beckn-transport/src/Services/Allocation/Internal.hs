@@ -4,7 +4,6 @@ module Services.Allocation.Internal where
 
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
-import Beckn.Types.App as BC
 import Beckn.Types.Common
 import Beckn.Types.ID
 import Beckn.Types.Storage.Person (Driver)
@@ -47,7 +46,7 @@ getConfiguredAllocationTime = asks (rideAllocationExpiry . driverAllocationConfi
 
 getDriverPool :: RideId -> Flow [ID Driver]
 getDriverPool (RideId rideId) = do
-  personIds <- Person.getDriverPool (ProductInstanceId rideId)
+  personIds <- Person.getDriverPool (ID rideId)
   let driverIds = fmap cast personIds
   pure driverIds
 
@@ -57,7 +56,7 @@ getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 assignDriver :: RideId -> ID Driver -> Flow ()
 assignDriver rideId = PI.assignDriver productInstanceId
   where
-    productInstanceId = ProductInstanceId $ rideId ^. #_getRideId
+    productInstanceId = ID $ rideId ^. #_getRideId
 
 rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
 rideRequestToRideRequest SRR.RideRequest {..} =
@@ -87,13 +86,13 @@ getCurrentNotification rideId = do
 
 sendNewRideNotification :: RideId -> ID Driver -> Flow ()
 sendNewRideNotification (RideId rideId) (ID driverId) = do
-  prodInst <- QPI.findById (ProductInstanceId rideId)
+  prodInst <- QPI.findById (ID rideId)
   person <- QP.findPersonById (ID driverId)
   notifyDriverNewAllocation prodInst person
 
 sendRideNotAssignedNotification :: RideId -> ID Driver -> Flow ()
 sendRideNotAssignedNotification (RideId rideId) (ID driverId) = do
-  prodInst <- QPI.findById (ProductInstanceId rideId)
+  prodInst <- QPI.findById (ID rideId)
   person <- QP.findPersonById (ID driverId)
   notifyDriverUnassigned prodInst person
 
@@ -189,7 +188,7 @@ logEvent = logAllocationEvent
 
 getRideInfo :: RideId -> Flow RideInfo
 getRideInfo rideId = do
-  productInstance <- QPI.findById productInstanceId
+  productInstance <- QPI.findById . ID $ _getRideId rideId
   rideStatus <- castToRideStatus $ productInstance ^. #_status
   pure
     RideInfo
@@ -198,7 +197,6 @@ getRideInfo rideId = do
         orderTime = OrderTime $ productInstance ^. #_createdAt
       }
   where
-    productInstanceId = ProductInstanceId $ _getRideId rideId
     castToRideStatus = \case
       PI.CONFIRMED -> pure Confirmed
       PI.TRIP_ASSIGNED -> pure Assigned

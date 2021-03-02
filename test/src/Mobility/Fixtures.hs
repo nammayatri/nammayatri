@@ -137,7 +137,7 @@ rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriv
 rideRespond = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 setDriverOnline :: Text -> Bool -> ClientM APIResult
-getNotificationInfo :: Text -> Maybe ProductInstanceId -> ClientM DriverInformationAPI.GetRideInfoRes
+getNotificationInfo :: Text -> Maybe (ID PI.ProductInstance) -> ClientM DriverInformationAPI.GetRideInfoRes
 _ :<|> setDriverOnline :<|> getNotificationInfo = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
@@ -188,12 +188,12 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM AckResponse
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> ProductInstanceId -> ID Case.Case -> ClientM AckResponse
+callAppFeedback :: Int -> ID PI.ProductInstance -> ID Case.Case -> ClientM AckResponse
 callAppFeedback ratingValue productInstanceId caseId =
   let request =
         AppFeedback.FeedbackReq
           { caseId = getId caseId,
-            productInstanceId = _getProductInstanceId productInstanceId,
+            productInstanceId = getId productInstanceId,
             rating = ratingValue
           }
    in appFeedback appRegistrationToken request
@@ -215,7 +215,7 @@ listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe I
 listDriverRides :: Text -> Text -> ClientM TbePI.RideListRes
 listVehicleRides :: Text -> Text -> ClientM TbePI.RideListRes
 listCasesByProductInstance :: Text -> Text -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
-rideUpdate :: Text -> ProductInstanceId -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
+rideUpdate :: Text -> ID PI.ProductInstance -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
 listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> rideUpdate = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
 listPIs :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList

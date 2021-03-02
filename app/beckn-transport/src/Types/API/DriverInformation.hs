@@ -7,11 +7,11 @@ module Types.API.DriverInformation
   )
 where
 
-import Beckn.Types.App (ProductInstanceId)
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person (Person)
+import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Data.Time
 import EulerHS.Prelude
 import qualified Types.API.Person as PersonAPI
@@ -42,7 +42,7 @@ newtype GetRideInfoRes = GetRideInfoRes
   deriving (Generic, ToJSON, FromJSON, Show)
 
 data RideInfo = RideInfo
-  { productInstanceId :: ProductInstanceId,
+  { productInstanceId :: ID ProductInstance,
     pickupLoc :: Loc.Location,
     dropLoc :: Loc.Location,
     etaForPickupLoc :: Maybe Integer,

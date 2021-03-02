@@ -2,7 +2,7 @@
 
 module Mobility.AppCancelRide where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -44,7 +44,7 @@ spec = do
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
         return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
+      let productInstanceId = getId $ AppCase._id productInstance
       -- Confirm ride from app backend
       confirmResult <-
         runClient
@@ -67,7 +67,7 @@ spec = do
         res <- runClient tbeClientEnv (buildOrgRideReq PI.CANCELLED Case.RIDEORDER)
         let Right piListRes = res
         let tbePiList = TbePI._productInstance <$> piListRes
-        let tbeOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+        let tbeOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
         pure $ nonEmpty tbeOrderPI
       orderPI ^. #_status `shouldBe` PI.CANCELLED
   where

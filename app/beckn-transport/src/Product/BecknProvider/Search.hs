@@ -175,7 +175,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
 
 createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> OrganizationId -> Flow ProductInstance.ProductInstance
 createProductInstance productCase price status transporterId = do
-  productInstanceId <- ProductInstanceId <$> L.generateGUID
+  productInstanceId <- ID <$> L.generateGUID
   now <- getCurrTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase ^. #_udf1)

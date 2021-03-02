@@ -5,7 +5,6 @@ module Utils.Notifications where
 import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -74,7 +73,7 @@ notifyCancelReqByBP p =
       FCM.FCMData
         { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
           _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getProductInstanceId $ p ^. #_id,
+          _fcmEntityIds = show $ getId $ p ^. #_id,
           _fcmEntityType = FCM.Organization
         }
     title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
@@ -93,7 +92,7 @@ notifyDriverCancelledRideRequest p = traverse_ (notifyPerson title body notifica
       FCM.FCMData
         { _fcmNotificationType = FCM.DRIVER_UNASSIGNED,
           _fcmShowNotification = FCM.SHOW,
-          _fcmEntityIds = show $ _getProductInstanceId $ p ^. #_id,
+          _fcmEntityIds = show $ getId $ p ^. #_id,
           _fcmEntityType = FCM.Organization
         }
     title = FCM.FCMNotificationTitle $ T.pack "Driver has refused the ride!"
@@ -135,7 +134,7 @@ notifyDriverNewAllocation productInstance = notifyPerson title body notification
         { _fcmNotificationType = FCM.ALLOCATION_REQUEST,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityType = FCM.Product,
-          _fcmEntityIds = _getProductInstanceId $ productInstance ^. #_id
+          _fcmEntityIds = getId $ productInstance ^. #_id
         }
 
 notifyDriverUnassigned :: ProductInstance -> Person -> Flow ()
@@ -153,5 +152,5 @@ notifyDriverUnassigned productInstance = notifyPerson title body notificationDat
         { _fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityType = FCM.Product,
-          _fcmEntityIds = _getProductInstanceId $ productInstance ^. #_id
+          _fcmEntityIds = getId $ productInstance ^. #_id
         }

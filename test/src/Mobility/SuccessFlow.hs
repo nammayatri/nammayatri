@@ -2,7 +2,7 @@
 
 module Mobility.SuccessFlow where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 -- import Data.Text (isSuffixOf)
@@ -55,7 +55,7 @@ spec = do
         let Right statusRes = statusResResult
         -- since all BPP can give quote for now we filter by orgId
         return $ nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
+      let productInstanceId = getId $ AppCase._id productInstance
 
       -- check if calculated price is greater than 0
       let prodPrice = productInstance ^. #_price
@@ -76,7 +76,7 @@ spec = do
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
             tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
       let transporterOrderPiId = PI._id transporterOrderPi
 
@@ -104,7 +104,7 @@ spec = do
         -- Filter order productInstance
         let Right rideListRes = rideReqRes
             tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
       tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
 
@@ -147,5 +147,5 @@ spec = do
     checkPiInResult piListResult productInstanceId =
       let Right piListRes = piListResult
           appPiList = AppPI._productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) appPiList
+          appOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) appPiList
        in length appOrderPI `shouldBe` 1

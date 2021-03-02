@@ -2,7 +2,7 @@
 
 module Mobility.AppConfirmRide where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -48,7 +48,7 @@ spec = do
             statusResResult `shouldSatisfy` isRight
             let Right statusRes = statusResResult
             return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-          let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
+          let productInstanceId = getId $ AppCase._id productInstance
           -- Confirm ride from app backend
           confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
           confirmResult `shouldSatisfy` isRight

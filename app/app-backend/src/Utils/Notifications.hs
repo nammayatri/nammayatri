@@ -5,7 +5,6 @@ module Utils.Notifications where
 import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -50,7 +49,7 @@ notifyOnStatusUpdate prodInst piStatus =
             ProductInstance.CANCELLED -> do
               let notificationData =
                     FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-                      show (_getProductInstanceId productInstanceId)
+                      show (getId productInstanceId)
                   title = FCMNotificationTitle $ T.pack "Ride cancelled!"
                   providerName = info ^. #_provider . _Just . #name . _Just
                   body =
@@ -65,7 +64,7 @@ notifyOnStatusUpdate prodInst piStatus =
             ProductInstance.INPROGRESS -> do
               let notificationData =
                     FCMData TRIP_STARTED SHOW FCM.Product $
-                      show (_getProductInstanceId productInstanceId)
+                      show (getId productInstanceId)
                   title = FCMNotificationTitle $ T.pack "Trip started!"
                   driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
                   body =
@@ -78,7 +77,7 @@ notifyOnStatusUpdate prodInst piStatus =
             ProductInstance.COMPLETED -> do
               let notificationData =
                     FCMData TRIP_FINISHED SHOW FCM.Product $
-                      show (_getProductInstanceId productInstanceId)
+                      show (getId productInstanceId)
                   title = FCMNotificationTitle $ T.pack "Trip finished!"
                   driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
                   body =
@@ -91,7 +90,7 @@ notifyOnStatusUpdate prodInst piStatus =
             ProductInstance.TRIP_REASSIGNMENT -> do
               let notificationData =
                     FCMData DRIVER_UNASSIGNED SHOW FCM.Product $
-                      show (_getProductInstanceId productInstanceId)
+                      show (getId productInstanceId)
                   title = FCMNotificationTitle $ T.pack "Assigning another driver for the ride!"
                   body =
                     FCMNotificationBody $
@@ -101,7 +100,7 @@ notifyOnStatusUpdate prodInst piStatus =
             ProductInstance.TRIP_ASSIGNED -> do
               let notificationData =
                     FCMData DRIVER_ASSIGNMENT SHOW FCM.Product $
-                      show (_getProductInstanceId productInstanceId)
+                      show (getId productInstanceId)
                   title = FCMNotificationTitle $ T.pack "Driver assigned!"
                   driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
                   body =

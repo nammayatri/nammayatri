@@ -12,6 +12,7 @@ import qualified Beckn.Types.Core.API.Feedback as API
 import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
+import Beckn.Types.ID
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
@@ -233,7 +234,7 @@ type ProductInstanceAPI =
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
            :<|> TokenAuth
-           :> Capture "productInstanceId" ProductInstanceId
+           :> Capture "productInstanceId" (ID ProductInstance)
            :> ReqBody '[JSON] ProdInstUpdateReq
            :> Post '[JSON] ProdInstInfo
        )
@@ -254,7 +255,7 @@ productInstanceFlow ::
                                FlowHandler CaseListRes
                              )
                                :<|> ( RegistrationToken ->
-                                      ProductInstanceId ->
+                                      ID ProductInstance ->
                                       ProdInstUpdateReq ->
                                       FlowHandler ProdInstInfo
                                     )
@@ -398,7 +399,7 @@ type DriverInformationAPI =
            :> Post '[JSON] APIResult
            :<|> "notification"
            :> TokenAuth
-           :> QueryParam "productInstanceId" ProductInstanceId
+           :> QueryParam "productInstanceId" (ID ProductInstance)
            :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
        )
 

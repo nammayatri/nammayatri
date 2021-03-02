@@ -38,7 +38,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   when ((case_ ^. #_validTill) < lt) $
     throwError400 "Case has expired"
   orderCase_ <- mkOrderCase case_
-  productInstance <- MPI.findById (ProductInstanceId productInstanceId)
+  productInstance <- MPI.findById (ID productInstanceId)
   organization <-
     OQ.findOrganizationById (OrganizationId $ productInstance ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
@@ -56,7 +56,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
       now <- getCurrTime
       return $
         BO.Order
-          { _id = _getProductInstanceId $ productInstance ^. #_id,
+          { _id = getId $ productInstance ^. #_id,
             _state = Nothing,
             _created_at = now,
             _updated_at = now,
@@ -77,7 +77,7 @@ onConfirm _org req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let trip = fromBeckn <$> msg ^. #order . #_trip
-          pid = ProductInstanceId $ msg ^. #order . #_id
+          pid = ID $ msg ^. #order . #_id
           tracker = flip Products.Tracker Nothing <$> trip
       prdInst <- MPI.findById pid
       -- TODO: update tracking prodInfo in .info
@@ -127,7 +127,7 @@ mkOrderProductInstance caseId prodInst = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SPI.ProductInstance
-      { _id = ProductInstanceId piid,
+      { _id = ID piid,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = prodInst ^. #_personId,

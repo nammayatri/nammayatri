@@ -5,10 +5,10 @@ module Product.BecknProvider.Feedback where
 import App.Types (Flow, FlowHandler, Log (..))
 import Beckn.Types.App
   ( OrganizationId,
-    ProductInstanceId (ProductInstanceId),
     RatingId (RatingId),
   )
 import qualified Beckn.Types.Core.API.Feedback as API
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -36,7 +36,7 @@ feedback :: OrganizationId -> Organization -> API.FeedbackReq -> FlowHandler API
 feedback _transporterId _organization request = withFlowHandler $ do
   logInfo "FeedbackAPI" "Received feedback API call."
   BP.validateContext "feedback" $ request ^. #context
-  let productInstanceId = ProductInstanceId $ request ^. #message . #order_id
+  let productInstanceId = ID $ request ^. #message . #order_id
   productInstances <- ProductInstance.findAllByParentId $ Just productInstanceId
   personId <- getPersonId productInstances & fromMaybeM500 "NO_DRIVER_ASSIGNED_FOR_ORDER"
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
@@ -64,7 +64,7 @@ feedback _transporterId _organization request = withFlowHandler $ do
     getPersonId (productI : _) = productI ^. #_personId
     getPersonId _ = Nothing
 
-mkRating :: ProductInstanceId -> Int -> Flow Rating.Rating
+mkRating :: ID ProductInstance.ProductInstance -> Int -> Flow Rating.Rating
 mkRating productInstanceId ratingValue = do
   _id <- RatingId <$> L.generateGUID
   let _productInstanceId = productInstanceId

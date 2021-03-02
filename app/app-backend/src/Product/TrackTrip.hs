@@ -29,7 +29,7 @@ import qualified Utils.Notifications as Notify
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandler $ do
   let prodInstId = req ^. #message . #order_id
-  prodInst <- MPI.findById $ ProductInstanceId prodInstId
+  prodInst <- MPI.findById $ ID prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
   msgId <- L.generateGUID
   let txnId = getId $ case_ ^. #_id

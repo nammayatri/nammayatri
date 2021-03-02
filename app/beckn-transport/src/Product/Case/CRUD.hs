@@ -77,7 +77,7 @@ createProductInstance cs prod price orgId status = do
   where
     getProdInst piId shortId currTime =
       ProductInstance
-        { _id = ProductInstanceId piId,
+        { _id = ID piId,
           _caseId = Case._id cs,
           _productId = Product._id prod,
           _personId = Nothing,

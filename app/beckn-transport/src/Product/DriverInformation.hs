@@ -8,6 +8,7 @@ import Beckn.Types.Amount (amountToString)
 import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.MapSearch
+import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
 import EulerHS.Prelude
@@ -46,9 +47,9 @@ setActivity RegistrationToken {..} isActive = withFlowHandler $ do
   QDriverInformation.updateActivity driverId isActive
   pure APIResult.Success
 
-getRideInfo :: RegistrationToken -> Maybe ProductInstanceId -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
+getRideInfo :: RegistrationToken -> Maybe (ID ProductInstance) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
 getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
-  let rideId = RideId . _getProductInstanceId <$> mbProductInstanceId
+  let rideId = RideId . getId <$> mbProductInstanceId
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
@@ -56,7 +57,7 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
       let productInstanceId = rideIdToProductInstanceId $ notification ^. #_rideId
       let notificationExpiryTime = notification ^. #_expiresAt
       productInstance <- QueryPI.findById productInstanceId
-      driver <- QPerson.findPersonById personId
+      driver <- QPerson.findPersonById driverId
       driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM500 "DRIVER_LOCATION_NOT_FOUND"
       fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM500 "PICKUP_LOCATION_NOT_FOUND"
       toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM500 "DROP_LOCATION_NOT_FOUND"
@@ -77,7 +78,6 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
               }
   where
     driverId = ID _EntityId
-    personId = cast driverId
-    rideIdToProductInstanceId rideId = ProductInstanceId $ rideId ^. #_getRideId
+    rideIdToProductInstanceId rideId = ID $ rideId ^. #_getRideId
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ LocationId <$> mbId
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long

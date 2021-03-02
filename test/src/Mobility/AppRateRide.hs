@@ -2,9 +2,6 @@
 
 module Mobility.AppRateRide where
 
-import Beckn.Types.App
-  ( ProductInstanceId (_getProductInstanceId),
-  )
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -61,7 +58,7 @@ spec = do
       confirmResult <-
         runClient appClient
           . F.appConfirmRide F.appRegistrationToken
-          $ F.buildAppConfirmReq (getId appCaseId) (_getProductInstanceId appProductInstanceId)
+          $ F.buildAppConfirmReq (getId appCaseId) (getId appProductInstanceId)
       confirmResult `shouldSatisfy` isRight
 
       transporterOrder :| [] <- poll $ do

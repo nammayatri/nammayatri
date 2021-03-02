@@ -19,7 +19,7 @@ import Types.ProductInfo as ProductInfo
 
 getProductInfo :: Person.Person -> Text -> FlowHandler GetProductInfoRes
 getProductInfo _person prodInstId = withFlowHandler $ do
-  productInstance <- MPI.findById (ProductInstanceId prodInstId)
+  productInstance <- MPI.findById (ID prodInstId)
   case decodeFromText =<< SPI._info productInstance of
     Just info ->
       case ProductInfo._tracker info of
@@ -46,7 +46,7 @@ getLocation person caseId = withFlowHandler $ do
   productInstances <- MPI.listAllProductInstanceByPerson person (ByApplicationId $ ID caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError400 "INVALID_CASE"
   let pI = head productInstances
-  resp <- External.location baseUrl (_getProductInstanceId $ pI ^. #_id)
+  resp <- External.location baseUrl (getId $ pI ^. #_id)
   case resp of
     Left err -> throwError500 $ Aeson.encode err
     Right r -> return r

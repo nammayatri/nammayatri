@@ -24,7 +24,7 @@ import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandler $ do
-  prodInst <- QPI.findById (ProductInstanceId productInstanceId)
+  prodInst <- QPI.findById (ID productInstanceId)
   case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
   let caseId = getId $ case_ ^. #_id
   msgId <- L.generateGUID
@@ -42,7 +42,7 @@ onStatus _org req = withFlowHandler $ do
       txnId = context ^. #_transaction_id
   case req ^. #contents of
     Right msg -> do
-      let prodInstId = ProductInstanceId $ msg ^. #order . #_id
+      let prodInstId = ID $ msg ^. #order . #_id
           orderState = fromBeckn $ msg ^. #order . #_state
       updateProductInstanceStatus prodInstId orderState
     Left err -> logError "on_status req" $ "on_status error: " <> show err

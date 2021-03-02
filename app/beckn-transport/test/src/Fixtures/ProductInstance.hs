@@ -1,7 +1,7 @@
 module Fixtures.ProductInstance where
 
 import qualified Beckn.Types.Amount as Amount
-import Beckn.Types.App (ProductInstanceId (..), ProductsId (..))
+import Beckn.Types.App (ProductsId (..))
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -12,7 +12,7 @@ import qualified Fixtures.Time as Fixtures
 defaultProductInstance :: ProductInstance.ProductInstance
 defaultProductInstance =
   ProductInstance.ProductInstance
-    { _id = ProductInstanceId "1",
+    { _id = ID "1",
       _caseId = ID "1",
       _productId = ProductsId "1",
       _personId = Just $ ID "1",

@@ -268,7 +268,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
   return
     PI.ProductInstance
-      { _id = ProductInstanceId $ item ^. #_id,
+      { _id = ID $ item ^. #_id,
         _shortId = "",
         _caseId = case_ ^. #_id,
         _productId = ProductsId $ item ^. #_id, -- TODO needs to be fixed
@@ -304,7 +304,7 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
   let info = ProductInfo (Just provider) Nothing
   return
     PI.ProductInstance
-      { _id = ProductInstanceId piId,
+      { _id = ID piId,
         _shortId = "",
         _caseId = case_ ^. #_id,
         _productId = ProductsId piId,

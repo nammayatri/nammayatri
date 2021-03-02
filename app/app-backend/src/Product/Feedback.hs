@@ -5,7 +5,6 @@ module Product.Feedback where
 import qualified App.Types as App
 import Beckn.Types.App
   ( OrganizationId (OrganizationId),
-    ProductInstanceId (ProductInstanceId),
   )
 import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
@@ -31,7 +30,7 @@ feedback person request = withFlowHandler $ do
   let ratingValue = request ^. #rating
   unless (ratingValue `elem` [1 .. 5]) $ throwBecknError400 "RATING_VALUE_INVALID"
   let prodInstId = request ^. #productInstanceId
-  product <- ProductInstance.findById $ ProductInstanceId prodInstId
+  product <- ProductInstance.findById $ ID prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
   messageId <- L.generateGUID
   let txnId = getId $ order ^. #_id

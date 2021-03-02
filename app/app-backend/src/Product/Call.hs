@@ -6,7 +6,6 @@ module Product.Call where
 
 import App.Types
 import Beckn.External.Exotel.Flow
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
@@ -33,7 +32,7 @@ import Types.ProductInfo as ProductInfo
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
 initiateCallToProvider _ req = withFlowHandler $ do
   let piId = req ^. #productInstanceId
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ProductInstanceId piId
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ID piId
   initiateCall customerPhone providerPhone
   mkAckResponse
 
@@ -41,12 +40,12 @@ initiateCallToProvider _ req = withFlowHandler $ do
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
 initiateCallToCustomer req = withFlowHandler $ do
   let piId = req ^. #productInstanceId -- RIDESEARCH PI
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ProductInstanceId piId
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ID piId
   initiateCall providerPhone customerPhone
   mkAckResponse
 
 -- | Get customer and driver pair by case ID
-getProductAndCustomerInfo :: ProductInstanceId -> Flow (Either String (Person, Driver.Driver))
+getProductAndCustomerInfo :: ID ProductInstance -> Flow (Either String (Person, Driver.Driver))
 getProductAndCustomerInfo rideSearchPid = do
   prodInst <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
   c <- Case.findById $ _caseId prodInst
@@ -93,7 +92,7 @@ getPersonTypePhone person = pure $
     errMsg = "Driver has no contacts"
 
 -- | Returns phones pair or throws an error
-getProductAndCustomerPhones :: ProductInstanceId -> Flow (Text, Text)
+getProductAndCustomerPhones :: ID ProductInstance -> Flow (Text, Text)
 getProductAndCustomerPhones piId = do
   info <- getProductAndCustomerInfo piId
   case info of

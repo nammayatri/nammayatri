@@ -66,7 +66,7 @@ instance FromBackendRow Postgres EntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductInstanceT f = ProductInstance
-  { _id :: B.C f ProductInstanceId,
+  { _id :: B.C f (ID ProductInstance),
     _caseId :: B.C f (ID Case.Case),
     _productId :: B.C f ProductsId,
     _personId :: B.C f (Maybe (ID Person)),
@@ -84,7 +84,7 @@ data ProductInstanceT f = ProductInstance
     _fromLocation :: B.C f (Maybe Text),
     _toLocation :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
-    _parentId :: B.C f (Maybe ProductInstanceId),
+    _parentId :: B.C f (Maybe (ID ProductInstance)),
     _udf1 :: B.C f (Maybe Text),
     _udf2 :: B.C f (Maybe Text),
     _udf3 :: B.C f (Maybe Text),
@@ -103,7 +103,7 @@ type ProductInstance = ProductInstanceT Identity
 type ProductInstancePrimaryKey = B.PrimaryKey ProductInstanceT Identity
 
 instance B.Table ProductInstanceT where
-  data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f ProductInstanceId)
+  data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f (ID ProductInstance))
     deriving (Generic, B.Beamable)
   primaryKey = ProductInstancePrimaryKey . _id
 

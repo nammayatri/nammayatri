@@ -65,7 +65,7 @@ cancel :: App.OrganizationId -> Organization.Organization -> API.CancelReq -> Fl
 cancel _transporterId _bapOrg req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
-  prodInst <- ProductInstance.findById (App.ProductInstanceId prodInstId)
+  prodInst <- ProductInstance.findById (ID prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
   RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
@@ -74,7 +74,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
 
 cancelRide :: RideId -> Flow ()
 cancelRide rideId = do
-  orderPi <- ProductInstance.findById . App.ProductInstanceId $ _getRideId rideId
+  orderPi <- ProductInstance.findById . ID $ _getRideId rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM500 "RIDEORDER_DOESNT_HAVE_PARENT"
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
@@ -90,7 +90,7 @@ cancelRide rideId = do
   let transporterId = App.OrganizationId $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = App._getShortOrganizationId $ transporter ^. #_shortId
-  notifyCancelToGateway (App._getProductInstanceId searchPiId) callbackUrl bppShortId
+  notifyCancelToGateway (getId searchPiId) callbackUrl bppShortId
 
   case piList of
     [] -> pure ()
@@ -128,7 +128,7 @@ serviceStatus :: App.OrganizationId -> Organization.Organization -> API.StatusRe
 serviceStatus transporterId bapOrg req = withFlowHandler $ do
   logInfo "serviceStatus API Flow" $ show req
   let piId = req ^. #message . #order . #id -- transporter search product instance id
-  trackerPi <- ProductInstance.findByParentIdType (Just $ App.ProductInstanceId piId) Case.LOCATIONTRACKER
+  trackerPi <- ProductInstance.findByParentIdType (Just $ ID piId) Case.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   transporter <- Organization.findOrganizationById transporterId
@@ -242,7 +242,7 @@ mkTrip c orderPi = do
 
 mkOnUpdatePayload :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> Flow API.OnUpdateReq
 mkOnUpdatePayload prodInst case_ pCase = do
-  context <- mkContext "on_update" $ App._getProductInstanceId $ prodInst ^. #_id
+  context <- mkContext "on_update" $ getId $ prodInst ^. #_id
   trip <- mkTrip case_ prodInst
   order <- GT.mkOrder pCase prodInst (Just trip)
   return
@@ -273,7 +273,7 @@ mkCancelRidePayload prodInstId = do
 
 mkCancelTripObj :: Text -> Flow Trip
 mkCancelTripObj prodInstId = do
-  productInstance <- ProductInstance.findById (App.ProductInstanceId prodInstId)
+  productInstance <- ProductInstance.findById (ID prodInstId)
   driver <- mapM mkDriverInfo $ productInstance ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (productInstance ^. #_entityId)
   return $
@@ -301,11 +301,11 @@ validateContext action context = do
   validateDomain Domain.MOBILITY context
   validateContextCommons action context
 
-mkRideReq :: App.ProductInstanceId -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
+mkRideReq :: ID ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
 mkRideReq pId rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrTime
-  let rideId = RideId $ App._getProductInstanceId pId
+  let rideId = RideId $ getId pId
   pure
     SRideRequest.RideRequest
       { _id = RideRequestId guid,

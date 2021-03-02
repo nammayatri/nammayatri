@@ -101,7 +101,7 @@ mkCategory provider =
 mkItem :: ProductInstance -> Item
 mkItem prodInst =
   Item
-    { _id = _getProductInstanceId $ prodInst ^. #_id,
+    { _id = getId $ prodInst ^. #_id,
       _parent_item_id = Nothing,
       _descriptor = mkItemDescriptor prodInst,
       _price = mkPrice prodInst,
@@ -134,7 +134,7 @@ mkOrder _c pri trip = do
   searchPiId <- pri ^. #_parentId & fromMaybeM500 "PARENT_ID_MISSING"
   return
     Mobility.Order
-      { _id = _getProductInstanceId searchPiId,
+      { _id = getId searchPiId,
         _items = [OrderItem (_getProductsId $ pri ^. #_productId) Nothing],
         _created_at = now,
         _updated_at = now,

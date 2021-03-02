@@ -77,13 +77,6 @@ newtype VehicleId = VehicleId
 
 deriveIdentifierInstances ''VehicleId
 
-newtype ProductInstanceId = ProductInstanceId
-  { _getProductInstanceId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''ProductInstanceId
-
 newtype InventoryId = InventoryId
   { _getInventoryId :: Text
   }

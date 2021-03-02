@@ -154,7 +154,7 @@ makeTripDetails caseM = case caseM of
     pure $
       Just $
         T.TripDetails
-          { _id = _getProductInstanceId _id,
+          { _id = getId _id,
             _status = _status,
             _driver = driver,
             _price = _price,

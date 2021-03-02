@@ -25,6 +25,7 @@ import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as SP
+import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
@@ -252,10 +253,10 @@ calculateAverageRating personId = do
     logInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     QP.updateAverageRating personId $ encodeToText newAverage
 
-driverPoolKey :: ProductInstanceId -> Text
-driverPoolKey = ("beckn:driverpool:" <>) . _getProductInstanceId
+driverPoolKey :: ID ProductInstance -> Text
+driverPoolKey = ("beckn:driverpool:" <>) . getId
 
-getDriverPool :: ProductInstanceId -> Flow [ID SP.Person]
+getDriverPool :: ID ProductInstance -> Flow [ID SP.Person]
 getDriverPool piId =
   Redis.getKeyRedis (driverPoolKey piId)
     >>= maybe calcDriverPool (pure . map ID)
@@ -272,7 +273,7 @@ getDriverPool piId =
       let orgId = OrganizationId (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
-setDriverPool :: ProductInstanceId -> [ID SP.Person] -> Flow ()
+setDriverPool :: ID ProductInstance -> [ID SP.Person] -> Flow ()
 setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 

@@ -36,7 +36,7 @@ confirm :: OrganizationId -> Organization.Organization -> API.ConfirmReq -> Flow
 confirm transporterId bapOrg req = withFlowHandler $ do
   logInfo "confirm API Flow" "Reached"
   BP.validateContext "confirm" $ req ^. #context
-  let prodInstId = ProductInstanceId $ req ^. #message . #order . #_id
+  let prodInstId = ID $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
   let transporterId' = OrganizationId $ productInstance ^. #_organizationId
   transporterOrg <- Organization.findOrganizationById transporterId'
@@ -84,7 +84,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
         & fromMaybeM500 "NO_VEHICLE_VARIANT"
     driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
-    logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
+    logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
   case result of
@@ -158,7 +158,7 @@ mkOrderProductInstance caseId prodInst = do
   inAppOtpCode <- generateOTPCode
   return $
     ProductInstance.ProductInstance
-      { _id = ProductInstanceId pid,
+      { _id = ID pid,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = Nothing,
@@ -210,7 +210,7 @@ mkTrackerProductInstance piId caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
     ProductInstance.ProductInstance
-      { _id = ProductInstanceId piId,
+      { _id = ID piId,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = Nothing,

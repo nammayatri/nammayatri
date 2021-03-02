@@ -2,7 +2,7 @@
 
 module Mobility.DriverCancelRide where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -50,7 +50,7 @@ spec = do
       confirmResult <-
         runClient
           appClientEnv
-          (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid $ _getProductInstanceId productInstanceId)
+          (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid $ getId productInstanceId)
       confirmResult `shouldSatisfy` isRight
 
       transporterOrderPi :| [] <- poll $ do
@@ -61,7 +61,7 @@ spec = do
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
             tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just (_getProductInstanceId productInstanceId)) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just (getId productInstanceId)) tbePiList
         return $ nonEmpty transporterOrdersPi
       let transporterOrderPiId = PI._id transporterOrderPi
 
@@ -102,7 +102,7 @@ spec = do
         res <- runClient appClientEnv (buildListPIs PI.CANCELLED)
         let Right piListRes = res
         let appPiList = AppPI._productInstance <$> piListRes
-        let appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just (_getProductInstanceId productInstanceId)) appPiList
+        let appOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just (getId productInstanceId)) appPiList
         pure $ nonEmpty appOrderPI
       piCancelled ^. #_status `shouldBe` PI.CANCELLED
   where
