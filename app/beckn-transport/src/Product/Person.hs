@@ -24,6 +24,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.ID
+import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import qualified Beckn.Types.Storage.Rating as Rating
@@ -72,7 +73,7 @@ createPerson orgId req = withFlowHandler $ do
   person <- addOrgId orgId <$> createTransform req
   QP.create person
   when (person ^. #_role == SP.DRIVER) $ createDriverDetails (person ^. #_id)
-  org <- OQ.findOrganizationById (OrganizationId orgId)
+  org <- OQ.findOrganizationById (ID orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
       credCfg <- credConfig . smsCfg <$> ask
@@ -270,7 +271,7 @@ getDriverPool piId =
       pickupPoint <-
         LocationId <$> prodInst ^. #_fromLocation
           & fromMaybeM500 "NO_FROM_LOCATION"
-      let orgId = OrganizationId (prodInst ^. #_organizationId)
+      let orgId = ID (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
 setDriverPool :: ID ProductInstance -> [ID SP.Person] -> Flow ()
@@ -279,7 +280,7 @@ setDriverPool piId ids =
 
 calculateDriverPool ::
   LocationId ->
-  OrganizationId ->
+  ID Organization ->
   SV.Variant ->
   Flow [ID SP.Person]
 calculateDriverPool locId orgId variant = do

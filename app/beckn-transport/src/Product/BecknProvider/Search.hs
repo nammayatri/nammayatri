@@ -40,7 +40,7 @@ import qualified Storage.Queries.Products as SProduct
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
 
-search :: OrganizationId -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
+search :: ID Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
 search transporterId bapOrg req = withFlowHandler $ do
   BP.validateContext "search" $ req ^. #context
   uuid <- L.generateGUID
@@ -95,12 +95,12 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> OrganizationId -> OrganizationId -> Maybe Float -> Case.Case
+mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> ID Org.Organization -> ID Org.Organization -> Maybe Float -> Case.Case
 mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
   let intent = req ^. #message . #intent
   let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
-  let tId = _getOrganizationId transporterId
-  let bapId = _getOrganizationId bapOrgId
+  let tId = getId transporterId
+  let bapId = getId bapOrgId
   Case.Case
     { _id = ID uuid,
       _name = Nothing,
@@ -152,7 +152,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
     logInfo "OnSearchCallback" $
-      "Calculated Driver Pool for organization " +|| _getOrganizationId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
+      "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
     let piStatus =
           if null pool
             then ProductInstance.OUTOFSTOCK
@@ -173,7 +173,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
       logError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
-createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> OrganizationId -> Flow ProductInstance.ProductInstance
+createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> ID Org.Organization -> Flow ProductInstance.ProductInstance
 createProductInstance productCase price status transporterId = do
   productInstanceId <- ID <$> L.generateGUID
   now <- getCurrTime
@@ -198,7 +198,7 @@ createProductInstance productCase price status transporterId = do
             _validTill = productCase ^. #_validTill,
             _fromLocation = Just $ productCase ^. #_fromLocationId,
             _toLocation = Just $ productCase ^. #_toLocationId,
-            _organizationId = _getOrganizationId transporterId,
+            _organizationId = getId transporterId,
             _parentId = Nothing,
             _udf1 = productCase ^. #_udf1,
             _udf2 = productCase ^. #_udf2,
@@ -276,7 +276,7 @@ mkOnSearchPayload productCase productInstances transporterOrg = do
             _timestamp = currTime,
             _ttl = Nothing
           }
-  piCount <- MPI.getCountByStatus (_getOrganizationId $ transporterOrg ^. #_id) Case.RIDEORDER
+  piCount <- MPI.getCountByStatus (getId $ transporterOrg ^. #_id) Case.RIDEORDER
   let stats = mkProviderStats piCount
   let provider = mkProviderInfo transporterOrg stats
   catalog <- GT.mkCatalog productCase productInstances provider
@@ -289,7 +289,7 @@ mkOnSearchPayload productCase productInstances transporterOrg = do
 mkProviderInfo :: Org.Organization -> APICase.ProviderStats -> APICase.ProviderInfo
 mkProviderInfo org stats =
   APICase.ProviderInfo
-    { _id = _getOrganizationId $ org ^. #_id,
+    { _id = getId $ org ^. #_id,
       _name = org ^. #_name,
       _stats = encodeToText stats,
       _contacts = fromMaybe "" (org ^. #_mobileNumber)

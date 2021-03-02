@@ -7,8 +7,8 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
 import Beckn.Types.ID
+import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common (getCurrTime, getSchemaName)
 import Data.Time
@@ -211,7 +211,7 @@ findAllWithLimitOffsetByRole mlimit moffset roles = do
       _role `B.in_` (B.val_ <$> r)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
-findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [OrganizationId] -> Flow [Storage.Person]
+findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [ID Organization] -> Flow [Storage.Person]
 findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
@@ -221,9 +221,9 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     predicate pOrgIds [] Storage.Person {..} =
-      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> pOrgIds)
+      _organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds)
     predicate pOrgIds pRoles Storage.Person {..} =
-      _organizationId `B.in_` (B.val_ . Just . _getOrganizationId <$> pOrgIds) &&. _role `B.in_` (B.val_ <$> pRoles)
+      _organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds) &&. _role `B.in_` (B.val_ <$> pRoles)
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
 
 deleteById :: ID Storage.Person -> Flow ()

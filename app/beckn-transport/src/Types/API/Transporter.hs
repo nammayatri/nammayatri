@@ -6,6 +6,7 @@ import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.Common as BC
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
@@ -45,7 +46,7 @@ instance FromJSON TransporterReq where
 instance CreateTransform TransporterReq SO.Organization Flow where
   createTransform req = do
     oid <- BC.generateGUID
-    let shortId = ShortOrganizationId $ _getOrganizationId oid
+    let shortId = ShortOrganizationId $ getId oid
     now <- getCurrTime
     location <- transformToLocation req
     QL.create location

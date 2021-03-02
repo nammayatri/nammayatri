@@ -14,6 +14,7 @@ import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.RegistrationToken
@@ -324,23 +325,23 @@ transporterServer =
     :<|> googleMapsProxyFlow
 
 type OrgBecknAPI =
-  Capture "orgId" OrganizationId
+  Capture "orgId" (ID Organization)
     :> SignatureAuth "Authorization"
     :> SignatureAuth "Proxy-Authorization"
     :> API.SearchAPI
-    :<|> Capture "orgId" OrganizationId
+    :<|> Capture "orgId" (ID Organization)
     :> SignatureAuth "Authorization"
     :> API.ConfirmAPI
-    :<|> Capture "orgId" OrganizationId
+    :<|> Capture "orgId" (ID Organization)
     :> SignatureAuth "Authorization"
     :> API.CancelAPI
-    :<|> Capture "orgId" OrganizationId
+    :<|> Capture "orgId" (ID Organization)
     :> SignatureAuth "Authorization"
     :> API.StatusAPI
-    :<|> Capture "orgId" OrganizationId
+    :<|> Capture "orgId" (ID Organization)
     :> SignatureAuth "Authorization"
     :> API.TrackAPI
-    :<|> Capture "orgId" OrganizationId
+    :<|> Capture "orgId" (ID Organization)
     :> SignatureAuth "Authorization"
     :> API.FeedbackAPI
 

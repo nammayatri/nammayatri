@@ -40,7 +40,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (ID productInstanceId)
   organization <-
-    OQ.findOrganizationById (OrganizationId $ productInstance ^. #_organizationId)
+    OQ.findOrganizationById (ID $ productInstance ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   QCase.create orderCase_

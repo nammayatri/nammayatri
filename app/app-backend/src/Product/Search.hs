@@ -292,7 +292,7 @@ mkProductInstance case_ bppOrg provider personId item = do
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _organizationId = _getOrganizationId $ bppOrg ^. #_id,
+        _organizationId = getId $ bppOrg ^. #_id,
         _createdAt = now,
         _updatedAt = now
       }
@@ -328,7 +328,7 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         _fromLocation = Just $ case_ ^. #_fromLocationId,
         _toLocation = Just $ case_ ^. #_toLocationId,
         _info = Just $ encodeToText info,
-        _organizationId = _getOrganizationId $ bppOrg ^. #_id,
+        _organizationId = getId $ bppOrg ^. #_id,
         _createdAt = now,
         _updatedAt = now
       }

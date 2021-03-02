@@ -61,7 +61,7 @@ import Types.App (RideId (..), RideRequestId (..))
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
-cancel :: App.OrganizationId -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
+cancel :: ID Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
 cancel _transporterId _bapOrg req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
@@ -85,9 +85,9 @@ cancelRide rideId = do
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
   bapOrgId <- Case._udf4 orderCase & fromMaybeM500 "BAP_ORG_ID_NOT_PRESENT"
-  bapOrg <- Organization.findOrganizationById $ App.OrganizationId bapOrgId
+  bapOrg <- Organization.findOrganizationById $ ID bapOrgId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  let transporterId = App.OrganizationId $ ProductInstance._organizationId orderPi
+  let transporterId = ID $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = App._getShortOrganizationId $ transporter ^. #_shortId
   notifyCancelToGateway (getId searchPiId) callbackUrl bppShortId
@@ -124,7 +124,7 @@ mkContext action tId = do
         _ttl = Nothing
       }
 
-serviceStatus :: App.OrganizationId -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
+serviceStatus :: ID Organization.Organization -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
 serviceStatus transporterId bapOrg req = withFlowHandler $ do
   logInfo "serviceStatus API Flow" $ show req
   let piId = req ^. #message . #order . #id -- transporter search product instance id
@@ -170,7 +170,7 @@ mkOnServiceStatusPayload piId trackerPi = do
             _quotation = Nothing
           }
 
-trackTrip :: App.OrganizationId -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
+trackTrip :: ID Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
 trackTrip transporterId org req = withFlowHandler $ do
   logInfo "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
@@ -316,6 +316,6 @@ mkRideReq pId rideRequestType = do
 
 makeBppUrl :: Organization.Organization -> App.BaseUrl -> App.BaseUrl
 makeBppUrl transporterOrg url =
-  let orgId = App._getOrganizationId $ transporterOrg ^. #_id
+  let orgId = getId $ transporterOrg ^. #_id
       newPath = baseUrlPath url <> "/" <> T.unpack orgId
    in url {baseUrlPath = newPath}

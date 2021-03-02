@@ -4,8 +4,7 @@ module Product.BecknProvider.Feedback where
 
 import App.Types (Flow, FlowHandler, Log (..))
 import Beckn.Types.App
-  ( OrganizationId,
-    RatingId (RatingId),
+  ( RatingId (RatingId),
   )
 import qualified Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.ID
@@ -32,7 +31,7 @@ import qualified Product.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 
-feedback :: OrganizationId -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
+feedback :: ID Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
 feedback _transporterId _organization request = withFlowHandler $ do
   logInfo "FeedbackAPI" "Received feedback API call."
   BP.validateContext "feedback" $ request ^. #context

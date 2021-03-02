@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
 import Data.Time
@@ -35,7 +36,7 @@ verifyToken regToken = do
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
-findOrganizationById :: OrganizationId -> Flow Storage.Organization
+findOrganizationById :: ID Storage.Organization -> Flow Storage.Organization
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -91,7 +92,7 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
-  OrganizationId ->
+  ID Storage.Organization ->
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do

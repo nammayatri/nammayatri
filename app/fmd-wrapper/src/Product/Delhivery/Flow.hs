@@ -3,7 +3,6 @@
 module Product.Delhivery.Flow where
 
 import App.Types
-import Beckn.Types.App (_getOrganizationId)
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Confirm as API
@@ -132,7 +131,7 @@ init org req = do
           req
           res
       let onInitReq = mkOnInitReq context onInitMessage
-      createCaseIfNotPresent (_getOrganizationId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
+      createCaseIfNotPresent (getId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
       logInfo (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
       onInitResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
       logInfo (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp

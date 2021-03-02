@@ -1,6 +1,7 @@
 module Types.Storage.TransporterConfig where
 
-import Beckn.Types.App (OrganizationId)
+import Beckn.Types.ID
+import Beckn.Types.Storage.Organization (Organization)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
@@ -8,7 +9,7 @@ import Types.App (ConfigKey, TranposrterParameterId (..))
 
 data TransporterConfigT f = TransporterConfig
   { _id :: B.C f TranposrterParameterId,
-    _transporterId :: B.C f OrganizationId,
+    _transporterId :: B.C f (ID Organization),
     _key :: B.C f ConfigKey,
     _value :: B.C f Text,
     _createdAt :: B.C f UTCTime,

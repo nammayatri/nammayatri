@@ -221,7 +221,7 @@ mkVehicleObj vehicle =
 mkProvider :: Organization -> Provider
 mkProvider orgInfo =
   Provider
-    { _id = _getOrganizationId $ orgInfo ^. #_id,
+    { _id = getId $ orgInfo ^. #_id,
       _descriptor =
         Descriptor
           { _name = Just $ orgInfo ^. #_name,

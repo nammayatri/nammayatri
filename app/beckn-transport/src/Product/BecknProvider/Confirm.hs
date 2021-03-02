@@ -32,19 +32,19 @@ import qualified Test.RandomStrings as RS
 import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
-confirm :: OrganizationId -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
+confirm :: ID Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
 confirm transporterId bapOrg req = withFlowHandler $ do
   logInfo "confirm API Flow" "Reached"
   BP.validateContext "confirm" $ req ^. #context
   let prodInstId = ID $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
-  let transporterId' = OrganizationId $ productInstance ^. #_organizationId
+  let transporterId' = ID $ productInstance ^. #_organizationId
   transporterOrg <- Organization.findOrganizationById transporterId'
   unless (transporterId' == transporterId) (throwError400 "DIFFERENT_TRANSPORTER_IDS")
-  let caseShortId = _getOrganizationId transporterId <> "_" <> req ^. #context . #_transaction_id
+  let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
   bapOrgId <- searchCase ^. #_udf4 & fromMaybeM500 "BAP_ORG_NOT_SET"
-  unless (bapOrg ^. #_id == OrganizationId bapOrgId) (throwError400 "BAP mismatch")
+  unless (bapOrg ^. #_id == ID bapOrgId) (throwError400 "BAP mismatch")
   orderCase <- mkOrderCase searchCase
   _ <- Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance

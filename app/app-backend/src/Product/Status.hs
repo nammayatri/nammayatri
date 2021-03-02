@@ -3,7 +3,6 @@
 module Product.Status (status, onStatus) where
 
 import App.Types
-import Beckn.Types.App
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
 import Beckn.Types.ID
@@ -30,7 +29,7 @@ status person StatusReq {..} = withFlowHandler $ do
   msgId <- L.generateGUID
   context <- buildContext "status" caseId msgId
   organization <-
-    OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
+    OQ.findOrganizationById (ID $ prodInst ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)

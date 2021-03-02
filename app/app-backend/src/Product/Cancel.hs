@@ -3,7 +3,6 @@
 module Product.Cancel (cancel, onCancel) where
 
 import App.Types
-import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
@@ -49,7 +48,7 @@ cancelProductInstance person req = do
       let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
           context = mkContext "cancel" txnId msgId currTime Nothing Nothing
       organization <-
-        OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
+        OQ.findOrganizationById (ID $ prodInst ^. #_organizationId)
           >>= fromMaybeM500 "INVALID_PROVIDER_ID"
       baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)

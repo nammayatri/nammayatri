@@ -35,7 +35,7 @@ track person req = withFlowHandler $ do
   let txnId = getId $ case_ ^. #_id
   let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
   organization <-
-    OQ.findOrganizationById (OrganizationId $ prodInst ^. #_organizationId)
+    OQ.findOrganizationById (ID $ prodInst ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   case decodeFromText =<< (prodInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"

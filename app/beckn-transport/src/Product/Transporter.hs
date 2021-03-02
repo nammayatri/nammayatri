@@ -4,7 +4,6 @@ module Product.Transporter where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.App
 import Beckn.Types.ID (ID (..))
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
@@ -31,7 +30,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   hatchbackFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.HATCHBACK (organization ^. #_createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
-  QP.updateOrganizationIdAndMakeAdmin (ID _EntityId) (_getOrganizationId $ SO._id organization)
+  QP.updateOrganizationIdAndMakeAdmin (ID _EntityId) (getId $ SO._id organization)
   updatedPerson <- QP.findPersonById (ID _EntityId)
   return $ TransporterRes updatedPerson organization
   where
@@ -51,7 +50,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
         SFarePolicy.FarePolicy
           { _id = ID farePolicyId,
             _vehicleVariant = vehicleVariant, -- TODO: variants should be looked up from DB
-            _organizationId = ID $ _getOrganizationId orgId,
+            _organizationId = orgId,
             _baseFare = Just DFarePolicy.defaultBaseFare,
             _baseDistance = Just DFarePolicy.defaultBaseDistance,
             _perExtraKmRate = DFarePolicy.defaultPerExtraKmRate,
@@ -69,7 +68,7 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   case maybePerson of
     Just person -> do
       validate person
-      org <- QO.findOrganizationById $ OrganizationId orgId
+      org <- QO.findOrganizationById $ ID orgId
       organization <-
         if req ^. #enabled /= Just False
           then modifyTransform req org >>= addTime (Just now)
@@ -88,7 +87,7 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   person <- QP.findPersonById (ID _EntityId)
   validate person
   case person ^. #_organizationId of
-    Just orgId -> TransporterRec <$> QO.findOrganizationById (OrganizationId orgId)
+    Just orgId -> TransporterRec <$> QO.findOrganizationById (ID orgId)
     Nothing -> throwError400 "user not registered an organization"
   where
     validate person =

@@ -10,8 +10,8 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
 import Beckn.Types.ID
+import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
@@ -314,7 +314,7 @@ getNearestDrivers
 getNearestDrivers point' radius' orgId' = do
   personTable <- getDbTable
   locationTable <- Location.getDbTable
-  let orgId = _getOrganizationId <$> orgId'
+  let orgId = getId <$> orgId'
   DB.findAllByJoinWithoutLimits orderBy
     (query personTable locationTable point' radius' orgId)
     >>= either DB.throwDBError pure
@@ -354,7 +354,7 @@ getNearestDrivers point' radius' orgId' = do
 getNearestDrivers ::
   LatLong ->
   Integer ->
-  OrganizationId ->
+  ID Org.Organization ->
   Vehicle.Variant ->
   Flow [(ID Storage.Person, Double)]
 getNearestDrivers LatLong {..} radius orgId variant =
@@ -383,4 +383,4 @@ getNearestDrivers LatLong {..} radius orgId variant =
         WHERE dist < ?
         ORDER BY dist ASC
       |]
-      (lon, lat, _getOrganizationId orgId, show variant :: Text, radius)
+      (lon, lat, getId orgId, show variant :: Text, radius)

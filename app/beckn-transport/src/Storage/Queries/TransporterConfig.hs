@@ -2,7 +2,8 @@ module Storage.Queries.TransporterConfig where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App (OrganizationId)
+import Beckn.Types.ID
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (getSchemaName)
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
@@ -15,7 +16,7 @@ getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Transpor
 getDbTable =
   DB._transporterConfig . DB.transporterDb <$> getSchemaName
 
-findValueByOrgIdAndKey :: OrganizationId -> ConfigKey -> Flow (Maybe TransporterConfig.TransporterConfig)
+findValueByOrgIdAndKey :: ID Organization -> ConfigKey -> Flow (Maybe TransporterConfig.TransporterConfig)
 findValueByOrgIdAndKey orgId key = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

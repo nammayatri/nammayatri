@@ -3,9 +3,9 @@ module Product.FareCalculator.Interpreter (calculateFare) where
 import App.Types (Flow, Log (..))
 import Beckn.Product.BusinessRule (runBRFlowMaybe)
 import Beckn.Types.Amount (Amount)
-import Beckn.Types.App (OrganizationId (_getOrganizationId))
-import Beckn.Types.ID (ID (ID))
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as Location
+import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -23,7 +23,7 @@ import qualified Storage.Queries.FarePolicy as FarePolicyS
 import qualified Types.Storage.FarePolicy as FarePolicyS
 
 calculateFare ::
-  OrganizationId ->
+  ID Organization ->
   Vehicle.Variant ->
   Location.Location ->
   Location.Location ->
@@ -36,7 +36,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
     runBRFlowMaybe $
       doCalculateFare
         serviceHandle
-        (ID $ _getOrganizationId orgId)
+        (ID $ getId orgId)
         vehicleVariant
         (PickupLocation pickLoc)
         (DropLocation dropLoc)

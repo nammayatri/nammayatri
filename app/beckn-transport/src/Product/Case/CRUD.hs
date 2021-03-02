@@ -41,7 +41,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
   now <- getCurrTime
   case person ^. #_organizationId of
     Just orgId -> do
-      org <- OQ.findOrganizationById (OrganizationId orgId)
+      org <- OQ.findOrganizationById (ID orgId)
       when (org ^. #_status /= Organization.APPROVED) $
         throwBecknError401 "Unauthorized"
       caseList <-
@@ -110,7 +110,7 @@ notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> 
 notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
   logInfo "notifyGateway" $ show c
   logInfo "notifyGateway" $ show prodInst
-  transporterOrg <- OQ.findOrganizationById (OrganizationId transporterOrgId)
+  transporterOrg <- OQ.findOrganizationById (ID transporterOrgId)
   onSearchPayload <- case piStatus of
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg
@@ -137,7 +137,7 @@ mkOnSearchPayload c pis orgInfo = do
             _timestamp = currTime,
             _ttl = Nothing
           }
-  piCount <- MPI.getCountByStatus (_getOrganizationId $ orgInfo ^. #_id) Case.RIDEORDER
+  piCount <- MPI.getCountByStatus (getId $ orgInfo ^. #_id) Case.RIDEORDER
   let stats = mkProviderStats piCount
       provider = mkProviderInfo orgInfo stats
   catalog <- GT.mkCatalog c pis provider
@@ -148,7 +148,7 @@ mkOnSearchPayload c pis orgInfo = do
       }
   where
     makeBppUrl url =
-      let orgId = _getOrganizationId $ orgInfo ^. #_id
+      let orgId = getId $ orgInfo ^. #_id
           newPath = baseUrlPath url <> "/" <> T.unpack orgId
        in url {baseUrlPath = newPath}
 
@@ -157,7 +157,7 @@ mkOnSearchPayload c pis orgInfo = do
 mkProviderInfo :: Organization -> ProviderStats -> ProviderInfo
 mkProviderInfo org stats =
   ProviderInfo
-    { _id = _getOrganizationId $ org ^. #_id,
+    { _id = getId $ org ^. #_id,
       _name = org ^. #_name,
       _stats = encodeToText stats,
       _contacts = fromMaybe "" (org ^. #_mobileNumber)

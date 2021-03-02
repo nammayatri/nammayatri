@@ -31,7 +31,7 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
   person <- QPerson.findPersonById (ID _EntityId)
   personEntity <- Person.mkPersonRes person
   orgId <- person ^. #_organizationId & fromMaybeM500 "ORGANIZATION_ID_IS_NOT_PRESENT"
-  organization <- QOrganization.findOrganizationById $ OrganizationId orgId
+  organization <- QOrganization.findOrganizationById $ ID orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM500 "INVALID_DRIVER_ID"
   pure $
     DriverInformationAPI.DriverInformationResponse

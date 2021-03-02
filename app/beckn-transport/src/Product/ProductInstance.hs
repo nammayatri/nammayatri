@@ -84,7 +84,7 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
     fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM500 "PRODUCT_INSTANCE_WITH_CASE_NOT_PRESENT"
       bapOrgId <- prodCase ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONTAIN_BAP_ORG_ID"
-      OQ.findOrganizationById $ OrganizationId bapOrgId
+      OQ.findOrganizationById $ ID bapOrgId
     fetchCase caseId = do
       prodCase <- QCase.findById caseId
       checkDBError prodCase
@@ -227,7 +227,7 @@ updateStatus piId req = do
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
 notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
-  transporter <- OQ.findOrganizationById . OrganizationId $ searchPi ^. #_organizationId
+  transporter <- OQ.findOrganizationById . ID $ searchPi ^. #_organizationId
   let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
@@ -324,7 +324,7 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
       _ -> notifyStatusToGateway bppShortId
     Nothing -> return ()
   where
-    findOrganization = OQ.findOrganizationById $ OrganizationId $ searchPi ^. #_organizationId
+    findOrganization = OQ.findOrganizationById $ ID $ searchPi ^. #_organizationId
     getAdmins transporterOrg = do
       if transporterOrg ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]

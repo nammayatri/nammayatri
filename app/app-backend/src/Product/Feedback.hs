@@ -3,9 +3,6 @@
 module Product.Feedback where
 
 import qualified App.Types as App
-import Beckn.Types.App
-  ( OrganizationId (OrganizationId),
-  )
 import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
@@ -36,7 +33,7 @@ feedback person request = withFlowHandler $ do
   let txnId = getId $ order ^. #_id
   context <- buildContext "feedback" txnId messageId
   organization <-
-    Organization.findOrganizationById (OrganizationId $ product ^. #_organizationId)
+    Organization.findOrganizationById (ID $ product ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   let feedbackMsg =
         Beckn.FeedbackReqMessage

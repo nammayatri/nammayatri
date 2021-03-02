@@ -49,13 +49,6 @@ newtype ProductsId = ProductsId
 
 deriveIdentifierInstances ''ProductsId
 
-newtype OrganizationId = OrganizationId
-  { _getOrganizationId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''OrganizationId
-
 newtype ShortOrganizationId = ShortOrganizationId
   { _getShortOrganizationId :: Text
   }
