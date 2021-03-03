@@ -135,16 +135,19 @@ throwOnDBErrorOrEmpty ::
 throwOnDBErrorOrEmpty dbres domainErrorOnDbError =
   checkDBErrorOrEmpty' dbres (const domainErrorOnDbError)
 
-fromMaybeM :: (HasCallStack, L.MonadFlow m) => ServerError -> Maybe a -> m a
-fromMaybeM err Nothing = L.throwException err
-fromMaybeM _ (Just a) = return a
+fromMaybeM :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Maybe a -> m a
+fromMaybeM err = maybe logAndThrow pure
+  where
+    logAndThrow = do
+      logError "FROMMAYBE" (decodeUtf8 $ errBody err)
+      L.throwException err
 
 fromMaybeM400,
   fromMaybeM401,
   fromMaybeM404,
   fromMaybeM500,
   fromMaybeM503 ::
-    (HasCallStack, L.MonadFlow m) => BSL.ByteString -> Maybe a -> m a
+    (HasCallStack, L.MonadFlow m, Log m) => BSL.ByteString -> Maybe a -> m a
 fromMaybeM400 a = fromMaybeM (S.err400 {errBody = a})
 fromMaybeM401 a = fromMaybeM (S.err401 {errBody = a})
 fromMaybeM404 a = fromMaybeM (S.err404 {errBody = a})
@@ -156,7 +159,7 @@ fromMaybeMJSON400,
   fromMaybeMJSON404,
   fromMaybeMJSON500,
   fromMaybeMJSON503 ::
-    (HasCallStack, L.MonadFlow m) => Text -> Maybe a -> m a
+    (HasCallStack, L.MonadFlow m, Log m) => Text -> Maybe a -> m a
 fromMaybeMJSON400 a = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
 fromMaybeMJSON401 a = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
 fromMaybeMJSON404 a = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg a, errHeaders = [jsonHeader]})
@@ -251,13 +254,14 @@ authenticate = check handleKey
     throw401 :: HasLogContext r => FlowR r a
     throw401 =
       throwError401 "Invalid Auth"
-
-throwHttpError :: (HasCallStack, L.MonadFlow m) => ServerError -> BSL.ByteString -> m a
-throwHttpError err errMsg =
+throwHttpError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> BSL.ByteString -> m a
+throwHttpError err errMsg = do
+  logError "HTTP_ERROR" (decodeUtf8 errMsg)
   L.throwException err {errBody = errMsg}
 
-throwHttpErrorJSON :: (HasCallStack, L.MonadFlow m) => ServerError -> BSL.ByteString -> m a
-throwHttpErrorJSON err errMsg =
+throwHttpErrorJSON :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> BSL.ByteString -> m a
+throwHttpErrorJSON err errMsg = do
+  logError "HTTP_ERROR_JSON" (decodeUtf8 errMsg)
   L.throwException err {errBody = errMsg, errHeaders = [jsonHeader]}
 
 throwBecknError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Text -> m a

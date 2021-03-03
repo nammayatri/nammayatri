@@ -108,6 +108,7 @@ dependencies:
   - tasty-hunit
   - either
   - mtl
+  - uuid
 
 ghc-options:
   - -fwrite-ide-info
