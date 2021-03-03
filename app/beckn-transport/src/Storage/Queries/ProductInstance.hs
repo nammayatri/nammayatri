@@ -126,6 +126,26 @@ updateStatus prodInstId status = do
           _status <-. B.val_ scStatus
         ]
 
+updateStatus' ::
+  Id Storage.ProductInstance ->
+  Storage.ProductInstanceStatus ->
+  DB.SqlDB ()
+updateStatus' prodInstId status = do
+  dbTable <- getDbTable'
+  currTime <- asks DB.currentTime
+  DB.update'
+    dbTable
+    (setClause status currTime)
+    (predicate prodInstId)
+  where
+    predicate pId Storage.ProductInstance {..} =
+      _id ==. B.val_ pId
+    setClause scStatus currTime Storage.ProductInstance {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ scStatus
+        ]
+
 findAllByCaseIds :: [Id Case.Case] -> Flow [Storage.ProductInstance]
 findAllByCaseIds ids = do
   dbTable <- getDbTable

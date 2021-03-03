@@ -12,10 +12,13 @@ import Beckn.Product.Validation.Context
   ( validateContextCommons,
     validateDomain,
   )
-import qualified Beckn.Types.App as App
+import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.App as TA
 import Beckn.Types.Common (GuidLike (..))
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Cancel as API
+import Beckn.Types.Core.API.Confirm
+import Beckn.Types.Core.API.Search
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
@@ -43,7 +46,12 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified External.Gateway.Transform as GT
 import qualified Models.Case as Case
+import qualified Models.ProductInstance as MPI
+import Product.FareCalculator
+import qualified Product.Location as Location
+import Product.Person (calculateDriverPool, setDriverPool)
 import Servant.Client (BaseUrl (baseUrlPath))
+import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
@@ -72,11 +80,10 @@ cancelRide rideId = do
   orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM PIParentIdNotPresent
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
-  Case.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
-  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
-  _ <- ProductInstance.updateStatus searchPiId ProductInstance.CANCELLED
-  _ <- ProductInstance.updateStatus (ProductInstance._id trackerPi) ProductInstance.COMPLETED
-  _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
+  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+  _ <-
+    DB.runSqlDBTransaction $
+      cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id)
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
   bapOrgId <- Case._udf4 orderCase & fromMaybeM CaseBapOrgIdNotPresent
@@ -93,10 +100,22 @@ cancelRide rideId = do
       c <- Case.findById $ prdInst ^. #_caseId
       case prdInst ^. #_personId of
         Nothing -> pure ()
-        Just personId -> do
-          driver <- Person.findPersonById personId
-          DriverInformation.updateOnRideFlow (cast personId) False
+        Just driverId -> do
+          driver <- Person.findPersonById driverId
+          DriverInformation.updateOnRideFlow (cast driverId) False
           Notify.notifyDriverOnCancel c driver
+
+cancelRideTransaction :: [ProductInstance.ProductInstance] -> ProductInstanceId -> ProductInstanceId -> ProductInstanceId -> DB.SqlDB ()
+cancelRideTransaction piList searchPiId trackerPiId orderPiId = do
+  case piList of
+    [] -> pure ()
+    (prdInst : _) -> do
+      QCase.updateStatusByIds' (ProductInstance._caseId <$> piList) SC.CLOSED
+      maybe (pure ()) (\driverId -> DriverInformation.updateOnRide' (DriverId $ _getPersonId driverId) False) (prdInst ^. #_personId)
+  _ <- ProductInstance.updateStatus' searchPiId ProductInstance.CANCELLED
+  _ <- ProductInstance.updateStatus' trackerPiId ProductInstance.COMPLETED
+  _ <- ProductInstance.updateStatus' orderPiId ProductInstance.CANCELLED
+  pure ()
 
 -- TODO : Add notifying transporter admin with FCM
 
