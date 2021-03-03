@@ -1,9 +1,12 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Utils.Common where
 
 import Beckn.Storage.DB.Config
+import Beckn.TypeClass.IsError
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
@@ -149,11 +152,11 @@ fromMaybeM400,
   fromMaybeM500,
   fromMaybeM503 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> Maybe a -> m a
-fromMaybeM400 code = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
-fromMaybeM401 code = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
-fromMaybeM404 code = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
-fromMaybeM500 code = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
-fromMaybeM503 code = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg code $ buildErrorMessage code, errHeaders = [jsonHeader]})
+fromMaybeM400 err = fromMaybeM (S.err400 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM401 err = fromMaybeM (S.err401 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM404 err = fromMaybeM (S.err404 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM500 err = fromMaybeM (S.err500 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM503 err = fromMaybeM (S.err503 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
 
 fromMaybeMWithMsg400,
   fromMaybeMWithMsg401,
@@ -161,11 +164,14 @@ fromMaybeMWithMsg400,
   fromMaybeMWithMsg500,
   fromMaybeMWithMsg503 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> Maybe a -> m a
-fromMaybeMWithMsg400 code msg = fromMaybeM (S.err400 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg401 code msg = fromMaybeM (S.err401 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg404 code msg = fromMaybeM (S.err404 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg500 code msg = fromMaybeM (S.err500 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg503 code msg = fromMaybeM (S.err503 {errBody = makeErrorJSONMsg code msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg400 err msg = fromMaybeM (S.err400 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg401 err msg = fromMaybeM (S.err401 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg404 err msg = fromMaybeM (S.err404 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg500 err msg = fromMaybeM (S.err500 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
+fromMaybeMWithMsg503 err msg = fromMaybeM (S.err503 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
+
+makeErrorJSONWithMsg :: forall b e. (IsError e b, IsError (DomainErrorWithMessage e) b) => e -> Text -> BSL.ByteString
+makeErrorJSONWithMsg err msg = Aeson.encode @b . toError $ DomainErrorWithMessage err msg
 
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
@@ -256,15 +262,11 @@ authenticate = check handleKey
     throw401 =
       throwError401 "Invalid Auth"
 
-throwHttpError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> BSL.ByteString -> m a
+throwHttpError :: forall b e m a. (HasCallStack, L.MonadFlow m, Log m, IsError e b) => ServerError -> e -> m a
 throwHttpError err errMsg = do
-  logError "HTTP_ERROR" (decodeUtf8 errMsg)
-  L.throwException err {errBody = errMsg}
-
-throwHttpErrorJSON :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> BSL.ByteString -> m a
-throwHttpErrorJSON err errMsg = do
-  logError "HTTP_ERROR_JSON" (decodeUtf8 errMsg)
-  L.throwException err {errBody = errMsg, errHeaders = [jsonHeader]}
+  let body = Aeson.encode @b $ toError errMsg
+  logError "HTTP_ERROR" (decodeUtf8 body)
+  L.throwException err {errBody = body, errHeaders = [jsonHeader]}
 
 throwBecknError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Text -> m a
 throwBecknError err errMsg = do
@@ -291,13 +293,13 @@ throwError500,
   throwError403,
   throwError404 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
-throwError500 code = throwHttpErrorJSON S.err500 . makeErrorJSONMsg code $ buildErrorMessage code
-throwError501 code = throwHttpErrorJSON S.err501 . makeErrorJSONMsg code $ buildErrorMessage code
-throwError503 code = throwHttpErrorJSON S.err503 . makeErrorJSONMsg code $ buildErrorMessage code
-throwError400 code = throwHttpErrorJSON S.err400 . makeErrorJSONMsg code $ buildErrorMessage code
-throwError401 code = throwHttpErrorJSON S.err401 . makeErrorJSONMsg code $ buildErrorMessage code
-throwError403 code = throwHttpErrorJSON S.err403 . makeErrorJSONMsg code $ buildErrorMessage code
-throwError404 code = throwHttpErrorJSON S.err404 . makeErrorJSONMsg code $ buildErrorMessage code
+throwError500 = throwHttpError @APIError S.err500
+throwError501 = throwHttpError @APIError S.err501
+throwError503 = throwHttpError @APIError S.err503
+throwError400 = throwHttpError @APIError S.err400
+throwError401 = throwHttpError @APIError S.err401
+throwError403 = throwHttpError @APIError S.err403
+throwError404 = throwHttpError @APIError S.err404
 
 throwErrorMsg500,
   throwErrorMsg501,
@@ -307,19 +309,13 @@ throwErrorMsg500,
   throwErrorMsg403,
   throwErrorMsg404 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> m a
-throwErrorMsg500 code msg = throwHttpErrorJSON S.err500 $ makeErrorJSONMsg code msg
-throwErrorMsg501 code msg = throwHttpErrorJSON S.err501 $ makeErrorJSONMsg code msg
-throwErrorMsg503 code msg = throwHttpErrorJSON S.err503 $ makeErrorJSONMsg code msg
-throwErrorMsg400 code msg = throwHttpErrorJSON S.err400 $ makeErrorJSONMsg code msg
-throwErrorMsg401 code msg = throwHttpErrorJSON S.err401 $ makeErrorJSONMsg code msg
-throwErrorMsg403 code msg = throwHttpErrorJSON S.err403 $ makeErrorJSONMsg code msg
-throwErrorMsg404 code msg = throwHttpErrorJSON S.err404 $ makeErrorJSONMsg code msg
-
-buildErrorMessage :: Text -> Text
-buildErrorMessage = T.toTitle . T.replace "_" " "
-
-makeErrorJSONMsg :: Text -> Text -> BSL.ByteString
-makeErrorJSONMsg code msg = Aeson.encode $ Aeson.object ["code" Aeson..= code, "message" Aeson..= msg]
+throwErrorMsg500 err errMsg = throwHttpError @APIError S.err500 $ DomainErrorWithMessage err errMsg
+throwErrorMsg501 err errMsg = throwHttpError @APIError S.err501 $ DomainErrorWithMessage err errMsg
+throwErrorMsg503 err errMsg = throwHttpError @APIError S.err503 $ DomainErrorWithMessage err errMsg
+throwErrorMsg400 err errMsg = throwHttpError @APIError S.err400 $ DomainErrorWithMessage err errMsg
+throwErrorMsg401 err errMsg = throwHttpError @APIError S.err401 $ DomainErrorWithMessage err errMsg
+throwErrorMsg403 err errMsg = throwHttpError @APIError S.err403 $ DomainErrorWithMessage err errMsg
+throwErrorMsg404 err errMsg = throwHttpError @APIError S.err404 $ DomainErrorWithMessage err errMsg
 
 throwBecknError500,
   throwBecknError501,
