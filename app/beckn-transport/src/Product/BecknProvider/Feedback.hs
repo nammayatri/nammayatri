@@ -3,9 +3,6 @@
 module Product.BecknProvider.Feedback where
 
 import App.Types (Flow, FlowHandler, Log (..))
-import Beckn.Types.App
-  ( RatingId (RatingId),
-  )
 import qualified Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Case as Case
@@ -65,7 +62,7 @@ feedback _transporterId _organization request = withFlowHandler $ do
 
 mkRating :: ID ProductInstance.ProductInstance -> Int -> Flow Rating.Rating
 mkRating productInstanceId ratingValue = do
-  _id <- RatingId <$> L.generateGUID
+  _id <- ID <$> L.generateGUID
   let _productInstanceId = productInstanceId
   now <- getCurrTime
   let _createdAt = now

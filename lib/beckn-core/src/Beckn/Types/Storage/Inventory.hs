@@ -3,7 +3,6 @@
 
 module Beckn.Types.Storage.Inventory where
 
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.Products (Products)
@@ -36,7 +35,7 @@ instance FromHttpApiData InventoryStatus where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data InventoryT f = Inventory
-  { _id :: B.C f InventoryId,
+  { _id :: B.C f (ID Inventory),
     _productId :: B.C f (ID Products),
     _organizationId :: B.C f (ID Organization),
     _status :: B.C f InventoryStatus,
@@ -51,7 +50,7 @@ type Inventory = InventoryT Identity
 type InventoryPrimaryKey = B.PrimaryKey InventoryT Identity
 
 instance B.Table InventoryT where
-  data PrimaryKey InventoryT f = InventoryPrimaryKey (B.C f InventoryId)
+  data PrimaryKey InventoryT f = InventoryPrimaryKey (B.C f (ID Inventory))
     deriving (Generic, B.Beamable)
   primaryKey = InventoryPrimaryKey . _id
 

@@ -3,7 +3,6 @@ module Storage.Queries.Rating where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Query
-import Beckn.Types.App (RatingId)
 import Beckn.Types.ID
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -25,7 +24,7 @@ create rating = do
   Query.createOne dbTable (Storage.insertExpression rating)
     >>= either Query.throwDBError pure
 
-updateRatingValue :: RatingId -> Int -> Flow ()
+updateRatingValue :: ID Storage.Rating -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
   now <- getCurrTime

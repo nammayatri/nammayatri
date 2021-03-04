@@ -22,7 +22,6 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Location (Location)
 import Beckn.Types.Storage.Organization (Organization)
@@ -170,7 +169,7 @@ linkEntity orgId personId req = withFlowHandler $ do
   person <- QP.findPersonById (ID personId)
   _ <- case req ^. #_entityType of
     VEHICLE ->
-      QV.findVehicleById (VehicleId (req ^. #_entityId))
+      QV.findVehicleById (ID (req ^. #_entityId))
         >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
     _ -> throwError400 "UNSUPPORTED ENTITY TYPE"
   when
@@ -191,7 +190,7 @@ mkPersonRes :: SP.Person -> Flow PersonEntityRes
 mkPersonRes person = do
   entity <- case person ^. #_udf2 >>= mapEntityType of
     Just VEHICLE -> do
-      vehicle <- QV.findVehicleById $ VehicleId $ fromMaybe "" (person ^. #_udf1)
+      vehicle <- QV.findVehicleById $ ID $ fromMaybe "" (person ^. #_udf1)
       return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)
     _ -> return Nothing
   return $

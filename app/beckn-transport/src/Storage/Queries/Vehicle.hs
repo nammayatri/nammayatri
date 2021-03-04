@@ -5,7 +5,7 @@ module Storage.Queries.Vehicle where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Vehicle as Storage
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -24,7 +24,7 @@ create Storage.Vehicle {..} = do
     >>= either DB.throwDBError pure
 
 findVehicleById ::
-  VehicleId -> Flow (Maybe Storage.Vehicle)
+  ID Storage.Vehicle -> Flow (Maybe Storage.Vehicle)
 findVehicleById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -33,7 +33,7 @@ findVehicleById id = do
     predicate Storage.Vehicle {..} = _id ==. B.val_ id
 
 findByIdAndOrgId ::
-  VehicleId -> Text -> Flow Storage.Vehicle
+  ID Storage.Vehicle -> Text -> Flow Storage.Vehicle
 findByIdAndOrgId id orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -94,7 +94,7 @@ updateVehicleRec vehicle = do
         ]
     predicate id Storage.Vehicle {..} = _id ==. B.val_ id
 
-deleteById :: VehicleId -> Flow ()
+deleteById :: ID Storage.Vehicle -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
@@ -109,7 +109,7 @@ findByAnyOf registrationNoM vehicleIdM = do
     >>= either DB.throwDBError pure
   where
     predicate Storage.Vehicle {..} =
-      (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (VehicleId (fromMaybe "DONT_MATCH" vehicleIdM)))
+      (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (ID (fromMaybe "DONT_MATCH" vehicleIdM)))
         &&. (B.val_ (isNothing registrationNoM) ||. _registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
 
 findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> Maybe Storage.EnergyType -> Integer -> Integer -> Text -> Flow [Storage.Vehicle]
@@ -125,7 +125,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
         &&. (B.val_ (isNothing categoryM) ||. _category ==. B.val_ categoryM)
         &&. (B.val_ (isNothing energyTypeM) ||. _energyType ==. B.val_ energyTypeM)
 
-findByIds :: [VehicleId] -> Flow [Storage.Vehicle]
+findByIds :: [ID Storage.Vehicle] -> Flow [Storage.Vehicle]
 findByIds ids = do
   dbTable <- getDbTable
   DB.findAllOrErr dbTable predicate

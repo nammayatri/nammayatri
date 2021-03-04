@@ -119,7 +119,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
 listVehicleRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
   user <- PersQ.findPersonById (ID _EntityId)
-  vehicle <- VQ.findVehicleById (VehicleId vehicleId)
+  vehicle <- VQ.findVehicleById (ID vehicleId)
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
   locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
@@ -186,7 +186,7 @@ assignDriver productInstanceId driverId = do
   vehicleId <-
     driver ^. #_udf1
       & fromMaybeM400 "DRIVER_HAS_NO_VEHICLE"
-      <&> VehicleId
+      <&> ID
   vehicle <-
     VQ.findVehicleById vehicleId
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"

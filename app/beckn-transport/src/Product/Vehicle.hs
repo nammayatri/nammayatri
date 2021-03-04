@@ -4,7 +4,6 @@ module Product.Vehicle where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.App
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -40,7 +39,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandl
 
 updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do
-  vehicle <- QV.findByIdAndOrgId (VehicleId {_getVehicleId = vehicleId}) orgId
+  vehicle <- QV.findByIdAndOrgId (ID {getId = vehicleId}) orgId
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
@@ -48,11 +47,11 @@ updateVehicle orgId vehicleId req = withFlowHandler $ do
 deleteVehicle :: Text -> Text -> FlowHandler DeleteVehicleRes
 deleteVehicle orgId vehicleId = withFlowHandler $ do
   vehicle <-
-    QV.findVehicleById (VehicleId vehicleId)
+    QV.findVehicleById (ID vehicleId)
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
   if vehicle ^. #_organizationId == orgId
     then do
-      QV.deleteById (VehicleId vehicleId)
+      QV.deleteById (ID vehicleId)
       return $ DeleteVehicleRes vehicleId
     else throwError401 "Unauthorized"
 
@@ -80,7 +79,7 @@ mkVehicleRes personList vehicle =
   let mdriver =
         find
           ( \person ->
-              SP._udf1 person == Just (_getVehicleId $ vehicle ^. #_id)
+              SP._udf1 person == Just (getId $ vehicle ^. #_id)
           )
           personList
    in VehicleRes

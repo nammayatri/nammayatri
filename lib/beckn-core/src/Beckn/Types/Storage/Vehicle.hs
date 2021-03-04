@@ -3,7 +3,7 @@
 
 module Beckn.Types.Storage.Vehicle where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -90,7 +90,7 @@ instance FromHttpApiData RegistrationCategory where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data VehicleT f = Vehicle
-  { _id :: B.C f VehicleId,
+  { _id :: B.C f (ID Vehicle),
     _capacity :: B.C f (Maybe Int),
     _organizationId :: B.C f Text,
     _category :: B.C f (Maybe Category),
@@ -112,7 +112,7 @@ type Vehicle = VehicleT Identity
 type VehiclePrimaryKey = B.PrimaryKey VehicleT Identity
 
 instance B.Table VehicleT where
-  data PrimaryKey VehicleT f = VehiclePrimaryKey (B.C f VehicleId)
+  data PrimaryKey VehicleT f = VehiclePrimaryKey (B.C f (ID Vehicle))
     deriving (Generic, B.Beamable)
   primaryKey = VehiclePrimaryKey . _id
 

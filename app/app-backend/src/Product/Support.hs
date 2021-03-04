@@ -8,7 +8,6 @@ where
 
 import qualified App.Types as App
 import qualified Beckn.SesConfig as SesConfig
-import Beckn.Types.App (IssueId (..))
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
@@ -38,7 +37,7 @@ sendIssue person request@SendIssueReq {..} = withFlowHandler $ do
 mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> SIssue.Issue
 mkDBIssue issueId customerId SendIssueReq {..} time =
   SIssue.Issue
-    { _id = IssueId issueId,
+    { _id = ID issueId,
       _customerId = customerId,
       _productInstanceId = productInstanceId,
       _contactEmail = contactEmail,

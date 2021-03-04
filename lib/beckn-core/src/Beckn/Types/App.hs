@@ -1,7 +1,4 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -15,7 +12,6 @@ import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
 import Beckn.Utils.Logging (HasLogContext (..))
-import Beckn.Utils.TH
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend
@@ -38,34 +34,6 @@ type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
 type FlowServerR r api = ServerT api (FlowHandlerR r)
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
-
-newtype VehicleId = VehicleId
-  { _getVehicleId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''VehicleId
-
-newtype InventoryId = InventoryId
-  { _getInventoryId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''InventoryId
-
-newtype IssueId = IssueId
-  { _getIssueId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''IssueId
-
-newtype RatingId = RatingId
-  { _getRatingId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''RatingId
 
 type Limit = Int
 

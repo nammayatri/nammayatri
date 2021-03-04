@@ -6,9 +6,9 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.ID
-import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person (Person)
+import Beckn.Types.Storage.Vehicle (Vehicle)
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
@@ -322,19 +322,19 @@ updateDriver ids driverId = do
 
 updateVehicleFlow :: [ID Storage.ProductInstance] -> Maybe Text -> Flow ()
 updateVehicleFlow ids vehId = do
-  DB.runSqlDB (updateVehicle ids (VehicleId <$> vehId))
+  DB.runSqlDB (updateVehicle ids (ID <$> vehId))
     >>= either DB.throwDBError pure
 
 updateVehicle ::
   [ID Storage.ProductInstance] ->
-  Maybe VehicleId ->
+  Maybe (ID Vehicle) ->
   DB.SqlDB ()
 updateVehicle ids vehId = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
   DB.update'
     dbTable
-    (setClause (_getVehicleId <$> vehId) now)
+    (setClause (getId <$> vehId) now)
     (predicate ids)
   where
     predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)

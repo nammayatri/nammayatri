@@ -258,7 +258,7 @@ mkDriverInfo driverId = do
 
 mkVehicleInfo :: Text -> Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
-  vehicle <- Vehicle.findVehicleById (App.VehicleId vehicleId)
+  vehicle <- Vehicle.findVehicleById (ID vehicleId)
   return $ GT.mkVehicleObj <$> vehicle
 
 mkCancelRidePayload :: Text -> Flow API.OnCancelReq
