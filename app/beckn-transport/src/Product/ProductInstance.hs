@@ -25,6 +25,7 @@ import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ
+import Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
@@ -269,7 +270,6 @@ updateTrip piId newStatus request = do
   case newStatus of
     -- Only admin can send CANCELLED status to cancel ride
     PI.CANCELLED -> do
-      trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       searchPi <- case prodInst ^. #_parentId of
         Just pid -> PIQ.findById pid
