@@ -38,7 +38,8 @@ handle =
       runSafely = I.runSafely,
       logInfo = I.logInfo,
       logError = I.logError,
-      logEvent = I.logEvent
+      logEvent = I.logEvent,
+      getRideStatus = I.getRideStatus
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

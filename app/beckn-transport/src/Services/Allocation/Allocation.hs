@@ -43,6 +43,14 @@ data CurrentNotification
   = CurrentNotification DriverId UTCTime
   deriving (Show)
 
+data RideStatus
+  = CONFIRMED
+  | TRIP_ASSIGNED
+  | INPROGRESS
+  | COMPLETED
+  | CANCELLED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
+
 data ServiceHandle m = ServiceHandle
   { -- Get current time
     getCurrentTime :: m UTCTime,
@@ -104,7 +112,8 @@ data ServiceHandle m = ServiceHandle
     runSafely :: forall a. (FromJSON a, ToJSON a) => m a -> m (Either Text a),
     logInfo :: Text -> Text -> m (),
     logError :: Text -> Text -> m (),
-    logEvent :: AllocationEventType -> RideId -> m ()
+    logEvent :: AllocationEventType -> RideId -> m (),
+    getRideStatus :: RideId -> m RideStatus
   }
 
 process :: Monad m => ServiceHandle m -> Integer -> m Int
@@ -127,20 +136,26 @@ processRequest :: Monad m => ServiceHandle m -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} rideRequest = do
   let requestHeader = rideRequest ^. #requestHeader
   let requestId = requestHeader ^. #requestId
-  eres <- runSafely $ do
-    resetRequestTime requestId
-    logRequestInfo handle requestHeader "Start processing request"
-    case rideRequest ^. #requestData of
-      Allocation orderTime ->
-        processAllocation handle requestHeader orderTime
-      Cancellation -> do
-        cancel handle requestHeader
-        logEvent ConsumerCancelled (requestHeader ^. #rideId)
-    logRequestInfo handle requestHeader "End processing request"
-  whenLeft eres $
-    \err -> do
-      let message = "Error processing request " <> show requestId <> ": " <> err
-      logError "AllocationService" message
+  rideStatus <- getRideStatus $ requestHeader ^. #rideId
+  case rideStatus of
+    CONFIRMED -> do
+      eres <- runSafely $ do
+        resetRequestTime requestId
+        logRequestInfo handle requestHeader "Start processing request"
+        case rideRequest ^. #requestData of
+          Allocation orderTime ->
+            processAllocation handle requestHeader orderTime
+          Cancellation -> do
+            cancel handle requestHeader
+            logEvent ConsumerCancelled (requestHeader ^. #rideId)
+        logRequestInfo handle requestHeader "End processing request"
+      whenLeft eres $
+        \err -> do
+          let message = "Error processing request " <> show requestId <> ": " <> err
+          logError "AllocationService" message
+    _ -> do
+      logRequestInfo handle requestHeader "Request is cancelled"
+      cleanupRide $ requestHeader ^. #rideId
 
 processAllocation :: Monad m => ServiceHandle m -> RequestHeader -> OrderTime -> m ()
 processAllocation handle@ServiceHandle {..} requestHeader orderTime = do

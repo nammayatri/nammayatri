@@ -21,8 +21,6 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
 import Types.API.ProductInstance
@@ -57,10 +55,10 @@ getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 
 assignDriver :: RideId -> DriverId -> Flow ()
 assignDriver rideId driverId = do
-  ordPi <- PIQ.findById productInstanceId
-  searchPi <- PIQ.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
-  piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
-  person <- QPerson.findPersonById personId
+  ordPi <- QPI.findById productInstanceId
+  searchPi <- QPI.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
+  piList <- QPI.findAllByParentId (ordPi ^. #_parentId)
+  person <- QP.findPersonById personId
   let vehicleId = person ^. #_udf1
       req = buildProdInstUpdateReq vehicleId
 
@@ -206,3 +204,17 @@ toDriverId = DriverId . _getPersonId
 
 logEvent :: AllocationEventType -> RideId -> Flow ()
 logEvent = logAllocationEvent
+
+getRideStatus :: RideId -> Flow RideStatus
+getRideStatus rideId = do
+  productInstance <- QPI.findById productInstanceId
+  castToRideStatus $ productInstance ^. #_status
+  where
+    productInstanceId = ProductInstanceId $ _getRideId rideId
+    castToRideStatus = \case
+      PI.CONFIRMED -> return CONFIRMED
+      PI.TRIP_ASSIGNED -> return TRIP_ASSIGNED
+      PI.INPROGRESS -> return INPROGRESS
+      PI.COMPLETED -> return COMPLETED
+      PI.CANCELLED -> return CANCELLED
+      _ -> throwErrorJSON500 "UNKNOWN_STATUS"

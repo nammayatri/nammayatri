@@ -2,6 +2,7 @@
 
 module Flow.Allocation where
 
+import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Control.Concurrent.MVar as MVar
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
@@ -116,7 +117,8 @@ handle Repository {..} =
       runSafely = (Right <$>),
       logInfo = \_ _ -> pure (),
       logError = \_ _ -> pure (),
-      logEvent = \_ _ -> pure ()
+      logEvent = \_ _ -> pure (),
+      getRideStatus = \rideId -> return Allocation.CONFIRMED
     }
 
 driverPool1 :: [DriverId]
