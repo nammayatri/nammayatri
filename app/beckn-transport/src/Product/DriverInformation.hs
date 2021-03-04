@@ -6,8 +6,8 @@ import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.ID
+import Types.App
 import Beckn.Types.MapSearch
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
 import EulerHS.Prelude
@@ -21,7 +21,6 @@ import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Types.API.DriverInformation as DriverInformationAPI
-import Types.App
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandler $ do
@@ -46,14 +45,13 @@ setActivity RegistrationToken {..} isActive = withFlowHandler $ do
   QDriverInformation.updateActivity driverId isActive
   pure APIResult.Success
 
-getRideInfo :: RegistrationToken -> Maybe (ID ProductInstance) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
-getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
-  let rideId = RideId . getId <$> mbProductInstanceId
+getRideInfo :: RegistrationToken -> Maybe (ID Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
+getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
     Just notification -> do
-      let productInstanceId = rideIdToProductInstanceId $ notification ^. #_rideId
+      let productInstanceId = notification ^. #_rideId
       let notificationExpiryTime = notification ^. #_expiresAt
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById driverId
@@ -77,6 +75,5 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
               }
   where
     driverId = ID _EntityId
-    rideIdToProductInstanceId rideId = ID $ rideId ^. #_getRideId
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ ID <$> mbId
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long

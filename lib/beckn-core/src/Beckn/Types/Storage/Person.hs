@@ -168,8 +168,6 @@ instance ToJSON (PersonT Identity)
 
 instance FromJSON (PersonT Identity)
 
-type Driver = Person
-
 deriveTableEncryption ''PersonTE
 
 -- TODO: move it to appropriate place

@@ -9,7 +9,7 @@ import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.App (RideId)
+import Types.App
 import qualified Types.Storage.AllocationEvent as Storage
 import qualified Types.Storage.DB as DB
 
@@ -32,7 +32,7 @@ findAllocationEventById id = do
   where
     predicate Storage.AllocationEvent {..} = _id ==. B.val_ id
 
-logAllocationEvent :: Storage.AllocationEventType -> RideId -> Flow ()
+logAllocationEvent :: Storage.AllocationEventType -> ID Ride -> Flow ()
 logAllocationEvent eventType rideId = do
   uuid <- generateGUID
   now <- getCurrTime

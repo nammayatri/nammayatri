@@ -5,10 +5,10 @@ import Beckn.Types.Storage.Organization (Organization)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
-import Types.App (ConfigKey, TranposrterParameterId (..))
+import Types.App (ConfigKey)
 
 data TransporterConfigT f = TransporterConfig
-  { _id :: B.C f TranposrterParameterId,
+  { _id :: B.C f (ID TransporterParameter),
     _transporterId :: B.C f (ID Organization),
     _key :: B.C f ConfigKey,
     _value :: B.C f Text,
@@ -22,7 +22,7 @@ type TransporterConfig = TransporterConfigT Identity
 type TransporterConfigPrimaryKey = B.PrimaryKey TransporterConfigT Identity
 
 instance B.Table TransporterConfigT where
-  data PrimaryKey TransporterConfigT f = TransporterConfigPrimaryKey (B.C f TranposrterParameterId)
+  data PrimaryKey TransporterConfigT f = TransporterConfigPrimaryKey (B.C f (ID TransporterParameter))
     deriving (Generic, B.Beamable)
   primaryKey = TransporterConfigPrimaryKey . _id
 
@@ -42,3 +42,5 @@ fieldEMod =
           _createdAt = "created_at",
           _updatedAt = "updated_at"
         }
+
+data TransporterParameter

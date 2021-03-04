@@ -91,9 +91,8 @@ createPerson orgId req = withFlowHandler $ do
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
 
 createDriverDetails :: ID SP.Person -> Flow ()
-createDriverDetails personId = do
+createDriverDetails driverId = do
   now <- getCurrTime
-  let driverId = cast personId
   let driverInfo =
         DriverInformation.DriverInformation
           { _driverId = driverId,

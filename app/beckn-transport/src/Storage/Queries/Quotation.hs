@@ -3,13 +3,13 @@ module Storage.Queries.Quotation where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.ID
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Quotation as Storage
 
@@ -24,7 +24,7 @@ create Storage.Quotation {..} = do
     >>= either DB.throwDBError pure
 
 findQuotationById ::
-  QuotationId -> Flow (Maybe Storage.Quotation)
+  ID Storage.Quotation -> Flow (Maybe Storage.Quotation)
 findQuotationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -54,7 +54,7 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
-  QuotationId ->
+  ID Storage.Quotation ->
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do

@@ -3,14 +3,13 @@
 module Types.Storage.NotificationStatus where
 
 import Beckn.Types.ID
-import Beckn.Types.Storage.Person (Driver)
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
-import Types.App (RideId)
+import Types.App
 
 data AnswerStatus = NOTIFIED | REJECTED | IGNORED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -25,7 +24,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerStatus
 
 data NotificationStatusT f = NotificationStatus
   { _id :: B.C f (ID NotificationStatus),
-    _rideId :: B.C f RideId,
+    _rideId :: B.C f (ID Ride),
     _driverId :: B.C f (ID Driver),
     _status :: B.C f AnswerStatus,
     _expiresAt :: B.C f UTCTime

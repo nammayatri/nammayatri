@@ -57,7 +57,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
-import Types.App (RideId (..), RideRequestId (..))
+import Types.App (Ride)
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
@@ -72,9 +72,9 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
   uuid <- L.generateGUID
   mkAckResponse uuid "cancel"
 
-cancelRide :: RideId -> Flow ()
+cancelRide :: ID Ride -> Flow ()
 cancelRide rideId = do
-  orderPi <- ProductInstance.findById . ID $ _getRideId rideId
+  orderPi <- ProductInstance.findById rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM500 "RIDEORDER_DOESNT_HAVE_PARENT"
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
@@ -302,13 +302,12 @@ validateContext action context = do
   validateContextCommons action context
 
 mkRideReq :: ID ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
-mkRideReq pId rideRequestType = do
+mkRideReq rideId rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrTime
-  let rideId = RideId $ getId pId
   pure
     SRideRequest.RideRequest
-      { _id = RideRequestId guid,
+      { _id = ID guid,
         _rideId = rideId,
         _createdAt = currTime,
         _type = rideRequestType

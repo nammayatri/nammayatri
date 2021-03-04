@@ -1,10 +1,10 @@
 module Types.Storage.DriverStats where
 
 import Beckn.Types.ID
-import Beckn.Types.Storage.Person (Driver)
 import Data.Time (UTCTime (..))
 import qualified Database.Beam as B
 import EulerHS.Prelude
+import Types.App
 
 data DriverStatsT f = DriverStats
   { _driverId :: B.C f (ID Driver),

@@ -5,10 +5,10 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.ID
 import Beckn.Utils.Common (HasSchemaName (..), getCurrTime)
-import Beckn.Types.Storage.Person (Driver)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
 

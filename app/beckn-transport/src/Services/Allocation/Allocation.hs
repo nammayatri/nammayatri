@@ -4,7 +4,6 @@ module Services.Allocation.Allocation where
 
 import Beckn.Utils.Logging (LogLevel (..))
 import Beckn.Types.ID
-import Beckn.Types.Storage.Person (Driver)
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
@@ -12,6 +11,7 @@ import EulerHS.Prelude
 import qualified Types.API.Ride as DriverResponse (DriverResponse (..), NotificationStatus (..))
 import Types.App
 import Types.Storage.AllocationEvent (AllocationEventType (..))
+import qualified Types.Storage.RideRequest as SRR
 
 newtype OrderTime = OrderTime
   { utcTime :: UTCTime
@@ -24,8 +24,8 @@ data RequestData
   deriving (Show)
 
 data RequestHeader = RequestHeader
-  { requestId :: RideRequestId,
-    rideId :: RideId,
+  { requestId :: ID SRR.RideRequest,
+    rideId :: ID Ride,
     requestTime :: UTCTime
   }
   deriving (Generic, Show)
@@ -55,7 +55,7 @@ data RideStatus
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
 
 data RideInfo = RideInfo
-  { rideId :: RideId,
+  { rideId :: ID Ride,
     rideStatus :: RideStatus,
     orderTime :: OrderTime
   }
@@ -67,27 +67,27 @@ data ServiceHandle m = ServiceHandle
     getConfiguredNotificationTime :: m NominalDiffTime,
     getConfiguredAllocationTime :: m NominalDiffTime,
     getRequests :: Integer -> m [RideRequest],
-    getDriverPool :: RideId -> m [ID Driver],
-    getCurrentNotification :: RideId -> m (Maybe CurrentNotification),
-    sendNewRideNotification :: RideId -> ID Driver -> m (),
-    sendRideNotAssignedNotification :: RideId -> ID Driver -> m (),
-    addNotificationStatus :: RideId -> ID Driver -> UTCTime -> m (),
-    updateNotificationStatus :: RideId -> ID Driver -> NotificationStatus -> m (),
+    getDriverPool :: ID Ride -> m [ID Driver],
+    getCurrentNotification :: ID Ride -> m (Maybe CurrentNotification),
+    sendNewRideNotification :: ID Ride -> ID Driver -> m (),
+    sendRideNotAssignedNotification :: ID Ride -> ID Driver -> m (),
+    addNotificationStatus :: ID Ride -> ID Driver -> UTCTime -> m (),
+    updateNotificationStatus :: ID Ride -> ID Driver -> NotificationStatus -> m (),
     resetLastRejectionTime :: ID Driver -> m (),
-    getAttemptedDrivers :: RideId -> m [ID Driver],
+    getAttemptedDrivers :: ID Ride -> m [ID Driver],
     getDriversWithNotification :: m [ID Driver],
     getFirstDriverInTheQueue :: NonEmpty (ID Driver) -> m (ID Driver),
     checkAvailability :: NonEmpty (ID Driver) -> m [ID Driver],
-    getDriverResponse :: RideId -> ID Driver -> m (Maybe DriverResponse.DriverResponse),
-    assignDriver :: RideId -> ID Driver -> m (),
-    cancelRide :: RideId -> m (),
-    cleanupNotifications :: RideId -> m (),
-    addAllocationRequest :: RideId -> m (),
-    getRideInfo :: RideId -> m RideInfo,
-    removeRequest :: RideRequestId -> m (),
+    getDriverResponse :: ID Ride -> ID Driver -> m (Maybe DriverResponse.DriverResponse),
+    assignDriver :: ID Ride -> ID Driver -> m (),
+    cancelRide :: ID Ride -> m (),
+    cleanupNotifications :: ID Ride -> m (),
+    addAllocationRequest :: ID Ride -> m (),
+    getRideInfo :: ID Ride -> m RideInfo,
+    removeRequest :: ID SRR.RideRequest -> m (),
     runSafely :: forall a. (FromJSON a, ToJSON a) => m a -> m (Either Text a),
     addLogTag :: forall a. Text -> m a -> m a,
-    logEvent :: AllocationEventType -> RideId -> m (),
+    logEvent :: AllocationEventType -> ID Ride -> m (),
     logOutput :: LogLevel -> [Text] -> Text -> m ()
   }
 
@@ -117,7 +117,7 @@ processRequest handle@ServiceHandle {..} rideRequest = do
   let rideStatus = rideInfo ^. #rideStatus
   let orderTime = rideInfo ^. #orderTime
   eres <- runSafely $ do
-    addLogTag ("RideRequest_" <> rideId ^. #_getRideId) $ do
+    addLogTag ("RideRequest_" <> rideId ^. #getId) $ do
       logInfoText handle "Start processing request"
       case rideRequest ^. #requestData of
         Allocation ->

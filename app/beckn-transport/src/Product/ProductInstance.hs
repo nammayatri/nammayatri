@@ -30,6 +30,7 @@ import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
+import Types.App
 
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $ do
@@ -66,7 +67,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   isAllowed ordPi req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
-      DSQ.updateIdleTime . ID . getId $ user ^. #_id
+      DSQ.updateIdleTime $ user ^. #_id
     updateStatus piId req
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
@@ -174,7 +175,7 @@ isAllowed orderPi req = do
     Left _ -> throwErrorJSON400 "INVALID_UPDATE_OPERATION"
     Right _ -> return ()
 
-assignDriver :: ID PI.ProductInstance -> ID SP.Driver -> Flow ()
+assignDriver :: ID PI.ProductInstance -> ID Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
   searchPi <- PIQ.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
@@ -297,7 +298,7 @@ updateTrip piId newStatus request = do
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       updateOnRide (PI._personId orderPi) False
-      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime . ID . getId)
+      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime)
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) PI.TRIP_ASSIGNED

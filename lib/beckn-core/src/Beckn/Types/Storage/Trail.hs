@@ -18,7 +18,7 @@ import EulerHS.Prelude
 
 data TrailT f = Trail
   { _id :: B.C f Text,
-    -- _customerId      :: B.C f (Maybe CustomerId),
+    -- _customerId      :: B.C f (Maybe (ID Customer)),
     -- _sessionId       :: B.C f (Maybe SessionId),
     _endpointId :: B.C f LText,
     _headers :: B.C f LText,

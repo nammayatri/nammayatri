@@ -15,16 +15,17 @@ import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
+import qualified Types.Storage.RideRequest as SRR
 import Types.App
 
 numRequestsToProcess :: Integer
 numRequestsToProcess = 10
 
-ride01Id :: RideId
-ride01Id = RideId "ride01"
+ride01Id :: ID Ride
+ride01Id = ID "ride01"
 
-ride02Id :: RideId
-ride02Id = RideId "ride02"
+ride02Id :: ID Ride
+ride02Id = ID "ride02"
 
 allocationTime :: NominalDiffTime
 allocationTime = 120
@@ -37,14 +38,14 @@ isNotified currentTime (Notified, expiryTime) = expiryTime > currentTime
 isNotified _ _ = False
 
 attemptedNotification ::
-  RideId ->
-  (RideId, ID Driver) ->
+  ID Ride ->
+  (ID Ride, ID Driver) ->
   (NotificationStatus, UTCTime) ->
   Bool
 attemptedNotification rideId (id, _) (status, _) =
   id == rideId && (status == Rejected || status == Ignored)
 
-addRide :: Repository -> RideId -> IO ()
+addRide :: Repository -> ID Ride -> IO ()
 addRide Repository {..} rideId = do
   currTime <- Time.getCurrentTime
   let rideInfo =
@@ -55,10 +56,10 @@ addRide Repository {..} rideId = do
           }
   modifyIORef ridesVar $ Map.insert rideId rideInfo
 
-addRequest :: RequestData -> Repository -> RideId -> IO ()
+addRequest :: RequestData -> Repository -> ID Ride -> IO ()
 addRequest requestData Repository {..} rideId = do
   currentId <- readIORef currentIdVar
-  let requestId = RideRequestId $ show currentId
+  let requestId = ID $ show currentId
   currTime <- Time.getCurrentTime
   let request =
         RideRequest
@@ -73,17 +74,17 @@ addRequest requestData Repository {..} rideId = do
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> RideId -> ID Driver -> Ride.NotificationStatus -> IO ()
+addResponse :: Repository -> ID Ride -> ID Driver -> Ride.NotificationStatus -> IO ()
 addResponse Repository {..} rideId driverId status = do
   currentTime <- Time.getCurrentTime
   let response = Ride.DriverResponse status currentTime
   modifyIORef responsesVar $ Map.insert (rideId, driverId) response
 
-checkRideStatus :: Repository -> RideId -> RideStatus -> IO ()
+checkRideStatus :: Repository -> ID Ride -> RideStatus -> IO ()
 checkRideStatus Repository {..} rideId expectedStatus = do
   rides <- readIORef ridesVar
   case Map.lookup ride01Id rides of
-    Nothing -> assertFailure $ "Ride " <> show (rideId ^. #_getRideId) <> " not found"
+    Nothing -> assertFailure $ "Ride " <> show (rideId ^. #getId) <> " not found"
     Just rideInfo -> rideInfo ^. #rideStatus @?= expectedStatus
 
 handle :: Repository -> ServiceHandle IO
@@ -166,17 +167,17 @@ driverPool1 = [ID "driver01", ID "driver02", ID "driver03"]
 driverPool2 :: [ID Driver]
 driverPool2 = [ID "driver05", ID "driver07", ID "driver08"]
 
-driverPoolPerRide :: Map RideId [ID Driver]
+driverPoolPerRide :: Map (ID Ride) [ID Driver]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map RideId [ID Driver]),
-    ridesVar :: IORef (Map RideId RideInfo),
-    rideRequestsVar :: IORef (Map RideRequestId RideRequest),
-    notificationStatusVar :: IORef (Map (RideId, ID Driver) (NotificationStatus, UTCTime)),
-    assignmentsVar :: IORef [(RideId, ID Driver)],
-    responsesVar :: IORef (Map (RideId, ID Driver) Ride.DriverResponse)
+    driverPoolVar :: IORef (Map (ID Ride) [ID Driver]),
+    ridesVar :: IORef (Map (ID Ride) RideInfo),
+    rideRequestsVar :: IORef (Map (ID SRR.RideRequest) RideRequest),
+    notificationStatusVar :: IORef (Map (ID Ride, ID Driver) (NotificationStatus, UTCTime)),
+    assignmentsVar :: IORef [(ID Ride, ID Driver)],
+    responsesVar :: IORef (Map (ID Ride, ID Driver) Ride.DriverResponse)
   }
 
 initRepository :: IO Repository

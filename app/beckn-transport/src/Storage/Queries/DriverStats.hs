@@ -6,11 +6,11 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.ID
-import Beckn.Types.Storage.Person (Driver)
 import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverStats as Storage
 

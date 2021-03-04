@@ -4,6 +4,7 @@
 
 module Types.Storage.Quotation where
 
+import Beckn.Types.ID
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -15,7 +16,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude
 import Servant.API
-import Types.App
 
 data Status = NEW | PENDING | EXPIRED | CONFIRMED | SYSTEM_CANCELLED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -34,7 +34,7 @@ instance FromHttpApiData Status where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data QuotationT f = Quotation
-  { _id :: B.C f QuotationId,
+  { _id :: B.C f (ID Quotation),
     _leadsId :: B.C f Text,
     _amount :: B.C f Text,
     _organizationId :: B.C f Text,
@@ -49,7 +49,7 @@ type Quotation = QuotationT Identity
 type QuotationPrimaryKey = B.PrimaryKey QuotationT Identity
 
 instance B.Table QuotationT where
-  data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f QuotationId)
+  data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f (ID Quotation))
     deriving (Generic, B.Beamable)
   primaryKey = QuotationPrimaryKey . _id
 

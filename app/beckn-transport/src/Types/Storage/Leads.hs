@@ -4,15 +4,15 @@
 
 module Types.Storage.Leads where
 
+import Beckn.Types.ID
 import Data.Aeson
 import Data.Swagger
 import Data.Time
 import qualified Database.Beam as B
 import EulerHS.Prelude
-import Types.App
 
 data LeadsT f = Leads
-  { _id :: B.C f LeadsId,
+  { _id :: B.C f (ID Leads),
     _customerId :: B.C f Text,
     _fromLocationId :: B.C f (Maybe Text),
     _toLocationId :: B.C f (Maybe Text),
@@ -32,7 +32,7 @@ type Leads = LeadsT Identity
 type LeadsPrimaryKey = B.PrimaryKey LeadsT Identity
 
 instance B.Table LeadsT where
-  data PrimaryKey LeadsT f = LeadsPrimaryKey (B.C f LeadsId)
+  data PrimaryKey LeadsT f = LeadsPrimaryKey (B.C f (ID Leads))
     deriving (Generic, B.Beamable)
   primaryKey = LeadsPrimaryKey . _id
 

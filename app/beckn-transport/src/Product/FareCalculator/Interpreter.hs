@@ -36,7 +36,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
     runBRFlowMaybe $
       doCalculateFare
         serviceHandle
-        (ID $ getId orgId)
+        orgId
         vehicleVariant
         (PickupLocation pickLoc)
         (DropLocation dropLoc)
