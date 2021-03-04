@@ -360,7 +360,7 @@ throwDomainError err =
       ProductNotFound -> t S.err404 "Product not found"
       ProductNotUpdated -> t S.err405 "Product not updated"
       ProductNotCreated -> t S.err405 "Product not created"
-    AuthErr UnAuthorized -> t S.err401 "Unauthorized"
+    AuthErr Unauthorized -> t S.err401 "Unauthorized"
     _ -> t S.err500 "Unknown error"
   where
     t errCode (ErrorMsg errMsg) = throwBecknError errCode errMsg
