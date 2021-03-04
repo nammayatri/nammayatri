@@ -111,11 +111,11 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId = do
     [] -> pure ()
     (prdInst : _) -> do
       QCase.updateStatusByIds' (ProductInstance._caseId <$> piList) SC.CLOSED
-      maybe (pure ()) (\driverId -> DriverInformation.updateOnRide' (DriverId $ _getPersonId driverId) False) (prdInst ^. #_personId)
-  _ <- ProductInstance.updateStatus' searchPiId ProductInstance.CANCELLED
-  _ <- ProductInstance.updateStatus' trackerPiId ProductInstance.COMPLETED
-  _ <- ProductInstance.updateStatus' orderPiId ProductInstance.CANCELLED
-  pure ()
+      let mbDriverId = prdInst ^. #_personId
+      whenJust mbDriverId (\driverId -> DriverInformation.updateOnRide' (DriverId $ _getPersonId driverId) False)
+  ProductInstance.updateStatus' searchPiId ProductInstance.CANCELLED
+  ProductInstance.updateStatus' trackerPiId ProductInstance.COMPLETED
+  ProductInstance.updateStatus' orderPiId ProductInstance.CANCELLED
 
 -- TODO : Add notifying transporter admin with FCM
 
