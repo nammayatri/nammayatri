@@ -3,7 +3,7 @@
 
 module Beckn.Types.Storage.Location where
 
-import Beckn.Types.App
+import Beckn.Types.ID
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -35,7 +35,7 @@ instance FromHttpApiData LocationType where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data LocationT f = Location
-  { _id :: B.C f LocationId,
+  { _id :: B.C f (ID Location),
     _locationType :: B.C f LocationType,
     _lat :: B.C f (Maybe Double),
     _long :: B.C f (Maybe Double),
@@ -57,7 +57,7 @@ type Location = LocationT Identity
 type LocationPrimaryKey = B.PrimaryKey LocationT Identity
 
 instance B.Table LocationT where
-  data PrimaryKey LocationT f = LocationPrimaryKey (B.C f LocationId)
+  data PrimaryKey LocationT f = LocationPrimaryKey (B.C f (ID Location))
     deriving (Generic, B.Beamable)
   primaryKey = LocationPrimaryKey . _id
 

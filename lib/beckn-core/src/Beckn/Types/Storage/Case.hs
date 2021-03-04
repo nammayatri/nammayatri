@@ -125,7 +125,7 @@ data CaseT f = Case
   deriving (Generic, B.Beamable)
 
 --TODO: assignedTo, requestor - -- need to point to primarykey of Person
--- fromLcoationId and toLocationId to LocationId
+-- fromLcoationId and toLocationId to ID
 -- fields => mobility  => pass
 -- udf1 => vehicle variant  =>
 -- udf2 => luggage_count =>

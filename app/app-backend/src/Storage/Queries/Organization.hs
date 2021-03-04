@@ -99,7 +99,7 @@ update id status = do
           _status <-. B.val_ pStatus
         ]
 
-findOrgByShortId :: ShortOrganizationId -> Flow (Maybe Storage.Organization)
+findOrgByShortId :: ShortID Storage.Organization -> Flow (Maybe Storage.Organization)
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

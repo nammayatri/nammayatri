@@ -4,7 +4,6 @@ module Product.Search where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Types.App as TA
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
@@ -177,8 +176,8 @@ mkCase req userId from to = do
         _requestor = Just userId,
         _requestorType = Just Case.CONSUMER,
         _parentCaseId = Nothing,
-        _fromLocationId = TA._getLocationId $ from ^. #_id,
-        _toLocationId = TA._getLocationId $ to ^. #_id,
+        _fromLocationId = getId $ from ^. #_id,
+        _toLocationId = getId $ to ^. #_id,
         _udf1 = Just $ req ^. #vehicle . #variant,
         _udf2 = Just $ show $ length $ req ^. #travellers,
         _udf3 = Nothing,

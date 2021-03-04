@@ -5,7 +5,6 @@ module Types.API.Person where
 import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
-import Beckn.Types.App
 import Beckn.Types.Common as BC
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as SL
@@ -83,7 +82,7 @@ instance ModifyTransform UpdatePersonReq SP.Person Flow where
           SP._udf2 = ifJust (req ^. #_udf2) (person ^. #_udf2),
           SP._organizationId = ifJust (req ^. #_organizationId) (person ^. #_organizationId),
           SP._description = ifJust (req ^. #_description) (person ^. #_description),
-          SP._locationId = Just (_getLocationId $ SL._id location)
+          SP._locationId = Just (getId $ SL._id location)
         }
 
 updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> Flow SL.Location
@@ -93,9 +92,9 @@ updateOrCreateLocation req Nothing = do
   return location
 updateOrCreateLocation req (Just locId) = do
   location <-
-    QL.findLocationById (LocationId locId)
+    QL.findLocationById (ID locId)
       >>= fromMaybeM400 "INVALID_DATA"
-  QL.updateLocationRec (LocationId locId) $ transformToLocation req location
+  QL.updateLocationRec (ID locId) $ transformToLocation req location
   return location
 
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
@@ -202,7 +201,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
           SP._udf2 = req ^. #_udf2,
           SP._organizationId = Nothing,
           SP._description = req ^. #_description,
-          SP._locationId = Just (_getLocationId $ SL._id location),
+          SP._locationId = Just (getId $ SL._id location),
           SP._createdAt = now,
           SP._updatedAt = now
         }

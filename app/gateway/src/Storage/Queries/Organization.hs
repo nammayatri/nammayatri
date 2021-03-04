@@ -24,7 +24,7 @@ findOrgById oId = do
     predicate Org.Organization {..} =
       _id ==. B.val_ (ID oId)
 
-findOrgByShortId :: ShortOrganizationId -> Flow (Maybe Org.Organization)
+findOrgByShortId :: ShortID Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

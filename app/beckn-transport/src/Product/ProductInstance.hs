@@ -50,8 +50,8 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
         { _case = res ^. #_case,
           _product = res ^. #_product,
           _productInstance = res ^. #_productInstance,
-          _fromLocation = find (\x -> Case._fromLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList,
-          _toLocation = find (\x -> Case._toLocationId (res ^. #_case) == _getLocationId (Loc._id x)) locList
+          _fromLocation = find (\x -> Case._fromLocationId (res ^. #_case) == getId (Loc._id x)) locList,
+          _toLocation = find (\x -> Case._toLocationId (res ^. #_case) == getId (Loc._id x)) locList
         }
 
 update :: SR.RegistrationToken -> ID PI.ProductInstance -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
@@ -105,10 +105,10 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
         )
         $ throwError401 "Unauthorized"
     joinByIds locList ride =
-      find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
+      find (\x -> PI._fromLocation ride == Just (getId (Loc._id x))) locList
         >>= buildResponse
       where
-        buildResponse k = prepare ride k <$> find (\x -> PI._toLocation ride == Just (_getLocationId (Loc._id x))) locList
+        buildResponse k = prepare ride k <$> find (\x -> PI._toLocation ride == Just (getId (Loc._id x))) locList
         prepare pRide from to =
           RideRes
             { _product = pRide,
@@ -132,10 +132,10 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
         )
         $ throwError401 "Unauthorized"
     joinByIds locList ride =
-      find (\x -> PI._fromLocation ride == Just (_getLocationId (Loc._id x))) locList
+      find (\x -> PI._fromLocation ride == Just (getId (Loc._id x))) locList
         >>= buildResponse
       where
-        buildResponse k = prepare ride k <$> find (\x -> PI._toLocation ride == Just (_getLocationId (Loc._id x))) locList
+        buildResponse k = prepare ride k <$> find (\x -> PI._toLocation ride == Just (getId (Loc._id x))) locList
         prepare pRide from to =
           RideRes
             { _product = pRide,
@@ -154,10 +154,10 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
   return $ catMaybes $ joinByIds locList <$> caseList
   where
     joinByIds locList cs =
-      find (\x -> Case._fromLocationId cs == _getLocationId (Loc._id x)) locList
+      find (\x -> Case._fromLocationId cs == getId (Loc._id x)) locList
         >>= buildResponse
       where
-        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == _getLocationId (Loc._id x)) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == getId (Loc._id x)) locList
         prepare pcs from to =
           APICase.CaseRes
             { _case = pcs,
@@ -228,7 +228,7 @@ notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUr
 notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
   transporter <- OQ.findOrganizationById . ID $ searchPi ^. #_organizationId
-  let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
+  let bppShortId = getShortId $ transporter ^. #_shortId
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
     (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
@@ -310,7 +310,7 @@ updateTrip piId newStatus request = do
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do
   transporterOrg <- findOrganization
-  let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
+  let bppShortId = getShortId $ transporterOrg ^. #_shortId
   case status of
     Just k -> case k of
       PI.CANCELLED -> do

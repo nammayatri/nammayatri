@@ -39,20 +39,6 @@ type FlowServerR r api = ServerT api (FlowHandlerR r)
 
 type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a
 
-newtype ShortOrganizationId = ShortOrganizationId
-  { _getShortOrganizationId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''ShortOrganizationId
-
-newtype LocationId = LocationId
-  { _getLocationId :: Text
-  }
-  deriving (Generic, Show)
-
-deriveIdentifierInstances ''LocationId
-
 newtype VehicleId = VehicleId
   { _getVehicleId :: Text
   }

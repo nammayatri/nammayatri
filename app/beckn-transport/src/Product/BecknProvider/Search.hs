@@ -4,7 +4,6 @@ module Product.BecknProvider.Search (search) where
 
 import App.Types
 import Beckn.Types.Amount
-import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Callback as Callback
 import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.Ack as Ack
@@ -68,7 +67,7 @@ mkFromStop now stop = do
   let loc = stop ^. #_location
   let mgps = loc ^. #_gps
   let maddress = loc ^. #_address
-  uuid <- LocationId <$> L.generateGUID
+  uuid <- ID <$> L.generateGUID
   pure $
     Location.Location
       { _id = uuid,
@@ -118,8 +117,8 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       _requestor = Nothing,
       _requestorType = Just Case.CONSUMER,
       _parentCaseId = Nothing,
-      _fromLocationId = _getLocationId $ fromLocation ^. #_id,
-      _toLocationId = _getLocationId $ toLocation ^. #_id,
+      _fromLocationId = getId $ fromLocation ^. #_id,
+      _toLocationId = getId $ toLocation ^. #_id,
       _udf1 = Just $ intent ^. #_vehicle . #variant,
       _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
       _udf3 = encodeToText <$> deadDistance,
@@ -133,7 +132,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- LocationId <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
+    orgLocId <- ID <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
       Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
@@ -243,7 +242,7 @@ sendOnSearchFailed productCase transporterOrg err = do
                     _message = Nothing
                   }
           }
-  let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
+  let bppShortId = getShortId $ transporterOrg ^. #_shortId
   Gateway.onSearch payload bppShortId
 
 sendOnSearchSuccess :: Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow Ack.AckResponse
@@ -254,7 +253,7 @@ sendOnSearchSuccess productCase transporterOrg productInstance = do
           ProductInstance.OUTOFSTOCK -> []
           _ -> [productInstance]
   onSearchPayload <- mkOnSearchPayload productCase productInstances transporterOrg
-  let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
+  let bppShortId = getShortId $ transporterOrg ^. #_shortId
   Gateway.onSearch onSearchPayload bppShortId
 
 mkOnSearchPayload :: Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq

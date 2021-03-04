@@ -40,3 +40,26 @@ instance FromHttpApiData (ID a) where
 
 instance GuidLike (ID a) where
   generateGUID = ID <$> generateGUID
+
+newtype ShortID domain = ShortID
+  { getShortId :: Text
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving newtype (ToJSON, FromJSON, ToSchema, ToHttpApiData)
+
+instance IsString (ShortID d) where
+  fromString = ShortID . Text.pack
+
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be (ShortID a) where
+  sqlValueSyntax = sqlValueSyntax . getShortId
+
+instance FromBackendRow Postgres (ShortID a) where
+  fromBackendRow = ShortID <$> fromBackendRow
+
+instance BeamSqlBackend be => HasSqlEqualityCheck be (ShortID a)
+
+instance FromHttpApiData (ShortID a) where
+  parseUrlPiece = pure . ShortID
+
+instance GuidLike (ShortID a) where
+  generateGUID = ShortID <$> generateGUID

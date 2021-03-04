@@ -3,7 +3,6 @@
 module External.Gateway.Flow where
 
 import App.Types
-import Beckn.Types.App (ShortOrganizationId (..))
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Cancel
@@ -13,6 +12,7 @@ import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
+import Beckn.Types.ID
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
 import EulerHS.Prelude
@@ -26,7 +26,7 @@ onSearch req@CallbackReq {context} bppShortId = do
   appConfig <- ask
   authKey <- getHttpManagerKey bppShortId
   gatewayShortId <- xGatewaySelector appConfig & fromMaybeM500 "GATEWAY_SELECTOR_NOT_SET"
-  gatewayOrg <- Org.findOrgByShortId $ ShortOrganizationId gatewayShortId
+  gatewayOrg <- Org.findOrgByShortId $ ShortID gatewayShortId
   res <- case gatewayShortId of
     "NSDL.BG.1" -> do
       nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 "NSDL_BASEURL_NOT_SET"

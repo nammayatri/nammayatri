@@ -3,6 +3,7 @@ module Storage.Queries.Organization where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Database.Beam ((==.))
@@ -32,7 +33,7 @@ findOrgByCallbackUrl cbUrl = do
     predicate Org.Organization {..} =
       _callbackUrl ==. B.val_ (Just cbUrl)
 
-findOrgByShortId :: ShortOrganizationId -> Flow (Maybe Org.Organization)
+findOrgByShortId :: ShortID Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

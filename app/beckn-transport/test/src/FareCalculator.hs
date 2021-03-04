@@ -33,7 +33,7 @@ defaultPickupLocation :: PickupLocation
 defaultPickupLocation =
   PickupLocation $
     Location.Location
-      { _id = LocationId "",
+      { _id = ID "",
         _locationType = Location.POINT,
         _lat = Just 0.0,
         _long = Just 0.0,
@@ -53,7 +53,7 @@ defaultDropLocation :: DropLocation
 defaultDropLocation =
   DropLocation $
     Location.Location
-      { _id = LocationId "",
+      { _id = ID "",
         _locationType = Location.POINT,
         _lat = Just 0.0,
         _long = Just 0.0,

@@ -332,7 +332,7 @@ getNearestDrivers point' radius' orgId' = do
             (pure False)
             ( (B.primaryKey location ==.)
                 . Storage.LocationPrimaryKey
-                . fmap LocationId
+                . fmap ID
             )
             (driver ^. #_locationId)
       dist <- distToPoint point location

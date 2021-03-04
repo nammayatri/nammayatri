@@ -5,7 +5,6 @@ module Product.DriverInformation where
 import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.Amount (amountToString)
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
@@ -79,5 +78,5 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
   where
     driverId = ID _EntityId
     rideIdToProductInstanceId rideId = ID $ rideId ^. #_getRideId
-    findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ LocationId <$> mbId
+    findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ ID <$> mbId
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long

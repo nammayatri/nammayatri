@@ -3,6 +3,7 @@ module Storage.Queries.Organization where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
@@ -59,7 +60,7 @@ findByBapUrl bapUrl = do
         &&. _verified ==. B.val_ True
         &&. _enabled ==. B.val_ True
 
-findOrgByShortId :: ShortOrganizationId -> Flow (Maybe Org.Organization)
+findOrgByShortId :: ShortID Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

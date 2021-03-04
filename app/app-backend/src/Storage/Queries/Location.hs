@@ -3,7 +3,7 @@ module Storage.Queries.Location where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
@@ -22,7 +22,7 @@ create Storage.Location {..} = do
     >>= either DB.throwDBError pure
 
 findLocationById ::
-  LocationId -> Flow (Maybe Storage.Location)
+  ID Storage.Location -> Flow (Maybe Storage.Location)
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -63,7 +63,7 @@ complementVal l
 findAllByIds :: [Text] -> Flow [Storage.Location]
 findAllByIds locIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable (predicate (LocationId <$> locIds))
+  DB.findAllOrErr dbTable (predicate (ID <$> locIds))
   where
     predicate locationIds Storage.Location {..} =
       B.in_ _id (B.val_ <$> locationIds)

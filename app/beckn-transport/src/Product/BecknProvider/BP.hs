@@ -89,7 +89,7 @@ cancelRide rideId = do
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   let transporterId = ID $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
-  let bppShortId = App._getShortOrganizationId $ transporter ^. #_shortId
+  let bppShortId = getShortId $ transporter ^. #_shortId
   notifyCancelToGateway (getId searchPiId) callbackUrl bppShortId
 
   case piList of
@@ -132,7 +132,7 @@ serviceStatus transporterId bapOrg req = withFlowHandler $ do
   --TODO : use forkFlow to notify gateway
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   transporter <- Organization.findOrganizationById transporterId
-  let bppShortId = App._getShortOrganizationId $ transporter ^. #_shortId
+  let bppShortId = getShortId $ transporter ^. #_shortId
   notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
@@ -182,7 +182,7 @@ trackTrip transporterId org req = withFlowHandler $ do
       --TODO : use forkFlow to notify gateway
       callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
       transporter <- Organization.findOrganizationById transporterId
-      let bppShortId = App._getShortOrganizationId $ transporter ^. #_shortId
+      let bppShortId = getShortId $ transporter ^. #_shortId
       notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId
       uuid <- L.generateGUID
       mkAckResponse uuid "track"

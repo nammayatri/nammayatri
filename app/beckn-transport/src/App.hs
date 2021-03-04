@@ -8,6 +8,7 @@ import App.Types
 import Beckn.External.FCM.Utils
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -50,7 +51,7 @@ runTransporterBackendApp' appEnv settings = do
     try (runFlowR flowRt appEnv Storage.loadAllProviders) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
       Right allProviders -> do
-        let allShortIds = map (App._getShortOrganizationId . Organization._shortId) allProviders
+        let allShortIds = map (getShortId . Organization._shortId) allProviders
         case prepareAuthManagers flowRt appEnv allShortIds of
           Left err -> putStrLn @String ("Could not prepare authentication managers: " <> show err)
           Right getManagers -> do

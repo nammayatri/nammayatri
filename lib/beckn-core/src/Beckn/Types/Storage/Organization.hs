@@ -97,7 +97,7 @@ data OrganizationT f = Organization
   { _id :: B.C f (ID Organization),
     _name :: B.C f Text,
     _description :: B.C f (Maybe Text),
-    _shortId :: B.C f ShortOrganizationId,
+    _shortId :: B.C f (ShortID Organization),
     _mobileNumber :: B.C f (Maybe Text),
     _mobileCountryCode :: B.C f (Maybe Text),
     _gstin :: B.C f (Maybe Text),

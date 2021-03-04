@@ -6,7 +6,6 @@ module Product.CustomerSupport where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
 import Beckn.Types.ID
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
@@ -114,8 +113,8 @@ makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
       >>= either DB.throwDBError pure
   let (status :: Maybe CaseStatus) = ((\x -> Just $ x ^. #_status) =<< confiremedOrder) <|> Just _status
-  fromLocation <- Location.findLocationById $ LocationId _fromLocationId
-  toLocation <- Location.findLocationById $ LocationId _toLocationId
+  fromLocation <- Location.findLocationById $ ID _fromLocationId
+  toLocation <- Location.findLocationById $ ID _toLocationId
   trip <- makeTripDetails confiremedOrder
   --  Info: udf1 is vechicle variant
   let details =

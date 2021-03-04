@@ -45,7 +45,7 @@ findOrganizationById id = do
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
-findOrganizationByShortId :: ShortOrganizationId -> Flow (Maybe Storage.Organization)
+findOrganizationByShortId :: ShortID Storage.Organization -> Flow (Maybe Storage.Organization)
 findOrganizationByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable (\Storage.Organization {..} -> _shortId ==. B.val_ shortId)
@@ -145,7 +145,7 @@ findOrgByCbUrl url = do
   where
     predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
 
-findOrgByShortId :: ShortOrganizationId -> Flow Storage.Organization
+findOrgByShortId :: ShortID Storage.Organization -> Flow Storage.Organization
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

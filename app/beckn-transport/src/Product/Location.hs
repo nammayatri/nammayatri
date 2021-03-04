@@ -4,7 +4,6 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Types.App
 import Beckn.Types.ID
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Case as Case
@@ -23,7 +22,7 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- Person.findPersonById $ ID _EntityId
   driver <- if person ^. #_role == Person.DRIVER then return person else throwError400 "Only driver can update location."
   locationId <-
-    driver ^. #_locationId & (LocationId <$>)
+    driver ^. #_locationId & (ID <$>)
       & fromMaybeM500 "Driver location not found"
   Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
   return $ UpdateLocationRes "ACK"
@@ -35,7 +34,7 @@ getLocation piId = withFlowHandler $ do
     orderProductInstance ^. #_personId & fromMaybeM400 "Driver not assigned"
       >>= Person.findPersonById
   currLocation <-
-    driver ^. #_locationId & (LocationId <$>)
+    driver ^. #_locationId & (ID <$>)
       & fromMaybeM500 "Driver location not found"
       >>= Location.findLocationById
       >>= fromMaybeM500 "Driver location not found"

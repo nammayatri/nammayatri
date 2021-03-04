@@ -4,7 +4,6 @@ module Product.Case.CRUD where
 
 import App.Types
 import Beckn.Types.Amount
-import Beckn.Types.App
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
@@ -55,10 +54,10 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
     joinByIds locList cs =
-      find (\x -> Case._fromLocationId cs == _getLocationId (Location._id x)) locList
+      find (\x -> Case._fromLocationId cs == getId (Location._id x)) locList
         >>= buildResponse
       where
-        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == _getLocationId (Location._id x)) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == getId (Location._id x)) locList
         prepare pcs from to =
           CaseRes
             { _case = pcs,

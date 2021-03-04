@@ -7,6 +7,7 @@ module Beckn.Utils.Servant.SignatureAuth where
 import Beckn.Types.App
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Credentials
+import Beckn.Types.ID
 import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Logging (HasLogContext, Log (..))
@@ -93,7 +94,7 @@ instance LookupMethod LookupRegistry where
 
 lookupRegistryAction ::
   (AuthenticatingEntity r, HasLogContext r) =>
-  (ShortOrganizationId -> FlowR r (Maybe Organization)) ->
+  (ShortID Organization -> FlowR r (Maybe Organization)) ->
   LookupAction LookupRegistry r
 lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
   appEnv <- ask
@@ -108,7 +109,7 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
       logError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
       throwError401 "INVALID_KEY_ID"
   org <-
-    findOrgByShortId (ShortOrganizationId $ cred ^. #shortOrgId)
+    findOrgByShortId (ShortID $ cred ^. #shortOrgId)
       >>= maybe (throwError401 "ORG_NOT_FOUND") pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do

@@ -24,6 +24,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
 import Beckn.Types.App
 import Beckn.Types.ID
+import Beckn.Types.Storage.Location (Location)
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
@@ -269,7 +270,7 @@ getDriverPool piId =
         (case_ ^. #_udf1 >>= readMaybe . T.unpack)
           & fromMaybeM500 "NO_VEHICLE_VARIANT"
       pickupPoint <-
-        LocationId <$> prodInst ^. #_fromLocation
+        ID <$> prodInst ^. #_fromLocation
           & fromMaybeM500 "NO_FROM_LOCATION"
       let orgId = ID (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
@@ -279,7 +280,7 @@ setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
-  LocationId ->
+  ID Location ->
   ID Organization ->
   SV.Variant ->
   Flow [ID SP.Person]

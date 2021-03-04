@@ -9,6 +9,7 @@ import Beckn.External.FCM.Utils (createFCMTokenRefreshThread)
 import Beckn.Storage.DB.Config
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
+import Beckn.Types.ID
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -46,7 +47,7 @@ runBackgroundTaskManager configModifier = do
         try (runFlowR flowRt appEnv Storage.loadAllProviders) >>= \case
           Left (e :: SomeException) -> putStrLn @Text ("Exception thrown: " <> show e) >> handleShutdown shutdown
           Right allProviders -> do
-            let allShortIds = map (App._getShortOrganizationId . Organization._shortId) allProviders
+            let allShortIds = map (getShortId . Organization._shortId) allProviders
             prepareAuthManagers flowRt appEnv allShortIds & \case
               Left err -> putStrLn @Text ("Could not prepare authentication managers: " <> show err) >> handleShutdown shutdown
               Right getManagers -> do
