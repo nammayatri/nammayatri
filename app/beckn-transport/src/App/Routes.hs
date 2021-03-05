@@ -423,12 +423,17 @@ type RideAPI =
              :> "start"
              :> ReqBody '[JSON] RideAPI.StartRideReq
              :> Post '[JSON] APIResult
+           :<|> TokenAuth
+             :> Capture "rideId" Text
+             :> "cancel"
+             :> Post '[JSON] APIResult
        )
 
 rideFlow :: FlowServer RideAPI
 rideFlow =
   Ride.setDriverAcceptance
     :<|> RideAPI.StartRide.startRide
+    :<|> RideAPI.CancelRide.cancelRide
 
 type HealthCheckAPI = Get '[JSON] Text
 
