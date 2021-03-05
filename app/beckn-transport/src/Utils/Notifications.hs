@@ -126,8 +126,8 @@ notifyDriverNewAllocation productInstance = notifyPerson title body notification
     body =
       FCM.FCMNotificationBody $
         unwords
-          [ "New ride request!"
-          , "Check the app for more details."
+          [ "New ride request!",
+            "Check the app for more details."
           ]
     notificationData =
       FCM.FCMData
@@ -144,8 +144,8 @@ notifyDriverUnassigned productInstance = notifyPerson title body notificationDat
     body =
       FCM.FCMNotificationBody $
         unwords
-          [ "Ride could not be assigned to you."
-          , "Please wait for another request."
+          [ "Ride could not be assigned to you.",
+            "Please wait for another request."
           ]
     notificationData =
       FCM.FCMData
