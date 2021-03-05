@@ -196,7 +196,7 @@ assignDriver piList req = case req ^. #_personId of
     notificationTitle = "Driver has been assigned the ride!"
     message p' =
       unwords
-        [ "You have been assigned a ride scheduled for",
+        [ "You have been assigned a ride for",
           showTimeIst (PI._startTime p') <> ".",
           "Check the app for more details."
         ]

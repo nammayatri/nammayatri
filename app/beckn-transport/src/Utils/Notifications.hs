@@ -14,32 +14,10 @@ import Beckn.Utils.Common (showTimeIst)
 import qualified Data.Text as T
 import EulerHS.Prelude
 
--- | Send FCM "confirm" notification to provider admins
-notifyTransportersOnConfirm :: Case -> ProductInstance -> [Person] -> Flow ()
-notifyTransportersOnConfirm c _prodInst admins = do
-  let model = fromMaybe "Unknown" $ c ^. #_udf1
-  traverse_
-    (notifyPerson title (body model) notificationData)
-    admins
-  where
-    notificationData =
-      FCMData CONFIRM_REQUEST SHOW FCM.Organization $
-        show (_getCaseId $ c ^. #_id)
-    title = FCMNotificationTitle $ T.pack "Customer has confirmed the ride!"
-    body model =
-      FCMNotificationBody $
-        unwords
-          [ "Customer has accepted your offer for",
-            model,
-            "dated",
-            showTimeIst (Case._startTime c) <> ".",
-            "Visit the app to assign a driver."
-          ]
-
--- | Send FCM "cancel" notification to provider admins
-notifyTransportersOnCancel :: Case -> [Person] -> Flow ()
-notifyTransportersOnCancel c =
-  traverse_ (notifyPerson title body notificationData)
+-- | Send FCM "cancel" notification to driver
+notifyDriverOnCancel :: Case -> Person -> Flow ()
+notifyDriverOnCancel c =
+  notifyPerson title body notificationData
   where
     caseId = Case._id c
     notificationData =
@@ -49,7 +27,7 @@ notifyTransportersOnCancel c =
     body =
       FCMNotificationBody $
         unwords
-          [ "Customer had to cancel your ride scehduled for",
+          [ "Customer had to cancel your ride for",
             showTimeIst (Case._startTime c) <> ".",
             "Check the app for more details."
           ]
@@ -66,8 +44,8 @@ notifyOnRegistration regToken =
     body =
       FCMNotificationBody $
         unwords
-          [ "Welcome to Beckn Mobility! Click here to view all the open ride",
-            "requests. You will be notified whenever a new request comes in."
+          [ "Welcome Yatri Partner!",
+            "Click here to set up your account."
           ]
 
 notifyTransporterOnExpiration :: Case -> [Person] -> Flow ()
@@ -148,8 +126,8 @@ notifyDriverNewAllocation productInstance = notifyPerson title body notification
     body =
       FCM.FCMNotificationBody $
         unwords
-          [ "New allocation request.",
-            "Check the app for more details."
+          [ "New ride request!"
+          , "Check the app for more details."
           ]
     notificationData =
       FCM.FCMData
@@ -166,7 +144,9 @@ notifyDriverUnassigned productInstance = notifyPerson title body notificationDat
     body =
       FCM.FCMNotificationBody $
         unwords
-          ["Ride could not be assigned."]
+          [ "Ride could not be assigned to you."
+          , "Please wait for another request."
+          ]
     notificationData =
       FCM.FCMData
         { _fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,

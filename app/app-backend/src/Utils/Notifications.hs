@@ -56,7 +56,7 @@ notifyOnStatusUpdate prodInst piStatus =
                     FCMNotificationBody $
                       unwords
                         [ providerName,
-                          "had to cancel your ride scehduled for",
+                          "had to cancel your ride for",
                           showTimeIst (Case._startTime c) <> ".",
                           "Check the app for more details."
                         ]
@@ -118,7 +118,6 @@ notifyOnExpiration :: Case -> Flow ()
 notifyOnExpiration caseObj = do
   let caseId = Case._id caseObj
   let personId = Case._requestor caseObj
-  let startTime = Case._startTime caseObj
   if isJust personId
     then do
       person <- Person.findById $ PersonId (fromJust personId)
@@ -131,10 +130,8 @@ notifyOnExpiration caseObj = do
               body =
                 FCMNotificationBody $
                   unwords
-                    [ "Your ride for",
-                      showTimeIst startTime,
-                      "has expired as there were no replies.",
-                      "You can place a new request to get started again!"
+                    [ "Your ride has expired as you did not confirm any offer.",
+                      "Please book again to continue."
                     ]
           notifyPerson title body notificationData p
         _ -> pure ()
@@ -150,7 +147,7 @@ notifyOnRegistration regToken person =
       body =
         FCMNotificationBody $
           unwords
-            [ "Welcome to Beckn Mobility!",
+            [ "Welcome to Yatri.",
               "Click here to book your first ride with us."
             ]
    in notifyPerson title body notificationData person

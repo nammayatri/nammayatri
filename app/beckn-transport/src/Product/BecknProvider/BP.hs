@@ -27,7 +27,6 @@ import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Case as SC
 import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
-import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
@@ -242,21 +241,16 @@ cancelRide rideId = do
   let bppShortId = _getShortOrganizationId $ transporter ^. #_shortId
   notifyCancelToGateway (_getProductInstanceId searchPiId) callbackUrl bppShortId
 
-  admins <-
-    if transporter ^. #_enabled
-      then Person.findAllByOrgIds [Person.ADMIN] [_getOrganizationId transporterId]
-      else return []
   case piList of
     [] -> pure ()
     prdInst : _ -> do
       c <- Case.findById $ ProductInstance._caseId prdInst
       case prdInst ^. #_personId of
+        Nothing -> pure ()
         Just driverId -> do
           driver <- Person.findPersonById driverId
           DriverInformation.updateOnRide (DriverId $ _getPersonId driverId) False
-          Notify.notifyTransportersOnCancel c (driver : admins)
-        Nothing -> Notify.notifyTransportersOnCancel c admins
-  pure ()
+          Notify.notifyDriverOnCancel c driver
 
 -- TODO: Move this to core Utils.hs
 getValidTime :: UTCTime -> UTCTime -> Flow UTCTime
@@ -368,11 +362,6 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
   notifyGateway searchCase orderProductInstance trackerCase callbackUrl bppShortId
 
-  admins <-
-    if transporterOrg ^. #_enabled
-      then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
-      else return []
-  Notify.notifyTransportersOnConfirm searchCase productInstance admins
   mkAckResponse uuid "confirm"
 
 mkOrderCase :: SC.Case -> Flow SC.Case
