@@ -26,7 +26,7 @@ getDbTable = DB._productInstance . DB.transporterDb <$> getSchemaName
 
 getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable' =
-  DB._productInstance . DB.transporterDb <$> getSchemaName'
+  DB._productInstance . DB.transporterDb <$> getSchemaName
 
 getCsTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT))
 getCsTable =

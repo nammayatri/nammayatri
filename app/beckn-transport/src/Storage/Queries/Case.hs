@@ -19,7 +19,7 @@ getDbTable =
 
 getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT))
 getDbTable' =
-  DB._case . DB.transporterDb <$> getSchemaName'
+  DB._case . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Case -> Flow (T.DBResult ())
 create Storage.Case {..} = do

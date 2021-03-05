@@ -17,8 +17,6 @@ import Beckn.Types.App as TA
 import Beckn.Types.Common (GuidLike (..))
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Cancel as API
-import Beckn.Types.Core.API.Confirm
-import Beckn.Types.Core.API.Search
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
@@ -46,10 +44,6 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified External.Gateway.Transform as GT
 import qualified Models.Case as Case
-import qualified Models.ProductInstance as MPI
-import Product.FareCalculator
-import qualified Product.Location as Location
-import Product.Person (calculateDriverPool, setDriverPool)
 import Servant.Client (BaseUrl (baseUrlPath))
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -80,7 +74,7 @@ cancelRide rideId = do
   orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM PIParentIdNotPresent
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
-  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.LOCATIONTRACKER
+  trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
   _ <-
     DB.runSqlDBTransaction $
       cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id)
@@ -105,14 +99,19 @@ cancelRide rideId = do
           DriverInformation.updateOnRideFlow (cast driverId) False
           Notify.notifyDriverOnCancel c driver
 
-cancelRideTransaction :: [ProductInstance.ProductInstance] -> ProductInstanceId -> ProductInstanceId -> ProductInstanceId -> DB.SqlDB ()
+cancelRideTransaction ::
+  [ProductInstance.ProductInstance] ->
+  Id ProductInstance.ProductInstance ->
+  Id ProductInstance.ProductInstance ->
+  Id ProductInstance.ProductInstance ->
+  DB.SqlDB ()
 cancelRideTransaction piList searchPiId trackerPiId orderPiId = do
   case piList of
     [] -> pure ()
     (prdInst : _) -> do
-      QCase.updateStatusByIds' (ProductInstance._caseId <$> piList) SC.CLOSED
+      QCase.updateStatusByIds' (ProductInstance._caseId <$> piList) Case.CLOSED
       let mbDriverId = prdInst ^. #_personId
-      whenJust mbDriverId (\driverId -> DriverInformation.updateOnRide' (DriverId $ _getPersonId driverId) False)
+      whenJust mbDriverId (\driverId -> DriverInformation.updateOnRide (cast driverId) False)
   ProductInstance.updateStatus' searchPiId ProductInstance.CANCELLED
   ProductInstance.updateStatus' trackerPiId ProductInstance.COMPLETED
   ProductInstance.updateStatus' orderPiId ProductInstance.CANCELLED
@@ -151,7 +150,7 @@ serviceStatus transporterId bapOrg req = withFlowHandler $ do
   uuid <- L.generateGUID
   mkAckResponse uuid "status"
 
-notifyServiceStatusToGateway :: Text -> ProductInstance.ProductInstance -> App.BaseUrl -> Text -> Flow ()
+notifyServiceStatusToGateway :: Text -> ProductInstance.ProductInstance -> BaseUrl -> Text -> Flow ()
 notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
   logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
@@ -202,21 +201,21 @@ trackTrip transporterId org req = withFlowHandler $ do
       mkAckResponse uuid "track"
     Nothing -> throwErrorWithInfo CaseFieldNotPresent "_parentCaseId is null."
 
-notifyTripUrlToGateway :: Case.Case -> Case.Case -> App.BaseUrl -> Text -> Flow ()
+notifyTripUrlToGateway :: Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
   logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   _ <- Gateway.onTrackTrip callbackUrl onTrackTripPayload bppShortId
   return ()
 
-notifyTripInfoToGateway :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> App.BaseUrl -> Text -> Flow ()
+notifyTripInfoToGateway :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl bppShortId = do
   onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
   logInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
   _ <- Gateway.onUpdate callbackUrl onUpdatePayload bppShortId
   return ()
 
-notifyCancelToGateway :: Text -> App.BaseUrl -> Text -> Flow ()
+notifyCancelToGateway :: Text -> BaseUrl -> Text -> Flow ()
 notifyCancelToGateway prodInstId callbackUrl bppShortId = do
   onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
   logInfo "notifyGateway Request" $ show onCancelPayload
@@ -327,7 +326,7 @@ mkRideReq prodInstID rideRequestType = do
         _type = rideRequestType
       }
 
-makeBppUrl :: Organization.Organization -> App.BaseUrl -> App.BaseUrl
+makeBppUrl :: Organization.Organization -> BaseUrl -> BaseUrl
 makeBppUrl transporterOrg url =
   let orgId = getId $ transporterOrg ^. #_id
       newPath = baseUrlPath url <> "/" <> T.unpack orgId
