@@ -217,7 +217,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
   prodInst <- ProductInstance.findById (ProductInstanceId prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
-  RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION (orderPi ^. #_createdAt)
+  RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
   uuid <- L.generateGUID
   mkAckResponse uuid "cancel"
 
@@ -337,7 +337,7 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
   RideRequest.create
-    =<< mkRideReq (orderProductInstance ^. #_id) SRideRequest.ALLOCATION (orderProductInstance ^. #_createdAt)
+    =<< mkRideReq (orderProductInstance ^. #_id) SRideRequest.ALLOCATION
   Case.updateStatus (orderCase ^. #_id) SC.INPROGRESS
   _ <- ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
@@ -419,16 +419,16 @@ mkOrderProductInstance caseId prodInst = do
         _udf5 = prodInst ^. #_udf5
       }
 
-mkRideReq :: ProductInstanceId -> SRideRequest.RideRequestType -> UTCTime -> Flow SRideRequest.RideRequest
-mkRideReq pId rideRequestType currTime = do
+mkRideReq :: ProductInstanceId -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
+mkRideReq pId rideRequestType = do
   guid <- generateGUID
+  currTime <- getCurrTime
   let rideId = RideId $ _getProductInstanceId pId
   pure
     SRideRequest.RideRequest
       { _id = RideRequestId guid,
         _rideId = rideId,
         _createdAt = currTime,
-        _lastProcessTime = currTime,
         _type = rideRequestType
       }
 

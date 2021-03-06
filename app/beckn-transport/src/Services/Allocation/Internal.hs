@@ -88,7 +88,7 @@ rideRequestToRideRequest SRR.RideRequest {..} =
             requestTime = _createdAt
           },
       requestData = case _type of
-        SRR.ALLOCATION -> Alloc.Allocation (OrderTime _createdAt)
+        SRR.ALLOCATION -> Alloc.Allocation
         SRR.CANCELLATION -> Alloc.Cancellation
     }
 
@@ -147,16 +147,17 @@ getDriverResponse rideId driverId =
 cancelRide :: RideId -> Flow ()
 cancelRide = BP.cancelRide
 
-cleanupRide :: RideId -> Flow ()
-cleanupRide rideId = do
-  QRR.removeRide rideId
-  QNS.removeRide rideId
+cleanupNotifications :: RideId -> Flow ()
+cleanupNotifications = QNS.cleanupNotifications
 
-resetRequestTime :: RideRequestId -> Flow ()
-resetRequestTime = QRR.updateLastProcessTime
+removeRequest :: RideRequestId -> Flow ()
+removeRequest = QRR.removeRequest
 
 logInfo :: Text -> Text -> Flow ()
 logInfo = Log.logInfo
+
+logWarning :: Text -> Text -> Flow ()
+logWarning = Log.logWarning
 
 logError :: Text -> Text -> Flow ()
 logError = Log.logError
@@ -171,6 +172,19 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Notified _ -> SNS.NOTIFIED
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
+
+addAllocationRequest :: RideId -> Flow ()
+addAllocationRequest rideId = do
+  guid <- generateGUID
+  currTime <- getCurrTime
+  let rideRequest =
+        SRR.RideRequest
+          { _id = RideRequestId guid,
+            _rideId = rideId,
+            _createdAt = currTime,
+            _type = SRR.ALLOCATION
+          }
+  QRR.create rideRequest
 
 addNotificationStatus ::
   RideId ->
@@ -205,16 +219,22 @@ toDriverId = DriverId . _getPersonId
 logEvent :: AllocationEventType -> RideId -> Flow ()
 logEvent = logAllocationEvent
 
-getRideStatus :: RideId -> Flow RideStatus
-getRideStatus rideId = do
+getRideInfo :: RideId -> Flow RideInfo
+getRideInfo rideId = do
   productInstance <- QPI.findById productInstanceId
-  castToRideStatus $ productInstance ^. #_status
+  rideStatus <- castToRideStatus $ productInstance ^. #_status
+  pure
+    RideInfo
+      { rideId = rideId,
+        rideStatus = rideStatus,
+        orderTime = OrderTime $ productInstance ^. #_createdAt
+      }
   where
     productInstanceId = ProductInstanceId $ _getRideId rideId
     castToRideStatus = \case
-      PI.CONFIRMED -> return CONFIRMED
-      PI.TRIP_ASSIGNED -> return TRIP_ASSIGNED
-      PI.INPROGRESS -> return INPROGRESS
-      PI.COMPLETED -> return COMPLETED
-      PI.CANCELLED -> return CANCELLED
+      PI.CONFIRMED -> pure Confirmed
+      PI.TRIP_ASSIGNED -> pure Assigned
+      PI.INPROGRESS -> pure InProgress
+      PI.COMPLETED -> pure Completed
+      PI.CANCELLED -> pure Cancelled
       _ -> throwErrorJSON500 "UNKNOWN_STATUS"

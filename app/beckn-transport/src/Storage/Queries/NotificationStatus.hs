@@ -70,8 +70,8 @@ findActiveNotificationByDriverId driverId rideId = do
         &&. maybe (B.val_ True) (\v -> _rideId ==. B.val_ v) rideId
         &&. _status ==. B.val_ NotificationStatus.NOTIFIED
 
-removeRide :: RideId -> Flow ()
-removeRide rideId = do
+cleanupNotifications :: RideId -> Flow ()
+cleanupNotifications rideId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate rideId)
     >>= either DB.throwDBError pure

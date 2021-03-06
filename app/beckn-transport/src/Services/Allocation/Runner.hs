@@ -33,13 +33,15 @@ handle =
       getDriverResponse = I.getDriverResponse,
       assignDriver = I.assignDriver,
       cancelRide = I.cancelRide,
-      cleanupRide = I.cleanupRide,
-      resetRequestTime = I.resetRequestTime,
+      addAllocationRequest = I.addAllocationRequest,
+      getRideInfo = I.getRideInfo,
+      cleanupNotifications = I.cleanupNotifications,
+      removeRequest = I.removeRequest,
       runSafely = I.runSafely,
       logInfo = I.logInfo,
+      logWarning = I.logWarning,
       logError = I.logError,
-      logEvent = I.logEvent,
-      getRideStatus = I.getRideStatus
+      logEvent = I.logEvent
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

@@ -25,7 +25,6 @@ data RideRequestT f = RideRequest
   { _id :: B.C f RideRequestId,
     _rideId :: B.C f RideId,
     _createdAt :: B.C f UTCTime,
-    _lastProcessTime :: B.C f UTCTime,
     _type :: B.C f RideRequestType
   }
   deriving (Generic, B.Beamable)
@@ -53,5 +52,5 @@ fieldEMod =
       B.tableModification
         { _rideId = "ride_id",
           _createdAt = "created_at",
-          _lastProcessTime = "last_process_time"
+          _type = "type"
         }

@@ -16,7 +16,7 @@ newtype OrderTime = OrderTime
   deriving (Generic, Show)
 
 data RequestData
-  = Allocation OrderTime
+  = Allocation
   | Cancellation
   deriving (Show)
 
@@ -44,76 +44,49 @@ data CurrentNotification
   deriving (Show)
 
 data RideStatus
-  = CONFIRMED
-  | TRIP_ASSIGNED
-  | INPROGRESS
-  | COMPLETED
-  | CANCELLED
+  = Confirmed
+  | Assigned
+  | InProgress
+  | Completed
+  | Cancelled
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
 
+data RideInfo = RideInfo
+  { rideId :: RideId,
+    rideStatus :: RideStatus,
+    orderTime :: OrderTime
+  }
+  deriving (Generic)
+
 data ServiceHandle m = ServiceHandle
-  { -- Get current time
-    getCurrentTime :: m UTCTime,
-    -- Get driver pool sort mode
-    -- Based on the config setting
+  { getCurrentTime :: m UTCTime,
     getDriverSortMode :: m SortMode,
-    -- Get the time the driver has to accept a ride
-    -- Based on the config setting
     getConfiguredNotificationTime :: m NominalDiffTime,
-    -- Get the time allowed for allocation of the driver
-    -- Based on the config setting
     getConfiguredAllocationTime :: m NominalDiffTime,
-    -- Get N oldest requests
-    -- Can be done as a select query from the RideRequest table.
     getRequests :: Integer -> m [RideRequest],
-    -- Get driver pool for this ride from Redis
     getDriverPool :: RideId -> m [DriverId],
-    -- Get the driver that is currently being notified about this ride,
-    -- and the time when the notification was sent.
-    -- Can be done as a select from the NotificationStatus table.
     getCurrentNotification :: RideId -> m (Maybe CurrentNotification),
-    -- Send notification to a driver about a ride
     sendNewRideNotification :: RideId -> DriverId -> m (),
-    -- Send notification to a driver about the ride he didn't get assigned to
     sendRideNotAssignedNotification :: RideId -> DriverId -> m (),
-    -- Add notification status
-    -- Can be done as an insert to the NotificationStatus table.
     addNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
-    -- Update notification status
-    -- Can be done as an update of the NotificationStatus table.
     updateNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
-    -- Reset last rejection time
-    -- Can be done as update of the DriverStats table
     resetLastRejectionTime :: DriverId -> m (),
-    -- Get drivers that were notified or attempted to be notified about the ride.
-    -- This includes drivers that rejected or ignored the notification.
-    -- Can be done as a select from the NotificationStatus table.
     getAttemptedDrivers :: RideId -> m [DriverId],
-    -- Get drivers that are currently being notified for any ride.
     getDriversWithNotification :: m [DriverId],
-    -- Get the driver that has been idle the most.
-    -- Can be done as a select from the DriverStats table
     getFirstDriverInTheQueue :: NonEmpty DriverId -> m DriverId,
-    -- Check which drivers of the ones provided are available (online and don't have a ride assigned)
-    -- Can be done as a select query from the Driver table
     checkAvailability :: NonEmpty DriverId -> m [DriverId],
-    -- Get the response if it was registered for this ride by this driver
-    -- Can be done as a Redis lookup
     getDriverResponse :: RideId -> DriverId -> m (Maybe DriverResponse.DriverResponse),
-    -- Assign a ride to a driver
     assignDriver :: RideId -> DriverId -> m (),
-    -- Cancel the ride
     cancelRide :: RideId -> m (),
-    -- Remove the ride from RideRequest and NotificationStatus tables
-    cleanupRide :: RideId -> m (),
-    -- Reset request time to match the current time
-    -- Can be done as update of the RideRequest table
-    resetRequestTime :: RideRequestId -> m (),
+    cleanupNotifications :: RideId -> m (),
+    addAllocationRequest :: RideId -> m (),
+    getRideInfo :: RideId -> m RideInfo,
+    removeRequest :: RideRequestId -> m (),
     runSafely :: forall a. (FromJSON a, ToJSON a) => m a -> m (Either Text a),
     logInfo :: Text -> Text -> m (),
+    logWarning :: Text -> Text -> m (),
     logError :: Text -> Text -> m (),
-    logEvent :: AllocationEventType -> RideId -> m (),
-    getRideStatus :: RideId -> m RideStatus
+    logEvent :: AllocationEventType -> RideId -> m ()
   }
 
 process :: Monad m => ServiceHandle m -> Integer -> m Int
@@ -129,33 +102,43 @@ process handle@ServiceHandle {..} requestsNum = do
   traverse_ (processRequest handle) rides
   reqsHandlingEndTime <- getCurrentTime
   let reqsHandlingTime = diffUTCTime reqsHandlingEndTime reqsHandlingStartTime
-  logInfo "AllocationService" $ "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
+  logInfo "AllocationService" $
+    "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
   pure ridesNum
 
 processRequest :: Monad m => ServiceHandle m -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} rideRequest = do
   let requestHeader = rideRequest ^. #requestHeader
   let requestId = requestHeader ^. #requestId
-  rideStatus <- getRideStatus $ requestHeader ^. #rideId
-  case rideStatus of
-    CONFIRMED -> do
-      eres <- runSafely $ do
-        resetRequestTime requestId
-        logRequestInfo handle requestHeader "Start processing request"
-        case rideRequest ^. #requestData of
-          Allocation orderTime ->
-            processAllocation handle requestHeader orderTime
-          Cancellation -> do
+  rideInfo <- getRideInfo $ requestHeader ^. #rideId
+  let rideStatus = rideInfo ^. #rideStatus
+  let orderTime = rideInfo ^. #orderTime
+  eres <- runSafely $ do
+    logRequestInfo handle requestHeader "Start processing request"
+    case rideRequest ^. #requestData of
+      Allocation ->
+        case rideStatus of
+          Confirmed -> processAllocation handle requestHeader orderTime
+          Cancelled -> logRequestInfo handle requestHeader "Ride is cancelled, allocation request skipped"
+          _ ->
+            logRequestWarning handle requestHeader $
+              "Ride status is " <> show rideStatus <> ", allocation request skipped"
+      Cancellation ->
+        case rideStatus of
+          Confirmed -> do
             cancel handle requestHeader
             logEvent ConsumerCancelled (requestHeader ^. #rideId)
-        logRequestInfo handle requestHeader "End processing request"
-      whenLeft eres $
-        \err -> do
-          let message = "Error processing request " <> show requestId <> ": " <> err
-          logError "AllocationService" message
-    _ -> do
-      logRequestInfo handle requestHeader "Request is cancelled"
-      cleanupRide $ requestHeader ^. #rideId
+          _ ->
+            logRequestWarning handle requestHeader $
+              "Ride status is " <> show rideStatus <> ", cancellation request skipped"
+
+    logRequestInfo handle requestHeader "End processing request"
+  whenLeft eres $
+    \err -> do
+      let message = "Error processing request " <> show requestId <> ": " <> err
+      logError "AllocationService" message
+
+  removeRequest $ requestHeader ^. #requestId
 
 processAllocation :: Monad m => ServiceHandle m -> RequestHeader -> OrderTime -> m ()
 processAllocation handle@ServiceHandle {..} requestHeader orderTime = do
@@ -195,15 +178,18 @@ processCurrentNotification
       else do
         mResponse <- getDriverResponse rideId driverId
         logRequestInfo handle requestHeader ("getDriverResponse " <> show mResponse)
-        whenJust mResponse $ \driverResponse ->
-          case driverResponse ^. #_status of
-            DriverResponse.ACCEPT -> do
-              logRequestInfo handle requestHeader ("assigning driver" <> show driverId)
-              assignDriver rideId driverId
-              cleanupRide $ requestHeader ^. #rideId
-              logEvent AcceptedByDriver (requestHeader ^. #rideId)
-            DriverResponse.REJECT ->
-              processRejection handle False requestHeader driverId
+        case mResponse of
+          Just driverResponse ->
+            case driverResponse ^. #_status of
+              DriverResponse.ACCEPT -> do
+                logRequestInfo handle requestHeader ("assigning driver" <> show driverId)
+                assignDriver rideId driverId
+                cleanupNotifications $ requestHeader ^. #rideId
+                logEvent AcceptedByDriver (requestHeader ^. #rideId)
+              DriverResponse.REJECT ->
+                processRejection handle False requestHeader driverId
+          Nothing ->
+            checkRideLater handle requestHeader
 
 processRejection :: Monad m => ServiceHandle m -> Bool -> RequestHeader -> DriverId -> m ()
 processRejection handle@ServiceHandle {..} ignored requestHeader driverId = do
@@ -253,15 +239,21 @@ processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
       addNotificationStatus rideId firstDriver $ Notified time
       logRequestInfo handle requestHeader $ "Notified driver " <> _getDriverId firstDriver
       logEvent NotificationSent (requestHeader ^. #rideId)
+      checkRideLater handle requestHeader
     [] -> do
       cancel handle requestHeader
       logEvent EmptyDriverPool (requestHeader ^. #rideId)
+
+checkRideLater :: Monad m => ServiceHandle m -> RequestHeader -> m ()
+checkRideLater handle@ServiceHandle {..} requestHeader = do
+  addAllocationRequest (requestHeader ^. #rideId)
+  logRequestInfo handle requestHeader "Check ride later"
 
 cancel :: Monad m => ServiceHandle m -> RequestHeader -> m ()
 cancel handle@ServiceHandle {..} requestHeader = do
   logRequestInfo handle requestHeader "Cancelling ride"
   cancelRide $ requestHeader ^. #rideId
-  cleanupRide $ requestHeader ^. #rideId
+  cleanupNotifications $ requestHeader ^. #rideId
 
 isAllocationTimeFinished :: Monad m => ServiceHandle m -> OrderTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} orderTime = do
@@ -278,7 +270,10 @@ isNotificationTimeFinished ServiceHandle {..} notificationTime = do
   pure $ elapsedNotificationTime > configuredNotificationTime
 
 logRequestInfo :: Monad m => ServiceHandle m -> RequestHeader -> Text -> m ()
-logRequestInfo ServiceHandle {..} header = logInfo ("RideRequest_" <> _getRideId (header ^. #rideId))
+logRequestInfo ServiceHandle {..} header = logInfo $ "RideRequest_" <> _getRideId (header ^. #rideId)
+
+logRequestWarning :: Monad m => ServiceHandle m -> RequestHeader -> Text -> m ()
+logRequestWarning ServiceHandle {..} header = logWarning $ "RideRequest_" <> _getRideId (header ^. #rideId)
 
 logRequestError :: Monad m => ServiceHandle m -> RequestHeader -> Text -> m ()
-logRequestError ServiceHandle {..} header = logError ("RideRequest_" <> _getRideId (header ^. #rideId))
+logRequestError ServiceHandle {..} header = logError $ "RideRequest_" <> _getRideId (header ^. #rideId)
