@@ -95,16 +95,14 @@ rideRequestToRideRequest SRR.RideRequest {..} =
 getCurrentNotification ::
   RideId ->
   Flow (Maybe CurrentNotification)
-getCurrentNotification rideId =
-  QNS.findActiveNotificationByRideId rideId
-    >>= maybe (return Nothing) (fmap Just . buildCurrentNotification)
+getCurrentNotification rideId = do
+  notificationStatus <- QNS.findActiveNotificationByRideId rideId
+  pure $ buildCurrentNotification <$> notificationStatus
   where
-    buildCurrentNotification notificationStatus = do
-      notifiedAt <-
-        notificationStatus ^. #_notifiedAt
-          & fromMaybeM500 "NOTIFICATION_STATUS_NOT_NOTIFIED"
-      let driverId = notificationStatus ^. #_driverId
-      return (Alloc.CurrentNotification driverId notifiedAt)
+    buildCurrentNotification notificationStatus =
+      Alloc.CurrentNotification
+        (notificationStatus ^. #_driverId)
+        (notificationStatus ^. #_expiresAt)
 
 sendNewRideNotification :: RideId -> DriverId -> Flow ()
 sendNewRideNotification (RideId rideId) (DriverId driverId) = do
@@ -169,7 +167,7 @@ allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->
   SNS.AnswerStatus
 allocNotifStatusToStorageStatus = \case
-  Alloc.Notified _ -> SNS.NOTIFIED
+  Alloc.Notified -> SNS.NOTIFIED
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
 
@@ -189,23 +187,18 @@ addAllocationRequest rideId = do
 addNotificationStatus ::
   RideId ->
   DriverId ->
-  NotificationStatus ->
+  UTCTime ->
   Flow ()
-addNotificationStatus rideId driverId status = do
+addNotificationStatus rideId driverId expiryTime = do
   uuid <- generateGUID
   QNS.create
     SNS.NotificationStatus
       { _id = ID uuid,
         _rideId = rideId,
         _driverId = driverId,
-        _status = allocNotifStatusToStorageStatus status,
-        _notifiedAt = notifiedAt
+        _status = SNS.NOTIFIED,
+        _expiresAt = expiryTime
       }
-  where
-    notifiedAt =
-      case status of
-        Alloc.Notified time -> Just time
-        _ -> Nothing
 
 addAvailableDriver :: SDriverInfo.DriverInformation -> [DriverId] -> [DriverId]
 addAvailableDriver driverInfo availableDriversIds =

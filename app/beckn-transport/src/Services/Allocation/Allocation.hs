@@ -4,7 +4,7 @@ module Services.Allocation.Allocation where
 
 import Data.Generics.Labels ()
 import qualified Data.Text as T
-import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
+import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.Ride as DriverResponse (DriverResponse (..), NotificationStatus (..))
 import Types.App
@@ -34,7 +34,7 @@ data RideRequest = RideRequest
   deriving (Generic, Show)
 
 data NotificationStatus
-  = Notified UTCTime
+  = Notified
   | Rejected
   | Ignored
   deriving (Eq, Show)
@@ -68,7 +68,7 @@ data ServiceHandle m = ServiceHandle
     getCurrentNotification :: RideId -> m (Maybe CurrentNotification),
     sendNewRideNotification :: RideId -> DriverId -> m (),
     sendRideNotAssignedNotification :: RideId -> DriverId -> m (),
-    addNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
+    addNotificationStatus :: RideId -> DriverId -> UTCTime -> m (),
     updateNotificationStatus :: RideId -> DriverId -> NotificationStatus -> m (),
     resetLastRejectionTime :: DriverId -> m (),
     getAttemptedDrivers :: RideId -> m [DriverId],
@@ -166,9 +166,9 @@ processCurrentNotification ::
 processCurrentNotification
   handle@ServiceHandle {..}
   requestHeader
-  (CurrentNotification driverId notificationTime) = do
+  (CurrentNotification driverId expiryTime) = do
     let rideId = requestHeader ^. #rideId
-    notificationTimeFinished <- isNotificationTimeFinished handle notificationTime
+    notificationTimeFinished <- isNotificationTimeFinished handle expiryTime
     logRequestInfo handle requestHeader $ "isNotificationTimeFinished " <> show notificationTimeFinished
     if notificationTimeFinished
       then do
@@ -234,9 +234,11 @@ processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
         case sortMode of
           ETA -> pure driverId
           IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
-      time <- getCurrentTime
+      currentTime <- getCurrentTime
+      notificationTime <- getConfiguredNotificationTime
+      let expiryTime = addUTCTime notificationTime currentTime
       sendNewRideNotification rideId firstDriver
-      addNotificationStatus rideId firstDriver $ Notified time
+      addNotificationStatus rideId firstDriver expiryTime
       logRequestInfo handle requestHeader $ "Notified driver " <> _getDriverId firstDriver
       logEvent NotificationSent (requestHeader ^. #rideId)
       checkRideLater handle requestHeader
@@ -263,11 +265,9 @@ isAllocationTimeFinished ServiceHandle {..} orderTime = do
   pure $ elapsedSearchTime > configuredAllocationTime
 
 isNotificationTimeFinished :: Monad m => ServiceHandle m -> UTCTime -> m Bool
-isNotificationTimeFinished ServiceHandle {..} notificationTime = do
+isNotificationTimeFinished ServiceHandle {..} expiryTime = do
   currentTime <- getCurrentTime
-  configuredNotificationTime <- getConfiguredNotificationTime
-  let elapsedNotificationTime = diffUTCTime currentTime notificationTime
-  pure $ elapsedNotificationTime > configuredNotificationTime
+  pure $ currentTime > expiryTime
 
 logRequestInfo :: Monad m => ServiceHandle m -> RequestHeader -> Text -> m ()
 logRequestInfo ServiceHandle {..} header = logInfo $ "RideRequest_" <> _getRideId (header ^. #rideId)

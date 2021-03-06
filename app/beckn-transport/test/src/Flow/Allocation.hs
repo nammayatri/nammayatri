@@ -4,7 +4,7 @@ module Flow.Allocation where
 
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
-import Data.Time (UTCTime, getCurrentTime)
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 import qualified Data.Time as Time
 import EulerHS.Prelude hiding (id)
 import qualified Services.Allocation.Allocation as Allocation
@@ -21,6 +21,24 @@ ride01Id = RideId "ride01"
 
 ride02Id :: RideId
 ride02Id = RideId "ride02"
+
+allocationTime :: NominalDiffTime
+allocationTime = 120
+
+notificationTime :: NominalDiffTime
+notificationTime = 15
+
+isNotified :: UTCTime -> (Allocation.NotificationStatus, UTCTime) -> Bool
+isNotified currentTime (Allocation.Notified, expiryTime) = expiryTime > currentTime
+isNotified _ _ = False
+
+attemptedNotification ::
+  RideId ->
+  (RideId, DriverId) ->
+  (Allocation.NotificationStatus, UTCTime) ->
+  Bool
+attemptedNotification rideId (id, _) (status, _) =
+  id == rideId && (status == Allocation.Rejected || status == Allocation.Ignored)
 
 addRide :: Repository -> RideId -> IO ()
 addRide Repository {..} rideId = do
@@ -58,18 +76,13 @@ addResponse Repository {..} rideId driverId status = do
   let response = DriverResponse status currentTime
   modifyTVarIO responsesVar $ Map.insert (rideId, driverId) response
 
-extractNotificationTime :: Allocation.NotificationStatus -> Maybe UTCTime
-extractNotificationTime notificationStatus = case notificationStatus of
-  Allocation.Notified notificationTime -> Just notificationTime
-  _ -> Nothing
-
 handle :: Repository -> Allocation.ServiceHandle IO
 handle repository@Repository {..} =
   Allocation.ServiceHandle
     { getCurrentTime = getCurrentTime,
       getDriverSortMode = pure ETA,
-      getConfiguredNotificationTime = pure 120,
-      getConfiguredAllocationTime = pure 15,
+      getConfiguredAllocationTime = pure allocationTime,
+      getConfiguredNotificationTime = pure notificationTime,
       getRequests = \numRides -> do
         rideRequests <- readTVarIO rideRequestsVar
         let requests = Map.elems rideRequests
@@ -81,32 +94,39 @@ handle repository@Repository {..} =
       sendNewRideNotification = \_ _ -> do
         pure (),
       getCurrentNotification = \rideId -> do
+        currentTime <- getCurrentTime
         notificationStatus <- readTVarIO notificationStatusVar
-        let notificationTimes = Map.mapMaybe extractNotificationTime notificationStatus
-        let filtered = Map.toList $ Map.filterWithKey (\(r, _) _ -> r == rideId) notificationTimes
+        let filtered =
+              Map.toList $
+                Map.filterWithKey
+                  (\(id, _) notification -> id == rideId && isNotified currentTime notification)
+                  notificationStatus
         case filtered of
-          [((_, driverId), notificationTime)] ->
-            pure $ Just $ Allocation.CurrentNotification driverId notificationTime
+          [((_, driverId), (_, expiryTime))] ->
+            pure $ Just $ Allocation.CurrentNotification driverId expiryTime
           _ -> pure Nothing,
-      addNotificationStatus = \rideId driverId _ -> do
-        now <- Time.getCurrentTime
-        modifyTVarIO notificationStatusVar $ Map.insert (rideId, driverId) (Allocation.Notified now),
+      addNotificationStatus = \rideId driverId expiryTime -> do
+        modifyTVarIO notificationStatusVar $ Map.insert (rideId, driverId) (Allocation.Notified, expiryTime),
       updateNotificationStatus = \rideId driverId nStatus -> do
-        modifyTVarIO notificationStatusVar $ Map.insert (rideId, driverId) nStatus,
+        modifyTVarIO notificationStatusVar $
+          Map.adjust
+            (\(_, expiryTime) -> (nStatus, expiryTime))
+            (rideId, driverId),
       resetLastRejectionTime = \_ -> pure (),
       getAttemptedDrivers = \rideId -> do
         notificationStatus <- readTVarIO notificationStatusVar
         let filtered =
               fmap snd $
-                Map.keys $ Map.filterWithKey (\(r, _) _ -> r == rideId) notificationStatus
+                Map.keys $ Map.filterWithKey (attemptedNotification rideId) notificationStatus
         pure filtered,
       getDriversWithNotification = do
+        currentTime <- getCurrentTime
         notificationStatus <- readTVarIO notificationStatusVar
-        let filtered = fmap snd $ Map.keys $ Map.filter isNotified notificationStatus
+        let filtered = fmap snd $ Map.keys $ Map.filter (isNotified currentTime) notificationStatus
         pure filtered,
       getDriverResponse = \rideId driverId -> do
-        ar <- readTVarIO responsesVar
-        pure $ Map.lookup (rideId, driverId) ar,
+        responses <- readTVarIO responsesVar
+        pure $ Map.lookup (rideId, driverId) responses,
       assignDriver = \rideId driverId -> do
         modifyTVarIO responsesVar $ Map.delete (rideId, driverId)
         modifyTVarIO assignmentsVar $ (:) (rideId, driverId),
@@ -143,16 +163,12 @@ driverPool2 = [DriverId "driver05", DriverId "driver07", DriverId "driver08"]
 driverPoolPerRide :: Map RideId [DriverId]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
 
-isNotified :: Allocation.NotificationStatus -> Bool
-isNotified (Allocation.Notified _) = True
-isNotified _ = False
-
 data Repository = Repository
   { currentIdVar :: TVar Int,
     driverPoolVar :: TVar (Map RideId [DriverId]),
     ridesVar :: TVar (Map RideId Allocation.RideInfo),
     rideRequestsVar :: TVar (Map RideRequestId Allocation.RideRequest),
-    notificationStatusVar :: TVar (Map (RideId, DriverId) Allocation.NotificationStatus),
+    notificationStatusVar :: TVar (Map (RideId, DriverId) (Allocation.NotificationStatus, UTCTime)),
     assignmentsVar :: TVar [(RideId, DriverId)],
     responsesVar :: TVar (Map (RideId, DriverId) DriverResponse)
   }

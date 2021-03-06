@@ -3,8 +3,8 @@ module Storage.Queries.NotificationStatus where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Utils.Common (getSchemaName)
-import Database.Beam ((&&.), (<-.), (==.))
+import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Database.Beam ((&&.), (<-.), (==.), (>.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.App (DriverId, RideId)
@@ -44,31 +44,37 @@ fetchRefusedNotificationsByRideId rideId = do
 fetchActiveNotifications :: Flow [NotificationStatus.NotificationStatus]
 fetchActiveNotifications = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  currTime <- getCurrTime
+  DB.findAllOrErr dbTable (predicate currTime)
   where
-    predicate NotificationStatus.NotificationStatus {..} =
+    predicate currentTime NotificationStatus.NotificationStatus {..} =
       _status ==. B.val_ NotificationStatus.NOTIFIED
+        &&. _expiresAt >. B.val_ currentTime
 
 findActiveNotificationByRideId :: RideId -> Flow (Maybe NotificationStatus.NotificationStatus)
 findActiveNotificationByRideId rideId = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  currTime <- getCurrTime
+  DB.findOne dbTable (predicate currTime)
     >>= either DB.throwDBError pure
   where
-    predicate NotificationStatus.NotificationStatus {..} =
+    predicate currentTime NotificationStatus.NotificationStatus {..} =
       _rideId ==. B.val_ rideId
         &&. _status ==. B.val_ NotificationStatus.NOTIFIED
+        &&. _expiresAt >. B.val_ currentTime
 
 findActiveNotificationByDriverId :: DriverId -> Maybe RideId -> Flow (Maybe NotificationStatus.NotificationStatus)
 findActiveNotificationByDriverId driverId rideId = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  currTime <- getCurrTime
+  DB.findOne dbTable (predicate currTime)
     >>= either DB.throwDBError pure
   where
-    predicate NotificationStatus.NotificationStatus {..} =
+    predicate currentTime NotificationStatus.NotificationStatus {..} =
       _driverId ==. B.val_ driverId
         &&. maybe (B.val_ True) (\v -> _rideId ==. B.val_ v) rideId
         &&. _status ==. B.val_ NotificationStatus.NOTIFIED
+        &&. _expiresAt >. B.val_ currentTime
 
 cleanupNotifications :: RideId -> Flow ()
 cleanupNotifications rideId = do

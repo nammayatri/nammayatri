@@ -27,7 +27,7 @@ data NotificationStatusT f = NotificationStatus
     _rideId :: B.C f RideId,
     _driverId :: B.C f DriverId,
     _status :: B.C f AnswerStatus,
-    _notifiedAt :: B.C f (Maybe UTCTime)
+    _expiresAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -54,5 +54,5 @@ fieldEMod =
       B.tableModification
         { _rideId = "ride_id",
           _driverId = "driver_id",
-          _notifiedAt = "notified_at"
+          _expiresAt = "expires_at"
         }

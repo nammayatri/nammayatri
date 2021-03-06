@@ -9,7 +9,6 @@ import Beckn.Types.App
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
-import Data.Time (addUTCTime)
 import EulerHS.Prelude
 import qualified Product.Location as Location
 import qualified Product.Person as Person
@@ -54,8 +53,7 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
     Just notification -> do
       let productInstanceId = rideIdToProductInstanceId $ notification ^. #_rideId
-      notificationTime <- notification ^. #_notifiedAt & fromMaybeM500 "UNKNOWN_NOTIFIED_TIME"
-      driverNotificationExpiry <- getDriverNotificationExpiry
+      let notificationExpiryTime = notification ^. #_expiresAt
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById personId
       driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM500 "DRIVER_LOCATION_NOT_FOUND"
@@ -73,13 +71,12 @@ getRideInfo RegistrationToken {..} mbProductInstanceId = withFlowHandler $ do
                 dropLoc = toLocation,
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
-                notificationExpiryTime = addUTCTime driverNotificationExpiry notificationTime,
+                notificationExpiryTime = notificationExpiryTime,
                 estimatedPrice = amountToString $ productInstance ^. #_price
               }
   where
     driverId = DriverId _EntityId
     personId = PersonId $ _getDriverId driverId
     rideIdToProductInstanceId rideId = ProductInstanceId $ rideId ^. #_getRideId
-    getDriverNotificationExpiry = App.driverNotificationExpiry . App.driverAllocationConfig <$> ask
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ LocationId <$> mbId
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long

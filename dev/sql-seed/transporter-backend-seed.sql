@@ -725,7 +725,7 @@ CREATE TABLE atlas_transporter.notification_status (
     ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id) on delete cascade,
     driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
     status character varying(20) NOT NULL,
-    notified_at timestamp with time zone
+    expires_at timestamp with time zone NOT NULL
 );
 
 CREATE TABLE atlas_transporter.allocation_event (
