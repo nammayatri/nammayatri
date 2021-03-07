@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Mobility.AppCancelRide where
+module Mobility.DriversIgnoreRide where
 
 import Beckn.Types.App
 import qualified Beckn.Types.Storage.Case as Case
@@ -13,10 +13,11 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
-import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "app-backend" Types.API.Common as AppCommon
+import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
+import qualified "beckn-transport" Types.API.Ride as RideAPI
 import Utils
 
 spec :: Spec
@@ -27,7 +28,12 @@ spec = do
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv appManager transporterBaseUrl
   describe "Testing App and Transporter APIs" $
-    it "Testing API flow for ride cancelled by App" do
+    it "Testing API flow for ride cancelled by Driver" do
+      -- Driver sets online
+      setDriverOnlineResponse <-
+        runClient tbeClientEnv $ setDriverOnline appRegistrationToken True
+      setDriverOnlineResponse `shouldSatisfy` isRight
+
       -- Do an App Search
       transactionId <- UUID.nextUUID
       sreq <- buildSearchReq $ UUID.toText $ fromJust transactionId
@@ -52,24 +58,38 @@ spec = do
           (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
       confirmResult `shouldSatisfy` isRight
 
-      -- cancel request initiated by App
-      txnId <- UUID.nextUUID
-      cancelResult <-
-        runClient
-          appClientEnv
-          ( cancelRide appRegistrationToken $
-              buildAppCancelReq (UUID.toText $ fromJust txnId) productInstanceId CancelAPI.PRODUCT_INSTANCE
-          )
-      cancelResult `shouldSatisfy` isRight
+      transporterOrderPi :| [] <- poll $ do
+        -- List all confirmed rides (type = RIDEORDER)
+        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq PI.CONFIRMED Case.RIDEORDER)
+        rideReqResult `shouldSatisfy` isRight
 
-      -- List all cancelled rides (type = RIDEORDER)
-      orderPI :| [] <- poll $ do
-        res <- runClient tbeClientEnv (buildOrgRideReq PI.CANCELLED Case.RIDEORDER)
-        let Right piListRes = res
-        let tbePiList = TbePI._productInstance <$> piListRes
-        let tbeOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
-        pure $ nonEmpty tbeOrderPI
-      orderPI ^. #_status `shouldBe` PI.CANCELLED
+        -- Filter order productInstance
+        let Right rideListRes = rideReqResult
+            tbePiList = TbePI._productInstance <$> rideListRes
+            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+        return $ nonEmpty transporterOrdersPi
+      let transporterOrderPiId = PI._id transporterOrderPi
+
+      -- Driver Rejects a ride
+      let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.REJECT
+      driverAcceptRideRequestResult <-
+        runClient
+          tbeClientEnv
+          $ rideRespond driverToken respondBody
+      driverAcceptRideRequestResult `shouldSatisfy` isRight
+
+      piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)
+      piListResult `shouldSatisfy` isRight
+
+      -- Check if app RIDEORDER PI is not CANCELLED. Only Customer can cancel the order.
+      checkPiInResult piListResult productInstanceId
   where
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance
+
+    checkPiInResult :: Either ClientError [AppPI.ProductInstanceRes] -> Text -> Expectation
+    checkPiInResult piListResult productInstanceId =
+      let Right piListRes = piListResult
+          appPiList = AppPI._productInstance <$> piListRes
+          appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) appPiList
+       in length appOrderPI `shouldBe` 0

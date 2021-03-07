@@ -32,12 +32,12 @@ data DriverInformationResponse = DriverInformationResponse
     person :: PersonAPI.PersonEntityRes,
     driverInformation :: DriverInformation
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON)
 
 newtype GetRideInfoRes = GetRideInfoRes
   { rideRequest :: Maybe RideInfo
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON, Show)
 
 data RideInfo = RideInfo
   { productInstanceId :: ProductInstanceId,
@@ -48,4 +48,4 @@ data RideInfo = RideInfo
     notificationExpiryTime :: UTCTime,
     estimatedPrice :: Text
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON, Show)

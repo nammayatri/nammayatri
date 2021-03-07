@@ -8,6 +8,7 @@ import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
 import qualified "mock-app-backend" App as MockAppBackend
 import qualified "mock-provider-backend" App as MockProviderBackend
+import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
@@ -67,7 +68,13 @@ specs = do
       )
   where
     allServers =
-      [ Gateway.runGateway $ \cfg ->
+      [ TransporterBGTM.runBackgroundTaskManager $ \cfg ->
+          cfg & #loggerConfig . #logToConsole .~ False
+            & #loggerConfig . #logRawSql .~ False
+            & #loggerConfig . #logFilePath .~ "/tmp/beckn-transport-bgtm.log"
+            & #driverAllocationConfig . #driverNotificationExpiry .~ 18
+            & #driverAllocationConfig . #rideAllocationExpiry .~ 18,
+        Gateway.runGateway $ \cfg ->
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False,
         AppBackend.runAppBackend $
@@ -93,7 +100,7 @@ specs = do
     startServers servers = do
       threadIds <- traverse forkIO servers
       -- Wait for servers to start up and migrations to run
-      threadDelay 10e6
+      threadDelay 5e6
       return threadIds
 
     cleanupServers = traverse_ killThread

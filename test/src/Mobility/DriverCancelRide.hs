@@ -17,6 +17,7 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
+import qualified "beckn-transport" Types.API.Ride as RideAPI
 import Utils
 
 spec :: Spec
@@ -44,12 +45,12 @@ spec = do
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
         return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = _getProductInstanceId $ AppCase._id productInstance
+      let productInstanceId = AppCase._id productInstance
       -- Confirm ride from app backend
       confirmResult <-
         runClient
           appClientEnv
-          (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
+          (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid $ _getProductInstanceId productInstanceId)
       confirmResult `shouldSatisfy` isRight
 
       transporterOrderPi :| [] <- poll $ do
@@ -60,36 +61,50 @@ spec = do
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
             tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just (_getProductInstanceId productInstanceId)) tbePiList
         return $ nonEmpty transporterOrdersPi
       let transporterOrderPiId = PI._id transporterOrderPi
 
-      -- Assign Driver and Vehicle
-      assignDriverVehicleResult <-
+      rideInfo <- poll $ do
+        res <-
+          runClient
+            tbeClientEnv
+            $ getNotificationInfo driverToken (Just transporterOrderPiId)
+        pure $ either (const Nothing) (^. #rideRequest) res
+      rideInfo ^. #productInstanceId `shouldBe` transporterOrderPiId
+
+      -- Driver Accepts a ride
+      let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
+      driverAcceptRideRequestResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId buildUpdatePIReq)
-      assignDriverVehicleResult `shouldSatisfy` isRight
+          $ rideRespond driverToken respondBody
+      driverAcceptRideRequestResult `shouldSatisfy` isRight
+
+      tripAssignedPI :| [] <- poll $ do
+        rideRequestResponse <- runClient tbeClientEnv $ buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER
+        rideRequestResponse `shouldSatisfy` isRight
+        let Right rideResponse = rideRequestResponse
+        let orders =
+              rideResponse ^.. traverse . #_productInstance
+                & filter \p -> p ^. #_parentId == Just productInstanceId
+        return $ nonEmpty orders
+      tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT
       cancelStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.TRIP_REASSIGNMENT Nothing))
+          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.CANCELLED Nothing))
       cancelStatusResult `shouldSatisfy` isRight
 
-      piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)
-      piListResult `shouldSatisfy` isRight
-
-      -- Check if app RIDEORDER PI is not CANCELLED. Only Customer can cancel the order.
-      checkPiInResult piListResult productInstanceId
+      piCancelled :| [] <- poll $ do
+        res <- runClient appClientEnv (buildListPIs PI.CANCELLED)
+        let Right piListRes = res
+        let appPiList = AppPI._productInstance <$> piListRes
+        let appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just (_getProductInstanceId productInstanceId)) appPiList
+        pure $ nonEmpty appOrderPI
+      piCancelled ^. #_status `shouldBe` PI.CANCELLED
   where
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance
-
-    checkPiInResult :: Either ClientError [AppPI.ProductInstanceRes] -> Text -> Expectation
-    checkPiInResult piListResult productInstanceId =
-      let Right piListRes = piListResult
-          appPiList = AppPI._productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) appPiList
-       in length appOrderPI `shouldBe` 0

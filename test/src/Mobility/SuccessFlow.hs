@@ -19,6 +19,7 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
+import qualified "beckn-transport" Types.API.Ride as RideAPI
 import Utils
 
 spec :: Spec
@@ -30,6 +31,11 @@ spec = do
       tbeClientEnv = mkClientEnv appManager transporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for successful booking and completion of ride" do
+      -- Driver sets online
+      setDriverOnlineResponse <-
+        runClient tbeClientEnv $ setDriverOnline appRegistrationToken True
+      setDriverOnlineResponse `shouldSatisfy` isRight
+
       -- Do an App Search
       transactionId <- UUID.nextUUID
       sreq <- buildSearchReq $ UUID.toText $ fromJust transactionId
@@ -74,18 +80,39 @@ spec = do
         return $ nonEmpty transporterOrdersPi
       let transporterOrderPiId = PI._id transporterOrderPi
 
-      -- Assign Driver and Vehicle
-      assignDriverVehicleResult <-
+      rideInfo <- poll $ do
+        res <-
+          runClient
+            tbeClientEnv
+            $ getNotificationInfo driverToken (Just transporterOrderPiId)
+        pure $ either (const Nothing) (^. #rideRequest) res
+      rideInfo ^. #productInstanceId `shouldBe` transporterOrderPiId
+
+      -- Driver Accepts a ride
+      let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
+      driverAcceptRideRequestResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId buildUpdatePIReq)
-      assignDriverVehicleResult `shouldSatisfy` isRight
+          $ rideRespond driverToken respondBody
+      driverAcceptRideRequestResult `shouldSatisfy` isRight
+
+      tripAssignedPI :| [] <- poll $ do
+        -- List all confirmed rides (type = RIDEORDER)
+        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER)
+        rideReqResult `shouldSatisfy` isRight
+
+        -- Filter order productInstance
+        let Right rideListRes = rideReqResult
+            tbePiList = TbePI._productInstance <$> rideListRes
+            transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+        return $ nonEmpty transporterOrdersPi
+      tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.INPROGRESS (transporterOrderPi ^. #_udf4)))
+          (rideUpdate driverToken transporterOrderPiId (buildUpdateStatusReq PI.INPROGRESS (transporterOrderPi ^. #_udf4)))
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)

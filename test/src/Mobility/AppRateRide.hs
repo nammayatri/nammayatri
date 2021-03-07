@@ -26,7 +26,8 @@ import Servant.Client
     Scheme (Http),
     mkClientEnv,
   )
-import Test.Hspec (Spec, describe, it, runIO, shouldSatisfy)
+import Test.Hspec (Spec, describe, it, runIO, shouldBe, shouldSatisfy)
+import qualified "beckn-transport" Types.API.Ride as RideAPI
 import Utils (poll, runClient)
 
 spec :: Spec
@@ -74,11 +75,31 @@ spec = do
         pure $ nonEmpty orders
 
       let transporterOrderId = transporterOrder ^. #_id
-      assignDriverResult <-
+      rideInfo <- poll $ do
+        res <-
+          runClient
+            transporterClient
+            $ F.getNotificationInfo F.driverToken (Just transporterOrderId)
+        pure $ either (const Nothing) (^. #rideRequest) res
+      rideInfo ^. #productInstanceId `shouldBe` transporterOrderId
+
+      -- Driver Accepts a ride
+      let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderId RideAPI.ACCEPT
+      driverAcceptRideRequestResult <-
         runClient
           transporterClient
-          $ F.rideUpdate F.appRegistrationToken transporterOrderId F.buildUpdatePIReq
-      assignDriverResult `shouldSatisfy` isRight
+          $ F.rideRespond F.driverToken respondBody
+      driverAcceptRideRequestResult `shouldSatisfy` isRight
+
+      tripAssignedPI :| [] <- poll $ do
+        rideRequestResponse <- runClient transporterClient $ F.buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER
+        rideRequestResponse `shouldSatisfy` isRight
+        let Right rideResponse = rideRequestResponse
+        let orders =
+              rideResponse ^.. traverse . #_productInstance
+                & filter \pi -> pi ^. #_parentId == Just appProductInstanceId
+        return $ nonEmpty orders
+      tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
 
       inProgressStatusResult <-
         runClient

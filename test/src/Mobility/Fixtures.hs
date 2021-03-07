@@ -3,6 +3,7 @@ module Mobility.Fixtures where
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
+import Beckn.Types.APIResult
 import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
@@ -20,11 +21,13 @@ import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
+import qualified "beckn-transport" Types.API.DriverInformation as DriverInformationAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import qualified "beckn-transport" Types.API.Person as TbePerson
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "app-backend" Types.API.Registration as Reg
+import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Common as AppCommon
@@ -128,6 +131,13 @@ buildSearchReq guid = do
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
+
+rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
+rideRespond = client (Proxy :: Proxy TbeRoutes.RideAPI)
+
+setDriverOnline :: Text -> Bool -> ClientM APIResult
+getNotificationInfo :: Text -> Maybe ProductInstanceId -> ClientM DriverInformationAPI.GetRideInfoRes
+_ :<|> setDriverOnline :<|> getNotificationInfo = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
 buildAppCancelReq guid entityId entityType =
@@ -285,6 +295,9 @@ buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csTy
 
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
+
+driverToken :: Text
+driverToken = "ca05cf3c-c88b-4a2f-8874-191659397e0d"
 
 testVehicleId :: Text
 testVehicleId = "0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94"
