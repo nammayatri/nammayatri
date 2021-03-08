@@ -46,6 +46,8 @@ run shutdown activeTask = do
   Redis.tryLockRedis "allocation" 10 >>= \case
     False -> L.runIO $ threadDelay 5000000 -- sleep for a bit
     _ -> do
+      now <- getCurrTime
+      Redis.setKeyRedis "beckn:allocation:service" now
       L.runIO $ atomically $ putTMVar activeTask ()
       processStartTime <- getCurrTime
       requestsNum <- asks (requestsNumPerIteration . driverAllocationConfig)
