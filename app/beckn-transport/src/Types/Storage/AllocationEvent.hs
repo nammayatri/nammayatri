@@ -61,5 +61,5 @@ fieldEMod =
         { _id = "id",
           _eventType = "event_type",
           _timestamp = "timestamp",
-          _rideId = "ride_request_id"
+          _rideId = "ride_id"
         }
