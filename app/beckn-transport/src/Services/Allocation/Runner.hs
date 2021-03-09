@@ -38,10 +38,9 @@ handle =
       cleanupNotifications = I.cleanupNotifications,
       removeRequest = I.removeRequest,
       runSafely = I.runSafely,
-      logInfo = I.logInfo,
-      logWarning = I.logWarning,
-      logError = I.logError,
-      logEvent = I.logEvent
+      addLogTag = I.addLogTag,
+      logEvent = I.logEvent,
+      logOutput = I.logOutput
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

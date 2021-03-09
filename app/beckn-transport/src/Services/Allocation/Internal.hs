@@ -8,7 +8,8 @@ import Beckn.Types.App as BC
 import Beckn.Types.Common
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common
+import Beckn.Utils.Common (fromMaybeM500, getCurrTime, throwErrorJSON500)
+import qualified Beckn.Utils.Common as Common
 import qualified Beckn.Utils.Logging as Log
 import Data.Time
 import EulerHS.Prelude
@@ -151,17 +152,14 @@ cleanupNotifications = QNS.cleanupNotifications
 removeRequest :: RideRequestId -> Flow ()
 removeRequest = QRR.removeRequest
 
-logInfo :: Text -> Text -> Flow ()
-logInfo = Log.logInfo
-
-logWarning :: Text -> Text -> Flow ()
-logWarning = Log.logWarning
-
-logError :: Text -> Text -> Flow ()
-logError = Log.logError
+logOutput :: Log.LogLevel -> [Text] -> Text -> Flow ()
+logOutput = Log.logOutput
 
 runSafely :: (FromJSON a, ToJSON a) => Flow a -> Flow (Either Text a)
-runSafely = runSafeFlow
+runSafely = Common.runSafeFlow
+
+addLogTag :: Log.HasLogContext env => Text -> FlowR env a -> FlowR env a
+addLogTag = Common.addLogTag
 
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->

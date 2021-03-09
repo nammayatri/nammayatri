@@ -145,10 +145,9 @@ handle repository@Repository {..} =
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
       runSafely = (Right <$>),
-      logInfo = \_ _ -> pure (),
-      logWarning = \_ _ -> pure (),
-      logError = \_ _ -> pure (),
-      logEvent = \_ _ -> pure ()
+      addLogTag = \_ action -> action,
+      logEvent = \_ _ -> pure (),
+      logOutput = \_ _ _ -> pure ()
     }
 
 driverPool1 :: [DriverId]

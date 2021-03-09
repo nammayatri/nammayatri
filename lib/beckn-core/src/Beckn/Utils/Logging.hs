@@ -1,12 +1,4 @@
-module Beckn.Utils.Logging
-  ( LogLevel (..),
-    LoggerConfig (..),
-    Log (..),
-    HasLogContext (..),
-    getEulerLoggerConfig,
-    addLogTagToEnv,
-  )
-where
+module Beckn.Utils.Logging where
 
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
@@ -23,10 +15,19 @@ addLogTagToEnv :: HasLogContext env => Text -> env -> env
 addLogTagToEnv tag = getLogContext >>= setLogContext . (++ [tag])
 
 class Log m where
-  logDebug :: Text -> Text -> m ()
-  logInfo :: Text -> Text -> m ()
-  logWarning :: Text -> Text -> m ()
-  logError :: Text -> Text -> m ()
+  logOutput :: LogLevel -> [Text] -> Text -> m ()
+
+  logDebug :: Log m => Text -> Text -> m ()
+  logDebug tag = logOutput DEBUG [tag]
+
+  logInfo :: Log m => Text -> Text -> m ()
+  logInfo tag = logOutput INFO [tag]
+
+  logWarning :: Log m => Text -> Text -> m ()
+  logWarning tag = logOutput WARNING [tag]
+
+  logError :: Log m => Text -> Text -> m ()
+  logError tag = logOutput ERROR [tag]
 
 data LoggerConfig = LoggerConfig
   { isAsync :: Bool,
