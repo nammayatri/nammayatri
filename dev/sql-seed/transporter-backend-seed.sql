@@ -702,6 +702,9 @@ CREATE TABLE atlas_transporter.fare_policy (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, True, False, now(), now() from atlas_transporter.person where role ='DRIVER';
+INSERT INTO atlas_transporter.driver_stats (driver_id, idle_since) SELECT id, now() FROM atlas_transporter.person WHERE role ='DRIVER';
+
 ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas;
 
 INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
@@ -732,8 +735,6 @@ CREATE TABLE atlas_transporter.allocation_event (
     timestamp timestamp with time zone NOT NULL
 );
 
--- Insert data for postman's allocator tests
-
 -- Driver1
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
   ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
@@ -760,42 +761,7 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
 
-INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where role ='DRIVER';
-INSERT INTO atlas_transporter.driver_stats (driver_id, idle_since) SELECT id, now() FROM atlas_transporter.person WHERE role ='DRIVER';
-
-
--- User
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
-  ('003d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
-
-INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('003b93df-4f7c-440f-bada-4d46c396d7d0', 'Some', 'Cool', 'User', NULL, 'USER', 'FEMALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+94', '003', NULL, true, NULL, NULL, 'ACTIVE', NULL, NULL, '003d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
-
-INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
-  ('003d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '4321', '003df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'USER', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
-
--- Ride request
-
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
-  ('004d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10.0749, public.ST_SetSRID(public.ST_Point(76.2733, 10.0749), 4326));
-
-INSERT INTO atlas_transporter."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) VALUES
-  ('001f6115-417a-4da2-aff7-e6290242c766', NULL, 'Case to search for a Ride', '001Ii4P8I3cAEz0G', 'MOBILITY', 'RIDESEARCH', 'FULFILLMENT', 'NEW', '2021-02-11 14:30:21.622047+00', NULL, '2321-02-11 14:30:21.622047+00', '70c76e36-f035-46fd-98a7-572dc8934323', NULL, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'CONSUMER',	NULL,	'003d2f36-a455-4625-bfb4-22807fefa1eb', '004d2f36-a455-4625-bfb4-22807fefa1eb', 'SUV', '0', '1304.376', '1233651-5340-4836-81a7-045394ba6dc3', '0', NULL, '2321-02-11 12:30:28.284869+00', '2321-02-11 12:30:28.429638+00');
-
-INSERT INTO atlas_transporter."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) VALUES
-  ('002f6115-417a-4da2-aff7-e6290242c766', NULL, 'Case to order a Ride', '002Ii4P8I3cAEz0G', 'MOBILITY', 'RIDEORDER', 'FULFILLMENT', 'INPROGRESS', '2021-02-11 14:30:21.622047+00', NULL, '2321-02-11 14:30:21.622047+00', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'CONSUMER',	'001f6115-417a-4da2-aff7-e6290242c766',	'003d2f36-a455-4625-bfb4-22807fefa1eb', '004d2f36-a455-4625-bfb4-22807fefa1eb', 'SUV', '0', '1304.376', '505e4651-5340-4836-81a7-045394ba6dc3', '0', NULL, '2321-02-11 12:30:28.284869+00', '2321-02-11 12:30:28.429638+00');
-
-INSERT INTO atlas_transporter."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) VALUES
-  ('003f6115-417a-4da2-aff7-e6290242c766', NULL, 'Case to track a Ride', '003Ii4P8I3cAEz0G', 'MOBILITY', 'LOCATIONTRACKER', 'FULFILLMENT', 'NEW', '2021-02-11 14:30:21.622047+00', NULL, '2321-02-11 14:30:21.622047+00', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'CONSUMER',	'001f6115-417a-4da2-aff7-e6290242c766',	'003d2f36-a455-4625-bfb4-22807fefa1eb', '004d2f36-a455-4625-bfb4-22807fefa1eb', 'SUV', '0', '1304.376', '505e4651-5340-4836-81a7-045394ba6dc3', '0', NULL, '2321-02-11 12:30:28.284869+00', '2321-02-11 12:30:28.429638+00');
-
-INSERT INTO atlas_transporter.product_instance (id, case_id, product_id, person_id, person_updated_at, short_id, entity_id, entity_type, quantity, price, type, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, parent_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) VALUES
-  ('001faa07-3df6-4b5c-b4d2-962880760841',	'001f6115-417a-4da2-aff7-e6290242c766',	'f726d2fa-2df1-42f0-a009-6795cfdc9b05',	'003b93df-4f7c-440f-bada-4d46c396d7d0',	'2020-07-28 16:07:04.203777+00',	'001Di0b7O1okooZJ', NULL,	'VEHICLE', 1, 1372.4707500000, 'RIDESEARCH', 'CONFIRMED', now(), NULL, '2321-02-11 14:30:21.622047+00', '003d2f36-a455-4625-bfb4-22807fefa1eb',	'004d2f36-a455-4625-bfb4-22807fefa1eb',	'7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL,	'SUV', '0',	'1304.376',	'505e4651-5340-4836-81a7-045394ba6dc3',	'109372.56',	'2321-02-11 12:30:28.286682+00',	'2321-02-11 12:30:28.426986+00');
-
-INSERT INTO atlas_transporter.product_instance (id, case_id, product_id, person_id, person_updated_at, short_id, entity_id, entity_type, quantity, price, type, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, parent_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) VALUES
-  ('002faa07-3df6-4b5c-b4d2-962880760841',	'003f6115-417a-4da2-aff7-e6290242c766',	'f726d2fa-2df1-42f0-a009-6795cfdc9b05',	'003b93df-4f7c-440f-bada-4d46c396d7d0',	'2020-07-28 16:07:04.203777+00',	'002Di0b7O1okooZJ', NULL,	'VEHICLE', 1, 0, 'LOCATIONTRACKER', 'CONFIRMED', now(), NULL, '2321-02-11 14:30:21.622047+00', '003d2f36-a455-4625-bfb4-22807fefa1eb',	'004d2f36-a455-4625-bfb4-22807fefa1eb',	'7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '001faa07-3df6-4b5c-b4d2-962880760841', NULL,	'SUV', '0',	'1304.376',	'505e4651-5340-4836-81a7-045394ba6dc3',	'109372.56',	'2321-02-11 12:30:28.286682+00',	'2321-02-11 12:30:28.426986+00');
-
-INSERT INTO atlas_transporter.product_instance (id, case_id, product_id, person_id, person_updated_at, short_id, entity_id, entity_type, quantity, price, type, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, parent_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) VALUES
-  ('003faa07-3df6-4b5c-b4d2-962880760841',	'002f6115-417a-4da2-aff7-e6290242c766',	'f726d2fa-2df1-42f0-a009-6795cfdc9b05',	'003b93df-4f7c-440f-bada-4d46c396d7d0',	'2020-07-28 16:07:04.203777+00',	'003Di0b7O1okooZJ', NULL,	'VEHICLE', 1, 1372.4707500000, 'RIDEORDER', 'CONFIRMED', now(), NULL, '2321-02-11 14:30:21.622047+00', '003d2f36-a455-4625-bfb4-22807fefa1eb',	'004d2f36-a455-4625-bfb4-22807fefa1eb',	'7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '001faa07-3df6-4b5c-b4d2-962880760841', NULL,	'SUV', '0',	'1304.376',	'3333',	'109372.56',	'2321-02-11 12:30:28.286682+00',	'2321-02-11 12:30:28.426986+00');
-
-INSERT INTO atlas_transporter.ride_request (id, ride_id, created_at, last_process_time, type) VALUES
-  ('001fc8b8-672d-4eaa-b178-1bd2a52c03e1', '003faa07-3df6-4b5c-b4d2-962880760841', '2321-02-11 12:30:28.286682+00', now(), 'ALLOCATION');
+INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where id ='001b93df-4f7c-440f-bada-4d46c396d7d0';
+INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where id ='002b93df-4f7c-440f-bada-4d46c396d7d0';
+INSERT INTO atlas_transporter.driver_stats (driver_id, idle_since) SELECT id, now() FROM atlas_transporter.person WHERE id ='001b93df-4f7c-440f-bada-4d46c396d7d0';
+INSERT INTO atlas_transporter.driver_stats (driver_id, idle_since) SELECT id, now() FROM atlas_transporter.person WHERE id ='002b93df-4f7c-440f-bada-4d46c396d7d0';

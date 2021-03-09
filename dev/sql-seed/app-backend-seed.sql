@@ -737,8 +737,6 @@ ALTER TABLE atlas_app.issues OWNER TO atlas;
 
 
 
--- Insert data for postman's allocator tests
-
 -- User
 
 INSERT INTO atlas_app.location (id, location_type, lat, long, point) VALUES
@@ -749,16 +747,3 @@ INSERT INTO atlas_app.person (id, first_name, middle_name, last_name, full_name,
 
 INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('003d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '4321', '003df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'USER', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
-
--- Ride request
-INSERT INTO atlas_app."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) VALUES
-  ('001f6115-417a-4da2-aff7-e6290242c766', NULL, 'Case to search for a Ride', '001Ii4P8I3cAEz0G', 'MOBILITY', 'RIDESEARCH', 'FULFILLMENT', 'NEW', '2021-02-11 14:30:21.622047+00', NULL, '2321-02-11 14:30:21.622047+00', '70c76e36-f035-46fd-98a7-572dc8934323', NULL, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'CONSUMER',	NULL,	'003d2f36-a455-4625-bfb4-22807fefa1eb', '004d2f36-a455-4625-bfb4-22807fefa1eb', 'SUV', '0', '1304.376', '1233651-5340-4836-81a7-045394ba6dc3', '0', NULL, '2321-02-11 12:30:28.284869+00', '2321-02-11 12:30:28.429638+00');
-
-INSERT INTO atlas_app."case" (id, name, description, short_id, industry, type, exchange_type, status, start_time, end_time, valid_till, provider, provider_type, requestor, requestor_type, parent_case_id, from_location_id, to_location_id, udf1, udf2, udf3, udf4, udf5, info, created_at, updated_at) VALUES
-  ('002f6115-417a-4da2-aff7-e6290242c766', NULL, 'Case to order a Ride', '002Ii4P8I3cAEz0G', 'MOBILITY', 'RIDEORDER', 'FULFILLMENT', 'INPROGRESS', '2021-02-11 14:30:21.622047+00', NULL, '2321-02-11 14:30:21.622047+00', '70c76e36-f035-46fd-98a7-572dc8934323', NULL, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'CONSUMER',	'001f6115-417a-4da2-aff7-e6290242c766',	'003d2f36-a455-4625-bfb4-22807fefa1eb', '004d2f36-a455-4625-bfb4-22807fefa1eb', 'SUV', '0', '1304.376', '1233651-5340-4836-81a7-045394ba6dc3', '0', NULL, '2321-02-11 12:30:28.284869+00', '2321-02-11 12:30:28.429638+00');
-
-INSERT INTO atlas_app.product_instance (id, case_id, product_id, person_id, person_updated_at, short_id, entity_id, entity_type, quantity, price, type, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, parent_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) VALUES
-  ('001faa07-3df6-4b5c-b4d2-962880760841',	'002f6115-417a-4da2-aff7-e6290242c766',	'f726d2fa-2df1-42f0-a009-6795cfdc9b05',	'003b93df-4f7c-440f-bada-4d46c396d7d0',	'2020-07-28 16:07:04.203777+00',	'001Di0b7O1okooZJ', NULL,	'VEHICLE', 1, 1372.4707500000, 'RIDESEARCH', 'CONFIRMED', now(), NULL, '2321-02-11 14:30:21.622047+00', '003d2f36-a455-4625-bfb4-22807fefa1eb',	'004d2f36-a455-4625-bfb4-22807fefa1eb',	'70c76e36-f035-46fd-98a7-572dc8934323', NULL, NULL,	'SUV', '0',	'1304.376',	NULL,	'109372.56',	'2321-02-11 12:30:28.286682+00',	'2321-02-11 12:30:28.426986+00');
-
-INSERT INTO atlas_app.product_instance (id, case_id, product_id, person_id, person_updated_at, short_id, entity_id, entity_type, quantity, price, type, status, start_time, end_time, valid_till, from_location_id, to_location_id, organization_id, parent_id, info, udf1, udf2, udf3, udf4, udf5, created_at, updated_at) VALUES
-  ('003faa07-3df6-4b5c-b4d2-962880760841',	'002f6115-417a-4da2-aff7-e6290242c766',	'f726d2fa-2df1-42f0-a009-6795cfdc9b05',	'003b93df-4f7c-440f-bada-4d46c396d7d0',	'2020-07-28 16:07:04.203777+00',	'003Di0b7O1okooZJ', NULL,	'VEHICLE', 1, 1372.4707500000, 'RIDEORDER', 'CONFIRMED', now(), NULL, '2321-02-11 14:30:21.622047+00', '003d2f36-a455-4625-bfb4-22807fefa1eb',	'004d2f36-a455-4625-bfb4-22807fefa1eb',	'70c76e36-f035-46fd-98a7-572dc8934323', '001faa07-3df6-4b5c-b4d2-962880760841', NULL,	'SUV', '0',	'1304.376',	NULL,	'109372.56',	'2321-02-11 12:30:28.286682+00',	'2321-02-11 12:30:28.426986+00');
