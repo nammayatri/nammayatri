@@ -38,7 +38,7 @@ cancelProductInstance person req = do
   orderPI <- MPI.findByParentIdType (Just $ searchPI ^. #_id) Case.RIDEORDER
   if isProductInstanceCancellable orderPI
     then sendCancelReq searchPI cs
-    else errResp (show (searchPI ^. #_status)) cs
+    else errResp (show (orderPI ^. #_status)) cs
   where
     sendCancelReq prodInst cs = do
       let txnId = _getCaseId $ cs ^. #_id
@@ -76,11 +76,9 @@ searchCancel person req = do
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =
-  case prodInst ^. #_status of
-    PI.CONFIRMED -> True
-    PI.VALID -> True
-    PI.INSTOCK -> True
-    _ -> False
+  case PI.validateStatusTransition (prodInst ^. #_status) PI.CANCELLED of
+    Left _ -> False
+    Right _ -> True
 
 isCaseCancellable :: Case.Case -> Bool
 isCaseCancellable case_ =

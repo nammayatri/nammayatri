@@ -168,12 +168,11 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 -- Core Utility methods are below
 
 isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
-isAllowed prodInst req = do
-  piList <- PIQ.findAllByStatusParentId [PI.COMPLETED, PI.INPROGRESS, PI.TRIP_ASSIGNED] (prodInst ^. #_parentId)
-  when (isJust (req ^. #_personId) || isJust (req ^. #_vehicleId)) $ do
-    case (length piList, req ^. #_personId, req ^. #_vehicleId, req ^. #_status) of
-      (0, Just _, Just _, Just PI.TRIP_ASSIGNED) -> return ()
-      _ -> throwError400 "INVALID UPDATE OPERATION"
+isAllowed orderPi req = do
+  newStatus <- fromMaybeM400 "INVALID_UPDATE_OPERATION" (req ^. #_status)
+  case PI.validateStatusTransition (orderPi ^. #_status) newStatus of
+    Left _ -> throwErrorJSON400 "INVALID_UPDATE_OPERATION"
+    Right _ -> return ()
 
 assignDriver :: ProductInstanceId -> DriverId -> Flow ()
 assignDriver productInstanceId driverId = do
