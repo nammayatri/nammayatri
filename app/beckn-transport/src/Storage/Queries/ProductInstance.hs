@@ -24,10 +24,6 @@ import qualified Types.Storage.DB as DB
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB._productInstance . DB.transporterDb <$> getSchemaName
 
-getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
-getDbTable' =
-  DB._productInstance . DB.transporterDb <$> getSchemaName
-
 getCsTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT))
 getCsTable =
   DB._case . DB.transporterDb <$> getSchemaName
