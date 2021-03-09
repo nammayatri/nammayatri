@@ -75,9 +75,7 @@ cancelRide rideId = do
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM PIParentIdNotPresent
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
-  _ <-
-    DB.runSqlDBTransaction $
-      cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id)
+  cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id)
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
   bapOrgId <- Case._udf4 orderCase & fromMaybeM CaseBapOrgIdNotPresent
@@ -104,8 +102,8 @@ cancelRideTransaction ::
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
-  DB.SqlDB ()
-cancelRideTransaction piList searchPiId trackerPiId orderPiId = do
+  Flow ()
+cancelRideTransaction piList searchPiId trackerPiId orderPiId = DB.runSqlDBTransaction $ do
   case piList of
     [] -> pure ()
     (prdInst : _) -> do
