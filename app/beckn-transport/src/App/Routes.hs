@@ -22,6 +22,7 @@ import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Product.BecknProvider.Feedback as BP
+import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
 import qualified Product.Case.CRUD as Case
 import qualified Product.Cron as Cron

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Product.BecknProvider.BP where
 
@@ -9,7 +10,6 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Cancel
 import Beckn.Types.Core.API.Confirm
-import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
@@ -17,20 +17,16 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Core.Order
-import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Mobility.Driver
 import Beckn.Types.Mobility.Payload
-import Beckn.Types.Mobility.Stop as BS
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Case as SC
-import Beckn.Types.Storage.Location as SL
 import Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
-import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time
 import qualified EulerHS.Language as L
@@ -38,177 +34,18 @@ import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import Models.Case as Case
-import qualified Models.ProductInstance as MPI
-import Product.FareCalculator
-import qualified Product.Location as Location
 import Product.Person (calculateDriverPool, setDriverPool)
-import Servant.Client
 import qualified Storage.Queries.DriverInformation as DriverInformation
-import Storage.Queries.Location as Loc
 import Storage.Queries.Organization as Org
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
-import qualified Storage.Queries.Products as SProduct
 import Storage.Queries.RideRequest as RideRequest
 import Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
-import qualified Types.API.Case as APICase
 import Types.App (DriverId (..), RideId (..), RideRequestId (..))
 import Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
-
--- 1) Create Parent Case with Customer Request Details
--- 2) Notify all transporter using FCM
--- 3) Respond with Ack
-
-search :: OrganizationId -> Organization -> SearchReq -> FlowHandler AckResponse
-search transporterId bapOrg req = withFlowHandler $ do
-  validateContext "search" $ req ^. #context
-  uuid <- L.generateGUID
-  transporter <- findOrganizationById transporterId
-  when (transporter ^. #_enabled) $ do
-    let intent = req ^. #message . #intent
-    currTime <- getCurrTime
-    let pickup = head $ intent ^. #_pickups
-        dropOff = head $ intent ^. #_drops
-        startTime = pickup ^. #_departure_time . #_est
-    validity <- getValidTime currTime startTime
-    uuid1 <- L.generateGUID
-    let fromLocation = mkFromStop req uuid1 currTime pickup
-    uuid2 <- L.generateGUID
-    let toLocation = mkFromStop req uuid2 currTime dropOff
-    Loc.create fromLocation
-    Loc.create toLocation
-    let bapOrgId = bapOrg ^. #_id
-    deadDistance <- calculateDeadDistance transporter fromLocation
-    let productCase = mkCase req uuid currTime validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
-    Case.create productCase
-    fork "search" $ do
-      vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
-      (piStatus, caseStatus) <- do
-        pool <-
-          calculateDriverPool
-            (fromLocation ^. #_id)
-            transporterId
-            vehicleVariant
-        logInfo ("Search_DriverPool_" <> _getOrganizationId transporterId) (T.intercalate ", " $ _getPersonId <$> pool)
-        return $
-          if null pool
-            then (ProductInstance.OUTOFSTOCK, SC.CLOSED)
-            else (ProductInstance.INSTOCK, SC.CONFIRMED)
-      price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
-      prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price piStatus
-      sendOnSearch productCase prodInst transporter
-      Case.updateStatus (productCase ^. #_id) caseStatus
-  mkAckResponse uuid "search"
-  where
-    -- TODO :: need to isolate it from this module
-    sendOnSearch productCase productInstance transporterOrg = do
-      let piStatus = productInstance ^. #_status
-      let productInstances =
-            case piStatus of
-              ProductInstance.OUTOFSTOCK -> []
-              _ -> [productInstance]
-      onSearchPayload <- mkOnSearchPayload productCase productInstances transporterOrg
-      let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
-      _ <- Gateway.onSearch onSearchPayload bppShortId
-      pure ()
-    mkOnSearchPayload productCase productInstances transporterOrg = do
-      currTime <- getCurrTime
-      appEnv <- ask
-      let context =
-            Context
-              { _domain = Domain.MOBILITY,
-                _country = Just "IND",
-                _city = Nothing,
-                _action = "on_search",
-                _core_version = Just "0.8.2",
-                _domain_version = Just "0.8.2",
-                _transaction_id = last $ T.split (== '_') $ productCase ^. #_shortId,
-                _message_id = productCase ^. #_shortId,
-                _bap_uri = Nothing,
-                _bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
-                _timestamp = currTime,
-                _ttl = Nothing
-              }
-      piCount <- MPI.getCountByStatus (_getOrganizationId $ transporterOrg ^. #_id) SC.RIDEORDER
-      let stats = mkProviderStats piCount
-      let provider = mkProviderInfo transporterOrg stats
-      catalog <- GT.mkCatalog productCase productInstances provider
-      return
-        CallbackReq
-          { context,
-            contents = Right $ OnSearchServices catalog
-          }
-      where
-        mkProviderInfo org stats =
-          APICase.ProviderInfo
-            { _id = _getOrganizationId $ org ^. #_id,
-              _name = org ^. #_name,
-              _stats = encodeToText stats,
-              _contacts = fromMaybe "" (org ^. #_mobileNumber)
-            }
-        mkProviderStats piCount =
-          APICase.ProviderStats
-            { _completed = List.lookup ProductInstance.COMPLETED piCount,
-              _inprogress = List.lookup ProductInstance.INPROGRESS piCount,
-              _confirmed = List.lookup ProductInstance.CONFIRMED piCount
-            }
-        makeBppUrl url =
-          let orgId = _getOrganizationId $ transporterOrg ^. #_id
-              newPath = baseUrlPath url <> "/" <> T.unpack orgId
-           in url {baseUrlPath = newPath}
-
-    createProductInstance productCase price status = do
-      productInstanceId <- ProductInstanceId <$> L.generateGUID
-      now <- getCurrTime
-      shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-      products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase ^. #_udf1)
-      let productInstance =
-            ProductInstance
-              { _id = productInstanceId,
-                _caseId = productCase ^. #_id,
-                _productId = products ^. #_id,
-                _personId = Nothing,
-                _personUpdatedAt = Nothing,
-                _shortId = shortId,
-                _entityType = ProductInstance.VEHICLE,
-                _entityId = Nothing,
-                _quantity = 1,
-                _type = SC.RIDESEARCH,
-                _price = fromMaybe 0 price,
-                _status = status,
-                _startTime = productCase ^. #_startTime,
-                _endTime = productCase ^. #_endTime,
-                _validTill = productCase ^. #_validTill,
-                _fromLocation = Just $ productCase ^. #_fromLocationId,
-                _toLocation = Just $ productCase ^. #_toLocationId,
-                _organizationId = _getOrganizationId transporterId,
-                _parentId = Nothing,
-                _udf1 = productCase ^. #_udf1,
-                _udf2 = productCase ^. #_udf2,
-                _udf3 = productCase ^. #_udf3,
-                _udf4 = productCase ^. #_udf4,
-                _udf5 = productCase ^. #_udf5,
-                _info = productCase ^. #_info,
-                _createdAt = now,
-                _updatedAt = now
-              }
-      ProductInstance.create productInstance
-      pure productInstance
-    calculateDeadDistance organization fromLocation = do
-      eres <- runSafeFlow do
-        orgLocId <- LocationId <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
-        mbOrgLocation <- Loc.findLocationById orgLocId
-        case mbOrgLocation of
-          Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
-          Just orgLocation -> Location.calculateDistance orgLocation fromLocation
-      case eres of
-        Left err -> do
-          logWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
-          pure Nothing
-        Right mDistance -> return mDistance
 
 cancel :: OrganizationId -> Organization -> CancelReq -> FlowHandler AckResponse
 cancel _transporterId _bapOrg req = withFlowHandler $ do
@@ -252,72 +89,6 @@ cancelRide rideId = do
           DriverInformation.updateOnRideFlow (DriverId $ _getPersonId driverId) False
           Notify.notifyDriverOnCancel c driver
 
--- TODO: Move this to core Utils.hs
-getValidTime :: UTCTime -> UTCTime -> Flow UTCTime
-getValidTime now startTime = do
-  caseExpiry_ <- fromMaybe 7200 . caseExpiry <$> ask
-  let minExpiry = 300 -- 5 minutes
-      timeToRide = startTime `diffUTCTime` now
-      validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
-  pure validTill
-
-mkFromStop :: SearchReq -> Text -> UTCTime -> BS.Stop -> SL.Location
-mkFromStop _req uuid now stop =
-  let loc = stop ^. #_location
-      mgps = loc ^. #_gps
-      maddress = loc ^. #_address
-   in SL.Location
-        { _id = LocationId uuid,
-          _locationType = SL.POINT,
-          _lat = read . T.unpack . (^. #lat) <$> mgps,
-          _long = read . T.unpack . (^. #lon) <$> mgps,
-          _ward = (^. #_ward) =<< maddress,
-          _district = Nothing,
-          _city = (^. #_city) <$> maddress,
-          _state = (^. #_state) <$> maddress,
-          _country = (^. #_country) <$> maddress,
-          _pincode = (^. #_area_code) <$> maddress,
-          _address = encodeToText <$> maddress,
-          _bound = Nothing,
-          _createdAt = now,
-          _updatedAt = now
-        }
-
-mkCase :: SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> SL.Location -> SL.Location -> OrganizationId -> OrganizationId -> Maybe Float -> SC.Case
-mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
-  let intent = req ^. #message . #intent
-  let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
-  let tId = _getOrganizationId transporterId
-  let bapId = _getOrganizationId bapOrgId
-  SC.Case
-    { _id = CaseId {_getCaseId = uuid},
-      _name = Nothing,
-      _description = Just "Case to search for a Ride",
-      _shortId = tId <> "_" <> req ^. #context . #_transaction_id,
-      _industry = SC.MOBILITY,
-      _type = RIDESEARCH,
-      _exchangeType = FULFILLMENT,
-      _status = SC.NEW,
-      _startTime = startTime,
-      _endTime = Nothing,
-      _validTill = validity,
-      _provider = Just tId,
-      _providerType = Nothing,
-      _requestor = Nothing,
-      _requestorType = Just CONSUMER,
-      _parentCaseId = Nothing,
-      _fromLocationId = TA._getLocationId $ fromLocation ^. #_id,
-      _toLocationId = TA._getLocationId $ toLocation ^. #_id,
-      _udf1 = Just $ intent ^. #_vehicle . #variant,
-      _udf2 = Just $ show $ length $ intent ^. #_payload . #_travellers,
-      _udf3 = encodeToText <$> deadDistance,
-      _udf4 = Just bapId,
-      _udf5 = distance,
-      _info = Nothing, --Just $ show $ req ^. #message
-      _createdAt = now,
-      _updatedAt = now
-    }
-
 confirm :: OrganizationId -> Organization -> ConfirmReq -> FlowHandler AckResponse
 confirm transporterId bapOrg req = withFlowHandler $ do
   logInfo "confirm API Flow" "Reached"
@@ -331,7 +102,6 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   searchCase <- Case.findBySid caseShortId
   bapOrgId <- searchCase ^. #_udf4 & fromMaybeM500 "BAP_ORG_NOT_SET"
   unless (bapOrg ^. #_id == OrganizationId bapOrgId) (throwError400 "BAP mismatch")
-
   orderCase <- mkOrderCase searchCase
   Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -349,19 +119,31 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   ProductInstance.create trackerProductInstance
   Case.updateStatus (searchCase ^. #_id) SC.COMPLETED
 
-  pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
-  vehicleVariant :: Vehicle.Variant <-
-    (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM500 "NO_VEHICLE_VARIANT"
-  driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
-  logInfo ("Confirm_DriverPool_" <> _getProductInstanceId prodInstId) (T.intercalate ", " $ _getPersonId <$> driverPool)
-  setDriverPool prodInstId driverPool
+  fork "OnConfirmRequest" $ do
+    result <- runSafeFlow $ do
+      pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
+      vehicleVariant :: Vehicle.Variant <-
+        (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
+          & fromMaybeM500 "NO_VEHICLE_VARIANT"
+      driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
+      setDriverPool prodInstId driverPool
+      L.logInfo @Text "OnConfirm" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (_getPersonId <$> driverPool) ||+ ""
 
-  -- Send callback to BAP
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
-  notifyGateway searchCase orderProductInstance trackerCase callbackUrl bppShortId
+    case result of
+      Right () -> do
+        -- Send callback to BAP
+        callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+        let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
+        notifyGateway searchCase orderProductInstance trackerCase callbackUrl bppShortId
 
+        admins <-
+          if transporterOrg ^. #_enabled
+            then Person.findAllByOrgIds [Person.ADMIN] [productInstance ^. #_organizationId]
+            else return []
+        Notify.notifyTransportersOnConfirm searchCase productInstance admins
+      Left err -> do
+        L.logError @Text "OnConfirmRequest" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
+        pure ()
   mkAckResponse uuid "confirm"
 
 mkOrderCase :: SC.Case -> Flow SC.Case
