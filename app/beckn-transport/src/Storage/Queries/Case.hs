@@ -17,10 +17,6 @@ getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB._case . DB.transporterDb <$> getSchemaName
 
-getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT))
-getDbTable' =
-  DB._case . DB.transporterDb <$> getSchemaName
-
 create :: Storage.Case -> Flow (T.DBResult ())
 create Storage.Case {..} = do
   dbTable <- getDbTable
@@ -120,7 +116,7 @@ updateStatusByIds' ::
   Storage.CaseStatus ->
   DB.SqlDB ()
 updateStatusByIds' ids newStatus = do
-  dbTable <- getDbTable'
+  dbTable <- getDbTable
   currTime <- asks DB.currentTime
   DB.update'
     dbTable
