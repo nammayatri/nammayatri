@@ -16,6 +16,7 @@ import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Models.Case as CQ
 import Product.BecknProvider.BP as BP
+import qualified Storage.Queries.Allocation as AQ
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DSQ
@@ -70,7 +71,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
       DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
     updateStatus piId req
-  updateInfo piId
+  updateInfoFlow piId
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
   where
@@ -196,7 +197,7 @@ assignDriver productInstanceId driverId = do
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
   let piIdList = PI._id <$> piList
 
-  DB.runSqlDBTransaction (assignDriver' productInstanceId piIdList vehicle driver)
+  DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle driver)
 
   notifyUpdateToBAP searchPi ordPi (Just PI.TRIP_ASSIGNED)
   Notify.notifyDriver notificationType notificationTitle (message headPi) driver
@@ -211,26 +212,10 @@ assignDriver productInstanceId driverId = do
           "Check the app for more details."
         ]
 
-assignDriver' ::
-  ProductInstanceId ->
-  [ProductInstanceId] ->
-  V.Vehicle ->
-  SP.Person ->
-  DB.SqlDB ()
-assignDriver' productInstanceId piIdList vehicle driver = do
-  PIQ.updateVehicle' piIdList (Just $ vehicle ^. #_id)
-  PIQ.updateDriver' piIdList (Just personId)
-  DriverInformation.updateOnRide' driverId True
-  PIQ.updateStatusByIds' piIdList PI.TRIP_ASSIGNED
-  updateInfo' productInstanceId driver vehicle
-  where
-    personId = driver ^. #_id
-    driverId = DriverId $ _getPersonId personId
-
 updateVehicleDetails :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 updateVehicleDetails piList req = case req ^. #_vehicleId of
   Just _ ->
-    PIQ.updateVehicle (PI._id <$> piList) (req ^. #_vehicleId)
+    PIQ.updateVehicleFlow (PI._id <$> piList) (req ^. #_vehicleId)
   Nothing -> return ()
 
 updateStatus :: ProductInstanceId -> ProdInstUpdateReq -> Flow ()
@@ -261,8 +246,8 @@ notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
     (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
     _ -> return ()
 
-updateInfo :: ProductInstanceId -> Flow ()
-updateInfo piId = do
+updateInfoFlow :: ProductInstanceId -> Flow ()
+updateInfoFlow piId = do
   prodInst <- PIQ.findById piId
   case (prodInst ^. #_personId, prodInst ^. #_entityId) of
     (Just driverId, Just vehicleId) -> do
@@ -270,24 +255,9 @@ updateInfo piId = do
       vehicle <-
         VQ.findVehicleById (VehicleId vehicleId)
           >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
-      DB.runSqlDB (updateInfo' piId driver vehicle)
+      DB.runSqlDB (AQ.updateInfo piId driver vehicle)
         >>= either DB.throwDBError pure
     (_, _) -> return ()
-
-updateInfo' ::
-  ProductInstanceId ->
-  SP.Person ->
-  V.Vehicle ->
-  DB.SqlDB ()
-updateInfo' piId driver vehicle =
-  PIQ.updateInfo' piId info
-  where
-    info = encodeToText (mkInfoObj driver vehicle)
-    mkInfoObj drivInfo vehiInfo =
-      DriverVehicleInfo
-        { driverInfo = encodeToText drivInfo,
-          vehicleInfo = encodeToText vehiInfo
-        }
 
 unAssignDriverInfo :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 unAssignDriverInfo productInstances request = do
@@ -297,8 +267,8 @@ unAssignDriverInfo productInstances request = do
         "unAssignDriverInfo"
         "Can't unassign driver info for null ProductInstance."
       throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
-  _ <- PIQ.updateVehicle (PI._id <$> productInstances) Nothing
-  _ <- PIQ.updateDriver (PI._id <$> productInstances) Nothing
+  _ <- PIQ.updateVehicleFlow (PI._id <$> productInstances) Nothing
+  _ <- PIQ.updateDriverFlow (PI._id <$> productInstances) Nothing
   notifyDriver (request ^. #_personId)
   where
     notifyDriver Nothing = pure ()
@@ -342,12 +312,12 @@ updateTrip piId newStatus request = do
       _ <- unAssignDriverInfo piList request
       pure ()
     PI.INPROGRESS -> do
-      _ <- PIQ.updateStatusByIds (PI._id <$> piList) newStatus
+      _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) newStatus
       CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
       CQ.updateStatus (Case._id orderCase_) Case.INPROGRESS
       return ()
     PI.COMPLETED -> do
-      _ <- PIQ.updateStatusByIds (PI._id <$> piList) newStatus
+      _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) newStatus
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
@@ -355,12 +325,12 @@ updateTrip piId newStatus request = do
       whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime . DriverId . _getPersonId)
       return ()
     PI.TRIP_ASSIGNED -> do
-      _ <- PIQ.updateStatusByIds (PI._id <$> piList) PI.TRIP_ASSIGNED
+      _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) PI.TRIP_ASSIGNED
       pure ()
     _ -> return ()
   where
     updateOnRide Nothing _ = pure ()
-    updateOnRide (Just personId) status = DriverInformation.updateOnRide (DriverId $ _getPersonId personId) status
+    updateOnRide (Just personId) status = DriverInformation.updateOnRideFlow (DriverId $ _getPersonId personId) status
 
 notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do

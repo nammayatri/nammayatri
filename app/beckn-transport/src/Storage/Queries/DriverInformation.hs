@@ -64,16 +64,16 @@ updateActivity driverId active = do
         ]
     predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
 
-updateOnRide :: DriverId -> Bool -> Flow ()
-updateOnRide driverId onRide =
-  DB.runSqlDB (updateOnRide' driverId onRide)
+updateOnRideFlow :: DriverId -> Bool -> Flow ()
+updateOnRideFlow driverId onRide =
+  DB.runSqlDB (updateOnRide driverId onRide)
     >>= either DB.throwDBError pure
 
-updateOnRide' ::
+updateOnRide ::
   DriverId ->
   Bool ->
   DB.SqlDB ()
-updateOnRide' driverId onRide = do
+updateOnRide driverId onRide = do
   dbTable <- getDbTable'
   now <- asks DB.currentTime
   DB.update' dbTable (setClause onRide now) (predicate driverId)

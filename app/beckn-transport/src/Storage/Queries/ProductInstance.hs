@@ -135,18 +135,18 @@ findAllByCaseIds ids = do
     predicate Storage.ProductInstance {..} =
       B.in_ _caseId (B.val_ <$> ids)
 
-updateStatusByIds ::
+updateStatusByIdsFlow ::
   [ProductInstanceId] ->
   Storage.ProductInstanceStatus ->
   Flow (T.DBResult ())
-updateStatusByIds ids status =
-  DB.runSqlDB (updateStatusByIds' ids status)
+updateStatusByIdsFlow ids status =
+  DB.runSqlDB (updateStatusByIds ids status)
 
-updateStatusByIds' ::
+updateStatusByIds ::
   [ProductInstanceId] ->
   Storage.ProductInstanceStatus ->
   DB.SqlDB ()
-updateStatusByIds' ids status = do
+updateStatusByIds ids status = do
   dbTable <- getDbTable'
   currTime <- asks DB.currentTime
   DB.update'
@@ -299,15 +299,22 @@ findById pid = do
   where
     predicate Storage.ProductInstance {..} = _id ==. B.val_ pid
 
-updateDriver :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
-updateDriver ids driverId = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
-  DB.update
-    dbTable
-    (setClause driverId currTime)
-    (predicate ids)
+updateDriverFlow :: [ProductInstanceId] -> Maybe PersonId -> Flow ()
+updateDriverFlow ids driverId =
+  DB.runSqlDB (updateDriver ids driverId)
     >>= either DB.throwDBError pure
+
+updateDriver ::
+  [ProductInstanceId] ->
+  Maybe PersonId ->
+  DB.SqlDB ()
+updateDriver ids driverId = do
+  dbTable <- getDbTable'
+  now <- asks DB.currentTime
+  DB.update'
+    dbTable
+    (setClause driverId now)
+    (predicate ids)
   where
     predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)
     setClause sDriverId currTime Storage.ProductInstance {..} =
@@ -317,36 +324,16 @@ updateDriver ids driverId = do
           _updatedAt <-. B.val_ currTime
         ]
 
-updateDriver' ::
-  [ProductInstanceId] ->
-  Maybe PersonId ->
-  DB.SqlDB ()
-updateDriver' ids driverId = do
-  dbTable <- getDbTable'
-  now <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause driverId now)
-    (predicate ids)
-  where
-    predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)
-    setClause sDriverId currTime' Storage.ProductInstance {..} =
-      mconcat
-        [ _personId <-. B.val_ sDriverId,
-          _personUpdatedAt <-. B.val_ (Just currTime'),
-          _updatedAt <-. B.val_ currTime'
-        ]
-
-updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
-updateVehicle ids vehId = do
-  DB.runSqlDB (updateVehicle' ids (VehicleId <$> vehId))
+updateVehicleFlow :: [ProductInstanceId] -> Maybe Text -> Flow ()
+updateVehicleFlow ids vehId = do
+  DB.runSqlDB (updateVehicle ids (VehicleId <$> vehId))
     >>= either DB.throwDBError pure
 
-updateVehicle' ::
+updateVehicle ::
   [ProductInstanceId] ->
   Maybe VehicleId ->
   DB.SqlDB ()
-updateVehicle' ids vehId = do
+updateVehicle ids vehId = do
   dbTable <- getDbTable'
   now <- asks DB.currentTime
   DB.update'
@@ -361,13 +348,13 @@ updateVehicle' ids vehId = do
           _updatedAt <-. B.val_ currTime'
         ]
 
-updateInfo :: ProductInstanceId -> Text -> Flow ()
-updateInfo prodInstId info =
-  DB.runSqlDB (updateInfo' prodInstId info)
+updateInfoFlow :: ProductInstanceId -> Text -> Flow ()
+updateInfoFlow prodInstId info =
+  DB.runSqlDB (updateInfo prodInstId info)
     >>= either DB.throwDBError pure
 
-updateInfo' :: ProductInstanceId -> Text -> DB.SqlDB ()
-updateInfo' prodInstId info = do
+updateInfo :: ProductInstanceId -> Text -> DB.SqlDB ()
+updateInfo prodInstId info = do
   dbTable <- getDbTable'
   DB.update'
     dbTable

@@ -28,7 +28,7 @@ updateStatusByIds :: [ProductInstanceId] -> ProductInstanceStatus -> Flow ()
 updateStatusByIds ids status = do
   productInstances <- findAllByIds ids
   validatePIStatusesChange' status productInstances
-  result <- Q.updateStatusByIds ids status
+  result <- Q.updateStatusByIdsFlow ids status
   checkDBError result
 
 -- | Find Product Instance by id

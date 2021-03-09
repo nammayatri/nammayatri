@@ -249,7 +249,7 @@ cancelRide rideId = do
         Nothing -> pure ()
         Just driverId -> do
           driver <- Person.findPersonById driverId
-          DriverInformation.updateOnRide (DriverId $ _getPersonId driverId) False
+          DriverInformation.updateOnRideFlow (DriverId $ _getPersonId driverId) False
           Notify.notifyDriverOnCancel c driver
 
 -- TODO: Move this to core Utils.hs
