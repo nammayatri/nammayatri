@@ -33,7 +33,6 @@ import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
 import qualified Product.Location as Location
 import qualified Product.Person as Person
-import Servant.Client
 import qualified Storage.Queries.Location as Loc
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
@@ -228,7 +227,7 @@ sendOnSearchFailed productCase transporterOrg err = do
             _transaction_id = last $ T.split (== '_') $ productCase ^. #_shortId,
             _message_id = productCase ^. #_shortId,
             _bap_uri = Nothing,
-            _bpp_uri = Just $ makeBppUrl transporterOrg $ nwAddress appEnv,
+            _bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
             _timestamp = currTime,
             _ttl = Nothing
           }
@@ -273,7 +272,7 @@ mkOnSearchPayload productCase productInstances transporterOrg = do
             _transaction_id = last $ T.split (== '_') $ productCase ^. #_shortId,
             _message_id = productCase ^. #_shortId,
             _bap_uri = Nothing,
-            _bpp_uri = Just $ makeBppUrl transporterOrg $ nwAddress appEnv,
+            _bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
             _timestamp = currTime,
             _ttl = Nothing
           }
@@ -303,9 +302,3 @@ mkProviderStats piCount =
       _inprogress = List.lookup ProductInstance.INPROGRESS piCount,
       _confirmed = List.lookup ProductInstance.CONFIRMED piCount
     }
-
-makeBppUrl :: Org.Organization -> BaseUrl -> BaseUrl
-makeBppUrl transporterOrg url =
-  let orgId = _getOrganizationId $ transporterOrg ^. #_id
-      newPath = baseUrlPath url <> "/" <> T.unpack orgId
-   in url {baseUrlPath = newPath}

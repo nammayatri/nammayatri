@@ -8,6 +8,9 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.Ack as Ack
+import qualified Beckn.Types.Core.Context as Context
+import qualified Beckn.Types.Core.Domain as Domain
+import qualified Beckn.Types.Core.Error as Error
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -59,24 +62,75 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   ProductInstance.create trackerProductInstance
   _ <- Case.updateStatus (searchCase ^. #_id) Case.COMPLETED
 
-  fork "OnConfirmRequest" $ do
-    result <- runSafeFlow $ do
-      pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
-      vehicleVariant :: Vehicle.Variant <-
-        (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM500 "NO_VEHICLE_VARIANT"
-      driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
-      setDriverPool prodInstId driverPool
-      L.logInfo @Text "OnConfirm" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (_getPersonId <$> driverPool) ||+ ""
-    case result of
-      Right () -> do
-        callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-        let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
-        notifyGateway searchCase orderProductInstance trackerCase callbackUrl bppShortId
-      Left err -> do
-        L.logError @Text "OnConfirmRequest" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
-        pure ()
+  fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
   mkAckResponse uuid "confirm"
+
+onConfirmCallback ::
+  Organization.Organization ->
+  ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstance ->
+  Case.Case ->
+  Case.Case ->
+  Case.Case ->
+  Organization.Organization ->
+  Flow ()
+onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg = do
+  let transporterId = transporterOrg ^. #_id
+  let prodInstId = productInstance ^. #_id
+  result <- runSafeFlow $ do
+    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
+    vehicleVariant :: Vehicle.Variant <-
+      (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
+        & fromMaybeM500 "NO_VEHICLE_VARIANT"
+    driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
+    setDriverPool prodInstId driverPool
+    L.logInfo @Text "OnConfirmCallback" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (_getPersonId <$> driverPool) ||+ ""
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
+  case result of
+    Right () -> notifySuccessGateway callbackUrl bppShortId
+    Left err -> do
+      L.logError @Text "OnConfirmCallback" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
+      notifyErrorGateway err callbackUrl bppShortId
+  where
+    notifySuccessGateway callbackUrl bppShortId = do
+      allPis <- ProductInstance.findAllByCaseId (searchCase ^. #_id)
+      onConfirmPayload <- mkOnConfirmPayload searchCase [orderProductInstance] allPis trackerCase
+      L.logInfo @Text "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| callbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
+      _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
+      pure ()
+    notifyErrorGateway err callbackUrl bppShortId = do
+      currTime <- getCurrTime
+      appEnv <- ask
+      let context =
+            Context.Context
+              { _domain = Domain.MOBILITY,
+                _country = Just "IND",
+                _city = Nothing,
+                _action = "on_confirm",
+                _core_version = Just "0.8.2",
+                _domain_version = Just "0.8.2",
+                _transaction_id = last $ T.split (== '_') $ searchCase ^. #_shortId,
+                _message_id = searchCase ^. #_shortId,
+                _bap_uri = Nothing,
+                _bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
+                _timestamp = currTime,
+                _ttl = Nothing
+              }
+      let payload =
+            API.CallbackReq
+              { context,
+                contents =
+                  Left $
+                    Error.Error
+                      { _type = "DOMAIN-ERROR",
+                        _code = err,
+                        _path = Nothing,
+                        _message = Nothing
+                      }
+              }
+      _ <- Gateway.onConfirm callbackUrl payload bppShortId
+      pure ()
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
@@ -184,15 +238,6 @@ mkTrackerProductInstance piId caseId prodInst currTime = do
         _udf4 = prodInst ^. #_udf4,
         _udf5 = prodInst ^. #_udf5
       }
-
-notifyGateway :: Case.Case -> ProductInstance.ProductInstance -> Case.Case -> BaseUrl -> Text -> Flow ()
-notifyGateway c orderPi trackerCase callbackUrl bppShortId = do
-  logInfo "notifyGateway" $ show c
-  allPis <- ProductInstance.findAllByCaseId (c ^. #_id)
-  onConfirmPayload <- mkOnConfirmPayload c [orderPi] allPis trackerCase
-  logInfo "notifyGateway onConfirm Request Payload" $ show onConfirmPayload
-  _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
-  return ()
 
 mkOnConfirmPayload :: Case.Case -> [ProductInstance.ProductInstance] -> [ProductInstance.ProductInstance] -> Case.Case -> Flow API.OnConfirmReq
 mkOnConfirmPayload c pis _allPis trackerCase = do

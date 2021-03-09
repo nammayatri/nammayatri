@@ -47,6 +47,7 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified External.Gateway.Transform as GT
 import qualified Models.Case as Case
+import Servant.Client (BaseUrl (baseUrlPath))
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
@@ -310,3 +311,9 @@ mkRideReq pId rideRequestType = do
         _createdAt = currTime,
         _type = rideRequestType
       }
+
+makeBppUrl :: Organization.Organization -> App.BaseUrl -> App.BaseUrl
+makeBppUrl transporterOrg url =
+  let orgId = App._getOrganizationId $ transporterOrg ^. #_id
+      newPath = baseUrlPath url <> "/" <> T.unpack orgId
+   in url {baseUrlPath = newPath}
