@@ -4,6 +4,8 @@ module Types.API.DriverInformation
     DriverInformationResponse (..),
     GetRideInfoRes (..),
     RideInfo (..),
+    ListDriverRes (..),
+    DriverEntityRes (..),
   )
 where
 
@@ -12,6 +14,8 @@ import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person (Person)
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
+import Beckn.Types.Storage.Vehicle (Vehicle)
+import Data.Aeson
 import Data.Time
 import EulerHS.Prelude
 import qualified Types.API.Person as PersonAPI
@@ -51,3 +55,19 @@ data RideInfo = RideInfo
     estimatedPrice :: Text
   }
   deriving (Generic, ToJSON, FromJSON, Show)
+
+newtype ListDriverRes = ListDriverRes
+  {drivers :: [DriverEntityRes]}
+  deriving (Generic, ToJSON, FromJSON)
+
+data DriverEntityRes = DriverEntityRes
+  { id :: Id Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    linkedVehicle :: Maybe Vehicle,
+    active :: Bool,
+    onRide :: Bool
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)

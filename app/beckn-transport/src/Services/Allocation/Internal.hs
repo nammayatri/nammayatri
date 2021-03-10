@@ -102,7 +102,7 @@ getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList
 checkAvailability :: NonEmpty (Id Driver) -> Flow [Id Driver]
 checkAvailability driverIds = do
   driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driverIds
-  pure $ map SDriverInfo._driverId driversInfo
+  pure $ map (cast . SDriverInfo._driverId) driversInfo
 
 getDriverResponse :: Id Ride -> Id Driver -> Flow (Maybe DriverResponse)
 getDriverResponse rideId driverId =
@@ -157,7 +157,7 @@ addNotificationStatus rideId driverId expiryTime = do
 addAvailableDriver :: SDriverInfo.DriverInformation -> [Id Driver] -> [Id Driver]
 addAvailableDriver driverInfo availableDriversIds =
   if driverInfo ^. #_active && not (driverInfo ^. #_onRide)
-    then driverInfo ^. #_driverId : availableDriversIds
+    then cast (driverInfo ^. #_driverId) : availableDriversIds
     else availableDriversIds
 
 logEvent :: AllocationEventType -> Id Ride -> Flow ()

@@ -383,6 +383,11 @@ type DriverInformationAPI =
            :> TokenAuth
            :> QueryParam "productInstanceId" (Id Ride)
            :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
+           :<|> "list"
+           :> AdminTokenAuth
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
+           :> Get '[JSON] DriverInformationAPI.ListDriverRes
        )
 
 driverInformationFlow :: FlowServer DriverInformationAPI
@@ -390,6 +395,7 @@ driverInformationFlow =
   DriverInformation.getInformation
     :<|> DriverInformation.setActivity
     :<|> DriverInformation.getRideInfo
+    :<|> DriverInformation.listDriver
 
 type RideAPI =
   "ride"

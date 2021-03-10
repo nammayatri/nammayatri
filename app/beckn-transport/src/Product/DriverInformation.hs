@@ -2,6 +2,7 @@
 
 module Product.DriverInformation where
 
+import App.Types
 import qualified App.Types as App
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
@@ -19,6 +20,7 @@ import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
+import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.App
 import Types.Error
@@ -78,3 +80,23 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
     driverId = Id _EntityId
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ Id <$> mbId
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long
+
+listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
+listDriver orgId mbLimit mbOffset = withFlowHandler $ do
+  personList <- QDriverInformation.findAllWithLimitOffsetByOrgIds mbLimit mbOffset [orgId]
+  respPersonList <- traverse convertToRes personList
+  return $ DriverInformationAPI.ListDriverRes respPersonList
+  where
+    convertToRes (person, driverInfo) = do
+      vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person ^. #_udf1
+      return $
+        DriverInformationAPI.DriverEntityRes
+          { id = person ^. #_id,
+            firstName = person ^. #_firstName,
+            middleName = person ^. #_middleName,
+            lastName = person ^. #_lastName,
+            mobileNumber = person ^. #_mobileNumber,
+            linkedVehicle = vehicle,
+            active = driverInfo ^. #_active,
+            onRide = driverInfo ^. #_onRide
+          }

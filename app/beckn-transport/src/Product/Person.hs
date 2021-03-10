@@ -98,7 +98,7 @@ createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
         DriverInformation.DriverInformation
-          { _driverId = driverId,
+          { _driverId = personId,
             _active = False,
             _onRide = False,
             _createdAt = now,

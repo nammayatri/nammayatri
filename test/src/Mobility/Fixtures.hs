@@ -140,7 +140,7 @@ rideRespond :<|> _ = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
-_ :<|> setDriverOnline :<|> getNotificationInfo = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
+_ :<|> setDriverOnline :<|> getNotificationInfo :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
 buildAppCancelReq guid entityId entityType =
