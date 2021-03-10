@@ -13,7 +13,6 @@ import Beckn.Product.Validation.Context
     validateDomain,
   )
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App as TA
 import Beckn.Types.Common (GuidLike (..))
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Cancel as API
@@ -107,12 +106,12 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId = DB.runSqlDBTrans
   case piList of
     [] -> pure ()
     (prdInst : _) -> do
-      QCase.updateStatusByIds' (ProductInstance._caseId <$> piList) Case.CLOSED
+      QCase.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
       let mbDriverId = prdInst ^. #_personId
       whenJust mbDriverId (\driverId -> DriverInformation.updateOnRide (cast driverId) False)
-  ProductInstance.updateStatus' searchPiId ProductInstance.CANCELLED
-  ProductInstance.updateStatus' trackerPiId ProductInstance.COMPLETED
-  ProductInstance.updateStatus' orderPiId ProductInstance.CANCELLED
+  ProductInstance.updateStatus searchPiId ProductInstance.CANCELLED
+  ProductInstance.updateStatus trackerPiId ProductInstance.COMPLETED
+  ProductInstance.updateStatus orderPiId ProductInstance.CANCELLED
 
 -- TODO : Add notifying transporter admin with FCM
 

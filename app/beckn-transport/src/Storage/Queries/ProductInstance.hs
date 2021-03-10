@@ -24,10 +24,6 @@ import qualified Types.Storage.DB as DB
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB._productInstance . DB.transporterDb <$> getSchemaName
 
-getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
-getDbTable' =
-  DB._productInstance . DB.transporterDb <$> getSchemaName
-
 getCsTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT))
 getCsTable =
   DB._case . DB.transporterDb <$> getSchemaName
@@ -106,11 +102,11 @@ updateStatusForProducts productId status = do
           _status <-. B.val_ scStatus
         ]
 
-updateStatus ::
+updateStatusFlow ::
   Id Storage.ProductInstance ->
   Storage.ProductInstanceStatus ->
   Flow (T.DBResult ())
-updateStatus prodInstId status = do
+updateStatusFlow prodInstId status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
   DB.update
@@ -126,12 +122,12 @@ updateStatus prodInstId status = do
           _status <-. B.val_ scStatus
         ]
 
-updateStatus' ::
+updateStatus ::
   Id Storage.ProductInstance ->
   Storage.ProductInstanceStatus ->
   DB.SqlDB ()
-updateStatus' prodInstId status = do
-  dbTable <- getDbTable'
+updateStatus prodInstId status = do
+  dbTable <- getDbTable
   currTime <- asks DB.currentTime
   DB.update'
     dbTable

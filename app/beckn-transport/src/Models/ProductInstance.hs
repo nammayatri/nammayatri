@@ -21,7 +21,7 @@ import Types.Error
 updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus prodInstId newStatus = do
   validatePIStatusChange newStatus prodInstId
-  result <- Q.updateStatus prodInstId newStatus
+  result <- Q.updateStatusFlow prodInstId newStatus
   checkDBError result
 
 -- | Validate and update ProductInstances statusses

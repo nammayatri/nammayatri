@@ -62,7 +62,7 @@ updateStatusByIds :: [Id Case] -> CaseStatus -> Flow ()
 updateStatusByIds ids status = do
   cases <- findAllByIds ids
   validateCasesStatusesChange' status cases
-  result <- Q.updateStatusByIds ids status
+  result <- Q.updateStatusByIdsFlow ids status
   checkDBError result
 
 -- | Find Case by id and type
