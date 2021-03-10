@@ -235,7 +235,7 @@ spec:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
               - key: beckn-transport.dhall
-                path: config/beckn-transport.dhall
+                path: config/beckn-transport-btm.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
