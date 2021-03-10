@@ -50,7 +50,7 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
   ProductInstance.create orderProductInstance
   RideRequest.create
-    =<< BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION (orderProductInstance ^. #_createdAt)
+    =<< BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
   _ <- Case.updateStatus (orderCase ^. #_id) Case.INPROGRESS
   _ <- ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case

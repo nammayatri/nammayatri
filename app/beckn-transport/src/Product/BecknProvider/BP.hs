@@ -65,7 +65,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
   prodInst <- ProductInstance.findById (App.ProductInstanceId prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
-  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) SC.RIDEORDER
+  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
   RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
   uuid <- L.generateGUID
   mkAckResponse uuid "cancel"
@@ -299,11 +299,11 @@ validateContext action context = do
   validateDomain Domain.MOBILITY context
   validateContextCommons action context
 
-mkRideReq :: ProductInstanceId -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
+mkRideReq :: App.ProductInstanceId -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
 mkRideReq pId rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrTime
-  let rideId = RideId $ _getProductInstanceId pId
+  let rideId = RideId $ App._getProductInstanceId pId
   pure
     SRideRequest.RideRequest
       { _id = RideRequestId guid,
