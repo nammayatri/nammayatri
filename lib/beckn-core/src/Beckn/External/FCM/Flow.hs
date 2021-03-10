@@ -51,13 +51,24 @@ createAndroidConfig :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotific
 createAndroidConfig title body tag =
   def & fcmdNotification ?~ notification
   where
-    notification =
-      def & fcmdTitle ?~ title
+    notification = createAndroidNotification title body tag
+
+createAndroidNotification :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidNotification
+createAndroidNotification title body notificationType =
+  let notification = case notificationType of
+        ALLOCATION_REQUEST ->
+          def & fcmdSound ?~ "notify_sound.mp3"
+            & fcmdChannelId ?~ "RINGING_ALERT"
+        TRIP_STARTED ->
+          def & fcmdSound ?~ "notify_otp_sound.mp3"
+            & fcmdChannelId ?~ "TRIP_STARTED"
+        _ -> def
+   in notification & fcmdTitle ?~ title
         & fcmdBody ?~ body
         & fcmdIcon
           ?~ FCMNotificationIconUrl
             "https://api.sandbox.beckn.juspay.in/static/images/ride-success.png"
-        & fcmdTag ?~ tag
+        & fcmdTag ?~ notificationType
 
 -- | Send FCM message to a person
 notifyPerson ::

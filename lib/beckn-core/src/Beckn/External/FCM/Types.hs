@@ -236,8 +236,31 @@ $(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidNo
 
 instance Default FCMAndroidNotification where
   def =
-    let z = Nothing
-     in FCMAndroidNotification z z z z z z z z z z z z z z z z z z z z z
+    let sound = Just "default"
+        channelId = Just "General"
+     in FCMAndroidNotification
+          { _fcmdTitle = Nothing,
+            _fcmdBody = Nothing,
+            _fcmdIcon = Nothing,
+            _fcmdColor = Nothing,
+            _fcmdSound = sound,
+            _fcmdTag = Nothing,
+            _fcmdClickAction = Nothing,
+            _fcmdBodyLocKey = Nothing,
+            _fcmdBodyLockArgs = Nothing,
+            _fcmdTitleLocKey = Nothing,
+            _fcmdTitleLockArgs = Nothing,
+            _fcmdChannelId = channelId,
+            _fcmdTicker = Nothing,
+            _fcmdSticky = Nothing,
+            _fcmdEventTime = Nothing,
+            _fcmdLocalOnly = Nothing,
+            _fcmdNotificationPriority = Nothing,
+            _fcmdDefaultSound = Nothing,
+            _fcmdDefalutVibrateTimings = Nothing,
+            _fcmdDefaultLightSettings = Nothing,
+            _fcmdVibrateTimings = Nothing
+          }
 
 -- | Android specific options for messages sent through FCM connection server
 data FCMAndroidConfig = FCMAndroidConfig
