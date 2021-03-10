@@ -66,8 +66,8 @@ findActiveNotificationByRideId rideId = do
 findActiveNotificationByDriverId :: DriverId -> Maybe RideId -> Flow (Maybe NotificationStatus.NotificationStatus)
 findActiveNotificationByDriverId driverId rideId = do
   dbTable <- getDbTable
-  currTime <- getCurrTime
-  DB.findOne dbTable (predicate currTime)
+  now <- getCurrTime
+  DB.findOne dbTable (predicate now)
     >>= either DB.throwDBError pure
   where
     predicate currentTime NotificationStatus.NotificationStatus {..} =

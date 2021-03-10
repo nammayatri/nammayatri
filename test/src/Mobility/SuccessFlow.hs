@@ -98,11 +98,11 @@ spec = do
 
       tripAssignedPI :| [] <- poll $ do
         -- List all confirmed rides (type = RIDEORDER)
-        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER)
-        rideReqResult `shouldSatisfy` isRight
+        rideReqRes <- runClient tbeClientEnv (buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER)
+        rideReqRes `shouldSatisfy` isRight
 
         -- Filter order productInstance
-        let Right rideListRes = rideReqResult
+        let Right rideListRes = rideReqRes
             tbePiList = TbePI._productInstance <$> rideListRes
             transporterOrdersPi = filter (\pI -> (_getProductInstanceId <$> PI._parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi

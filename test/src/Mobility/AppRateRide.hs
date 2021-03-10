@@ -92,9 +92,9 @@ spec = do
       driverAcceptRideRequestResult `shouldSatisfy` isRight
 
       tripAssignedPI :| [] <- poll $ do
-        rideRequestResponse <- runClient transporterClient $ F.buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER
-        rideRequestResponse `shouldSatisfy` isRight
-        let Right rideResponse = rideRequestResponse
+        rideRequestRes <- runClient transporterClient $ F.buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER
+        rideRequestRes `shouldSatisfy` isRight
+        let Right rideResponse = rideRequestRes
         let orders =
               rideResponse ^.. traverse . #_productInstance
                 & filter \pi -> pi ^. #_parentId == Just appProductInstanceId

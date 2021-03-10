@@ -254,6 +254,7 @@ authenticate = check handleKey
     throw401 :: HasLogContext r => FlowR r a
     throw401 =
       throwError401 "Invalid Auth"
+
 throwHttpError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> BSL.ByteString -> m a
 throwHttpError err errMsg = do
   logError "HTTP_ERROR" (decodeUtf8 errMsg)

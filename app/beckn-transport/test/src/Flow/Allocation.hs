@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation where
 
 import qualified Data.List.NonEmpty as NonEmpty
@@ -140,8 +138,7 @@ handle repository@Repository {..} =
       removeRequest = \requestId -> do
         modifyTVarIO rideRequestsVar $ Map.filterWithKey (\id _ -> id /= requestId)
         pure (),
-      addAllocationRequest = \rideId ->
-        addAllocationRequest repository rideId,
+      addAllocationRequest = addAllocationRequest repository,
       getRideInfo = \rideId -> do
         rides <- readTVarIO ridesVar
         case Map.lookup rideId rides of
