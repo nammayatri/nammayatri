@@ -63,15 +63,11 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   searchPi <- case ordPi ^. #_parentId of
     Just pid -> PIQ.findById pid
     Nothing -> throwError400 "INVALID FLOW"
-  piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   isAllowed ordPi req
-  when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
-    updateVehicleDetails piList req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
       DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
     updateStatus piId req
-  updateInfoFlow piId
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
   where
@@ -212,12 +208,6 @@ assignDriver productInstanceId driverId = do
           "Check the app for more details."
         ]
 
-updateVehicleDetails :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-updateVehicleDetails piList req = case req ^. #_vehicleId of
-  Just _ ->
-    PIQ.updateVehicleFlow (PI._id <$> piList) (req ^. #_vehicleId)
-  Nothing -> return ()
-
 updateStatus :: ProductInstanceId -> ProdInstUpdateReq -> Flow ()
 updateStatus piId req = do
   prodInst <- PIQ.findById piId
@@ -245,19 +235,6 @@ notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
   case (trackerCase, parentCase) of
     (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
     _ -> return ()
-
-updateInfoFlow :: ProductInstanceId -> Flow ()
-updateInfoFlow piId = do
-  prodInst <- PIQ.findById piId
-  case (prodInst ^. #_personId, prodInst ^. #_entityId) of
-    (Just driverId, Just vehicleId) -> do
-      driver <- PersQ.findPersonById driverId
-      vehicle <-
-        VQ.findVehicleById (VehicleId vehicleId)
-          >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
-      DB.runSqlDB (AQ.updateInfo piId driver vehicle)
-        >>= either DB.throwDBError pure
-    (_, _) -> return ()
 
 unAssignDriverInfo :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 unAssignDriverInfo productInstances request = do

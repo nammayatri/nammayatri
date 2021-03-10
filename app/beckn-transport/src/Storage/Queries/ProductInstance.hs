@@ -343,11 +343,6 @@ updateVehicle ids vehId = do
           _updatedAt <-. B.val_ currTime'
         ]
 
-updateInfoFlow :: ProductInstanceId -> Text -> Flow ()
-updateInfoFlow prodInstId info =
-  DB.runSqlDB (updateInfo prodInstId info)
-    >>= either DB.throwDBError pure
-
 updateInfo :: ProductInstanceId -> Text -> DB.SqlDB ()
 updateInfo prodInstId info = do
   dbTable <- getDbTable
