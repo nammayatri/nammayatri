@@ -408,7 +408,7 @@ mkCreateTaskReq context order = do
         drop_details = dropDet,
         sender_details = senderDet,
         receiver_details = receiverDet,
-        special_instructions = joinInstructions pickupIntructions dropIntructions,
+        special_instructions = joinInstructions orderId pickupIntructions dropIntructions,
         package_approx_value = mTotalValue,
         package_content = [packageContent],
         reference_id = order ^. #_prev_order_id
@@ -468,12 +468,13 @@ mkCreateTaskReq context order = do
         then Nothing
         else Just $ tag <> ": " <> T.intercalate ", " insts
 
-    joinInstructions pickupInstructions dropInstructions =
-      case (pickupInstructions, dropInstructions) of
-        (Just pickupInst, Just dropInst) -> Just $ pickupInst <> " and " <> dropInst
-        (Nothing, Just dropInst) -> Just dropInst
-        (Just pickupInst, Nothing) -> Just pickupInst
-        _ -> Nothing
+    joinInstructions orderId pickupInstructions dropInstructions =
+      let orderMsg = "Order " <> orderId
+       in case (pickupInstructions, dropInstructions) of
+            (Just pickupInst, Just dropInst) -> Just $ orderMsg <> ": " <> pickupInst <> " and " <> dropInst
+            (Nothing, Just dropInst) -> Just $ orderMsg <> ": " <> dropInst
+            (Just pickupInst, Nothing) -> Just $ orderMsg <> ": " <> pickupInst
+            _ -> Just orderMsg
 
 mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
 mkOnConfirmReq context order = do
