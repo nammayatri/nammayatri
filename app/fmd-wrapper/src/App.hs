@@ -30,11 +30,11 @@ import Network.Wai.Handler.Warp
 runFMDWrapper :: (AppEnv -> AppEnv) -> IO ()
 runFMDWrapper configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
-  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings
-  R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     putStrLn @String "Initializing Redis Connections..."
     let shortOrgId = appEnv ^. #selfId
     case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of

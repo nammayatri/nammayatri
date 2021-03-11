@@ -44,8 +44,8 @@ prepareAppOptions =
 
 runAppBackend' :: AppEnv -> Settings -> IO ()
 runAppBackend' appEnv settings = do
-  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
-  R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
     let shortOrgId = appEnv ^. #bapSelfId
     case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of

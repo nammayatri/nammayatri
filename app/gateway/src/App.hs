@@ -43,7 +43,7 @@ runGateway configModifier = do
   activeConnections <- newTVarIO (0 :: Int)
   void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
-  let loggerCfg = getEulerLoggerConfig $ appCfg ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime $ appCfg ^. #loggerConfig
       settings =
         setOnExceptionResponse gatewayExceptionResponse $
           setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
@@ -55,7 +55,7 @@ runGateway configModifier = do
   let autoMigrate = appCfg ^. #autoMigrate
   cache <- C.newCache Nothing
   threadId <- forkIO $
-    E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+    E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
       let appEnv = mkAppEnv appCfg cache
       let shortOrgId = appEnv ^. #gwId
       case prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId of

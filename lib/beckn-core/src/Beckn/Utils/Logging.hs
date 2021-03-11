@@ -2,6 +2,8 @@ module Beckn.Utils.Logging where
 
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
+import EulerHS.Runtime (LoggerRuntime, createLoggerRuntime)
+import EulerHS.Types (defaultFlowFormatter)
 import qualified EulerHS.Types as T
 
 data LogLevel = DEBUG | INFO | WARNING | ERROR
@@ -43,11 +45,11 @@ getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
 getEulerLoggerConfig loggerConfig =
   T.defaultLoggerConfig
     { T._isAsync = isAsync loggerConfig,
-      T._level = logLevel,
+      T._logLevel = logLevel,
       T._logToFile = logToFile loggerConfig,
       T._logFilePath = logFilePath loggerConfig,
       T._logToConsole = logToConsole loggerConfig,
-      T._logRawSql = logRawSql loggerConfig
+      T._logRawSql = logSql
     }
   where
     logLevel = case level loggerConfig of
@@ -55,3 +57,10 @@ getEulerLoggerConfig loggerConfig =
       INFO -> T.Info
       WARNING -> T.Warning
       ERROR -> T.Error
+    logSql =
+      if logRawSql loggerConfig
+        then T.UnsafeLogSQL_DO_NOT_USE_IN_PRODUCTION
+        else T.SafelyOmitSqlLogs
+
+getEulerLoggerRuntime :: LoggerConfig -> IO LoggerRuntime
+getEulerLoggerRuntime = createLoggerRuntime defaultFlowFormatter . getEulerLoggerConfig

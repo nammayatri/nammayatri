@@ -44,8 +44,8 @@ prepareAppOptions =
 
 runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
 runTransporterBackendApp' appEnv settings = do
-  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
-  R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
     try (runFlowR flowRt appEnv Storage.loadAllProviders) >>= \case
       Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)

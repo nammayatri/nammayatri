@@ -31,11 +31,11 @@ runMockApp :: (AppEnv -> AppEnv) -> IO ()
 runMockApp configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "mock-app-backend"
   Metrics.serve (metricsPort appEnv)
-  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse mockAppExceptionResponse $
           setPort (port appEnv) defaultSettings
-  E.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
     let selfId = appEnv ^. #selfId
     case prepareAuthManager flowRt appEnv "Authorization" selfId of

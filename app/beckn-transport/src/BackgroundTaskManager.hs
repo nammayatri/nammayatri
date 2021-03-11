@@ -26,7 +26,7 @@ import System.Posix.Signals
 runBackgroundTaskManager :: (AppEnv -> AppEnv) -> IO ()
 runBackgroundTaskManager configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "beckn-transport"
-  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
   let redisCfg = appEnv ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appEnv ^. #bgtmPort
@@ -38,7 +38,7 @@ runBackgroundTaskManager configModifier = do
   void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
 
-  R.withFlowRuntime (Just loggerCfg) $ \flowRt -> do
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     try (runFlowR flowRt appEnv checkConnections) >>= \case
       Left (e :: SomeException) -> putStrLn @Text ("Connections check failed. Exception thrown: " <> show e) >> handleShutdown shutdown
       Right _ -> do
