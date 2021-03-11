@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.Utils.Common where
 
@@ -474,9 +475,12 @@ headMaybe :: [a] -> Maybe a
 headMaybe [] = Nothing
 headMaybe (x : _) = Just x
 
-getSchemaName :: HasDbCfg r => FlowR r Text
-getSchemaName =
-  asks (schemaName <$> getField @"dbCfg")
+class HasSchemaName m where
+  getSchemaName :: m Text
+
+instance HasDbCfg r => HasSchemaName (FlowR r) where
+  getSchemaName =
+    asks (schemaName <$> getField @"dbCfg")
 
 -- | Get trace flag from ENV var
 getTraceFlag :: HasTraceFlag r => FlowR r TraceFlag

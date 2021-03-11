@@ -5,8 +5,10 @@
 module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.DB.Config as DB
+import Beckn.Types.Common (FlowR)
 import Beckn.Utils.Common
 import Beckn.Utils.Logging (Log (..))
+import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
@@ -34,6 +36,43 @@ type RunReadablePgTable table db =
   )
 
 type Table table db = B.DatabaseEntity Postgres db (B.TableEntity table)
+
+data DBEnv = DBEnv
+  { schemaName :: Text,
+    currentTime :: UTCTime
+  }
+
+type SqlDB = ReaderT DBEnv (L.SqlDB Pg)
+
+instance HasSchemaName SqlDB where
+  getSchemaName = asks schemaName
+
+runSqlDB' ::
+  (HasCallStack, T.JSONEx a) =>
+  ( T.SqlConn Pg ->
+    L.SqlDB Pg a ->
+    FlowR r (T.DBResult a)
+  ) ->
+  SqlDB a ->
+  DB.FlowWithDb r (T.DBResult a)
+runSqlDB' runSqlDBFunction query = do
+  connection <- DB.getOrInitConn
+  schemaName <- getSchemaName
+  currentTime <- getCurrTime
+  let env = DBEnv {..}
+  runSqlDBFunction connection (runReaderT query env)
+
+runSqlDB ::
+  (HasCallStack, T.JSONEx a) =>
+  SqlDB a ->
+  DB.FlowWithDb r (T.DBResult a)
+runSqlDB = runSqlDB' L.runDB
+
+runSqlDBTransaction ::
+  (HasCallStack, T.JSONEx a) =>
+  SqlDB a ->
+  DB.FlowWithDb r a
+runSqlDBTransaction = runSqlDB' L.runTransaction >=> either throwDBError pure
 
 run :: (HasCallStack, T.JSONEx a) => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
 run query = do
@@ -170,21 +209,22 @@ findAllRows' ::
   L.SqlDB Pg [table Identity]
 findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
 
+-- use this only for single sql statement, for multiple use transactions
 update ::
   (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   DB.FlowWithDb r (T.DBResult ())
-update dbTable setClause predicate = run $ update' dbTable setClause predicate
+update dbTable setClause predicate = runSqlDB $ update' dbTable setClause predicate
 
 update' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  L.SqlDB Pg ()
-update' dbTable setClause predicate = L.updateRows $ B.update dbTable setClause predicate
+  SqlDB ()
+update' dbTable setClause predicate = lift . L.updateRows $ B.update dbTable setClause predicate
 
 delete ::
   (HasCallStack, RunReadablePgTable table db) =>

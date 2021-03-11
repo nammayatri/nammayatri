@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Queries.ProductInstance where
 
@@ -23,6 +22,10 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable =
+  DB._productInstance . DB.transporterDb <$> getSchemaName
+
+getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
+getDbTable' =
   DB._productInstance . DB.transporterDb <$> getSchemaName
 
 getCsTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT))
@@ -136,18 +139,25 @@ updateStatusByIds ::
   [ProductInstanceId] ->
   Storage.ProductInstanceStatus ->
   Flow (T.DBResult ())
-updateStatusByIds ids status = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
-  DB.update
+updateStatusByIds ids status =
+  DB.runSqlDB (updateStatusByIds' ids status)
+
+updateStatusByIds' ::
+  [ProductInstanceId] ->
+  Storage.ProductInstanceStatus ->
+  DB.SqlDB ()
+updateStatusByIds' ids status = do
+  dbTable <- getDbTable'
+  currTime <- asks DB.currentTime
+  DB.update'
     dbTable
     (setClause status currTime)
     (predicate ids)
   where
     predicate pids Storage.ProductInstance {..} = B.in_ _id (B.val_ <$> pids)
-    setClause scStatus currTime Storage.ProductInstance {..} =
+    setClause scStatus currTime' Storage.ProductInstance {..} =
       mconcat
-        [ _updatedAt <-. B.val_ currTime,
+        [ _updatedAt <-. B.val_ currTime',
           _status <-. B.val_ scStatus
         ]
 
@@ -193,6 +203,25 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
+productInstancejoinQuery ::
+  ( B.Database be db,
+    B.HasSqlEqualityCheck be CaseId,
+    B.HasSqlEqualityCheck be ProductsId
+  ) =>
+  B.DatabaseEntity be db (B.TableEntity CaseT) ->
+  B.DatabaseEntity be db (B.TableEntity ProductsT) ->
+  B.DatabaseEntity be db (B.TableEntity Storage.ProductInstanceT) ->
+  (CaseT (B.QExpr be s) -> B.QExpr be s Bool) ->
+  (ProductsT (B.QExpr be s) -> B.QExpr be s Bool) ->
+  (Storage.ProductInstanceT (B.QExpr be s) -> B.QExpr be s Bool) ->
+  B.Q
+    be
+    db
+    s
+    ( CaseT (B.QExpr be s),
+      ProductsT (B.QExpr be s),
+      Storage.ProductInstanceT (B.QExpr be s)
+    )
 productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
   i <- B.filter_ pred1 $ B.all_ tbl1
   j <- B.filter_ pred2 $ B.all_ tbl2
@@ -288,36 +317,67 @@ updateDriver ids driverId = do
           _updatedAt <-. B.val_ currTime
         ]
 
-updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
-updateVehicle ids vehId = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
-  DB.update
+updateDriver' ::
+  [ProductInstanceId] ->
+  Maybe PersonId ->
+  DB.SqlDB ()
+updateDriver' ids driverId = do
+  dbTable <- getDbTable'
+  now <- asks DB.currentTime
+  DB.update'
     dbTable
-    (setClause vehId currTime)
+    (setClause driverId now)
     (predicate ids)
-    >>= either DB.throwDBError pure
   where
     predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)
-    setClause vehicleId currTime Storage.ProductInstance {..} =
+    setClause sDriverId currTime' Storage.ProductInstance {..} =
       mconcat
-        [ _entityId <-. B.val_ vehicleId,
-          _updatedAt <-. B.val_ currTime
+        [ _personId <-. B.val_ sDriverId,
+          _personUpdatedAt <-. B.val_ (Just currTime'),
+          _updatedAt <-. B.val_ currTime'
         ]
 
-updateInfo :: ProductInstanceId -> Maybe Text -> Flow ()
-updateInfo prodInstId info = do
-  dbTable <- getDbTable
-  DB.update
+updateVehicle :: [ProductInstanceId] -> Maybe Text -> Flow ()
+updateVehicle ids vehId = do
+  DB.runSqlDB (updateVehicle' ids (VehicleId <$> vehId))
+    >>= either DB.throwDBError pure
+
+updateVehicle' ::
+  [ProductInstanceId] ->
+  Maybe VehicleId ->
+  DB.SqlDB ()
+updateVehicle' ids vehId = do
+  dbTable <- getDbTable'
+  now <- asks DB.currentTime
+  DB.update'
+    dbTable
+    (setClause (_getVehicleId <$> vehId) now)
+    (predicate ids)
+  where
+    predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)
+    setClause vehicleId currTime' Storage.ProductInstance {..} =
+      mconcat
+        [ _entityId <-. B.val_ vehicleId,
+          _updatedAt <-. B.val_ currTime'
+        ]
+
+updateInfo :: ProductInstanceId -> Text -> Flow ()
+updateInfo prodInstId info =
+  DB.runSqlDB (updateInfo' prodInstId info)
+    >>= either DB.throwDBError pure
+
+updateInfo' :: ProductInstanceId -> Text -> DB.SqlDB ()
+updateInfo' prodInstId info = do
+  dbTable <- getDbTable'
+  DB.update'
     dbTable
     (setClause info)
     (predicate prodInstId)
-    >>= either DB.throwDBError pure
   where
     predicate id Storage.ProductInstance {..} = _id ==. B.val_ id
     setClause pInfo Storage.ProductInstance {..} =
       mconcat
-        [_info <-. B.val_ pInfo]
+        [_info <-. B.val_ (Just pInfo)]
 
 findAllByVehicleId :: Maybe Text -> Flow [Storage.ProductInstance]
 findAllByVehicleId id = do

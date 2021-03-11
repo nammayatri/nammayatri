@@ -12,8 +12,10 @@ import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
-getDbTable =
-  DB._driverInformation . DB.transporterDb <$> getSchemaName
+getDbTable = DB._driverInformation . DB.transporterDb <$> getSchemaName
+
+getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
+getDbTable' = DB._driverInformation . DB.transporterDb <$> getSchemaName
 
 create :: DriverInformation.DriverInformation -> Flow ()
 create DriverInformation.DriverInformation {..} = do
@@ -63,16 +65,23 @@ updateActivity driverId active = do
     predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
 
 updateOnRide :: DriverId -> Bool -> Flow ()
-updateOnRide driverId onRide = do
-  dbTable <- getDbTable
-  now <- getCurrTime
-  DB.update dbTable (setClause onRide now) (predicate driverId)
+updateOnRide driverId onRide =
+  DB.runSqlDB (updateOnRide' driverId onRide)
     >>= either DB.throwDBError pure
+
+updateOnRide' ::
+  DriverId ->
+  Bool ->
+  DB.SqlDB ()
+updateOnRide' driverId onRide = do
+  dbTable <- getDbTable'
+  now <- asks DB.currentTime
+  DB.update' dbTable (setClause onRide now) (predicate driverId)
   where
-    setClause onR now DriverInformation.DriverInformation {..} =
+    setClause onR now' DriverInformation.DriverInformation {..} =
       mconcat
         [ _onRide <-. B.val_ onR,
-          _updatedAt <-. B.val_ now
+          _updatedAt <-. B.val_ now'
         ]
     predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
 

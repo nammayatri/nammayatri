@@ -4,6 +4,7 @@ module Product.ProductInstance where
 
 import App.Types
 import Beckn.External.FCM.Types as FCM
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as BC
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
@@ -65,8 +66,6 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   isAllowed ordPi req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $
     updateVehicleDetails piList req
-  when (user ^. #_role == SP.ADMIN) $
-    assignDriver piList req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
       DSQ.updateIdleTime . DriverId . _getPersonId $ user ^. #_id
@@ -179,19 +178,30 @@ isAllowed prodInst req = do
       (0, Just _, Just _, Just PI.TRIP_ASSIGNED) -> return ()
       _ -> throwError400 "INVALID UPDATE OPERATION"
 
-assignDriver :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-assignDriver piList req = case req ^. #_personId of
-  Just driverId ->
-    case piList of
-      [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
-      p : _ -> do
-        PIQ.updateDriver (PI._id <$> piList) (Just $ PersonId driverId)
-        DriverInformation.updateOnRide (DriverId driverId) True
-        driver <- PersQ.findPersonById (PersonId driverId)
-        Notify.notifyDriver notificationType notificationTitle (message p) driver
-        return ()
-  Nothing -> return ()
+assignDriver :: ProductInstanceId -> DriverId -> Flow ()
+assignDriver productInstanceId driverId = do
+  ordPi <- PIQ.findById productInstanceId
+  searchPi <- PIQ.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
+  piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
+  headPi <- case piList of
+    p : _ -> pure p
+    [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
+  driver <- PersQ.findPersonById personId
+  vehicleId <-
+    driver ^. #_udf1
+      & fromMaybeM400 "DRIVER_HAS_NO_VEHICLE"
+      <&> VehicleId
+  vehicle <-
+    VQ.findVehicleById vehicleId
+      >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
+  let piIdList = PI._id <$> piList
+
+  DB.runSqlDBTransaction (assignDriver' productInstanceId piIdList vehicle driver)
+
+  notifyUpdateToBAP searchPi ordPi (Just PI.TRIP_ASSIGNED)
+  Notify.notifyDriver notificationType notificationTitle (message headPi) driver
   where
+    personId = PersonId $ driverId ^. #_getDriverId
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
     message p' =
@@ -200,6 +210,22 @@ assignDriver piList req = case req ^. #_personId of
           showTimeIst (PI._startTime p') <> ".",
           "Check the app for more details."
         ]
+
+assignDriver' ::
+  ProductInstanceId ->
+  [ProductInstanceId] ->
+  V.Vehicle ->
+  SP.Person ->
+  DB.SqlDB ()
+assignDriver' productInstanceId piIdList vehicle driver = do
+  PIQ.updateVehicle' piIdList (Just $ vehicle ^. #_id)
+  PIQ.updateDriver' piIdList (Just personId)
+  DriverInformation.updateOnRide' driverId True
+  PIQ.updateStatusByIds' piIdList PI.TRIP_ASSIGNED
+  updateInfo' productInstanceId driver vehicle
+  where
+    personId = driver ^. #_id
+    driverId = DriverId $ _getPersonId personId
 
 updateVehicleDetails :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
 updateVehicleDetails piList req = case req ^. #_vehicleId of
@@ -243,12 +269,20 @@ updateInfo piId = do
       driver <- PersQ.findPersonById driverId
       vehicle <-
         VQ.findVehicleById (VehicleId vehicleId)
-          >>= fromMaybeM400 "VEHICLE NOT FOUND"
-      let info = Just $ encodeToText (mkInfoObj driver vehicle)
-      PIQ.updateInfo piId info
-      return ()
+          >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
+      DB.runSqlDB (updateInfo' piId driver vehicle)
+        >>= either DB.throwDBError pure
     (_, _) -> return ()
+
+updateInfo' ::
+  ProductInstanceId ->
+  SP.Person ->
+  V.Vehicle ->
+  DB.SqlDB ()
+updateInfo' piId driver vehicle =
+  PIQ.updateInfo' piId info
   where
+    info = encodeToText (mkInfoObj driver vehicle)
     mkInfoObj drivInfo vehiInfo =
       DriverVehicleInfo
         { driverInfo = encodeToText drivInfo,

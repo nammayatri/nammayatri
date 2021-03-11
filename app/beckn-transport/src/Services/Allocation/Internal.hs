@@ -8,7 +8,7 @@ import Beckn.Types.App as BC
 import Beckn.Types.Common
 import Beckn.Types.ID
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, throwErrorJSON500)
+import Beckn.Utils.Common (getCurrTime, throwErrorJSON500)
 import qualified Beckn.Utils.Common as Common
 import qualified Beckn.Utils.Logging as Log
 import Data.Time
@@ -24,7 +24,6 @@ import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
-import Types.API.ProductInstance
 import Types.API.Ride (DriverResponse (..))
 import Types.App
 import Types.Storage.AllocationEvent (AllocationEventType)
@@ -55,29 +54,9 @@ getRequests :: Integer -> Flow [RideRequest]
 getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 
 assignDriver :: RideId -> DriverId -> Flow ()
-assignDriver rideId driverId = do
-  ordPi <- QPI.findById productInstanceId
-  searchPi <- QPI.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
-  piList <- QPI.findAllByParentId (ordPi ^. #_parentId)
-  person <- QP.findPersonById personId
-  let vehicleId = person ^. #_udf1
-      req = buildProdInstUpdateReq vehicleId
-
-  PI.updateVehicleDetails piList req
-  PI.assignDriver piList req
-  PI.updateStatus productInstanceId req
-  PI.updateInfo productInstanceId
-  PI.notifyUpdateToBAP searchPi ordPi (req ^. #_status)
+assignDriver rideId = PI.assignDriver productInstanceId
   where
-    personId = PersonId $ driverId ^. #_getDriverId
     productInstanceId = ProductInstanceId $ rideId ^. #_getRideId
-    buildProdInstUpdateReq vehicleId =
-      ProdInstUpdateReq
-        { _status = Just PI.TRIP_ASSIGNED,
-          _personId = Just $ driverId ^. #_getDriverId,
-          _vehicleId = vehicleId,
-          _otpCode = Nothing
-        }
 
 rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
 rideRequestToRideRequest SRR.RideRequest {..} =
