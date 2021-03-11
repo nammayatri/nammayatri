@@ -3,7 +3,7 @@ module Storage.Queries.DriverInformation where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Beckn.Utils.Common (HasSchemaName (..), getCurrTime)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -11,11 +11,8 @@ import Types.App (DriverId)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
 getDbTable = DB._driverInformation . DB.transporterDb <$> getSchemaName
-
-getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
-getDbTable' = DB._driverInformation . DB.transporterDb <$> getSchemaName
 
 create :: DriverInformation.DriverInformation -> Flow ()
 create DriverInformation.DriverInformation {..} = do
@@ -74,7 +71,7 @@ updateOnRide ::
   Bool ->
   DB.SqlDB ()
 updateOnRide driverId onRide = do
-  dbTable <- getDbTable'
+  dbTable <- getDbTable
   now <- asks DB.currentTime
   DB.update' dbTable (setClause onRide now) (predicate driverId)
   where

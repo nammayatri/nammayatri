@@ -20,13 +20,8 @@ import qualified EulerHS.Types as T
 import Types.API.ProductInstance
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
-getDbTable =
-  DB._productInstance . DB.transporterDb <$> getSchemaName
-
-getDbTable' :: DB.SqlDB (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
-getDbTable' =
-  DB._productInstance . DB.transporterDb <$> getSchemaName
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
+getDbTable = DB._productInstance . DB.transporterDb <$> getSchemaName
 
 getCsTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT))
 getCsTable =
@@ -147,7 +142,7 @@ updateStatusByIds ::
   Storage.ProductInstanceStatus ->
   DB.SqlDB ()
 updateStatusByIds ids status = do
-  dbTable <- getDbTable'
+  dbTable <- getDbTable
   currTime <- asks DB.currentTime
   DB.update'
     dbTable
@@ -309,7 +304,7 @@ updateDriver ::
   Maybe PersonId ->
   DB.SqlDB ()
 updateDriver ids driverId = do
-  dbTable <- getDbTable'
+  dbTable <- getDbTable
   now <- asks DB.currentTime
   DB.update'
     dbTable
@@ -334,7 +329,7 @@ updateVehicle ::
   Maybe VehicleId ->
   DB.SqlDB ()
 updateVehicle ids vehId = do
-  dbTable <- getDbTable'
+  dbTable <- getDbTable
   now <- asks DB.currentTime
   DB.update'
     dbTable
@@ -355,7 +350,7 @@ updateInfoFlow prodInstId info =
 
 updateInfo :: ProductInstanceId -> Text -> DB.SqlDB ()
 updateInfo prodInstId info = do
-  dbTable <- getDbTable'
+  dbTable <- getDbTable
   DB.update'
     dbTable
     (setClause info)
