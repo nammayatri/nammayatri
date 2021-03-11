@@ -33,7 +33,7 @@ let dunzoConfig =
   , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/fmd/v1/"
   , payee = sec.payee
   , dzTestMode = True
-  , dzQuotationTTLinMin = +5
+  , dzQuotationTTLinMin = +10
   }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
