@@ -32,6 +32,8 @@ pipeline {
       steps {
         sh 'make build-dep'
         sh 'make push-dep'
+        sh 'make aws-auth && \
+            make push-dep -e VERSION=$(git rev-parse --short HEAD) -e NS="147728078333.dkr.ecr.ap-south-1.amazonaws.com"'
       }
     }
 
@@ -66,6 +68,8 @@ pipeline {
             stage('Docker push') {
               steps {
                 sh 'make push -e VERSION=$(git rev-parse --short HEAD)'
+                sh 'make aws-auth && \
+                    make push -e VERSION=$(git rev-parse --short HEAD) -e NS="147728078333.dkr.ecr.ap-south-1.amazonaws.com"'
               }
             }
 

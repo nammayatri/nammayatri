@@ -1,0 +1,44 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: beckn-app-backend-production-destinations
+  namespace: atlas
+spec:
+  host: beckn-app-backend-production
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_CONN
+  subsets:
+    - name: a869c485
+      labels:
+        version: a869c485
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: beckn-transport-production-destinations
+  namespace: atlas
+spec:
+  host: beckn-transport-production
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_CONN
+  subsets:
+    - name: a869c485
+      labels:
+        version: a869c485
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: beckn-gateway-production-destinations
+  namespace: atlas
+spec:
+  host: beckn-gateway-production
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_CONN
+  subsets:
+    - name: a869c485
+      labels:
+        version: a869c485

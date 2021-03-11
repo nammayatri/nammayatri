@@ -1,0 +1,73 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: atlas-vs
+  namespace: atlas
+spec:
+  gateways:
+    - atlas-internal
+  hosts:
+    - api.sandbox.beckn.juspay.in
+  http:
+    - match:
+        - uri:
+            prefix: /fmd/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-fmd-wrapper-083-production
+            subset: 039dad9d
+          weight: 100
+      timeout: 40s
+    - match:
+        - headers:
+            "authorization":
+              prefix: "Signature"
+          uri:
+            prefix: /gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-production
+            subset: a869c485
+          weight: 100
+      timeout: 40s
+    - match:
+        - uri:
+            prefix: /gateway/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-gateway-083-production
+            subset: 039dad9d
+          weight: 100
+      timeout: 40s
+    - match:
+        - uri:
+            prefix: /app/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-app-backend-sandbox
+            subset: a869c485
+            port:
+              number: 8013
+          weight: 100
+      timeout: 40s
+    - match:
+        - uri:
+            prefix: /transport/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: beckn-transport-sandbox
+            subset: a869c485
+            port:
+              number: 8014
+          weight: 100
+      timeout: 40s

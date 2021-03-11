@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beckn-transport-allocation-service-production-$BUILD_VERSION
+  namespace: atlas
+  labels:
+    version: $BUILD_VERSION
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beckn-transport-allocation-service-production
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
+      labels:
+        app: beckn-transport-allocation-service-production
+        version: $BUILD_VERSION
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-type
+                    operator: In
+                    values:
+                      - generic-compute
+      containers:
+        - command:
+            - /bin/bash
+            - -c
+          args:
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/beckn-transport-btm-exe'
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: BECKN_TRANSPORT_BTM_CONFIG_PATH
+              value: /etc/beckn/config/beckn-transport-btm.dhall
+          image: 147728078333.dkr.ecr.ap-south-1.amazonaws.com/beckn-uat:$BUILD_VERSION
+          name: beckn-transport-allocation-service-production
+          ports:
+            - containerPort: 8114
+              name: http-app
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8114
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 12
+          readinessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 8114
+            initialDelaySeconds: 30
+            periodSeconds: 12
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+          volumeMounts:
+            - mountPath: "/var/local/beckn"
+              name: fcm-key
+              readOnly: true
+            - name: dhall-configs
+              mountPath: "/tmp/dhall-configs"
+              readOnly: true
+            - name: dhall-secrets
+              mountPath: "/tmp/dhall-secrets"
+              readOnly: true
+          securityContext:
+            privileged: false
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+          - name: single-request-reopen
+      terminationGracePeriodSeconds: 90
+      volumes:
+        - emptyDir:
+            medium: Memory
+          name: istio-envoy
+        - name: fcm-key
+          secret:
+            secretName: beckn-fcm-key
+        - name: istio-certs
+          secret:
+            optional: true
+            secretName: istio.default
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-production
+            items:
+              - key: beckn-transport-btm.dhall
+                path: config/beckn-transport-btm.dhall
+              - key: beckn-transport.dhall
+                path: config/beckn-transport.dhall
+              - key: common.dhall
+                path: config/common.dhall
+              - key: globalCommon.dhall
+                path: generic/common.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-production
+            items:
+              - key: beckn-transport.dhall
+                path: config/secrets/beckn-transport.dhall
+              - key: common.dhall
+                path: config/secrets/common.dhall
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: atlas
+  name: beckn-transport-allocation-service-production
+  labels:
+    app: beckn-transport-allocation-service-production
+spec:
+  ports:
+    - port: 8114
+      targetPort: 8114
+      name: http-app
+  selector:
+    app: beckn-transport-allocation-service-production
