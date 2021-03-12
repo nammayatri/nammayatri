@@ -740,7 +740,7 @@ INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size
   ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
-  ('001d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
+  ('001d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email,password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('001b93df-4f7c-440f-bada-4d46c396d7d0', 'Some', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+92', '001', NULL, true, '001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '001d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
@@ -753,7 +753,7 @@ INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size
   ('002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'GREEN', NULL, '3211', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
-  ('002d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
+  ('002d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('002b93df-4f7c-440f-bada-4d46c396d7d0', 'Another', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+93', '002', NULL, true, '002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '002d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');

@@ -76,9 +76,7 @@ searchCancel person req = do
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =
-  case PI.validateStatusTransition (prodInst ^. #_status) PI.CANCELLED of
-    Left _ -> False
-    Right _ -> True
+  isRight $ PI.validateStatusTransition (prodInst ^. #_status) PI.CANCELLED
 
 isCaseCancellable :: Case.Case -> Bool
 isCaseCancellable case_ =
