@@ -18,6 +18,8 @@ import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
+import Types.API.Ride (DriverResponse (..))
+import Types.Cancel
 import Types.App
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -156,8 +158,9 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id Ride ->
+  CancellationReason ->
   m ()
-cancelRide rideId = BP.cancelRide rideId False
+cancelRide = BP.cancelRide
 
 cleanupNotifications :: DBFlow m r => Id Ride -> m ()
 cleanupNotifications = QNS.cleanupNotifications

@@ -143,7 +143,7 @@ handle repository@Repository {..} =
       assignDriver = \rideId driverId -> do
         modifyIORef assignmentsVar $ (:) (rideId, driverId)
         modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Assigned) rideId,
-      cancelRide = modifyIORef ridesVar . Map.adjust (#rideStatus .~ Cancelled),
+      cancelRide = \rideId _ -> modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Cancelled) rideId,
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getFirstDriverInTheQueue = pure . NonEmpty.head,

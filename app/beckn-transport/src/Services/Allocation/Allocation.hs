@@ -10,6 +10,7 @@ import EulerHS.Prelude
 import qualified Types.API.Ride as Ride (DriverResponse (..), NotificationStatus (..))
 import Types.App
 import qualified Types.Metrics as Metrics
+import Types.Cancel
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
@@ -77,7 +78,7 @@ data ServiceHandle m = ServiceHandle
     getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> m (Id Driver),
     checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
     assignDriver :: Id Ride -> Id Driver -> m (),
-    cancelRide :: Id Ride -> m (),
+    cancelRide :: Id Ride -> CancellationReason -> m (),
     cleanupNotifications :: Id Ride -> m (),
     addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
@@ -143,7 +144,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         Cancellation ->
           case rideStatus of
             status | status == Confirmed || status == Assigned -> do
-              cancel handle rideId
+              cancel handle rideId ByUser
               logEvent ConsumerCancelled rideId Nothing
             _ ->
               logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
@@ -173,7 +174,7 @@ processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
   if allocationTimeFinished
     then do
-      cancel handle rideId
+      cancel handle rideId AllocationTimeExpired
       logEvent AllocationTimeFinished rideId Nothing
     else do
       mCurrentNotification <- getCurrentNotification rideId
@@ -238,7 +239,7 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
       logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
       processFilteredPool handle rideId filteredPool shortOrgId
     [] -> do
-      cancel handle rideId
+      cancel handle rideId NoDriversInRange
       logEvent EmptyDriverPool rideId Nothing
 
 processFilteredPool ::
@@ -272,10 +273,10 @@ checkRideLater ServiceHandle {..} shortOrgId rideId = do
   addAllocationRequest shortOrgId rideId
   logInfo "Check ride later"
 
-cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()
-cancel ServiceHandle {..} rideId = do
+cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> CancellationReason -> m ()
+cancel ServiceHandle {..} rideId reason = do
   logInfo "Cancelling ride"
-  cancelRide rideId
+  cancelRide rideId reason
   cleanupNotifications rideId
 
 isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> OrderTime -> m Bool

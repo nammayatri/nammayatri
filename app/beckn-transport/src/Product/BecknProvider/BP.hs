@@ -45,6 +45,7 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import Types.App (Ride)
+import Types.Cancel
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.RideRequest as SRideRequest
@@ -80,9 +81,9 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id Ride ->
-  Bool ->
+  CancellationReason ->
   m ()
-cancelRide rideId requestedByDriver = do
+cancelRide rideId reason = do
   orderPi <- ProductInstance.findById (cast rideId) >>= fromMaybeM PIDoesNotExist
   searchPiId <- ProductInstance.parentId orderPi & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
@@ -90,7 +91,7 @@ cancelRide rideId requestedByDriver = do
   trackerPi <-
     ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.LOCATIONTRACKER
       >>= fromMaybeM PINotFound
-  cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) requestedByDriver
+  cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) reason
   fork "cancelRide - Notify BAP" $ do
     let transporterId = ProductInstance.organizationId orderPi
     transporter <-
@@ -105,7 +106,7 @@ cancelRide rideId requestedByDriver = do
           Nothing -> pure ()
           Just driverId -> do
             driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
-            Notify.notifyDriverOnCancel c driver
+            Notify.notifyOnCancel c driver reason
 
 cancelRideTransaction ::
   DBFlow m r =>
@@ -113,9 +114,9 @@ cancelRideTransaction ::
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
-  Bool ->
+  CancellationReason ->
   m ()
-cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver = DB.runSqlDBTransaction $ do
+cancelRideTransaction piList searchPiId trackerPiId orderPiId reason = DB.runSqlDBTransaction $ do
   case piList of
     [] -> pure ()
     (prdInst : _) -> do
@@ -129,7 +130,7 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver 
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when requestedByDriver $ QDriverStats.updateIdleTime driverId
+      when (reason == ByDriver) $ QDriverStats.updateIdleTime driverId
 
 serviceStatus ::
   Id Organization.Organization ->

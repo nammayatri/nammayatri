@@ -11,17 +11,19 @@ import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Types.Cancel
 
 -- | Send FCM "cancel" notification to driver
-notifyDriverOnCancel ::
+notifyOnCancel ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
   Case ->
   Person ->
+  CancellationReason ->
   m ()
-notifyDriverOnCancel c =
-  notifyPerson notificationData
+notifyOnCancel c person reason =
+  notifyPerson notificationData person
   where
     caseId = Case.id c
     notificationData =
@@ -34,12 +36,13 @@ notifyDriverOnCancel c =
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body =
-      FCMNotificationBody $
-        unwords
-          [ "Customer had to cancel your ride for",
-            showTimeIst (Case.startTime c) <> ".",
-            "Check the app for more details."
-          ]
+      FCMNotificationBody reasonMsg
+    reasonMsg = case reason of
+      ByUser -> "CANCELLED_BY_USER"
+      ByDriver -> "CANCELLED_BY_DRIVER"
+      ByOrganization -> "CANCELLED_BY_ORGANIZATION"
+      AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
+      NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
 
 notifyOnRegistration ::
   ( FCMFlow m r,
