@@ -37,6 +37,7 @@ import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
+import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
 import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
