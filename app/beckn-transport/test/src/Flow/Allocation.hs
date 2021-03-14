@@ -47,11 +47,11 @@ addRide Repository {..} rideId = do
             rideStatus = Allocation.Confirmed,
             orderTime = Allocation.OrderTime currTime
           }
-  modifyTVarIO ridesVar $ Map.insert rideId rideInfo
+  modifyIORef ridesVar $ Map.insert rideId rideInfo
 
 addAllocationRequest :: Repository -> RideId -> IO ()
 addAllocationRequest Repository {..} rideId = do
-  currentId <- readTVarIO currentIdVar
+  currentId <- readIORef currentIdVar
   let requestId = RideRequestId $ show currentId
   currTime <- getCurrentTime
   let request =
@@ -65,14 +65,14 @@ addAllocationRequest Repository {..} rideId = do
             requestData =
               Allocation.Allocation
           }
-  modifyTVarIO currentIdVar (+ 1)
-  modifyTVarIO rideRequestsVar $ Map.insert requestId request
+  modifyIORef currentIdVar (+ 1)
+  modifyIORef rideRequestsVar $ Map.insert requestId request
 
 addResponse :: Repository -> RideId -> DriverId -> NotificationStatus -> IO ()
 addResponse Repository {..} rideId driverId status = do
   currentTime <- getCurrentTime
   let response = DriverResponse status currentTime
-  modifyTVarIO responsesVar $ Map.insert (rideId, driverId) response
+  modifyIORef responsesVar $ Map.insert (rideId, driverId) response
 
 handle :: Repository -> Allocation.ServiceHandle IO
 handle repository@Repository {..} =
@@ -82,18 +82,18 @@ handle repository@Repository {..} =
       getConfiguredAllocationTime = pure allocationTime,
       getConfiguredNotificationTime = pure notificationTime,
       getRequests = \numRides -> do
-        rideRequests <- readTVarIO rideRequestsVar
+        rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
         pure $ take (fromIntegral numRides) requests,
       getDriverPool = \rideId -> do
-        poolMap <- readTVarIO driverPoolVar
+        poolMap <- readIORef driverPoolVar
         let pool = fromMaybe [] $ Map.lookup rideId poolMap
         pure pool,
       sendNewRideNotification = \_ _ -> do
         pure (),
       getCurrentNotification = \rideId -> do
         currentTime <- getCurrentTime
-        notificationStatus <- readTVarIO notificationStatusVar
+        notificationStatus <- readIORef notificationStatusVar
         let filtered =
               Map.toList $
                 Map.filterWithKey
@@ -104,43 +104,44 @@ handle repository@Repository {..} =
             pure $ Just $ Allocation.CurrentNotification driverId expiryTime
           _ -> pure Nothing,
       addNotificationStatus = \rideId driverId expiryTime -> do
-        modifyTVarIO notificationStatusVar $ Map.insert (rideId, driverId) (Allocation.Notified, expiryTime),
+        modifyIORef notificationStatusVar $
+          Map.insert (rideId, driverId) (Allocation.Notified, expiryTime),
       updateNotificationStatus = \rideId driverId nStatus -> do
-        modifyTVarIO notificationStatusVar $
+        modifyIORef notificationStatusVar $
           Map.adjust
             (\(_, expiryTime) -> (nStatus, expiryTime))
             (rideId, driverId),
       resetLastRejectionTime = \_ -> pure (),
       getAttemptedDrivers = \rideId -> do
-        notificationStatus <- readTVarIO notificationStatusVar
+        notificationStatus <- readIORef notificationStatusVar
         let filtered =
               fmap snd $
                 Map.keys $ Map.filterWithKey (attemptedNotification rideId) notificationStatus
         pure filtered,
       getDriversWithNotification = do
         currentTime <- getCurrentTime
-        notificationStatus <- readTVarIO notificationStatusVar
+        notificationStatus <- readIORef notificationStatusVar
         let filtered = fmap snd $ Map.keys $ Map.filter (isNotified currentTime) notificationStatus
         pure filtered,
       getDriverResponse = \rideId driverId -> do
-        responses <- readTVarIO responsesVar
+        responses <- readIORef responsesVar
         pure $ Map.lookup (rideId, driverId) responses,
       assignDriver = \rideId driverId -> do
-        modifyTVarIO responsesVar $ Map.delete (rideId, driverId)
-        modifyTVarIO assignmentsVar $ (:) (rideId, driverId),
+        modifyIORef responsesVar $ Map.delete (rideId, driverId)
+        modifyIORef assignmentsVar $ (:) (rideId, driverId),
       cancelRide = \_ -> pure (),
       cleanupNotifications = \rideId -> do
-        modifyTVarIO notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId)
+        modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId)
         pure (),
       getFirstDriverInTheQueue = pure . NonEmpty.head,
       checkAvailability = pure . NonEmpty.toList,
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = \requestId -> do
-        modifyTVarIO rideRequestsVar $ Map.filterWithKey (\id _ -> id /= requestId)
+        modifyIORef rideRequestsVar $ Map.filterWithKey (\id _ -> id /= requestId)
         pure (),
       addAllocationRequest = addAllocationRequest repository,
       getRideInfo = \rideId -> do
-        rides <- readTVarIO ridesVar
+        rides <- readIORef ridesVar
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
@@ -160,24 +161,24 @@ driverPoolPerRide :: Map RideId [DriverId]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
 
 data Repository = Repository
-  { currentIdVar :: TVar Int,
-    driverPoolVar :: TVar (Map RideId [DriverId]),
-    ridesVar :: TVar (Map RideId Allocation.RideInfo),
-    rideRequestsVar :: TVar (Map RideRequestId Allocation.RideRequest),
-    notificationStatusVar :: TVar (Map (RideId, DriverId) (Allocation.NotificationStatus, UTCTime)),
-    assignmentsVar :: TVar [(RideId, DriverId)],
-    responsesVar :: TVar (Map (RideId, DriverId) DriverResponse)
+  { currentIdVar :: IORef Int,
+    driverPoolVar :: IORef (Map RideId [DriverId]),
+    ridesVar :: IORef (Map RideId Allocation.RideInfo),
+    rideRequestsVar :: IORef (Map RideRequestId Allocation.RideRequest),
+    notificationStatusVar :: IORef (Map (RideId, DriverId) (Allocation.NotificationStatus, UTCTime)),
+    assignmentsVar :: IORef [(RideId, DriverId)],
+    responsesVar :: IORef (Map (RideId, DriverId) DriverResponse)
   }
 
 initRepository :: IO Repository
 initRepository = do
-  initCurrentId <- newTVarIO 1
-  initDriverPool <- newTVarIO driverPoolPerRide
-  initRides <- newTVarIO Map.empty
-  initRideRequest <- newTVarIO Map.empty
-  initNotificationStatus <- newTVarIO Map.empty
-  initHasFound <- newTVarIO []
-  initAcceptReject <- newTVarIO Map.empty
+  initCurrentId <- newIORef 1
+  initDriverPool <- newIORef driverPoolPerRide
+  initRides <- newIORef Map.empty
+  initRideRequest <- newIORef Map.empty
+  initNotificationStatus <- newIORef Map.empty
+  initHasFound <- newIORef []
+  initAcceptReject <- newIORef Map.empty
 
   let repository =
         Repository
@@ -211,7 +212,7 @@ allocateDriverForRide = testCase "Find a driver for ride" $ do
   addResponse r ride02Id (DriverId "driver08") ACCEPT
   Allocation.process (handle r) numRequestsToProcess >>= \numProcessed -> numProcessed @?= 2
 
-  assignments <- readTVarIO assignmentsVar
+  assignments <- readIORef assignmentsVar
   assignments @?= [(ride02Id, DriverId "driver08"), (ride01Id, DriverId "driver03")]
 
 allocation :: TestTree
@@ -220,6 +221,3 @@ allocation =
     "Allocation"
     [ allocateDriverForRide
     ]
-
-modifyTVarIO :: TVar a -> (a -> a) -> IO ()
-modifyTVarIO tvar f = atomically $ modifyTVar tvar f
