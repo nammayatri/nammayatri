@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Flow.Allocation where
 
 import qualified Data.List.NonEmpty as NonEmpty
@@ -73,6 +75,13 @@ addResponse Repository {..} rideId driverId status = do
   let response = Ride.DriverResponse status currentTime
   modifyIORef responsesVar $ Map.insert (rideId, driverId) response
 
+checkRideStatus :: Repository -> RideId -> RideStatus -> IO ()
+checkRideStatus Repository {..} rideId expectedStatus = do
+  rides <- readIORef ridesVar
+  case Map.lookup ride01Id rides of
+    Nothing -> assertFailure $ "Ride " <> show (rideId ^. #_getRideId) <> " not found"
+    Just rideInfo -> rideInfo ^. #rideStatus @?= expectedStatus
+
 handle :: Repository -> ServiceHandle IO
 handle repository@Repository {..} =
   ServiceHandle
@@ -126,8 +135,9 @@ handle repository@Repository {..} =
         pure $ Map.lookup (rideId, driverId) responses,
       assignDriver = \rideId driverId -> do
         modifyIORef responsesVar $ Map.delete (rideId, driverId)
-        modifyIORef assignmentsVar $ (:) (rideId, driverId),
-      cancelRide = \_ -> pure (),
+        modifyIORef assignmentsVar $ (:) (rideId, driverId)
+        modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Assigned) rideId,
+      cancelRide = modifyIORef ridesVar . Map.adjust (#rideStatus .~ Cancelled),
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getFirstDriverInTheQueue = pure . NonEmpty.head,
@@ -185,16 +195,17 @@ initRepository = do
           initAssignments
           initResponses
 
-  currTime <- Time.getCurrentTime
-  addRide repository ride01Id
-  addRide repository ride02Id
-  addRequest Allocation repository ride01Id
-  addRequest Allocation repository ride02Id
   pure repository
 
 twoAllocations :: TestTree
 twoAllocations = testCase "Two allocations" $ do
   r@Repository {..} <- initRepository
+
+  currTime <- Time.getCurrentTime
+  addRide r ride01Id
+  addRide r ride02Id
+  addRequest Allocation r ride01Id
+  addRequest Allocation r ride02Id
 
   process (handle r) numRequestsToProcess
   addResponse r ride01Id (DriverId "driver01") Ride.REJECT
@@ -210,9 +221,32 @@ twoAllocations = testCase "Two allocations" $ do
   assignments <- readIORef assignmentsVar
   assignments @?= [(ride02Id, DriverId "driver08"), (ride01Id, DriverId "driver03")]
 
+  checkRideStatus r ride01Id Assigned
+  checkRideStatus r ride02Id Assigned
+
+cancellationAfterAssignment :: TestTree
+cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
+  r@Repository {..} <- initRepository
+
+  currTime <- Time.getCurrentTime
+  addRide r ride01Id
+  addRequest Allocation r ride01Id
+
+  process (handle r) numRequestsToProcess
+  addResponse r ride01Id (DriverId "driver01") Ride.ACCEPT
+
+  process (handle r) numRequestsToProcess
+  checkRideStatus r ride01Id Assigned
+
+  addRequest Cancellation r ride01Id
+
+  process (handle r) numRequestsToProcess
+  checkRideStatus r ride01Id Cancelled
+
 allocation :: TestTree
 allocation =
   testGroup
     "Allocation"
-    [ twoAllocations
+    [ twoAllocations,
+      cancellationAfterAssignment
     ]

@@ -127,7 +127,7 @@ processRequest handle@ServiceHandle {..} rideRequest = do
                 "Ride status is " <> show rideStatus <> ", allocation request skipped"
         Cancellation ->
           case rideStatus of
-            Confirmed -> do
+            status | status == Confirmed || status == Assigned -> do
               cancel handle requestHeader
               logEvent ConsumerCancelled (requestHeader ^. #rideId)
             _ ->
