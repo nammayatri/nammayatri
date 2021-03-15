@@ -92,6 +92,7 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
+  - -Wno-unrecognised-pragmas
 
 library:
   source-dirs:
