@@ -46,6 +46,7 @@ import qualified Models.Case as Case
 import Servant.Client (BaseUrl (baseUrlPath))
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
@@ -68,13 +69,13 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
   uuid <- L.generateGUID
   mkAckResponse uuid "cancel"
 
-cancelRide :: Id Ride -> Flow ()
-cancelRide rideId = do
+cancelRide :: Id Ride -> Bool -> Flow ()
+cancelRide rideId requestedByDriver = do
   orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM PIParentIdNotPresent
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
-  cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id)
+  cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id) requestedByDriver
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
   bapOrgId <- Case._udf4 orderCase & fromMaybeM CaseBapOrgIdNotPresent
@@ -101,17 +102,25 @@ cancelRideTransaction ::
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
+  Bool ->
   Flow ()
-cancelRideTransaction piList searchPiId trackerPiId orderPiId = DB.runSqlDBTransaction $ do
+cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver = DB.runSqlDBTransaction $ do
   case piList of
     [] -> pure ()
     (prdInst : _) -> do
       QCase.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
-      let mbDriverId = prdInst ^. #_personId
-      whenJust mbDriverId (\driverId -> DriverInformation.updateOnRide (cast driverId) False)
+      let mbPersonId = prdInst ^. #_personId
+      whenJust mbPersonId updateDriverInfo
   ProductInstance.updateStatus searchPiId ProductInstance.CANCELLED
   ProductInstance.updateStatus trackerPiId ProductInstance.COMPLETED
   ProductInstance.updateStatus orderPiId ProductInstance.CANCELLED
+  where
+    updateDriverInfo personId = do
+      let driverId = cast personId
+      DriverInformation.updateOnRide driverId False
+      if requestedByDriver
+        then QDriverStats.updateIdleTime driverId
+        else pure ()
 
 -- TODO : Add notifying transporter admin with FCM
 

@@ -52,7 +52,7 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   RideRequest.create
     =<< BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
   _ <- Case.updateStatus (orderCase ^. #_id) Case.INPROGRESS
-  _ <- ProductInstance.updateStatus (productInstance ^. #_id) ProductInstance.CONFIRMED
+  _ <- ProductInstance.updateStatusFlow (productInstance ^. #_id) ProductInstance.CONFIRMED
   --TODO: need to update other product status to VOID for this case
   (currTime, uuid, shortId) <- BP.getIdShortIdAndTime
   let trackerCase = mkTrackerCase searchCase uuid currTime shortId

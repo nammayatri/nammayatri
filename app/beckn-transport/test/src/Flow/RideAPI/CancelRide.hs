@@ -17,7 +17,7 @@ handle =
   CancelRide.ServiceHandle
     { findPIById = \_piId -> pure rideProductInstance,
       findPersonById = \_personid -> pure Fixtures.defaultDriver,
-      createRideRequest = \_rideReq -> pure (),
+      cancelRide = \_rideReq _requestedByAdmin -> pure (),
       generateGUID = pure "",
       getCurrentTime = pure Fixtures.defaultTime
     }
@@ -44,12 +44,12 @@ cancelRide =
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =
   testCase "Cancel successfully if requested by driver executor" $
-    runBR (CancelRide.cancelRide handle "1" "1") @?= pure (Right APIResult.Success)
+    runBR (CancelRide.cancelRideHandler handle "1" "1") @?= pure (Right APIResult.Success)
 
 successfulCancellationByAdmin :: TestTree
 successfulCancellationByAdmin =
   testCase "Cancel successfully if requested by admin" $
-    runBR (CancelRide.cancelRide handleCase "1" "1") @?= pure (Right APIResult.Success)
+    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Right APIResult.Success)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure admin}
     admin =
@@ -61,7 +61,7 @@ successfulCancellationByAdmin =
 successfulCancellationWithoutDriverByAdmin :: TestTree
 successfulCancellationWithoutDriverByAdmin =
   testCase "Cancel successfully if ride has no driver but requested by admin" $
-    runBR (CancelRide.cancelRide handleCase "1" "1") @?= pure (Right APIResult.Success)
+    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Right APIResult.Success)
   where
     handleCase =
       handle
@@ -78,7 +78,7 @@ successfulCancellationWithoutDriverByAdmin =
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $
-    runBR (CancelRide.cancelRide handleCase "driverNotExecutorId" "1") @?= pure (Left error)
+    runBR (CancelRide.cancelRideHandler handleCase "driverNotExecutorId" "1") @?= pure (Left error)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver {Person._id = PersonId "driverNotExecutorId"}
@@ -87,7 +87,7 @@ failedCancellationByAnotherDriver =
 failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
   testCase "Fail cancellation if requested by neither driver nor admin" $
-    runBR (CancelRide.cancelRide handleCase "managerId" "1") @?= pure (Left error)
+    runBR (CancelRide.cancelRideHandler handleCase "managerId" "1") @?= pure (Left error)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
@@ -100,7 +100,7 @@ failedCancellationByNotDriverAndNotAdmin =
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
   testCase "Fail cancellation if ride has no driver and requested by not an admin" $
-    runBR (CancelRide.cancelRide handleCase "1" "1") @?= pure (Left error)
+    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Left error)
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}
@@ -109,7 +109,7 @@ failedCancellationWithoutDriverByDriver =
 failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
 failedCancellationWhenProductInstanceStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $
-    runBR (CancelRide.cancelRide handleCase "1" "1") @?= pure (Left error)
+    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Left error)
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure completedPI}
     completedPI = rideProductInstance {ProductInstance._status = ProductInstance.COMPLETED}

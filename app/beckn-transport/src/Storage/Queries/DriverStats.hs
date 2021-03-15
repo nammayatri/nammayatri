@@ -15,9 +15,8 @@ import Types.Error
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverStats as Storage
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverStatsT))
-getDbTable =
-  DB._driverStats . DB.transporterDb <$> getSchemaName
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverStatsT))
+getDbTable = DB._driverStats . DB.transporterDb <$> getSchemaName
 
 createInitialDriverStats :: Id Driver -> Flow ()
 createInitialDriverStats driverId = do
@@ -41,12 +40,24 @@ getFirstDriverInTheQueue ids = do
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ _idleSince
 
-updateIdleTime :: Id Driver -> Flow ()
-updateIdleTime driverId = do
+updateIdleTimeFlow :: Id Driver -> Flow ()
+updateIdleTimeFlow driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause now) (predicate driverId)
     >>= either throwDBError pure
+  where
+    setClause now Storage.DriverStats {..} =
+      mconcat
+        [ _idleSince <-. B.val_ now
+        ]
+    predicate id Storage.DriverStats {..} = _driverId ==. B.val_ id
+
+updateIdleTime :: Id Driver -> DB.SqlDB ()
+updateIdleTime driverId = do
+  dbTable <- getDbTable
+  now <- asks DB.currentTime
+  DB.update' dbTable (setClause now) (predicate driverId)
   where
     setClause now Storage.DriverStats {..} =
       mconcat

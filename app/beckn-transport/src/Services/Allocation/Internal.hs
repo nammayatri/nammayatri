@@ -96,7 +96,7 @@ updateNotificationStatus rideId driverId =
   QNS.updateStatus rideId driverId . allocNotifStatusToStorageStatus
 
 resetLastRejectionTime :: Id Driver -> Flow ()
-resetLastRejectionTime = QDS.updateIdleTime
+resetLastRejectionTime = QDS.updateIdleTimeFlow
 
 getAttemptedDrivers :: Id Ride -> Flow [Id Driver]
 getAttemptedDrivers rideId =
@@ -118,7 +118,7 @@ getDriverResponse rideId driverId =
   Redis.getKeyRedis $ "beckn:" <> getId rideId <> ":" <> getId driverId <> ":response"
 
 cancelRide :: Id Ride -> Flow ()
-cancelRide = BP.cancelRide
+cancelRide = flip BP.cancelRide False
 
 cleanupNotifications :: Id Ride -> Flow ()
 cleanupNotifications = QNS.cleanupNotifications
