@@ -5,7 +5,7 @@ module BackgroundTaskManager where
 
 import App.Routes
 import App.Types
-import Beckn.External.FCM.Utils (createFCMTokenRefreshThread)
+import Beckn.External.FCM.Utils (createFCMTokenRefreshThreadSync)
 import Beckn.Storage.DB.Config
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
@@ -55,16 +55,16 @@ runBackgroundTaskManager configModifier = do
                 putStrLn @Text $ "Loaded http managers - " <> show (keys managerMap)
                 let flowRt' = flowRt {R._httpClientManagers = managerMap}
                 let settings = setPort port defaultSettings
-                mError <- try (runFlowR flowRt appEnv createFCMTokenRefreshThread)
-                whenLeft mError $ \(e :: SomeException) -> putStrLn @Text ("FCM check failed: " <> show e)
+                fcmThreadId <- forkIO $ runFlowR flowRt' appEnv createFCMTokenRefreshThreadSync
                 appThreadId <- forkIO $ runFlowR flowRt' appEnv $ Runner.run shutdown activeTask
                 apiThreadId <- forkIO $ runSettings settings $ Server.run healthCheckAPI (healthCheckServer shutdown) EmptyContext (App.EnvR flowRt' appEnv)
                 putStrLn @Text "Background Task Manager is ready."
                 atomically $ readTMVar shutdown
-                putStrLn @Text "Shutting down..."
                 waitForTaskToComplete activeTask
+                putStrLn @Text "Shutting down..."
                 killThread appThreadId
                 killThread apiThreadId
+                killThread fcmThreadId
                 exitSuccess
   where
     handleShutdown shutdown = do
