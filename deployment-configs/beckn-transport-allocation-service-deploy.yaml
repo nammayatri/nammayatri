@@ -11,10 +11,7 @@ spec:
     matchLabels:
       app: beckn-transport-allocation-service-$DEPLOY_VARIANT
   strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-    type: RollingUpdate
+    type: Recreate
   template:
     metadata:
       annotations:
@@ -239,20 +236,20 @@ spec:
           configMap:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
-            - key: beckn-transport.dhall
-              path: config/beckn-transport.dhall
-            - key: common.dhall
-              path: config/common.dhall
-            - key: globalCommon.dhall
-              path: generic/common.dhall
+              - key: beckn-transport.dhall
+                path: config/beckn-transport.dhall
+              - key: common.dhall
+                path: config/common.dhall
+              - key: globalCommon.dhall
+                path: generic/common.dhall
         - name: dhall-secrets
           secret:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
-            - key: beckn-transport.dhall
-              path: config/secrets/beckn-transport.dhall
-            - key: common.dhall
-              path: config/secrets/common.dhall
+              - key: beckn-transport.dhall
+                path: config/secrets/beckn-transport.dhall
+              - key: common.dhall
+                path: config/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1
