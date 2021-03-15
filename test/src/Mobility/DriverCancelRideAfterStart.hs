@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 
+{-# HLINT ignore "Reduce duplication" #-}
+
 module Mobility.DriverCancelRideAfterStart where
 
 import Beckn.Types.App
