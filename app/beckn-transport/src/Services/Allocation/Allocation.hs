@@ -3,6 +3,7 @@ module Services.Allocation.Allocation where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization
+import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
@@ -10,7 +11,6 @@ import EulerHS.Prelude
 import qualified Types.API.Ride as Ride (DriverResponse (..), NotificationStatus (..))
 import Types.App
 import qualified Types.Metrics as Metrics
-import Types.Cancel
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common

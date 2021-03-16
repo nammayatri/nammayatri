@@ -10,7 +10,6 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
-import Beckn.Types.Mobility.Trip
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 
@@ -38,7 +37,7 @@ data CancelReq = CancelReq
 
 type CancelRes = AckResponse
 
-type OnCancelReq = CallbackReq Trip
+type OnCancelReq = CallbackReq OnCancelReqMessage
 
 type OnCancelRes = AckResponse
 
@@ -53,7 +52,7 @@ data CancellationOrder = CancellationOrder
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data OnCancelReqMessage = OnCancelReqMessage
-  { cancellation_id :: Text,
-    order :: Order
+newtype OnCancelReqMessage = OnCancelReqMessage
+  { order :: Order
   }
+  deriving (Generic, Show, FromJSON, ToJSON)

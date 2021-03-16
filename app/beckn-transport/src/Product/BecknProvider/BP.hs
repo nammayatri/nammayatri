@@ -20,6 +20,7 @@ import Beckn.Types.Core.Order
   )
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver (Driver)
+import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Beckn.Types.Mobility.Payload (Payload (..))
 import Beckn.Types.Mobility.Trip (Trip (..))
 import qualified Beckn.Types.Mobility.Vehicle as BVehicle
@@ -45,7 +46,6 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import Types.App (Ride)
-import Types.Cancel
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.RideRequest as SRideRequest
@@ -97,7 +97,7 @@ cancelRide rideId reason = do
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    notifyCancelToGateway searchPi transporter
+    notifyCancelToGateway searchPi transporter reason
     case piList of
       [] -> pure ()
       prdInst : _ -> do
@@ -216,8 +216,8 @@ notifyTripInfoToGateway ::
   Organization.Organization ->
   Id Case.Case ->
   m ()
-notifyTripInfoToGateway prodInst trackerCaseId transporter parentCaseId = do
-  mkOnUpdatePayload prodInst trackerCaseId
+notifyTripInfoToGateway orderPI trackerCaseId transporter parentCaseId = do
+  mkOnUpdatePayload orderPI trackerCaseId
     >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter parentCaseId . Right
 
 notifyCancelToGateway ::
@@ -228,10 +228,12 @@ notifyCancelToGateway ::
   ) =>
   ProductInstance.ProductInstance ->
   Organization.Organization ->
+  CancellationReason -> 
   m ()
-notifyCancelToGateway searchPi transporter = do
-  mkCancelTripObj searchPi
-    >>= ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right
+notifyCancelToGateway searchPi transporter reason = do
+  trip <- mkCancelTripObj searchPi
+  order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just reason
+  ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right $ API.OnCancelReqMessage order
 
 mkTrip :: (DBFlow m r, EncFlow m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip
 mkTrip cId orderPi = do
@@ -260,9 +262,10 @@ mkOnUpdatePayload ::
   ProductInstance.ProductInstance ->
   Id Case.Case ->
   m API.OnUpdateOrder
-mkOnUpdatePayload prodInst caseId = do
-  trip <- mkTrip caseId prodInst
-  order <- ExternalAPITransform.mkOrder prodInst (Just trip)
+mkOnUpdatePayload orderPI caseId = do
+  trip <- mkTrip caseId orderPI
+  searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+  order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
   return $ API.OnUpdateOrder order
 
 mkDriverInfo :: (DBFlow m r, EncFlow m r) => Id Person.Person -> m Driver
@@ -278,19 +281,19 @@ mkVehicleInfo vehicleId = do
   return $ ExternalAPITransform.mkVehicleObj <$> vehicle
 
 mkCancelTripObj :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m Trip
-mkCancelTripObj productInstance = do
-  driver <- mapM mkDriverInfo $ productInstance.personId
-  vehicle <- join <$> mapM mkVehicleInfo (productInstance.entityId)
+mkCancelTripObj searchPI = do
+  driver <- mapM mkDriverInfo $ searchPI.personId
+  vehicle <- join <$> mapM mkVehicleInfo (searchPI.entityId)
   return $
     Trip
-      { id = getId $ productInstance.id,
+      { id = getId $ searchPI.id,
         pickup = Nothing,
         drop = Nothing,
         state = Nothing,
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = Just $ ExternalAPITransform.mkPrice productInstance,
+        fare = Just $ ExternalAPITransform.mkPrice searchPI,
         route = Nothing
       }
 

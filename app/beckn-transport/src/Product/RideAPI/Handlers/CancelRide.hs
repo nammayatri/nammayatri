@@ -3,11 +3,11 @@ module Product.RideAPI.Handlers.CancelRide where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Mobility.Order (CancellationReason (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance (ProductInstance, ProductInstanceStatus (..))
 import EulerHS.Prelude
-import Types.Cancel
 import Types.App (Ride)
 import Types.Error
 import Utils.Common

@@ -7,6 +7,7 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -18,7 +19,7 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
-import Utils.Common (decodeFromText, fromMaybeM, showTimeIst)
+import Utils.Common 
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is
@@ -254,3 +255,21 @@ notifyOnTrackCb personId tracker c =
           notifyPerson notificationData p
         _ -> pure ()
     else pure ()
+
+notifyOnCancel :: (CoreMetrics m, FCMFlow m r) => Case -> Person -> CancellationReason -> m ()
+notifyOnCancel c person reason =
+  notifyPerson notificationData person
+  where
+    caseId = c.id
+    notificationData =
+      FCM.FCMAndroidData
+        { fcmNotificationType = FCM.CANCELLED_PRODUCT,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Product,
+          fcmEntityIds = show $ getId caseId,
+          fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
+        }
+    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
+    body =
+      FCMNotificationBody reasonMsg
+    reasonMsg = encodeToText reason

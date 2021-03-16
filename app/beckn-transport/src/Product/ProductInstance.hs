@@ -5,6 +5,7 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
+import Beckn.Types.Mobility.Order (CancellationReason (..))
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as SO
@@ -231,7 +232,7 @@ notifyStatusUpdateReq transporterOrg searchPi status = do
   case status of
     PI.CANCELLED -> do
       admins <- getAdmins
-      BP.notifyCancelToGateway searchPi transporterOrg
+      BP.notifyCancelToGateway searchPi transporterOrg ByOrganization
       Notify.notifyCancelReqByBP searchPi admins
     PI.TRIP_REASSIGNMENT -> do
       admins <- getAdmins

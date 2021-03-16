@@ -221,5 +221,6 @@ mkTrackerProductInstance caseId prodInst currTime = do
 mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> Id Case.Case -> m API.ConfirmOrder
 mkOnConfirmPayload orderPI trackerCaseId = do
   trip <- BP.mkTrip trackerCaseId orderPI
-  order <- ExternalAPITransform.mkOrder orderPI (Just trip)
+  searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+  order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
   return $ API.ConfirmOrder order

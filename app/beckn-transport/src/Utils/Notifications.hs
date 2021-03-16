@@ -4,6 +4,7 @@ import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
+import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -11,7 +12,6 @@ import Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Types.Cancel
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
@@ -37,12 +37,7 @@ notifyOnCancel c person reason =
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body =
       FCMNotificationBody reasonMsg
-    reasonMsg = case reason of
-      ByUser -> "CANCELLED_BY_USER"
-      ByDriver -> "CANCELLED_BY_DRIVER"
-      ByOrganization -> "CANCELLED_BY_ORGANIZATION"
-      AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
-      NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
+    reasonMsg = encodeToText reason 
 
 notifyOnRegistration ::
   ( FCMFlow m r,

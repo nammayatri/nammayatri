@@ -5,6 +5,7 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
+import Beckn.Types.Mobility.Order
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -14,6 +15,7 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as MPI
 import Types.API.Cancel as Cancel
 import Types.Error
@@ -85,7 +87,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
     validateContext "on_cancel" $ req.context
     case req.contents of
       Right msg -> do
-        let prodInstId = Id $ msg.id
+        let prodInstId = Id $ msg.order.id
         -- TODO: Handle usecase where multiple productinstances exists for one product
 
         piList <- MPI.findAllByParentId prodInstId
@@ -106,7 +108,12 @@ onCancel _org req = withFlowHandlerBecknAPI $
         MPI.updateStatus prodInstId PI.CANCELLED
         let caseId = productInstance.caseId
         -- notify customer
-        Notify.notifyOnStatusUpdate productInstance PI.CANCELLED
+        cs <- MC.findById caseId >>= fromMaybeM CaseNotFound
+        whenJust (cs.requestor) $ \personId -> do
+          mbPerson <- Person.findById $ Id personId
+          whenJust mbPerson $ \person -> do
+            let reason = fromMaybe UnknownReason $ msg.order.cancellation_reason_id
+            Notify.notifyOnCancel cs person reason
         --
         arrPICase <- MPI.findAllByCaseId caseId
         let arrTerminalPI =

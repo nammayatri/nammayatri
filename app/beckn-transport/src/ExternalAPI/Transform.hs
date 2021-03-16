@@ -27,8 +27,6 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
-import Types.Error
-import Utils.Common (fromMaybeM)
 
 mkCatalog :: DBFlow m r => Case -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
 mkCatalog c prodInsts provider =
@@ -127,21 +125,20 @@ mkPrice prodInst =
           maximum_value = amt
         }
 
-mkOrder :: MonadFlow m => ProductInstance -> Maybe Trip -> m Mobility.Order
-mkOrder orderPI trip = do
+mkOrder :: MonadFlow m => Id ProductInstance -> Maybe Trip -> Maybe CancellationReason -> m Mobility.Order
+mkOrder searchPiId trip mbReason = do
   now <- getCurrentTime
-  searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   return
     Mobility.Order
       { id = getId searchPiId,
-        items = [OrderItem (getId $ orderPI.productId) Nothing],
+        items = [OrderItem (getId searchPiId) Nothing],
         created_at = now,
         updated_at = now,
         state = Nothing,
         billing = Nothing,
         payment = Nothing,
         trip = trip,
-        cancellation_reason_id = Nothing,
+        cancellation_reason_id = mbReason,
         cancellation_reasons = [],
         cancellation_policy = Nothing
       }
