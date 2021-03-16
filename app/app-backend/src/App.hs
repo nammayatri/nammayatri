@@ -40,7 +40,7 @@ runAppBackend configModifier = do
 prepareAppOptions :: Flow ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
-  createFCMTokenRefreshThread
+  fork "FCM token refresh thread" doFCMTokenRefresh
 
 runAppBackend' :: AppEnv -> Settings -> IO ()
 runAppBackend' appEnv settings = do

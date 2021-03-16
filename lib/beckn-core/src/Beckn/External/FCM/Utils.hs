@@ -1,14 +1,13 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Beckn.External.FCM.Utils
-  ( createFCMTokenRefreshThread,
-    createFCMTokenRefreshThreadSync,
+  ( doFCMTokenRefresh,
   )
 where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.Types.Common
-import Beckn.Utils.Common (fork, throwError500)
+import Beckn.Utils.Common (throwError500)
 import qualified Beckn.Utils.JWT as JWT
 import Beckn.Utils.Logging (HasLogContext, Log (..))
 import qualified Control.Exception as E (try)
@@ -18,31 +17,18 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
 
-createFCMTokenRefreshThread ::
-  (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) =>
-  FlowR r ()
-createFCMTokenRefreshThread = createFCMTokenRefreshThread' True
-
-createFCMTokenRefreshThreadSync ::
-  (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) =>
-  FlowR r ()
-createFCMTokenRefreshThreadSync = createFCMTokenRefreshThread' False
-
 -- | Creates a loop that refreshes FCM token
-createFCMTokenRefreshThread' ::
+doFCMTokenRefresh ::
   (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) =>
-  Bool ->
   FlowR r ()
-createFCMTokenRefreshThread' isForked = do
+doFCMTokenRefresh = do
   getField @"fcmJsonPath" <$> ask
     >>= maybe (throwError500 "fcmJsonPath not configured") withFJP
   where
     withFJP f = L.runIO (readAndDecode f) >>= either logAndThrowIt doIt
     readAndDecode f = either (Left . excText f) (first fromString . Aeson.eitherDecode) <$> E.try (BL.readFile $ toString f)
     excText f e = "Error on reading FCM json file [" <> f <> "]: " <> fromString (displayException (e :: SomeException))
-    forkDesc = "Forever loop that checks and refreshes FCM token"
-    doIt sa = if isForked then fork forkDesc $ task sa else task sa
-    task sa = forever $ do
+    doIt sa = forever $ do
       token <- FCM.checkAndGetToken sa
       L.runIO $ delay token
     -- wait for some time depeding on a token status

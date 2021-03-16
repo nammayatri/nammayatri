@@ -41,7 +41,7 @@ runTransporterBackendApp configModifier = do
 prepareAppOptions :: Flow ()
 prepareAppOptions =
   -- FCM token ( options key = FCMTokenKey )
-  createFCMTokenRefreshThread
+  fork "FCM token refresh thread" doFCMTokenRefresh
 
 runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
 runTransporterBackendApp' appEnv settings = do
