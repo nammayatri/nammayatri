@@ -213,8 +213,8 @@ createProductInstance productCase price status transporterId = do
 
 sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow Ack.AckResponse
 sendOnSearchFailed productCase transporterOrg err = do
-  currTime <- getCurrTime
   appEnv <- ask
+  currTime <- getCurrTime
   let context =
         Context.Context
           { _domain = Domain.MOBILITY,
