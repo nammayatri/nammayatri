@@ -5,7 +5,7 @@ module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.Amount
 import Beckn.Types.Common
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person (Person)
 import Beckn.Types.Storage.Products (Products)
@@ -66,10 +66,10 @@ instance FromBackendRow Postgres EntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductInstanceT f = ProductInstance
-  { _id :: B.C f (ID ProductInstance),
-    _caseId :: B.C f (ID Case.Case),
-    _productId :: B.C f (ID Products),
-    _personId :: B.C f (Maybe (ID Person)),
+  { _id :: B.C f (Id ProductInstance),
+    _caseId :: B.C f (Id Case.Case),
+    _productId :: B.C f (Id Products),
+    _personId :: B.C f (Maybe (Id Person)),
     _personUpdatedAt :: B.C f (Maybe UTCTime),
     _shortId :: B.C f Text,
     _entityType :: B.C f EntityType,
@@ -84,7 +84,7 @@ data ProductInstanceT f = ProductInstance
     _fromLocation :: B.C f (Maybe Text),
     _toLocation :: B.C f (Maybe Text),
     _organizationId :: B.C f Text,
-    _parentId :: B.C f (Maybe (ID ProductInstance)),
+    _parentId :: B.C f (Maybe (Id ProductInstance)),
     _udf1 :: B.C f (Maybe Text),
     _udf2 :: B.C f (Maybe Text),
     _udf3 :: B.C f (Maybe Text),
@@ -103,7 +103,7 @@ type ProductInstance = ProductInstanceT Identity
 type ProductInstancePrimaryKey = B.PrimaryKey ProductInstanceT Identity
 
 instance B.Table ProductInstanceT where
-  data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f (ID ProductInstance))
+  data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f (Id ProductInstance))
     deriving (Generic, B.Beamable)
   primaryKey = ProductInstancePrimaryKey . _id
 
@@ -220,6 +220,6 @@ instance ToBeckn Text ProductInstanceStatus where
 
 -- | ByOrganizationId OrganizationId
 data ListById
-  = ByApplicationId (ID Case.Case)
-  | ById (ID Products)
-  | ByCustomerId (ID Person)
+  = ByApplicationId (Id Case.Case)
+  | ById (Id Products)
+  | ByCustomerId (Id Person)

@@ -3,7 +3,7 @@
 
 module Beckn.Types.Storage.Rating where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
@@ -11,8 +11,8 @@ import qualified Database.Beam as B
 import EulerHS.Prelude
 
 data RatingT f = Rating
-  { _id :: B.C f (ID Rating),
-    _productInstanceId :: B.C f (ID ProductInstance),
+  { _id :: B.C f (Id Rating),
+    _productInstanceId :: B.C f (Id ProductInstance),
     _ratingValue :: B.C f Int,
     _createdAt :: B.C f UTCTime,
     _updatedAt :: B.C f UTCTime
@@ -24,7 +24,7 @@ type Rating = RatingT Identity
 type RatingPrimaryId = B.PrimaryKey RatingT Identity
 
 instance B.Table RatingT where
-  data PrimaryKey RatingT f = RatingPrimaryKey (B.C f (ID Rating))
+  data PrimaryKey RatingT f = RatingPrimaryKey (B.C f (Id Rating))
     deriving (Generic, B.Beamable)
   primaryKey = RatingPrimaryKey . _id
 

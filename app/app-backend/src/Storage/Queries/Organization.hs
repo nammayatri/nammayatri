@@ -4,7 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
 import Data.Time
@@ -34,7 +34,7 @@ verifyApiKey regToken = do
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
 findOrganizationById ::
-  ID Storage.Organization -> Flow (Maybe Storage.Organization)
+  Id Storage.Organization -> Flow (Maybe Storage.Organization)
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -81,7 +81,7 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
-  ID Storage.Organization ->
+  Id Storage.Organization ->
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
@@ -99,7 +99,7 @@ update id status = do
           _status <-. B.val_ pStatus
         ]
 
-findOrgByShortId :: ShortID Storage.Organization -> Flow (Maybe Storage.Organization)
+findOrgByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organization)
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

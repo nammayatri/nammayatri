@@ -7,7 +7,7 @@
 module Types.Storage.Customer where
 
 import Beckn.External.Encryption
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Aeson
 import Data.Swagger
 import Data.Time
@@ -15,7 +15,7 @@ import qualified Database.Beam as B
 import EulerHS.Prelude
 
 data CustomerTE e f = Customer
-  { _id :: B.C f (ID Customer),
+  { _id :: B.C f (Id Customer),
     _referenceId :: B.C f Text,
     _name :: B.C f Text,
     _mobileNumber :: EncryptedHashedField e f Text,
@@ -34,7 +34,7 @@ instance B.Beamable CustomerT
 type CustomerPrimaryKey = B.PrimaryKey CustomerT Identity
 
 instance B.Table CustomerT where
-  data PrimaryKey CustomerT f = CustomerPrimaryKey (B.C f (ID Customer))
+  data PrimaryKey CustomerT f = CustomerPrimaryKey (B.C f (Id Customer))
     deriving (Generic, B.Beamable)
   primaryKey = CustomerPrimaryKey . _id
 

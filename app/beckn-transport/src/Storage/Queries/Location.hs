@@ -8,7 +8,7 @@ module Storage.Queries.Location where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.), (||.))
@@ -29,7 +29,7 @@ create Storage.Location {..} = do
     >>= either DB.throwDBError pure
 
 findLocationById ::
-  ID Storage.Location -> Flow (Maybe Storage.Location)
+  Id Storage.Location -> Flow (Maybe Storage.Location)
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -37,7 +37,7 @@ findLocationById id = do
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
-updateLocationRec :: ID Storage.Location -> Storage.Location -> Flow ()
+updateLocationRec :: Id Storage.Location -> Storage.Location -> Flow ()
 updateLocationRec locationId location = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -64,14 +64,14 @@ updateLocationRec locationId location = do
 findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
 findAllByLocIds fromIds toIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable (predicate (ID <$> fromIds) (ID <$> toIds))
+  DB.findAllOrErr dbTable (predicate (Id <$> fromIds) (Id <$> toIds))
   where
     predicate pFromIds pToIds Storage.Location {..} =
       B.in_ _id (B.val_ <$> pFromIds)
         ||. B.in_ _id (B.val_ <$> pToIds)
 
-updateGpsCoord :: ID Storage.Location -> Double -> Double -> Flow ()
-updateGpsCoord (ID locId) lat long = do
+updateGpsCoord :: Id Storage.Location -> Double -> Double -> Flow ()
+updateGpsCoord (Id locId) lat long = do
   now <- getCurrTime
   void $
     postgreSQLSimpleExecute

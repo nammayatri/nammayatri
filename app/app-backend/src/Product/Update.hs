@@ -7,7 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Tracking
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Mobility.Trip
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -27,7 +27,7 @@ onUpdate _org req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let trip = msg ^. #order . #_trip
-          pid = ID $ msg ^. #order . #_id
+          pid = Id $ msg ^. #order . #_id
       orderPi <- MPI.findByParentIdType (Just pid) Case.RIDEORDER
       let mprdInfo = decodeFromText =<< (orderPi ^. #_info)
           uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)

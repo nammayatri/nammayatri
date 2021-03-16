@@ -4,7 +4,7 @@
 
 module Types.Storage.Quotation where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -34,7 +34,7 @@ instance FromHttpApiData Status where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data QuotationT f = Quotation
-  { _id :: B.C f (ID Quotation),
+  { _id :: B.C f (Id Quotation),
     _leadsId :: B.C f Text,
     _amount :: B.C f Text,
     _organizationId :: B.C f Text,
@@ -49,7 +49,7 @@ type Quotation = QuotationT Identity
 type QuotationPrimaryKey = B.PrimaryKey QuotationT Identity
 
 instance B.Table QuotationT where
-  data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f (ID Quotation))
+  data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f (Id Quotation))
     deriving (Generic, B.Beamable)
   primaryKey = QuotationPrimaryKey . _id
 

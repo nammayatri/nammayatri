@@ -2,7 +2,7 @@ module Flow.NearestDrivers (runTests) where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Vehicle
 import EulerHS.Prelude
 import Storage.Queries.Person (getNearestDrivers)
@@ -42,4 +42,4 @@ testInRadius =
 
 pickupPoint = LatLong 12.994927 77.596386
 
-org1 = ID "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f"
+org1 = Id "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f"

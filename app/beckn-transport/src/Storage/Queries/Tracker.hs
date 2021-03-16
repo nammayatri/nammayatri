@@ -3,7 +3,7 @@ module Storage.Queries.Tracker where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
@@ -22,7 +22,7 @@ create Storage.Tracker {..} = do
     >>= either DB.throwDBError pure
 
 findTrackerById ::
-  ID Storage.Tracker -> Flow (Maybe Storage.Tracker)
+  Id Storage.Tracker -> Flow (Maybe Storage.Tracker)
 findTrackerById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

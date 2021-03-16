@@ -5,7 +5,7 @@ module Services.Allocation.Internal where
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (getCurrTime, throwErrorJSON500)
 import qualified Beckn.Utils.Common as Common
@@ -43,13 +43,13 @@ getConfiguredNotificationTime = asks (driverNotificationExpiry . driverAllocatio
 getConfiguredAllocationTime :: Flow NominalDiffTime
 getConfiguredAllocationTime = asks (rideAllocationExpiry . driverAllocationConfig)
 
-getDriverPool :: ID Ride -> Flow [ID Driver]
+getDriverPool :: Id Ride -> Flow [Id Driver]
 getDriverPool rideId = Person.getDriverPool (cast rideId)
 
 getRequests :: Integer -> Flow [RideRequest]
 getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 
-assignDriver :: ID Ride -> ID Driver -> Flow ()
+assignDriver :: Id Ride -> Id Driver -> Flow ()
 assignDriver = PI.assignDriver . cast
 
 rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
@@ -67,7 +67,7 @@ rideRequestToRideRequest SRR.RideRequest {..} =
     }
 
 getCurrentNotification ::
-  ID Ride ->
+  Id Ride ->
   Flow (Maybe CurrentNotification)
 getCurrentNotification rideId = do
   notificationStatus <- QNS.findActiveNotificationByRideId rideId
@@ -78,51 +78,51 @@ getCurrentNotification rideId = do
         (notificationStatus ^. #_driverId)
         (notificationStatus ^. #_expiresAt)
 
-sendNewRideNotification :: ID Ride -> ID Driver -> Flow ()
-sendNewRideNotification (ID rideId) (ID driverId) = do
-  prodInst <- QPI.findById (ID rideId)
-  person <- QP.findPersonById (ID driverId)
+sendNewRideNotification :: Id Ride -> Id Driver -> Flow ()
+sendNewRideNotification (Id rideId) (Id driverId) = do
+  prodInst <- QPI.findById (Id rideId)
+  person <- QP.findPersonById (Id driverId)
   notifyDriverNewAllocation prodInst person
 
-sendRideNotAssignedNotification :: ID Ride -> ID Driver -> Flow ()
-sendRideNotAssignedNotification (ID rideId) (ID driverId) = do
-  prodInst <- QPI.findById (ID rideId)
-  person <- QP.findPersonById (ID driverId)
+sendRideNotAssignedNotification :: Id Ride -> Id Driver -> Flow ()
+sendRideNotAssignedNotification (Id rideId) (Id driverId) = do
+  prodInst <- QPI.findById (Id rideId)
+  person <- QP.findPersonById (Id driverId)
   notifyDriverUnassigned prodInst person
 
-updateNotificationStatus :: ID Ride -> ID Driver -> NotificationStatus -> Flow ()
+updateNotificationStatus :: Id Ride -> Id Driver -> NotificationStatus -> Flow ()
 updateNotificationStatus rideId driverId =
   QNS.updateStatus rideId driverId . allocNotifStatusToStorageStatus
 
-resetLastRejectionTime :: ID Driver -> Flow ()
+resetLastRejectionTime :: Id Driver -> Flow ()
 resetLastRejectionTime = QDS.updateIdleTime
 
-getAttemptedDrivers :: ID Ride -> Flow [ID Driver]
+getAttemptedDrivers :: Id Ride -> Flow [Id Driver]
 getAttemptedDrivers rideId =
   QNS.fetchRefusedNotificationsByRideId rideId <&> map (^. #_driverId)
 
-getDriversWithNotification :: Flow [ID Driver]
+getDriversWithNotification :: Flow [Id Driver]
 getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (^. #_driverId)
 
-getFirstDriverInTheQueue :: NonEmpty (ID Driver) -> Flow (ID Driver)
+getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> Flow (Id Driver)
 getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList
 
-checkAvailability :: NonEmpty (ID Driver) -> Flow [ID Driver]
+checkAvailability :: NonEmpty (Id Driver) -> Flow [Id Driver]
 checkAvailability driverIds = do
   driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driverIds
   pure $ map SDriverInfo._driverId driversInfo
 
-getDriverResponse :: ID Ride -> ID Driver -> Flow (Maybe DriverResponse)
+getDriverResponse :: Id Ride -> Id Driver -> Flow (Maybe DriverResponse)
 getDriverResponse rideId driverId =
   Redis.getKeyRedis $ "beckn:" <> getId rideId <> ":" <> getId driverId <> ":response"
 
-cancelRide :: ID Ride -> Flow ()
+cancelRide :: Id Ride -> Flow ()
 cancelRide = BP.cancelRide
 
-cleanupNotifications :: ID Ride -> Flow ()
+cleanupNotifications :: Id Ride -> Flow ()
 cleanupNotifications = QNS.cleanupNotifications
 
-removeRequest :: ID SRR.RideRequest -> Flow ()
+removeRequest :: Id SRR.RideRequest -> Flow ()
 removeRequest = QRR.removeRequest
 
 logOutput :: Log.LogLevel -> [Text] -> Text -> Flow ()
@@ -142,13 +142,13 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
 
-addAllocationRequest :: ID Ride -> Flow ()
+addAllocationRequest :: Id Ride -> Flow ()
 addAllocationRequest rideId = do
   guid <- generateGUID
   currTime <- getCurrTime
   let rideRequest =
         SRR.RideRequest
-          { _id = ID guid,
+          { _id = Id guid,
             _rideId = rideId,
             _createdAt = currTime,
             _type = SRR.ALLOCATION
@@ -156,31 +156,31 @@ addAllocationRequest rideId = do
   QRR.create rideRequest
 
 addNotificationStatus ::
-  ID Ride ->
-  ID Driver ->
+  Id Ride ->
+  Id Driver ->
   UTCTime ->
   Flow ()
 addNotificationStatus rideId driverId expiryTime = do
   uuid <- generateGUID
   QNS.create
     SNS.NotificationStatus
-      { _id = ID uuid,
+      { _id = Id uuid,
         _rideId = rideId,
         _driverId = driverId,
         _status = SNS.NOTIFIED,
         _expiresAt = expiryTime
       }
 
-addAvailableDriver :: SDriverInfo.DriverInformation -> [ID Driver] -> [ID Driver]
+addAvailableDriver :: SDriverInfo.DriverInformation -> [Id Driver] -> [Id Driver]
 addAvailableDriver driverInfo availableDriversIds =
   if driverInfo ^. #_active && not (driverInfo ^. #_onRide)
     then driverInfo ^. #_driverId : availableDriversIds
     else availableDriversIds
 
-logEvent :: AllocationEventType -> ID Ride -> Flow ()
+logEvent :: AllocationEventType -> Id Ride -> Flow ()
 logEvent = logAllocationEvent
 
-getRideInfo :: ID Ride -> Flow RideInfo
+getRideInfo :: Id Ride -> Flow RideInfo
 getRideInfo rideId = do
   productInstance <- QPI.findById $ cast rideId
   rideStatus <- castToRideStatus $ productInstance ^. #_status

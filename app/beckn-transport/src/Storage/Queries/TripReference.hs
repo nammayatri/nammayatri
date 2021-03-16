@@ -3,7 +3,7 @@ module Storage.Queries.TripReference where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
@@ -24,7 +24,7 @@ create Storage.TripReference {..} = do
     >>= either DB.throwDBError pure
 
 findTripReferenceById ::
-  ID Storage.TripReference -> Flow (Maybe Storage.TripReference)
+  Id Storage.TripReference -> Flow (Maybe Storage.TripReference)
 findTripReferenceById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -54,7 +54,7 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
-  ID Storage.TripReference ->
+  Id Storage.TripReference ->
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do

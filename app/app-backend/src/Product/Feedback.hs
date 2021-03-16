@@ -6,7 +6,7 @@ import qualified App.Types as App
 import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
   ( fromMaybeM500,
@@ -27,13 +27,13 @@ feedback person request = withFlowHandler $ do
   let ratingValue = request ^. #rating
   unless (ratingValue `elem` [1 .. 5]) $ throwBecknError400 "RATING_VALUE_INVALID"
   let prodInstId = request ^. #productInstanceId
-  product <- ProductInstance.findById $ ID prodInstId
+  product <- ProductInstance.findById $ Id prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
   messageId <- L.generateGUID
   let txnId = getId $ order ^. #_id
   context <- buildContext "feedback" txnId messageId
   organization <-
-    Organization.findOrganizationById (ID $ product ^. #_organizationId)
+    Organization.findOrganizationById (Id $ product ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   let feedbackMsg =
         Beckn.FeedbackReqMessage

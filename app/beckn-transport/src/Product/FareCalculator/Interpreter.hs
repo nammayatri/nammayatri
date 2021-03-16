@@ -3,7 +3,7 @@ module Product.FareCalculator.Interpreter (calculateFare) where
 import App.Types (Flow, Log (..))
 import Beckn.Product.BusinessRule (runBRFlowMaybe)
 import Beckn.Types.Amount (Amount)
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
@@ -23,7 +23,7 @@ import qualified Storage.Queries.FarePolicy as FarePolicyS
 import qualified Types.Storage.FarePolicy as FarePolicyS
 
 calculateFare ::
-  ID Organization ->
+  Id Organization ->
   Vehicle.Variant ->
   Location.Location ->
   Location.Location ->

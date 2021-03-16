@@ -7,7 +7,7 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import Beckn.Types.Common as BC
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -164,7 +164,7 @@ createPerson req = do
 
 checkPersonExists :: Text -> Flow SP.Person
 checkPersonExists _EntityId =
-  QP.findPersonById (ID _EntityId)
+  QP.findPersonById (Id _EntityId)
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =

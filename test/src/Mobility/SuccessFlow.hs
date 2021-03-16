@@ -2,7 +2,7 @@
 
 module Mobility.SuccessFlow where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 -- import Data.Text (isSuffixOf)

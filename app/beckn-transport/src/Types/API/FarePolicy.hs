@@ -7,14 +7,14 @@ module Types.API.FarePolicy
 where
 
 import Beckn.Types.Core.Ack (Ack (..))
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
 import EulerHS.Prelude
 import Types.Domain.FarePolicy (FarePolicy)
 
 data FarePolicyResponse = FarePolicyResponse
-  { id :: ID FarePolicy,
+  { id :: Id FarePolicy,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Maybe Double,
     baseDistance :: Maybe Double,

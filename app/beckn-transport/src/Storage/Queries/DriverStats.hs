@@ -5,7 +5,7 @@ module Storage.Queries.DriverStats where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
@@ -18,7 +18,7 @@ getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.
 getDbTable =
   DB._driverStats . DB.transporterDb <$> getSchemaName
 
-createInitialDriverStats :: ID Driver -> Flow ()
+createInitialDriverStats :: Id Driver -> Flow ()
 createInitialDriverStats driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -30,7 +30,7 @@ createInitialDriverStats driverId = do
   DB.createOne dbTable (Storage.Common.insertExpression driverStats)
     >>= either DB.throwDBError pure
 
-getFirstDriverInTheQueue :: [ID Driver] -> Flow (ID Driver)
+getFirstDriverInTheQueue :: [Id Driver] -> Flow (Id Driver)
 getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
@@ -40,7 +40,7 @@ getFirstDriverInTheQueue ids = do
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ _idleSince
 
-updateIdleTime :: ID Driver -> Flow ()
+updateIdleTime :: Id Driver -> Flow ()
 updateIdleTime driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -59,7 +59,7 @@ fetchAll = do
   DB.findAllRows dbTable
     >>= either DB.throwDBError pure
 
-deleteById :: ID Driver -> Flow ()
+deleteById :: Id Driver -> Flow ()
 deleteById driverId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate driverId)

@@ -2,7 +2,7 @@ module Models.Case where
 
 import App.Types
 import Beckn.Types.Error
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.Person as Person
@@ -28,7 +28,7 @@ create c = do
 
 -- | Find Cases
 findAllByTypeAndStatuses ::
-  ID Person ->
+  Id Person ->
   CaseType ->
   [CaseStatus] ->
   Maybe Integer ->
@@ -39,25 +39,25 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
   checkDBError result
 
 -- | Find Case by id
-findById :: ID Case -> Flow Case
+findById :: Id Case -> Flow Case
 findById caseId = do
   result <- Q.findById caseId
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Case by id and type
-findByIdAndType :: ID Case -> CaseType -> Flow Case
+findByIdAndType :: Id Case -> CaseType -> Flow Case
 findByIdAndType caseId caseType = do
   result <- Q.findByIdAndType caseId caseType
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Case by id and a requestor id
-findIdByPerson :: Person.Person -> ID Case -> Flow Case
+findIdByPerson :: Person.Person -> Id Case -> Flow Case
 findIdByPerson person caseId = do
   result <- Q.findIdByPerson person caseId
   checkDBErrorOrEmpty result (CaseErr CaseNotFound)
 
 -- | Find Cases by list of ids
-findAllByIds :: [ID Case] -> Flow [Case]
+findAllByIds :: [Id Case] -> Flow [Case]
 findAllByIds caseIds =
   if null caseIds
     then pure []
@@ -78,13 +78,13 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
   checkDBError result
 
 -- | Update Case validity date
-updateValidTill :: ID Case -> UTCTime -> Flow ()
+updateValidTill :: Id Case -> UTCTime -> Flow ()
 updateValidTill cid validTill = do
   result <- Q.updateValidTill cid validTill
   checkDBError result
 
 -- | Validate and update Case status
-updateStatus :: ID Case -> CaseStatus -> Flow ()
+updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
   validateStatusChange status cid
   result <- Q.updateStatus cid status
@@ -92,7 +92,7 @@ updateStatus cid status = do
 
 -- | Validate and update Case status and its udfs
 updateStatusAndUdfs ::
-  ID Case ->
+  Id Case ->
   CaseStatus ->
   Maybe Text ->
   Maybe Text ->
@@ -120,14 +120,14 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
   checkDBError result
 
 -- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> ID Case -> Flow ()
+validateStatusChange :: CaseStatus -> Id Case -> Flow ()
 validateStatusChange newStatus caseId = do
   c <- findById caseId
   case validateStatusTransition (_status c) newStatus of
     Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
     _ -> pure ()
 
-updateInfo :: ID Case -> Text -> Flow ()
+updateInfo :: Id Case -> Text -> Flow ()
 updateInfo cId info = do
   result <- Q.updateInfo cId info
   checkDBError result

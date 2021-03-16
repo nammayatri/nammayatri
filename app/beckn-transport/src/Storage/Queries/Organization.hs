@@ -6,7 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
 import Data.Time
@@ -36,7 +36,7 @@ verifyToken regToken = do
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
-findOrganizationById :: ID Storage.Organization -> Flow Storage.Organization
+findOrganizationById :: Id Storage.Organization -> Flow Storage.Organization
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -45,7 +45,7 @@ findOrganizationById id = do
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
-findOrganizationByShortId :: ShortID Storage.Organization -> Flow (Maybe Storage.Organization)
+findOrganizationByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organization)
 findOrganizationByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable (\Storage.Organization {..} -> _shortId ==. B.val_ shortId)
@@ -92,7 +92,7 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
-  ID Storage.Organization ->
+  Id Storage.Organization ->
   Storage.Status ->
   Flow (T.DBResult ())
 update id status = do
@@ -145,7 +145,7 @@ findOrgByCbUrl url = do
   where
     predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
 
-findOrgByShortId :: ShortID Storage.Organization -> Flow Storage.Organization
+findOrgByShortId :: ShortId Storage.Organization -> Flow Storage.Organization
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

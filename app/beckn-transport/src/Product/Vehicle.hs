@@ -4,7 +4,7 @@ module Product.Vehicle where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
@@ -39,7 +39,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandl
 
 updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do
-  vehicle <- QV.findByIdAndOrgId (ID {getId = vehicleId}) orgId
+  vehicle <- QV.findByIdAndOrgId (Id {getId = vehicleId}) orgId
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
@@ -47,17 +47,17 @@ updateVehicle orgId vehicleId req = withFlowHandler $ do
 deleteVehicle :: Text -> Text -> FlowHandler DeleteVehicleRes
 deleteVehicle orgId vehicleId = withFlowHandler $ do
   vehicle <-
-    QV.findVehicleById (ID vehicleId)
+    QV.findVehicleById (Id vehicleId)
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
   if vehicle ^. #_organizationId == orgId
     then do
-      QV.deleteById (ID vehicleId)
+      QV.deleteById (Id vehicleId)
       return $ DeleteVehicleRes vehicleId
     else throwError401 "Unauthorized"
 
 getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
-  user <- QP.findPersonById (ID _EntityId)
+  user <- QP.findPersonById (Id _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError400 "Invalid Request"
     _ ->

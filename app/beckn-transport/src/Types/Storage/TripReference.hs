@@ -4,7 +4,7 @@
 
 module Types.Storage.TripReference where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -34,7 +34,7 @@ instance FromHttpApiData Status where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data TripReferenceT f = TripReference
-  { _id :: B.C f (ID TripReference),
+  { _id :: B.C f (Id TripReference),
     _customerId :: B.C f Text,
     _quotationId :: B.C f Text,
     _driverId :: B.C f (Maybe Text),
@@ -52,7 +52,7 @@ type TripReference = TripReferenceT Identity
 type TripReferencePrimaryKey = B.PrimaryKey TripReferenceT Identity
 
 instance B.Table TripReferenceT where
-  data PrimaryKey TripReferenceT f = TripReferencePrimaryKey (B.C f (ID TripReference))
+  data PrimaryKey TripReferenceT f = TripReferencePrimaryKey (B.C f (Id TripReference))
     deriving (Generic, B.Beamable)
   primaryKey = TripReferencePrimaryKey . _id
 

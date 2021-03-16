@@ -14,7 +14,7 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
 import Beckn.Types.Core.Tag
 import qualified Beckn.Types.Core.Tracking as CoreTracking
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Mobility.Catalog as Mobility
 import Beckn.Types.Mobility.Driver as Mobility
 import Beckn.Types.Mobility.Order as Mobility

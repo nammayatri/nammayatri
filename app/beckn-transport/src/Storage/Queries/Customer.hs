@@ -4,7 +4,7 @@ import App.Types
 import Beckn.External.Encryption
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
@@ -24,7 +24,7 @@ create customer = do
     >>= either DB.throwDBError pure
 
 findCustomerById ::
-  ID Storage.Customer -> Flow (Maybe Storage.Customer)
+  Id Storage.Customer -> Flow (Maybe Storage.Customer)
 findCustomerById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

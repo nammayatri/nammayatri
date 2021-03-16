@@ -7,7 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -33,13 +33,13 @@ import Utils.Routes
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
 confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrTime
-  case_ <- QCase.findIdByPerson person $ ID caseId
+  case_ <- QCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
     throwError400 "Case has expired"
   orderCase_ <- mkOrderCase case_
-  productInstance <- MPI.findById (ID productInstanceId)
+  productInstance <- MPI.findById (Id productInstanceId)
   organization <-
-    OQ.findOrganizationById (ID $ productInstance ^. #_organizationId)
+    OQ.findOrganizationById (Id $ productInstance ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   QCase.create orderCase_
@@ -76,7 +76,7 @@ onConfirm _org req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let trip = fromBeckn <$> msg ^. #order . #_trip
-          pid = ID $ msg ^. #order . #_id
+          pid = Id $ msg ^. #order . #_id
           tracker = flip Products.Tracker Nothing <$> trip
       prdInst <- MPI.findById pid
       -- TODO: update tracking prodInfo in .info
@@ -119,14 +119,14 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: ID Case.Case -> SPI.ProductInstance -> Flow SPI.ProductInstance
+mkOrderProductInstance :: Id Case.Case -> SPI.ProductInstance -> Flow SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   now <- getCurrTime
   piid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SPI.ProductInstance
-      { _id = ID piid,
+      { _id = Id piid,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = prodInst ^. #_personId,

@@ -12,7 +12,7 @@ import qualified Beckn.Types.Core.API.Feedback as API
 import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.Person as SP
@@ -236,7 +236,7 @@ type ProductInstanceAPI =
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
            :<|> TokenAuth
-           :> Capture "productInstanceId" (ID ProductInstance)
+           :> Capture "productInstanceId" (Id ProductInstance)
            :> ReqBody '[JSON] ProdInstUpdateReq
            :> Post '[JSON] ProdInstInfo
        )
@@ -257,7 +257,7 @@ productInstanceFlow ::
                                FlowHandler CaseListRes
                              )
                                :<|> ( RegistrationToken ->
-                                      ID ProductInstance ->
+                                      Id ProductInstance ->
                                       ProdInstUpdateReq ->
                                       FlowHandler ProdInstInfo
                                     )
@@ -326,23 +326,23 @@ transporterServer =
     :<|> googleMapsProxyFlow
 
 type OrgBecknAPI =
-  Capture "orgId" (ID Organization)
+  Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> SignatureAuth "Proxy-Authorization"
     :> API.SearchAPI
-    :<|> Capture "orgId" (ID Organization)
+    :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.ConfirmAPI
-    :<|> Capture "orgId" (ID Organization)
+    :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.CancelAPI
-    :<|> Capture "orgId" (ID Organization)
+    :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.StatusAPI
-    :<|> Capture "orgId" (ID Organization)
+    :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.TrackAPI
-    :<|> Capture "orgId" (ID Organization)
+    :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.FeedbackAPI
 
@@ -401,7 +401,7 @@ type DriverInformationAPI =
            :> Post '[JSON] APIResult
            :<|> "notification"
            :> TokenAuth
-           :> QueryParam "productInstanceId" (ID Ride)
+           :> QueryParam "productInstanceId" (Id Ride)
            :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
        )
 

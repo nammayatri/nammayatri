@@ -4,7 +4,7 @@
 module Product.Case where
 
 import App.Types
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -18,17 +18,17 @@ import Types.API.Case as API
 
 status ::
   Person.Person ->
-  ID Case.Case ->
+  Id Case.Case ->
   FlowHandler StatusRes
 status person caseId = withFlowHandler $ do
   case_ <- Case.findIdByPerson person caseId
   prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM500 "Could not find from location"
-      =<< Location.findLocationById (ID $ case_ ^. #_fromLocationId)
+      =<< Location.findLocationById (Id $ case_ ^. #_fromLocationId)
   toLocation <-
     fromMaybeM500 "Could not find to location"
-      =<< Location.findLocationById (ID $ case_ ^. #_toLocationId)
+      =<< Location.findLocationById (Id $ case_ ^. #_toLocationId)
   return $ StatusRes case_ prodInstRes fromLocation toLocation
 
 list ::
@@ -45,8 +45,8 @@ list person caseType statuses mlimit moffset =
   where
     mapProductInstance case_@Case.Case {..} = do
       prodInstRes <- getProdInstances case_
-      fromLocation <- Location.findLocationById $ ID _fromLocationId
-      toLocation <- Location.findLocationById $ ID _toLocationId
+      fromLocation <- Location.findLocationById $ Id _fromLocationId
+      toLocation <- Location.findLocationById $ Id _toLocationId
       return $ API.CaseRes case_ prodInstRes fromLocation toLocation
 
 -- Core Utility functions are below

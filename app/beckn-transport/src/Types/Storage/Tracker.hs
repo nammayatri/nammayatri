@@ -4,7 +4,7 @@
 
 module Types.Storage.Tracker where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -34,7 +34,7 @@ instance FromHttpApiData Type where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data TrackerT f = Tracker
-  { _id :: B.C f (ID Tracker),
+  { _id :: B.C f (Id Tracker),
     _type :: B.C f Type,
     _referenceId :: B.C f Text,
     _long :: B.C f Text,
@@ -50,7 +50,7 @@ type Tracker = TrackerT Identity
 type TrackerPrimaryKey = B.PrimaryKey TrackerT Identity
 
 instance B.Table TrackerT where
-  data PrimaryKey TrackerT f = TrackerPrimaryKey (B.C f (ID Tracker))
+  data PrimaryKey TrackerT f = TrackerPrimaryKey (B.C f (Id Tracker))
     deriving (Generic, B.Beamable)
   primaryKey = TrackerPrimaryKey . _id
 

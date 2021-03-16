@@ -18,7 +18,7 @@ import qualified Beckn.Types.FMD.API.Track as API
 import qualified Beckn.Types.FMD.API.Update as API
 import qualified Beckn.Types.FMD.Item as Item
 import Beckn.Types.FMD.Order
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwBecknError400, throwBecknError500)
@@ -179,7 +179,7 @@ init org req = do
 
     createCaseIfNotPresent orgId order quote = do
       now <- getCurrTime
-      let caseId = ID $ fromJust $ order ^. #_id
+      let caseId = Id $ fromJust $ order ^. #_id
       let case_ =
             Case
               { _id = caseId,
@@ -221,7 +221,7 @@ confirm org req = do
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) context $ reqOrder ^. #_id
-  case_ <- Storage.findById (ID orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let order = orderDetails ^. #order
   validateDelayFromInit dzQuotationTTLinMin case_
@@ -314,7 +314,7 @@ track org req = do
   let orderId = req ^. (#message . #order_id)
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-  case_ <- Storage.findById (ID orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   fork "track" do
     let taskId = case_ ^. #_shortId
     dzBACreds <- getDzBAPCreds org
@@ -340,7 +340,7 @@ status org req = do
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
   payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
   let orderId = req ^. (#message . #order_id)
-  c <- Storage.findById (ID orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  c <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let taskId = c ^. #_shortId
   (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
   dzBACreds <- getDzBAPCreds org
@@ -384,7 +384,7 @@ cancel org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-  case_ <- Storage.findById (ID oId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  case_ <- Storage.findById (Id oId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let taskId = case_ ^. #_shortId
   orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   dzBACreds <- getDzBAPCreds org
@@ -399,7 +399,7 @@ cancel org req = do
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: ID Case -> OrderDetails -> Case -> Flow ()
+    updateCase :: Id Case -> OrderDetails -> Case -> Flow ()
     updateCase caseId orderDetails case_ = do
       let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase
@@ -468,7 +468,7 @@ validateReturn :: Order -> Flow ()
 validateReturn currOrder =
   when (currOrder ^. #_type == Just "RETURN") $ do
     prevOrderId <- currOrder ^. #_prev_order_id & fromMaybeM400 "INVALID_ORDER_ID"
-    prevOrderCase <- Storage.findById (ID prevOrderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
+    prevOrderCase <- Storage.findById (Id prevOrderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
     (prevOrderDetails :: OrderDetails) <- prevOrderCase ^. #_udf1 >>= decodeFromText & fromMaybeM400 "ORDER_NOT_FOUND"
     let prevOrder = prevOrderDetails ^. #order
     -- validating that the items which are returned should be a subset of items in the actual order.

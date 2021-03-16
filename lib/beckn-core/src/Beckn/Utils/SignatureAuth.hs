@@ -88,7 +88,7 @@ decodeKeyId input =
 
 -- | Signature parameters as per the specification
 data SignatureParams = SignatureParams
-  { -- | The key ID that should be used to to generate/verify the signature
+  { -- | The key Id that should be used to to generate/verify the signature
     keyId :: KeyId,
     -- | The signature algorithm to use
     algorithm :: SignatureAlgorithm,

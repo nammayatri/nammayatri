@@ -3,13 +3,13 @@
 module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
-import Beckn.Types.ID
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Error
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -31,19 +31,19 @@ import qualified Test.RandomStrings as RS
 import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
-confirm :: ID Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
+confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
 confirm transporterId bapOrg req = withFlowHandler $ do
   logInfo "confirm API Flow" "Reached"
   BP.validateContext "confirm" $ req ^. #context
-  let prodInstId = ID $ req ^. #message . #order . #_id
+  let prodInstId = Id $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
-  let transporterId' = ID $ productInstance ^. #_organizationId
+  let transporterId' = Id $ productInstance ^. #_organizationId
   transporterOrg <- Organization.findOrganizationById transporterId'
   unless (transporterId' == transporterId) (throwError400 "DIFFERENT_TRANSPORTER_IDS")
   let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
   bapOrgId <- searchCase ^. #_udf4 & fromMaybeM500 "BAP_ORG_NOT_SET"
-  unless (bapOrg ^. #_id == ID bapOrgId) (throwError400 "BAP mismatch")
+  unless (bapOrg ^. #_id == Id bapOrgId) (throwError400 "BAP mismatch")
   orderCase <- mkOrderCase searchCase
   _ <- Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -81,7 +81,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
     vehicleVariant :: Vehicle.Variant <-
       (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
         & fromMaybeM500 "NO_VEHICLE_VARIANT"
-    driverPool <- calculateDriverPool (ID pickupPoint) transporterId vehicleVariant
+    driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
     logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
@@ -151,13 +151,13 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: ID Case.Case -> ProductInstance.ProductInstance -> Flow ProductInstance.ProductInstance
+mkOrderProductInstance :: Id Case.Case -> ProductInstance.ProductInstance -> Flow ProductInstance.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   (now, pid, shortId) <- BP.getIdShortIdAndTime
   inAppOtpCode <- generateOTPCode
   return $
     ProductInstance.ProductInstance
-      { _id = ID pid,
+      { _id = Id pid,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = Nothing,
@@ -189,7 +189,7 @@ mkOrderProductInstance caseId prodInst = do
 mkTrackerCase :: Case.Case -> Text -> UTCTime -> Text -> Case.Case
 mkTrackerCase case_@Case.Case {..} uuid now shortId =
   Case.Case
-    { _id = ID uuid,
+    { _id = Id uuid,
       _name = Nothing,
       _description = Just "Case to track a Ride",
       _shortId = shortId,
@@ -204,12 +204,12 @@ mkTrackerCase case_@Case.Case {..} uuid now shortId =
       ..
     }
 
-mkTrackerProductInstance :: Text -> ID Case.Case -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
+mkTrackerProductInstance :: Text -> Id Case.Case -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
 mkTrackerProductInstance piId caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
     ProductInstance.ProductInstance
-      { _id = ID piId,
+      { _id = Id piId,
         _caseId = caseId,
         _productId = prodInst ^. #_productId,
         _personId = Nothing,

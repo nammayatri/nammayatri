@@ -8,7 +8,7 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
@@ -36,11 +36,11 @@ import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
 list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ do
-  person <- QP.findPersonById (ID _EntityId)
+  person <- QP.findPersonById (Id _EntityId)
   now <- getCurrTime
   case person ^. #_organizationId of
     Just orgId -> do
-      org <- OQ.findOrganizationById (ID orgId)
+      org <- OQ.findOrganizationById (Id orgId)
       when (org ^. #_status /= Organization.APPROVED) $
         throwBecknError401 "Unauthorized"
       caseList <-
@@ -76,7 +76,7 @@ createProductInstance cs prod price orgId status = do
   where
     getProdInst piId shortId currTime =
       ProductInstance
-        { _id = ID piId,
+        { _id = Id piId,
           _caseId = Case._id cs,
           _productId = Product._id prod,
           _personId = Nothing,
@@ -109,7 +109,7 @@ notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> 
 notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
   logInfo "notifyGateway" $ show c
   logInfo "notifyGateway" $ show prodInst
-  transporterOrg <- OQ.findOrganizationById (ID transporterOrgId)
+  transporterOrg <- OQ.findOrganizationById (Id transporterOrgId)
   onSearchPayload <- case piStatus of
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg

@@ -19,7 +19,7 @@ module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
 import Beckn.Types.Common
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fork)
 import qualified Beckn.Utils.JWT as JWT

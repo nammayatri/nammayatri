@@ -1,7 +1,7 @@
 module App.Routes.FarePolicy where
 
 import App.Types (FlowServer)
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import Product.FarePolicy (listFarePolicies, updateFarePolicy)
 import Servant
 import Types.API.FarePolicy
@@ -16,7 +16,7 @@ type FarePolicyAPI =
   "farePolicy"
     :> ( TokenAuth :> Get '[JSON] ListFarePolicyResponse
            :<|> TokenAuth
-             :> Capture "farePolicyId" (ID FarePolicy)
+             :> Capture "farePolicyId" (Id FarePolicy)
              :> ReqBody '[JSON] UpdateFarePolicyRequest
              :> Post '[JSON] UpdateFarePolicyResponse
        )

@@ -1,13 +1,13 @@
 module Types.API.Ride where
 
 import Beckn.Types.Core.Ack (Ack (..))
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Data.Time
 import EulerHS.Prelude
 
 data SetDriverAcceptanceReq = SetDriverAcceptanceReq
-  { _productInstanceId :: ID ProductInstance,
+  { _productInstanceId :: Id ProductInstance,
     _response :: NotificationStatus
   }
   deriving (Show, Generic)

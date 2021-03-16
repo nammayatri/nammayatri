@@ -357,7 +357,7 @@ data FCMErrorCode
     INVALID_ARGUMENT
   | -- (HTTP error code = 404) App instance was unregistered from FCM. This usually means that the token used is no longer valid and a new one must be used
     UNREGISTERED
-  | -- (HTTP error code = 403) The authenticated sender ID is different from the sender ID for the registration token
+  | -- (HTTP error code = 403) The authenticated sender Id is different from the sender Id for the registration token
     SENDER_ID_MISMATCH
   | -- (HTTP error code = 429) Sending limit exceeded for the message target. An extension of type google.rpc.QuotaFailure is returned to specify which quota got exceeded
     QUOTA_EXCEEDED

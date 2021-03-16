@@ -6,7 +6,7 @@ module Product.FareCalculator.Flow where
 
 import Beckn.Product.BusinessRule (BusinessRule, fromMaybeBR)
 import Beckn.Types.Amount (Amount (..))
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
@@ -34,7 +34,7 @@ data JourneyTrip = OneWayTrip | HalfReturnTrip | FullReturnTrip
   deriving stock (Show, Eq)
 
 data ServiceHandle m = ServiceHandle
-  { getFarePolicy :: ID Organization.Organization -> Vehicle.Variant -> BusinessRule m (Maybe FarePolicy),
+  { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> BusinessRule m (Maybe FarePolicy),
     getDistance :: PickupLocation -> DropLocation -> BusinessRule m (Maybe Float)
   }
 
@@ -52,7 +52,7 @@ fareSum FareParameters {..} =
 doCalculateFare ::
   Monad m =>
   ServiceHandle m ->
-  ID Organization.Organization ->
+  Id Organization.Organization ->
   Vehicle.Variant ->
   PickupLocation ->
   DropLocation ->

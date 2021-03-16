@@ -2,7 +2,7 @@ module Models.ProductInstance where
 
 import App.Types
 import Beckn.Types.Error
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case (Case)
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Common
@@ -18,14 +18,14 @@ import qualified Storage.Queries.ProductInstance as Q
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update ProductInstance status
-updateStatus :: ID ProductInstance -> ProductInstanceStatus -> Flow ()
+updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus prodInstId newStatus = do
   validatePIStatusChange newStatus prodInstId
   result <- Q.updateStatus prodInstId newStatus
   checkDBError result
 
 -- | Validate and update ProductInstances statusses
-updateStatusByIds :: [ID ProductInstance] -> ProductInstanceStatus -> Flow ()
+updateStatusByIds :: [Id ProductInstance] -> ProductInstanceStatus -> Flow ()
 updateStatusByIds ids status = do
   productInstances <- findAllByIds ids
   validatePIStatusesChange' status productInstances
@@ -33,25 +33,25 @@ updateStatusByIds ids status = do
   checkDBError result
 
 -- | Find Product Instance by id
-findById :: ID ProductInstance -> Flow ProductInstance
+findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: ID Case -> Flow [ProductInstance]
+findAllByCaseId :: Id Case -> Flow [ProductInstance]
 findAllByCaseId caseId = do
   result <- Q.findAllByCaseId' caseId
   checkDBError result
 
 -- | Find Product Instances
-findAllByIds :: [ID ProductInstance] -> Flow [ProductInstance]
+findAllByIds :: [Id ProductInstance] -> Flow [ProductInstance]
 findAllByIds ids = do
   result <- Q.findAllByIds' ids
   checkDBError result
 
 -- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> ID ProductInstance -> Flow ()
+validatePIStatusChange :: ProductInstanceStatus -> Id ProductInstance -> Flow ()
 validatePIStatusChange newStatus productInstanceId = do
   cp <- findById productInstanceId
   validateStatusChange newStatus cp

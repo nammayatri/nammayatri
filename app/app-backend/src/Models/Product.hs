@@ -2,7 +2,7 @@ module Models.Product where
 
 import App.Types
 import Beckn.Types.Error
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
 import EulerHS.Prelude hiding (product)
@@ -21,12 +21,12 @@ create product = do
   checkDBError result
 
 -- | Find Product by id
-findById :: ID Products -> Flow Products
+findById :: Id Products -> Flow Products
 findById pid = do
   result <- Q.findById pid
   checkDBErrorOrEmpty result $ CaseErr CaseNotFound
 
-findAllByIds :: [ID Products] -> Flow [Products]
+findAllByIds :: [Id Products] -> Flow [Products]
 findAllByIds pids = do
   result <- Q.findAllByIds pids
   checkDBError result

@@ -3,7 +3,7 @@ module Storage.Queries.Rating where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Query
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Rating as Storage
@@ -24,7 +24,7 @@ create rating = do
   Query.createOne dbTable (Storage.insertExpression rating)
     >>= either Query.throwDBError pure
 
-updateRatingValue :: ID Storage.Rating -> Int -> Flow ()
+updateRatingValue :: Id Storage.Rating -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -39,7 +39,7 @@ updateRatingValue ratingId newRatingValue = do
     (\Storage.Rating {..} -> _id ==. B.val_ ratingId)
     >>= either Query.throwDBError pure
 
-findByProductInstanceId :: ID PI.ProductInstance -> Flow (Maybe Storage.Rating)
+findByProductInstanceId :: Id PI.ProductInstance -> Flow (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
   Query.findOne dbTable predicate
@@ -47,7 +47,7 @@ findByProductInstanceId productInsId = do
   where
     predicate Storage.Rating {..} = _productInstanceId ==. B.val_ productInsId
 
-findAllRatingsForPerson :: ID Person -> Flow [Storage.Rating]
+findAllRatingsForPerson :: Id Person -> Flow [Storage.Rating]
 findAllRatingsForPerson personId = do
   ratingTable <- getDbTable
   productInstanceTable <- PI.getDbTable

@@ -10,7 +10,7 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
@@ -37,7 +37,7 @@ create person = do
     >>= either DB.throwDBError pure
 
 findPersonById ::
-  ID Storage.Person -> Flow Storage.Person
+  Id Storage.Person -> Flow Storage.Person
 findPersonById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -47,7 +47,7 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
 
-findPersonByIdAndRoleAndOrgId :: ID Storage.Person -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
 findPersonByIdAndRoleAndOrgId id role orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -158,7 +158,7 @@ findByEmail email = do
     predicate Storage.Person {..} =
       _email ==. B.val_ (Just email)
 
-updateOrganizationIdAndMakeAdmin :: ID Storage.Person -> Text -> Flow ()
+updateOrganizationIdAndMakeAdmin :: Id Storage.Person -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -173,7 +173,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePersonRec :: ID Storage.Person -> Storage.Person -> Flow ()
+updatePersonRec :: Id Storage.Person -> Storage.Person -> Flow ()
 updatePersonRec personId uperson = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -202,7 +202,7 @@ updatePersonRec personId uperson = do
         ]
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
-updatePerson :: ID Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
+updatePerson :: Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -224,7 +224,7 @@ updatePerson personId verified identifier identifierType mobileNumber = do
     predicate id Storage.Person {..} = _id ==. B.val_ id
 
 update ::
-  ID Storage.Person ->
+  Id Storage.Person ->
   Storage.Status ->
   Bool ->
   Maybe FCM.FCMRecipientToken ->
@@ -247,7 +247,7 @@ update id status verified deviceTokenM = do
         ]
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
-deleteById :: ID Storage.Person -> Flow ()
+deleteById :: Id Storage.Person -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
@@ -255,7 +255,7 @@ deleteById id = do
   where
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
-updateEntity :: ID Storage.Person -> Text -> Text -> Flow ()
+updateEntity :: Id Storage.Person -> Text -> Text -> Flow ()
 updateEntity personId entityId entityType = do
   dbTable <- getDbTable
   let mEntityId =
@@ -289,7 +289,7 @@ findByEntityId entityId = do
     predicate Storage.Person {..} =
       _udf1 ==. B.val_ (Just entityId)
 
-updateAverageRating :: ID Storage.Person -> Text -> Flow ()
+updateAverageRating :: Id Storage.Person -> Text -> Flow ()
 updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
   now <- getCurrTime
@@ -333,7 +333,7 @@ getNearestDrivers point' radius' orgId' = do
             (pure False)
             ( (B.primaryKey location ==.)
                 . Storage.LocationPrimaryKey
-                . fmap ID
+                . fmap Id
             )
             (driver ^. #_locationId)
       dist <- distToPoint point location
@@ -355,11 +355,11 @@ getNearestDrivers point' radius' orgId' = do
 getNearestDrivers ::
   LatLong ->
   Integer ->
-  ID Org.Organization ->
+  Id Org.Organization ->
   Vehicle.Variant ->
-  Flow [(ID Driver, Double)]
+  Flow [(Id Driver, Double)]
 getNearestDrivers LatLong {..} radius orgId variant =
-  map (first ID)
+  map (first Id)
     <$> postgreSQLSimpleQuery
       [sql|
         WITH a AS (

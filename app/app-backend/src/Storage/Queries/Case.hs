@@ -5,7 +5,7 @@ module Storage.Queries.Case where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
@@ -26,7 +26,7 @@ create Storage.Case {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
 
 findAllByTypeAndStatuses ::
-  ID Person.Person ->
+  Id Person.Person ->
   Storage.CaseType ->
   [Storage.CaseStatus] ->
   Maybe Integer ->
@@ -48,14 +48,14 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
           _requestor ==. B.val_ (Just $ getId personId)
         ]
 
-findById :: ID Storage.Case -> Flow (T.DBResult (Maybe Storage.Case))
+findById :: Id Storage.Case -> Flow (T.DBResult (Maybe Storage.Case))
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} = _id ==. B.val_ caseId
 
-findByIdAndType :: ID Storage.Case -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
+findByIdAndType :: Id Storage.Case -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
 findByIdAndType caseId caseType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -64,7 +64,7 @@ findByIdAndType caseId caseType = do
       (_id ==. B.val_ caseId)
         &&. (_type ==. B.val_ caseType)
 
-findIdByPerson :: Person.Person -> ID Storage.Case -> Flow (T.DBResult (Maybe Storage.Case))
+findIdByPerson :: Person.Person -> Id Storage.Case -> Flow (T.DBResult (Maybe Storage.Case))
 findIdByPerson person caseId = do
   dbTable <- getDbTable
   let personId = getId $ person ^. #_id
@@ -73,21 +73,21 @@ findIdByPerson person caseId = do
     predicate personId Storage.Case {..} =
       _id ==. B.val_ caseId &&. _requestor ==. B.val_ (Just personId)
 
-findAllByIds :: [ID Storage.Case] -> Flow (T.DBResult [Storage.Case])
+findAllByIds :: [Id Storage.Case] -> Flow (T.DBResult [Storage.Case])
 findAllByIds caseIds = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
   where
     predicate Storage.Case {..} = _id `B.in_` (B.val_ <$> caseIds)
 
-findAllByParentIdsAndCaseType :: [ID Storage.Case] -> Storage.CaseType -> Flow (T.DBResult [Storage.Case])
+findAllByParentIdsAndCaseType :: [Id Storage.Case] -> Storage.CaseType -> Flow (T.DBResult [Storage.Case])
 findAllByParentIdsAndCaseType caseIds caseType = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
   where
     predicate Storage.Case {..} = _parentCaseId `B.in_` (B.val_ . Just <$> caseIds) &&. (_type ==. B.val_ caseType)
 
-findOneByParentIdAndCaseType :: ID Storage.Case -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
+findOneByParentIdAndCaseType :: Id Storage.Case -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
 findOneByParentIdAndCaseType caseId caseType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -118,7 +118,7 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
             <> maybe [] (\to -> [_createdAt B.<=. B.val_ to]) maybeTo
         )
 
-updateValidTill :: ID Storage.Case -> UTCTime -> Flow (T.DBResult ())
+updateValidTill :: Id Storage.Case -> UTCTime -> Flow (T.DBResult ())
 updateValidTill id validTill = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
@@ -134,7 +134,7 @@ updateValidTill id validTill = do
         ]
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
 
-updateStatus :: ID Storage.Case -> Storage.CaseStatus -> Flow (T.DBResult ())
+updateStatus :: Id Storage.Case -> Storage.CaseStatus -> Flow (T.DBResult ())
 updateStatus id status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
@@ -150,7 +150,7 @@ updateStatus id status = do
         ]
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
 
-updateStatusAndUdfs :: ID Storage.Case -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow (T.DBResult ())
+updateStatusAndUdfs :: Id Storage.Case -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow (T.DBResult ())
 updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
@@ -200,7 +200,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-updateInfo :: ID Storage.Case -> Text -> Flow (T.DBResult ())
+updateInfo :: Id Storage.Case -> Text -> Flow (T.DBResult ())
 updateInfo caseId csInfo = do
   dbTable <- getDbTable
   currTime <- getCurrTime

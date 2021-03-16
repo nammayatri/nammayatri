@@ -11,7 +11,7 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Core
 import qualified Beckn.Types.Core.Tag as Tag
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Stop as Stop
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
@@ -39,7 +39,7 @@ import qualified Storage.Queries.Products as SProduct
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
 
-search :: ID Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
+search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
 search transporterId bapOrg req = withFlowHandler $ do
   BP.validateContext "search" $ req ^. #context
   uuid <- L.generateGUID
@@ -67,7 +67,7 @@ mkFromStop now stop = do
   let loc = stop ^. #_location
   let mgps = loc ^. #_gps
   let maddress = loc ^. #_address
-  uuid <- ID <$> L.generateGUID
+  uuid <- Id <$> L.generateGUID
   pure $
     Location.Location
       { _id = uuid,
@@ -94,14 +94,14 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> ID Org.Organization -> ID Org.Organization -> Maybe Float -> Case.Case
+mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> Id Org.Organization -> Id Org.Organization -> Maybe Float -> Case.Case
 mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
   let intent = req ^. #message . #intent
   let distance = Tag._value <$> find (\x -> x ^. #_key == "distance") (fromMaybe [] $ intent ^. #_tags)
   let tId = getId transporterId
   let bapId = getId bapOrgId
   Case.Case
-    { _id = ID uuid,
+    { _id = Id uuid,
       _name = Nothing,
       _description = Just "Case to search for a Ride",
       _shortId = tId <> "_" <> req ^. #context . #_transaction_id,
@@ -132,7 +132,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- ID <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
+    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
       Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
@@ -172,9 +172,9 @@ onSearchCallback productCase transporter fromLocation toLocation = do
       logError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
-createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> ID Org.Organization -> Flow ProductInstance.ProductInstance
+createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
 createProductInstance productCase price status transporterId = do
-  productInstanceId <- ID <$> L.generateGUID
+  productInstanceId <- Id <$> L.generateGUID
   now <- getCurrTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase ^. #_udf1)

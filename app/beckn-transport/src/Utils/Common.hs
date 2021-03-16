@@ -5,7 +5,7 @@ module Utils.Common where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
@@ -92,13 +92,13 @@ verifyDriver user = do
 validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (ID _EntityId)
+  user <- QP.findPersonById (Id _EntityId)
   verifyAdmin user
 
 validateDriver :: RegToken -> Flow Text
 validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (ID _EntityId)
+  user <- QP.findPersonById (Id _EntityId)
   verifyDriver user
 
 validateAdminAction :: VerificationAction AdminVerifyToken AppEnv

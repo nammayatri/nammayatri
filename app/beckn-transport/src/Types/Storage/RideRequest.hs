@@ -2,7 +2,7 @@
 
 module Types.Storage.RideRequest where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -23,8 +23,8 @@ instance FromBackendRow Postgres RideRequestType where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 
 data RideRequestT f = RideRequest
-  { _id :: B.C f (ID RideRequest),
-    _rideId :: B.C f (ID Ride),
+  { _id :: B.C f (Id RideRequest),
+    _rideId :: B.C f (Id Ride),
     _createdAt :: B.C f UTCTime,
     _type :: B.C f RideRequestType
   }
@@ -35,7 +35,7 @@ type RideRequest = RideRequestT Identity
 type RideRequestPrimaryKey = B.PrimaryKey RideRequestT Identity
 
 instance B.Table RideRequestT where
-  data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (ID Ride))
+  data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (Id Ride))
     deriving (Generic, B.Beamable)
   primaryKey = RideRequestPrimaryKey . _rideId
 

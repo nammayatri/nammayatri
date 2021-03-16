@@ -2,7 +2,7 @@
 
 module Mobility.AppConfirmRide where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude

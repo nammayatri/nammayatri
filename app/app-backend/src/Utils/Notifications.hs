@@ -5,7 +5,7 @@ module Utils.Notifications where
 import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -43,7 +43,7 @@ notifyOnStatusUpdate prodInst piStatus =
         minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst ^. #_info
     case (mpersonId, minfo) of
       (Just personId, Just info) -> do
-        person <- Person.findById $ ID personId
+        person <- Person.findById $ Id personId
         case person of
           Just p -> case piStatus of
             ProductInstance.CANCELLED -> do
@@ -120,7 +120,7 @@ notifyOnExpiration caseObj = do
   let personId = Case._requestor caseObj
   if isJust personId
     then do
-      person <- Person.findById $ ID (fromJust personId)
+      person <- Person.findById $ Id (fromJust personId)
       case person of
         Just p -> do
           let notificationData =
@@ -157,7 +157,7 @@ notifyOnTrackCb personId tracker c =
   if isJust personId
     then do
       let caseId = Case._id c
-      mperson <- Person.findById $ ID (fromJust personId)
+      mperson <- Person.findById $ Id (fromJust personId)
       case mperson of
         Just p -> do
           let notificationData =

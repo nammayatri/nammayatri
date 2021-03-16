@@ -8,7 +8,7 @@ import App.Types
 import Beckn.External.FCM.Utils
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)

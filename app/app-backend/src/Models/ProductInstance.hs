@@ -2,7 +2,7 @@ module Models.ProductInstance where
 
 import App.Types
 import Beckn.Types.Error
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
@@ -25,51 +25,51 @@ create prdInst = do
   checkDBError result
 
 -- | Validate and update ProductInstance status
-updateStatus :: ID ProductInstance -> ProductInstanceStatus -> Flow ()
+updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus piid status = do
   validatePIStatusChange status piid
   result <- Q.updateStatus piid status
   checkDBError result
 
 -- | Bulk validate and update Case's ProductInstances statuses
-updateAllProductInstancesByCaseId :: ID Case.Case -> ProductInstanceStatus -> Flow ()
+updateAllProductInstancesByCaseId :: Id Case.Case -> ProductInstanceStatus -> Flow ()
 updateAllProductInstancesByCaseId caseId status = do
   validatePIStatusesChange status caseId
   result <- Q.updateAllProductInstancesByCaseId caseId status
   checkDBError result
 
-updateMultiple :: ID ProductInstance -> ProductInstance -> Flow ()
+updateMultiple :: Id ProductInstance -> ProductInstance -> Flow ()
 updateMultiple piid prdInst = do
   validatePIStatusChange (_status prdInst) piid
   result <- Q.updateMultiple piid prdInst
   checkDBError result
 
 -- | Find Product Instance by id
-findById :: ID ProductInstance -> Flow ProductInstance
+findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById caseProductId
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: ID Case.Case -> Flow [ProductInstance]
+findAllByCaseId :: Id Case.Case -> Flow [ProductInstance]
 findAllByCaseId caseId = do
   result <- Q.findAllByCaseId caseId
   checkDBError result
 
 -- | Find Product Instance by Product Id
-findByProductId :: ID Products -> Flow ProductInstance
+findByProductId :: Id Products -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId pId
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
 -- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> ID ProductInstance -> Flow ()
+validatePIStatusChange :: ProductInstanceStatus -> Id ProductInstance -> Flow ()
 validatePIStatusChange newStatus productInstanceId = do
   cp <- findById productInstanceId
   validateStatusChange newStatus cp
 
 -- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange :: ProductInstanceStatus -> ID Case.Case -> Flow ()
+validatePIStatusesChange :: ProductInstanceStatus -> Id Case.Case -> Flow ()
 validatePIStatusesChange newStatus caseId = do
   cps <- findAllByCaseId caseId
   validatePIStatusesChange' newStatus cps
@@ -101,17 +101,17 @@ listAllProductInstanceByPerson person piid status = do
   result <- Q.listAllProductInstanceByPerson person piid status
   checkDBError result
 
-findAllByParentId :: Maybe (ID ProductInstance) -> Flow [ProductInstance]
+findAllByParentId :: Maybe (Id ProductInstance) -> Flow [ProductInstance]
 findAllByParentId piid = do
   result <- Q.findAllByParentId piid
   checkDBError result
 
-findByParentIdType :: Maybe (ID ProductInstance) -> Case.CaseType -> Flow ProductInstance
+findByParentIdType :: Maybe (Id ProductInstance) -> Case.CaseType -> Flow ProductInstance
 findByParentIdType mparentId csType = do
   result <- Q.findByParentIdType mparentId csType
   checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
 
-findAllByPerson :: ID Person.Person -> Flow [ProductInstance]
+findAllByPerson :: Id Person.Person -> Flow [ProductInstance]
 findAllByPerson perId = do
   result <- Q.findAllByPerson perId
   checkDBError result

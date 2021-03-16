@@ -1,6 +1,6 @@
 module Types.Storage.TransporterConfig where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Organization (Organization)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -8,8 +8,8 @@ import EulerHS.Prelude
 import Types.App (ConfigKey)
 
 data TransporterConfigT f = TransporterConfig
-  { _id :: B.C f (ID TransporterParameter),
-    _transporterId :: B.C f (ID Organization),
+  { _id :: B.C f (Id TransporterParameter),
+    _transporterId :: B.C f (Id Organization),
     _key :: B.C f ConfigKey,
     _value :: B.C f Text,
     _createdAt :: B.C f UTCTime,
@@ -22,7 +22,7 @@ type TransporterConfig = TransporterConfigT Identity
 type TransporterConfigPrimaryKey = B.PrimaryKey TransporterConfigT Identity
 
 instance B.Table TransporterConfigT where
-  data PrimaryKey TransporterConfigT f = TransporterConfigPrimaryKey (B.C f (ID TransporterParameter))
+  data PrimaryKey TransporterConfigT f = TransporterConfigPrimaryKey (B.C f (Id TransporterParameter))
     deriving (Generic, B.Beamable)
   primaryKey = TransporterConfigPrimaryKey . _id
 

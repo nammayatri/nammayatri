@@ -10,7 +10,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Tag
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
@@ -100,7 +100,7 @@ searchCb _bppOrg req = withFlowHandler $ do
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do
-  let caseId = ID $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
+  let caseId = Id $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
   when (case_ ^. #_status /= Case.CLOSED) $ do
     bpp <-
@@ -109,7 +109,7 @@ searchCbService req catalog = do
     personId <-
       maybe
         (throwError500 "No person linked to case")
-        (return . ID)
+        (return . Id)
         (Case._requestor case_)
     case (catalog ^. #_categories, catalog ^. #_items) of
       ([], _) -> throwError400 "missing provider"
@@ -233,7 +233,7 @@ mkProduct case_ item = do
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
   return
     Products.Products
-      { _id = ID $ item ^. #_id,
+      { _id = Id $ item ^. #_id,
         _shortId = "",
         _name = fromMaybe "" $ item ^. #_descriptor . #_name,
         _description = item ^. #_descriptor . #_short_desc,
@@ -254,7 +254,7 @@ mkProduct case_ item = do
       }
 
 mkProductInstance ::
-  Case.Case -> Org.Organization -> Common.Provider -> ID Person.Person -> Core.Item -> Flow PI.ProductInstance
+  Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> Core.Item -> Flow PI.ProductInstance
 mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrTime
   let info = ProductInfo (Just provider) Nothing
@@ -267,10 +267,10 @@ mkProductInstance case_ bppOrg provider personId item = do
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
   return
     PI.ProductInstance
-      { _id = ID $ item ^. #_id,
+      { _id = Id $ item ^. #_id,
         _shortId = "",
         _caseId = case_ ^. #_id,
-        _productId = ID $ item ^. #_id, -- TODO needs to be fixed
+        _productId = Id $ item ^. #_id, -- TODO needs to be fixed
         _personId = Just personId,
         _personUpdatedAt = Nothing,
         _quantity = 1,
@@ -296,17 +296,17 @@ mkProductInstance case_ bppOrg provider personId item = do
         _updatedAt = now
       }
 
-mkDeclinedProductInstance :: Case.Case -> Org.Organization -> Common.Provider -> ID Person.Person -> Flow PI.ProductInstance
+mkDeclinedProductInstance :: Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> Flow PI.ProductInstance
 mkDeclinedProductInstance case_ bppOrg provider personId = do
   now <- getCurrTime
   piId <- generateGUID
   let info = ProductInfo (Just provider) Nothing
   return
     PI.ProductInstance
-      { _id = ID piId,
+      { _id = Id piId,
         _shortId = "",
         _caseId = case_ ^. #_id,
-        _productId = ID piId,
+        _productId = Id piId,
         _personId = Just personId,
         _personUpdatedAt = Nothing,
         _quantity = 1,

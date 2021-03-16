@@ -1,7 +1,7 @@
 module Fixtures.ProductInstance where
 
 import qualified Beckn.Types.Amount as Amount
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Data.Ratio ((%))
@@ -11,10 +11,10 @@ import qualified Fixtures.Time as Fixtures
 defaultProductInstance :: ProductInstance.ProductInstance
 defaultProductInstance =
   ProductInstance.ProductInstance
-    { _id = ID "1",
-      _caseId = ID "1",
-      _productId = ID "1",
-      _personId = Just $ ID "1",
+    { _id = Id "1",
+      _caseId = Id "1",
+      _productId = Id "1",
+      _personId = Just $ Id "1",
       _personUpdatedAt = Nothing,
       _shortId = "",
       _entityType = ProductInstance.VEHICLE,

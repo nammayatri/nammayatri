@@ -4,7 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common (generateGUID)
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
@@ -24,7 +24,7 @@ create allocationEvent = do
     >>= either DB.throwDBError pure
 
 findAllocationEventById ::
-  ID Storage.AllocationEvent -> Flow (Maybe Storage.AllocationEvent)
+  Id Storage.AllocationEvent -> Flow (Maybe Storage.AllocationEvent)
 findAllocationEventById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -32,7 +32,7 @@ findAllocationEventById id = do
   where
     predicate Storage.AllocationEvent {..} = _id ==. B.val_ id
 
-logAllocationEvent :: Storage.AllocationEventType -> ID Ride -> Flow ()
+logAllocationEvent :: Storage.AllocationEventType -> Id Ride -> Flow ()
 logAllocationEvent eventType rideId = do
   uuid <- generateGUID
   now <- getCurrTime

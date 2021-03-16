@@ -1,7 +1,7 @@
 module Types.API.Case where
 
 import Beckn.Types.Amount
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
 import Beckn.Types.Storage.Person
@@ -54,10 +54,10 @@ instance ToJSON CaseRes where
 type CaseListRes = [CaseRes]
 
 data ProdInstRes = ProdInstRes
-  { _id :: ID ProductInstance,
-    _caseId :: ID Case,
-    _productId :: ID Products,
-    _personId :: Maybe (ID Person),
+  { _id :: Id ProductInstance,
+    _caseId :: Id Case,
+    _productId :: Id Products,
+    _personId :: Maybe (Id Person),
     _shortId :: Text,
     _entityType :: EntityType,
     _entityId :: Maybe Text,
@@ -70,7 +70,7 @@ data ProdInstRes = ProdInstRes
     _fromLocation :: Maybe Text,
     _toLocation :: Maybe Text,
     _organizationId :: Text,
-    _parentId :: Maybe (ID ProductInstance),
+    _parentId :: Maybe (Id ProductInstance),
     _udf1 :: Maybe Text,
     _udf2 :: Maybe Text,
     _udf3 :: Maybe Text,

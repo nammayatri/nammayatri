@@ -4,7 +4,7 @@
 
 module Mobility.DriverCancelRideAfterStart where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -49,7 +49,7 @@ spec = do
       searchACK `shouldSatisfy` isRight
 
       let Right searchResponse = searchACK
-      let appCaseId = ID $ searchResponse ^. #message . #_message
+      let appCaseId = Id $ searchResponse ^. #message . #_message
 
       productInstance :| [] <- poll $ do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)

@@ -4,7 +4,7 @@
 module Beckn.Types.Storage.Organization where
 
 import Beckn.Types.App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -94,10 +94,10 @@ instance FromHttpApiData OrganizationDomain where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data OrganizationT f = Organization
-  { _id :: B.C f (ID Organization),
+  { _id :: B.C f (Id Organization),
     _name :: B.C f Text,
     _description :: B.C f (Maybe Text),
-    _shortId :: B.C f (ShortID Organization),
+    _shortId :: B.C f (ShortId Organization),
     _mobileNumber :: B.C f (Maybe Text),
     _mobileCountryCode :: B.C f (Maybe Text),
     _gstin :: B.C f (Maybe Text),
@@ -124,7 +124,7 @@ type Organization = OrganizationT Identity
 type OrganizationPrimaryKey = B.PrimaryKey OrganizationT Identity
 
 instance B.Table OrganizationT where
-  data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f (ID Organization))
+  data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f (Id Organization))
     deriving (Generic, B.Beamable)
   primaryKey = OrganizationPrimaryKey . _id
 

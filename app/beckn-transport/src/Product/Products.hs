@@ -3,7 +3,7 @@
 module Product.Products where
 
 import App.Types
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Utils.Common (getCurrTime, withFlowHandler)
@@ -27,7 +27,7 @@ mkProduct req = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return $
     Product.Products
-      { Product._id = ID pid,
+      { Product._id = Id pid,
         Product._name = req ^. #_name,
         Product._description = req ^. #_description,
         Product._industry = Case.MOBILITY,

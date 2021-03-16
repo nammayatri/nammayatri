@@ -4,7 +4,7 @@ module Product.Transporter where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.ID (ID (..))
+import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -21,7 +21,7 @@ import qualified Types.Storage.FarePolicy as SFarePolicy
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
-  person <- QP.findPersonById (ID _EntityId)
+  person <- QP.findPersonById (Id _EntityId)
   validate person
   organization <- createTransform req
   validateReq req
@@ -30,8 +30,8 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   hatchbackFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.HATCHBACK (organization ^. #_createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
-  QP.updateOrganizationIdAndMakeAdmin (ID _EntityId) (getId $ SO._id organization)
-  updatedPerson <- QP.findPersonById (ID _EntityId)
+  QP.updateOrganizationIdAndMakeAdmin (Id _EntityId) (getId $ SO._id organization)
+  updatedPerson <- QP.findPersonById (Id _EntityId)
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
@@ -48,7 +48,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       farePolicyId <- L.generateGUID
       pure $
         SFarePolicy.FarePolicy
-          { _id = ID farePolicyId,
+          { _id = Id farePolicyId,
             _vehicleVariant = vehicleVariant, -- TODO: variants should be looked up from DB
             _organizationId = orgId,
             _baseFare = Just DFarePolicy.defaultBaseFare,
@@ -63,12 +63,12 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
 
 updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
-  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (ID _EntityId) SP.ADMIN orgId
+  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id _EntityId) SP.ADMIN orgId
   now <- getCurrTime
   case maybePerson of
     Just person -> do
       validate person
-      org <- QO.findOrganizationById $ ID orgId
+      org <- QO.findOrganizationById $ Id orgId
       organization <-
         if req ^. #enabled /= Just False
           then modifyTransform req org >>= addTime (Just now)
@@ -84,10 +84,10 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
 
 getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
 getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
-  person <- QP.findPersonById (ID _EntityId)
+  person <- QP.findPersonById (Id _EntityId)
   validate person
   case person ^. #_organizationId of
-    Just orgId -> TransporterRec <$> QO.findOrganizationById (ID orgId)
+    Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
     Nothing -> throwError400 "user not registered an organization"
   where
     validate person =

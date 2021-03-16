@@ -5,7 +5,7 @@ module Types.API.Transporter where
 import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
@@ -45,7 +45,7 @@ instance FromJSON TransporterReq where
 instance CreateTransform TransporterReq SO.Organization Flow where
   createTransform req = do
     oid <- BC.generateGUID
-    let shortId = ShortID $ getId oid
+    let shortId = ShortId $ getId oid
     now <- getCurrTime
     location <- transformToLocation req
     QL.create location

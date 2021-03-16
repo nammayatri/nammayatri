@@ -3,7 +3,7 @@ module Storage.Queries.RideRequest where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.Common (getSchemaName)
 import Database.Beam ((==.))
 import qualified Database.Beam as B
@@ -29,7 +29,7 @@ fetchOldest limit = do
   DB.findAllWithLimitOffset dbTable limit noOffset order
     >>= either DB.throwDBError pure
 
-removeRequest :: ID RideRequest.RideRequest -> Flow ()
+removeRequest :: Id RideRequest.RideRequest -> Flow ()
 removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)

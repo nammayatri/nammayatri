@@ -6,7 +6,7 @@ module Product.CustomerSupport where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -98,12 +98,12 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
-        Case.findByIdAndType (ID caseId) C.RIDESEARCH
+        Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= either DB.throwDBError pure
           >>= fromMaybeMJSON400 "Invalid OrderId"
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
-        Person.findById (ID personId)
+        Person.findById (Id personId)
           >>= fromMaybeMJSON400 "Invalid CustomerId"
       return $ T.OrderInfo person [_case]
 
@@ -113,8 +113,8 @@ makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
       >>= either DB.throwDBError pure
   let (status :: Maybe CaseStatus) = ((\x -> Just $ x ^. #_status) =<< confiremedOrder) <|> Just _status
-  fromLocation <- Location.findLocationById $ ID _fromLocationId
-  toLocation <- Location.findLocationById $ ID _toLocationId
+  fromLocation <- Location.findLocationById $ Id _fromLocationId
+  toLocation <- Location.findLocationById $ Id _toLocationId
   trip <- makeTripDetails confiremedOrder
   --  Info: udf1 is vechicle variant
   let details =

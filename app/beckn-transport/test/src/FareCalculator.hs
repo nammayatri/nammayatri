@@ -3,7 +3,7 @@ module FareCalculator where
 import Beckn.Product.BusinessRule
 import Beckn.Types.Amount
 import Beckn.Types.App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
@@ -33,7 +33,7 @@ defaultPickupLocation :: PickupLocation
 defaultPickupLocation =
   PickupLocation $
     Location.Location
-      { _id = ID "",
+      { _id = Id "",
         _locationType = Location.POINT,
         _lat = Just 0.0,
         _long = Just 0.0,
@@ -53,7 +53,7 @@ defaultDropLocation :: DropLocation
 defaultDropLocation =
   DropLocation $
     Location.Location
-      { _id = ID "",
+      { _id = Id "",
         _locationType = Location.POINT,
         _lat = Just 0.0,
         _long = Just 0.0,
@@ -72,7 +72,7 @@ defaultDropLocation =
 mockTime :: UTCTime
 mockTime = parseTime "2018-12-06T11:39:57.153Z"
 
-orgID :: ID Organization.Organization
+orgID :: Id Organization.Organization
 orgID = "organization_id"
 
 handle :: ServiceHandle IO

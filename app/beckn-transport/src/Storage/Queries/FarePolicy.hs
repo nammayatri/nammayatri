@@ -5,7 +5,7 @@ module Storage.Queries.FarePolicy where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
@@ -27,7 +27,7 @@ create Storage.FarePolicy {..} = do
     >>= either DB.throwDBError pure
 
 findFarePolicyByOrgAndVehicleVariant ::
-  ID Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)
+  Id Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -37,7 +37,7 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
       _organizationId ==. B.val_ orgId
         &&. _vehicleVariant ==. B.val_ vehicleVariant
 
-findFarePoliciesByOrgId :: ID Organization.Organization -> Flow [Storage.FarePolicy]
+findFarePoliciesByOrgId :: Id Organization.Organization -> Flow [Storage.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -45,7 +45,7 @@ findFarePoliciesByOrgId orgId = do
   where
     predicate Storage.FarePolicy {..} = _organizationId ==. B.val_ orgId
 
-findFarePolicyById :: ID D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
+findFarePolicyById :: Id D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

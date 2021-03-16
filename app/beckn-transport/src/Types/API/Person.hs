@@ -6,7 +6,7 @@ import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.Common
@@ -92,9 +92,9 @@ updateOrCreateLocation req Nothing = do
   return location
 updateOrCreateLocation req (Just locId) = do
   location <-
-    QL.findLocationById (ID locId)
+    QL.findLocationById (Id locId)
       >>= fromMaybeM400 "INVALID_DATA"
-  QL.updateLocationRec (ID locId) $ transformToLocation req location
+  QL.updateLocationRec (Id locId) $ transformToLocation req location
   return location
 
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
@@ -256,7 +256,7 @@ instance ToJSON LinkedEntity where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data PersonEntityRes = PersonEntityRes
-  { _id :: ID SP.Person,
+  { _id :: Id SP.Person,
     _firstName :: Maybe Text,
     _middleName :: Maybe Text,
     _lastName :: Maybe Text,

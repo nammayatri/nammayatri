@@ -4,7 +4,7 @@ module Product.Cancel (cancel, onCancel) where
 
 import App.Types
 import qualified Beckn.Types.Core.API.Cancel as API
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -33,7 +33,7 @@ cancel person req = withFlowHandler $ do
 cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
-  searchPI <- MPI.findById (ID prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
   cs <- MC.findIdByPerson person (searchPI ^. #_caseId)
   orderPI <- MPI.findByParentIdType (Just $ searchPI ^. #_id) Case.RIDEORDER
   if isProductInstanceCancellable orderPI
@@ -48,7 +48,7 @@ cancelProductInstance person req = do
       let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
           context = mkContext "cancel" txnId msgId currTime Nothing Nothing
       organization <-
-        OQ.findOrganizationById (ID $ prodInst ^. #_organizationId)
+        OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
           >>= fromMaybeM500 "INVALID_PROVIDER_ID"
       baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
@@ -63,7 +63,7 @@ searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
 searchCancel person req = do
   let caseId = req ^. #message . #entityId
   let txnId = caseId
-  case_ <- MC.findIdByPerson person (ID caseId)
+  case_ <- MC.findIdByPerson person (Id caseId)
   if isCaseCancellable case_
     then do
       Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
@@ -92,7 +92,7 @@ onCancel _org req = withFlowHandler $ do
   let txnId = context ^. #_transaction_id
   case req ^. #contents of
     Right msg -> do
-      let prodInstId = ID $ msg ^. #id
+      let prodInstId = Id $ msg ^. #id
       -- TODO: Handle usecase where multiple productinstances exists for one product
 
       piList <- MPI.findAllByParentId (Just prodInstId)

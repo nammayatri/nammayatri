@@ -3,7 +3,7 @@ module Storage.Queries.Leads where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
@@ -22,7 +22,7 @@ create Storage.Leads {..} = do
     >>= either DB.throwDBError pure
 
 findLeadsById ::
-  ID Storage.Leads -> Flow (Maybe Storage.Leads)
+  Id Storage.Leads -> Flow (Maybe Storage.Leads)
 findLeadsById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

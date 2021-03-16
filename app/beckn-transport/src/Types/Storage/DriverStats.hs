@@ -1,13 +1,13 @@
 module Types.Storage.DriverStats where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Time (UTCTime (..))
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App
 
 data DriverStatsT f = DriverStats
-  { _driverId :: B.C f (ID Driver),
+  { _driverId :: B.C f (Id Driver),
     _idleSince :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -17,7 +17,7 @@ type DriverStats = DriverStatsT Identity
 type DriverStatsPrimaryKey = B.PrimaryKey DriverStatsT Identity
 
 instance B.Table DriverStatsT where
-  data PrimaryKey DriverStatsT f = DriverStatsPrimaryKey (B.C f (ID Driver))
+  data PrimaryKey DriverStatsT f = DriverStatsPrimaryKey (B.C f (Id Driver))
     deriving (Generic, B.Beamable)
   primaryKey = DriverStatsPrimaryKey . _driverId
 

@@ -2,7 +2,7 @@
 
 module Types.Storage.NotificationStatus where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -23,9 +23,9 @@ instance FromBackendRow Postgres AnswerStatus where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerStatus
 
 data NotificationStatusT f = NotificationStatus
-  { _id :: B.C f (ID NotificationStatus),
-    _rideId :: B.C f (ID Ride),
-    _driverId :: B.C f (ID Driver),
+  { _id :: B.C f (Id NotificationStatus),
+    _rideId :: B.C f (Id Ride),
+    _driverId :: B.C f (Id Driver),
     _status :: B.C f AnswerStatus,
     _expiresAt :: B.C f UTCTime
   }
@@ -36,7 +36,7 @@ type NotificationStatus = NotificationStatusT Identity
 type NotificationStatusPrimaryKey = B.PrimaryKey NotificationStatusT Identity
 
 instance B.Table NotificationStatusT where
-  data PrimaryKey NotificationStatusT f = NotificationStatusPrimaryKey (B.C f (ID NotificationStatus))
+  data PrimaryKey NotificationStatusT f = NotificationStatusPrimaryKey (B.C f (Id NotificationStatus))
     deriving (Generic, B.Beamable)
   primaryKey = NotificationStatusPrimaryKey . _id
 

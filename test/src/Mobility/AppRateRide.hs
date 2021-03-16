@@ -2,7 +2,7 @@
 
 module Mobility.AppRateRide where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
@@ -47,7 +47,7 @@ spec = do
       searchACK `shouldSatisfy` isRight
 
       let Right searchResponse = searchACK
-      let appCaseId = ID $ searchResponse ^. #message . #_message
+      let appCaseId = Id $ searchResponse ^. #message . #_message
 
       productInstance :| [] <- poll $ do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)
@@ -120,7 +120,7 @@ spec = do
       appFeedbackResponse ^. #_error `shouldSatisfy` isNothing
 
       driverInfoResult <-
-        runClient transporterClient $ F.callGetPerson (ID F.testDriverId)
+        runClient transporterClient $ F.callGetPerson (Id F.testDriverId)
       driverInfoResult `shouldSatisfy` isRight
       let Right driverInfoResponse = driverInfoResult
       let driverRating = driverInfoResponse ^. #_rating

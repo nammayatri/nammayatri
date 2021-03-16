@@ -4,7 +4,7 @@
 module Beckn.Types.Storage.Products where
 
 import Beckn.Types.Amount
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -55,7 +55,7 @@ instance FromHttpApiData ProductsStatus where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data ProductsT f = Products
-  { _id :: B.C f (ID Products),
+  { _id :: B.C f (Id Products),
     _name :: B.C f Text,
     _description :: B.C f (Maybe Text),
     _industry :: B.C f ProductsIndustry,
@@ -81,7 +81,7 @@ type Products = ProductsT Identity
 type ProductsPrimaryKey = B.PrimaryKey ProductsT Identity
 
 instance B.Table ProductsT where
-  data PrimaryKey ProductsT f = ProductsPrimaryKey (B.C f (ID Products))
+  data PrimaryKey ProductsT f = ProductsPrimaryKey (B.C f (Id Products))
     deriving (Generic, B.Beamable)
   primaryKey = ProductsPrimaryKey . _id
 

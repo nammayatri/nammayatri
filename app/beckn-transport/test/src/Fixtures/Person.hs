@@ -1,6 +1,6 @@
 module Fixtures.Person (defaultDriver) where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
@@ -8,7 +8,7 @@ import qualified Fixtures.Time as Fixtures
 defaultDriver :: Person.Person
 defaultDriver =
   Person.Person
-    { _id = ID "1",
+    { _id = Id "1",
       _firstName = Just "Driver",
       _middleName = Nothing,
       _lastName = Just "Driverson",

@@ -2,7 +2,7 @@
 
 module Types.Storage.AllocationEvent where
 
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -12,10 +12,10 @@ import EulerHS.Prelude
 import Types.App (Ride)
 
 data AllocationEventT f = AllocationEvent
-  { _id :: B.C f (ID AllocationEvent),
+  { _id :: B.C f (Id AllocationEvent),
     _eventType :: B.C f AllocationEventType,
     _timestamp :: B.C f UTCTime,
-    _rideId :: B.C f (ID Ride)
+    _rideId :: B.C f (Id Ride)
   }
   deriving (Generic, B.Beamable)
 
@@ -42,7 +42,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be AllocationEventType
 type AllocationEventPrimaryKey = B.PrimaryKey AllocationEventT Identity
 
 instance B.Table AllocationEventT where
-  data PrimaryKey AllocationEventT f = AllocationEventPrimaryKey (B.C f (ID AllocationEvent))
+  data PrimaryKey AllocationEventT f = AllocationEventPrimaryKey (B.C f (Id AllocationEvent))
     deriving (Generic, B.Beamable)
   primaryKey = AllocationEventPrimaryKey . _id
 

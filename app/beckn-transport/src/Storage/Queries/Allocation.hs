@@ -3,7 +3,7 @@
 module Storage.Queries.Allocation where
 
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Vehicle as SV
@@ -14,8 +14,8 @@ import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.ProductInstance (DriverVehicleInfo (..))
 
 assignDriver ::
-  ID SPI.ProductInstance ->
-  [ID SPI.ProductInstance] ->
+  Id SPI.ProductInstance ->
+  [Id SPI.ProductInstance] ->
   SV.Vehicle ->
   SP.Person ->
   DB.SqlDB ()
@@ -30,7 +30,7 @@ assignDriver productInstanceId piIdList vehicle driver = do
     driverId = cast personId
 
 updateInfo ::
-  ID SPI.ProductInstance ->
+  Id SPI.ProductInstance ->
   SP.Person ->
   SV.Vehicle ->
   DB.SqlDB ()

@@ -3,7 +3,7 @@
 module Product.ProductInstance where
 
 import App.Types
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as Person

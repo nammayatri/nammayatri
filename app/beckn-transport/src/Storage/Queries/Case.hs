@@ -3,7 +3,7 @@ module Storage.Queries.Case where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Storage
 import Beckn.Utils.Common
 import Data.Time
@@ -22,7 +22,7 @@ create Storage.Case {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
 
-findAllByIds :: [ID Storage.Case] -> Flow (T.DBResult [Storage.Case])
+findAllByIds :: [Id Storage.Case] -> Flow (T.DBResult [Storage.Case])
 findAllByIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -30,14 +30,14 @@ findAllByIds ids = do
     predicate Storage.Case {..} =
       B.in_ _id (B.val_ <$> ids)
 
-findById :: ID Storage.Case -> Flow (T.DBResult (Maybe Storage.Case))
+findById :: Id Storage.Case -> Flow (T.DBResult (Maybe Storage.Case))
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} = _id ==. B.val_ caseId
 
-findByParentCaseIdAndType :: ID Storage.Case -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
+findByParentCaseIdAndType :: Id Storage.Case -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
 findByParentCaseIdAndType pCaseId cType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -54,7 +54,7 @@ findBySid sid = do
     predicate Storage.Case {..} = _shortId ==. B.val_ sid
 
 updateStatus ::
-  ID Storage.Case ->
+  Id Storage.Case ->
   Storage.CaseStatus ->
   Flow (T.DBResult ())
 updateStatus id newStatus = do
@@ -74,7 +74,7 @@ updateStatus id newStatus = do
         ]
 
 updateStatusByIds ::
-  [ID Storage.Case] ->
+  [Id Storage.Case] ->
   Storage.CaseStatus ->
   Flow (T.DBResult ())
 updateStatusByIds ids newStatus = do
@@ -92,7 +92,7 @@ updateStatusByIds ids newStatus = do
           _status <-. B.val_ status
         ]
 
-findByIdType :: [ID Storage.Case] -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
+findByIdType :: [Id Storage.Case] -> Storage.CaseType -> Flow (T.DBResult (Maybe Storage.Case))
 findByIdType ids type_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -101,7 +101,7 @@ findByIdType ids type_ = do
       _type ==. B.val_ type_
         &&. B.in_ _id (B.val_ <$> ids)
 
-findAllByIdType :: [ID Storage.Case] -> Storage.CaseType -> Flow (T.DBResult [Storage.Case])
+findAllByIdType :: [Id Storage.Case] -> Storage.CaseType -> Flow (T.DBResult [Storage.Case])
 findAllByIdType ids type_ = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate

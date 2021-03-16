@@ -1,15 +1,15 @@
 module Types.Domain.FarePolicy where
 
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
 import EulerHS.Prelude
 
 data FarePolicy = FarePolicy
-  { id :: ID FarePolicy,
+  { id :: Id FarePolicy,
     vehicleVariant :: Vehicle.Variant,
-    organizationId :: ID Organization.Organization,
+    organizationId :: Id Organization.Organization,
     baseFare :: Maybe Rational,
     baseDistance :: Maybe Rational,
     perExtraKmRate :: Rational,

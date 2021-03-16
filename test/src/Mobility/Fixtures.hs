@@ -8,7 +8,7 @@ import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Mobility.Payload
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -138,7 +138,7 @@ rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriv
 rideRespond = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 setDriverOnline :: Text -> Bool -> ClientM APIResult
-getNotificationInfo :: Text -> Maybe (ID Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
+getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
 _ :<|> setDriverOnline :<|> getNotificationInfo = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
@@ -159,7 +159,7 @@ data CaseClient = CaseClient
       Maybe Integer ->
       Maybe Integer ->
       ClientM AppCase.CaseListRes,
-    getCaseStatusRes :: ID Case.Case -> ClientM AppCase.StatusRes
+    getCaseStatusRes :: Id Case.Case -> ClientM AppCase.StatusRes
   }
 
 getCase :: CaseAPIClient
@@ -180,7 +180,7 @@ buildCaseStatusRes :: Text -> ClientM AppCase.StatusRes
 buildCaseStatusRes caseId = do
   let CaseAPIClient {..} = getCase
       CaseClient {..} = mkCaseClient appRegistrationToken
-      appCaseId = ID caseId
+      appCaseId = Id caseId
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
@@ -189,7 +189,7 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM AckResponse
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> ID PI.ProductInstance -> ID Case.Case -> ClientM AckResponse
+callAppFeedback :: Int -> Id PI.ProductInstance -> Id Case.Case -> ClientM AckResponse
 callAppFeedback ratingValue productInstanceId caseId =
   let request =
         AppFeedback.FeedbackReq
@@ -216,7 +216,7 @@ listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe I
 listDriverRides :: Text -> Text -> ClientM TbePI.RideListRes
 listVehicleRides :: Text -> Text -> ClientM TbePI.RideListRes
 listCasesByProductInstance :: Text -> Text -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
-rideUpdate :: Text -> ID PI.ProductInstance -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
+rideUpdate :: Text -> Id PI.ProductInstance -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
 listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> rideUpdate = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
 listPIs :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
@@ -238,7 +238,7 @@ createPerson
   :<|> deletePerson
   :<|> linkEntity = client (Proxy :: Proxy TbeRoutes.PersonAPI)
 
-callGetPerson :: ID Person.Person -> ClientM TbePerson.PersonEntityRes
+callGetPerson :: Id Person.Person -> ClientM TbePerson.PersonEntityRes
 callGetPerson personId =
   getPerson
     appRegistrationToken

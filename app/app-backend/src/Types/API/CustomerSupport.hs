@@ -41,7 +41,7 @@ instance ToJSON OrderDetails where
   toJSON = genericToJSON stripAllLensPrefixOptions
 
 data TripDetails = TripDetails
-  { _id :: Text, -- Product Instance ID
+  { _id :: Text, -- Product Instance Id
     _status :: SP.ProductInstanceStatus,
     _driver :: Maybe Driver, -- _info -> driver
     _vehicle :: Maybe Vehicle,

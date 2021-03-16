@@ -8,7 +8,7 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -28,13 +28,13 @@ import qualified Utils.Notifications as Notify
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandler $ do
   let prodInstId = req ^. #message . #order_id
-  prodInst <- MPI.findById $ ID prodInstId
+  prodInst <- MPI.findById $ Id prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
   msgId <- L.generateGUID
   let txnId = getId $ case_ ^. #_id
   let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
   organization <-
-    OQ.findOrganizationById (ID $ prodInst ^. #_organizationId)
+    OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM500 "INVALID_PROVIDER_ID"
   case decodeFromText =<< (prodInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
@@ -53,7 +53,7 @@ trackCb _org req = withFlowHandler $ do
   case req ^. #contents of
     Right msg -> do
       let tracking = msg ^. #tracking
-          caseId = ID $ context ^. #_transaction_id
+          caseId = Id $ context ^. #_transaction_id
       case_ <- MC.findById caseId
       prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
       let confirmedProducts = prodInst

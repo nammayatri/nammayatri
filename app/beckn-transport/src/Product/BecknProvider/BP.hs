@@ -26,7 +26,7 @@ import Beckn.Types.Core.Order
   ( Order (..),
     OrderItem (OrderItem),
   )
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver (Driver)
 import Beckn.Types.Mobility.Payload (Payload (..))
 import Beckn.Types.Mobility.Trip (Trip (..))
@@ -61,18 +61,18 @@ import Types.App (Ride)
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
-cancel :: ID Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
+cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
 cancel _transporterId _bapOrg req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
-  prodInst <- ProductInstance.findById (ID prodInstId)
+  prodInst <- ProductInstance.findById (Id prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
   RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
   uuid <- L.generateGUID
   mkAckResponse uuid "cancel"
 
-cancelRide :: ID Ride -> Flow ()
+cancelRide :: Id Ride -> Flow ()
 cancelRide rideId = do
   orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM500 "RIDEORDER_DOESNT_HAVE_PARENT"
@@ -85,9 +85,9 @@ cancelRide rideId = do
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
   bapOrgId <- Case._udf4 orderCase & fromMaybeM500 "BAP_ORG_ID_NOT_PRESENT"
-  bapOrg <- Organization.findOrganizationById $ ID bapOrgId
+  bapOrg <- Organization.findOrganizationById $ Id bapOrgId
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
-  let transporterId = ID $ ProductInstance._organizationId orderPi
+  let transporterId = Id $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
   notifyCancelToGateway (getId searchPiId) callbackUrl bppShortId
@@ -124,11 +124,11 @@ mkContext action tId = do
         _ttl = Nothing
       }
 
-serviceStatus :: ID Organization.Organization -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
+serviceStatus :: Id Organization.Organization -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
 serviceStatus transporterId bapOrg req = withFlowHandler $ do
   logInfo "serviceStatus API Flow" $ show req
   let piId = req ^. #message . #order . #id -- transporter search product instance id
-  trackerPi <- ProductInstance.findByParentIdType (Just $ ID piId) Case.LOCATIONTRACKER
+  trackerPi <- ProductInstance.findByParentIdType (Just $ Id piId) Case.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   transporter <- Organization.findOrganizationById transporterId
@@ -170,12 +170,12 @@ mkOnServiceStatusPayload piId trackerPi = do
             _quotation = Nothing
           }
 
-trackTrip :: ID Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
+trackTrip :: Id Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
 trackTrip transporterId org req = withFlowHandler $ do
   logInfo "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id
-  case_ <- Case.findById $ ID tripId
+  case_ <- Case.findById $ Id tripId
   case case_ ^. #_parentCaseId of
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
@@ -251,14 +251,14 @@ mkOnUpdatePayload prodInst case_ pCase = do
         contents = Right $ API.OnUpdateOrder order
       }
 
-mkDriverInfo :: ID Person.Person -> Flow Driver
+mkDriverInfo :: Id Person.Person -> Flow Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
   return $ GT.mkDriverObj person
 
 mkVehicleInfo :: Text -> Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
-  vehicle <- Vehicle.findVehicleById (ID vehicleId)
+  vehicle <- Vehicle.findVehicleById (Id vehicleId)
   return $ GT.mkVehicleObj <$> vehicle
 
 mkCancelRidePayload :: Text -> Flow API.OnCancelReq
@@ -273,7 +273,7 @@ mkCancelRidePayload prodInstId = do
 
 mkCancelTripObj :: Text -> Flow Trip
 mkCancelTripObj prodInstId = do
-  productInstance <- ProductInstance.findById (ID prodInstId)
+  productInstance <- ProductInstance.findById (Id prodInstId)
   driver <- mapM mkDriverInfo $ productInstance ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (productInstance ^. #_entityId)
   return $
@@ -301,13 +301,13 @@ validateContext action context = do
   validateDomain Domain.MOBILITY context
   validateContextCommons action context
 
-mkRideReq :: ID ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
+mkRideReq :: Id ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
 mkRideReq prodInstID rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrTime
   pure
     SRideRequest.RideRequest
-      { _id = ID guid,
+      { _id = Id guid,
         _rideId = cast prodInstID,
         _createdAt = currTime,
         _type = rideRequestType

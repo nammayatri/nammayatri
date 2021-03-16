@@ -10,7 +10,7 @@ import EulerHS.Prelude
 data ExternalTrailT f = ExternalTrail
   { _id :: B.C f Text,
     _gatewayId :: B.C f Text,
-    --, _customerId  :: B.C f (Maybe (ID Customer))
+    --, _customerId  :: B.C f (Maybe (Id Customer))
     --, _sessionId   :: B.C f (Maybe SessionId)
     _endpointId :: B.C f LText,
     _headers :: B.C f LText,

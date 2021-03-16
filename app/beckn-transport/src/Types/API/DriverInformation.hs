@@ -7,7 +7,7 @@ module Types.API.DriverInformation
   )
 where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person (Person)
@@ -23,7 +23,7 @@ newtype ActiveDriversResponse = ActiveDriversResponse
   deriving (Eq, Show, Generic, ToJSON)
 
 data DriverRidesInformation = DriverRidesInformation
-  { driver_id :: ID Person,
+  { driver_id :: Id Person,
     completed_rides_over_time :: Int,
     earnings_over_time :: Float
   }
@@ -42,7 +42,7 @@ newtype GetRideInfoRes = GetRideInfoRes
   deriving (Generic, ToJSON, FromJSON, Show)
 
 data RideInfo = RideInfo
-  { productInstanceId :: ID ProductInstance,
+  { productInstanceId :: Id ProductInstance,
     pickupLoc :: Loc.Location,
     dropLoc :: Loc.Location,
     etaForPickupLoc :: Maybe Integer,

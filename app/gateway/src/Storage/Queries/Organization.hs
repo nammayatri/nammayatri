@@ -3,7 +3,7 @@ module Storage.Queries.Organization where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))
@@ -22,9 +22,9 @@ findOrgById oId = do
     >>= either DB.throwDBError pure
   where
     predicate Org.Organization {..} =
-      _id ==. B.val_ (ID oId)
+      _id ==. B.val_ (Id oId)
 
-findOrgByShortId :: ShortID Org.Organization -> Flow (Maybe Org.Organization)
+findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

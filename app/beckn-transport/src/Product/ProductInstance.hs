@@ -6,7 +6,7 @@ import App.Types
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as BC
-import Beckn.Types.ID
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as SP
@@ -34,7 +34,7 @@ import qualified Utils.Notifications as Notify
 
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $ do
-  person <- PersQ.findPersonById (ID _EntityId)
+  person <- PersQ.findPersonById (Id _EntityId)
   case SP._organizationId person of
     Just orgId -> do
       result <- PIQ.productInstanceJoin limit offset csTypes orgId status
@@ -55,11 +55,11 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
           _toLocation = find (\x -> Case._toLocationId (res ^. #_case) == getId (Loc._id x)) locList
         }
 
-update :: SR.RegistrationToken -> ID PI.ProductInstance -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
+update :: SR.RegistrationToken -> Id PI.ProductInstance -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   when (maybe False (`elem` forbiddenStatuses) (req ^. #_status)) $
     throwError400 "BAD_STATUS"
-  user <- PersQ.findPersonById (ID _EntityId)
+  user <- PersQ.findPersonById (Id _EntityId)
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
     Just pid -> PIQ.findById pid
@@ -85,15 +85,15 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
     fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM500 "PRODUCT_INSTANCE_WITH_CASE_NOT_PRESENT"
       bapOrgId <- prodCase ^. #_udf4 & fromMaybeM500 "CASE_DOES_NOT_CONTAIN_BAP_ORG_ID"
-      OQ.findOrganizationById $ ID bapOrgId
+      OQ.findOrganizationById $ Id bapOrgId
     fetchCase caseId = do
       prodCase <- QCase.findById caseId
       checkDBError prodCase
 
 listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
-  user <- PersQ.findPersonById (ID _EntityId)
-  person <- PersQ.findPersonById (ID personId)
+  user <- PersQ.findPersonById (Id _EntityId)
+  person <- PersQ.findPersonById (Id personId)
   hasAccess user person
   rideList <- PIQ.findAllByPersonId (SP._id person)
   locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
@@ -119,8 +119,8 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
 
 listVehicleRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
 listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
-  user <- PersQ.findPersonById (ID _EntityId)
-  vehicle <- VQ.findVehicleById (ID vehicleId)
+  user <- PersQ.findPersonById (Id _EntityId)
+  vehicle <- VQ.findVehicleById (Id vehicleId)
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
   locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
@@ -146,7 +146,7 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
 
 listCasesByProductInstance :: SR.RegistrationToken -> Text -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
 listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandler $ do
-  prodInst <- PIQ.findById (ID piId)
+  prodInst <- PIQ.findById (Id piId)
   piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
   caseList <- case csType of
     Just type_ -> CQ.findAllByIdType (PI._caseId <$> piList) type_
@@ -175,7 +175,7 @@ isAllowed orderPi req = do
     Left _ -> throwErrorJSON400 "INVALID_UPDATE_OPERATION"
     Right _ -> return ()
 
-assignDriver :: ID PI.ProductInstance -> ID Driver -> Flow ()
+assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
   searchPi <- PIQ.findById =<< fromMaybeM500 "PARENT_PI_NOT_FOUND" (ordPi ^. #_parentId)
@@ -187,7 +187,7 @@ assignDriver productInstanceId driverId = do
   vehicleId <-
     driver ^. #_udf1
       & fromMaybeM400 "DRIVER_HAS_NO_VEHICLE"
-      <&> ID
+      <&> Id
   vehicle <-
     VQ.findVehicleById vehicleId
       >>= fromMaybeM400 "VEHICLE_NOT_FOUND"
@@ -207,7 +207,7 @@ assignDriver productInstanceId driverId = do
           "Check the app for more details."
         ]
 
-updateStatus :: ID PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
+updateStatus :: Id PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 updateStatus piId req = do
   prodInst <- PIQ.findById piId
   _ <- case (req ^. #_status, prodInst ^. #_entityId, prodInst ^. #_personId) of
@@ -228,7 +228,7 @@ updateStatus piId req = do
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
 notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
-  transporter <- OQ.findOrganizationById . ID $ searchPi ^. #_organizationId
+  transporter <- OQ.findOrganizationById . Id $ searchPi ^. #_organizationId
   let bppShortId = getShortId $ transporter ^. #_shortId
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
@@ -256,10 +256,10 @@ unAssignDriverInfo productInstances request = do
               [ "You have refused the ride.",
                 "Check the app for more details."
               ]
-      driver <- PersQ.findPersonById (ID driverId)
+      driver <- PersQ.findPersonById (Id driverId)
       Notify.notifyDriver notificationType notificationTitle message driver
 
-updateTrip :: ID PI.ProductInstance -> PI.ProductInstanceStatus -> ProdInstUpdateReq -> Flow ()
+updateTrip :: Id PI.ProductInstance -> PI.ProductInstanceStatus -> ProdInstUpdateReq -> Flow ()
 updateTrip piId newStatus request = do
   prodInst <- PIQ.findById piId
   piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
@@ -325,7 +325,7 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
       _ -> notifyStatusToGateway bppShortId
     Nothing -> return ()
   where
-    findOrganization = OQ.findOrganizationById $ ID $ searchPi ^. #_organizationId
+    findOrganization = OQ.findOrganizationById $ Id $ searchPi ^. #_organizationId
     getAdmins transporterOrg = do
       if transporterOrg ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]

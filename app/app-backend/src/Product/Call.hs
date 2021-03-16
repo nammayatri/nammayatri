@@ -9,7 +9,7 @@ import Beckn.External.Exotel.Flow
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -32,7 +32,7 @@ import Types.ProductInfo as ProductInfo
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
 initiateCallToProvider _ req = withFlowHandler $ do
   let piId = req ^. #productInstanceId
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ID piId
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall customerPhone providerPhone
   mkAckResponse
 
@@ -40,12 +40,12 @@ initiateCallToProvider _ req = withFlowHandler $ do
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
 initiateCallToCustomer req = withFlowHandler $ do
   let piId = req ^. #productInstanceId -- RIDESEARCH PI
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ ID piId
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall providerPhone customerPhone
   mkAckResponse
 
--- | Get customer and driver pair by case ID
-getProductAndCustomerInfo :: ID ProductInstance -> Flow (Either String (Person, Driver.Driver))
+-- | Get customer and driver pair by case Id
+getProductAndCustomerInfo :: Id ProductInstance -> Flow (Either String (Person, Driver.Driver))
 getProductAndCustomerInfo rideSearchPid = do
   prodInst <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
   c <- Case.findById $ _caseId prodInst
@@ -66,7 +66,7 @@ getProductAndCustomerInfo rideSearchPid = do
                   case driver_ of
                     Nothing -> pure $ Left "No driver info"
                     Just driver -> do
-                      person_ <- Person.findById $ ID personId
+                      person_ <- Person.findById $ Id personId
                       case person_ of
                         Nothing -> pure $ Left "Customer not found"
                         Just person -> pure $ Right (person, toBeckn driver)
@@ -92,7 +92,7 @@ getPersonTypePhone person = pure $
     errMsg = "Driver has no contacts"
 
 -- | Returns phones pair or throws an error
-getProductAndCustomerPhones :: ID ProductInstance -> Flow (Text, Text)
+getProductAndCustomerPhones :: Id ProductInstance -> Flow (Text, Text)
 getProductAndCustomerPhones piId = do
   info <- getProductAndCustomerInfo piId
   case info of

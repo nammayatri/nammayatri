@@ -4,7 +4,7 @@
 
 module Types.Storage.FarePolicy where
 
-import Beckn.Types.ID (ID)
+import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay, UTCTime)
@@ -13,9 +13,9 @@ import EulerHS.Prelude
 import qualified Types.Domain.FarePolicy as D
 
 data FarePolicyT f = FarePolicy
-  { _id :: B.C f (ID D.FarePolicy),
+  { _id :: B.C f (Id D.FarePolicy),
     _vehicleVariant :: B.C f Vehicle.Variant,
-    _organizationId :: B.C f (ID Organization.Organization),
+    _organizationId :: B.C f (Id Organization.Organization),
     _baseFare :: B.C f (Maybe Double),
     _baseDistance :: B.C f (Maybe Double),
     _perExtraKmRate :: B.C f Double,
@@ -32,7 +32,7 @@ type FarePolicy = FarePolicyT Identity
 type FarePolicyPrimaryKey = B.PrimaryKey FarePolicyT Identity
 
 instance B.Table FarePolicyT where
-  data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (ID D.FarePolicy))
+  data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (Id D.FarePolicy))
     deriving (Generic, B.Beamable)
   primaryKey = FarePolicyPrimaryKey . _id
 

@@ -1,13 +1,13 @@
 module Types.Storage.DriverInformation where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App
 
 data DriverInformationT f = DriverInformation
-  { _driverId :: B.C f (ID Driver),
+  { _driverId :: B.C f (Id Driver),
     _active :: B.C f Bool,
     _onRide :: B.C f Bool,
     _createdAt :: B.C f UTCTime,
@@ -20,7 +20,7 @@ type DriverInformation = DriverInformationT Identity
 type DriverInformationPrimaryKey = B.PrimaryKey DriverInformationT Identity
 
 instance B.Table DriverInformationT where
-  data PrimaryKey DriverInformationT f = DriverInformationPrimaryKey (B.C f (ID Driver))
+  data PrimaryKey DriverInformationT f = DriverInformationPrimaryKey (B.C f (Id Driver))
     deriving (Generic, B.Beamable)
   primaryKey = DriverInformationPrimaryKey . _driverId
 

@@ -2,14 +2,14 @@
 
 module Beckn.Types.Storage.Issue where
 
-import Beckn.Types.ID
+import Beckn.Types.Id
 import Data.Aeson
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
 
 data IssueT f = Issue
-  { _id :: B.C f (ID Issue),
+  { _id :: B.C f (Id Issue),
     _customerId :: B.C f Text,
     _productInstanceId :: B.C f (Maybe Text),
     _contactEmail :: B.C f Text,
@@ -25,7 +25,7 @@ type Issue = IssueT Identity
 type IssuePrimaryKey = B.PrimaryKey IssueT Identity
 
 instance B.Table IssueT where
-  data PrimaryKey IssueT f = IssuePrimaryKey (B.C f (ID Issue))
+  data PrimaryKey IssueT f = IssuePrimaryKey (B.C f (Id Issue))
     deriving (Generic, B.Beamable)
   primaryKey = IssuePrimaryKey . _id
 
