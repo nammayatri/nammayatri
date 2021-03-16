@@ -84,19 +84,19 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
         & fromMaybeM500 "NO_VEHICLE_VARIANT"
     driverPool <- calculateDriverPool (LocationId pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
-    L.logInfo @Text "OnConfirmCallback" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (_getPersonId <$> driverPool) ||+ ""
+    logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| _getProductInstanceId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (_getPersonId <$> driverPool) ||+ ""
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
   let bppShortId = _getShortOrganizationId $ transporterOrg ^. #_shortId
   case result of
     Right () -> notifySuccessGateway callbackUrl bppShortId
     Left err -> do
-      L.logError @Text "OnConfirmCallback" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
+      logError "OnConfirmCallback" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
       notifyErrorGateway err callbackUrl bppShortId
   where
     notifySuccessGateway callbackUrl bppShortId = do
       allPis <- ProductInstance.findAllByCaseId (searchCase ^. #_id)
       onConfirmPayload <- mkOnConfirmPayload searchCase [orderProductInstance] allPis trackerCase
-      L.logInfo @Text "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| callbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
+      logInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| callbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
       _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
       pure ()
     notifyErrorGateway err callbackUrl bppShortId = do

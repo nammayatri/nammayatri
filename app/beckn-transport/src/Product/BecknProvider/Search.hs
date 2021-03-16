@@ -151,7 +151,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
     vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
-    L.logInfo @Text "OnSearchCallback" $
+    logInfo "OnSearchCallback" $
       "Calculated Driver Pool for organization " +|| _getOrganizationId transporterId ||+ " with drivers " +| T.intercalate ", " (_getPersonId <$> pool) |+ ""
     let piStatus =
           if null pool
@@ -166,11 +166,11 @@ onSearchCallback productCase transporter fromLocation toLocation = do
   case result of
     Right prodInst -> do
       let productStatus = prodInst ^. #_status
-      L.logInfo @Text "OnSearchCallback" $
+      logInfo "OnSearchCallback" $
         "Sending on_search callback with status " +|| productStatus ||+ " for product " +|| prodInst ^. #_id ||+ ""
       void $ sendOnSearchSuccess productCase transporter prodInst
     Left err -> do
-      L.logError @Text "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
+      logError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
 createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> OrganizationId -> Flow ProductInstance.ProductInstance
