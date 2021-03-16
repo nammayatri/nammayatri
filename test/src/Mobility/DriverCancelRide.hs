@@ -69,7 +69,7 @@ spec = do
         res <-
           runClient
             tbeClientEnv
-            $ getNotificationInfo driverToken (Just transporterOrderPiId)
+            $ getNotificationInfo driverToken (Just $ cast transporterOrderPiId)
         pure $ either (const Nothing) (^. #rideRequest) res
       rideInfo ^. #productInstanceId `shouldBe` transporterOrderPiId
 

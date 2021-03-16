@@ -44,13 +44,13 @@ getConfiguredAllocationTime :: Flow NominalDiffTime
 getConfiguredAllocationTime = asks (rideAllocationExpiry . driverAllocationConfig)
 
 getDriverPool :: ID Ride -> Flow [ID Driver]
-getDriverPool (ID rideId) = Person.getDriverPool (ID rideId)
+getDriverPool rideId = Person.getDriverPool (cast rideId)
 
 getRequests :: Integer -> Flow [RideRequest]
 getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 
 assignDriver :: ID Ride -> ID Driver -> Flow ()
-assignDriver = PI.assignDriver
+assignDriver = PI.assignDriver . cast
 
 rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
 rideRequestToRideRequest SRR.RideRequest {..} =
@@ -182,7 +182,7 @@ logEvent = logAllocationEvent
 
 getRideInfo :: ID Ride -> Flow RideInfo
 getRideInfo rideId = do
-  productInstance <- QPI.findById rideId
+  productInstance <- QPI.findById $ cast rideId
   rideStatus <- castToRideStatus $ productInstance ^. #_status
   pure
     RideInfo

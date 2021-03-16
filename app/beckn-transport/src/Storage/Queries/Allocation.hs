@@ -21,12 +21,13 @@ assignDriver ::
   DB.SqlDB ()
 assignDriver productInstanceId piIdList vehicle driver = do
   QPI.updateVehicle piIdList (Just $ vehicle ^. #_id)
-  QPI.updateDriver piIdList (Just driverId)
+  QPI.updateDriver piIdList (Just personId)
   QDI.updateOnRide driverId True
   QPI.updateStatusByIds piIdList SPI.TRIP_ASSIGNED
   updateInfo productInstanceId driver vehicle
   where
-    driverId = driver ^. #_id
+    personId = driver ^. #_id
+    driverId = cast personId
 
 updateInfo ::
   ID SPI.ProductInstance ->

@@ -28,9 +28,9 @@ import qualified Storage.Queries.ProductInstance as PIQ
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
+import Types.App
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
-import Types.App
 
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $ do
@@ -67,7 +67,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   isAllowed ordPi req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
-      DSQ.updateIdleTime $ user ^. #_id
+      DSQ.updateIdleTime . cast $ user ^. #_id
     updateStatus piId req
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
@@ -183,7 +183,7 @@ assignDriver productInstanceId driverId = do
   headPi <- case piList of
     p : _ -> pure p
     [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
-  driver <- PersQ.findPersonById driverId
+  driver <- PersQ.findPersonById $ cast driverId
   vehicleId <-
     driver ^. #_udf1
       & fromMaybeM400 "DRIVER_HAS_NO_VEHICLE"
@@ -278,7 +278,7 @@ updateTrip piId newStatus request = do
       _ <- PIQ.updateStatus (PI._id searchPi) PI.CANCELLED
       CQ.updateStatus (Case._id trackerCase_) Case.CLOSED
       CQ.updateStatus (Case._id orderCase_) Case.CLOSED
-      updateOnRide (PI._personId orderPi) False
+      updateOnRide (cast <$> PI._personId orderPi) False
     -- Sent by Driver for order reassignment
     PI.TRIP_REASSIGNMENT -> do
       trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
@@ -297,8 +297,8 @@ updateTrip piId newStatus request = do
       CQ.updateStatus (Case._id trackerCase_) Case.COMPLETED
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
-      updateOnRide (PI._personId orderPi) False
-      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime)
+      updateOnRide (cast <$> PI._personId orderPi) False
+      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTime . cast)
       return ()
     PI.TRIP_ASSIGNED -> do
       _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) PI.TRIP_ASSIGNED

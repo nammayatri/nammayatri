@@ -75,7 +75,7 @@ spec = do
         res <-
           runClient
             transporterClient
-            $ F.getNotificationInfo F.driverToken (Just transporterOrderId)
+            $ F.getNotificationInfo F.driverToken (Just $ cast transporterOrderId)
         pure $ either (const Nothing) (^. #rideRequest) res
       rideInfo ^. #productInstanceId `shouldBe` transporterOrderId
 

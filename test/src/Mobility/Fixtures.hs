@@ -31,6 +31,7 @@ import qualified "app-backend" Types.API.Registration as Reg
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
+import "beckn-transport" Types.App
 import qualified "app-backend" Types.Common as AppCommon
 
 address :: AppCommon.Address
@@ -137,7 +138,7 @@ rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriv
 rideRespond = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 setDriverOnline :: Text -> Bool -> ClientM APIResult
-getNotificationInfo :: Text -> Maybe (ID PI.ProductInstance) -> ClientM DriverInformationAPI.GetRideInfoRes
+getNotificationInfo :: Text -> Maybe (ID Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
 _ :<|> setDriverOnline :<|> getNotificationInfo = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq

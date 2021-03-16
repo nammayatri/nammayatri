@@ -52,6 +52,7 @@ import Types.API.Registration
 import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
+import Types.App (Ride)
 import Utils.Auth (lookup)
 import Utils.Common (AdminTokenAuth, DriverTokenAuth, TokenAuth)
 
@@ -400,7 +401,7 @@ type DriverInformationAPI =
            :> Post '[JSON] APIResult
            :<|> "notification"
            :> TokenAuth
-           :> QueryParam "productInstanceId" (ID ProductInstance)
+           :> QueryParam "productInstanceId" (ID Ride)
            :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
        )
 

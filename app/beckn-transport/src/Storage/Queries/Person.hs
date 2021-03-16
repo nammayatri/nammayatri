@@ -21,6 +21,7 @@ import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Prelude hiding (id)
 import Types.API.Location (LatLong (..))
+import Types.App
 import qualified Types.Storage.DB as DB
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
@@ -356,7 +357,7 @@ getNearestDrivers ::
   Integer ->
   ID Org.Organization ->
   Vehicle.Variant ->
-  Flow [(ID Storage.Person, Double)]
+  Flow [(ID Driver, Double)]
 getNearestDrivers LatLong {..} radius orgId variant =
   map (first ID)
     <$> postgreSQLSimpleQuery

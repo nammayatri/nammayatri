@@ -5,8 +5,6 @@
 
 module Types.App where
 
-import Beckn.Types.Storage.Person (Person)
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.TH
 import EulerHS.Prelude
@@ -19,9 +17,9 @@ newtype ConfigKey = ConfigKey
 
 deriveIdentifierInstances ''ConfigKey
 
-type Ride = ProductInstance
+data Ride -- = ProductInstance
 
-type Driver = Person
+data Driver -- = Person
 
 type Limit = Int
 

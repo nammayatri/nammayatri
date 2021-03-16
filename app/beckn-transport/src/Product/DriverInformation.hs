@@ -6,7 +6,6 @@ import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.ID
-import Types.App
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Common (fromMaybeM500, withFlowHandler)
@@ -21,6 +20,7 @@ import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Types.API.DriverInformation as DriverInformationAPI
+import Types.App
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandler $ do
@@ -51,10 +51,10 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
     Just notification -> do
-      let productInstanceId = notification ^. #_rideId
+      let productInstanceId = cast $ notification ^. #_rideId
       let notificationExpiryTime = notification ^. #_expiresAt
       productInstance <- QueryPI.findById productInstanceId
-      driver <- QPerson.findPersonById driverId
+      driver <- QPerson.findPersonById $ cast driverId
       driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM500 "DRIVER_LOCATION_NOT_FOUND"
       fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM500 "PICKUP_LOCATION_NOT_FOUND"
       toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM500 "DROP_LOCATION_NOT_FOUND"

@@ -74,7 +74,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
 
 cancelRide :: ID Ride -> Flow ()
 cancelRide rideId = do
-  orderPi <- ProductInstance.findById rideId
+  orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM500 "RIDEORDER_DOESNT_HAVE_PARENT"
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
@@ -98,9 +98,9 @@ cancelRide rideId = do
       c <- Case.findById $ prdInst ^. #_caseId
       case prdInst ^. #_personId of
         Nothing -> pure ()
-        Just driverId -> do
-          driver <- Person.findPersonById driverId
-          DriverInformation.updateOnRideFlow driverId False
+        Just personId -> do
+          driver <- Person.findPersonById personId
+          DriverInformation.updateOnRideFlow (cast personId) False
           Notify.notifyDriverOnCancel c driver
 
 -- TODO : Add notifying transporter admin with FCM
@@ -302,13 +302,13 @@ validateContext action context = do
   validateContextCommons action context
 
 mkRideReq :: ID ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
-mkRideReq rideId rideRequestType = do
+mkRideReq prodInstID rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrTime
   pure
     SRideRequest.RideRequest
       { _id = ID guid,
-        _rideId = rideId,
+        _rideId = cast prodInstID,
         _createdAt = currTime,
         _type = rideRequestType
       }

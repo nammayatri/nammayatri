@@ -48,7 +48,7 @@ import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Location (LatLong (..))
 import Types.API.Person
-import Types.App (ConfigKey (..))
+import Types.App (ConfigKey (..), Driver)
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -91,7 +91,7 @@ createPerson orgId req = withFlowHandler $ do
           _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
 
 createDriverDetails :: ID SP.Person -> Flow ()
-createDriverDetails driverId = do
+createDriverDetails personId = do
   now <- getCurrTime
   let driverInfo =
         DriverInformation.DriverInformation
@@ -103,6 +103,8 @@ createDriverDetails driverId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
+  where
+    driverId = cast personId
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandler $ do
@@ -256,7 +258,7 @@ calculateAverageRating personId = do
 driverPoolKey :: ID ProductInstance -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
-getDriverPool :: ID ProductInstance -> Flow [ID SP.Person]
+getDriverPool :: ID ProductInstance -> Flow [ID Driver]
 getDriverPool piId =
   Redis.getKeyRedis (driverPoolKey piId)
     >>= maybe calcDriverPool (pure . map ID)
@@ -273,7 +275,7 @@ getDriverPool piId =
       let orgId = ID (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
-setDriverPool :: ID ProductInstance -> [ID SP.Person] -> Flow ()
+setDriverPool :: ID ProductInstance -> [ID Driver] -> Flow ()
 setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
@@ -281,7 +283,7 @@ calculateDriverPool ::
   ID Location ->
   ID Organization ->
   SV.Variant ->
-  Flow [ID SP.Person]
+  Flow [ID Driver]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
   lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"
