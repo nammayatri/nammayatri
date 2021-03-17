@@ -2,12 +2,12 @@ module Flow.RideAPI.CancelRide where
 
 import Beckn.Product.BusinessRule (BusinessError (..), runBR)
 import qualified Beckn.Types.APIResult as APIResult
-import Beckn.Types.App (PersonId (..))
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Control.Monad.Identity
 import EulerHS.Prelude
-import qualified Fixtures as Fixtures
+import qualified Fixtures
 import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -25,7 +25,7 @@ handle =
 rideProductInstance :: ProductInstance.ProductInstance
 rideProductInstance =
   Fixtures.defaultProductInstance
-    { ProductInstance._status = ProductInstance.INPROGRESS
+    { ProductInstance._status = ProductInstance.CONFIRMED
     }
 
 cancelRide :: TestTree
@@ -54,7 +54,7 @@ successfulCancellationByAdmin =
     handleCase = handle {CancelRide.findPersonById = \personId -> pure admin}
     admin =
       Fixtures.defaultDriver
-        { Person._id = PersonId "adminId",
+        { Person._id = Id "adminId",
           Person._role = Person.ADMIN
         }
 
@@ -71,7 +71,7 @@ successfulCancellationWithoutDriverByAdmin =
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}
     admin =
       Fixtures.defaultDriver
-        { Person._id = PersonId "adminId",
+        { Person._id = Id "adminId",
           Person._role = Person.ADMIN
         }
 
@@ -81,7 +81,7 @@ failedCancellationByAnotherDriver =
     runBR (CancelRide.cancelRideHandler handleCase "driverNotExecutorId" "1") @?= pure (Left error)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
-    driverNotExecutor = Fixtures.defaultDriver {Person._id = PersonId "driverNotExecutorId"}
+    driverNotExecutor = Fixtures.defaultDriver {Person._id = Id "driverNotExecutorId"}
     error = BusinessError "NOT_AN_ORDER_EXECUTOR" "You are not an order executor."
 
 failedCancellationByNotDriverAndNotAdmin :: TestTree
@@ -92,7 +92,7 @@ failedCancellationByNotDriverAndNotAdmin =
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
       Fixtures.defaultDriver
-        { Person._id = PersonId "managerId",
+        { Person._id = Id "managerId",
           Person._role = Person.MANAGER
         }
     error = BusinessError "NOT_AN_ORDER_EXECUTOR" "You are not an order executor."

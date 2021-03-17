@@ -38,7 +38,7 @@ cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   where
     isValidPI prodInst =
       prodInst ^. #_type == Case.RIDEORDER
-        && (prodInst ^. #_status) `elem` [CONFIRMED, INPROGRESS, TRIP_ASSIGNED, TRIP_REASSIGNMENT]
+        && (prodInst ^. #_status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]
     adminOrRideDriver authPerson driverId =
       authPerson ^. #_role == Person.ADMIN
         || (authPerson ^. #_role == Person.DRIVER && authPerson ^. #_id == driverId)
