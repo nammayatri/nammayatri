@@ -1,5 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -158,20 +156,20 @@ fromMaybeM404 err = fromMaybeM (S.err404 {errBody = Aeson.encode @APIError $ toE
 fromMaybeM500 err = fromMaybeM (S.err500 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
 fromMaybeM503 err = fromMaybeM (S.err503 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
 
-fromMaybeMWithMsg400,
-  fromMaybeMWithMsg401,
-  fromMaybeMWithMsg404,
-  fromMaybeMWithMsg500,
-  fromMaybeMWithMsg503 ::
+fromMaybeMWithInfo400,
+  fromMaybeMWithInfo401,
+  fromMaybeMWithInfo404,
+  fromMaybeMWithInfo500,
+  fromMaybeMWithInfo503 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> Maybe a -> m a
-fromMaybeMWithMsg400 err msg = fromMaybeM (S.err400 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg401 err msg = fromMaybeM (S.err401 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg404 err msg = fromMaybeM (S.err404 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg500 err msg = fromMaybeM (S.err500 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
-fromMaybeMWithMsg503 err msg = fromMaybeM (S.err503 {errBody = makeErrorJSONWithMsg @APIError err msg, errHeaders = [jsonHeader]})
+fromMaybeMWithInfo400 err info = fromMaybeM (S.err400 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+fromMaybeMWithInfo401 err info = fromMaybeM (S.err401 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+fromMaybeMWithInfo404 err info = fromMaybeM (S.err404 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+fromMaybeMWithInfo500 err info = fromMaybeM (S.err500 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+fromMaybeMWithInfo503 err info = fromMaybeM (S.err503 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 
-makeErrorJSONWithMsg :: forall b e. (IsError e b, IsError (DomainErrorWithMessage e) b) => e -> Text -> BSL.ByteString
-makeErrorJSONWithMsg err msg = Aeson.encode @b . toError $ DomainErrorWithMessage err msg
+buildErrorBodyWithInfo :: Text -> Text -> BSL.ByteString
+buildErrorBodyWithInfo err info = Aeson.encode $ buildAPIErrorWithInfo err info
 
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
@@ -262,9 +260,9 @@ authenticate = check handleKey
     throw401 =
       throwError401 "Invalid Auth"
 
-throwHttpError :: forall b e m a. (HasCallStack, L.MonadFlow m, Log m, IsError e b) => ServerError -> e -> m a
+throwHttpError :: forall e m a. (HasCallStack, L.MonadFlow m, Log m, ToJSON e) => ServerError -> e -> m a
 throwHttpError err errMsg = do
-  let body = Aeson.encode @b $ toError errMsg
+  let body = Aeson.encode errMsg
   logError "HTTP_ERROR" (decodeUtf8 body)
   L.throwException err {errBody = body, errHeaders = [jsonHeader]}
 
@@ -293,29 +291,37 @@ throwError500,
   throwError403,
   throwError404 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
-throwError500 = throwHttpError @APIError S.err500
-throwError501 = throwHttpError @APIError S.err501
-throwError503 = throwHttpError @APIError S.err503
-throwError400 = throwHttpError @APIError S.err400
-throwError401 = throwHttpError @APIError S.err401
-throwError403 = throwHttpError @APIError S.err403
-throwError404 = throwHttpError @APIError S.err404
+throwError500 = throwHttpError @APIError S.err500 . toError
+throwError501 = throwHttpError @APIError S.err501 . toError
+throwError503 = throwHttpError @APIError S.err503 . toError
+throwError400 = throwHttpError @APIError S.err400 . toError
+throwError401 = throwHttpError @APIError S.err401 . toError
+throwError403 = throwHttpError @APIError S.err403 . toError
+throwError404 = throwHttpError @APIError S.err404 . toError
 
-throwErrorMsg500,
-  throwErrorMsg501,
-  throwErrorMsg503,
-  throwErrorMsg400,
-  throwErrorMsg401,
-  throwErrorMsg403,
-  throwErrorMsg404 ::
+throwErrorWithInfo500,
+  throwErrorWithInfo501,
+  throwErrorWithInfo503,
+  throwErrorWithInfo400,
+  throwErrorWithInfo401,
+  throwErrorWithInfo403,
+  throwErrorWithInfo404 ::
     (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> m a
-throwErrorMsg500 err errMsg = throwHttpError @APIError S.err500 $ DomainErrorWithMessage err errMsg
-throwErrorMsg501 err errMsg = throwHttpError @APIError S.err501 $ DomainErrorWithMessage err errMsg
-throwErrorMsg503 err errMsg = throwHttpError @APIError S.err503 $ DomainErrorWithMessage err errMsg
-throwErrorMsg400 err errMsg = throwHttpError @APIError S.err400 $ DomainErrorWithMessage err errMsg
-throwErrorMsg401 err errMsg = throwHttpError @APIError S.err401 $ DomainErrorWithMessage err errMsg
-throwErrorMsg403 err errMsg = throwHttpError @APIError S.err403 $ DomainErrorWithMessage err errMsg
-throwErrorMsg404 err errMsg = throwHttpError @APIError S.err404 $ DomainErrorWithMessage err errMsg
+throwErrorWithInfo500 err info = throwHttpError @APIError S.err500 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo501 err info = throwHttpError @APIError S.err501 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo503 err info = throwHttpError @APIError S.err503 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo400 err info = throwHttpError @APIError S.err400 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo401 err info = throwHttpError @APIError S.err401 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo403 err info = throwHttpError @APIError S.err403 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo404 err info = throwHttpError @APIError S.err404 $ buildAPIErrorWithInfo err info
+
+buildAPIErrorWithInfo :: Text -> Text -> APIError
+buildAPIErrorWithInfo err info =
+  let apiErr@APIError {..} = toError err
+      defMsg = fromMaybe "" errorMessage
+   in apiErr
+        { errorMessage = Just $ defMsg <> " " <> info
+        }
 
 throwBecknError500,
   throwBecknError501,

@@ -53,7 +53,7 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  role <- fromMaybeMWithMsg400 "CUSTOMER_ROLE_NOT_FOUND" "Customer role required" (req ^. #_role)
+  role <- fromMaybeM400 "CUSTOMER_ROLE_NOT_FOUND" (req ^. #_role)
   pid <- BC.generateGUID
   now <- getCurrTime
   return $
@@ -126,7 +126,7 @@ sendOTP SmsCredConfig {..} phoneNumber otpCode = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructOtpSms otpCode otpHash
         }
-  whenLeft res $ \err -> throwErrorMsg503 "UNABLE_TO_SEND_OTP" err
+  whenLeft res $ \err -> throwErrorWithInfo503 "UNABLE_TO_SEND_OTP" err
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
@@ -151,7 +151,7 @@ login tokenId req =
         Person.updateMultiple personId updatedPerson
         LoginRes _token . SP.maskPerson
           <$> ( Person.findById personId
-                  >>= fromMaybeMWithMsg500 "USER_NOT_FOUND" "Could not find user"
+                  >>= fromMaybeM500 "USER_NOT_FOUND"
               )
       else throwError400 "AUTH_VALUE_MISMATCH"
   where

@@ -79,13 +79,13 @@ search person req = withFlowHandler $ do
     validateServiceability sreq = do
       originGps <-
         sreq ^. #origin . #location . #gps
-          & fromMaybeMWithMsg400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the origin location"
+          & fromMaybeMWithInfo400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the origin location"
       destinationGps <-
         req ^. #destination . #location . #gps
-          & fromMaybeMWithMsg400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the destination location"
+          & fromMaybeMWithInfo400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the destination location"
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
-        throwErrorMsg400 "RIDE_NOT_SERVICEABLE" "Ride not serviceable due to georestrictions"
+        throwErrorWithInfo400 "RIDE_NOT_SERVICEABLE" "Ride not serviceable due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _bppOrg req = withFlowHandler $ do
@@ -108,7 +108,7 @@ searchCbService req catalog = do
         >>= fromMaybeM400 "INVALID_PROVIDER_URI"
     personId <-
       maybe
-        (throwErrorMsg500 "PERSON_ID_NOT_FOUND" "No person linked to case")
+        (throwError500 "PERSON_ID_NOT_FOUND")
         (return . Id)
         (Case._requestor case_)
     case (catalog ^. #_categories, catalog ^. #_items) of
@@ -121,7 +121,7 @@ searchCbService req catalog = do
       (category : _, items) -> do
         when
           (case_ ^. #_status == Case.CLOSED)
-          (throwErrorMsg400 "EXPIRED_CASE" "Case expired")
+          (throwError400 "EXPIRED_CASE")
         let provider = fromBeckn category
         products <- traverse (mkProduct case_) items
         traverse_ Products.create products

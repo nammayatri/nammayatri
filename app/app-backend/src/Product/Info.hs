@@ -46,5 +46,5 @@ getLocation person caseId = withFlowHandler $ do
   let pI = head productInstances
   resp <- External.location baseUrl (getId $ pI ^. #_id)
   case resp of
-    Left err -> throwErrorMsg500 "UNABLE_TO_GET_LOCATION" err
+    Left err -> throwErrorWithInfo500 "UNABLE_TO_GET_LOCATION" err
     Right r -> return r

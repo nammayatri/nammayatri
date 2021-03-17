@@ -41,7 +41,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
-      throwErrorMsg400 "MISSING_ORG_ID" "organisation id is missing"
+      throwError400 "MISSING_ORG_ID"
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM

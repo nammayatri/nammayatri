@@ -38,7 +38,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
       unless (SP._verified person) $
         throwError400 "USER_NOT_VERIFIED"
       when (isJust $ SP._organizationId person) $
-        throwErrorMsg400 "ORG_ALREADY_EXISTS" "user already registered an organization"
+        throwErrorWithInfo400 "ORG_ALREADY_EXISTS" "User already registered an organization"
       when (SP._role person /= SP.ADMIN) $
         throwError401 "UNAUTHORIZED"
     validateReq treq =
@@ -88,7 +88,7 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
-    Nothing -> throwErrorMsg400 "ORG_NOT_EXISTS" "user not registered an organization"
+    Nothing -> throwErrorWithInfo400 "ORG_NOT_EXISTS" "User not registered an organization"
   where
     validate person =
       unless (SP._verified person) $ throwError400 "USER_NOT_VERIFIED"

@@ -39,7 +39,7 @@ import Beckn.Utils.Common
   ( fromMaybeM500,
     getCurrTime,
     mkAckResponse,
-    throwErrorMsg400,
+    throwError400,
     withFlowHandler,
   )
 import qualified Data.Text as T
@@ -186,7 +186,7 @@ trackTrip transporterId org req = withFlowHandler $ do
       notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
-    Nothing -> throwErrorMsg400 "NO_PARENT_CASE" "Case does not have an associated parent case"
+    Nothing -> throwError400 "NO_PARENT_CASE"
 
 notifyTripUrlToGateway :: Case.Case -> Case.Case -> App.BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do

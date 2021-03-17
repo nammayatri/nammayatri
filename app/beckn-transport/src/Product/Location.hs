@@ -20,10 +20,10 @@ import Types.API.Location as Location
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- Person.findPersonById $ Id _EntityId
-  driver <- if person ^. #_role == Person.DRIVER then return person else throwErrorMsg400 "INVALID_ROLE" "Only driver can update location."
+  driver <- if person ^. #_role == Person.DRIVER then return person else throwError400 "INVALID_ROLE"
   locationId <-
     driver ^. #_locationId & (Id <$>)
-      & fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Driver location not found"
+      & fromMaybeM500 "LOCATION_NOT_FOUND"
   Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
   return $ UpdateLocationRes "ACK"
 
@@ -35,9 +35,9 @@ getLocation piId = withFlowHandler $ do
       >>= Person.findPersonById
   currLocation <-
     driver ^. #_locationId & (Id <$>)
-      & fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Driver location not found"
+      & fromMaybeM500 "LOCATION_NOT_FOUND"
       >>= Location.findLocationById
-      >>= fromMaybeMWithMsg500 "LOCATION_NOT_FOUND" "Driver location not found"
+      >>= fromMaybeM500 "LOCATION_NOT_FOUND"
   lat <- currLocation ^. #_lat & fromMaybeM500 "GPS_COORDS_NOT_SET"
   long <- currLocation ^. #_long & fromMaybeM500 "GPS_COORDS_NOT_SET"
   return $ GetLocationRes {location = Location.LocationInfo lat long}
@@ -71,7 +71,7 @@ getRoute _ Location.Request {..} =
   withFlowHandler $
     MapSearch.getRoute getRouteRequest
       >>= either
-        (throwErrorMsg400 "UNABLE_TO_GET_ROUTE" . show)
+        (throwErrorWithInfo400 "UNABLE_TO_GET_ROUTE" . show)
         return
   where
     mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long

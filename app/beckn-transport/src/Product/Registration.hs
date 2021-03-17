@@ -123,7 +123,7 @@ sendOTP SmsCredConfig {..} phoneNumber otpCode = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructOtpSms otpCode otpHash
         }
-  whenLeft res $ \err -> throwErrorMsg503 "UNABLE_TO_SEND_OTP" err
+  whenLeft res $ \err -> throwErrorWithInfo503 "UNABLE_TO_SEND_OTP" err
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =

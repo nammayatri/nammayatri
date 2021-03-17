@@ -18,28 +18,16 @@ instance IsString ErrorMsg where
   fromString = ErrorMsg . fromString
 
 data APIError = APIError
-  { _code :: Text,
-    _message :: Maybe Text
+  { errorCode :: Text,
+    errorMessage :: Maybe Text
   }
-  deriving (Generic, Eq, Show)
-
-instance FromJSON APIError where
-  parseJSON = genericParseJSON stripLensPrefixOptions
-
-instance ToJSON APIError where
-  toJSON = genericToJSON stripLensPrefixOptions
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError Text APIError where
   toError e = APIError e Nothing
 
-data DomainErrorWithMessage a = DomainErrorWithMessage a Text
-
---temporary solution until we change all Text Errors to ADT
-instance IsError a APIError => IsError (DomainErrorWithMessage a) APIError where
-  toError (DomainErrorWithMessage e msg) =
-    (toError e)
-      { _message = Just msg
-      }
+apiError :: Text -> APIError
+apiError code = APIError code Nothing
 
 data DomainError
   = AuthErr AuthError
@@ -68,7 +56,7 @@ data AuthError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError AuthError APIError where
-  toError Unauthorized = APIError "UNAUTHORIZED" Nothing
+  toError Unauthorized = apiError "UNAUTHORIZED"
 
 data QuotaError
   = QuotaNotFound
@@ -76,8 +64,8 @@ data QuotaError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError QuotaError APIError where
-  toError QuotaNotFound = APIError "QUOTA_NOT_FOUND" Nothing
-  toError QuotaNotCreated = APIError "QUOTA_NOT_CREATED" Nothing
+  toError QuotaNotFound = apiError "QUOTA_NOT_FOUND"
+  toError QuotaNotCreated = apiError "QUOTA_NOT_CREATED"
 
 data CommentError
   = CommentNotFound
@@ -85,8 +73,8 @@ data CommentError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError CommentError APIError where
-  toError CommentNotFound = APIError "COMMENT_NOT_FOUND" Nothing
-  toError CommentNotCreated = APIError "COMMENT_NOT_CREATED" Nothing
+  toError CommentNotFound = apiError "COMMENT_NOT_FOUND"
+  toError CommentNotCreated = apiError "COMMENT_NOT_CREATED"
 
 data CustomerError
   = CustomerNotFound
@@ -95,9 +83,9 @@ data CustomerError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError CustomerError APIError where
-  toError CustomerNotFound = APIError "CUSTOMER_NOT_FOUND" Nothing
-  toError CannotCreateCustomer = APIError "CANNOT_CREATE_CUSTOMER" Nothing
-  toError CustomerOrgMismatch = APIError "CUSTOMER_ORG_MISMATCH" Nothing
+  toError CustomerNotFound = apiError "CUSTOMER_NOT_FOUND"
+  toError CannotCreateCustomer = apiError "CANNOT_CREATE_CUSTOMER"
+  toError CustomerOrgMismatch = apiError "CUSTOMER_ORG_MISMATCH"
 
 data PersonError
   = PersonNotFound
@@ -106,9 +94,9 @@ data PersonError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError PersonError APIError where
-  toError PersonNotFound = APIError "PERSON_NOT_FOUND" Nothing
-  toError PersonNotUpdated = APIError "PERSON_NOT_UPDATED" Nothing
-  toError PersonNotCreated = APIError "PERSON_NOT_CREATED" Nothing
+  toError PersonNotFound = apiError "PERSON_NOT_FOUND"
+  toError PersonNotUpdated = apiError "PERSON_NOT_UPDATED"
+  toError PersonNotCreated = apiError "PERSON_NOT_CREATED"
 
 data TransporterError
   = TransporterNotFound
@@ -117,9 +105,9 @@ data TransporterError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError TransporterError APIError where
-  toError TransporterNotFound = APIError "TRANSPORTER_NOT_FOUND" Nothing
-  toError TransporterNotUpdated = APIError "TRANSPORTER_NOT_UPDATED" Nothing
-  toError TransporterNotCreated = APIError "TRANSPORTER_NOT_CREATED" Nothing
+  toError TransporterNotFound = apiError "TRANSPORTER_NOT_FOUND"
+  toError TransporterNotUpdated = apiError "TRANSPORTER_NOT_UPDATED"
+  toError TransporterNotCreated = apiError "TRANSPORTER_NOT_CREATED"
 
 data LocationError
   = LocationNotFound
@@ -127,29 +115,29 @@ data LocationError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError LocationError APIError where
-  toError LocationNotFound = APIError "LOCATION_NOT_FOUND" Nothing
-  toError LocationNotUpdated = APIError "LOCATION_NOT_UPDATED" Nothing
+  toError LocationNotFound = apiError "LOCATION_NOT_FOUND"
+  toError LocationNotUpdated = apiError "LOCATION_NOT_UPDATED"
 
 data RouteError
   = RouteNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError RouteError APIError where
-  toError RouteNotFound = APIError "ROUTE_NOT_FOUND" Nothing
+  toError RouteNotFound = apiError "ROUTE_NOT_FOUND"
 
 data DocumentError
   = InvalidPassApplicationId
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError DocumentError APIError where
-  toError InvalidPassApplicationId = APIError "INVALID_PASS_APPLICATION_ID" Nothing
+  toError InvalidPassApplicationId = apiError "INVALID_PASS_APPLICATION_ID"
 
 data HealthCheckError
   = HealthCheckNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError HealthCheckError APIError where
-  toError HealthCheckNotFound = APIError "HEALTH_CHECK_NOT_FOUND" Nothing
+  toError HealthCheckNotFound = apiError "HEALTH_CHECK_NOT_FOUND"
 
 data TagError
   = TagNotFound
@@ -157,7 +145,7 @@ data TagError
 
 instance IsError TagError APIError where
   toError TagNotFound =
-    APIError "TAG_NOT_FOUND" Nothing
+    apiError "TAG_NOT_FOUND"
 
 newtype UnknownError
   = UnknownError ErrorMsg
@@ -172,8 +160,8 @@ data OrganizationError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError OrganizationError APIError where
-  toError OrganizationNotFound = APIError "ORGANIZATION_NOT_FOUND" Nothing
-  toError OrganizationIdMissing = APIError "ORGANIZATION_ID_MISSING" Nothing
+  toError OrganizationNotFound = apiError "ORGANIZATION_NOT_FOUND"
+  toError OrganizationIdMissing = apiError "ORGANIZATION_ID_MISSING"
 
 data CaseError
   = CaseNotFound
@@ -183,9 +171,9 @@ data CaseError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError CaseError APIError where
-  toError CaseNotFound = APIError "CASE_NOT_FOUND" Nothing
-  toError CaseNotCreated = APIError "CASE_NOT_CREATED" Nothing
-  toError CaseNotUpdated = APIError "CASE_NOT_UPDATED" Nothing
+  toError CaseNotFound = apiError "CASE_NOT_FOUND"
+  toError CaseNotCreated = apiError "CASE_NOT_CREATED"
+  toError CaseNotUpdated = apiError "CASE_NOT_UPDATED"
   toError (CaseStatusTransitionErr msg) = APIError "CASE_STATUS_TRANSITION_ERROR" . Just $ fromErrorMsg msg
 
 data ProductInstanceError
@@ -194,7 +182,7 @@ data ProductInstanceError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ProductInstanceError APIError where
-  toError ProductInstanceNotFound = APIError "PRODUCT_INSTANCE_NOT_FOUND" Nothing
+  toError ProductInstanceNotFound = apiError "PRODUCT_INSTANCE_NOT_FOUND"
   toError (ProductInstanceStatusTransitionErr msg) =
     APIError "PRODUCT_INSTANCE_STATUS_TRANSITION_ERROR" . Just $ fromErrorMsg msg
 
@@ -205,9 +193,9 @@ data ProductError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ProductError APIError where
-  toError ProductNotFound = APIError "PRODUCT_NOT_FOUND" Nothing
-  toError ProductNotUpdated = APIError "PRODUCT_NOT_UPDATED" Nothing
-  toError ProductNotCreated = APIError "PRODUCT_NOT_CREATED" Nothing
+  toError ProductNotFound = apiError "PRODUCT_NOT_FOUND"
+  toError ProductNotUpdated = apiError "PRODUCT_NOT_UPDATED"
+  toError ProductNotCreated = apiError "PRODUCT_NOT_CREATED"
 
 data ProductInfoError
   = ProductInfoNotFound
@@ -216,9 +204,9 @@ data ProductInfoError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ProductInfoError APIError where
-  toError ProductInfoNotFound = APIError "PRODUCT_INFO__NOT_FOUND" Nothing
-  toError ProductInfoNotUpdated = APIError "PRODUCT_INFO_NOT_UPDATED" Nothing
-  toError OtherProductInfoError = APIError "OTHER_PRODUCT_INFO_ERROR" Nothing
+  toError ProductInfoNotFound = apiError "PRODUCT_INFO__NOT_FOUND"
+  toError ProductInfoNotUpdated = apiError "PRODUCT_INFO_NOT_UPDATED"
+  toError OtherProductInfoError = apiError "OTHER_PRODUCT_INFO_ERROR"
 
 newtype SystemError
   = SystemError ErrorMsg

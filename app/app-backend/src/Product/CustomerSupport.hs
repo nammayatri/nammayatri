@@ -26,10 +26,10 @@ login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandler $ do
   personM <- Person.findByUsernameAndPassword _email _password
   case personM of
-    Nothing -> throwErrorMsg401 "INVALID_CREDENTIALS" "Invalid credentials. Please try again."
+    Nothing -> throwError401 "INVALID_CREDENTIALS"
     Just person ->
       if person ^. #_status /= SP.ACTIVE && person ^. #_role /= SP.CUSTOMER_SUPPORT
-        then throwErrorMsg401 "INVALID_CREDENTIALS" "Invalid credentials. Please try again."
+        then throwError401 "INVALID_CREDENTIALS"
         else do
           token <- generateToken person
           pure $ T.LoginRes token "Logged in successfully"
@@ -47,7 +47,7 @@ logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
   withFlowHandler $
     if person ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwErrorMsg401 "UNAUTHORIZED" "Unauthorized request. Please try again" -- Do we need this Check?
+      then throwError401 "UNAUTHORIZED" -- Do we need this Check?
       else do
         RegistrationToken.deleteByPersonId (getId $ person ^. #_id)
         pure $ T.LogoutRes "Logged out successfully"
@@ -84,7 +84,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwErrorMsg400 "INVALID_REQUEST" "No CaseId or Mobile Number in Request"
+          (_, _) -> throwError400 "INVALID_REQUEST"
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do

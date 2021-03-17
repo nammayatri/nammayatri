@@ -35,7 +35,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrTime
   case_ <- QCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
-    throwErrorMsg400 "EXPIRED_CASE" "Case has expired"
+    throwError400 "EXPIRED_CASE"
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (Id productInstanceId)
   organization <-

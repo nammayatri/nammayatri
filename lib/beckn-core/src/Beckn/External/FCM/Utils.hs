@@ -7,7 +7,7 @@ where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.Types.Common
-import Beckn.Utils.Common (throwErrorMsg500)
+import Beckn.Utils.Common (throwError500, throwErrorWithInfo500)
 import qualified Beckn.Utils.JWT as JWT
 import Beckn.Utils.Logging (HasLogContext, Log (..))
 import qualified Control.Exception as E (try)
@@ -23,7 +23,7 @@ doFCMTokenRefresh ::
   FlowR r ()
 doFCMTokenRefresh = do
   getField @"fcmJsonPath" <$> ask
-    >>= maybe (throwErrorMsg500 "FCM_JSON_PATH_NOT_CONFIGURED" "fcmJsonPath not configured") withFJP
+    >>= maybe (throwError500 "FCM_JSON_PATH_NOT_CONFIGURED") withFJP
   where
     withFJP f = L.runIO (readAndDecode f) >>= either logAndThrowIt doIt
     readAndDecode f = either (Left . excText f) (first fromString . Aeson.eitherDecode) <$> E.try (BL.readFile $ toString f)
@@ -47,4 +47,4 @@ doFCMTokenRefresh = do
               _ -> 10 -- just a caution, it should be valid by this moment
     logAndThrowIt err = do
       logInfo ("fcm" :: Text) err
-      throwErrorMsg500 "UNABLE_TO_READ" "Unable to read fcmJson file"
+      throwErrorWithInfo500 "UNABLE_TO_READ" "Unable to read fcmJson file"
