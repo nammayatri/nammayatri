@@ -9,7 +9,7 @@ import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
 import Beckn.Types.FMD.API.Select
 import Beckn.Types.FMD.API.Update
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 import qualified "mock-app-backend" Product.Trigger as MockAppTrigger
 import Servant.API

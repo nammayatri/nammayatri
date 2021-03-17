@@ -14,7 +14,7 @@ import qualified Beckn.Types.Core.Location as Location
 import Beckn.Types.Core.Price
 import qualified Beckn.Types.FMD.API.Search as Search
 import Beckn.Types.FMD.Catalog
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Common
 import Control.Lens (Setter', _Just)
 import Control.Lens.At

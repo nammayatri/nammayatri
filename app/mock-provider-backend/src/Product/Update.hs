@@ -12,6 +12,7 @@ import Beckn.Types.Core.FmdError
 import qualified Beckn.Types.FMD.API.Update as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Beckn.Utils.Logging (Log (..))
 import Beckn.Utils.Mock
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig

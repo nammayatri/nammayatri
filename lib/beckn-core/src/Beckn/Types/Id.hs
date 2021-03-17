@@ -4,6 +4,7 @@
 module Beckn.Types.Id where
 
 import Beckn.Types.Common (GuidLike (..))
+import Beckn.Utils.Example (Example, idExample)
 import Data.Swagger
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
@@ -23,6 +24,9 @@ newtype Id domain = Id
 
 cast :: Id a -> Id b
 cast = Id . getId
+
+instance Example (Id a) where
+  example = Id idExample
 
 instance IsString (Id d) where
   fromString = Id . Text.pack
