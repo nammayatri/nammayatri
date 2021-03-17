@@ -1,7 +1,7 @@
 module Product.FareCalculator.Interpreter (calculateFare) where
 
 import App.Types (Flow, Log (..))
-import Beckn.Product.BusinessRule (runBRFlowMaybe)
+import Beckn.Product.BusinessRule (runBRFlowFatal)
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
@@ -29,11 +29,11 @@ calculateFare ::
   Location.Location ->
   UTCTime ->
   Maybe Text ->
-  Flow (Maybe Amount)
+  Flow Amount
 calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
   logInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
-    runBRFlowMaybe $
+    runBRFlowFatal $
       doCalculateFare
         serviceHandle
         orgId
@@ -43,7 +43,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
         OneWayTrip -- TODO :: determine the type of trip
         startTime
         (mbDistance >>= readMaybe . T.unpack)
-  let totalFare = fareSum <$> fareParams
+  let totalFare = fareSum fareParams
   logInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ". Total fare: " +|| totalFare ||+ ""

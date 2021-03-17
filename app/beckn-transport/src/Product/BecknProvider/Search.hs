@@ -157,7 +157,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
             then ProductInstance.OUTOFSTOCK
             else ProductInstance.INSTOCK
     price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
-    prodInst :: ProductInstance.ProductInstance <- createProductInstance productCase price piStatus transporterId
+    prodInst <- createProductInstance productCase price piStatus transporterId
     let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
         caseStatus _ = Case.CLOSED
     Case.updateStatus (productCase ^. #_id) (caseStatus $ prodInst ^. #_status)
@@ -172,7 +172,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
       logError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
-createProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
+createProductInstance :: Case.Case -> Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
 createProductInstance productCase price status transporterId = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrTime
@@ -190,7 +190,7 @@ createProductInstance productCase price status transporterId = do
             _entityId = Nothing,
             _quantity = 1,
             _type = Case.RIDESEARCH,
-            _price = fromMaybe 0 price,
+            _price = price,
             _status = status,
             _startTime = productCase ^. #_startTime,
             _endTime = productCase ^. #_endTime,
