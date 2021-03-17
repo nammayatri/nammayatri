@@ -381,3 +381,35 @@ foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) 
 
 addLogTag :: HasLogContext env => Text -> FlowR env a -> FlowR env a
 addLogTag = local . addLogTagToEnv
+
+fromMaybeThrowM400,
+  fromMaybeThrowM401,
+  fromMaybeThrowM403,
+  fromMaybeThrowM404,
+  fromMaybeThrowM500,
+  fromMaybeThrowM501,
+  fromMaybeThrowM503 ::
+    MonadThrow m => BSL.ByteString -> Maybe a -> m a
+fromMaybeThrowM400 err = maybe (throwM400 err) pure
+fromMaybeThrowM401 err = maybe (throwM401 err) pure
+fromMaybeThrowM403 err = maybe (throwM403 err) pure
+fromMaybeThrowM404 err = maybe (throwM404 err) pure
+fromMaybeThrowM500 err = maybe (throwM500 err) pure
+fromMaybeThrowM501 err = maybe (throwM501 err) pure
+fromMaybeThrowM503 err = maybe (throwM503 err) pure
+
+throwM400,
+  throwM401,
+  throwM403,
+  throwM404,
+  throwM500,
+  throwM501,
+  throwM503 ::
+    MonadThrow m => BSL.ByteString -> m a
+throwM400 err = throwM $ S.err400 {errBody = err}
+throwM401 err = throwM $ S.err401 {errBody = err}
+throwM403 err = throwM $ S.err403 {errBody = err}
+throwM404 err = throwM $ S.err404 {errBody = err}
+throwM500 err = throwM $ S.err500 {errBody = err}
+throwM501 err = throwM $ S.err501 {errBody = err}
+throwM503 err = throwM $ S.err503 {errBody = err}

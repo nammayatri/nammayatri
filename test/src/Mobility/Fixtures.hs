@@ -135,7 +135,7 @@ cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
-rideRespond = client (Proxy :: Proxy TbeRoutes.RideAPI)
+rideRespond :<|> _ = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 setDriverOnline :: Text -> Bool -> ClientM APIResult
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes

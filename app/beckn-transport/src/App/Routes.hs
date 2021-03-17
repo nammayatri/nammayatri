@@ -37,6 +37,7 @@ import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
+import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
@@ -412,13 +413,22 @@ driverInformationFlow =
     :<|> DriverInformation.getRideInfo
 
 type RideAPI =
-  "ride" :> "respond"
-    :> TokenAuth
-    :> ReqBody '[JSON] RideAPI.SetDriverAcceptanceReq
-    :> Post '[JSON] RideAPI.SetDriverAcceptanceRes
+  "ride"
+    :> ( "respond"
+           :> TokenAuth
+           :> ReqBody '[JSON] RideAPI.SetDriverAcceptanceReq
+           :> Post '[JSON] RideAPI.SetDriverAcceptanceRes
+           :<|> TokenAuth
+             :> Capture "rideId" Text
+             :> Capture "OTP" Text
+             :> "start"
+             :> Post '[JSON] APIResult
+       )
 
 rideFlow :: FlowServer RideAPI
-rideFlow = Ride.setDriverAcceptance
+rideFlow =
+  Ride.setDriverAcceptance
+    :<|> RideAPI.StartRide.startRide
 
 type HealthCheckAPI = Get '[JSON] Text
 
