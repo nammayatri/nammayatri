@@ -1,7 +1,7 @@
 module Beckn.Types.Mobility.FareProduct where
 
 import Beckn.Types.Core.Descriptor
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

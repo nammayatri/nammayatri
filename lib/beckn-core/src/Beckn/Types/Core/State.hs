@@ -1,7 +1,7 @@
 module Beckn.Types.Core.State where
 
 import Beckn.Types.Core.Descriptor
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Aeson (Value)
 import Data.Time
 import EulerHS.Prelude hiding (State)

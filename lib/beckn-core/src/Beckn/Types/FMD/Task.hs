@@ -7,7 +7,7 @@ import Beckn.Types.Core.State
 import Beckn.Types.FMD.Agent
 import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson hiding (Error)
 import Data.Time (UTCTime)

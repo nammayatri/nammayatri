@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Scalar where
 
 import Beckn.Types.Core.ScalarRange
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

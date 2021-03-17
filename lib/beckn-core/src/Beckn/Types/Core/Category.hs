@@ -2,7 +2,7 @@ module Beckn.Types.Core.Category where
 
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Tag
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

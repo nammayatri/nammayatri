@@ -1,6 +1,6 @@
 module Beckn.Types.Core.ScalarRange where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data ScalarRange = ScalarRange

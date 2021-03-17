@@ -1,7 +1,7 @@
 module Beckn.Types.Core.MonetaryValue where
 
 import Beckn.Types.Core.DecimalValue
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data MonetaryValue = MonetaryValue

@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Domain where
 
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson
 import EulerHS.Prelude
@@ -16,6 +17,9 @@ domainOptions =
   defaultOptions
     { constructorTagModifier = replaceUnderscoresString
     }
+
+instance Example Domain where
+  example = MOBILITY -- TODO :: add randomized values maybe?
 
 instance ToJSON Domain where
   toJSON = genericToJSON domainOptions

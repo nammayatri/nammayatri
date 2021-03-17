@@ -3,7 +3,7 @@ module Beckn.Types.Core.Billing where
 import Beckn.Types.Core.Address
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Billing = Billing

@@ -3,7 +3,7 @@
 module Beckn.Types.Core.Model where
 
 import Beckn.Types.Core.Image
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Model = Model

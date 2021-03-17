@@ -1,7 +1,7 @@
 module Beckn.Types.Mobility.Route where
 
 import Beckn.Types.Core.Scalar
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 newtype Route = Route

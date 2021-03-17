@@ -1,7 +1,7 @@
 module Beckn.Types.Core.PaymentEndpoint where
 
 import Beckn.Types.Core.Person
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data PaymentEndpoint = PaymentEndpoint

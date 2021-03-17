@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Offer where
 
 import Beckn.Types.Core.Descriptor
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import Data.Time
 import EulerHS.Prelude

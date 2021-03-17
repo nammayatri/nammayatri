@@ -1,7 +1,7 @@
 module Beckn.Types.FMD.Paradigm where
 
 import Beckn.Types.Core.Image
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Paradigm = Paradigm

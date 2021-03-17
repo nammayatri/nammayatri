@@ -4,7 +4,7 @@ import Beckn.Types.Core.Dimensions
 import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.TravelGroup
 import Beckn.Types.Mobility.Traveller
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Luggage = Luggage

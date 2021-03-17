@@ -4,7 +4,7 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Types.Mobility.Stop (StopTime)
 import Beckn.Types.Mobility.Transfer
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 

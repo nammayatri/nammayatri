@@ -4,7 +4,7 @@ import Beckn.Types.Core.Billing
 import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Quotation
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 

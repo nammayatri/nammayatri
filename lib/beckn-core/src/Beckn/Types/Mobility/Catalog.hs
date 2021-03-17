@@ -6,7 +6,7 @@ import Beckn.Types.Core.Item
 import Beckn.Types.Core.Model
 import Beckn.Types.Core.Offer
 import Beckn.Types.Mobility.FareProduct
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import Data.Time
 import EulerHS.Prelude

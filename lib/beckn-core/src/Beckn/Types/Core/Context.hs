@@ -3,11 +3,12 @@
 module Beckn.Types.Core.Context where
 
 import Beckn.Types.Core.Domain
+import Beckn.Utils.Example
 import Data.Aeson
 import Data.Text
-import Data.Time (UTCTime)
+import Data.Time
 import EulerHS.Prelude
-import Servant.Client (BaseUrl)
+import Servant.Client (BaseUrl, parseBaseUrl)
 
 data Context = Context
   { _domain :: Domain,
@@ -24,6 +25,23 @@ data Context = Context
     _ttl :: Maybe Text
   }
   deriving (Generic, Show)
+
+instance Example Context where
+  example =
+    Context
+      { _domain = example,
+        _country = Just "IND",
+        _city = Just "BLR",
+        _action = "on_search",
+        _core_version = Just "0.8.2",
+        _domain_version = Just "0.8.2",
+        _bap_uri = parseBaseUrl "https://api.domain.com/",
+        _bpp_uri = parseBaseUrl "https://api.domain.com/",
+        _transaction_id = idExample,
+        _message_id = idExample,
+        _timestamp = example,
+        _ttl = Just "600"
+      }
 
 instance FromJSON Context where
   parseJSON = genericParseJSON stripLensPrefixOptions

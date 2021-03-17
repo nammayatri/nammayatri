@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Contact where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

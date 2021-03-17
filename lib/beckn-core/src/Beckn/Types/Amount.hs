@@ -13,7 +13,7 @@ module Beckn.Types.Amount
   )
 where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Control.Lens.Operators
 import Data.Char
 import Data.Proxy

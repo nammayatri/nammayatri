@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Price where
 
 import Beckn.Types.Core.DecimalValue
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

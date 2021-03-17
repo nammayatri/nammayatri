@@ -5,7 +5,7 @@ import Beckn.Types.Core.Category
 import Beckn.Types.Core.Item
 import Beckn.Types.Core.Model
 import Beckn.Types.Core.Offer
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import Data.Time (UTCTime)
 import EulerHS.Prelude

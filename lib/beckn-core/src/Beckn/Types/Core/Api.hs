@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Api where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import Data.Time
 import EulerHS.Prelude

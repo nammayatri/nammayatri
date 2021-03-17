@@ -2,7 +2,7 @@ module Beckn.Types.Mobility.Transfer where
 
 -- import           Types.API.External.Mobility.Mode -- not availble in github
 import Beckn.Types.Mobility.Route
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

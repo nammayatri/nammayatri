@@ -7,7 +7,7 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Catalog
 import Beckn.Types.Mobility.Intent
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))

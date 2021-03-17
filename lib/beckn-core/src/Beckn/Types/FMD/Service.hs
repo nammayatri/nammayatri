@@ -8,7 +8,7 @@ import Beckn.Types.Core.Offer
 import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Provider
 import Beckn.Types.FMD.Paradigm
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 

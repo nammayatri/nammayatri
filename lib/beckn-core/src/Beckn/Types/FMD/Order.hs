@@ -7,7 +7,7 @@ import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.State
 import Beckn.Types.FMD.Item (Item)
 import Beckn.Types.FMD.Task (Task)
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude hiding (State)
 

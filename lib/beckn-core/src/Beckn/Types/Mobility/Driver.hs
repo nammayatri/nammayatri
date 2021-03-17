@@ -5,7 +5,7 @@ module Beckn.Types.Mobility.Driver where
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Rating
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

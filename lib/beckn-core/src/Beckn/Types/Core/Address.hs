@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Address where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

@@ -1,7 +1,7 @@
 module Beckn.Types.Core.PaymentPolicy where
 
 import Beckn.Types.Core.Duration
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

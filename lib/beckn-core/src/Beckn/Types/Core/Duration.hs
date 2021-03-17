@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Duration where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 -- Describes duration as per ISO8601 format

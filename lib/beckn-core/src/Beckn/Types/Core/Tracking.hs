@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.Tracking where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Tracking = Tracking

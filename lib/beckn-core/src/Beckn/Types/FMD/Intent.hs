@@ -3,7 +3,7 @@ module Beckn.Types.FMD.Intent where
 import Beckn.Types.Core.Location
 import Beckn.Types.Core.Tag
 import Beckn.Types.FMD.Package
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 

@@ -4,7 +4,7 @@ import Beckn.Types.Core.Duration
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.State
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude hiding (State)
 

@@ -2,7 +2,7 @@
 
 module Beckn.Types.Mobility.Tracking where
 
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

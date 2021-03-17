@@ -9,9 +9,9 @@ import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Route
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
-import EulerHS.Prelude
+import EulerHS.Prelude (FromJSON, Generic, Maybe, Show, ToJSON)
 
 data Trip = Trip
   { id :: Text,

@@ -4,7 +4,7 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Item = Item

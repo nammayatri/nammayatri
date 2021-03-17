@@ -5,7 +5,7 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Person
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import Data.Time
 import EulerHS.Prelude

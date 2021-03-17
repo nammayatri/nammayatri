@@ -1,7 +1,7 @@
 module Beckn.Types.Core.ItemQuantity where
 
 import Beckn.Types.Core.Scalar
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Quantity = Quantity

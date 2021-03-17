@@ -6,7 +6,7 @@ import Beckn.Types.Core.Option (Option)
 import Beckn.Types.Core.Order (OrderItem)
 import Beckn.Types.Core.Payment
 import Beckn.Types.Mobility.Trip
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 

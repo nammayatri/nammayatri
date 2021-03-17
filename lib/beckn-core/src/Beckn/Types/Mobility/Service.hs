@@ -5,7 +5,7 @@ module Beckn.Types.Mobility.Service where
 import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Provider
 import Beckn.Types.Mobility.Catalog
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

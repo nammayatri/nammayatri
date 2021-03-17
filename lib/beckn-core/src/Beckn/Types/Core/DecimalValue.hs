@@ -1,7 +1,7 @@
 module Beckn.Types.Core.DecimalValue where
 
 import Beckn.Types.Amount
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text hiding (head, length)
 import EulerHS.Prelude
 

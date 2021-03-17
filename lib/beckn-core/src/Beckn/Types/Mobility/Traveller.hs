@@ -1,7 +1,7 @@
 module Beckn.Types.Mobility.Traveller where
 
 import Beckn.Types.Core.Person
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 

@@ -5,7 +5,7 @@ import Beckn.Types.Core.Dimensions
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Scalar
 import Beckn.Types.FMD.Item
-import Beckn.Utils.Common
+import Beckn.Utils.Example
 import EulerHS.Prelude
 
 data Package = Package
