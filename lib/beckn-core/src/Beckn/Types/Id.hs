@@ -4,8 +4,8 @@
 module Beckn.Types.Id where
 
 import Beckn.Types.Common (GuidLike (..))
-import Beckn.Utils.Example (Example, idExample)
-import Data.Swagger
+import Beckn.Utils.Example (Example (..), idExample)
+import Data.Swagger (ToSchema)
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
   ( BeamSqlBackend,
