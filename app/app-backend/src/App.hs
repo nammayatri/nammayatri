@@ -6,7 +6,6 @@ module App where
 
 import qualified App.Server as App
 import App.Types
-import Beckn.External.FCM.Utils
 import Beckn.Storage.DB.Config (prepareDBConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
@@ -36,12 +35,6 @@ runAppBackend configModifier = do
     setOnExceptionResponse appExceptionResponse $
       setPort (port appEnv) defaultSettings
 
--- | Prepare common applications options
-prepareAppOptions :: Flow ()
-prepareAppOptions =
-  -- FCM token ( options key = FCMTokenKey )
-  fork "FCM token refresh thread" doFCMTokenRefresh
-
 runAppBackend' :: AppEnv -> Settings -> IO ()
 runAppBackend' appEnv settings = do
   let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
@@ -58,11 +51,7 @@ runAppBackend' appEnv settings = do
         try (runFlowR flowRt' appEnv prepare) >>= \case
           Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
           Right _ -> do
-            putStrLn @String "Initializing Options..."
-            try (runFlowR flowRt' appEnv prepareAppOptions) >>= \case
-              Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-              Right _ ->
-                putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
+            putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
             _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
             runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 

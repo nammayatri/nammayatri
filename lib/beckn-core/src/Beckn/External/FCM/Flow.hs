@@ -18,13 +18,16 @@
 module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
-import Beckn.Types.Common
+import Beckn.Types.Common (FlowR)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fork)
 import qualified Beckn.Utils.JWT as JWT
 import Beckn.Utils.Logging (HasLogContext, Log (..))
+import qualified Control.Exception as E (try)
 import Control.Lens
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as BL
 import Data.Default.Class
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -72,7 +75,10 @@ createAndroidNotification title body notificationType =
 
 -- | Send FCM message to a person
 notifyPerson ::
-  (HasLogContext r, HasField "fcmUrl" r BaseUrl) =>
+  ( HasLogContext r,
+    HasField "fcmUrl" r BaseUrl,
+    HasField "fcmJsonPath" r (Maybe Text)
+  ) =>
   FCMNotificationTitle ->
   FCMNotificationBody ->
   FCMData ->
@@ -99,7 +105,10 @@ fcmSendMessageAPI = Proxy
 
 -- | Send FCM message to a registered device
 sendMessage ::
-  (HasLogContext r, HasField "fcmUrl" r BaseUrl) =>
+  ( HasLogContext r,
+    HasField "fcmUrl" r BaseUrl,
+    HasField "fcmJsonPath" r (Maybe Text)
+  ) =>
   FCMRequest ->
   T.Text ->
   FlowR r ()
@@ -122,11 +131,15 @@ sendMessage fcmMsg toWhom = fork desc $ do
     fcm = T.pack "FCM"
 
 -- | try to get FCM text token
-getTokenText :: (L.MonadFlow m, Log m) => m (Either String Text)
+getTokenText ::
+  ( HasField "fcmJsonPath" r (Maybe Text),
+    HasLogContext r
+  ) =>
+  FlowR r (Either Text Text)
 getTokenText = do
   token <- getToken
   pure $ case token of
-    Left err -> Left err
+    Left err -> Left $ T.pack err
     Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
 
 -- | check FCM token and refresh if it is invalid
@@ -159,28 +172,48 @@ checkAndGetToken sa = do
           L.delOption FCMTokenKey
           refreshToken
   where
-    fcm = T.pack "FCM"
+    fcm = "FCM"
     refreshToken = do
       logInfo fcm "Refreshing token"
       t <- L.runIO $ JWT.doRefreshToken sa
       case t of
         Left err -> do
-          logInfo fcm $ T.pack err
-          pure $ Left err
+          logError fcm $ fromString err
+          pure $ Left $ fromString err
         Right token -> do
-          logInfo fcm $ T.pack "Success"
+          logInfo fcm $ fromString "Success"
           L.setOption FCMTokenKey token
           pure $ Right token
 
 -- | Get token (do not refresh it if it is expired / invalid)
-getToken :: L.MonadFlow m => m (Either String JWT.JWToken)
+getToken ::
+  ( HasField "fcmJsonPath" r (Maybe Text),
+    HasLogContext r
+  ) =>
+  FlowR r (Either String JWT.JWToken)
 getToken = do
-  token <- L.getOption FCMTokenKey
-  case token of
-    Nothing -> pure $ Left "Token not found"
-    Just t -> do
-      validityStatus <- L.runIO $ JWT.isValid t
-      pure $ case validityStatus of
-        JWT.JWTValid _ -> Right t
-        JWT.JWTExpired _ -> Left "Token expired"
-        JWT.JWTInvalid -> Left "Token is invalid"
+  tokenStatus <-
+    L.getOption FCMTokenKey >>= \case
+      Nothing -> pure $ Left "Token not found"
+      Just t -> do
+        validityStatus <- L.runIO $ JWT.isValid t
+        pure $ case validityStatus of
+          JWT.JWTValid _ -> Right t
+          JWT.JWTExpired _ -> Left "Token expired"
+          JWT.JWTInvalid -> Left "Token is invalid"
+  case tokenStatus of
+    Left err -> do
+      logWarning "FCM" $ "Refreshing FCM token. Reason: " <> fromString err
+      getAndParseFCMAccount >>= either (pure . Left) checkAndGetToken
+    t -> pure t
+
+getAndParseFCMAccount ::
+  HasField "fcmJsonPath" r (Maybe Text) =>
+  FlowR r (Either String JWT.ServiceAccount)
+getAndParseFCMAccount = do
+  mbFcmFile <- getField @"fcmJsonPath" <$> ask
+  rawContent <- L.runIO $ E.try @SomeException (BL.readFile . toString $ fromMaybe "" mbFcmFile)
+  pure $ parseContent $ first show rawContent
+  where
+    parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
+    parseContent rawContent = rawContent >>= Aeson.eitherDecode
