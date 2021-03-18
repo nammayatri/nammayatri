@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.RideAPI.StartRide where
 
 import App.Types (FlowHandler)

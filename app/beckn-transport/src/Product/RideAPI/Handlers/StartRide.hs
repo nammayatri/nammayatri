@@ -3,7 +3,7 @@
 module Product.RideAPI.Handlers.StartRide where
 
 import qualified Beckn.Types.APIResult as APIResult
-import Beckn.Types.App (CaseId, PersonId (..), ProductInstanceId (..))
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -11,22 +11,22 @@ import Beckn.Utils.Common (fromMaybeThrowM400, throwM400)
 import EulerHS.Prelude
 
 data ServiceHandle m = ServiceHandle
-  { findPersonById :: PersonId -> m Person.Person,
-    findPIById :: ProductInstanceId -> m ProductInstance.ProductInstance,
-    findPIsByParentId :: ProductInstanceId -> m [ProductInstance.ProductInstance],
-    findCaseByIdsAndType :: [CaseId] -> Case.CaseType -> m Case.Case,
-    updatePIsStatus :: [ProductInstanceId] -> ProductInstance.ProductInstanceStatus -> m (),
-    updateCaseStatus :: CaseId -> Case.CaseStatus -> m (),
+  { findPersonById :: Id Person.Person -> m Person.Person,
+    findPIById :: Id ProductInstance.ProductInstance -> m ProductInstance.ProductInstance,
+    findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
+    findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m Case.Case,
+    updatePIsStatus :: [Id ProductInstance.ProductInstance] -> ProductInstance.ProductInstanceStatus -> m (),
+    updateCaseStatus :: Id Case.Case -> Case.CaseStatus -> m (),
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
   }
 
 startRideHandler :: MonadThrow m => ServiceHandle m -> Text -> Text -> Text -> m APIResult.APIResult
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
-  requestor <- findPersonById $ PersonId requestorId
-  orderPi <- findPIById $ ProductInstanceId rideId
+  requestor <- findPersonById $ Id requestorId
+  orderPi <- findPIById $ Id rideId
   unless (requestor ^. #_role == Person.ADMIN) do
     rideDriver <- orderPi ^. #_personId & fromMaybeThrowM400 "NOT_AN_ORDER_EXECUTOR"
-    when (rideDriver /= PersonId requestorId) do
+    when (rideDriver /= Id requestorId) do
       _ <- throwM400 "NOT_AN_ORDER_EXECUTOR"
       pure ()
   whenLeft (ProductInstance.validateStatusTransition (orderPi ^. #_status) ProductInstance.INPROGRESS) $
