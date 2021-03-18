@@ -26,8 +26,8 @@ import System.Posix.Signals
 
 runBackgroundTaskManager :: (AppEnv -> AppEnv) -> IO ()
 runBackgroundTaskManager configModifier = do
-  appEnv <- configModifier <$> readDhallConfigDefault "beckn-transport"
-  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  appEnv <- configModifier <$> readDhallConfigDefault "beckn-transport-btm"
+  let loggerCfg = getEulerLoggerConfig $ appEnv ^. #loggerConfig
   let redisCfg = appEnv ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appEnv ^. #bgtmPort

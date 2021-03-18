@@ -36,8 +36,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: BECKN_TRANSPORT_CONFIG_PATH
-              value: /etc/beckn/config/beckn-transport.dhall
+            - name: BECKN_TRANSPORT_BTM_CONFIG_PATH
+              value: /etc/beckn/config/beckn-transport-btm.dhall
           image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
           name: beckn-transport-$DEPLOY_VARIANT
           ports:
@@ -234,8 +234,10 @@ spec:
           configMap:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
-              - key: beckn-transport.dhall
+              - key: beckn-transport-btm.dhall
                 path: config/beckn-transport-btm.dhall
+              - key: beckn-transport.dhall
+                path: config/beckn-transport.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
