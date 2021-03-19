@@ -10,7 +10,7 @@ RUN apt-get update \
 RUN mv libgmp*.deb libgmp.deb
 
 # Dependencies for checks
-RUN stack install --resolver lts-16.3 hlint ormolu
+RUN stack install --resolver lts-17.6 hlint ormolu
 
 # Docker build should not use cached layer if any of these is modified
 COPY . /opt/build/
