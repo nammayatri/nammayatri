@@ -9,6 +9,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
@@ -49,7 +50,7 @@ verifyPerson :: RegToken -> Flow Person.Person
 verifyPerson token = do
   sr <- Utils.Common.verifyToken token
   Person.findById (Id $ SR._EntityId sr)
-    >>= Utils.fromMaybeM500 "USER_NOT_FOUND"
+    >>= Utils.fromMaybeM500 PersonNotFound
 
 verifyPersonAction :: VerificationAction VerifyToken AppEnv
 verifyPersonAction = VerificationAction Utils.Common.verifyPerson
@@ -57,14 +58,14 @@ verifyPersonAction = VerificationAction Utils.Common.verifyPerson
 verifyToken :: RegToken -> Flow SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
-    >>= Utils.fromMaybeM401 "INVALID_TOKEN"
+    >>= Utils.fromMaybeM401 InvalidToken
     >>= validateToken
 
 validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ _tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal _updatedAt
-  when expired $ Utils.throwError400 "TOKEN_EXPIRED"
+  when expired $ Utils.throwError400 TokenExpired
   return sr
 
 generateShortId :: Flow Text

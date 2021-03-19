@@ -10,6 +10,7 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
@@ -42,7 +43,7 @@ findPersonById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "PERSON_NOT_FOUND"
+    >>= fromMaybeM400 PersonNotFound
     >>= decrypt
   where
     predicate Storage.Person {..} = _id ==. B.val_ id

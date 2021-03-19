@@ -6,6 +6,7 @@ module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.DB.Config as DB
 import Beckn.Types.Common (FlowR)
+import Beckn.Types.Error
 import Beckn.Utils.Common
 import Beckn.Utils.Logging (Log (..))
 import Data.Time (UTCTime)
@@ -90,8 +91,8 @@ findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
-    Right Nothing -> throwError500 "NO_REC_FOUND"
-    Left err -> throwErrorWithInfo500 "DB_ERROR" $ "DBError: " <> show err
+    Right Nothing -> throwError500 RecordNotFound
+    Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
 
 findOne ::
   ( HasCallStack,
@@ -123,7 +124,7 @@ findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
     Right val -> return val
-    Left err -> throwErrorWithInfo500 "DB_ERROR" $ "DBError: " <> show err
+    Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
 
 findAll ::
   ( HasCallStack,

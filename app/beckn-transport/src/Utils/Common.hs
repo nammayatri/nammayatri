@@ -5,6 +5,7 @@ module Utils.Common where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -76,18 +77,18 @@ instance VerificationMethod DriverVerifyToken where
 verifyAdmin :: SP.Person -> Flow Text
 verifyAdmin user = do
   when (user ^. #_role /= SP.ADMIN) $
-    throwError400 "NEED_ADMIN_ACCESS"
+    throwError400 AccessDenied
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> throwError400 "NO_ORGANIZATION_FOR_THIS_USER"
+    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
 
 verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
   unless ((user ^. #_role) `elem` [SP.ADMIN, SP.DRIVER]) $
-    throwError400 "NEED_ADMIN_OR_DRIVER_ACCESS"
+    throwError400 AccessDenied
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> throwError400 "NO_ORGANIZATION_FOR_THIS_USER"
+    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
 
 validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do

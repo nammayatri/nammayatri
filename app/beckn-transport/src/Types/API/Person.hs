@@ -6,6 +6,7 @@ import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
@@ -93,7 +94,7 @@ updateOrCreateLocation req Nothing = do
 updateOrCreateLocation req (Just locId) = do
   location <-
     QL.findLocationById (Id locId)
-      >>= fromMaybeM400 "INVALID_DATA"
+      >>= fromMaybeM400 LocationNotFound
   QL.updateLocationRec (Id locId) $ transformToLocation req location
   return location
 

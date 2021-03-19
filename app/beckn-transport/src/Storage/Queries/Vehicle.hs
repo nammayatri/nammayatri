@@ -5,6 +5,7 @@ module Storage.Queries.Vehicle where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Vehicle as Storage
 import Beckn.Utils.Common
@@ -38,7 +39,7 @@ findByIdAndOrgId id orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_VEHICLE_ID"
+    >>= fromMaybeM400 VehicleNotFound
   where
     predicate Storage.Vehicle {..} = _id ==. B.val_ id &&. _organizationId ==. B.val_ orgId
 

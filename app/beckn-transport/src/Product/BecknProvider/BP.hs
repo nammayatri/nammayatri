@@ -26,6 +26,7 @@ import Beckn.Types.Core.Order
   ( Order (..),
     OrderItem (OrderItem),
   )
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver (Driver)
 import Beckn.Types.Mobility.Payload (Payload (..))
@@ -36,12 +37,6 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
-  ( fromMaybeM500,
-    getCurrTime,
-    mkAckResponse,
-    throwError400,
-    withFlowHandler,
-  )
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
@@ -75,7 +70,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
 cancelRide :: Id Ride -> Flow ()
 cancelRide rideId = do
   orderPi <- ProductInstance.findById $ cast rideId
-  searchPiId <- ProductInstance._parentId orderPi & fromMaybeM500 "RIDEORDER_DOESNT_HAVE_PARENT"
+  searchPiId <- ProductInstance._parentId orderPi & fromMaybeMWithInfo500 ProductInstanceInvalidState "_parentId is null."
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
   trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
@@ -84,9 +79,9 @@ cancelRide rideId = do
   _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
-  bapOrgId <- Case._udf4 orderCase & fromMaybeM500 "BAP_ORG_ID_NOT_PRESENT"
+  bapOrgId <- Case._udf4 orderCase & fromMaybeMWithInfo500 CaseInvalidState "_udf4 is null. Bap org id is not present."
   bapOrg <- Organization.findOrganizationById $ Id bapOrgId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   let transporterId = Id $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
@@ -130,7 +125,7 @@ serviceStatus transporterId bapOrg req = withFlowHandler $ do
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ Id piId) Case.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
   notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId
@@ -180,13 +175,13 @@ trackTrip transporterId org req = withFlowHandler $ do
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
-      callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+      callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
       transporter <- Organization.findOrganizationById transporterId
       let bppShortId = getShortId $ transporter ^. #_shortId
       notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
-    Nothing -> throwError400 "NO_PARENT_CASE"
+    Nothing -> throwErrorWithInfo400 CaseInvalidState "_parentCaseId is null."
 
 notifyTripUrlToGateway :: Case.Case -> Case.Case -> App.BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do
@@ -225,7 +220,7 @@ mkTrip c orderPi = do
   prodInst <- ProductInstance.findByCaseId $ c ^. #_id
   driver <- mapM mkDriverInfo $ prodInst ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (prodInst ^. #_entityId)
-  tripCode <- orderPi ^. #_udf4 & fromMaybeM500 "IN_APP_OTP_MISSING"
+  tripCode <- orderPi ^. #_udf4 & fromMaybeMWithInfo500 ProductInstanceInvalidState "_udf4 is null. OTP is not present."
   logInfo "vehicle" $ show vehicle
   return $
     Trip

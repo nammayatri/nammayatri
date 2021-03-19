@@ -11,6 +11,7 @@ import Beckn.Types.Core.API.Callback
 import qualified Beckn.Types.Core.API.Search as Core
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
+import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Beckn.Utils.Logging (Log (..))
@@ -45,7 +46,7 @@ search proxySign org req = withFlowHandler $ do
       let bgSession = BA.GwSession cbUrl cbApiKey context
       BA.insert messageId bgSession
       forM_ providers $ \provider -> fork "Provider search" $ do
-        providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
+        providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet -- Already checked for existance
         void $ BA.incrSearchReqCount messageId
         -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
         eRes <-
@@ -85,7 +86,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
   let gatewayOnSearchSignAuth = ET.client $ withClientTracing GatewayAPI.onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
-  bgSession <- BA.lookup messageId >>= fromMaybeM400 "INVALID_MESSAGE"
+  bgSession <- BA.lookup messageId >>= fromMaybeMWithInfo400 CommonError "Message not found."
   let baseUrl = bgSession ^. #cbUrl
   eRes <-
     callAPIWithTrail'
@@ -93,7 +94,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
       baseUrl
       (gatewayOnSearchSignAuth (Just proxySign) req)
       "on_search"
-  providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 "PROVIDER_URL_NOT_FOUND" -- Already checked for existance
+  providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet -- Already checked for existance
   logDebug "gateway_transaction" $
     messageId
       <> ", search_cb: "

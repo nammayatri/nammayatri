@@ -5,6 +5,7 @@ module Product.Delhivery.Flow where
 import App.Types
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
+import Beckn.Types.Error
 import qualified Beckn.Types.FMD.API.Confirm as API
 import qualified Beckn.Types.FMD.API.Init as API
 import qualified Beckn.Types.FMD.API.Search as API
@@ -39,8 +40,8 @@ search org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  bapUrl <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_URI"
-  bap <- Org.findByBapUrl bapUrl >>= fromMaybeM400 "BAP_NOT_CONFIGURED"
+  bapUrl <- context ^. #_bap_uri & fromMaybeM400 InvalidRequest
+  bap <- Org.findByBapUrl bapUrl >>= fromMaybeM400 OrganizationNotFound
   dlBACreds <- getDlBAPCreds bap
   fork "Search" $ do
     eres <- getQuote dlBACreds config quoteReq
@@ -48,7 +49,7 @@ search org req = do
   returnAck context
   where
     sendCb context res = do
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
       case res of
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
@@ -70,7 +71,7 @@ select org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
   --  validateOrderRequest $ req ^. #message . #order
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   dlBACreds <- getDlBAPCreds org
   fork "Select" $ do
     quoteReq <- mkQuoteReqFromSelect req
@@ -108,10 +109,10 @@ init :: Org.Organization -> API.InitReq -> Flow API.InitRes
 init org req = do
   conf@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
   let quoteId = quote ^. #_id
-  payeeDetails <- dlPayee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
+  payeeDetails <- dlPayee & decodeFromText & fromMaybeMWithInfo500 CommonError "Decode error."
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
   dlBACreds <- getDlBAPCreds org
   fork "init" $ do
@@ -188,7 +189,7 @@ confirm :: Org.Organization -> API.ConfirmReq -> Flow API.ConfirmRes
 confirm org req = do
   dconf@DelhiveryConfig {..} <- dlConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) ctx $ reqOrder ^. #_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
@@ -219,7 +220,7 @@ confirm org req = do
           & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
       if confirmAmount == orderAmount
         then pass
-        else throwError400 "INVALID_ORDER_AMOUNT"
+        else throwErrorWithInfo400 CommonError "Invalid order amount."
 
     sendCb order context cbUrl res =
       case res of
@@ -242,7 +243,7 @@ fetchToken :: DlBAConfig -> DelhiveryConfig -> Flow Token
 fetchToken DlBAConfig {..} DelhiveryConfig {..} = do
   eres <- API.getToken dlTokenUrl (TokenReq dlClientId dlClientSecret "client_credentials")
   case eres of
-    Left err -> throwError500 $ show err
+    Left err -> throwErrorWithInfo500 CommonError $ show err
     Right tokenRes -> return (tokenRes ^. #access_token)
 
 getQuote :: DlBAConfig -> DelhiveryConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)

@@ -7,6 +7,7 @@ module Beckn.Utils.Servant.SignatureAuth where
 import Beckn.Types.App
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Credentials
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
@@ -107,14 +108,14 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
     Just c -> return c
     Nothing -> do
       logError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
-      throwError401 "INVALID_KEY_ID"
+      throwErrorWithInfo401 CommonError "Invalid key id."
   org <-
     findOrgByShortId (ShortId $ cred ^. #shortOrgId)
-      >>= maybe (throwError401 "ORG_NOT_FOUND") pure
+      >>= maybe (throwError401 OrganizationNotFound) pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
       logError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
-      throwError401 "INVALID_PUBLIC_KEY"
+      throwErrorWithInfo401 CommonError "Invalid public key."
     Just key -> return key
   return (org, pk, selfUrl)
 
@@ -215,7 +216,7 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
       logDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
       case addSignature body params headers req of
         Just signedReq -> pure signedReq
-        Nothing -> throwError500 $ "Could not add signature: " <> show params
+        Nothing -> throwErrorWithInfo500 CommonError $ "Could not add signature: " <> show params
     getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
     getBody (Http.RequestBodyBS body) = pure body
     getBody _ = pure "<MISSING_BODY>"

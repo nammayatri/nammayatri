@@ -4,6 +4,7 @@ module Product.BecknProvider.Feedback where
 
 import App.Types (Flow, FlowHandler, Log (..))
 import qualified Beckn.Types.Core.API.Feedback as API
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Organization (Organization)
@@ -13,14 +14,6 @@ import Beckn.Types.Storage.Rating as Rating
     RatingT (..),
   )
 import Beckn.Utils.Common
-  ( decodeFromText,
-    fromMaybeM400,
-    fromMaybeM500,
-    getCurrTime,
-    mkAckResponse,
-    throwBecknError401,
-    withFlowHandler,
-  )
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -34,13 +27,13 @@ feedback _transporterId _organization request = withFlowHandler $ do
   BP.validateContext "feedback" $ request ^. #context
   let productInstanceId = Id $ request ^. #message . #order_id
   productInstances <- ProductInstance.findAllByParentId $ Just productInstanceId
-  personId <- getPersonId productInstances & fromMaybeM500 "NO_DRIVER_ASSIGNED_FOR_ORDER"
+  personId <- getPersonId productInstances & fromMaybeMWithInfo500 ProductInstanceInvalidState "_personId is null. Driver is not assigned."
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
   unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
     throwBecknError401 "ORDER_NOT_READY_FOR_RATING"
   ratingValue :: Int <-
     decodeFromText (request ^. #message . #rating . #_value)
-      & fromMaybeM400 "INVALID_RATING_TYPE"
+      & fromMaybeMWithInfo400 CommonError "Invalid rating type."
   let orderId = orderPi ^. #_id
   mbRating <- Rating.findByProductInstanceId orderId
   case mbRating of

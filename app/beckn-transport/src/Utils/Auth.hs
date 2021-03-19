@@ -1,6 +1,7 @@
 module Utils.Auth where
 
 import App.Types
+import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
@@ -19,7 +20,7 @@ instance VerificationMethod VerifyAPIKey where
     \If you don't have an API key, register the app/gateway."
 
 verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
-verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM401 "INVALID_API_KEY"
+verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM401 OrganizationNotFound
 
 lookup :: LookupAction LookupRegistry AppEnv
 lookup = lookupRegistryAction Org.findOrganizationByShortId

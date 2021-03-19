@@ -11,6 +11,7 @@ import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.App
+import Types.Error
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverStats as Storage
 
@@ -35,7 +36,7 @@ getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "NO_DRIVERS_NEARBY" . listToMaybe . map (^. #_driverId)
+    >>= fromMaybeM400 EmptyDriverPool . listToMaybe . map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ _idleSince

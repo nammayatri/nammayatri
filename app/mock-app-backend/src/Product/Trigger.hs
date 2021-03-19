@@ -19,6 +19,7 @@ import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.FmdError
+import Beckn.Types.Error hiding (ServiceUnavailable)
 import qualified Beckn.Types.FMD.API.Cancel as API
 import qualified Beckn.Types.FMD.API.Search as API
 import qualified Beckn.Types.FMD.API.Track as API
@@ -201,12 +202,12 @@ triggerUpdateForLast mode = do
 
 getOrderCallbackCoords :: Text -> Flow (BaseUrl, Text)
 getOrderCallbackCoords orderId = do
-  OrderInfo {bppOrg = org} <- readingCallsTrack (#orderConfirms . at orderId) >>= fromMaybeM500 "UNKNOWN_ORDER_ID"
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 "CB_API_KEY_NOT_CONFIGURED"
+  OrderInfo {bppOrg = org} <- readingCallsTrack (#orderConfirms . at orderId) >>= fromMaybeMWithInfo500 CommonError "Unknown order id."
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM500 CallbackApiKeyNotSet
   return (cbUrl, cbApiKey)
 
 getLastOrderId :: FlowHandler Text
 getLastOrderId =
   withFlowHandler $
-    readingCallsTrack #lastOrderId >>= fromMaybeM400 "NO_ORDERS_REGISTERED"
+    readingCallsTrack #lastOrderId >>= fromMaybeMWithInfo400 CommonError "No orders registered."

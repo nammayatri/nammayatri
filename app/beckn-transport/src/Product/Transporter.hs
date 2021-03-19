@@ -4,6 +4,7 @@ module Product.Transporter where
 
 import App.Types
 import Beckn.TypeClass.Transform
+import Beckn.Types.Error
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
@@ -36,14 +37,14 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   where
     validate person = do
       unless (SP._verified person) $
-        throwError400 "USER_NOT_VERIFIED"
+        throwError400 AccessDenied
       when (isJust $ SP._organizationId person) $
-        throwErrorWithInfo400 "ORG_ALREADY_EXISTS" "User already registered an organization"
+        throwError400 PersonOrgExists
       when (SP._role person /= SP.ADMIN) $
-        throwError401 "UNAUTHORIZED"
+        throwError401 AccessDenied
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
-        throwError400 "MISSING_MANDATORY_FIELDS"
+        throwError400 InvalidRequest
     mkFarePolicy orgId vehicleVariant now = do
       farePolicyId <- L.generateGUID
       pure $
@@ -75,10 +76,10 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
           else modifyTransform req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
-    Nothing -> throwError400 "USER_NOT_ELIGIBLE"
+    Nothing -> throwError400 PersonNotFound
   where
     validate person =
-      unless (SP._verified person) $ throwError400 "USER_NOT_VERIFIED"
+      unless (SP._verified person) $ throwError400 AccessDenied
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
@@ -88,10 +89,10 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
-    Nothing -> throwErrorWithInfo400 "ORG_NOT_EXISTS" "User not registered an organization"
+    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
   where
     validate person =
-      unless (SP._verified person) $ throwError400 "USER_NOT_VERIFIED"
+      unless (SP._verified person) $ throwError400 AccessDenied
 
 transporterMandatoryFields :: TransporterReq -> [Maybe Text]
 transporterMandatoryFields req =

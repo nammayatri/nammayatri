@@ -8,6 +8,7 @@ import App.Types
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
+import Beckn.Types.Error
 import qualified Beckn.Types.FMD.API.Cancel as API
 import qualified Beckn.Types.FMD.API.Confirm as API
 import qualified Beckn.Types.FMD.API.Init as API
@@ -21,7 +22,7 @@ import Beckn.Types.FMD.Order
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common (decodeFromText, encodeToText, fork, fromMaybeM400, fromMaybeM500, getCurrTime, throwBecknError400, throwBecknError500)
+import Beckn.Utils.Common
 import Beckn.Utils.Logging (Log (..))
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
@@ -50,8 +51,8 @@ search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  bapUrl <- context ^. #_bap_uri & fromMaybeM400 "INVALID_BAP_URI"
-  bap <- Org.findByBapUrl bapUrl >>= fromMaybeM400 "BAP_NOT_CONFIGURED"
+  bapUrl <- context ^. #_bap_uri & fromMaybeM400 InvalidRequest
+  bap <- Org.findByBapUrl bapUrl >>= fromMaybeM400 OrganizationNotFound
   dzBACreds <- getDzBAPCreds bap
   fork "Search" $ do
     eres <- getQuote dzBACreds config quoteReq
@@ -60,7 +61,7 @@ search org req = do
   returnAck context
   where
     sendCb context res = do
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+      cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
       case res of
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
@@ -83,7 +84,7 @@ select org req = do
   let ctx = updateBppUri (req ^. #context) dzBPNwAddress
   validateOrderRequest $ req ^. #message . #order
   validateReturn $ req ^. #message . #order
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   dzBACreds <- getDzBAPCreds org
   fork "Select" do
     quoteReq <- mkQuoteReqFromSelect req
@@ -135,10 +136,10 @@ init :: Org.Organization -> API.InitReq -> Flow API.InitRes
 init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
   let quoteId = quote ^. #_id
-  payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
+  payeeDetails <- payee & decodeFromText & fromMaybeMWithInfo500 CommonError "Decode error."
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
   let order = orderDetails ^. #order
   validateReturn order
@@ -218,7 +219,7 @@ confirm :: Org.Organization -> API.ConfirmReq -> Flow API.ConfirmRes
 confirm org req = do
   dconf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) context $ reqOrder ^. #_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
@@ -227,7 +228,7 @@ confirm org req = do
   validateDelayFromInit dzQuotationTTLinMin case_
   verifyPayment reqOrder order
   validateReturn order
-  payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
+  payeeDetails <- payee & decodeFromText & fromMaybeMWithInfo500 CommonError "Decode error."
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
       & fromMaybe400Log "TXN_ID_NOT_FOUND" Nothing context
@@ -313,7 +314,7 @@ track org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req ^. (#message . #order_id)
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   fork "track" do
     let taskId = case_ ^. #_shortId
@@ -337,12 +338,12 @@ status :: Org.Organization -> API.StatusReq -> Flow API.StatusRes
 status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
-  payeeDetails <- payee & decodeFromText & fromMaybeM500 "PAYMENT_ENDPOINT_DECODE_ERROR"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  payeeDetails <- payee & decodeFromText & fromMaybeMWithInfo500 CommonError "Decode error."
   let orderId = req ^. (#message . #order_id)
   c <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let taskId = c ^. #_shortId
-  (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeM500 "ORDER_NOT_FOUND"
+  (orderDetails :: OrderDetails) <- c ^. #_udf1 >>= decodeFromText & fromMaybeMWithInfo500 CommonError "Decode error."
   dzBACreds <- getDzBAPCreds org
   fork "status" do
     eres <- getStatus dzBACreds conf (TaskId taskId)
@@ -383,7 +384,7 @@ cancel org req = do
   let oId = req ^. (#message . #order . #id)
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   case_ <- Storage.findById (Id oId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
   let taskId = case_ ^. #_shortId
   orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
@@ -428,7 +429,7 @@ update :: Org.Organization -> API.UpdateReq -> Flow API.UpdateRes
 update org req = do
   DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   fork "update" do
     -- TODO: Dunzo doesnt have update
     let onUpdateReq = mkOnUpdateErrReq context
@@ -467,9 +468,11 @@ returnAck context = return $ AckResponse context (ack "ACK") Nothing
 validateReturn :: Order -> Flow ()
 validateReturn currOrder =
   when (currOrder ^. #_type == Just "RETURN") $ do
-    prevOrderId <- currOrder ^. #_prev_order_id & fromMaybeM400 "INVALID_ORDER_ID"
-    prevOrderCase <- Storage.findById (Id prevOrderId) >>= fromMaybeM400 "ORDER_NOT_FOUND"
-    (prevOrderDetails :: OrderDetails) <- prevOrderCase ^. #_udf1 >>= decodeFromText & fromMaybeM400 "ORDER_NOT_FOUND"
+    prevOrderId <- currOrder ^. #_prev_order_id & fromMaybeMWithInfo400 CommonError "Prev order id is null."
+    prevOrderCase <- Storage.findById (Id prevOrderId) >>= fromMaybeM400 CaseNotFound
+    (prevOrderDetails :: OrderDetails) <-
+      prevOrderCase ^. #_udf1 >>= decodeFromText
+        & fromMaybeMWithInfo400 CommonError "Decode error."
     let prevOrder = prevOrderDetails ^. #order
     -- validating that the items which are returned should be a subset of items in the actual order.
     -- would fail when there are duplicates in current order items

@@ -1,8 +1,9 @@
 module Utils.Auth where
 
 import App.Types
+import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common (fromMaybeM401)
+import Beckn.Utils.Common (fromMaybeMWithInfo401)
 import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
 import qualified Storage.Queries.App as BA
@@ -22,4 +23,4 @@ verifyAPIKeyAction = VerificationAction $ \apiKey -> do
   app <- BA.lookupKey Org.APP apiKey
   provider <- BP.lookupKey Org.PROVIDER apiKey
   app <|> provider
-    & fromMaybeM401 "INVALID_API_KEY"
+    & fromMaybeMWithInfo401 CommonError "Invalid api key"

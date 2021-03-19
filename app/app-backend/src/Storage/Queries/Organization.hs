@@ -4,6 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
@@ -29,7 +30,7 @@ verifyApiKey regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "UNAUTHENTICATED_ORGANIZATION"
+    >>= fromMaybeM400 Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 

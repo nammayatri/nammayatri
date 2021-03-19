@@ -5,6 +5,7 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App (TraceFlag)
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Utils.Common (fromClientError, throwErrorWithInfo500)
 import Beckn.Utils.Logging (HasLogContext, Log (..))
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
@@ -31,7 +32,7 @@ autoComplete url apiKey input location radius components = do
     Left cliErr -> do
       let err = fromClientError cliErr
       logError "client Google maps API autoComplete call error" $ (err ^. #_message) ?: "Some error"
-      throwErrorWithInfo500 "GOOGLE_MAPS_API_ERROR" "Google maps API autoComplete error"
+      throwErrorWithInfo500 GMAPIError "Google maps API autoComplete error"
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
@@ -50,7 +51,7 @@ placeDetails url apiKey placeId fields = do
     Left cliErr -> do
       let err = fromClientError cliErr
       logError "client Google maps API placeDetails call error" $ (err ^. #_message) ?: "Some error"
-      throwErrorWithInfo500 "GOOGLE_MAPS_API_ERROR" "Google maps API placeDetails error"
+      throwErrorWithInfo500 GMAPIError "Google maps API placeDetails error"
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
@@ -68,4 +69,4 @@ getPlaceName url latLng apiKey = do
     Left cliErr -> do
       let err = fromClientError cliErr
       logError "client Google maps API getPlaceName call error" $ (err ^. #_message) ?: "Some error"
-      throwErrorWithInfo500 "GOOGLE_MAPS_API_ERROR" "Google maps API getPlaceName error"
+      throwErrorWithInfo500 GMAPIError "Google maps API getPlaceName error"

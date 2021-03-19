@@ -14,6 +14,7 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
 import Beckn.Types.Core.Tag
 import qualified Beckn.Types.Core.Tracking as CoreTracking
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Catalog as Mobility
 import Beckn.Types.Mobility.Driver as Mobility
@@ -25,7 +26,7 @@ import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime)
+import Beckn.Utils.Common (fromMaybeMWithInfo500, getCurrTime)
 import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
@@ -130,7 +131,7 @@ mkPrice prodInst =
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
 mkOrder _c pri trip = do
   now <- getCurrTime
-  searchPiId <- pri ^. #_parentId & fromMaybeM500 "PARENT_ID_MISSING"
+  searchPiId <- pri ^. #_parentId & fromMaybeMWithInfo500 ProductInstanceInvalidState "_parentId is null."
   return
     Mobility.Order
       { _id = getId searchPiId,

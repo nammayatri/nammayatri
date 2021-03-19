@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -149,7 +151,7 @@ fromMaybeM400,
   fromMaybeM404,
   fromMaybeM500,
   fromMaybeM503 ::
-    (HasCallStack, L.MonadFlow m, Log m) => Text -> Maybe a -> m a
+    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Maybe b -> m b
 fromMaybeM400 err = fromMaybeM (S.err400 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
 fromMaybeM401 err = fromMaybeM (S.err401 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
 fromMaybeM404 err = fromMaybeM (S.err404 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
@@ -161,14 +163,14 @@ fromMaybeMWithInfo400,
   fromMaybeMWithInfo404,
   fromMaybeMWithInfo500,
   fromMaybeMWithInfo503 ::
-    (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> Maybe a -> m a
+    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Text -> Maybe b -> m b
 fromMaybeMWithInfo400 err info = fromMaybeM (S.err400 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 fromMaybeMWithInfo401 err info = fromMaybeM (S.err401 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 fromMaybeMWithInfo404 err info = fromMaybeM (S.err404 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 fromMaybeMWithInfo500 err info = fromMaybeM (S.err500 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 fromMaybeMWithInfo503 err info = fromMaybeM (S.err503 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 
-buildErrorBodyWithInfo :: Text -> Text -> BSL.ByteString
+buildErrorBodyWithInfo :: (IsError a APIError) => a -> Text -> BSL.ByteString
 buildErrorBodyWithInfo err info = Aeson.encode $ buildAPIErrorWithInfo err info
 
 jsonHeader :: (HeaderName, ByteString)
@@ -258,7 +260,7 @@ authenticate = check handleKey
     check = maybe throw401
     throw401 :: HasLogContext r => FlowR r a
     throw401 =
-      throwError401 "Invalid Auth"
+      throwError401 AuthBlocked
 
 throwHttpError :: forall e m a. (HasCallStack, L.MonadFlow m, Log m, ToJSON e) => ServerError -> e -> m a
 throwHttpError err errMsg = do
@@ -290,7 +292,7 @@ throwError500,
   throwError401,
   throwError403,
   throwError404 ::
-    (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
+    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> m b
 throwError500 = throwHttpError @APIError S.err500 . toError
 throwError501 = throwHttpError @APIError S.err501 . toError
 throwError503 = throwHttpError @APIError S.err503 . toError
@@ -306,7 +308,7 @@ throwErrorWithInfo500,
   throwErrorWithInfo401,
   throwErrorWithInfo403,
   throwErrorWithInfo404 ::
-    (HasCallStack, L.MonadFlow m, Log m) => Text -> Text -> m a
+    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Text -> m b
 throwErrorWithInfo500 err info = throwHttpError @APIError S.err500 $ buildAPIErrorWithInfo err info
 throwErrorWithInfo501 err info = throwHttpError @APIError S.err501 $ buildAPIErrorWithInfo err info
 throwErrorWithInfo503 err info = throwHttpError @APIError S.err503 $ buildAPIErrorWithInfo err info
@@ -315,7 +317,7 @@ throwErrorWithInfo401 err info = throwHttpError @APIError S.err401 $ buildAPIErr
 throwErrorWithInfo403 err info = throwHttpError @APIError S.err403 $ buildAPIErrorWithInfo err info
 throwErrorWithInfo404 err info = throwHttpError @APIError S.err404 $ buildAPIErrorWithInfo err info
 
-buildAPIErrorWithInfo :: Text -> Text -> APIError
+buildAPIErrorWithInfo :: (IsError a APIError) => a -> Text -> APIError
 buildAPIErrorWithInfo err info =
   let apiErr@APIError {..} = toError err
       defMsg = fromMaybe "" errorMessage
@@ -357,15 +359,18 @@ throwDomainError err =
       CaseStatusTransitionErr msg -> t S.err405 msg
       CaseNotCreated -> t S.err404 "Case not created"
       CaseNotUpdated -> t S.err404 "Case not updated"
+      _ -> t S.err404 "Case not updated"
     -- Product Instance errors
     ProductInstanceErr suberr -> case suberr of
       ProductInstanceNotFound -> t S.err404 "Product Instance not found"
       ProductInstanceStatusTransitionErr msg -> t S.err405 msg
+      _ -> t S.err404 "Case not updated"
     -- Product errors
     ProductErr suberr -> case suberr of
       ProductNotFound -> t S.err404 "Product not found"
       ProductNotUpdated -> t S.err405 "Product not updated"
       ProductNotCreated -> t S.err405 "Product not created"
+      _ -> t S.err404 "Case not updated"
     AuthErr Unauthorized -> t S.err401 "Unauthorized"
     _ -> t S.err500 "Unknown error"
   where

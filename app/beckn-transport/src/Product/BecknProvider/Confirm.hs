@@ -9,6 +9,7 @@ import qualified Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Error
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -39,11 +40,11 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   productInstance <- ProductInstance.findById prodInstId
   let transporterId' = Id $ productInstance ^. #_organizationId
   transporterOrg <- Organization.findOrganizationById transporterId'
-  unless (transporterId' == transporterId) (throwError400 "DIFFERENT_TRANSPORTER_IDS")
+  unless (transporterId' == transporterId) (throwError400 AccessDenied)
   let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
-  bapOrgId <- searchCase ^. #_udf4 & fromMaybeM500 "BAP_ORG_NOT_SET"
-  unless (bapOrg ^. #_id == Id bapOrgId) (throwError400 "BAP mismatch")
+  bapOrgId <- searchCase ^. #_udf4 & fromMaybeMWithInfo500 CaseInvalidState "_udf4 is null. Bap org id is not present."
+  unless (bapOrg ^. #_id == Id bapOrgId) (throwError400 AccessDenied)
   orderCase <- mkOrderCase searchCase
   _ <- Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -77,14 +78,14 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
   let transporterId = transporterOrg ^. #_id
   let prodInstId = productInstance ^. #_id
   result <- runSafeFlow $ do
-    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM500 "NO_FROM_LOCATION"
+    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeMWithInfo500 ProductInstanceInvalidState "_fromLocation is null."
     vehicleVariant :: Vehicle.Variant <-
       (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
-        & fromMaybeM500 "NO_VEHICLE_VARIANT"
+        & fromMaybeMWithInfo500 CaseInvalidState "_udf1 is null. Vehicle variant is not present."
     driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
     logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 "ORG_CALLBACK_URL_NOT_CONFIGURED"
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   case result of
     Right () -> notifySuccessGateway callbackUrl bppShortId

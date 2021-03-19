@@ -5,9 +5,10 @@ module Services.Allocation.Internal where
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (getCurrTime, throwError500)
+import Beckn.Utils.Common (getCurrTime, throwErrorWithInfo500)
 import qualified Beckn.Utils.Common as Common
 import qualified Beckn.Utils.Logging as Log
 import Data.Time
@@ -197,4 +198,4 @@ getRideInfo rideId = do
       PI.INPROGRESS -> pure InProgress
       PI.COMPLETED -> pure Completed
       PI.CANCELLED -> pure Cancelled
-      _ -> throwError500 "UNKNOWN_STATUS"
+      _ -> throwErrorWithInfo500 CommonError "Unknown status to cast."

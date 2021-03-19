@@ -21,6 +21,7 @@ import Beckn.Types.Core.Person
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.Tag
+import Beckn.Types.Error
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
@@ -30,7 +31,7 @@ import qualified Beckn.Types.FMD.Item as FMD
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeM500, getCurrTime, headMaybe, throwError400)
+import Beckn.Utils.Common (fromMaybeMWithInfo500, getCurrTime, headMaybe, throwError400)
 import Control.Lens ((?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
@@ -61,8 +62,8 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> onePickupLocationExpected
     _ -> oneDropLocationExpected
   where
-    onePickupLocationExpected = throwError400 "ONE_PICKUP_LOCATION_EXPECTED"
-    oneDropLocationExpected = throwError400 "ONE_DROP_LOCATION_EXPECTED"
+    onePickupLocationExpected = throwError400 InvalidRequest
+    oneDropLocationExpected = throwError400 InvalidRequest
     mkLocDetails loc = do
       address <- mkAddress (loc ^. #_location)
       return $
@@ -253,7 +254,7 @@ mkItemDetails item =
 
 mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
 mkLocationDetails PickupOrDrop {..} = do
-  phone <- headMaybe (_poc ^. #phones) & fromMaybeM500 "PERSON_PHONENUMBER_NOT_FOUND"
+  phone <- headMaybe (_poc ^. #phones) & fromMaybeMWithInfo500 CommonError "Person phone number is not present."
   address <- mkAddress _location
   return $
     LocationDetails
@@ -274,8 +275,8 @@ mkLocationDetails PickupOrDrop {..} = do
 
 mkAddress :: CoreLoc.Location -> Flow Address
 mkAddress location = do
-  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeM500 "LAT_LON_NOT_FOUND"
-  address <- CoreLoc._address location & fromMaybeM500 "ADDRESS_NOT_FOUND"
+  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeMWithInfo500 CommonError "Lat/long not found."
+  address <- CoreLoc._address location & fromMaybeMWithInfo500 CommonError "Address not found."
   return $
     Address
       { cty = CoreAddr._city address,

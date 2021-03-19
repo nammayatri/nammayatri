@@ -12,6 +12,7 @@ import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
@@ -25,16 +26,16 @@ onSearch :: OnSearchReq -> Text -> Flow AckResponse
 onSearch req@CallbackReq {context} bppShortId = do
   appConfig <- ask
   authKey <- getHttpManagerKey bppShortId
-  gatewayShortId <- xGatewaySelector appConfig & fromMaybeM500 "GATEWAY_SELECTOR_NOT_SET"
+  gatewayShortId <- xGatewaySelector appConfig & fromMaybeM500 GatewaySelectorNotSet
   gatewayOrg <- Org.findOrgByShortId $ ShortId gatewayShortId
   res <- case gatewayShortId of
     "NSDL.BG.1" -> do
-      nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 "NSDL_BASEURL_NOT_SET"
+      nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 NSDLBaseUrlNotSet
       callAPIWithTrail' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
     "JUSPAY.BG.1" -> do
-      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM500 "CALLBACK_URL_NOT_CONFIGURED"
+      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
       callAPIWithTrail' (Just authKey) callbackUrl (API.onSearch req) "on_search"
-    _ -> throwError500 "GATEWAY_NOT_CONFIGURED"
+    _ -> throwError500 GatewaySelectorNotSet
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
@@ -84,4 +85,4 @@ initiateCall req = do
     Left cliErr -> do
       let err = fromClientError cliErr
       logError "client call error" $ (err ^. #_message) ?: "Some error"
-      throwError500 "CALL_API_ERROR"
+      throwError500 UnableToCall

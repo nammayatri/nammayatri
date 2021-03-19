@@ -2,6 +2,7 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import Beckn.Types.Error
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
@@ -13,7 +14,7 @@ getRoute _person Location.Request {..} =
   withFlowHandler $
     MapSearch.getRoute getRouteRequest
       >>= either
-        (throwErrorWithInfo400 "UNABLE_TO_GET_ROUTE" . show)
+        (throwErrorWithInfo400 UnableToGetRoute . show)
         return
   where
     getRouteRequest = do

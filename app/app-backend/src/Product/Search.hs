@@ -10,6 +10,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Tag
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Mobility.Catalog as BM
@@ -75,17 +76,17 @@ search person req = withFlowHandler $ do
       currTime <- getCurrTime
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
-        throwError400 "INVALID_START_TIME"
+        throwErrorWithInfo400 InvalidRequest "Invalid start time."
     validateServiceability sreq = do
       originGps <-
         sreq ^. #origin . #location . #gps
-          & fromMaybeMWithInfo400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the origin location"
+          & fromMaybeMWithInfo400 InvalidRequest "GPS coordinates required for the origin location"
       destinationGps <-
         req ^. #destination . #location . #gps
-          & fromMaybeMWithInfo400 "GPS_COORDINATES_NOT_FOUND" "GPS coordinates required for the destination location"
+          & fromMaybeMWithInfo400 InvalidRequest "GPS coordinates required for the destination location"
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
-        throwErrorWithInfo400 "RIDE_NOT_SERVICEABLE" "Ride not serviceable due to georestrictions"
+        throwErrorWithInfo400 ProductNotServiceable "Ride not serviceable due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _bppOrg req = withFlowHandler $ do
@@ -105,14 +106,14 @@ searchCbService req catalog = do
   when (case_ ^. #_status /= Case.CLOSED) $ do
     bpp <-
       Org.findOrganizationByCallbackUri (req ^. #context . #_bpp_uri) Org.PROVIDER
-        >>= fromMaybeM400 "INVALID_PROVIDER_URI"
+        >>= fromMaybeM400 OrganizationNotFound
     personId <-
       maybe
-        (throwError500 "PERSON_ID_NOT_FOUND")
+        (throwErrorWithInfo500 CaseInvalidState "_requestor id is not found.")
         (return . Id)
         (Case._requestor case_)
     case (catalog ^. #_categories, catalog ^. #_items) of
-      ([], _) -> throwError400 "MISSING_PROVIDER"
+      ([], _) -> throwErrorWithInfo400 InvalidRequest "Missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
         declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
@@ -121,7 +122,7 @@ searchCbService req catalog = do
       (category : _, items) -> do
         when
           (case_ ^. #_status == Case.CLOSED)
-          (throwError400 "EXPIRED_CASE")
+          (throwError400 CaseExpired)
         let provider = fromBeckn category
         products <- traverse (mkProduct case_) items
         traverse_ Products.create products
@@ -226,7 +227,7 @@ mkProduct case_ item = do
   now <- getCurrTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwError400 "INVALID_PRICE"
+      Nothing -> throwErrorWithInfo400 CommonError "convertDecimalValueToAmount returns Nothing."
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -260,7 +261,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   let info = ProductInfo (Just provider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwError400 "INVALID_PRICE"
+      Nothing -> throwErrorWithInfo400 CommonError "convertDecimalValueToAmount returns Nothing."
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -343,8 +344,8 @@ getDistance req = do
 
 mkRouteRequest :: Common.Location -> Common.Location -> Flow MapSearch.Request
 mkRouteRequest pickupLoc dropLoc = do
-  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeM400 "LAT_LON_NOT_FOUND"
-  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeM400 "LAT_LON_NOT_FOUND"
+  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeMWithInfo400 CommonError "No long / lat."
+  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeMWithInfo400 CommonError "No long / lat."
   pickupMapPoint <- mkMapPoint pickupLat pickupLon
   dropMapPoint <- mkMapPoint dropLat dropLon
   return $

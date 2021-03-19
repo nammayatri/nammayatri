@@ -7,6 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
@@ -35,19 +36,19 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrTime
   case_ <- QCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
-    throwError400 "EXPIRED_CASE"
+    throwError400 CaseExpired
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (Id productInstanceId)
   organization <-
     OQ.findOrganizationById (Id $ productInstance ^. #_organizationId)
-      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
+      >>= fromMaybeM500 OrganizationNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   QCase.create orderCase_
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   MPI.create orderProductInstance
   msgId <- L.generateGUID
   context <- buildContext "confirm" caseId msgId
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   order <- mkOrder productInstance
   Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where

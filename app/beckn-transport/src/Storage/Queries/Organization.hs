@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
@@ -32,7 +33,7 @@ verifyToken regToken = do
   logInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "UNAUTHENTICATED_ORGANIZATION"
+    >>= fromMaybeM400 Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
@@ -41,7 +42,7 @@ findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_ORG_ID"
+    >>= fromMaybeM400 OrganizationNotFound
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
@@ -141,7 +142,7 @@ findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_BAP_URI"
+    >>= fromMaybeM400 OrganizationNotFound
   where
     predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
 
@@ -150,6 +151,6 @@ findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either DB.throwDBError pure
-    >>= fromMaybeM400 "INVALID_SHORT_ID"
+    >>= fromMaybeM400 OrganizationNotFound
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId

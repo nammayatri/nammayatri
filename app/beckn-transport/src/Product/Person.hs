@@ -22,6 +22,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
 import Beckn.Types.Storage.Organization (Organization)
@@ -62,10 +63,10 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   where
     verifyPerson entityId =
       when (personId /= entityId) $
-        throwError400 "PERSON_ID_MISMATCH"
+        throwError400 AccessDenied
     isValidUpdate person =
       when (isJust (req ^. #_role) && person ^. #_role /= SP.ADMIN) $
-        throwError401 "ADMIN ACCESS REQUIRED"
+        throwError401 AccessDenied
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
@@ -87,8 +88,8 @@ createPerson orgId req = withFlowHandler $ do
         case (preq ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
-              throwError400 "DRIVER_ALREADY_CREATED"
-          _ -> throwError400 "MOBILE_NUMBER_AND_COUNTRY_CODE_MANDATORY"
+              throwErrorWithInfo400 InvalidRequest "Person with this mobile number already exists."
+          _ -> throwError400 InvalidRequest
 
 createDriverDetails :: Id SP.Person -> Flow ()
 createDriverDetails personId = do
@@ -130,18 +131,18 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     person <- case identifierTypeM of
       Nothing -> QP.findPersonById (Id $ fromJust idM)
       Just SP.MOBILENUMBER -> do
-        countryCode <- fromMaybeM400 "MOBILE_COUNTRY_CODE_REQUIRED" countryCodeM
-        mobile <- fromMaybeM400 "MOBILE_NUMBER_REQUIRED" mobileM
+        countryCode <- fromMaybeM400 InvalidRequest countryCodeM
+        mobile <- fromMaybeM400 InvalidRequest mobileM
         QP.findByMobileNumber countryCode mobile
-          >>= fromMaybeM400 "PERSON_NOT_FOUND"
+          >>= fromMaybeM400 PersonNotFound
       Just SP.EMAIL ->
-        fromMaybeM400 "EMAIL_REQUIRED" emailM
+        fromMaybeM400 InvalidRequest emailM
           >>= QP.findByEmail
-          >>= fromMaybeM400 "PERSON_NOT_FOUND"
+          >>= fromMaybeM400 PersonNotFound
       Just SP.AADHAAR ->
-        fromMaybeM400 "IDENTIFIER_REQUIRED" identifierM
+        fromMaybeM400 InvalidRequest identifierM
           >>= QP.findByIdentifier
-          >>= fromMaybeM400 "PERSON_NOT_FOUND"
+          >>= fromMaybeM400 PersonNotFound
     hasAccess user person
     mkPersonRes person
   where
@@ -151,7 +152,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ throwError401 "UNAUTHORIZED"
+        $ throwError401 Unauthorized
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do
@@ -163,7 +164,7 @@ deletePerson orgId personId = withFlowHandler $ do
       QDriverInformation.deleteById $ Id personId
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
-    else throwError401 "UNAUTHORIZED"
+    else throwError401 Unauthorized
 
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
@@ -171,11 +172,11 @@ linkEntity orgId personId req = withFlowHandler $ do
   _ <- case req ^. #_entityType of
     VEHICLE ->
       QV.findVehicleById (Id (req ^. #_entityId))
-        >>= fromMaybeM400 "VEHICLE NOT REGISTERED"
-    _ -> throwError400 "UNSUPPORTED ENTITY TYPE"
+        >>= fromMaybeM400 VehicleNotFound
+    _ -> throwErrorWithInfo400 CommonError "Unsupported entity type."
   when
     (person ^. #_organizationId /= Just orgId)
-    (throwError401 "UNAUTHORIZED")
+    (throwError401 Unauthorized)
   prevPerson <- QP.findByEntityId (req ^. #_entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
   QP.updateEntity (Id personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
@@ -268,10 +269,10 @@ getDriverPool piId =
       case_ <- Case.findById (prodInst ^. #_caseId)
       vehicleVariant :: SV.Variant <-
         (case_ ^. #_udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM500 "NO_VEHICLE_VARIANT"
+          & fromMaybeMWithInfo500 CaseInvalidState "_udf1 is null. Vehicle is not set."
       pickupPoint <-
         Id <$> prodInst ^. #_fromLocation
-          & fromMaybeM500 "NO_FROM_LOCATION"
+          & fromMaybeMWithInfo500 ProductInstanceInvalidState "_fromLocation is null."
       let orgId = Id (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
@@ -285,9 +286,9 @@ calculateDriverPool ::
   SV.Variant ->
   Flow [Id Driver]
 calculateDriverPool locId orgId variant = do
-  location <- QL.findLocationById locId >>= fromMaybeM500 "NO_LOCATION_FOUND"
-  lat <- location ^. #_lat & fromMaybeM500 "NO_LATITUDE"
-  long <- location ^. #_long & fromMaybeM500 "NO_LONGITUDE"
+  location <- QL.findLocationById locId >>= fromMaybeM500 LocationNotFound
+  lat <- location ^. #_lat & fromMaybeMWithInfo500 LocationInvalidState "_lat is null."
+  long <- location ^. #_long & fromMaybeMWithInfo500 LocationInvalidState "_long is null."
   radius <- getRadius
   getNearestDriversStartTime <- getCurrTime
   driverPool <-
@@ -308,7 +309,7 @@ calculateDriverPool locId orgId variant = do
           (asks (defaultRadiusOfSearch . driverAllocationConfig))
           radiusFromTransporterConfig
     radiusFromTransporterConfig conf =
-      fromMaybeM500 "THE_RADIUS_IS_NOT_A_NUMBER"
+      fromMaybeMWithInfo500 CommonError "The radius is not a number."
         . readMaybe
         . toString
         $ conf ^. #_value

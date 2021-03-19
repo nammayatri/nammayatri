@@ -6,6 +6,7 @@ import qualified App.Types as App
 import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
@@ -34,7 +35,7 @@ feedback person request = withFlowHandler $ do
   context <- buildContext "feedback" txnId messageId
   organization <-
     Organization.findOrganizationById (Id $ product ^. #_organizationId)
-      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
+      >>= fromMaybeM500 OrganizationNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage
           { order_id = prodInstId,
@@ -57,5 +58,5 @@ feedback person request = withFlowHandler $ do
                   _3d_render = Nothing
                 }
           }
-  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg

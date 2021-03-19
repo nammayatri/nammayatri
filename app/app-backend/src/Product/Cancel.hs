@@ -4,6 +4,7 @@ module Product.Cancel (cancel, onCancel) where
 
 import App.Types
 import qualified Beckn.Types.Core.API.Cancel as API
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -49,8 +50,8 @@ cancelProductInstance person req = do
           context = mkContext "cancel" txnId msgId currTime Nothing Nothing
       organization <-
         OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
-          >>= fromMaybeM500 "INVALID_PROVIDER_ID"
-      baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+          >>= fromMaybeM500 OrganizationNotFound
+      baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)

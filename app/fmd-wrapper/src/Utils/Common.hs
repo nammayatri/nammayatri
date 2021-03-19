@@ -7,6 +7,7 @@ import Beckn.Types.Core.API.Log
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error
+import Beckn.Types.Error hiding (ErrorCode)
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified Data.Text as T
@@ -20,7 +21,7 @@ import Types.Error
 getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =
   let mconfig = org ^. #_info >>= decodeFromText
-   in fromMaybeM500 "CLIENT_CONFIG_DECODE_ERROR" mconfig
+   in fromMaybeMWithInfo500 CommonError "Client config decode error." mconfig
 
 parseBaseUrl :: Text -> Flow S.BaseUrl
 parseBaseUrl url =

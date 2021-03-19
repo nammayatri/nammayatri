@@ -5,6 +5,7 @@ module Storage.Queries.RegistrationToken where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Error
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
@@ -44,7 +45,7 @@ updateAttempts attemps id = do
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either DB.throwDBError pure
-  findById id >>= fromMaybeM500 "INVALID_TOKEN"
+  findById id >>= fromMaybeM500 InvalidToken
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =

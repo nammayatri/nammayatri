@@ -8,6 +8,7 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
@@ -49,7 +50,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
           else Case.findAllByTypeStatuses limit offset csType status orgId now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
-    Nothing -> throwError400 "ORG_ID MISSING"
+    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM

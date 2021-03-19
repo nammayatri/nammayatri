@@ -25,6 +25,7 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.State
 import Beckn.Types.Core.Tracking
+import Beckn.Types.Error
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
@@ -39,9 +40,8 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (foldWIndex, fromMaybeM500, getCurrTime, headMaybe, throwBecknError400)
+import Beckn.Utils.Common (foldWIndex, fromMaybeMWithInfo500, getCurrTime, headMaybe, throwBecknError400)
 import Beckn.Utils.JSON
-import Beckn.Utils.Logging (Log (..))
 import Control.Lens (element, (?~))
 import qualified Data.Text as T
 import Data.Time
@@ -238,7 +238,7 @@ mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
   now <- getCurrTime
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  quotation <- fromMaybeM500' "INVALID_ORDER_NO_QUOTATION" $ order ^. #_quotation
+  quotation <- fromMaybeMWithInfo500 CommonError "Invalid order, no quotation." $ order ^. #_quotation
   return $
     InitOrder $
       order & #_id ?~ orderId
@@ -503,14 +503,6 @@ mkOnUpdateErrReq context = do
           _path = Nothing,
           _message = Just "UPDATE_NOT_SUPPORTED"
         }
-
--- TODO: replace this with proper err logging for forked threads
-fromMaybeM500' :: Text -> Maybe a -> Flow a
-fromMaybeM500' errMsg m = do
-  when
-    (isNothing m)
-    (logError "Error" errMsg)
-  fromMaybeM500 errMsg m
 
 mapTaskState :: TaskState -> Maybe State
 mapTaskState s =

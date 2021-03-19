@@ -5,6 +5,7 @@ module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) w
 import App.Types
 import Beckn.Storage.DB.Config (DBConfig (..))
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Error
 import Beckn.Utils.Common
 import Control.Exception (Handler (..), catches)
 import Data.Aeson
@@ -42,11 +43,11 @@ withPostgreSQLSimple f = do
       >>= either DB.throwDBError pure
       >>= \case
         PostgresPool _connTag pool -> pure pool
-        _ -> throwError500 "NOT_POSTGRES_BACKEND"
+        _ -> throwError500 NotPostgresBackend
   res <-
     L.runIO . withResource pool $
       runPostgresqlSimple . fmap Right . f
-  either throwError500 pure res
+  either (throwErrorWithInfo500 SQLRequestError) pure res
 
 runPostgresqlSimple :: IO (Either Text a) -> IO (Either Text a)
 runPostgresqlSimple = (`catches` handlers)

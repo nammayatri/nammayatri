@@ -8,6 +8,7 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -35,7 +36,7 @@ track person req = withFlowHandler $ do
   let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
-      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
+      >>= fromMaybeM500 OrganizationNotFound
   case decodeFromText =<< (prodInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
     Just (info :: ProductInfo) ->
@@ -43,7 +44,7 @@ track person req = withFlowHandler $ do
         Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
-          gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+          gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
           Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
 
 trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes

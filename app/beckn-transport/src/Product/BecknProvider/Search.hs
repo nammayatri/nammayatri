@@ -11,6 +11,7 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Core
 import qualified Beckn.Types.Core.Tag as Tag
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Stop as Stop
 import qualified Beckn.Types.Storage.Case as Case
@@ -132,10 +133,10 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeM500 "ORG_HAS_NO_LOCATION"
+    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeMWithInfo500 OrganizationInvalidState "_locationId is null."
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
-      Nothing -> throwError500 "ORG_HAS_NO_LOCATION"
+      Nothing -> throwError500 LocationNotFound
       Just orgLocation -> Location.calculateDistance orgLocation fromLocation
   case eres of
     Left err -> do
@@ -147,7 +148,9 @@ onSearchCallback :: Case.Case -> Org.Organization -> Location.Location -> Locati
 onSearchCallback productCase transporter fromLocation toLocation = do
   let transporterId = transporter ^. #_id
   result <- runSafeFlow $ do
-    vehicleVariant :: Vehicle.Variant <- (productCase ^. #_udf1 >>= readMaybe . T.unpack) & fromMaybeM500 "NO_VEHICLE_VARIANT"
+    vehicleVariant :: Vehicle.Variant <-
+      (productCase ^. #_udf1 >>= readMaybe . T.unpack)
+        & fromMaybeMWithInfo500 CaseInvalidState "_udf1 is null. Vehicle variant is not present."
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
     logInfo "OnSearchCallback" $

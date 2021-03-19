@@ -6,6 +6,7 @@ module Product.CustomerSupport where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
@@ -26,10 +27,10 @@ login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandler $ do
   personM <- Person.findByUsernameAndPassword _email _password
   case personM of
-    Nothing -> throwError401 "INVALID_CREDENTIALS"
+    Nothing -> throwError401 PersonNotFound
     Just person ->
       if person ^. #_status /= SP.ACTIVE && person ^. #_role /= SP.CUSTOMER_SUPPORT
-        then throwError401 "INVALID_CREDENTIALS"
+        then throwError401 AccessDenied
         else do
           token <- generateToken person
           pure $ T.LoginRes token "Logged in successfully"
@@ -47,7 +48,7 @@ logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
   withFlowHandler $
     if person ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError401 "UNAUTHORIZED" -- Do we need this Check?
+      then throwError401 Unauthorized -- Do we need this Check?
       else do
         RegistrationToken.deleteByPersonId (getId $ person ^. #_id)
         pure $ T.LogoutRes "Logged out successfully"
@@ -79,19 +80,19 @@ listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Int
 listOrder supportP mCaseId mMobile mlimit moffset =
   withFlowHandler $
     if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError403 "FORBIDDEN"
+      then throwError403 AccessDenied
       else do
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwError400 "INVALID_REQUEST"
+          (_, _) -> throwError400 InvalidRequest
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
-          >>= fromMaybeM400 "INVALID_MOBILE_NUMBER"
+          >>= fromMaybeMWithInfo400 PersonNotFound "User with this mobile number doesn't exists."
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
           >>= either DB.throwDBError pure
@@ -100,11 +101,11 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= either DB.throwDBError pure
-          >>= fromMaybeM400 "INVALID_ORDER_ID"
+          >>= fromMaybeMWithInfo400 CaseNotFound "RIDESEARCH case with this id is not found."
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
         Person.findById (Id personId)
-          >>= fromMaybeM400 "INVALID_CUSTOMER_ID"
+          >>= fromMaybeM400 PersonNotFound
       return $ T.OrderInfo person [_case]
 
 makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp

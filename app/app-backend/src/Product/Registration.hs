@@ -7,6 +7,7 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Types.Common as BC
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -24,7 +25,7 @@ initiateLogin req =
   withFlowHandler $
     case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
-      _ -> throwError400 "UNSUPPORTED_MEDIUM_TYPE"
+      _ -> throwError400 InvalidRequest
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
@@ -53,7 +54,7 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  role <- fromMaybeM400 "CUSTOMER_ROLE_NOT_FOUND" (req ^. #_role)
+  role <- fromMaybeM400 InvalidRequest (req ^. #_role)
   pid <- BC.generateGUID
   now <- getCurrTime
   return $
@@ -126,13 +127,13 @@ sendOTP SmsCredConfig {..} phoneNumber otpCode = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructOtpSms otpCode otpHash
         }
-  whenLeft res $ \err -> throwErrorWithInfo503 "UNABLE_TO_SEND_OTP" err
+  whenLeft res $ \err -> throwErrorWithInfo503 UnableToSendSMS err
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandler $ do
     SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-    when _verified $ throwError400 "ALREADY_VERIFIED"
+    when _verified $ throwErrorWithInfo400 AuthBlocked "Already verified."
     checkForExpiry _authExpiry _updatedAt
     let isValid =
           _authMedium == req ^. #_medium
@@ -151,17 +152,17 @@ login tokenId req =
         Person.updateMultiple personId updatedPerson
         LoginRes _token . SP.maskPerson
           <$> ( Person.findById personId
-                  >>= fromMaybeM500 "USER_NOT_FOUND"
+                  >>= fromMaybeM500 PersonNotFound
               )
-      else throwError400 "AUTH_VALUE_MISMATCH"
+      else throwError400 InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
-        throwError400 "AUTH_EXPIRED"
+        throwError400 TokenExpired
 
 getRegistrationTokenE :: Text -> Flow SR.RegistrationToken
 getRegistrationTokenE tokenId =
-  RegistrationToken.findById tokenId >>= fromMaybeM401 "INVALID_TOKEN"
+  RegistrationToken.findById tokenId >>= fromMaybeM401 InvalidToken
 
 createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
@@ -171,7 +172,7 @@ createPerson req = do
 
 checkPersonExists :: Text -> Flow SP.Person
 checkPersonExists _EntityId =
-  Person.findById (Id _EntityId) >>= fromMaybeM400 "INVALID_DATA"
+  Person.findById (Id _EntityId) >>= fromMaybeM400 PersonNotFound
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
@@ -186,7 +187,7 @@ reInitiateLogin tokenId req =
         sendOTP credCfg (countryCode <> mobileNumber) _authValueHash
         _ <- RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
-      else throwError400 "LIMIT_EXCEEDED"
+      else throwErrorWithInfo400 AuthBlocked "Attempts limit exceed."
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do

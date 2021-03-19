@@ -5,6 +5,7 @@ module Product.Status (status, onStatus) where
 import App.Types
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -30,8 +31,8 @@ status person StatusReq {..} = withFlowHandler $ do
   context <- buildContext "status" caseId msgId
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
-      >>= fromMaybeM500 "INVALID_PROVIDER_ID"
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 "CB_URL_NOT_CONFIGURED"
+      >>= fromMaybeM500 OrganizationNotFound
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   Gateway.status baseUrl $ API.StatusReq context statusMessage
 
