@@ -13,7 +13,7 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT))
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT))
 getDbTable =
   DB._case . DB.transporterDb <$> getSchemaName
 
@@ -53,15 +53,34 @@ findBySid sid = do
   where
     predicate Storage.Case {..} = _shortId ==. B.val_ sid
 
-updateStatus ::
+updateStatusFlow ::
   Id Storage.Case ->
   Storage.CaseStatus ->
   Flow (T.DBResult ())
-updateStatus id newStatus = do
+updateStatusFlow id newStatus = do
   dbTable <- getDbTable
   -- update data
   (currTime :: UTCTime) <- getCurrTime
   DB.update
+    dbTable
+    (setClause newStatus currTime)
+    (predicate id)
+  where
+    predicate cid Storage.Case {..} = _id ==. B.val_ cid
+    setClause status currTime Storage.Case {..} =
+      mconcat
+        [ _updatedAt <-. B.val_ currTime,
+          _status <-. B.val_ status
+        ]
+
+updateStatus ::
+  Id Storage.Case ->
+  Storage.CaseStatus ->
+  DB.SqlDB ()
+updateStatus id newStatus = do
+  dbTable <- getDbTable
+  currTime <- asks DB.currentTime
+  DB.update'
     dbTable
     (setClause newStatus currTime)
     (predicate id)

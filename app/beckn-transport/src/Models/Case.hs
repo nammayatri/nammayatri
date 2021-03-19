@@ -54,7 +54,7 @@ findBySid sid = do
 updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
   validateCaseStatuseChange status cid
-  result <- Q.updateStatus cid status
+  result <- Q.updateStatusFlow cid status
   checkDBError result
 
 -- | Validate and update Cases statuses

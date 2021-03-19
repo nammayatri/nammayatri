@@ -15,8 +15,7 @@ data ServiceHandle m = ServiceHandle
     findPIById :: Id ProductInstance.ProductInstance -> m ProductInstance.ProductInstance,
     findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
     findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m Case.Case,
-    updatePIsStatus :: [Id ProductInstance.ProductInstance] -> ProductInstance.ProductInstanceStatus -> m (),
-    updateCaseStatus :: Id Case.Case -> Case.CaseStatus -> m (),
+    startRide :: [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m (),
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
   }
 
@@ -34,14 +33,10 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   searchPiId <- orderPi ^. #_parentId & fromMaybeThrowM400 "INVALID_RIDE_ID"
   searchPi <- findPIById searchPiId
   inAppOtp <- orderPi ^. #_udf4 & fromMaybeThrowM400 "RIDE_OTP_MISSING"
-  if otp == inAppOtp
-    then do
-      piList <- findPIsByParentId searchPiId
-      trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER
-      orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER
-      _ <- updatePIsStatus (ProductInstance._id <$> piList) ProductInstance.INPROGRESS
-      updateCaseStatus (Case._id trackerCase) Case.INPROGRESS
-      updateCaseStatus (Case._id orderCase) Case.INPROGRESS
-    else throwM400 "INCORRECT_TRIP_OTP"
+  when (otp /= inAppOtp) $ throwM400 "INCORRECT_TRIP_OTP"
+  piList <- findPIsByParentId searchPiId
+  trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER
+  orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER
+  startRide (ProductInstance._id <$> piList) (Case._id trackerCase) (Case._id orderCase)
   notifyBAPRideStarted searchPi orderPi
   pure APIResult.Success

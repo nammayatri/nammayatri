@@ -26,8 +26,7 @@ handle =
         if caseType == Case.LOCATIONTRACKER
           then pure trackerCase
           else pure rideCase,
-      updatePIsStatus = \_piIds _piStatus -> pure (),
-      updateCaseStatus = \_caseId _caseStatus -> pure (),
+      startRide = \_piIds _trackerCaseId _orderCaseId -> pure (),
       notifyBAPRideStarted = \_searchPi _orderPi -> pure ()
     }
 
