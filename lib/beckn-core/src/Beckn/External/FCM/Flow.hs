@@ -29,7 +29,6 @@ import Control.Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Default.Class
-import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding ((^.))
 import qualified EulerHS.Types as ET
@@ -89,7 +88,7 @@ notifyPerson title body msgData person =
       tokenNotFound = "device token of a person " <> pid <> " not found"
    in case Person._deviceToken person of
         Nothing -> do
-          logInfo (T.pack "FCM") tokenNotFound
+          logInfo "FCM" tokenNotFound
           pure ()
         Just token ->
           sendMessage (FCMRequest (createMessage title body msgData token)) pid
@@ -110,7 +109,7 @@ sendMessage ::
     HasField "fcmJsonPath" r (Maybe Text)
   ) =>
   FCMRequest ->
-  T.Text ->
+  Text ->
   FlowR r ()
 sendMessage fcmMsg toWhom = fork desc $ do
   authToken <- getTokenText
@@ -128,7 +127,7 @@ sendMessage fcmMsg toWhom = fork desc $ do
   where
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
     desc = "FCM send message forked flow"
-    fcm = T.pack "FCM"
+    fcm = "FCM"
 
 -- | try to get FCM text token
 getTokenText ::
@@ -139,8 +138,8 @@ getTokenText ::
 getTokenText = do
   token <- getToken
   pure $ case token of
-    Left err -> Left $ T.pack err
-    Right t -> Right $ JWT._jwtTokenType t <> T.pack " " <> JWT._jwtAccessToken t
+    Left err -> Left $ fromString err
+    Right t -> Right $ JWT._jwtTokenType t <> " " <> JWT._jwtAccessToken t
 
 -- | check FCM token and refresh if it is invalid
 checkAndGetToken ::
@@ -159,7 +158,7 @@ checkAndGetToken sa = do
             then pure $ Right t -- do nothing, token is ok
             else do
               -- close to expiration, start trying to refresh token
-              logInfo fcm "Token is about to be expiried, trying to refresh it"
+              logInfo fcm "Token is about to be expired, trying to refresh it"
               refreshToken
         JWT.JWTExpired x -> do
           -- token expired
@@ -185,7 +184,7 @@ checkAndGetToken sa = do
           L.setOption FCMTokenKey token
           pure $ Right token
 
--- | Get token (do not refresh it if it is expired / invalid)
+-- | Get token (refresh token if expired / invalid)
 getToken ::
   ( HasField "fcmJsonPath" r (Maybe Text),
     HasLogContext r
@@ -195,17 +194,17 @@ getToken = do
   tokenStatus <-
     L.getOption FCMTokenKey >>= \case
       Nothing -> pure $ Left "Token not found"
-      Just t -> do
-        validityStatus <- L.runIO $ JWT.isValid t
+      Just jwt -> do
+        validityStatus <- L.runIO $ JWT.isValid jwt
         pure $ case validityStatus of
-          JWT.JWTValid _ -> Right t
+          JWT.JWTValid _ -> Right jwt
           JWT.JWTExpired _ -> Left "Token expired"
           JWT.JWTInvalid -> Left "Token is invalid"
   case tokenStatus of
     Left err -> do
       logWarning "FCM" $ "Refreshing FCM token. Reason: " <> fromString err
       getAndParseFCMAccount >>= either (pure . Left) checkAndGetToken
-    t -> pure t
+    jwt -> pure jwt
 
 getAndParseFCMAccount ::
   HasField "fcmJsonPath" r (Maybe Text) =>
