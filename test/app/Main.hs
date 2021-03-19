@@ -28,6 +28,7 @@ main = do
     setConfigEnv
     [ "app-backend",
       "beckn-transport",
+      "beckn-transport-btm",
       "beckn-gateway",
       "mock-app-backend",
       "mock-provider-backend",
@@ -71,7 +72,6 @@ specs = do
       [ TransporterBGTM.runBackgroundTaskManager $ \cfg ->
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False
-            & #loggerConfig . #logFilePath .~ "/tmp/beckn-transport-bgtm.log"
             & #driverAllocationConfig . #driverNotificationExpiry .~ 18
             & #driverAllocationConfig . #rideAllocationExpiry .~ 18,
         Gateway.runGateway $ \cfg ->
