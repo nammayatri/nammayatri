@@ -24,6 +24,7 @@ import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (fork)
 import qualified Beckn.Utils.JWT as JWT
 import Beckn.Utils.Logging (HasLogContext, Log (..))
+import Control.Exception (IOException)
 import qualified Control.Exception as E (try)
 import Control.Lens
 import qualified Data.Aeson as Aeson
@@ -211,8 +212,11 @@ getAndParseFCMAccount ::
   FlowR r (Either String JWT.ServiceAccount)
 getAndParseFCMAccount = do
   mbFcmFile <- getField @"fcmJsonPath" <$> ask
-  rawContent <- L.runIO $ E.try @SomeException (BL.readFile . toString $ fromMaybe "" mbFcmFile)
-  pure $ parseContent $ first show rawContent
+  case mbFcmFile of
+    Nothing -> pure $ Left "FCM JSON file is not set in configs"
+    Just fcmFile -> do
+      rawContent <- L.runIO . E.try @IOException . BL.readFile $ toString fcmFile
+      pure $ parseContent $ first show rawContent
   where
     parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
     parseContent rawContent = rawContent >>= Aeson.eitherDecode
