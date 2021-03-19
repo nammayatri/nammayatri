@@ -26,14 +26,14 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   orderPi <- findPIById $ Id rideId
   unless (requestor ^. #_role == Person.ADMIN) do
     rideDriver <- orderPi ^. #_personId & fromMaybeThrowM400 "NOT_AN_ORDER_EXECUTOR"
-    when (rideDriver /= Id requestorId) do
+    when (rideDriver /= Id requestorId || requestor ^. #_role /= Person.DRIVER && requestor ^. #_role /= Person.ADMIN) do
       _ <- throwM400 "NOT_AN_ORDER_EXECUTOR"
       pure ()
   whenLeft (ProductInstance.validateStatusTransition (orderPi ^. #_status) ProductInstance.INPROGRESS) $
     \_ -> throwM400 "INVALID_ORDER_STATUS"
   searchPiId <- orderPi ^. #_parentId & fromMaybeThrowM400 "INVALID_RIDE_ID"
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #_udf4 & fromMaybeThrowM400 "IN_APP_OTP_MISSING"
+  inAppOtp <- orderPi ^. #_udf4 & fromMaybeThrowM400 "RIDE_OTP_MISSING"
   if otp == inAppOtp
     then do
       piList <- findPIsByParentId searchPiId

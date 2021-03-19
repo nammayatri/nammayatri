@@ -3,7 +3,7 @@ module Beckn.Types.APIResult (APIResult (..)) where
 import Data.Aeson hiding (Success)
 import EulerHS.Prelude hiding ((.=))
 
-data APIResult = Success | Failure Text deriving (Show)
+data APIResult = Success | Failure Text deriving (Show, Eq)
 
 instance ToJSON APIResult where
   toJSON Success = object ["result" .= ("Success" :: Text)]
