@@ -7,7 +7,8 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (fromMaybeThrowM400, throwM400)
+import Beckn.Utils.Common (fromMaybeMWithInfo400, throwErrorWithInfo400)
+import Beckn.Utils.Logging (Log)
 import EulerHS.Prelude
 
 data ServiceHandle m = ServiceHandle
@@ -19,21 +20,21 @@ data ServiceHandle m = ServiceHandle
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
   }
 
-startRideHandler :: MonadThrow m => ServiceHandle m -> Text -> Text -> Text -> m APIResult.APIResult
+startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> Text -> m APIResult.APIResult
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById $ Id requestorId
   orderPi <- findPIById $ Id rideId
   unless (requestor ^. #_role == Person.ADMIN) do
-    rideDriver <- orderPi ^. #_personId & fromMaybeThrowM400 "NOT_AN_ORDER_EXECUTOR"
+    rideDriver <- orderPi ^. #_personId & fromMaybeMWithInfo400 "NOT_AN_ORDER_EXECUTOR" "You are not an executor of this ride."
     when (rideDriver /= Id requestorId || requestor ^. #_role /= Person.DRIVER && requestor ^. #_role /= Person.ADMIN) do
-      _ <- throwM400 "NOT_AN_ORDER_EXECUTOR"
+      _ <- throwErrorWithInfo400 "NOT_AN_ORDER_EXECUTOR" "You are not an executor of this ride."
       pure ()
   whenLeft (ProductInstance.validateStatusTransition (orderPi ^. #_status) ProductInstance.INPROGRESS) $
-    \_ -> throwM400 "INVALID_ORDER_STATUS"
-  searchPiId <- orderPi ^. #_parentId & fromMaybeThrowM400 "INVALID_RIDE_ID"
+    \_ -> throwErrorWithInfo400 "INVALID_ORDER_STATUS" "Ride cannot be started."
+  searchPiId <- orderPi ^. #_parentId & fromMaybeMWithInfo400 "INVALID_RIDE_ID" "Invalid ride id."
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #_udf4 & fromMaybeThrowM400 "RIDE_OTP_MISSING"
-  when (otp /= inAppOtp) $ throwM400 "INCORRECT_TRIP_OTP"
+  inAppOtp <- orderPi ^. #_udf4 & fromMaybeMWithInfo400 "RIDE_OTP_MISSING" "Ride does not have OTP."
+  when (otp /= inAppOtp) $ throwErrorWithInfo400 "INCORRECT_TRIP_OTP" "Input OTP is wrong."
   piList <- findPIsByParentId searchPiId
   trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER

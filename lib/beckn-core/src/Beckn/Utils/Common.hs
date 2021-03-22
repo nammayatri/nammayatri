@@ -109,14 +109,14 @@ checkDBErrorOrEmpty dbres domainErrOnEmpty = case dbres of
     Just x -> pure x
 
 fromMaybeM ::
-  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> Maybe b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> Maybe b -> m b
 fromMaybeM err = maybe logAndThrow pure
   where
     logAndThrow = do
       throwError err
 
 fromMaybeMWithInfo ::
-  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> Text -> Maybe b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> Text -> Maybe b -> m b
 fromMaybeMWithInfo err info = maybe logAndThrow pure
   where
     logAndThrow = do
@@ -127,6 +127,18 @@ buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
 
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
+
+servantJsonError400,
+  servantJsonError401,
+  servantJsonError404,
+  servantJsonError500,
+  servantJsonError503 ::
+    Text -> Text -> ServerError
+servantJsonError400 err msg = S.err400 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
+servantJsonError401 err msg = S.err401 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
+servantJsonError404 err msg = S.err404 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
+servantJsonError500 err msg = S.err500 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
+servantJsonError503 err msg = S.err503 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
 
 mkOkResponse :: L.MonadFlow m => Context -> m AckResponse
 mkOkResponse context = do
@@ -214,20 +226,20 @@ authenticate = check handleKey
     throw401 =
       throwError AuthBlocked
 
-throwHttpError :: forall e m a. (HasCallStack, L.MonadFlow m, Log m, ToJSON e) => ServerError -> e -> m a
+throwHttpError :: forall e m a. (HasCallStack, MonadThrow m, Log m, ToJSON e) => ServerError -> e -> m a
 throwHttpError err errMsg = do
   let body = A.encode errMsg
   logError "HTTP_ERROR" (decodeUtf8 body)
-  L.throwException err {errBody = body, errHeaders = jsonHeader : errHeaders err}
+  throwM err {errBody = body, errHeaders = jsonHeader : errHeaders err}
 
 throwError ::
-  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> m b
 throwError err = throwHttpError serverErr $ toAPIError err
   where
     serverErr = toServerError $ toStatusCode err
 
 throwErrorWithInfo ::
-  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> Text -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> Text -> m b
 throwErrorWithInfo err info = throwHttpError serverErr $ buildAPIErrorWithInfo err info
   where
     serverErr = toServerError $ toStatusCode err
@@ -238,7 +250,7 @@ buildAPIErrorWithInfo err info =
       defMsg = apiErr ^. #errorMessage
    in apiErr {errorMessage = defMsg <> " " <> info}
 
-throwAuthError :: (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => [Header] -> a -> m b
+throwAuthError :: (HasCallStack, MonadThrow m, Log m, IsAPIError a) => [Header] -> a -> m b
 throwAuthError headers = throwHttpError (S.err401 {errHeaders = headers}) . toAPIError
 
 -- | Format time in IST and return it as text
@@ -381,35 +393,3 @@ foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) 
 
 addLogTag :: HasLogContext env => Text -> FlowR env a -> FlowR env a
 addLogTag = local . addLogTagToEnv
-
-fromMaybeThrowM400,
-  fromMaybeThrowM401,
-  fromMaybeThrowM403,
-  fromMaybeThrowM404,
-  fromMaybeThrowM500,
-  fromMaybeThrowM501,
-  fromMaybeThrowM503 ::
-    MonadThrow m => BSL.ByteString -> Maybe a -> m a
-fromMaybeThrowM400 err = maybe (throwM400 err) pure
-fromMaybeThrowM401 err = maybe (throwM401 err) pure
-fromMaybeThrowM403 err = maybe (throwM403 err) pure
-fromMaybeThrowM404 err = maybe (throwM404 err) pure
-fromMaybeThrowM500 err = maybe (throwM500 err) pure
-fromMaybeThrowM501 err = maybe (throwM501 err) pure
-fromMaybeThrowM503 err = maybe (throwM503 err) pure
-
-throwM400,
-  throwM401,
-  throwM403,
-  throwM404,
-  throwM500,
-  throwM501,
-  throwM503 ::
-    MonadThrow m => BSL.ByteString -> m a
-throwM400 err = throwM $ S.err400 {errBody = err}
-throwM401 err = throwM $ S.err401 {errBody = err}
-throwM403 err = throwM $ S.err403 {errBody = err}
-throwM404 err = throwM $ S.err404 {errBody = err}
-throwM500 err = throwM $ S.err500 {errBody = err}
-throwM501 err = throwM $ S.err501 {errBody = err}
-throwM503 err = throwM $ S.err503 {errBody = err}
