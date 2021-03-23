@@ -94,7 +94,6 @@ cancelRide rideId requestedByDriver = do
         Nothing -> pure ()
         Just driverId -> do
           driver <- Person.findPersonById driverId
-          DriverInformation.updateOnRideFlow (cast driverId) False
           Notify.notifyDriverOnCancel c driver
 
 cancelRideTransaction ::
