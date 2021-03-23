@@ -35,12 +35,3 @@ search url GrphrSearch.Request {..} =
     vehicle = T.toLower $ show _vehicle
     points = encodePoint <$> _points'
     clientM = ET.client grphrAPI points vehicle weighting _elevation points_encoded _calcPoints
-
-defaultGrphrBaseUrl :: BaseUrl
-defaultGrphrBaseUrl =
-  BaseUrl
-    { baseUrlScheme = Https,
-      baseUrlHost = "api.sandbox.beckn.juspay.in",
-      baseUrlPort = 443,
-      baseUrlPath = "/map/grphr"
-    }

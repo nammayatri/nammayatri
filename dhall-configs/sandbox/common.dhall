@@ -66,4 +66,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , signingKeys = sec.signingKeys
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
+   , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
    }

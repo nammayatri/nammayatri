@@ -46,6 +46,7 @@ data AppEnv = AppEnv
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
+    graphhopperUrl :: BaseUrl,
     logContext :: [Text]
   }
   deriving (Generic, FromDhall)

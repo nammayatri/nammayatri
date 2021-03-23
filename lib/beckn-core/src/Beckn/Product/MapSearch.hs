@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Product.MapSearch where
 
 import qualified Beckn.External.Graphhopper.Flow as Grphr
@@ -6,10 +8,12 @@ import Beckn.Types.Common
 import qualified Beckn.Types.MapSearch as MapSearch
 import Data.Geospatial
 import EulerHS.Prelude
+import GHC.Records (HasField (..))
 import Servant
+import Servant.Client (BaseUrl)
 import Prelude (atan2)
 
-getRoute :: MapSearch.Request -> FlowR r (Either SomeException MapSearch.Response)
+getRoute :: HasField "graphhopperUrl" r BaseUrl => MapSearch.Request -> FlowR r (Either SomeException MapSearch.Response)
 getRoute MapSearch.Request {..} =
   -- Currently integrated only with graphhopper
   if all isLatLong waypoints
@@ -17,7 +21,8 @@ getRoute MapSearch.Request {..} =
       let points = map (\(MapSearch.LatLong point) -> point) waypoints
           mode' = fromMaybe MapSearch.CAR mode
           vehicle = mapToVehicle mode'
-      res <- Grphr.search Grphr.defaultGrphrBaseUrl (grphrReq points vehicle)
+      graphhopperUrl <- getField @"graphhopperUrl" <$> ask
+      res <- Grphr.search graphhopperUrl (grphrReq points vehicle)
       case res of
         Left err -> return $ Left $ toException err
         Right Grphr.Response {..} ->
