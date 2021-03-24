@@ -32,6 +32,6 @@ validateVersion context = do
       FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)
   unless (context ^. #_core_version == desiredCoreVersion) $
-    throwError400 UnsupportedCoreVer
+    throwError UnsupportedCoreVer
   unless (context ^. #_domain_version == desiredDomainVersion) $
-    throwError400 UnsupportedDomainVer
+    throwError UnsupportedDomainVer

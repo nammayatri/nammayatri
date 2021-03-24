@@ -6,12 +6,12 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
-import Beckn.Types.Error
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.Error
 import qualified Types.Storage.DB as DB
 
 getDbTable ::
@@ -56,7 +56,7 @@ findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
     >>= either throwDBError pure
-    >>= fromMaybeM401 InvalidToken
+    >>= fromMaybeM InvalidToken
   where
     predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
 
@@ -66,7 +66,7 @@ updateAttempts attemps id = do
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either throwDBError pure
-  findRegistrationToken id >>= fromMaybeM500 InvalidToken
+  findRegistrationToken id >>= fromMaybeM InvalidToken
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =

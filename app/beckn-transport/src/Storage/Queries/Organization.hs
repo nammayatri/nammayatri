@@ -6,7 +6,6 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
@@ -15,6 +14,7 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
+import Types.Error
 import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))
@@ -33,7 +33,7 @@ verifyToken regToken = do
   logInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either throwDBError pure
-    >>= fromMaybeM400 Unauthorized
+    >>= fromMaybeM Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 
@@ -42,7 +42,7 @@ findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either throwDBError pure
-    >>= fromMaybeM400 OrganizationNotFound
+    >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
@@ -142,7 +142,7 @@ findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either throwDBError pure
-    >>= fromMaybeM400 OrganizationNotFound
+    >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
 
@@ -151,6 +151,6 @@ findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either throwDBError pure
-    >>= fromMaybeM400 OrganizationNotFound
+    >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId

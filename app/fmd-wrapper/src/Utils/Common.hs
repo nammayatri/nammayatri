@@ -21,7 +21,7 @@ import Types.Error
 getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =
   let mconfig = org ^. #_info >>= decodeFromText
-   in fromMaybeMWithInfo500 CommonError "Client config decode error." mconfig
+   in fromMaybeMWithInfo CommonInternalError "Client config decode error." mconfig
 
 parseBaseUrl :: Text -> Flow S.BaseUrl
 parseBaseUrl url =

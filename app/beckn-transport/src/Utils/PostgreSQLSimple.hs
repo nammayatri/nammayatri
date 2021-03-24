@@ -4,7 +4,6 @@ module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) w
 
 import App.Types
 import Beckn.Storage.DB.Config (DBConfig (..))
-import Beckn.Types.Error
 import Beckn.Utils.Common
 import Control.Exception (Handler (..), catches)
 import Data.Aeson
@@ -15,6 +14,7 @@ import Database.PostgreSQL.Simple
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, encodeUtf8, pack, (.=))
 import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
+import Types.Error
 
 postgreSQLSimpleExecute :: ToRow row => Query -> row -> Flow Int64
 postgreSQLSimpleExecute q qargs = do
@@ -42,11 +42,11 @@ withPostgreSQLSimple f = do
       >>= either throwDBError pure
       >>= \case
         PostgresPool _connTag pool -> pure pool
-        _ -> throwError500 NotPostgresBackend
+        _ -> throwError NotPostgresBackend
   res <-
     L.runIO . withResource pool $
       runPostgresqlSimple . fmap Right . f
-  either (throwErrorWithInfo500 SQLRequestError) pure res
+  either (throwErrorWithInfo SQLRequestError) pure res
 
 runPostgresqlSimple :: IO (Either Text a) -> IO (Either Text a)
 runPostgresqlSimple = (`catches` handlers)

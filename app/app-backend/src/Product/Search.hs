@@ -10,7 +10,6 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Tag
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Mobility.Catalog as BM
@@ -43,6 +42,7 @@ import qualified Types.API.Common as API
 import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
+import Types.Error
 import Types.ProductInfo
 import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
@@ -76,17 +76,17 @@ search person req = withFlowHandler $ do
       currTime <- getCurrTime
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
-        throwErrorWithInfo400 InvalidRequest "Invalid start time."
+        throwErrorWithInfo InvalidRequest "Invalid start time."
     validateServiceability sreq = do
       originGps <-
         sreq ^. #origin . #location . #gps
-          & fromMaybeMWithInfo400 InvalidRequest "GPS coordinates required for the origin location"
+          & fromMaybeMWithInfo InvalidRequest "GPS coordinates required for the origin location"
       destinationGps <-
         req ^. #destination . #location . #gps
-          & fromMaybeMWithInfo400 InvalidRequest "GPS coordinates required for the destination location"
+          & fromMaybeMWithInfo InvalidRequest "GPS coordinates required for the destination location"
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
-        throwErrorWithInfo400 ProductNotServiceable "Ride not serviceable due to georestrictions"
+        throwErrorWithInfo ProductNotServiceable "Ride not serviceable due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
 searchCb _bppOrg req = withFlowHandler $ do
@@ -106,14 +106,14 @@ searchCbService req catalog = do
   when (case_ ^. #_status /= Case.CLOSED) $ do
     bpp <-
       Org.findOrganizationByCallbackUri (req ^. #context . #_bpp_uri) Org.PROVIDER
-        >>= fromMaybeM400 OrganizationNotFound
+        >>= fromMaybeM OrgDoesNotExist
     personId <-
       maybe
-        (throwErrorWithInfo500 CaseInvalidState "_requestor id is not found.")
+        (throwError CaseRequestorNotPresent)
         (return . Id)
         (Case._requestor case_)
     case (catalog ^. #_categories, catalog ^. #_items) of
-      ([], _) -> throwErrorWithInfo400 InvalidRequest "Missing provider"
+      ([], _) -> throwErrorWithInfo InvalidRequest "Missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
         declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
@@ -122,7 +122,7 @@ searchCbService req catalog = do
       (category : _, items) -> do
         when
           (case_ ^. #_status == Case.CLOSED)
-          (throwError400 CaseExpired)
+          (throwError CaseExpired)
         let provider = fromBeckn category
         products <- traverse (mkProduct case_) items
         traverse_ Products.create products
@@ -227,7 +227,7 @@ mkProduct case_ item = do
   now <- getCurrTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwErrorWithInfo400 CommonError "convertDecimalValueToAmount returns Nothing."
+      Nothing -> throwErrorWithInfo InvalidRequest "convertDecimalValueToAmount returns Nothing."
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -261,7 +261,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   let info = ProductInfo (Just provider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwErrorWithInfo400 CommonError "convertDecimalValueToAmount returns Nothing."
+      Nothing -> throwErrorWithInfo InvalidRequest "convertDecimalValueToAmount returns Nothing."
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -344,8 +344,8 @@ getDistance req = do
 
 mkRouteRequest :: Common.Location -> Common.Location -> Flow MapSearch.Request
 mkRouteRequest pickupLoc dropLoc = do
-  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeMWithInfo400 CommonError "No long / lat."
-  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeMWithInfo400 CommonError "No long / lat."
+  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeMWithInfo InvalidRequest "No long / lat."
+  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeMWithInfo InvalidRequest "No long / lat."
   pickupMapPoint <- mkMapPoint pickupLat pickupLon
   dropMapPoint <- mkMapPoint dropLat dropLon
   return $
@@ -366,4 +366,4 @@ mkMapPoint lat' lon' = do
 readLatLng :: Text -> Flow Double
 readLatLng text = do
   let mCoord = readMaybe $ T.unpack text
-  maybe (throwErrorWithInfo400 CommonError "LOCATION_READ_ERROR") pure mCoord
+  maybe (throwErrorWithInfo InvalidRequest "LOCATION_READ_ERROR") pure mCoord

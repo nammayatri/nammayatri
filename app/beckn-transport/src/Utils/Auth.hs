@@ -1,7 +1,6 @@
 module Utils.Auth where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
@@ -9,6 +8,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as Org
+import Types.Error
 
 -- | TODO: Perform some API key verification.
 data VerifyAPIKey = VerifyAPIKey
@@ -20,7 +20,7 @@ instance VerificationMethod VerifyAPIKey where
     \If you don't have an API key, register the app/gateway."
 
 verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
-verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM401 OrganizationNotFound
+verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFound
 
 lookup :: LookupAction LookupRegistry AppEnv
 lookup = lookupRegistryAction Org.findOrganizationByShortId

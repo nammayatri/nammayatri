@@ -11,7 +11,6 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Core
 import qualified Beckn.Types.Core.Tag as Tag
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Stop as Stop
 import qualified Beckn.Types.Storage.Case as Case
@@ -39,6 +38,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
+import Types.Error
 
 search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
 search transporterId bapOrg req = withFlowHandler $ do
@@ -133,10 +133,10 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeMWithInfo500 OrganizationInvalidState "_locationId is null."
+    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeMWithInfo OrgFieldNotPresent "_locationId is null."
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
-      Nothing -> throwError500 LocationNotFound
+      Nothing -> throwError LocationNotFound
       Just orgLocation -> Location.calculateDistance orgLocation fromLocation
   case eres of
     Left err -> do
@@ -150,7 +150,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
   result <- runSafeFlow $ do
     vehicleVariant :: Vehicle.Variant <-
       (productCase ^. #_udf1 >>= readMaybe . T.unpack)
-        & fromMaybeMWithInfo500 CaseInvalidState "_udf1 is null. Vehicle variant is not present."
+        & fromMaybeM CaseVehicleVariantNotPresent
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
     logInfo "OnSearchCallback" $

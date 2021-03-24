@@ -79,4 +79,4 @@ validateBapUrl org context = do
         Nothing -> False
         Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
   unless satisfied $
-    throwErrorWithInfo400 CommonError "Invalid bap URL."
+    throwErrorWithInfo InvalidRequest "Invalid bap URL."

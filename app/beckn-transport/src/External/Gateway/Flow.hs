@@ -26,16 +26,16 @@ onSearch :: OnSearchReq -> Text -> Flow AckResponse
 onSearch req@CallbackReq {context} bppShortId = do
   appConfig <- ask
   authKey <- getHttpManagerKey bppShortId
-  gatewayShortId <- xGatewaySelector appConfig & fromMaybeM500 GatewaySelectorNotSet
+  gatewayShortId <- xGatewaySelector appConfig & fromMaybeM GatewaySelectorNotSet
   gatewayOrg <- Org.findOrgByShortId $ ShortId gatewayShortId
   res <- case gatewayShortId of
     "NSDL.BG.1" -> do
-      nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM500 NSDLBaseUrlNotSet
+      nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM NSDLBaseUrlNotSet
       callAPIWithTrail' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
     "JUSPAY.BG.1" -> do
-      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
       callAPIWithTrail' (Just authKey) callbackUrl (API.onSearch req) "on_search"
-    _ -> throwError500 GatewaySelectorNotSet
+    _ -> throwError GatewaySelectorNotSet
   AckResponse {} <- checkClientError context res
   mkOkResponse context
 
@@ -85,4 +85,4 @@ initiateCall req = do
     Left cliErr -> do
       let err = fromClientError cliErr
       logError "client call error" $ (err ^. #_message) ?: "Some error"
-      throwError500 UnableToCall
+      throwError UnableToCall

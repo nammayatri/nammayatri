@@ -8,7 +8,7 @@ where
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Utils.Common (throwError500)
+import Beckn.Utils.Common (throwError)
 import qualified Beckn.Utils.JWT as JWT
 import Beckn.Utils.Logging (HasLogContext, Log (..))
 import qualified Control.Exception as E (try)
@@ -24,7 +24,7 @@ doFCMTokenRefresh ::
   FlowR r ()
 doFCMTokenRefresh = do
   getField @"fcmJsonPath" <$> ask
-    >>= maybe (throwError500 FCMJSONPathNotConfigured) withFJP
+    >>= maybe (throwError FCMJSONPathNotConfigured) withFJP
   where
     withFJP f = L.runIO (readAndDecode f) >>= either logAndThrowIt doIt
     readAndDecode f = either (Left . excText f) (first fromString . Aeson.eitherDecode) <$> E.try (BL.readFile $ toString f)
@@ -48,4 +48,4 @@ doFCMTokenRefresh = do
               _ -> 10 -- just a caution, it should be valid by this moment
     logAndThrowIt err = do
       logInfo ("fcm" :: Text) err
-      throwError500 UnableToReadFCMJSONFile
+      throwError UnableToReadFCMJSONFile

@@ -6,7 +6,6 @@ import App.Types
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as BC
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
@@ -30,6 +29,7 @@ import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
 import Types.App
+import Types.Error
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
@@ -42,7 +42,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
-      throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
+      throwError PersonOrgIdNotPresent
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM
@@ -59,12 +59,12 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 update :: SR.RegistrationToken -> Id PI.ProductInstance -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   when (maybe False (`elem` forbiddenStatuses) (req ^. #_status)) $
-    throwError400 InvalidRequest
+    throwError InvalidRequest
   user <- PersQ.findPersonById (Id _EntityId)
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
     Just pid -> PIQ.findById pid
-    Nothing -> throwErrorWithInfo400 ProductInstanceInvalidState "_parentId is null."
+    Nothing -> throwError PIParentIdNotPresent
   isAllowed ordPi req
   when (user ^. #_role == SP.ADMIN || user ^. #_role == SP.DRIVER) $ do
     when (user ^. #_role == SP.DRIVER && req ^. #_status == Just PI.CANCELLED) $
@@ -79,13 +79,13 @@ notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> Maybe PI.Produc
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
   -- Send callback to BAP
   bapOrg <- fetchBapOrganization $ orderPi ^. #_caseId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   notifyTripDetailsToGateway searchPi orderPi callbackUrl
   notifyStatusUpdateReq searchPi updatedStatus callbackUrl
   where
     fetchBapOrganization caseId = do
-      prodCase <- fetchCase caseId >>= fromMaybeM500 CaseNotFound
-      bapOrgId <- prodCase ^. #_udf4 & fromMaybeMWithInfo500 CaseInvalidState "_udf4 is null. Case doesn't contain bap org id."
+      prodCase <- fetchCase caseId >>= fromMaybeM CaseNotFound
+      bapOrgId <- prodCase ^. #_udf4 & fromMaybeM CaseBapOrgIdNotPresent
       OQ.findOrganizationById $ Id bapOrgId
     fetchCase caseId = do
       prodCase <- QCase.findById caseId
@@ -105,7 +105,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ throwError401 Unauthorized
+        $ throwError Unauthorized
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (getId (Loc._id x))) locList
         >>= buildResponse
@@ -132,7 +132,7 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
         ( isNothing (SP._organizationId user)
             || (SP._organizationId user /= (V._organizationId <$> vehicle))
         )
-        $ throwError401 Unauthorized
+        $ throwError Unauthorized
     joinByIds locList ride =
       find (\x -> PI._fromLocation ride == Just (getId (Loc._id x))) locList
         >>= buildResponse
@@ -171,27 +171,27 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 
 isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed orderPi req = do
-  newStatus <- fromMaybeM400 InvalidRequest (req ^. #_status)
+  newStatus <- fromMaybeM InvalidRequest (req ^. #_status)
   case PI.validateStatusTransition (orderPi ^. #_status) newStatus of
-    Left _ -> throwError400 InvalidRequest
+    Left _ -> throwError InvalidRequest
     Right _ -> return ()
 
 assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
-  searchPi <- PIQ.findById =<< fromMaybeMWithInfo500 ProductInstanceInvalidState "_parentId is null." (ordPi ^. #_parentId)
+  searchPi <- PIQ.findById =<< fromMaybeM PIParentIdNotPresent (ordPi ^. #_parentId)
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   headPi <- case piList of
     p : _ -> pure p
-    [] -> throwError400 ProductInstanceNotFound
+    [] -> throwError PIDoesNotExist
   driver <- PersQ.findPersonById $ cast driverId
   vehicleId <-
     driver ^. #_udf1
-      & fromMaybeMWithInfo400 PersonInvalidState "_udf1 is null. Vehicle is not set."
+      & fromMaybeMWithInfo PersonFieldNotPresent "_udf1 is null. Vehicle is not set."
       <&> Id
   vehicle <-
     VQ.findVehicleById vehicleId
-      >>= fromMaybeM400 VehicleNotFound
+      >>= fromMaybeM VehicleNotFound
   let piIdList = PI._id <$> piList
 
   DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle driver)
@@ -215,15 +215,15 @@ updateStatus piId req = do
     (Just PI.CANCELLED, _, _) ->
       updateTrip (prodInst ^. #_id) PI.CANCELLED req
     (Just PI.INPROGRESS, Just _, Just _) -> do
-      inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeMWithInfo500 ProductInstanceInvalidState "_udf4 is null. OTP is not set."
-      tripOtpCode <- req ^. #_otpCode & fromMaybeM400 InvalidRequest
+      inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM PIOTPNotPresent
+      tripOtpCode <- req ^. #_otpCode & fromMaybeM InvalidRequest
       if inAppOtpCode == tripOtpCode
         then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
-        else throwError400 IncorrectOTP
+        else throwError IncorrectOTP
     (Just c, Just _, Just _) ->
       updateTrip (prodInst ^. #_id) c req
     (Nothing, Just _, Just _) -> return ()
-    _ -> throwErrorWithInfo400 ProductInstanceInvalidState "_entityId or _personId is null. Driver or vehicle unassigned."
+    _ -> throwErrorWithInfo PIFieldNotPresent "_entityId or _personId is null. Driver or vehicle unassigned."
   return ()
 
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
@@ -243,7 +243,7 @@ unAssignDriverInfo productInstances request = do
       logError
         "unAssignDriverInfo"
         "Can't unassign driver info for null ProductInstance."
-      throwError400 ProductInstanceNotFound
+      throwError PIDoesNotExist
   _ <- PIQ.updateVehicleFlow (PI._id <$> productInstances) Nothing
   _ <- PIQ.updateDriverFlow (PI._id <$> productInstances) Nothing
   notifyDriver (request ^. #_personId)
@@ -273,7 +273,7 @@ updateTrip piId newStatus request = do
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       searchPi <- case prodInst ^. #_parentId of
         Just pid -> PIQ.findById pid
-        Nothing -> throwErrorWithInfo400 ProductInstanceInvalidState "_parentId is null."
+        Nothing -> throwError PIParentIdNotPresent
       _ <- PIQ.updateStatus (PI._id trackerPi) PI.COMPLETED
       _ <- PIQ.updateStatus (PI._id orderPi) PI.CANCELLED
       _ <- PIQ.updateStatus (PI._id searchPi) PI.CANCELLED

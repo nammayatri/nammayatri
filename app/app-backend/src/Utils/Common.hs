@@ -9,7 +9,6 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
@@ -28,6 +27,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
+import Types.Error
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken
@@ -50,7 +50,7 @@ verifyPerson :: RegToken -> Flow Person.Person
 verifyPerson token = do
   sr <- Utils.Common.verifyToken token
   Person.findById (Id $ SR._EntityId sr)
-    >>= Utils.fromMaybeM500 PersonNotFound
+    >>= Utils.fromMaybeM PersonNotFound
 
 verifyPersonAction :: VerificationAction VerifyToken AppEnv
 verifyPersonAction = VerificationAction Utils.Common.verifyPerson
@@ -58,14 +58,14 @@ verifyPersonAction = VerificationAction Utils.Common.verifyPerson
 verifyToken :: RegToken -> Flow SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
-    >>= Utils.fromMaybeM401 InvalidToken
+    >>= Utils.fromMaybeM InvalidToken
     >>= validateToken
 
 validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ _tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal _updatedAt
-  when expired $ Utils.throwError400 TokenExpired
+  when expired $ Utils.throwError TokenExpired
   return sr
 
 generateShortId :: Flow Text

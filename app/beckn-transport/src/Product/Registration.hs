@@ -7,7 +7,6 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import Beckn.Types.Common as BC
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -18,6 +17,7 @@ import qualified Product.Person as Person
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
+import Types.Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -26,7 +26,7 @@ initiateLogin req =
   withFlowHandler $
     case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
-      _ -> throwError400 InvalidRequest
+      _ -> throwError InvalidRequest
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
@@ -124,13 +124,13 @@ sendOTP SmsCredConfig {..} phoneNumber otpCode = do
           SMS._category = SMS.BULK,
           SMS._text = SF.constructOtpSms otpCode otpHash
         }
-  whenLeft res $ \err -> throwErrorWithInfo503 UnableToSendSMS err
+  whenLeft res $ \err -> throwErrorWithInfo UnableToSendSMS err
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandler $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-    when _verified $ throwErrorWithInfo400 AuthBlocked "Already verified."
+    when _verified $ throwErrorWithInfo AuthBlocked "Already verified."
     checkForExpiry _authExpiry _updatedAt
     let isValid =
           _authMedium == req ^. #_medium && _authType == req ^. #__type
@@ -145,15 +145,15 @@ login tokenId req =
         QP.update (SP._id person) SP.ACTIVE True deviceToken
         updatedPerson <- QP.findPersonById (SP._id person)
         return $ LoginRes _token (Just $ SP.maskPerson updatedPerson)
-      else throwError400 InvalidAuthData
+      else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
-        throwError400 TokenExpired
+        throwError TokenExpired
 
 checkRegistrationTokenExists :: Text -> Flow SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
-  QR.findRegistrationToken tokenId >>= fromMaybeM401 InvalidToken
+  QR.findRegistrationToken tokenId >>= fromMaybeM InvalidToken
 
 createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
@@ -179,7 +179,7 @@ reInitiateLogin tokenId req =
         sendOTP credCfg (countryCode <> mobileNumber) _authValueHash
         _ <- QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
-      else throwErrorWithInfo400 AuthBlocked "Limit exceeded."
+      else throwErrorWithInfo AuthBlocked "Limit exceeded."
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do

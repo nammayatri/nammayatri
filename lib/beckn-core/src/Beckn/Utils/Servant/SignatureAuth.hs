@@ -108,14 +108,14 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
     Just c -> return c
     Nothing -> do
       logError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
-      throwErrorWithInfo401 Unauthorized "Invalid key id."
+      throwErrorWithInfo Unauthorized "Invalid key id."
   org <-
     findOrgByShortId (ShortId $ cred ^. #shortOrgId)
-      >>= maybe (throwError401 OrganizationNotFound) pure
+      >>= maybe (throwError OrgNotFound) pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
       logError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
-      throwErrorWithInfo401 Unauthorized "Invalid public key."
+      throwErrorWithInfo Unauthorized "Invalid public key."
     Just key -> return key
   return (org, pk, selfUrl)
 
@@ -216,7 +216,7 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
       logDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
       case addSignature body params headers req of
         Just signedReq -> pure signedReq
-        Nothing -> throwErrorWithInfo500 CommonError $ "Could not add signature: " <> show params
+        Nothing -> throwErrorWithInfo CommonInternalError $ "Could not add signature: " <> show params
     getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
     getBody (Http.RequestBodyBS body) = pure body
     getBody _ = pure "<MISSING_BODY>"

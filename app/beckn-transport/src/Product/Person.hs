@@ -22,7 +22,6 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
 import Beckn.Types.Storage.Organization (Organization)
@@ -50,6 +49,7 @@ import qualified Storage.Queries.Vehicle as QV
 import Types.API.Location (LatLong (..))
 import Types.API.Person
 import Types.App (ConfigKey (..), Driver)
+import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -63,10 +63,10 @@ updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
   where
     verifyPerson entityId =
       when (personId /= entityId) $
-        throwError400 AccessDenied
+        throwError AccessDenied
     isValidUpdate person =
       when (isJust (req ^. #_role) && person ^. #_role /= SP.ADMIN) $
-        throwError401 AccessDenied
+        throwError Unauthorized
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandler $ do
@@ -88,8 +88,8 @@ createPerson orgId req = withFlowHandler $ do
         case (preq ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
-              throwErrorWithInfo400 InvalidRequest "Person with this mobile number already exists."
-          _ -> throwError400 InvalidRequest
+              throwErrorWithInfo InvalidRequest "Person with this mobile number already exists."
+          _ -> throwError InvalidRequest
 
 createDriverDetails :: Id SP.Person -> Flow ()
 createDriverDetails personId = do
@@ -131,18 +131,18 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     person <- case identifierTypeM of
       Nothing -> QP.findPersonById (Id $ fromJust idM)
       Just SP.MOBILENUMBER -> do
-        countryCode <- fromMaybeM400 InvalidRequest countryCodeM
-        mobile <- fromMaybeM400 InvalidRequest mobileM
+        countryCode <- fromMaybeM InvalidRequest countryCodeM
+        mobile <- fromMaybeM InvalidRequest mobileM
         QP.findByMobileNumber countryCode mobile
-          >>= fromMaybeM400 PersonNotFound
+          >>= fromMaybeM PersonDoesNotExist
       Just SP.EMAIL ->
-        fromMaybeM400 InvalidRequest emailM
+        fromMaybeM InvalidRequest emailM
           >>= QP.findByEmail
-          >>= fromMaybeM400 PersonNotFound
+          >>= fromMaybeM PersonDoesNotExist
       Just SP.AADHAAR ->
-        fromMaybeM400 InvalidRequest identifierM
+        fromMaybeM InvalidRequest identifierM
           >>= QP.findByIdentifier
-          >>= fromMaybeM400 PersonNotFound
+          >>= fromMaybeM PersonDoesNotExist
     hasAccess user person
     mkPersonRes person
   where
@@ -152,7 +152,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
             || (user ^. #_organizationId) /= (person ^. #_organizationId)
         )
-        $ throwError401 Unauthorized
+        $ throwError Unauthorized
 
 deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
 deletePerson orgId personId = withFlowHandler $ do
@@ -164,7 +164,7 @@ deletePerson orgId personId = withFlowHandler $ do
       QDriverInformation.deleteById $ Id personId
       QR.deleteByEntitiyId personId
       return $ DeletePersonRes personId
-    else throwError401 Unauthorized
+    else throwError Unauthorized
 
 linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId personId req = withFlowHandler $ do
@@ -172,11 +172,11 @@ linkEntity orgId personId req = withFlowHandler $ do
   _ <- case req ^. #_entityType of
     VEHICLE ->
       QV.findVehicleById (Id (req ^. #_entityId))
-        >>= fromMaybeM400 VehicleNotFound
-    _ -> throwErrorWithInfo400 CommonError "Unsupported entity type."
+        >>= fromMaybeM VehicleNotFound
+    _ -> throwErrorWithInfo InvalidRequest "Unsupported entity type."
   when
     (person ^. #_organizationId /= Just orgId)
-    (throwError401 Unauthorized)
+    (throwError Unauthorized)
   prevPerson <- QP.findByEntityId (req ^. #_entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
   QP.updateEntity (Id personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
@@ -269,10 +269,10 @@ getDriverPool piId =
       case_ <- Case.findById (prodInst ^. #_caseId)
       vehicleVariant :: SV.Variant <-
         (case_ ^. #_udf1 >>= readMaybe . T.unpack)
-          & fromMaybeMWithInfo500 CaseInvalidState "_udf1 is null. Vehicle is not set."
+          & fromMaybeM CaseVehicleVariantNotPresent
       pickupPoint <-
         Id <$> prodInst ^. #_fromLocation
-          & fromMaybeMWithInfo500 ProductInstanceInvalidState "_fromLocation is null."
+          & fromMaybeM PIFromLocationIdNotPresent
       let orgId = Id (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
@@ -286,9 +286,9 @@ calculateDriverPool ::
   SV.Variant ->
   Flow [Id Driver]
 calculateDriverPool locId orgId variant = do
-  location <- QL.findLocationById locId >>= fromMaybeM500 LocationNotFound
-  lat <- location ^. #_lat & fromMaybeMWithInfo500 LocationInvalidState "_lat is null."
-  long <- location ^. #_long & fromMaybeMWithInfo500 LocationInvalidState "_long is null."
+  location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
+  lat <- location ^. #_lat & fromMaybeM LocationLongLatNotFound
+  long <- location ^. #_long & fromMaybeM LocationLongLatNotFound
   radius <- getRadius
   getNearestDriversStartTime <- getCurrTime
   driverPool <-
@@ -309,7 +309,7 @@ calculateDriverPool locId orgId variant = do
           (asks (defaultRadiusOfSearch . driverAllocationConfig))
           radiusFromTransporterConfig
     radiusFromTransporterConfig conf =
-      fromMaybeMWithInfo500 CommonError "The radius is not a number."
+      fromMaybeMWithInfo CommonInternalError "The radius is not a number."
         . readMaybe
         . toString
         $ conf ^. #_value

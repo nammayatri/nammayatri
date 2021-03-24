@@ -4,7 +4,6 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Case as Case
@@ -17,14 +16,15 @@ import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.API.Location as Location
+import Types.Error
 
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- Person.findPersonById $ Id _EntityId
-  driver <- if person ^. #_role == Person.DRIVER then return person else throwError400 AccessDenied
+  driver <- if person ^. #_role == Person.DRIVER then return person else throwError AccessDenied
   locationId <-
     driver ^. #_locationId & (Id <$>)
-      & fromMaybeMWithInfo500 PersonInvalidState "_locationId is null."
+      & fromMaybeM PersonLocationIdNotPresent
   Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
   return $ UpdateLocationRes "ACK"
 
@@ -32,15 +32,15 @@ getLocation :: Text -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandler $ do
   orderProductInstance <- ProductInstance.findByParentIdType (Just $ Id piId) Case.RIDEORDER
   driver <-
-    orderProductInstance ^. #_personId & fromMaybeMWithInfo400 ProductInstanceInvalidState "_personId is null. Driver is not assigned."
+    orderProductInstance ^. #_personId & fromMaybeMWithInfo PIPersonNotPresent "Driver is not assigned."
       >>= Person.findPersonById
   currLocation <-
     driver ^. #_locationId & (Id <$>)
-      & fromMaybeMWithInfo500 PersonInvalidState "_locationId is null."
+      & fromMaybeM PersonLocationIdNotPresent
       >>= Location.findLocationById
-      >>= fromMaybeM500 LocationNotFound
-  lat <- currLocation ^. #_lat & fromMaybeMWithInfo500 LocationInvalidState "_lat is null."
-  long <- currLocation ^. #_long & fromMaybeMWithInfo500 LocationInvalidState "_long is null."
+      >>= fromMaybeM LocationNotFound
+  lat <- currLocation ^. #_lat & fromMaybeM LocationLongLatNotFound
+  long <- currLocation ^. #_long & fromMaybeM LocationLongLatNotFound
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
 getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
@@ -72,7 +72,7 @@ getRoute _ Location.Request {..} =
   withFlowHandler $
     MapSearch.getRoute getRouteRequest
       >>= either
-        (throwErrorWithInfo400 UnableToGetRoute . show)
+        (throwErrorWithInfo UnableToGetRoute . show)
         return
   where
     mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long
@@ -96,10 +96,10 @@ calculateDistance source destination = do
     Right result -> pure $ MapSearch.distanceInM <$> headMaybe (result ^. #routes)
   where
     mkRouteRequest = do
-      sourceLat <- source ^. #_lat & fromMaybeMWithInfo500 LocationInvalidState "Source._lat is null."
-      sourceLng <- source ^. #_long & fromMaybeMWithInfo500 LocationInvalidState "Source._long is null."
-      destinationLat <- destination ^. #_lat & fromMaybeMWithInfo500 LocationInvalidState "Dest._lat is null."
-      destinationLng <- destination ^. #_long & fromMaybeMWithInfo500 LocationInvalidState "Dest._long is null."
+      sourceLat <- source ^. #_lat & fromMaybeMWithInfo LocationLongLatNotFound "Source._lat is null."
+      sourceLng <- source ^. #_long & fromMaybeMWithInfo LocationLongLatNotFound "Source._long is null."
+      destinationLat <- destination ^. #_lat & fromMaybeMWithInfo LocationLongLatNotFound "Dest._lat is null."
+      destinationLng <- destination ^. #_long & fromMaybeMWithInfo LocationLongLatNotFound "Dest._long is null."
       let sourceMapPoint = mkMapPoint sourceLat sourceLng
       let destinationMapPoint = mkMapPoint destinationLat destinationLng
       pure $

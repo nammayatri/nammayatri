@@ -5,13 +5,13 @@ module Storage.Queries.Vehicle where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Vehicle as Storage
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.Error
 import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
@@ -39,7 +39,7 @@ findByIdAndOrgId id orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either throwDBError pure
-    >>= fromMaybeM400 VehicleNotFound
+    >>= fromMaybeM VehicleNotFound
   where
     predicate Storage.Vehicle {..} = _id ==. B.val_ id &&. _organizationId ==. B.val_ orgId
 

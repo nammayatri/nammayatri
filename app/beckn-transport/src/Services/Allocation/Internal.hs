@@ -5,10 +5,9 @@ module Services.Allocation.Internal where
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (getCurrTime, throwErrorWithInfo500)
+import Beckn.Utils.Common (getCurrTime, throwErrorWithInfo)
 import qualified Beckn.Utils.Common as Common
 import qualified Beckn.Utils.Logging as Log
 import Data.Time
@@ -26,6 +25,7 @@ import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
 import Types.API.Ride (DriverResponse (..))
 import Types.App
+import Types.Error
 import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
@@ -198,4 +198,4 @@ getRideInfo rideId = do
       PI.INPROGRESS -> pure InProgress
       PI.COMPLETED -> pure Completed
       PI.CANCELLED -> pure Cancelled
-      _ -> throwErrorWithInfo500 CommonError "Unknown status to cast."
+      _ -> throwErrorWithInfo CommonInternalError "Unknown status to cast."

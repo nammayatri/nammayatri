@@ -10,7 +10,6 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
@@ -23,6 +22,7 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Prelude hiding (id)
 import Types.API.Location (LatLong (..))
 import Types.App
+import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
@@ -43,7 +43,7 @@ findPersonById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either throwDBError pure
-    >>= fromMaybeM400 PersonNotFound
+    >>= fromMaybeM PersonDoesNotExist
     >>= decrypt
   where
     predicate Storage.Person {..} = _id ==. B.val_ id

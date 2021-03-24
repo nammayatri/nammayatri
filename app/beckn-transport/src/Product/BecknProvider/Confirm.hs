@@ -40,11 +40,11 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   productInstance <- ProductInstance.findById prodInstId
   let transporterId' = Id $ productInstance ^. #_organizationId
   transporterOrg <- Organization.findOrganizationById transporterId'
-  unless (transporterId' == transporterId) (throwError400 AccessDenied)
+  unless (transporterId' == transporterId) (throwError AccessDenied)
   let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
-  bapOrgId <- searchCase ^. #_udf4 & fromMaybeMWithInfo500 CaseInvalidState "_udf4 is null. Bap org id is not present."
-  unless (bapOrg ^. #_id == Id bapOrgId) (throwError400 AccessDenied)
+  bapOrgId <- searchCase ^. #_udf4 & fromMaybeM CaseBapOrgIdNotPresent
+  unless (bapOrg ^. #_id == Id bapOrgId) (throwError AccessDenied)
   orderCase <- mkOrderCase searchCase
   _ <- Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -78,14 +78,14 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
   let transporterId = transporterOrg ^. #_id
   let prodInstId = productInstance ^. #_id
   result <- runSafeFlow $ do
-    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeMWithInfo500 ProductInstanceInvalidState "_fromLocation is null."
+    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM PIFromLocationIdNotPresent
     vehicleVariant :: Vehicle.Variant <-
       (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
-        & fromMaybeMWithInfo500 CaseInvalidState "_udf1 is null. Vehicle variant is not present."
+        & fromMaybeM CaseVehicleVariantNotPresent
     driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
     logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   case result of
     Right () -> notifySuccessGateway callbackUrl bppShortId

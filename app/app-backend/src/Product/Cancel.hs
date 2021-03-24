@@ -4,13 +4,12 @@ module Product.Cancel (cancel, onCancel) where
 
 import App.Types
 import qualified Beckn.Types.Core.API.Cancel as API
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, mkAckResponse', withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM, mkAckResponse, mkAckResponse', withFlowHandler)
 import Beckn.Utils.Logging (Log (..))
 import Data.Time (getCurrentTime)
 import qualified EulerHS.Language as L
@@ -20,6 +19,7 @@ import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Cancel as Cancel
+import Types.Error
 import Utils.Common (mkContext, validateContext)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
@@ -50,8 +50,8 @@ cancelProductInstance person req = do
           context = mkContext "cancel" txnId msgId currTime Nothing Nothing
       organization <-
         OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
-          >>= fromMaybeM500 OrganizationNotFound
-      baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+          >>= fromMaybeM OrgNotFound
+      baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
       eres <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
       case eres of
         Left err -> mkAckResponse' txnId "cancel" ("Err: " <> show err)

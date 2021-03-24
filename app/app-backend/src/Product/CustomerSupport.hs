@@ -5,7 +5,6 @@
 module Product.CustomerSupport where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
@@ -20,16 +19,17 @@ import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as PI
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.CustomerSupport as T
+import Types.Error
 import Types.ProductInfo as ProductInfo
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandler $ do
   personM <- Person.findByUsernameAndPassword _email _password
   case personM of
-    Nothing -> throwError401 PersonNotFound
+    Nothing -> throwError Unauthorized
     Just person ->
       if person ^. #_status /= SP.ACTIVE && person ^. #_role /= SP.CUSTOMER_SUPPORT
-        then throwError401 AccessDenied
+        then throwError Unauthorized
         else do
           token <- generateToken person
           pure $ T.LoginRes token "Logged in successfully"
@@ -47,7 +47,7 @@ logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
   withFlowHandler $
     if person ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError401 Unauthorized -- Do we need this Check?
+      then throwError Unauthorized -- Do we need this Check?
       else do
         RegistrationToken.deleteByPersonId (getId $ person ^. #_id)
         pure $ T.LogoutRes "Logged out successfully"
@@ -79,19 +79,19 @@ listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Int
 listOrder supportP mCaseId mMobile mlimit moffset =
   withFlowHandler $
     if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
-      then throwError403 AccessDenied
+      then throwError AccessDenied
       else do
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwError400 InvalidRequest
+          (_, _) -> throwError InvalidRequest
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
-          >>= fromMaybeMWithInfo400 PersonNotFound "User with this mobile number doesn't exists."
+          >>= fromMaybeMWithInfo PersonDoesNotExist "User with this mobile number doesn't exists."
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
           >>= either throwDBError pure
@@ -100,11 +100,11 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= either throwDBError pure
-          >>= fromMaybeMWithInfo400 CaseNotFound "RIDESEARCH case with this id is not found."
+          >>= fromMaybeMWithInfo CaseDoesNotExist "RIDESEARCH case with this id is not found."
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
         Person.findById (Id personId)
-          >>= fromMaybeM400 PersonNotFound
+          >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [_case]
 
 makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp

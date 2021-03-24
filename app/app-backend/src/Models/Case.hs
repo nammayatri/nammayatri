@@ -1,7 +1,6 @@
 module Models.Case where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Person (Person)
@@ -10,6 +9,7 @@ import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Q
+import Types.Error
 
 -- The layer between Storage.Queries and our business logic
 -- Here we should perform validations of all kinds
@@ -124,7 +124,7 @@ validateStatusChange :: CaseStatus -> Id Case -> Flow ()
 validateStatusChange newStatus caseId = do
   c <- findById caseId
   case validateStatusTransition (_status c) newStatus of
-    Left msg -> throwErrorWithInfo404 CaseInvalidStatus msg
+    Left msg -> throwErrorWithInfo CaseInvalidStatus msg
     _ -> pure ()
 
 updateInfo :: Id Case -> Text -> Flow ()

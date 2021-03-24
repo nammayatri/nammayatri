@@ -8,7 +8,6 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain as Domain
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Location as Location
@@ -33,6 +32,7 @@ import qualified Storage.Queries.Person as QP
 import Storage.Queries.ProductInstance as QPI
 import qualified Test.RandomStrings as RS
 import Types.API.Case
+import Types.Error
 import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
@@ -43,14 +43,14 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
     Just orgId -> do
       org <- OQ.findOrganizationById (Id orgId)
       when (org ^. #_status /= Organization.APPROVED) $
-        throwError401 AccessDenied
+        throwError Unauthorized
       caseList <-
         if not (org ^. #_enabled)
           then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #_fromTime)
           else Case.findAllByTypeStatuses limit offset csType status orgId now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
-    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
+    Nothing -> throwError PersonOrgIdNotPresent
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM

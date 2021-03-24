@@ -8,13 +8,12 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM500, withFlowHandler)
+import Beckn.Utils.Common (decodeFromText, encodeToText, fromMaybeM, withFlowHandler)
 import Beckn.Utils.Logging (Log (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -22,6 +21,7 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
+import Types.Error
 import Types.ProductInfo as ProductInfo
 import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
@@ -36,7 +36,7 @@ track person req = withFlowHandler $ do
   let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
-      >>= fromMaybeM500 OrganizationNotFound
+      >>= fromMaybeM OrgNotFound
   case decodeFromText =<< (prodInst ^. #_info) of
     Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
     Just (info :: ProductInfo) ->
@@ -44,7 +44,7 @@ track person req = withFlowHandler $ do
         Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
-          gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+          gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
           Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
 
 trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes

@@ -40,7 +40,7 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (foldWIndex, fromMaybeMWithInfo500, getCurrTime, headMaybe, throwErrorWithInfo400)
+import Beckn.Utils.Common (foldWIndex, fromMaybeMWithInfo, getCurrTime, headMaybe, throwErrorWithInfo)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import qualified Data.Text as T
@@ -83,10 +83,10 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> oneDropLocationExpected
     _ -> onePickupLocationExpected
   where
-    onePickupLocationExpected = throwErrorWithInfo400 CommonError "One pickup location expected."
-    oneDropLocationExpected = throwErrorWithInfo400 CommonError "One drop location expected."
-    pickupLocationNotFound = throwErrorWithInfo400 CommonError "Pickup location not found."
-    dropLocationNotFound = throwErrorWithInfo400 CommonError "Drop location not found."
+    onePickupLocationExpected = throwErrorWithInfo InvalidRequest "One pickup location expected."
+    oneDropLocationExpected = throwErrorWithInfo InvalidRequest "One drop location expected."
+    pickupLocationNotFound = throwErrorWithInfo InvalidRequest "Pickup location not found."
+    dropLocationNotFound = throwErrorWithInfo InvalidRequest "Drop location not found."
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
@@ -112,7 +112,7 @@ mkQuoteReqFromSelect SelectReq {..} = do
 readCoord :: Text -> Flow Double
 readCoord text = do
   let mCoord = readMaybe $ T.unpack text
-  maybe (throwErrorWithInfo400 CommonError "Location read error.") pure mCoord
+  maybe (throwErrorWithInfo InvalidRequest "Location read error.") pure mCoord
 
 mkOnSearchErrReq :: Context -> Error -> OnSearchReq
 mkOnSearchErrReq context err = do
@@ -238,7 +238,7 @@ mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
   now <- getCurrTime
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  quotation <- fromMaybeMWithInfo500 CommonError "Invalid order, no quotation." $ order ^. #_quotation
+  quotation <- fromMaybeMWithInfo CommonInternalError "Invalid order, no quotation." $ order ^. #_quotation
   return $
     InitOrder $
       order & #_id ?~ orderId

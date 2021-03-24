@@ -7,7 +7,6 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
 import qualified Beckn.Types.Storage.Case as Case
@@ -26,6 +25,7 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
+import Types.Error
 import qualified Types.ProductInfo as Products
 import Utils.Common (generateShortId, validateContext)
 import qualified Utils.Metrics as Metrics
@@ -36,19 +36,19 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrTime
   case_ <- QCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
-    throwError400 CaseExpired
+    throwError CaseExpired
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (Id productInstanceId)
   organization <-
     OQ.findOrganizationById (Id $ productInstance ^. #_organizationId)
-      >>= fromMaybeM500 OrganizationNotFound
+      >>= fromMaybeM OrgNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   QCase.create orderCase_
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
   MPI.create orderProductInstance
   msgId <- L.generateGUID
   context <- buildContext "confirm" caseId msgId
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   order <- mkOrder productInstance
   Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where

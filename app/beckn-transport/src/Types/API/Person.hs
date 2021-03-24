@@ -94,7 +94,7 @@ updateOrCreateLocation req Nothing = do
 updateOrCreateLocation req (Just locId) = do
   location <-
     QL.findLocationById (Id locId)
-      >>= fromMaybeM400 LocationNotFound
+      >>= fromMaybeM LocationDoesNotExist
   QL.updateLocationRec (Id locId) $ transformToLocation req location
   return location
 

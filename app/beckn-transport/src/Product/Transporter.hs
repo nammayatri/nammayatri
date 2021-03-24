@@ -4,7 +4,6 @@ module Product.Transporter where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.Error
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
@@ -18,6 +17,7 @@ import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Types.API.Transporter
 import qualified Types.Domain.FarePolicy as DFarePolicy
+import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
@@ -37,14 +37,14 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   where
     validate person = do
       unless (SP._verified person) $
-        throwError400 AccessDenied
+        throwError AccessDenied
       when (isJust $ SP._organizationId person) $
-        throwError400 PersonOrgExists
+        throwError PersonOrgExists
       when (SP._role person /= SP.ADMIN) $
-        throwError401 AccessDenied
+        throwError Unauthorized
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
-        throwError400 InvalidRequest
+        throwError InvalidRequest
     mkFarePolicy orgId vehicleVariant now = do
       farePolicyId <- L.generateGUID
       pure $
@@ -76,10 +76,10 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
           else modifyTransform req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
-    Nothing -> throwError400 PersonNotFound
+    Nothing -> throwError PersonDoesNotExist
   where
     validate person =
-      unless (SP._verified person) $ throwError400 AccessDenied
+      unless (SP._verified person) $ throwError AccessDenied
     addTime fromTime org =
       return $ org {SO._fromTime = fromTime}
 
@@ -89,10 +89,10 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
-    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
+    Nothing -> throwError PersonOrgIdNotPresent
   where
     validate person =
-      unless (SP._verified person) $ throwError400 AccessDenied
+      unless (SP._verified person) $ throwError AccessDenied
 
 transporterMandatoryFields :: TransporterReq -> [Maybe Text]
 transporterMandatoryFields req =

@@ -1,28 +1,39 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Types.Error where
+module Types.Error (module Types.Error) where
 
-import Beckn.TypeClass.IsError
-import Beckn.Types.Error
+import Beckn.TypeClass.IsDomainError
+import Beckn.Types.Error as Types.Error
 import EulerHS.Prelude
 
 data FarePolicyError
-  = FarePolicyNotFound
+  = FarePolicyDoesNotExist
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-instance IsError FarePolicyError APIError where
-  toError FarePolicyNotFound = apiErrorWithMsg "FARE_POLICY_NOT_FOUND" "Fare policy not found."
+instance IsDomainError FarePolicyError where
+  toError FarePolicyDoesNotExist = APIError "FARE_POLICY_DOES_NOT_EXIST" "No fare policy matches passed data."
+  toStatusCode FarePolicyDoesNotExist = E400
 
 data AllocationError
   = EmptyDriverPool
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-instance IsError AllocationError APIError where
-  toError EmptyDriverPool = apiErrorWithMsg "EMPTY_DRIVER_POOL" "No drivers nearby."
+instance IsDomainError AllocationError where
+  toError EmptyDriverPool = APIError "EMPTY_DRIVER_POOL" "No drivers nearby."
+  toStatusCode EmptyDriverPool = E400
 
 data DriverInformationError
   = DriverInfoNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-instance IsError DriverInformationError APIError where
-  toError DriverInfoNotFound = apiErrorWithMsg "DRIVER_INFORMATON_NOT_FOUND" "Driver information not found."
+instance IsDomainError DriverInformationError where
+  toError DriverInfoNotFound = APIError "DRIVER_INFORMATON_NOT_FOUND" "Driver information not found."
+  toStatusCode DriverInfoNotFound = E500
+
+data HealthCheckError
+  = ServiceUnavailable
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+instance IsDomainError HealthCheckError where
+  toError ServiceUnavailable = APIError "SERVICE_UNAVAILABLE" "Service is down."
+  toStatusCode ServiceUnavailable = E503

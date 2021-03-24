@@ -5,12 +5,11 @@ module Product.Status (status, onStatus) where
 import App.Types
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common (fromMaybeM500, mkAckResponse, withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM, mkAckResponse, withFlowHandler)
 import Beckn.Utils.Logging (Log (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -19,6 +18,7 @@ import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Status as Status
+import Types.Error
 import qualified Utils.Notifications as Notify
 import Utils.Routes
 
@@ -31,8 +31,8 @@ status person StatusReq {..} = withFlowHandler $ do
   context <- buildContext "status" caseId msgId
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
-      >>= fromMaybeM500 OrganizationNotFound
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+      >>= fromMaybeM OrgNotFound
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   Gateway.status baseUrl $ API.StatusReq context statusMessage
 

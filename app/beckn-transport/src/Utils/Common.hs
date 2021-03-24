@@ -5,7 +5,6 @@ module Utils.Common where
 
 import App.Types
 import Beckn.Types.App
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -16,9 +15,10 @@ import qualified Crypto.Number.Generate as Cryptonite
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant
+import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import Types.Error
 
 instance
   SanitizedUrl (sub :: Type) =>
@@ -77,18 +77,18 @@ instance VerificationMethod DriverVerifyToken where
 verifyAdmin :: SP.Person -> Flow Text
 verifyAdmin user = do
   when (user ^. #_role /= SP.ADMIN) $
-    throwError400 AccessDenied
+    throwError AccessDenied
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
+    Nothing -> throwError PersonOrgIdNotPresent
 
 verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
   unless ((user ^. #_role) `elem` [SP.ADMIN, SP.DRIVER]) $
-    throwError400 AccessDenied
+    throwError AccessDenied
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> throwErrorWithInfo400 PersonInvalidState "_organizationId is null."
+    Nothing -> throwError PersonOrgIdNotPresent
 
 validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do

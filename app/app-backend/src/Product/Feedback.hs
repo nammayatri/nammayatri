@@ -6,12 +6,11 @@ import qualified App.Types as App
 import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
-  ( fromMaybeM500,
-    throwError400,
+  ( fromMaybeM,
+    throwError,
     withFlowHandler,
   )
 import qualified EulerHS.Language as L
@@ -21,12 +20,13 @@ import qualified Models.Case as Case
 import qualified Models.ProductInstance as ProductInstance
 import qualified Storage.Queries.Organization as Organization
 import qualified Types.API.Feedback as API
+import Types.Error
 import Utils.Routes (buildContext)
 
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback person request = withFlowHandler $ do
   let ratingValue = request ^. #rating
-  unless (ratingValue `elem` [1 .. 5]) $ throwError400 InvalidRatingValue
+  unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let prodInstId = request ^. #productInstanceId
   product <- ProductInstance.findById $ Id prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
@@ -35,7 +35,7 @@ feedback person request = withFlowHandler $ do
   context <- buildContext "feedback" txnId messageId
   organization <-
     Organization.findOrganizationById (Id $ product ^. #_organizationId)
-      >>= fromMaybeM500 OrganizationNotFound
+      >>= fromMaybeM OrgNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage
           { order_id = prodInstId,
@@ -58,5 +58,5 @@ feedback person request = withFlowHandler $ do
                   _3d_render = Nothing
                 }
           }
-  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg

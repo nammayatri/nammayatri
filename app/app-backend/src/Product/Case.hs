@@ -4,7 +4,6 @@
 module Product.Case where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -16,6 +15,7 @@ import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Location as Location
 import Types.API.Case as API
+import Types.Error
 
 status ::
   Person.Person ->
@@ -25,10 +25,10 @@ status person caseId = withFlowHandler $ do
   case_ <- Case.findIdByPerson person caseId
   prodInstRes <- getProdInstances case_
   fromLocation <-
-    fromMaybeM500 LocationNotFound
+    fromMaybeM LocationNotFound
       =<< Location.findLocationById (Id $ case_ ^. #_fromLocationId)
   toLocation <-
-    fromMaybeM500 LocationNotFound
+    fromMaybeM LocationNotFound
       =<< Location.findLocationById (Id $ case_ ^. #_toLocationId)
   return $ StatusRes case_ prodInstRes fromLocation toLocation
 

@@ -89,8 +89,8 @@ findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
-    Right Nothing -> throwError500 SQLResultError
-    Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
+    Right Nothing -> throwError SQLResultError
+    Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
 
 findOne ::
   ( HasCallStack,
@@ -122,7 +122,7 @@ findAllOrErr dbTable predicate = do
   res <- run $ findAll' dbTable predicate
   case res of
     Right val -> return val
-    Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
+    Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
 
 findAll ::
   ( HasCallStack,
@@ -185,10 +185,10 @@ findOrCreateOne dbTable findPredicate insertExpression = do
         findAll' dbTable findPredicate
       xs -> pure xs
   case rez of
-    Right [] -> throwErrorWithInfo500 SQLResultError "Row not found"
+    Right [] -> throwErrorWithInfo SQLResultError "Row not found"
     Right [s] -> pure $ pure (Just s)
-    Right _ -> throwErrorWithInfo500 SQLResultError "Multiple rows found"
-    Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
+    Right _ -> throwErrorWithInfo SQLResultError "Multiple rows found"
+    Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
 
 findAllRows ::
   (HasCallStack, RunReadablePgTable table db) =>

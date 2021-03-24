@@ -27,7 +27,7 @@ selectCb _org req = withFlowHandler $ do
       <> show resp
   case req ^. #contents of
     Right msg -> do
-      quote <- (msg ^. #order . #_quotation) & fromMaybeM400 InvalidRequest
+      quote <- (msg ^. #order . #_quotation) & fromMaybeM InvalidRequest
       let quoteId = quote ^. #_id
       initReq <- buildInitReq ctx quoteId
       case req ^. #context . #_bpp_uri of

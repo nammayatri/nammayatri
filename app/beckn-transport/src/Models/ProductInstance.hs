@@ -1,7 +1,6 @@
 module Models.ProductInstance where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case (Case)
 import Beckn.Types.Storage.ProductInstance
@@ -9,6 +8,7 @@ import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
+import Types.Error
 
 -- The layer between Storage.Queries and our business logic
 -- Here we should perform validations of all kinds
@@ -36,7 +36,7 @@ updateStatusByIds ids status = do
 findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
-  checkDBErrorOrEmpty result ProductInstanceNotFound
+  checkDBErrorOrEmpty result PINotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: Id Case -> Flow [ProductInstance]
@@ -65,7 +65,7 @@ validatePIStatusesChange' newStatus =
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus productInstance =
   case validateStatusTransition (_status productInstance) newStatus of
-    Left msg -> throwErrorWithInfo404 ProductInstanceInvalidStatus msg
+    Left msg -> throwErrorWithInfo PIInvalidStatus msg
     _ -> pure ()
 
 findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]

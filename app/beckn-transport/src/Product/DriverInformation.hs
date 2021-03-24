@@ -5,11 +5,10 @@ module Product.DriverInformation where
 import qualified App.Types as App
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.Amount (amountToString)
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
-import Beckn.Utils.Common (fromMaybeM500, fromMaybeMWithInfo500, withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM, withFlowHandler)
 import EulerHS.Prelude
 import qualified Product.Location as Location
 import qualified Product.Person as Person
@@ -30,9 +29,9 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
   let driverId = Id _EntityId
   person <- QPerson.findPersonById (Id _EntityId)
   personEntity <- Person.mkPersonRes person
-  orgId <- person ^. #_organizationId & fromMaybeMWithInfo500 PersonInvalidState "_organizationId is null."
+  orgId <- person ^. #_organizationId & fromMaybeM PersonOrgIdNotPresent
   organization <- QOrganization.findOrganizationById $ Id orgId
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM500 DriverInfoNotFound
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
     DriverInformationAPI.DriverInformationResponse
       { transporter = organization,
@@ -57,11 +56,11 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
       let notificationExpiryTime = notification ^. #_expiresAt
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById $ cast driverId
-      driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeMWithInfo500 PersonInvalidState "_locationId is null."
-      fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeMWithInfo500 ProductInstanceInvalidState "_fromLocation is null."
-      toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeMWithInfo500 ProductInstanceInvalidState "_toLocation is null."
-      (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeMWithInfo500 LocationInvalidState "_lat or _long is null."
-      (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeMWithInfo500 LocationInvalidState "_lat or _long is null."
+      driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM PersonLocationIdNotPresent
+      fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM PIFromLocationIdNotPresent
+      toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM PIToLocationIdNotPresent
+      (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM LocationLongLatNotFound
+      (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM LocationLongLatNotFound
       mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
       return $
         DriverInformationAPI.GetRideInfoRes $

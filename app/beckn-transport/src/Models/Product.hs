@@ -1,11 +1,11 @@
 module Models.Product where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
 import qualified Storage.Queries.Products as Q
+import Types.Error
 
 -- The layer between Storage.Queries and our business logic
 -- Here we should perform validations of all kinds

@@ -6,7 +6,7 @@
 module Beckn.Utils.Common where
 
 import Beckn.Storage.DB.Config
-import Beckn.TypeClass.IsError
+import Beckn.TypeClass.IsDomainError
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack as Ack
@@ -83,7 +83,7 @@ checkClientError context = \case
 throwDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBError -> m a
 throwDBError err@(ET.DBError dbErrType msg) = do
   logError "DB error: " (show err)
-  uncurry throwErrorWithInfo500 $
+  uncurry throwErrorWithInfo $
     case dbErrType of
       ET.UnexpectedResult -> (SQLResultError, msg)
       ET.SQLError sqlErr -> (SQLRequestError, makeSqlErrMsg sqlErr msg)
@@ -100,48 +100,36 @@ checkDBError dbres =
 
 -- | Get rid of database error and empty result
 checkDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m, Log m, IsError b APIError) =>
+  (HasCallStack, L.MonadFlow m, Log m, IsDomainError b) =>
   ET.DBResult (Maybe a) ->
   b ->
   m a
 checkDBErrorOrEmpty dbres domainErrOnEmpty = case dbres of
   Left err -> throwDBError err
   Right maybeRes -> case maybeRes of
-    Nothing -> throwError500 domainErrOnEmpty
+    Nothing -> throwError domainErrOnEmpty
     Just x -> pure x
 
-fromMaybeM :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Maybe a -> m a
-fromMaybeM err = maybe logAndThrow pure
+fromMaybeM' :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Maybe a -> m a
+fromMaybeM' err = maybe logAndThrow pure
   where
     logAndThrow = do
       logError "FROMMAYBE" (decodeUtf8 $ errBody err)
       L.throwException err
 
-fromMaybeM400,
-  fromMaybeM401,
-  fromMaybeM404,
-  fromMaybeM500,
-  fromMaybeM503 ::
-    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Maybe b -> m b
-fromMaybeM400 err = fromMaybeM (S.err400 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM401 err = fromMaybeM (S.err401 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM404 err = fromMaybeM (S.err404 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM500 err = fromMaybeM (S.err500 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM503 err = fromMaybeM (S.err503 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM ::
+  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> Maybe b -> m b
+fromMaybeM err = fromMaybeM' (serverErr {errBody = A.encode $ toError err, errHeaders = [jsonHeader]})
+  where
+    serverErr = (toServerError $ toStatusCode err) {errBody = A.encode $ toError err, errHeaders = [jsonHeader]}
 
-fromMaybeMWithInfo400,
-  fromMaybeMWithInfo401,
-  fromMaybeMWithInfo404,
-  fromMaybeMWithInfo500,
-  fromMaybeMWithInfo503 ::
-    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Text -> Maybe b -> m b
-fromMaybeMWithInfo400 err info = fromMaybeM (S.err400 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
-fromMaybeMWithInfo401 err info = fromMaybeM (S.err401 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
-fromMaybeMWithInfo404 err info = fromMaybeM (S.err404 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
-fromMaybeMWithInfo500 err info = fromMaybeM (S.err500 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
-fromMaybeMWithInfo503 err info = fromMaybeM (S.err503 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+fromMaybeMWithInfo ::
+  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> Text -> Maybe b -> m b
+fromMaybeMWithInfo err info = fromMaybeM' (serverErr {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+  where
+    serverErr = toServerError $ toStatusCode err
 
-buildErrorBodyWithInfo :: (IsError a APIError) => a -> Text -> BSL.ByteString
+buildErrorBodyWithInfo :: (IsDomainError a) => a -> Text -> BSL.ByteString
 buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
 
 jsonHeader :: (HeaderName, ByteString)
@@ -231,7 +219,7 @@ authenticate = check handleKey
     check = maybe throw401
     throw401 :: HasLogContext r => FlowR r a
     throw401 =
-      throwError401 AuthBlocked
+      throwError AuthBlocked
 
 throwHttpError :: forall e m a. (HasCallStack, L.MonadFlow m, Log m, ToJSON e) => ServerError -> e -> m a
 throwHttpError err errMsg = do
@@ -239,50 +227,26 @@ throwHttpError err errMsg = do
   logError "HTTP_ERROR" (decodeUtf8 body)
   L.throwException err {errBody = body, errHeaders = jsonHeader : errHeaders err}
 
-throwError500,
-  throwError501,
-  throwError503,
-  throwError400,
-  throwError401,
-  throwError403,
-  throwError404 ::
-    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> m b
-throwError500 = throwHttpError @APIError S.err500 . toError
-throwError501 = throwHttpError @APIError S.err501 . toError
-throwError503 = throwHttpError @APIError S.err503 . toError
-throwError400 = throwHttpError @APIError S.err400 . toError
-throwError401 = throwHttpError @APIError S.err401 . toError
-throwError403 = throwHttpError @APIError S.err403 . toError
-throwError404 = throwHttpError @APIError S.err404 . toError
+throwError ::
+  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> m b
+throwError err = throwHttpError serverErr $ toError err
+  where
+    serverErr = toServerError $ toStatusCode err
 
-throwErrorWithInfo500,
-  throwErrorWithInfo501,
-  throwErrorWithInfo503,
-  throwErrorWithInfo400,
-  throwErrorWithInfo401,
-  throwErrorWithInfo403,
-  throwErrorWithInfo404 ::
-    (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Text -> m b
-throwErrorWithInfo500 err info = throwHttpError @APIError S.err500 $ buildAPIErrorWithInfo err info
-throwErrorWithInfo501 err info = throwHttpError @APIError S.err501 $ buildAPIErrorWithInfo err info
-throwErrorWithInfo503 err info = throwHttpError @APIError S.err503 $ buildAPIErrorWithInfo err info
-throwErrorWithInfo400 err info = throwHttpError @APIError S.err400 $ buildAPIErrorWithInfo err info
-throwErrorWithInfo401 err info = throwHttpError @APIError S.err401 $ buildAPIErrorWithInfo err info
-throwErrorWithInfo403 err info = throwHttpError @APIError S.err403 $ buildAPIErrorWithInfo err info
-throwErrorWithInfo404 err info = throwHttpError @APIError S.err404 $ buildAPIErrorWithInfo err info
+throwErrorWithInfo ::
+  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> Text -> m b
+throwErrorWithInfo err info = throwHttpError serverErr $ buildAPIErrorWithInfo err info
+  where
+    serverErr = toServerError $ toStatusCode err
 
-buildAPIErrorWithInfo :: (IsError a APIError) => a -> Text -> APIError
+buildAPIErrorWithInfo :: (IsDomainError a) => a -> Text -> APIError
 buildAPIErrorWithInfo err info =
   let apiErr = toError err
-   in apiErr {error = fmap updateErrorMsg $ apiErr ^. #error}
-  where
-    updateErrorMsg :: Error -> Error
-    updateErrorMsg error =
-      let defMsg = fromMaybe "" $ error ^. #_message
-       in error {_message = Just $ defMsg <> " " <> info}
+      defMsg = apiErr ^. #errorMessage
+   in apiErr {errorMessage = defMsg <> " " <> info}
 
-throwAuthError :: (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => [Header] -> a -> m b
-throwAuthError headers = throwHttpError @APIError (S.err401 {errHeaders = headers}) . toError
+throwAuthError :: (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => [Header] -> a -> m b
+throwAuthError headers = throwHttpError (S.err401 {errHeaders = headers}) . toError
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format

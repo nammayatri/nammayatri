@@ -36,7 +36,7 @@ getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
     >>= either throwDBError pure
-    >>= fromMaybeM400 EmptyDriverPool . listToMaybe . map (^. #_driverId)
+    >>= fromMaybeM EmptyDriverPool . listToMaybe . map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ _idleSince

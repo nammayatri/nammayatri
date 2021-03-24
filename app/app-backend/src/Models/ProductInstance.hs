@@ -1,7 +1,6 @@
 module Models.ProductInstance where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -11,6 +10,7 @@ import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
+import Types.Error
 
 -- The layer between Storage.Queries and our business logic
 -- Here we should perform validations of all kinds
@@ -48,7 +48,7 @@ updateMultiple piid prdInst = do
 findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById caseProductId
-  checkDBErrorOrEmpty result ProductInstanceNotFound
+  checkDBErrorOrEmpty result PINotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: Id Case.Case -> Flow [ProductInstance]
@@ -60,7 +60,7 @@ findAllByCaseId caseId = do
 findByProductId :: Id Products -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId pId
-  checkDBErrorOrEmpty result ProductInstanceNotFound
+  checkDBErrorOrEmpty result PINotFound
 
 -- | Get ProductInstance and validate its status change
 validatePIStatusChange :: ProductInstanceStatus -> Id ProductInstance -> Flow ()
@@ -83,7 +83,7 @@ validatePIStatusesChange' newStatus =
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus caseProduct =
   case validateStatusTransition (_status caseProduct) newStatus of
-    Left msg -> throwErrorWithInfo404 ProductInstanceInvalidStatus msg
+    Left msg -> throwErrorWithInfo PIInvalidStatus msg
     _ -> pure ()
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
@@ -109,7 +109,7 @@ findAllByParentId piid = do
 findByParentIdType :: Maybe (Id ProductInstance) -> Case.CaseType -> Flow ProductInstance
 findByParentIdType mparentId csType = do
   result <- Q.findByParentIdType mparentId csType
-  checkDBErrorOrEmpty result ProductInstanceNotFound
+  checkDBErrorOrEmpty result PINotFound
 
 findAllByPerson :: Id Person.Person -> Flow [ProductInstance]
 findAllByPerson perId = do

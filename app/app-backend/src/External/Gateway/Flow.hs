@@ -31,10 +31,10 @@ search url req = do
       case mNsdlUrl of
         Just nsdlBaseUrl ->
           callAPIWithTrail' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlSearch req) "search"
-        Nothing -> throwError500 NSDLBaseUrlNotSet
+        Nothing -> throwError NSDLBaseUrlNotSet
     Just "JUSPAY.BG.1" ->
       callAPIWithTrail' (Just signatureAuthManagerKey) url (API.search req) "search"
-    _ -> throwError500 GatewaySelectorNotSet
+    _ -> throwError GatewaySelectorNotSet
   case res of
     Left err -> do
       logError "Search" ("error occurred while search: " <> show err)

@@ -26,7 +26,6 @@ import Beckn.Types.Core.Order
   ( Order (..),
     OrderItem (OrderItem),
   )
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver (Driver)
 import Beckn.Types.Mobility.Payload (Payload (..))
@@ -53,6 +52,7 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import Types.App (Ride)
+import Types.Error
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
@@ -70,7 +70,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
 cancelRide :: Id Ride -> Flow ()
 cancelRide rideId = do
   orderPi <- ProductInstance.findById $ cast rideId
-  searchPiId <- ProductInstance._parentId orderPi & fromMaybeMWithInfo500 ProductInstanceInvalidState "_parentId is null."
+  searchPiId <- ProductInstance._parentId orderPi & fromMaybeM PIParentIdNotPresent
   piList <- ProductInstance.findAllByParentId (Just searchPiId)
   Case.updateStatusByIds (ProductInstance._caseId <$> piList) Case.CLOSED
   trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
@@ -79,9 +79,9 @@ cancelRide rideId = do
   _ <- ProductInstance.updateStatus (ProductInstance._id orderPi) ProductInstance.CANCELLED
 
   orderCase <- Case.findById (orderPi ^. #_caseId)
-  bapOrgId <- Case._udf4 orderCase & fromMaybeMWithInfo500 CaseInvalidState "_udf4 is null. Bap org id is not present."
+  bapOrgId <- Case._udf4 orderCase & fromMaybeM CaseBapOrgIdNotPresent
   bapOrg <- Organization.findOrganizationById $ Id bapOrgId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   let transporterId = Id $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
@@ -125,7 +125,7 @@ serviceStatus transporterId bapOrg req = withFlowHandler $ do
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ Id piId) Case.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
   notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId
@@ -175,13 +175,13 @@ trackTrip transporterId org req = withFlowHandler $ do
     Just parentCaseId -> do
       parentCase <- Case.findById parentCaseId
       --TODO : use forkFlow to notify gateway
-      callbackUrl <- org ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet
+      callbackUrl <- org ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
       transporter <- Organization.findOrganizationById transporterId
       let bppShortId = getShortId $ transporter ^. #_shortId
       notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId
       uuid <- L.generateGUID
       mkAckResponse uuid "track"
-    Nothing -> throwErrorWithInfo400 CaseInvalidState "_parentCaseId is null."
+    Nothing -> throwErrorWithInfo CaseFieldNotPresent "_parentCaseId is null."
 
 notifyTripUrlToGateway :: Case.Case -> Case.Case -> App.BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do
@@ -220,7 +220,7 @@ mkTrip c orderPi = do
   prodInst <- ProductInstance.findByCaseId $ c ^. #_id
   driver <- mapM mkDriverInfo $ prodInst ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (prodInst ^. #_entityId)
-  tripCode <- orderPi ^. #_udf4 & fromMaybeMWithInfo500 ProductInstanceInvalidState "_udf4 is null. OTP is not present."
+  tripCode <- orderPi ^. #_udf4 & fromMaybeM PIOTPNotPresent
   logInfo "vehicle" $ show vehicle
   return $
     Trip

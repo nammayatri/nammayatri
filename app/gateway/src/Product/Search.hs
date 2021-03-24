@@ -34,19 +34,19 @@ search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckRe
 search proxySign org req = withFlowHandler $ do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
-    throwErrorWithInfo400 CommonError "Invalid bap URI."
+    throwErrorWithInfo InvalidRequest "Invalid bap URI."
   let gatewaySearchSignAuth = ET.client $ withClientTracing GatewayAPI.searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of
-    (Nothing, _) -> throwError500 CallbackUrlNotSet
-    (_, Nothing) -> throwError500 CallbackApiKeyNotSet
+    (Nothing, _) -> throwError OrgCallbackUrlNotSet
+    (_, Nothing) -> throwError OrgCallbackApiKeyNotSet
     (Just cbUrl, Just cbApiKey) -> do
       providers <- BP.lookup context
       let bgSession = BA.GwSession cbUrl cbApiKey context
       BA.insert messageId bgSession
       forM_ providers $ \provider -> fork "Provider search" $ do
-        providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet -- Already checked for existance
+        providerUrl <- provider ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet -- Already checked for existance
         void $ BA.incrSearchReqCount messageId
         -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
         eRes <-
@@ -86,7 +86,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
   let gatewayOnSearchSignAuth = ET.client $ withClientTracing GatewayAPI.onSearchAPI
       messageId = req ^. #context . #_transaction_id
   void $ BA.incrOnSearchReqCount messageId
-  bgSession <- BA.lookup messageId >>= fromMaybeMWithInfo400 CommonError "Message not found."
+  bgSession <- BA.lookup messageId >>= fromMaybeMWithInfo InvalidRequest "Message not found."
   let baseUrl = bgSession ^. #cbUrl
   eRes <-
     callAPIWithTrail'
@@ -94,7 +94,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
       baseUrl
       (gatewayOnSearchSignAuth (Just proxySign) req)
       "on_search"
-  providerUrl <- provider ^. #_callbackUrl & fromMaybeM500 CallbackUrlNotSet -- Already checked for existance
+  providerUrl <- provider ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet -- Already checked for existance
   logDebug "gateway_transaction" $
     messageId
       <> ", search_cb: "

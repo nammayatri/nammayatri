@@ -31,7 +31,7 @@ import qualified Beckn.Types.FMD.Item as FMD
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeMWithInfo500, getCurrTime, headMaybe, throwError400)
+import Beckn.Utils.Common (fromMaybeMWithInfo, getCurrTime, headMaybe, throwError)
 import Control.Lens ((?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
@@ -62,8 +62,8 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> onePickupLocationExpected
     _ -> oneDropLocationExpected
   where
-    onePickupLocationExpected = throwError400 InvalidRequest
-    oneDropLocationExpected = throwError400 InvalidRequest
+    onePickupLocationExpected = throwError InvalidRequest
+    oneDropLocationExpected = throwError InvalidRequest
     mkLocDetails loc = do
       address <- mkAddress (loc ^. #_location)
       return $
@@ -254,7 +254,7 @@ mkItemDetails item =
 
 mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
 mkLocationDetails PickupOrDrop {..} = do
-  phone <- headMaybe (_poc ^. #phones) & fromMaybeMWithInfo500 CommonError "Person phone number is not present."
+  phone <- headMaybe (_poc ^. #phones) & fromMaybeMWithInfo CommonInternalError "Person phone number is not present."
   address <- mkAddress _location
   return $
     LocationDetails
@@ -275,8 +275,8 @@ mkLocationDetails PickupOrDrop {..} = do
 
 mkAddress :: CoreLoc.Location -> Flow Address
 mkAddress location = do
-  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeMWithInfo500 CommonError "Lat/long not found."
-  address <- CoreLoc._address location & fromMaybeMWithInfo500 CommonError "Address not found."
+  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeMWithInfo CommonInternalError "Lat/long not found."
+  address <- CoreLoc._address location & fromMaybeMWithInfo CommonInternalError "Address not found."
   return $
     Address
       { cty = CoreAddr._city address,

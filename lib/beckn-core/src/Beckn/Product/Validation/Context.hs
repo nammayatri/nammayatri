@@ -11,23 +11,23 @@ import EulerHS.Prelude
 validateDomain :: (L.MonadFlow m, Log m) => Domain -> Context -> m ()
 validateDomain expectedDomain context =
   unless (context ^. #_domain == expectedDomain) $
-    throwError400 InvalidDomain
+    throwError InvalidDomain
 
 validateCountry :: (L.MonadFlow m, Log m) => Context -> m ()
 validateCountry context =
   unless (context ^. #_country == Just "IND") $
-    throwError400 InvalidCountry
+    throwError InvalidCountry
 
 validateCity :: (L.MonadFlow m, Log m) => Context -> m ()
 validateCity context =
   -- just for testing purposes, to be rewritten later as well as country check
   unless (isJust $ context ^. #_country) $
-    throwError400 InvalidCity
+    throwError InvalidCity
 
 validateAction :: (L.MonadFlow m, Log m) => Text -> Context -> m ()
 validateAction expectedAction context =
   unless (context ^. #_action == expectedAction) $
-    throwError400 InvalidAction
+    throwError InvalidAction
 
 validateCoreVersion ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
@@ -38,7 +38,7 @@ validateCoreVersion ::
 validateCoreVersion context = do
   supportedVersion <- view #coreVersion
   unless (context ^. #_core_version == Just supportedVersion) $
-    throwError400 UnsupportedCoreVer
+    throwError UnsupportedCoreVer
 
 validateDomainVersion ::
   ( HasFlowEnv m r '["domainVersion" ::: Text],
@@ -49,7 +49,7 @@ validateDomainVersion ::
 validateDomainVersion context = do
   supportedVersion <- view #domainVersion
   unless (context ^. #_domain_version == Just supportedVersion) $
-    throwError400 UnsupportedDomainVer
+    throwError UnsupportedDomainVer
 
 validateContextCommons ::
   ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],

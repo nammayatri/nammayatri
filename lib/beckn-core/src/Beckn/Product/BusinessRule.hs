@@ -5,7 +5,7 @@ module Beckn.Product.BusinessRule where
 
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (throwError)
 import qualified Beckn.Utils.Logging as Log
 import Control.Monad.Except (MonadError, throwError)
 import EulerHS.Prelude
@@ -56,7 +56,7 @@ runBRFlowFatal br =
     Left be -> do
       let msg = "Error happened when evaluating business rule. Error: " +|| be ||+ ""
       logError "BusinessRule" msg
-      throwErrorWithInfo500 CommonError msg
+      throwErrorWithInfo CommonInternalError msg
     Right a -> pure a
 
 runBRFlowMaybe :: (Monad m, BusinessLog m) => BusinessRule m a -> m (Maybe a)

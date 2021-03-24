@@ -3,7 +3,7 @@ module Utils.Auth where
 import App.Types
 import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeM400)
+import Beckn.Utils.Common (fromMaybeM)
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
@@ -19,7 +19,7 @@ instance VerificationMethod VerifyAPIKey where
     \If you don't have an API key, register the app/gateway."
 
 verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
-verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM400 OrganizationNotFound)
+verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM OrgDoesNotExist)
 
 lookup :: HttpSig.LookupAction HttpSig.LookupRegistry AppEnv
 lookup = HttpSig.lookupRegistryAction Org.findOrgByShortId
