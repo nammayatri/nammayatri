@@ -114,7 +114,7 @@ failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
     result <- runHandler handleCase "2" "1" "otp"
-    result @?= Left (servantJsonError400 "NOT_AN_ORDER_EXECUTOR" "You are not an executor of this ride.")
+    result @?= Left (servantJsonError400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride.")
   where
     handleCase =
       handle
@@ -129,7 +129,7 @@ failedStartRequestedByNotDriverAndNotAdmin :: TestTree
 failedStartRequestedByNotDriverAndNotAdmin = do
   testCase "Fail ride starting if requested by not a driver and not an admin" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError400 "NOT_AN_ORDER_EXECUTOR" "You are not an executor of this ride.")
+    result @?= Left (servantJsonError400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride.")
   where
     handleCase =
       handle
@@ -144,7 +144,7 @@ failedStartWhenProductInstanceStatusIsWrong :: TestTree
 failedStartWhenProductInstanceStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError400 "INVALID_ORDER_STATUS" "Ride cannot be started.")
+    result @?= Left (servantJsonError400 "INVALID_RIDE_STATUS" "Ride cannot be started.")
   where
     handleCase =
       handle

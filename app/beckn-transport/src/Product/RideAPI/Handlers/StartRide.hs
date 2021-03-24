@@ -25,10 +25,10 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById $ Id requestorId
   orderPi <- findPIById $ Id rideId
   unless (requestor ^. #_role == Person.ADMIN) do
-    rideDriver <- orderPi ^. #_personId & fromMaybeMWithInfo400 "NOT_AN_ORDER_EXECUTOR" "You are not an executor of this ride."
+    rideDriver <- orderPi ^. #_personId & fromMaybeMWithInfo400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride."
     when (rideDriver /= Id requestorId || requestor ^. #_role /= Person.DRIVER) $
-      throwErrorWithInfo400 "NOT_AN_ORDER_EXECUTOR" "You are not an executor of this ride."
-  unless (isValidPiStatus (orderPi ^. #_status)) $ throwErrorWithInfo400 "INVALID_ORDER_STATUS" "Ride cannot be started."
+      throwErrorWithInfo400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride."
+  unless (isValidPiStatus (orderPi ^. #_status)) $ throwErrorWithInfo400 "INVALID_RIDE_STATUS" "Ride cannot be started."
   searchPiId <- orderPi ^. #_parentId & fromMaybeMWithInfo400 "INVALID_RIDE_ID" "Invalid ride id."
   searchPi <- findPIById searchPiId
   inAppOtp <- orderPi ^. #_udf4 & fromMaybeMWithInfo400 "RIDE_OTP_MISSING" "Ride does not have OTP."
