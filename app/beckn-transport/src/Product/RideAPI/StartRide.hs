@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.RideAPI.StartRide where
 
 import App.Types (AppEnv (dbCfg), Flow, FlowHandler)
@@ -15,10 +17,11 @@ import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
+import Types.API.Ride (StartRideReq (..))
 
-startRide :: SR.RegistrationToken -> Text -> Text -> FlowHandler APIResult.APIResult
-startRide SR.RegistrationToken {..} rideId otp = withFlowHandler $ do
-  Handler.startRideHandler handle _EntityId rideId otp
+startRide :: SR.RegistrationToken -> Text -> StartRideReq -> FlowHandler APIResult.APIResult
+startRide SR.RegistrationToken {..} rideId req = withFlowHandler $ do
+  Handler.startRideHandler handle _EntityId rideId (req ^. #otp)
   where
     handle =
       Handler.ServiceHandle

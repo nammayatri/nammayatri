@@ -420,8 +420,8 @@ type RideAPI =
            :> Post '[JSON] RideAPI.SetDriverAcceptanceRes
            :<|> TokenAuth
              :> Capture "rideId" Text
-             :> Capture "OTP" Text
              :> "start"
+             :> ReqBody '[JSON] RideAPI.StartRideReq
              :> Post '[JSON] APIResult
        )
 

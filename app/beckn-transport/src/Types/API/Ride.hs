@@ -36,3 +36,8 @@ instance FromJSON DriverResponse where
 
 instance ToJSON DriverResponse where
   toJSON = genericToJSON stripLensPrefixOptions
+
+newtype StartRideReq = StartRideReq
+  { otp :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
