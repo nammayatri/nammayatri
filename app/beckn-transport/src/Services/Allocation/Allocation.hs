@@ -95,17 +95,18 @@ process :: Monad m => ServiceHandle m -> Integer -> m Int
 process handle@ServiceHandle {..} requestsNum = do
   getRequestsStartTime <- getCurrentTime
   rides <- getRequests requestsNum
-  getRequestsEndTime <- getCurrentTime
-  let getRequestsTime = diffUTCTime getRequestsEndTime getRequestsStartTime
-  logInfo handle "Allocation service" $ show getRequestsTime <> " time spent for getRequests"
-
-  reqsHandlingStartTime <- getCurrentTime
   let ridesNum = length rides
-  traverse_ (processRequest handle) rides
-  reqsHandlingEndTime <- getCurrentTime
-  let reqsHandlingTime = diffUTCTime reqsHandlingEndTime reqsHandlingStartTime
-  logInfo handle "Allocation service" $
-    "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
+  unless (ridesNum == 0) $ do
+    getRequestsEndTime <- getCurrentTime
+    let getRequestsTime = diffUTCTime getRequestsEndTime getRequestsStartTime
+    logInfo handle "Allocation service" $ show getRequestsTime <> " time spent for getRequests"
+
+    reqsHandlingStartTime <- getCurrentTime
+    traverse_ (processRequest handle) rides
+    reqsHandlingEndTime <- getCurrentTime
+    let reqsHandlingTime = diffUTCTime reqsHandlingEndTime reqsHandlingStartTime
+    logInfo handle "Allocation service" $
+      "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
   pure ridesNum
 
 processRequest :: Monad m => ServiceHandle m -> RideRequest -> m ()
