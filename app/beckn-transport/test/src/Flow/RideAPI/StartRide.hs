@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (servantJsonError400)
+import Beckn.Utils.Common (servantJsonError400, servantJsonError500)
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide
@@ -174,7 +174,7 @@ failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError400 "RIDE_OTP_MISSING" "Ride does not have OTP.")
+    result @?= Left (servantJsonError500 "RIDE_OTP_MISSING" "Ride does not have OTP.")
   where
     handleCase =
       handle
@@ -189,4 +189,4 @@ failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
     result <- runHandler handle "1" "1" "otp2"
-    result @?= Left (servantJsonError400 "INCORRECT_TRIP_OTP" "Input OTP is wrong.")
+    result @?= Left (servantJsonError400 "INCORRECT_RIDE_OTP" "Input OTP is wrong.")

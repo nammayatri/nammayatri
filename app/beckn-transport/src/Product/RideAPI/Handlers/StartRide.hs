@@ -7,7 +7,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (fromMaybeMWithInfo400, throwErrorWithInfo400)
+import Beckn.Utils.Common (fromMaybeMWithInfo400, fromMaybeMWithInfo500, throwErrorWithInfo400)
 import Beckn.Utils.Logging (Log)
 import EulerHS.Prelude
 
@@ -31,8 +31,8 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   unless (isValidPiStatus (orderPi ^. #_status)) $ throwErrorWithInfo400 "INVALID_RIDE_STATUS" "Ride cannot be started."
   searchPiId <- orderPi ^. #_parentId & fromMaybeMWithInfo400 "INVALID_RIDE_ID" "Invalid ride id."
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #_udf4 & fromMaybeMWithInfo400 "RIDE_OTP_MISSING" "Ride does not have OTP."
-  when (otp /= inAppOtp) $ throwErrorWithInfo400 "INCORRECT_TRIP_OTP" "Input OTP is wrong."
+  inAppOtp <- orderPi ^. #_udf4 & fromMaybeMWithInfo500 "RIDE_OTP_MISSING" "Ride does not have OTP."
+  when (otp /= inAppOtp) $ throwErrorWithInfo400 "INCORRECT_RIDE_OTP" "Input OTP is wrong."
   piList <- findPIsByParentId searchPiId
   trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER
