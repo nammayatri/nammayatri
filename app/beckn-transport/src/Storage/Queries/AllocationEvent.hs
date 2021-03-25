@@ -21,14 +21,14 @@ create :: Storage.AllocationEvent -> Flow ()
 create allocationEvent = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression allocationEvent)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findAllocationEventById ::
   Id Storage.AllocationEvent -> Flow (Maybe Storage.AllocationEvent)
 findAllocationEventById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.AllocationEvent {..} = _id ==. B.val_ id
 

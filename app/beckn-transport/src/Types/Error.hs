@@ -11,18 +11,18 @@ data FarePolicyError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError FarePolicyError APIError where
-  toError FarePolicyNotFound = APIError "FARE_POLICY_NOT_FOUND" $ Just "Fare policy not found."
+  toError FarePolicyNotFound = apiErrorWithMsg "FARE_POLICY_NOT_FOUND" "Fare policy not found."
 
 data AllocationError
   = EmptyDriverPool
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError AllocationError APIError where
-  toError EmptyDriverPool = APIError "EMPTY_DRIVER_POOL" $ Just "No drivers nearby."
+  toError EmptyDriverPool = apiErrorWithMsg "EMPTY_DRIVER_POOL" "No drivers nearby."
 
 data DriverInformationError
   = DriverInfoNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError DriverInformationError APIError where
-  toError DriverInfoNotFound = APIError "DRIVER_INFORMATON_NOT_FOUND" $ Just "Driver information not found."
+  toError DriverInfoNotFound = apiErrorWithMsg "DRIVER_INFORMATON_NOT_FOUND" "Driver information not found."

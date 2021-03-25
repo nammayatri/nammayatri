@@ -120,17 +120,17 @@ select org req = do
 
     validateOrderRequest order = do
       let tasks = order ^. #_tasks
-      when (length tasks /= 1) $ throwBecknError400 "CURRENTLY_PROCESSING_ONLY_ONE_TASK_PER_ORDER"
+      when (length tasks /= 1) $ throwErrorWithInfo400 CommonError "Currently processing only one task per order."
       let task = head tasks
       let package = task ^. #_package
       let pickup = task ^. #_pickup
       let drop = task ^. #_drop
-      when (isJust $ pickup ^. #_time) $ throwBecknError400 "SCHEDULED_PICKUP_NOT_SUPPORTED"
-      when (isJust $ drop ^. #_time) $ throwBecknError400 "SCHEDULED_DROP_NOT_SUPPORTED"
+      when (isJust $ pickup ^. #_time) $ throwErrorWithInfo400 CommonError "Scheduled pickup not supported."
+      when (isJust $ drop ^. #_time) $ throwErrorWithInfo400 CommonError "Scheduled drop not supported."
       void $ case readMaybe . T.unpack =<< (package ^. #_package_category_id) of
-        Nothing -> throwBecknError400 "INVALID_PACKAGE_CATEGORY_ID"
+        Nothing -> throwErrorWithInfo400 CommonError "Invalid package category id."
         -- Category id is the index value of dzPackageContentList
-        Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwBecknError400 "INVALID_PACKAGE_CATEGORY_ID"
+        Just cid -> unless (cid > 0 && cid <= length dzPackageContentList) $ throwErrorWithInfo400 CommonError "Invalid package category id."
 
 init :: Org.Organization -> API.InitReq -> Flow API.InitRes
 init org req = do
@@ -254,7 +254,7 @@ confirm org req = do
           & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
       if confirmAmount == orderAmount
         then pass
-        else throwBecknError400 "INVALID_ORDER_AMOUNT"
+        else throwErrorWithInfo400 CommonError "Invalid order amount."
 
     updateCase case_ orderDetails taskStatus = do
       let caseId = case_ ^. #_id
@@ -307,7 +307,7 @@ confirm org req = do
       let orderCreatedAt = case_ ^. #_createdAt
       let thresholdTime = addUTCTime (fromInteger (dzQuotationTTLinMin * 60)) orderCreatedAt
       when (thresholdTime < now) $
-        throwBecknError400 "TOOK_TOO_LONG_TO_CONFIRM"
+        throwErrorWithInfo400 CommonError "Took too long to confirm."
 
 track :: Org.Organization -> API.TrackReq -> Flow API.TrackRes
 track org req = do
@@ -456,7 +456,7 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
     Nothing -> do
       eres <- API.getToken dzTokenUrl (TokenReq dzClientId dzClientSecret)
       case eres of
-        Left err -> throwBecknError500 $ show err
+        Left err -> throwErrorWithInfo500 CommonError $ show err
         Right (TokenRes token) -> do
           Dz.insertToken dzClientId token
           return token
@@ -477,4 +477,4 @@ validateReturn currOrder =
     -- validating that the items which are returned should be a subset of items in the actual order.
     -- would fail when there are duplicates in current order items
     unless (null $ (Item._id <$> currOrder ^. #_items) List.\\ (Item._id <$> prevOrder ^. #_items)) $
-      throwBecknError400 "INVALID_RETURN_ORDER"
+      throwErrorWithInfo400 CommonError "Invalid return order."

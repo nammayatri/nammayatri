@@ -4,7 +4,6 @@ module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) w
 
 import App.Types
 import Beckn.Storage.DB.Config (DBConfig (..))
-import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Error
 import Beckn.Utils.Common
 import Control.Exception (Handler (..), catches)
@@ -40,7 +39,7 @@ withPostgreSQLSimple f = do
   DBConfig {..} <- asks dbCfg
   pool <-
     L.getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
-      >>= either DB.throwDBError pure
+      >>= either throwDBError pure
       >>= \case
         PostgresPool _connTag pool -> pure pool
         _ -> throwError500 NotPostgresBackend

@@ -6,7 +6,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
-import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
+import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -29,13 +29,13 @@ createInitialDriverStats driverId = do
             _idleSince = now
           }
   DB.createOne dbTable (Storage.Common.insertExpression driverStats)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 getFirstDriverInTheQueue :: [Id Driver] -> Flow (Id Driver)
 getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 EmptyDriverPool . listToMaybe . map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
@@ -46,7 +46,7 @@ updateIdleTime driverId = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause now) (predicate driverId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     setClause now Storage.DriverStats {..} =
       mconcat
@@ -58,12 +58,12 @@ fetchAll :: Flow [Storage.DriverStats]
 fetchAll = do
   dbTable <- getDbTable
   DB.findAllRows dbTable
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 deleteById :: Id Driver -> Flow ()
 deleteById driverId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate driverId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate dId Storage.DriverStats {..} = _driverId ==. B.val_ dId

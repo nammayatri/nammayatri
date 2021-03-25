@@ -4,7 +4,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (getSchemaName)
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude
@@ -20,7 +20,7 @@ findValueByOrgIdAndKey :: Id Organization -> ConfigKey -> Flow (Maybe Transporte
 findValueByOrgIdAndKey orgId key = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate TransporterConfig.TransporterConfig {..} =
       _transporterId ==. B.val_ orgId

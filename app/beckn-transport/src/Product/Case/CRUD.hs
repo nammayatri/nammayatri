@@ -43,7 +43,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
     Just orgId -> do
       org <- OQ.findOrganizationById (Id orgId)
       when (org ^. #_status /= Organization.APPROVED) $
-        throwBecknError401 "Unauthorized"
+        throwError401 AccessDenied
       caseList <-
         if not (org ^. #_enabled)
           then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #_fromTime)

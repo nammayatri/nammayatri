@@ -108,14 +108,14 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
     Just c -> return c
     Nothing -> do
       logError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
-      throwErrorWithInfo401 CommonError "Invalid key id."
+      throwErrorWithInfo401 Unauthorized "Invalid key id."
   org <-
     findOrgByShortId (ShortId $ cred ^. #shortOrgId)
       >>= maybe (throwError401 OrganizationNotFound) pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
       logError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
-      throwErrorWithInfo401 CommonError "Invalid public key."
+      throwErrorWithInfo401 Unauthorized "Invalid public key."
     Just key -> return key
   return (org, pk, selfUrl)
 
@@ -251,7 +251,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   isVerified <- performVerification key host body
   unless isVerified $ do
     logError logTag "Signature is not valid."
-    throwAuthError [HttpSig.mkSignatureRealm getRealm host] "RESTRICTED"
+    throwAuthError [HttpSig.mkSignatureRealm getRealm host] AccessDenied
   pure lookupResult
   where
     logTag = "verifySignature-" <> headerName
@@ -279,7 +279,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
           signature
     throwVerificationFail host err = do
       logError logTag $ "Failed to verify the signature. Error: " <> show err
-      throwAuthError [HttpSig.mkSignatureRealm headerName host] "RESTRICTED"
+      throwAuthError [HttpSig.mkSignatureRealm headerName host] AccessDenied
 
 withBecknAuth ::
   (ToJSON req, HasLogContext r) =>

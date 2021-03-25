@@ -34,13 +34,13 @@ search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckRe
 search proxySign org req = withFlowHandler $ do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
-    throwBecknError400 "INVALID_BAP_URI"
+    throwErrorWithInfo400 CommonError "Invalid bap URI."
   let gatewaySearchSignAuth = ET.client $ withClientTracing GatewayAPI.searchAPI
       context = req ^. #context
       messageId = context ^. #_transaction_id
   case (Org._callbackUrl org, Org._callbackApiKey org) of
-    (Nothing, _) -> throwBecknError500 "CB_URL_NOT_CONFIGURED"
-    (_, Nothing) -> throwBecknError500 "CB_API_KEY_NOT_CONFIGURED"
+    (Nothing, _) -> throwError500 CallbackUrlNotSet
+    (_, Nothing) -> throwError500 CallbackApiKeyNotSet
     (Just cbUrl, Just cbApiKey) -> do
       providers <- BP.lookup context
       let bgSession = BA.GwSession cbUrl cbApiKey context

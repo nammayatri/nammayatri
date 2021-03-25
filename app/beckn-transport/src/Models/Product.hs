@@ -5,7 +5,6 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
-import EulerHS.Prelude
 import qualified Storage.Queries.Products as Q
 
 -- The layer between Storage.Queries and our business logic
@@ -19,4 +18,4 @@ import qualified Storage.Queries.Products as Q
 findById :: Id Products -> Flow Products
 findById pid = do
   result <- Q.findById' pid
-  checkDBErrorOrEmpty result $ CaseErr CaseNotFound
+  checkDBErrorOrEmpty result CaseNotFound

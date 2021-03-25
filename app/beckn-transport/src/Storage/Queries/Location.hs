@@ -26,14 +26,14 @@ create :: Storage.Location -> Flow ()
 create Storage.Location {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
@@ -42,7 +42,7 @@ updateLocationRec locationId location = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause location now) (predicate locationId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     setClause loc n Storage.Location {..} =
       mconcat

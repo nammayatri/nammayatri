@@ -30,7 +30,7 @@ feedback _transporterId _organization request = withFlowHandler $ do
   personId <- getPersonId productInstances & fromMaybeMWithInfo500 ProductInstanceInvalidState "_personId is null. Driver is not assigned."
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
   unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
-    throwBecknError401 "ORDER_NOT_READY_FOR_RATING"
+    throwErrorWithInfo401 ProductInstanceInvalidStatus "Order is not ready for rating."
   ratingValue :: Int <-
     decodeFromText (request ^. #message . #rating . #_value)
       & fromMaybeMWithInfo400 CommonError "Invalid rating type."

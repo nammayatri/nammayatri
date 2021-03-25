@@ -7,7 +7,7 @@ import Beckn.Types.Core.API.Log
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error
-import Beckn.Types.Error hiding (ErrorCode)
+import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import qualified Data.Text as T

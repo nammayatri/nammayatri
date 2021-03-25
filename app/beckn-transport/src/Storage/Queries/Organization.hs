@@ -25,14 +25,14 @@ create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
   dbTable <- getDbTable
   logInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
@@ -41,7 +41,7 @@ findOrganizationById :: Id Storage.Organization -> Flow Storage.Organization
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 OrganizationNotFound
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
@@ -50,7 +50,7 @@ findOrganizationByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage
 findOrganizationByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable (\Storage.Organization {..} -> _shortId ==. B.val_ shortId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 listOrganizations ::
   Maybe Int ->
@@ -61,7 +61,7 @@ listOrganizations ::
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -115,7 +115,7 @@ updateOrganizationRec :: Storage.Organization -> Flow ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
   DB.update dbTable (setClause org) (predicate $ org ^. #_id)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     setClause sOrg Storage.Organization {..} =
       mconcat
@@ -132,7 +132,7 @@ findOrgByApiKey :: APIKey -> Flow (Maybe Storage.Organization)
 findOrgByApiKey apiKey = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
@@ -141,7 +141,7 @@ findOrgByCbUrl :: BaseUrl -> Flow Storage.Organization
 findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 OrganizationNotFound
   where
     predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
@@ -150,7 +150,7 @@ findOrgByShortId :: ShortId Storage.Organization -> Flow Storage.Organization
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 OrganizationNotFound
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId

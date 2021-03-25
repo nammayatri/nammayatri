@@ -3,50 +3,24 @@
 module Beckn.Types.Error where
 
 import Beckn.TypeClass.IsError
+import qualified Beckn.Types.Core.Ack as Ack
+import qualified Beckn.Types.Core.Error as Error
 import EulerHS.Prelude
-import EulerHS.Types
-
-data Action = ACK | NACK deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
-
-newtype ErrorCode = ErrorCode {fromErrorCode :: Int}
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-newtype ErrorMsg = ErrorMsg {fromErrorMsg :: Text}
-  deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
-
-instance IsString ErrorMsg where
-  fromString = ErrorMsg . fromString
 
 data APIError = APIError
-  { errorCode :: Text,
-    errorMessage :: Maybe Text
+  { message :: Ack.Ack,
+    error :: Maybe Error.Error
   }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 apiError :: Text -> APIError
-apiError code = APIError code Nothing
+apiError code = APIError (Ack.Ack "NACK") . Just $ makeError code Nothing
 
-data DomainError
-  = AuthErr AuthError
-  | QuotaErr QuotaError
-  | CommentErr CommentError
-  | CustomerErr CustomerError
-  | DocumentErr DocumentError
-  | HealthCheckErr HealthCheckError
-  | PersonErr PersonError
-  | RouteErr RouteError
-  | ProductInfoErr ProductInfoError
-  | LocationErr LocationError
-  | TagErr TagError
-  | OrganizationErr OrganizationError
-  | TransporterErr TransporterError
-  | CaseErr CaseError
-  | ProductInstanceErr ProductInstanceError
-  | ProductErr ProductError
-  | UnknownDomainError ErrorMsg
-  | DatabaseError DBError
-  | SystemErr SystemError
-  deriving (Generic, Eq, Show)
+apiErrorWithMsg :: Text -> Text -> APIError
+apiErrorWithMsg code msg = APIError (Ack.Ack "NACK") . Just . makeError code $ Just msg
+
+makeError :: Text -> Maybe Text -> Error.Error
+makeError err = Error.Error "DOMAIN-ERROR" err Nothing
 
 data AuthError
   = Unauthorized
@@ -57,120 +31,59 @@ data AuthError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError AuthError APIError where
-  toError Unauthorized = APIError "UNAUTHORIZED" $ Just "Unauthorized action."
-  toError InvalidAuthData = APIError "INVALID_AUTH_DATA" $ Just "Authentication data is not valid."
-  toError TokenExpired = APIError "TOKEN_EXPIRED" $ Just "Token expired."
-  toError InvalidToken = APIError "INVALID_TOKEN" $ Just "Invalid registration token."
-  toError AuthBlocked = APIError "AUTH_BLOCKED" $ Just "Authentication process blocked."
+  toError Unauthorized = apiErrorWithMsg "UNAUTHORIZED" "Unauthorized action."
+  toError InvalidAuthData = apiErrorWithMsg "INVALID_AUTH_DATA" "Authentication data is not valid."
+  toError TokenExpired = apiErrorWithMsg "TOKEN_EXPIRED" "Token expired."
+  toError InvalidToken = apiErrorWithMsg "INVALID_TOKEN" "Invalid registration token."
+  toError AuthBlocked = apiErrorWithMsg "AUTH_BLOCKED" "Authentication process blocked."
 
 data RatingError
   = InvalidRatingValue
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError RatingError APIError where
-  toError InvalidRatingValue = APIError "INVALID_RATING_VALUE" $ Just "Invalid rating value."
+  toError InvalidRatingValue = apiErrorWithMsg "INVALID_RATING_VALUE" "Invalid rating value."
 
 data VehicleError
   = VehicleNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError VehicleError APIError where
-  toError VehicleNotFound = APIError "VEHICLE_NOT_FOUND" $ Just "Vehicle not found."
-
-data QuotaError
-  = QuotaNotFound
-  | QuotaNotCreated
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError QuotaError APIError where
-  toError QuotaNotFound = apiError "QUOTA_NOT_FOUND"
-  toError QuotaNotCreated = apiError "QUOTA_NOT_CREATED"
-
-data CommentError
-  = CommentNotFound
-  | CommentNotCreated
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError CommentError APIError where
-  toError CommentNotFound = apiError "COMMENT_NOT_FOUND"
-  toError CommentNotCreated = apiError "COMMENT_NOT_CREATED"
-
-data CustomerError
-  = CustomerNotFound
-  | CannotCreateCustomer
-  | CustomerOrgMismatch
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError CustomerError APIError where
-  toError CustomerNotFound = apiError "CUSTOMER_NOT_FOUND"
-  toError CannotCreateCustomer = apiError "CANNOT_CREATE_CUSTOMER"
-  toError CustomerOrgMismatch = apiError "CUSTOMER_ORG_MISMATCH"
+  toError VehicleNotFound = apiErrorWithMsg "VEHICLE_NOT_FOUND" "Vehicle not found."
 
 data PersonError
   = PersonNotFound
   | PersonInvalidState
   | PersonOrgExists
-  | PersonNotUpdated
-  | PersonNotCreated
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError PersonError APIError where
-  toError PersonNotFound = APIError "PERSON_NOT_FOUND" $ Just "Person not found."
-  toError PersonInvalidState = APIError "LOCATION_INVALID_STATE" $ Just "Required field is null in this person."
-  toError PersonOrgExists = APIError "ORG_ALREADY_EXISTS" $ Just "Person already registered an organization."
-  toError PersonNotUpdated = apiError "PERSON_NOT_UPDATED"
-  toError PersonNotCreated = apiError "PERSON_NOT_CREATED"
-
-data TransporterError
-  = TransporterNotFound
-  | TransporterNotUpdated
-  | TransporterNotCreated
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError TransporterError APIError where
-  toError TransporterNotFound = apiError "TRANSPORTER_NOT_FOUND"
-  toError TransporterNotUpdated = apiError "TRANSPORTER_NOT_UPDATED"
-  toError TransporterNotCreated = apiError "TRANSPORTER_NOT_CREATED"
+  toError PersonNotFound = apiErrorWithMsg "PERSON_NOT_FOUND" "Person not found."
+  toError PersonInvalidState = apiErrorWithMsg "LOCATION_INVALID_STATE" "Required field is null in this person."
+  toError PersonOrgExists = apiErrorWithMsg "ORG_ALREADY_EXISTS" "Person already registered an organization."
 
 data LocationError
   = LocationNotFound
   | LocationInvalidState
-  | LocationNotUpdated
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError LocationError APIError where
-  toError LocationNotFound = APIError "LOCATION_NOT_FOUND" $ Just "Location not found."
-  toError LocationInvalidState = APIError "LOCATION_INVALID_STATE" $ Just "Required field is null in this location."
-  toError LocationNotUpdated = apiError "LOCATION_NOT_UPDATED"
+  toError LocationNotFound = apiErrorWithMsg "LOCATION_NOT_FOUND" "Location not found."
+  toError LocationInvalidState = apiErrorWithMsg "LOCATION_INVALID_STATE" "Required field is null in this location."
 
 data RouteError
   = UnableToGetRoute
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError RouteError APIError where
-  toError UnableToGetRoute = APIError "UNABLE_TO_GET_ROUTE" $ Just "Unable to get route."
-
-data DocumentError
-  = InvalidPassApplicationId
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError DocumentError APIError where
-  toError InvalidPassApplicationId = apiError "INVALID_PASS_APPLICATION_ID"
+  toError UnableToGetRoute = apiErrorWithMsg "UNABLE_TO_GET_ROUTE" "Unable to get route."
 
 data HealthCheckError
   = ServiceUnavailable
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError HealthCheckError APIError where
-  toError ServiceUnavailable = APIError "SERVICE_UNAVAILABLE" $ Just "Service is down."
-
-data TagError
-  = TagNotFound
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError TagError APIError where
-  toError TagNotFound =
-    apiError "TAG_NOT_FOUND"
+  toError ServiceUnavailable = apiErrorWithMsg "SERVICE_UNAVAILABLE" "Service is down."
 
 data AmbiguousError
   = UnknownError
@@ -179,79 +92,53 @@ data AmbiguousError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError AmbiguousError APIError where
-  toError UnknownError = APIError "UNKNOWN_ERROR" $ Just "Something unknown happened."
-  toError CommonError = APIError "COMMON_ERROR" $ Just "Something common happened in workflow."
-  toError UnexpectedError = APIError "UNEXPECTED_ERROR" $ Just "Happened something, that shouldn't be happen at all."
+  toError UnknownError = apiErrorWithMsg "UNKNOWN_ERROR" "Something unknown happened."
+  toError CommonError = apiErrorWithMsg "COMMON_ERROR" "Something common happened in workflow."
+  toError UnexpectedError = apiErrorWithMsg "UNEXPECTED_ERROR" "Happened something, that shouldn't be happen at all."
 
 data OrganizationError
   = OrganizationNotFound
   | OrganizationInvalidState
   | CallbackUrlNotSet
   | CallbackApiKeyNotSet
-  | OrganizationIdMissing
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError OrganizationError APIError where
-  toError OrganizationNotFound = APIError "ORGANIZATION_NOT_FOUND" $ Just "Organization not found."
-  toError OrganizationInvalidState = APIError "ORGANIZATION_INVALID_STATE" $ Just "Required field is null in this organization."
-  toError OrganizationIdMissing = apiError "ORGANIZATION_ID_MISSING"
-  toError CallbackUrlNotSet = APIError "CALLBACK_URL_NOT_SET" $ Just "Callback url for organization is not set."
-  toError CallbackApiKeyNotSet = APIError "CALLBACK_API_KEY_NOT_SET" $ Just "Callback api key for organization is not set."
+  toError OrganizationNotFound = apiErrorWithMsg "ORGANIZATION_NOT_FOUND" "Organization not found."
+  toError OrganizationInvalidState = apiErrorWithMsg "ORGANIZATION_INVALID_STATE" "Required field is null in this organization."
+  toError CallbackUrlNotSet = apiErrorWithMsg "CALLBACK_URL_NOT_SET" "Callback url for organization is not set."
+  toError CallbackApiKeyNotSet = apiErrorWithMsg "CALLBACK_API_KEY_NOT_SET" "Callback api key for organization is not set."
 
 data CaseError
   = CaseNotFound
-  | CaseNotCreated
   | CaseExpired
-  | CaseNotUpdated
+  | CaseInvalidStatus
   | CaseInvalidState
-  | CaseStatusTransitionErr ErrorMsg
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError CaseError APIError where
-  toError CaseNotFound = APIError "CASE_NOT_FOUND" $ Just "Case with this id is not found."
-  toError CaseNotCreated = apiError "CASE_NOT_CREATED"
-  toError CaseExpired = APIError "CASE_EXPIRED" $ Just "This case expired and no longer valid."
-  toError CaseInvalidState = APIError "CASE_INVALID_STATE" $ Just "Required field is null in this case."
-  toError CaseNotUpdated = apiError "CASE_NOT_UPDATED"
-  toError (CaseStatusTransitionErr msg) = APIError "CASE_STATUS_TRANSITION_ERROR" . Just $ fromErrorMsg msg
+  toError CaseNotFound = apiErrorWithMsg "CASE_NOT_FOUND" "Case with this id is not found."
+  toError CaseExpired = apiErrorWithMsg "CASE_EXPIRED" "This case expired and no longer valid."
+  toError CaseInvalidState = apiErrorWithMsg "CASE_INVALID_STATE" "Required field is null in this case."
+  toError CaseInvalidStatus = apiErrorWithMsg "CASE_INVALID_STATUS" "Attempted to do some action in wrong case status."
 
 data ProductInstanceError
   = ProductInstanceNotFound
   | ProductInstanceInvalidState
   | ProductInstanceInvalidStatus
-  | ProductInstanceStatusTransitionErr ErrorMsg
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ProductInstanceError APIError where
   toError ProductInstanceNotFound = apiError "PRODUCT_INSTANCE_NOT_FOUND"
-  toError ProductInstanceInvalidState = APIError "PRODUCT_INSTANCE_INVALID_STATE" $ Just "Required field is null in this product instance."
-  toError ProductInstanceInvalidStatus = APIError "PRODUCT_INSTANCE_INVALID_STATUS" $ Just "Attempted to do some action in wrong product instance status."
-  toError (ProductInstanceStatusTransitionErr msg) =
-    APIError "PRODUCT_INSTANCE_STATUS_TRANSITION_ERROR" . Just $ fromErrorMsg msg
-
-data ProductError
-  = ProductNotFound
-  | ProductInvalidState
-  | ProductNotUpdated
-  | ProductNotCreated
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsError ProductError APIError where
-  toError ProductNotFound = apiError "PRODUCT_NOT_FOUND"
-  toError ProductInvalidState = APIError "PRODUCT_INVALID_STATE" $ Just "Required field is null in this product."
-  toError ProductNotUpdated = apiError "PRODUCT_NOT_UPDATED"
-  toError ProductNotCreated = apiError "PRODUCT_NOT_CREATED"
+  toError ProductInstanceInvalidState = apiErrorWithMsg "PRODUCT_INSTANCE_INVALID_STATE" "Required field is null in this product instance."
+  toError ProductInstanceInvalidStatus = apiErrorWithMsg "PRODUCT_INSTANCE_INVALID_STATUS" "Attempted to do some action in wrong product instance status."
 
 data ProductInfoError
   = ProductInfoNotFound
-  | ProductInfoNotUpdated
-  | OtherProductInfoError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ProductInfoError APIError where
-  toError ProductInfoNotFound = APIError "PRODUCT_INFO_NOT_FOUND" $ Just "Product info not found."
-  toError ProductInfoNotUpdated = apiError "PRODUCT_INFO_NOT_UPDATED"
-  toError OtherProductInfoError = apiError "OTHER_PRODUCT_INFO_ERROR"
+  toError ProductInfoNotFound = apiErrorWithMsg "PRODUCT_INFO_NOT_FOUND" "Product info not found."
 
 data GatewayError
   = GatewaySelectorNotSet
@@ -259,22 +146,22 @@ data GatewayError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError GatewayError APIError where
-  toError GatewaySelectorNotSet = APIError "GATEWAY_SELECTOR_NOT_SET" $ Just "Gateway selector is not set."
-  toError NSDLBaseUrlNotSet = APIError "NSDL_BASEURL_NOT_SET" $ Just "NSDL base url is not set."
+  toError GatewaySelectorNotSet = apiErrorWithMsg "GATEWAY_SELECTOR_NOT_SET" "Gateway selector is not set."
+  toError NSDLBaseUrlNotSet = apiErrorWithMsg "NSDL_BASEURL_NOT_SET" "NSDL base url is not set."
 
 data ServiceabilityError
   = ProductNotServiceable
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ServiceabilityError APIError where
-  toError ProductNotServiceable = APIError "PRODUCT_NOT_SERVICEABLE" $ Just "Requested product is not serviceable for some reason."
+  toError ProductNotServiceable = apiErrorWithMsg "PRODUCT_NOT_SERVICEABLE" "Requested product is not serviceable for some reason."
 
 data APIRequestError
   = InvalidRequest
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError APIRequestError APIError where
-  toError InvalidRequest = APIError "API_REQUEST_ERROR" $ Just "Not enough data to complete request."
+  toError InvalidRequest = apiErrorWithMsg "API_REQUEST_ERROR" "Not enough data to complete request."
 
 data CommunicationError
   = UnableToSendSMS
@@ -282,8 +169,8 @@ data CommunicationError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError CommunicationError APIError where
-  toError UnableToSendSMS = APIError "UNABLE_TO_SEND_SMS" $ Just "Unable to send SMS."
-  toError UnableToCall = APIError "UNABLE_TO_CALL" $ Just "Unable to call."
+  toError UnableToSendSMS = apiErrorWithMsg "UNABLE_TO_SEND_SMS" "Unable to send SMS."
+  toError UnableToCall = apiErrorWithMsg "UNABLE_TO_CALL" "Unable to call."
 
 data ValidationError
   = IncorrectOTP
@@ -291,19 +178,21 @@ data ValidationError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError ValidationError APIError where
-  toError IncorrectOTP = APIError "INCORRECT_OTP" $ Just "Wrong OTP."
-  toError AccessDenied = APIError "ACCESS_DENIED" $ Just "You have no access to this operation."
+  toError IncorrectOTP = apiErrorWithMsg "INCORRECT_OTP" "Wrong OTP."
+  toError AccessDenied = apiErrorWithMsg "ACCESS_DENIED" "You have no access to this operation."
 
 data DatabaseError
   = NotPostgresBackend
   | SQLRequestError
-  | RecordNotFound
+  | SQLResultError
+  | DBUnknownError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError DatabaseError APIError where
-  toError NotPostgresBackend = APIError "DB_NOT_POSTGRES_BACKEND" $ Just "Not postgres backend."
-  toError SQLRequestError = APIError "DB_SQL_REQUEST_ERROR" $ Just "SQL request error."
-  toError RecordNotFound = APIError "DB_RECORD_NOT_FOUND" $ Just "Record not found."
+  toError NotPostgresBackend = apiErrorWithMsg "DB_NOT_POSTGRES_BACKEND" "Not postgres backend."
+  toError SQLRequestError = apiErrorWithMsg "DB_SQL_REQUEST_ERROR" "SQL request error."
+  toError SQLResultError = apiErrorWithMsg "DB_SQL_RESULT_ERROR" "SQL result error."
+  toError DBUnknownError = apiErrorWithMsg "DB_UNKNOWN_ERROR" "Something unknown happened during work with db."
 
 data FCMTokenError
   = FCMJSONPathNotConfigured
@@ -311,29 +200,29 @@ data FCMTokenError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError FCMTokenError APIError where
-  toError FCMJSONPathNotConfigured = APIError "FCM_JSON_PATH_NOT_CONFIGURED" $ Just "FCM JSON path not configured."
-  toError UnableToReadFCMJSONFile = APIError "UNABLE_TO_READ_FCM_JSON_FILE" $ Just "Unable to read fcmJson file."
+  toError FCMJSONPathNotConfigured = apiErrorWithMsg "FCM_JSON_PATH_NOT_CONFIGURED" "FCM JSON path not configured."
+  toError UnableToReadFCMJSONFile = apiErrorWithMsg "UNABLE_TO_READ_FCM_JSON_FILE" "Unable to read fcmJson file."
+
+data ContextError
+  = UnsupportedCoreVer
+  | UnsupportedDomainVer
+  | InvalidDomain
+  | InvalidCountry
+  | InvalidCity
+  | InvalidAction
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+instance IsError ContextError APIError where
+  toError UnsupportedCoreVer = apiErrorWithMsg "UNSUPPORTED_CORE_VERSION" "Unsupported core version."
+  toError UnsupportedDomainVer = apiErrorWithMsg "UNSUPPORTED_DOMAIN_VERSION" "Unsupported domain version."
+  toError InvalidDomain = apiErrorWithMsg "INVALID_DOMAIN" "Domain validation failed."
+  toError InvalidCountry = apiErrorWithMsg "INVALID_COUNTRY" "Country validation failed."
+  toError InvalidCity = apiErrorWithMsg "INVALID_CITY" "City validation failed."
+  toError InvalidAction = apiErrorWithMsg "INVALID_ACTION" "Action validation failed."
 
 data GoogleMapsAPIError
   = GMAPIError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsError GoogleMapsAPIError APIError where
-  toError GMAPIError = APIError "GOOGLE_MAPS_API_ERROR" $ Just "Error ocured in google maps API."
-
-newtype SystemError
-  = SystemError ErrorMsg
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-data BecknError = BecknError
-  { _errorCode :: ErrorCode,
-    _errorMessage :: ErrorMsg,
-    _action :: Action
-  }
-  deriving (Generic, Eq, Show)
-
-instance FromJSON BecknError where
-  parseJSON = genericParseJSON stripLensPrefixOptions
-
-instance ToJSON BecknError where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toError GMAPIError = apiErrorWithMsg "GOOGLE_MAPS_API_ERROR" "Error ocured in google maps API."

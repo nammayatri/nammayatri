@@ -36,7 +36,7 @@ updateStatusByIds ids status = do
 findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById' caseProductId
-  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
+  checkDBErrorOrEmpty result ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: Id Case -> Flow [ProductInstance]
@@ -65,7 +65,7 @@ validatePIStatusesChange' newStatus =
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus productInstance =
   case validateStatusTransition (_status productInstance) newStatus of
-    Left msg -> throwDomainError $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwErrorWithInfo404 ProductInstanceInvalidStatus msg
     _ -> pure ()
 
 findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]

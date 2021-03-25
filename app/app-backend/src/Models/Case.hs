@@ -42,19 +42,19 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
 findById :: Id Case -> Flow Case
 findById caseId = do
   result <- Q.findById caseId
-  checkDBErrorOrEmpty result (CaseErr CaseNotFound)
+  checkDBErrorOrEmpty result CaseNotFound
 
 -- | Find Case by id and type
 findByIdAndType :: Id Case -> CaseType -> Flow Case
 findByIdAndType caseId caseType = do
   result <- Q.findByIdAndType caseId caseType
-  checkDBErrorOrEmpty result (CaseErr CaseNotFound)
+  checkDBErrorOrEmpty result CaseNotFound
 
 -- | Find Case by id and a requestor id
 findIdByPerson :: Person.Person -> Id Case -> Flow Case
 findIdByPerson person caseId = do
   result <- Q.findIdByPerson person caseId
-  checkDBErrorOrEmpty result (CaseErr CaseNotFound)
+  checkDBErrorOrEmpty result CaseNotFound
 
 -- | Find Cases by list of ids
 findAllByIds :: [Id Case] -> Flow [Case]
@@ -124,7 +124,7 @@ validateStatusChange :: CaseStatus -> Id Case -> Flow ()
 validateStatusChange newStatus caseId = do
   c <- findById caseId
   case validateStatusTransition (_status c) newStatus of
-    Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwErrorWithInfo404 CaseInvalidStatus msg
     _ -> pure ()
 
 updateInfo :: Id Case -> Text -> Flow ()

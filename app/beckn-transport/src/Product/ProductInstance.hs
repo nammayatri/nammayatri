@@ -183,7 +183,7 @@ assignDriver productInstanceId driverId = do
   piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
   headPi <- case piList of
     p : _ -> pure p
-    [] -> throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
+    [] -> throwError400 ProductInstanceNotFound
   driver <- PersQ.findPersonById $ cast driverId
   vehicleId <-
     driver ^. #_udf1
@@ -219,7 +219,7 @@ updateStatus piId req = do
       tripOtpCode <- req ^. #_otpCode & fromMaybeM400 InvalidRequest
       if inAppOtpCode == tripOtpCode
         then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
-        else throwBecknError400 "INCORRECT_TRIP_OTP"
+        else throwError400 IncorrectOTP
     (Just c, Just _, Just _) ->
       updateTrip (prodInst ^. #_id) c req
     (Nothing, Just _, Just _) -> return ()
@@ -243,7 +243,7 @@ unAssignDriverInfo productInstances request = do
       logError
         "unAssignDriverInfo"
         "Can't unassign driver info for null ProductInstance."
-      throwBecknError400 "INVALID_PRODUCT_INSTANCE_ID"
+      throwError400 ProductInstanceNotFound
   _ <- PIQ.updateVehicleFlow (PI._id <$> productInstances) Nothing
   _ <- PIQ.updateDriverFlow (PI._id <$> productInstances) Nothing
   notifyDriver (request ^. #_personId)

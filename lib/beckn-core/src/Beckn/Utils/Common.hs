@@ -9,7 +9,7 @@ import Beckn.Storage.DB.Config
 import Beckn.TypeClass.IsError
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Ack as Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error (Error (..))
@@ -18,7 +18,6 @@ import Beckn.Utils.Logging
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Control.Monad.Reader
 import qualified Data.Aeson as A
-import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Generics.Labels as GL
@@ -28,7 +27,7 @@ import Data.Time
 import Data.Time.Units (TimeUnit, fromMicroseconds)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (error, id)
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
@@ -81,63 +80,35 @@ checkClientError context = \case
     logError "client call error" $ (err ^. #_message) ?: "Some error"
     L.throwException $ mkErrResponse context err500 err
 
--- | Get rid of database error
--- convert it into UnknownDomainError
-checkDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> m a
-checkDBError dbres = checkDBError' dbres DatabaseError
+throwDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBError -> m a
+throwDBError err@(ET.DBError dbErrType msg) = do
+  logError "DB error: " (show err)
+  uncurry throwErrorWithInfo500 $
+    case dbErrType of
+      ET.UnexpectedResult -> (SQLResultError, msg)
+      ET.SQLError sqlErr -> (SQLRequestError, makeSqlErrMsg sqlErr msg)
+      _ -> (DBUnknownError, msg)
+  where
+    makeSqlErrMsg sqlErr desc = "SQLError: " <> show sqlErr <> " Description: " <> desc
 
 -- | Get rid of database error
--- convert it into specified DomainError
--- f converts DBError to DomainError
-checkDBError' ::
-  (HasCallStack, L.MonadFlow m, Log m) =>
-  ET.DBResult a ->
-  (ET.DBError -> DomainError) ->
-  m a
-checkDBError' dbres f =
+checkDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> m a
+checkDBError dbres =
   case dbres of
-    Left err -> throwDomainError $ f err
+    Left dbErr -> throwDBError dbErr
     Right res -> pure res
 
 -- | Get rid of database error and empty result
--- convert it into UnknownDomainError
 checkDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m, Log m) =>
+  (HasCallStack, L.MonadFlow m, Log m, IsError b APIError) =>
   ET.DBResult (Maybe a) ->
-  DomainError ->
+  b ->
   m a
-checkDBErrorOrEmpty dbres = checkDBErrorOrEmpty' dbres DatabaseError
-
--- | Get rid of database error and empty result
--- convert it into specified DomainError
--- f converts DBError to DomainError
-checkDBErrorOrEmpty' ::
-  (HasCallStack, L.MonadFlow m, Log m) =>
-  ET.DBResult (Maybe a) ->
-  (ET.DBError -> DomainError) ->
-  DomainError ->
-  m a
-checkDBErrorOrEmpty' dbres f domainErrOnEmpty =
-  case dbres of
-    Left err -> throwDomainError $ f err
-    Right maybeRes -> case maybeRes of
-      Nothing -> throwDomainError domainErrOnEmpty
-      Just x -> pure x
-
--- | Throw DomainError if DBError occurs
-throwOnDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> DomainError -> m a
-throwOnDBError dbres domainError =
-  checkDBError' dbres $ const domainError
-
--- Throw DomainErrors if DBError occurs or the result is empty
-throwOnDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m, Log m) =>
-  ET.DBResult (Maybe a) ->
-  DomainError ->
-  DomainError ->
-  m a
-throwOnDBErrorOrEmpty dbres domainErrorOnDbError =
-  checkDBErrorOrEmpty' dbres (const domainErrorOnDbError)
+checkDBErrorOrEmpty dbres domainErrOnEmpty = case dbres of
+  Left err -> throwDBError err
+  Right maybeRes -> case maybeRes of
+    Nothing -> throwError500 domainErrOnEmpty
+    Just x -> pure x
 
 fromMaybeM :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Maybe a -> m a
 fromMaybeM err = maybe logAndThrow pure
@@ -152,11 +123,11 @@ fromMaybeM400,
   fromMaybeM500,
   fromMaybeM503 ::
     (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => a -> Maybe b -> m b
-fromMaybeM400 err = fromMaybeM (S.err400 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM401 err = fromMaybeM (S.err401 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM404 err = fromMaybeM (S.err404 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM500 err = fromMaybeM (S.err500 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
-fromMaybeM503 err = fromMaybeM (S.err503 {errBody = Aeson.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM400 err = fromMaybeM (S.err400 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM401 err = fromMaybeM (S.err401 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM404 err = fromMaybeM (S.err404 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM500 err = fromMaybeM (S.err500 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
+fromMaybeM503 err = fromMaybeM (S.err503 {errBody = A.encode @APIError $ toError err, errHeaders = [jsonHeader]})
 
 fromMaybeMWithInfo400,
   fromMaybeMWithInfo401,
@@ -171,7 +142,7 @@ fromMaybeMWithInfo500 err info = fromMaybeM (S.err500 {errBody = buildErrorBodyW
 fromMaybeMWithInfo503 err info = fromMaybeM (S.err503 {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
 
 buildErrorBodyWithInfo :: (IsError a APIError) => a -> Text -> BSL.ByteString
-buildErrorBodyWithInfo err info = Aeson.encode $ buildAPIErrorWithInfo err info
+buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
 
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
@@ -264,26 +235,9 @@ authenticate = check handleKey
 
 throwHttpError :: forall e m a. (HasCallStack, L.MonadFlow m, Log m, ToJSON e) => ServerError -> e -> m a
 throwHttpError err errMsg = do
-  let body = Aeson.encode errMsg
+  let body = A.encode errMsg
   logError "HTTP_ERROR" (decodeUtf8 body)
-  L.throwException err {errBody = body, errHeaders = [jsonHeader]}
-
-throwBecknError :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Text -> m a
-throwBecknError err errMsg = do
-  logError "Beckn error" errMsg
-  L.throwException
-    err
-      { errBody = A.encode $ getBecknError err errMsg,
-        errHeaders = jsonHeader : errHeaders err
-      }
-
-getBecknError :: S.ServerError -> Text -> BecknError
-getBecknError err msg =
-  BecknError
-    { _errorCode = ErrorCode $ errHTTPCode err,
-      _errorMessage = ErrorMsg msg,
-      _action = NACK
-    }
+  L.throwException err {errBody = body, errHeaders = jsonHeader : errHeaders err}
 
 throwError500,
   throwError501,
@@ -319,26 +273,16 @@ throwErrorWithInfo404 err info = throwHttpError @APIError S.err404 $ buildAPIErr
 
 buildAPIErrorWithInfo :: (IsError a APIError) => a -> Text -> APIError
 buildAPIErrorWithInfo err info =
-  let apiErr@APIError {..} = toError err
-      defMsg = fromMaybe "" errorMessage
-   in apiErr
-        { errorMessage = Just $ defMsg <> " " <> info
-        }
+  let apiErr = toError err
+   in apiErr {error = fmap updateErrorMsg $ apiErr ^. #error}
+  where
+    updateErrorMsg :: Error -> Error
+    updateErrorMsg error =
+      let defMsg = fromMaybe "" $ error ^. #_message
+       in error {_message = Just $ defMsg <> " " <> info}
 
-throwBecknError500,
-  throwBecknError501,
-  throwBecknError400,
-  throwBecknError401,
-  throwBecknError404 ::
-    (HasCallStack, L.MonadFlow m, Log m) => Text -> m a
-throwBecknError500 = throwBecknError S.err500
-throwBecknError501 = throwBecknError S.err501
-throwBecknError400 = throwBecknError S.err400
-throwBecknError401 = throwBecknError S.err401
-throwBecknError404 = throwBecknError S.err404
-
-throwAuthError :: (HasCallStack, L.MonadFlow m, Log m) => [Header] -> Text -> m a
-throwAuthError headers = throwBecknError (S.err401 {errHeaders = headers})
+throwAuthError :: (HasCallStack, L.MonadFlow m, Log m, IsError a APIError) => [Header] -> a -> m b
+throwAuthError headers = throwHttpError @APIError (S.err401 {errHeaders = headers}) . toError
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format
@@ -346,35 +290,6 @@ throwAuthError headers = throwBecknError (S.err401 {errHeaders = headers})
 -- and timezone as arguments. Currently adds +5:30
 showTimeIst :: UTCTime -> Text
 showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addUTCTime (60 * 330)
-
-throwDomainError :: (HasCallStack, L.MonadFlow m, Log m) => DomainError -> m a
-throwDomainError err =
-  case err of
-    UnknownDomainError msg -> t S.err500 msg
-    -- TODO get more details from db error?
-    DatabaseError (ET.DBError _ text) -> t S.err500 $ show text
-    -- Case errors
-    CaseErr suberr -> case suberr of
-      CaseNotFound -> t S.err404 "Case not found"
-      CaseStatusTransitionErr msg -> t S.err405 msg
-      CaseNotCreated -> t S.err404 "Case not created"
-      CaseNotUpdated -> t S.err404 "Case not updated"
-      _ -> t S.err404 "Case not updated"
-    -- Product Instance errors
-    ProductInstanceErr suberr -> case suberr of
-      ProductInstanceNotFound -> t S.err404 "Product Instance not found"
-      ProductInstanceStatusTransitionErr msg -> t S.err405 msg
-      _ -> t S.err404 "Case not updated"
-    -- Product errors
-    ProductErr suberr -> case suberr of
-      ProductNotFound -> t S.err404 "Product not found"
-      ProductNotUpdated -> t S.err405 "Product not updated"
-      ProductNotCreated -> t S.err405 "Product not created"
-      _ -> t S.err404 "Case not updated"
-    AuthErr Unauthorized -> t S.err401 "Unauthorized"
-    _ -> t S.err500 "Unknown error"
-  where
-    t errCode (ErrorMsg errMsg) = throwBecknError errCode errMsg
 
 callClient ::
   (ET.JSONEx a, L.MonadFlow m, Log m) =>

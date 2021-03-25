@@ -6,6 +6,7 @@ import App.Types
 import Beckn.Product.Validation.Context
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Error
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
@@ -78,4 +79,4 @@ validateBapUrl org context = do
         Nothing -> False
         Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
   unless satisfied $
-    throwBecknError400 "INVALID_BAP_URI"
+    throwErrorWithInfo400 CommonError "Invalid bap URL."

@@ -48,7 +48,7 @@ updateMultiple piid prdInst = do
 findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
   result <- Q.findById caseProductId
-  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
+  checkDBErrorOrEmpty result ProductInstanceNotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: Id Case.Case -> Flow [ProductInstance]
@@ -60,7 +60,7 @@ findAllByCaseId caseId = do
 findByProductId :: Id Products -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId pId
-  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
+  checkDBErrorOrEmpty result ProductInstanceNotFound
 
 -- | Get ProductInstance and validate its status change
 validatePIStatusChange :: ProductInstanceStatus -> Id ProductInstance -> Flow ()
@@ -83,7 +83,7 @@ validatePIStatusesChange' newStatus =
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus caseProduct =
   case validateStatusTransition (_status caseProduct) newStatus of
-    Left msg -> throwDomainError $ ProductInstanceErr $ ProductInstanceStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwErrorWithInfo404 ProductInstanceInvalidStatus msg
     _ -> pure ()
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
@@ -109,7 +109,7 @@ findAllByParentId piid = do
 findByParentIdType :: Maybe (Id ProductInstance) -> Case.CaseType -> Flow ProductInstance
 findByParentIdType mparentId csType = do
   result <- Q.findByParentIdType mparentId csType
-  checkDBErrorOrEmpty result $ ProductInstanceErr ProductInstanceNotFound
+  checkDBErrorOrEmpty result ProductInstanceNotFound
 
 findAllByPerson :: Id Person.Person -> Flow [ProductInstance]
 findAllByPerson perId = do

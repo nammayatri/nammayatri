@@ -4,7 +4,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
-import Beckn.Utils.Common (getSchemaName)
+import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -19,7 +19,7 @@ create :: RideRequest.RideRequest -> Flow ()
 create RideRequest.RideRequest {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression RideRequest.RideRequest {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 fetchOldest :: Integer -> Flow [RideRequest.RideRequest]
 fetchOldest limit = do
@@ -27,12 +27,12 @@ fetchOldest limit = do
   let noOffset = 0
   let order RideRequest.RideRequest {..} = B.asc_ _createdAt
   DB.findAllWithLimitOffset dbTable limit noOffset order
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 removeRequest :: Id RideRequest.RideRequest -> Flow ()
 removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id

@@ -30,7 +30,7 @@ create c = do
 findById :: Id Case -> Flow Case
 findById caseId = do
   result <- Q.findById caseId
-  checkDBErrorOrEmpty result $ CaseErr CaseNotFound
+  checkDBErrorOrEmpty result CaseNotFound
 
 -- | Find Cases by id list
 findAllByIds :: [Id Case] -> Flow [Case]
@@ -48,7 +48,7 @@ findByParentCaseIdAndType pCaseId cType = do
 findBySid :: Text -> Flow Case
 findBySid sid = do
   result <- Q.findBySid sid
-  checkDBErrorOrEmpty result $ CaseErr CaseNotFound
+  checkDBErrorOrEmpty result CaseNotFound
 
 -- | Validate and update Case status
 updateStatus :: Id Case -> CaseStatus -> Flow ()
@@ -69,7 +69,7 @@ updateStatusByIds ids status = do
 findByIdType :: [Id Case] -> CaseType -> Flow Case
 findByIdType ids type_ = do
   result <- Q.findByIdType ids type_
-  checkDBErrorOrEmpty result (CaseErr CaseNotFound)
+  checkDBErrorOrEmpty result CaseNotFound
 
 -- | Find Cases by id and type
 findAllByIdType :: [Id Case] -> CaseType -> Flow [Case]
@@ -131,5 +131,5 @@ validateCasesStatusesChange' newStatus =
 validateStatusChange :: CaseStatus -> Case -> Flow ()
 validateStatusChange newStatus case_ =
   case validateStatusTransition (_status case_) newStatus of
-    Left msg -> throwDomainError $ CaseErr $ CaseStatusTransitionErr $ ErrorMsg msg
+    Left msg -> throwErrorWithInfo404 CaseInvalidStatus msg
     _ -> pure ()

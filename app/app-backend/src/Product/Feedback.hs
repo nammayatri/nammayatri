@@ -11,7 +11,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
   ( fromMaybeM500,
-    throwBecknError400,
+    throwError400,
     withFlowHandler,
   )
 import qualified EulerHS.Language as L
@@ -26,7 +26,7 @@ import Utils.Routes (buildContext)
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback person request = withFlowHandler $ do
   let ratingValue = request ^. #rating
-  unless (ratingValue `elem` [1 .. 5]) $ throwBecknError400 "RATING_VALUE_INVALID"
+  unless (ratingValue `elem` [1 .. 5]) $ throwError400 InvalidRatingValue
   let prodInstId = request ^. #productInstanceId
   product <- ProductInstance.findById $ Id prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId

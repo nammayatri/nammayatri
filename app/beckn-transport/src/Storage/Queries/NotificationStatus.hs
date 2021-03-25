@@ -4,7 +4,7 @@ import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
-import Beckn.Utils.Common (getSchemaName)
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -20,13 +20,13 @@ create :: NotificationStatus.NotificationStatus -> Flow ()
 create NotificationStatus.NotificationStatus {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression NotificationStatus.NotificationStatus {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 updateStatus :: Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> Flow ()
 updateStatus rideId driverId status = do
   dbTable <- getDbTable
   DB.update dbTable (setClause status) (predicate rideId driverId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     setClause s NotificationStatus.NotificationStatus {..} = _status <-. B.val_ s
     predicate rId dId NotificationStatus.NotificationStatus {..} =
@@ -54,7 +54,7 @@ findActiveNotificationByRideId :: Id Ride -> Flow (Maybe NotificationStatus.Noti
 findActiveNotificationByRideId rideId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate NotificationStatus.NotificationStatus {..} =
       _rideId ==. B.val_ rideId
@@ -64,7 +64,7 @@ findActiveNotificationByDriverId :: Id Driver -> Maybe (Id Ride) -> Flow (Maybe 
 findActiveNotificationByDriverId driverId rideId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate NotificationStatus.NotificationStatus {..} =
       _driverId ==. B.val_ driverId
@@ -75,6 +75,6 @@ cleanupNotifications :: Id Ride -> Flow ()
 cleanupNotifications rideId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate rideId)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate id NotificationStatus.NotificationStatus {..} = _rideId ==. B.val_ id

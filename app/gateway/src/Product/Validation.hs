@@ -4,6 +4,7 @@ import App.Types
 import Beckn.Product.Validation.Context (validateAction, validateCity, validateCountry)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Error
 import Beckn.Utils.Common
 import EulerHS.Prelude
 
@@ -31,6 +32,6 @@ validateVersion context = do
       FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)
   unless (context ^. #_core_version == desiredCoreVersion) $
-    throwBecknError400 "UNSUPPORTED_CORE_VERSION"
+    throwError400 UnsupportedCoreVer
   unless (context ^. #_domain_version == desiredDomainVersion) $
-    throwBecknError400 "UNSUPPORTED_DOMAIN_VERSION"
+    throwError400 UnsupportedDomainVer

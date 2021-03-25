@@ -21,14 +21,14 @@ create customer = do
   dbTable <- getDbTable
   customer' <- encrypt customer
   DB.createOne dbTable (Storage.insertExpression customer')
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findCustomerById ::
   Id Storage.Customer -> Flow (Maybe Storage.Customer)
 findCustomerById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= decrypt
   where
     predicate Storage.Customer {..} = _id ==. B.val_ id

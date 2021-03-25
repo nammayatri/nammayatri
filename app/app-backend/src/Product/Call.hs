@@ -9,6 +9,7 @@ import Beckn.External.Exotel.Flow
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
@@ -16,12 +17,14 @@ import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
   ( decodeFromText,
-    throwBecknError404,
+    fromMaybeM500,
+    fromMaybeMWithInfo500,
+    throwError500,
+    throwErrorWithInfo500,
     withFlowHandler,
   )
 import Data.Maybe
 import Data.Semigroup
-import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import Models.Case as Case
 import Models.ProductInstance as ProductInstance
@@ -45,67 +48,42 @@ initiateCallToCustomer req = withFlowHandler $ do
   mkAckResponse
 
 -- | Get customer and driver pair by case Id
-getProductAndCustomerInfo :: Id ProductInstance -> Flow (Either String (Person, Driver.Driver))
+getProductAndCustomerInfo :: Id ProductInstance -> Flow (Person, Driver.Driver)
 getProductAndCustomerInfo rideSearchPid = do
   prodInst <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
   c <- Case.findById $ _caseId prodInst
-  case Case._requestor c of
-    Nothing -> pure $ Left "No person linked to case"
-    Just personId ->
-      case ProductInstance._info prodInst of
-        Nothing -> pure $ Left "No product info linked to case"
-        Just info ->
-          case decodeFromText info of
-            Nothing -> pure $ Left "Bad product info"
-            Just productInfo ->
-              case _tracker productInfo of
-                Nothing -> pure $ Left "No tracker info"
-                Just tracker_ -> do
-                  let trip = _trip tracker_
-                  let driver_ = trip ^. #driver
-                  case driver_ of
-                    Nothing -> pure $ Left "No driver info"
-                    Just driver -> do
-                      person_ <- Person.findById $ Id personId
-                      case person_ of
-                        Nothing -> pure $ Left "Customer not found"
-                        Just person -> pure $ Right (person, toBeckn driver)
+  personId <- Case._requestor c & fromMaybeM500 CaseRequestorNotFound
+  info <- ProductInstance._info prodInst & fromMaybeMWithInfo500 ProductInstanceInvalidState "_info is null. No product info linked to product instance."
+  productInfo <- decodeFromText info & fromMaybeMWithInfo500 CommonError "Parse error."
+  tracker_ <- _tracker productInfo & fromMaybeMWithInfo500 CommonError "_tracker is null. No tracker info."
+  let trip = _trip tracker_
+      driver_ = trip ^. #driver
+  driver <- driver_ & fromMaybeMWithInfo500 CommonError "_driver is null. No driver info."
+  person_ <- Person.findById $ Id personId
+  case person_ of
+    Just person -> return (person, toBeckn driver)
+    Nothing -> throwError500 PersonNotFound
 
 -- | Get person's mobile phone
-getPersonPhone :: Person -> Flow (Either String Text)
-getPersonPhone person =
-  pure $ toEither $ countryCode <> number
-  where
-    errMsg = Left "Customer has no phone number"
-    toEither = maybe errMsg Right
-    countryCode = _mobileCountryCode person
-    number = _mobileNumber person
+getPersonPhone :: Person -> Flow Text
+getPersonPhone Person {..} = do
+  let phonenum = _mobileCountryCode <> _mobileNumber
+  phonenum & fromMaybeMWithInfo500 CommonError "Customer has no phone number."
 
 -- | Get phone from Person data type
-getPersonTypePhone :: Driver.Driver -> Flow (Either String Text)
-getPersonTypePhone person = pure $
-  case phonesLst of
-    [] -> Left errMsg
-    x : _ -> Right x
-  where
-    phonesLst = Driver.phones person
-    errMsg = "Driver has no contacts"
+getPersonTypePhone :: Driver.Driver -> Flow Text
+getPersonTypePhone Driver.Driver {..} =
+  case phones of
+    [] -> throwErrorWithInfo500 CommonError "Driver has no contacts."
+    x : _ -> return x
 
 -- | Returns phones pair or throws an error
 getProductAndCustomerPhones :: Id ProductInstance -> Flow (Text, Text)
 getProductAndCustomerPhones piId = do
-  info <- getProductAndCustomerInfo piId
-  case info of
-    Left err -> reportError err
-    Right (person, driver) -> do
-      customerPhone <- getPersonPhone person
-      driverPhone <- getPersonTypePhone driver
-      case (customerPhone, driverPhone) of
-        (Right cp, Right dp) -> pure (cp, dp)
-        (Left err, _) -> reportError err
-        (_, Left err) -> reportError err
-  where
-    reportError = throwBecknError404 . T.pack
+  (person, driver) <- getProductAndCustomerInfo piId
+  customerPhone <- getPersonPhone person
+  driverPhone <- getPersonTypePhone driver
+  return (customerPhone, driverPhone)
 
 mkAckResponse :: Flow CallRes
 mkAckResponse = return $ Ack {_status = "ACK"}

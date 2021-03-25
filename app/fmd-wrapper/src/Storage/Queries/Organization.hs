@@ -19,7 +19,7 @@ findOrgByApiKey :: App.APIKey -> Flow (Maybe Org.Organization)
 findOrgByApiKey apiKey = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Org.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
@@ -33,7 +33,7 @@ listOrganizations ::
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     complementVal l
       | null l = B.val_ True
@@ -53,7 +53,7 @@ findByBapUrl :: BaseUrl -> Flow (Maybe Org.Organization)
 findByBapUrl bapUrl = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Org.Organization {..} =
       _callbackUrl ==. B.val_ (Just bapUrl)
@@ -64,6 +64,6 @@ findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Org.Organization {..} = _shortId ==. B.val_ shortId

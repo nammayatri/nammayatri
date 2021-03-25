@@ -4,6 +4,7 @@
 module Beckn.Product.BusinessRule where
 
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Logging as Log
 import Control.Monad.Except (MonadError, throwError)
@@ -52,11 +53,10 @@ runBR = runExceptT . runBusinessRule
 runBRFlowFatal :: (HasCallStack, Log.HasLogContext r) => BusinessRule (FlowR r) a -> FlowR r a
 runBRFlowFatal br =
   runBR br >>= \case
-    Left be@BusinessError {errorCode} -> do
-      logError
-        "BusinessRule"
-        $ "Error happened when evaluating business rule. Error: " +|| be ||+ ""
-      throwBecknError500 errorCode
+    Left be -> do
+      let msg = "Error happened when evaluating business rule. Error: " +|| be ||+ ""
+      logError "BusinessRule" msg
+      throwErrorWithInfo500 CommonError msg
     Right a -> pure a
 
 runBRFlowMaybe :: (Monad m, BusinessLog m) => BusinessRule m a -> m (Maybe a)

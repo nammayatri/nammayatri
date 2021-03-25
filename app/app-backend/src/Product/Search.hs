@@ -366,4 +366,4 @@ mkMapPoint lat' lon' = do
 readLatLng :: Text -> Flow Double
 readLatLng text = do
   let mCoord = readMaybe $ T.unpack text
-  maybe (throwBecknError400 "LOCATION_READ_ERROR") pure mCoord
+  maybe (throwErrorWithInfo400 CommonError "LOCATION_READ_ERROR") pure mCoord

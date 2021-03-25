@@ -19,13 +19,13 @@ create :: Storage.Tracker -> Flow ()
 create Storage.Tracker {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Tracker {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findTrackerById ::
   Id Storage.Tracker -> Flow (Maybe Storage.Tracker)
 findTrackerById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Tracker {..} = _id ==. B.val_ id

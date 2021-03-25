@@ -23,12 +23,12 @@ create :: Storage.RegistrationToken -> Flow ()
 create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findRegistrationToken :: Text -> Flow (Maybe Storage.RegistrationToken)
 findRegistrationToken id = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= either DB.throwDBError pure
+  DB.findOne dbTable predicate >>= either throwDBError pure
   where
     predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
 
@@ -37,7 +37,7 @@ updateVerified id verified = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause verified now) (predicate id)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     setClause scVerified currTime Storage.RegistrationToken {..} =
       mconcat
@@ -55,7 +55,7 @@ findRegistrationTokenByToken :: RegToken -> Flow Storage.RegistrationToken
 findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM401 InvalidToken
   where
     predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
@@ -65,7 +65,7 @@ updateAttempts attemps id = do
   dbTable <- getDbTable
   now <- getCurrTime
   DB.update dbTable (setClause attemps now) (predicate id)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   findRegistrationToken id >>= fromMaybeM500 InvalidToken
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
@@ -76,6 +76,6 @@ deleteByEntitiyId :: Text -> Flow ()
 deleteByEntitiyId id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate rtid Storage.RegistrationToken {..} = _EntityId ==. B.val_ rtid

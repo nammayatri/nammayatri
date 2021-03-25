@@ -22,14 +22,14 @@ create :: Storage.Vehicle -> Flow ()
 create Storage.Vehicle {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Vehicle {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findVehicleById ::
   Id Storage.Vehicle -> Flow (Maybe Storage.Vehicle)
 findVehicleById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Vehicle {..} = _id ==. B.val_ id
 
@@ -38,7 +38,7 @@ findByIdAndOrgId ::
 findByIdAndOrgId id orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 VehicleNotFound
   where
     predicate Storage.Vehicle {..} = _id ==. B.val_ id &&. _organizationId ==. B.val_ orgId
@@ -47,7 +47,7 @@ findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> Fl
 findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
     limit = fromMaybe 100 mlimit
@@ -78,7 +78,7 @@ updateVehicleRec :: Storage.Vehicle -> Flow ()
 updateVehicleRec vehicle = do
   dbTable <- getDbTable
   DB.update dbTable (setClause vehicle) (predicate $ vehicle ^. #_id)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     setClause pVehicle Storage.Vehicle {..} =
       mconcat
@@ -99,7 +99,7 @@ deleteById :: Id Storage.Vehicle -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate vid Storage.Vehicle {..} = _id ==. B.val_ vid
 
@@ -107,7 +107,7 @@ findByAnyOf :: Maybe Text -> Maybe Text -> Flow (Maybe Storage.Vehicle)
 findByAnyOf registrationNoM vehicleIdM = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Vehicle {..} =
       (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (Id (fromMaybe "DONT_MATCH" vehicleIdM)))
@@ -117,7 +117,7 @@ findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> M
 findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
     predicate Storage.Vehicle {..} =
@@ -138,6 +138,6 @@ findByRegistrationNo ::
 findByRegistrationNo registrationNo = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Vehicle {..} = _registrationNo ==. B.val_ registrationNo

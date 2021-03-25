@@ -8,7 +8,6 @@ import qualified Beckn.Storage.DB.Config as DB
 import Beckn.Types.Common (FlowR)
 import Beckn.Types.Error
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -16,7 +15,6 @@ import qualified Database.Beam.Query.Internal as BI
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-import Servant (err500)
 
 type PgTable table db =
   ( B.Beamable table,
@@ -91,7 +89,7 @@ findOneWithErr dbTable predicate = do
   res <- run $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
-    Right Nothing -> throwError500 RecordNotFound
+    Right Nothing -> throwError500 SQLResultError
     Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
 
 findOne ::
@@ -179,24 +177,18 @@ findOrCreateOne ::
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
-findOrCreateOne dbTable findPredicate insertExpression =
-  run $ findOrCreateOne' dbTable findPredicate insertExpression
-
-findOrCreateOne' ::
-  (HasCallStack, ReadablePgTable table db) =>
-  Table table db ->
-  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  L.SqlDB Pg (Maybe (table Identity))
-findOrCreateOne' dbTable findPredicate insertExpression =
-  findAll' dbTable findPredicate >>= \case
-    [] -> do
-      createOne' dbTable insertExpression
-      findOne' dbTable findPredicate
-    (s : xs) ->
-      if null xs
-        then pure (Just s)
-        else error "multiple rows found"
+findOrCreateOne dbTable findPredicate insertExpression = do
+  rez <- run $ do
+    findAll' dbTable findPredicate >>= \case
+      [] -> do
+        createOne' dbTable insertExpression
+        findAll' dbTable findPredicate
+      xs -> pure xs
+  case rez of
+    Right [] -> throwErrorWithInfo500 SQLResultError "Row not found"
+    Right [s] -> pure $ pure (Just s)
+    Right _ -> throwErrorWithInfo500 SQLResultError "Multiple rows found"
+    Left err -> throwErrorWithInfo500 SQLRequestError $ "DBError: " <> show err
 
 findAllRows ::
   (HasCallStack, RunReadablePgTable table db) =>
@@ -240,17 +232,6 @@ delete' ::
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   L.SqlDB Pg ()
 delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
-
-throwDBError ::
-  ( HasCallStack,
-    L.MonadFlow mFlow,
-    Log mFlow
-  ) =>
-  T.DBError ->
-  mFlow a
-throwDBError err =
-  logError "DB error: " (show err)
-    >> L.throwException err500
 
 type Scope2 = BI.QNested (BI.QNested B.QBaseScope)
 

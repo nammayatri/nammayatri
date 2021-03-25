@@ -7,7 +7,7 @@ import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Storage
-import Beckn.Utils.Common (fromMaybeM400, getCurrTime, getSchemaName)
+import Beckn.Utils.Common
 import Data.Time
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -23,13 +23,13 @@ create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 verifyApiKey :: RegToken -> Flow Storage.Organization
 verifyApiKey regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
     >>= fromMaybeM400 Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
@@ -39,7 +39,7 @@ findOrganizationById ::
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
@@ -48,7 +48,7 @@ findOrganizationByCallbackUri ::
 findOrganizationByCallbackUri url oType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Organization {..} =
       _callbackUrl ==. B.val_ url
@@ -63,7 +63,7 @@ listOrganizations ::
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -104,6 +104,6 @@ findOrgByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organiza
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId

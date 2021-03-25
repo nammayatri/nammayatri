@@ -4,6 +4,7 @@ import qualified App.Types as App
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Queries
 import qualified Beckn.Types.Storage.Issue as Issue
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Common as Utils
 import qualified Database.Beam as B
 import EulerHS.Prelude
@@ -17,4 +18,4 @@ insertIssue :: Issue.Issue -> App.Flow ()
 insertIssue Issue.Issue {..} = do
   dbTable <- getDbTable
   Queries.createOne dbTable (Storage.insertExpression Issue.Issue {..})
-    >>= either Queries.throwDBError pure
+    >>= either throwDBError pure

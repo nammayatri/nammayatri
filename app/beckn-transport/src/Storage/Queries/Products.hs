@@ -20,7 +20,7 @@ create :: Storage.Products -> Flow ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findAllById :: [Id Storage.Products] -> Flow [Storage.Products]
 findAllById ids = do

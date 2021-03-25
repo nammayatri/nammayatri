@@ -19,14 +19,14 @@ create :: Storage.Location -> Flow ()
 create Storage.Location {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
@@ -39,7 +39,7 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = 
     limit
     offset
     orderByDesc
-    >>= either DB.throwDBError pure
+    >>= either throwDBError pure
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

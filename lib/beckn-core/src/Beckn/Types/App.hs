@@ -10,7 +10,6 @@ where
 
 import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Common (FlowR)
-import Beckn.Types.Error
 import Beckn.Utils.Logging (HasLogContext (..))
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
@@ -47,8 +46,6 @@ type CronAuthKey = Text
 
 -- FIXME: remove this
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
-
-type DomainResult a = Either DomainError a
 
 -- | Requests / responses track condiguration flag
 data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING

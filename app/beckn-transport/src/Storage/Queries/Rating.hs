@@ -7,7 +7,7 @@ import Beckn.Types.Id
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Rating as Storage
-import Beckn.Utils.Common (getCurrTime, getSchemaName)
+import Beckn.Utils.Common
 import Database.Beam (SqlEq ((==.)), (<-.))
 import qualified Database.Beam as B
 import EulerHS.Prelude
@@ -22,7 +22,7 @@ create :: Storage.Rating -> Flow ()
 create rating = do
   dbTable <- getDbTable
   Query.createOne dbTable (Storage.insertExpression rating)
-    >>= either Query.throwDBError pure
+    >>= either throwDBError pure
 
 updateRatingValue :: Id Storage.Rating -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
@@ -37,13 +37,13 @@ updateRatingValue ratingId newRatingValue = do
           ]
     )
     (\Storage.Rating {..} -> _id ==. B.val_ ratingId)
-    >>= either Query.throwDBError pure
+    >>= either throwDBError pure
 
 findByProductInstanceId :: Id PI.ProductInstance -> Flow (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
   Query.findOne dbTable predicate
-    >>= either Query.throwDBError pure
+    >>= either throwDBError pure
   where
     predicate Storage.Rating {..} = _productInstanceId ==. B.val_ productInsId
 
@@ -54,7 +54,7 @@ findAllRatingsForPerson personId = do
   Query.findAllByJoinWithoutLimits
     orderBy
     (joinPredicate ratingTable productInstanceTable)
-    >>= either Query.throwDBError pure
+    >>= either throwDBError pure
   where
     orderBy Storage.Rating {..} = B.desc_ _createdAt
     joinPredicate ratingTable productInstanceTable = do
