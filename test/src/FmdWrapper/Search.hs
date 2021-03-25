@@ -196,7 +196,7 @@ incorrectApiKey clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "" searchReq
-  verifyError 401 "INVALID_KEY_ID" gatewayResponse
+  verifyError 401 "UNAUTHORIZED" gatewayResponse
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
@@ -236,7 +236,7 @@ missingBapUri clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "INVALID_BAP_URI" gatewayResponse
+  verifyError 400 "API_REQUEST_ERROR" gatewayResponse
 
 missingCountry :: ClientEnv -> CallbackData -> IO ()
 missingCountry clientEnv _ = do
