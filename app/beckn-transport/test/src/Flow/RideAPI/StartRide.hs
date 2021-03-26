@@ -10,9 +10,9 @@ import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide
 import Servant.Server (ServerError)
-import qualified Servant.Server.Internal as S
 import Test.Tasty
 import Test.Tasty.HUnit
+import Utils.Common (errorCodeWhenLeft)
 
 handle :: StartRide.ServiceHandle IO
 handle =
@@ -114,7 +114,7 @@ failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
     result <- runHandler handleCase "2" "1" "otp"
-    result @?= Left (servantJsonError400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride.")
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
   where
     handleCase =
       handle
@@ -129,7 +129,7 @@ failedStartRequestedByNotDriverAndNotAdmin :: TestTree
 failedStartRequestedByNotDriverAndNotAdmin = do
   testCase "Fail ride starting if requested by not a driver and not an admin" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride.")
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
   where
     handleCase =
       handle
@@ -144,7 +144,7 @@ failedStartWhenProductInstanceStatusIsWrong :: TestTree
 failedStartWhenProductInstanceStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError400 "INVALID_RIDE_STATUS" "Ride cannot be started.")
+    errorCodeWhenLeft result @?= Left "INVALID_RIDE_STATUS"
   where
     handleCase =
       handle
@@ -159,7 +159,7 @@ failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
 failedStartWhenRideDoesNotHaveParentProductInstance = do
   testCase "Fail ride starting if ride does not have parent ProductInstance" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError400 "INVALID_RIDE_ID" "Invalid ride id.")
+    errorCodeWhenLeft result @?= Left "INVALID_RIDE_ID"
   where
     handleCase =
       handle
@@ -174,7 +174,7 @@ failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Left (servantJsonError500 "RIDE_OTP_MISSING" "Ride does not have OTP.")
+    errorCodeWhenLeft result @?= Left "RIDE_OTP_MISSING"
   where
     handleCase =
       handle
@@ -189,4 +189,4 @@ failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
     result <- runHandler handle "1" "1" "otp2"
-    result @?= Left (servantJsonError400 "INCORRECT_RIDE_OTP" "Input OTP is wrong.")
+    errorCodeWhenLeft result @?= Left "INCORRECT_RIDE_OTP"
