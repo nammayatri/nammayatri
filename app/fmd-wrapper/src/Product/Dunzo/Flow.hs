@@ -51,7 +51,7 @@ search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req ^. #context) dzBPNwAddress
-  bapUrl <- context ^. #_bap_uri & fromMaybeM InvalidRequest
+  bapUrl <- context ^. #_bap_uri & fromMaybeMWithInfo InvalidRequest "You should pass bap uri."
   bap <- Org.findByBapUrl bapUrl >>= fromMaybeM OrgDoesNotExist
   dzBACreds <- getDzBAPCreds bap
   fork "Search" $ do

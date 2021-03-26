@@ -59,7 +59,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 update :: SR.RegistrationToken -> Id PI.ProductInstance -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   when (maybe False (`elem` forbiddenStatuses) (req ^. #_status)) $
-    throwError InvalidRequest
+    throwErrorWithInfo InvalidRequest "Forbidden status."
   user <- PersQ.findPersonById (Id _EntityId)
   ordPi <- PIQ.findById piId -- order product instance
   searchPi <- case ordPi ^. #_parentId of
@@ -171,9 +171,9 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 
 isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
 isAllowed orderPi req = do
-  newStatus <- fromMaybeM InvalidRequest (req ^. #_status)
+  newStatus <- fromMaybeMWithInfo InvalidRequest "You should pass status." (req ^. #_status)
   case PI.validateStatusTransition (orderPi ^. #_status) newStatus of
-    Left _ -> throwError InvalidRequest
+    Left _ -> throwError PIInvalidStatus
     Right _ -> return ()
 
 assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
@@ -216,7 +216,7 @@ updateStatus piId req = do
       updateTrip (prodInst ^. #_id) PI.CANCELLED req
     (Just PI.INPROGRESS, Just _, Just _) -> do
       inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM PIOTPNotPresent
-      tripOtpCode <- req ^. #_otpCode & fromMaybeM InvalidRequest
+      tripOtpCode <- req ^. #_otpCode & fromMaybeMWithInfo InvalidRequest "You should pass OTP."
       if inAppOtpCode == tripOtpCode
         then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
         else throwError IncorrectOTP

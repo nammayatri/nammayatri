@@ -54,7 +54,7 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  role <- fromMaybeM InvalidRequest (req ^. #_role)
+  role <- fromMaybeMWithInfo InvalidRequest "You should pass person's role." (req ^. #_role)
   pid <- BC.generateGUID
   now <- getCurrTime
   return $

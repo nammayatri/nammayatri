@@ -1,4 +1,4 @@
-module Beckn.TypeClass.IsDomainError where
+module Beckn.TypeClass.IsAPIError where
 
 import Data.Aeson.Types
 import EulerHS.Prelude
@@ -25,8 +25,8 @@ toServerError sc = case sc of
   E501 -> S.err501
   E503 -> S.err503
 
-class IsDomainError domain_error where
-  toError :: domain_error -> APIError
+class IsAPIError domain_error where
+  toAPIError :: domain_error -> APIError
   toStatusCode :: domain_error -> StatusCode
 
 data APIError = APIError

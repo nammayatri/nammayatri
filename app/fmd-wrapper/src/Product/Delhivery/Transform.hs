@@ -31,7 +31,7 @@ import qualified Beckn.Types.FMD.Item as FMD
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeMWithInfo, getCurrTime, headMaybe, throwError)
+import Beckn.Utils.Common (fromMaybeMWithInfo, getCurrTime, headMaybe, throwErrorWithInfo)
 import Control.Lens ((?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
@@ -62,8 +62,8 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> onePickupLocationExpected
     _ -> oneDropLocationExpected
   where
-    onePickupLocationExpected = throwError InvalidRequest
-    oneDropLocationExpected = throwError InvalidRequest
+    onePickupLocationExpected = throwErrorWithInfo InvalidRequest "One pickup location expected."
+    oneDropLocationExpected = throwErrorWithInfo InvalidRequest "One drop location expected"
     mkLocDetails loc = do
       address <- mkAddress (loc ^. #_location)
       return $

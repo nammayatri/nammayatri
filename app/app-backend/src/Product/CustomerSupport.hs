@@ -84,7 +84,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwError InvalidRequest
+          (_, _) -> throwErrorWithInfo InvalidRequest "You should pass CaseId or mobile number."
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do

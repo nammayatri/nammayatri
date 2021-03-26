@@ -60,7 +60,7 @@ getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler Cr
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
   user <- QP.findPersonById (Id _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
-    (Nothing, Nothing) -> throwError InvalidRequest
+    (Nothing, Nothing) -> throwErrorWithInfo InvalidRequest "You should pass registration num and vehicle id."
     _ ->
       QV.findByAnyOf registrationNoM vehicleIdM
         >>= fromMaybeM VehicleNotFound

@@ -89,7 +89,7 @@ createPerson orgId req = withFlowHandler $ do
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwErrorWithInfo InvalidRequest "Person with this mobile number already exists."
-          _ -> throwError InvalidRequest
+          _ -> throwErrorWithInfo InvalidRequest "You should pass mobile number and country code."
 
 createDriverDetails :: Id SP.Person -> Flow ()
 createDriverDetails personId = do
@@ -131,16 +131,16 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     person <- case identifierTypeM of
       Nothing -> QP.findPersonById (Id $ fromJust idM)
       Just SP.MOBILENUMBER -> do
-        countryCode <- fromMaybeM InvalidRequest countryCodeM
-        mobile <- fromMaybeM InvalidRequest mobileM
+        countryCode <- fromMaybeMWithInfo InvalidRequest "You should pass country code." countryCodeM
+        mobile <- fromMaybeMWithInfo InvalidRequest "You should pass mobile number." mobileM
         QP.findByMobileNumber countryCode mobile
           >>= fromMaybeM PersonDoesNotExist
       Just SP.EMAIL ->
-        fromMaybeM InvalidRequest emailM
+        fromMaybeMWithInfo InvalidRequest "You should pass email." emailM
           >>= QP.findByEmail
           >>= fromMaybeM PersonDoesNotExist
       Just SP.AADHAAR ->
-        fromMaybeM InvalidRequest identifierM
+        fromMaybeMWithInfo InvalidRequest "You should pass identifier." identifierM
           >>= QP.findByIdentifier
           >>= fromMaybeM PersonDoesNotExist
     hasAccess user person

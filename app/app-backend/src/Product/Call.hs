@@ -18,8 +18,6 @@ import Beckn.Utils.Common
   ( decodeFromText,
     fromMaybeM,
     fromMaybeMWithInfo,
-    throwError,
-    throwErrorWithInfo,
     withFlowHandler,
   )
 import Data.Maybe
@@ -47,22 +45,21 @@ initiateCallToCustomer req = withFlowHandler $ do
   initiateCall providerPhone customerPhone
   mkAckResponse
 
--- | Get customer and driver pair by case Id
-getProductAndCustomerInfo :: Id ProductInstance -> Flow (Person, Driver.Driver)
-getProductAndCustomerInfo rideSearchPid = do
-  prodInst <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
-  c <- Case.findById $ _caseId prodInst
-  personId <- Case._requestor c & fromMaybeM CaseRequestorNotPresent
-  info <- ProductInstance._info prodInst & fromMaybeM PIInfoNotPresent
+getDriver :: ProductInstance -> Flow Driver.Driver
+getDriver rideSearchPI = do
+  info <- ProductInstance._info rideSearchPI & fromMaybeM PIInfoNotPresent
   productInfo <- decodeFromText info & fromMaybeMWithInfo CommonInternalError "Parse error."
   tracker_ <- _tracker productInfo & fromMaybeMWithInfo CommonInternalError "_tracker is null. No tracker info."
   let trip = _trip tracker_
       driver_ = trip ^. #driver
   driver <- driver_ & fromMaybeMWithInfo CommonInternalError "_driver is null. No driver info."
-  person_ <- Person.findById $ Id personId
-  case person_ of
-    Just person -> return (person, toBeckn driver)
-    Nothing -> throwError PersonNotFound
+  return $ toBeckn driver
+
+getPerson :: ProductInstance -> Flow Person
+getPerson rideSearchPI = do
+  c <- Case.findById $ _caseId rideSearchPI
+  personId <- Case._requestor c & fromMaybeM CaseRequestorNotPresent
+  Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone
 getPersonPhone :: Person -> Flow Text
@@ -71,18 +68,18 @@ getPersonPhone Person {..} = do
   phonenum & fromMaybeMWithInfo CommonInternalError "Customer has no phone number."
 
 -- | Get phone from Person data type
-getPersonTypePhone :: Driver.Driver -> Flow Text
-getPersonTypePhone Driver.Driver {..} =
-  case phones of
-    [] -> throwErrorWithInfo CommonInternalError "Driver has no contacts."
-    x : _ -> return x
+getDriverPhone :: Driver.Driver -> Flow Text
+getDriverPhone Driver.Driver {..} =
+  phones & listToMaybe & fromMaybeMWithInfo CommonInternalError "Driver has no contacts"
 
 -- | Returns phones pair or throws an error
 getProductAndCustomerPhones :: Id ProductInstance -> Flow (Text, Text)
-getProductAndCustomerPhones piId = do
-  (person, driver) <- getProductAndCustomerInfo piId
+getProductAndCustomerPhones rideSearchPid = do
+  rideSearchPI <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
+  person <- getPerson rideSearchPI
+  driver <- getDriver rideSearchPI
   customerPhone <- getPersonPhone person
-  driverPhone <- getPersonTypePhone driver
+  driverPhone <- getDriverPhone driver
   return (customerPhone, driverPhone)
 
 mkAckResponse :: Flow CallRes

@@ -5,7 +5,7 @@ import Data.Aeson.Types
 import EulerHS.Prelude hiding ((.=))
 
 class IsBecknError beckn_error where
-  toError :: beckn_error -> BecknAPIError
+  toBecknError :: beckn_error -> BecknAPIError
 
 newtype BecknAPIError = BecknAPIError Error.Error
   deriving (Generic, Eq, Show)
@@ -14,7 +14,7 @@ instance FromJSON BecknAPIError where
   parseJSON (Object v) = BecknAPIError <$> v .: "error"
   parseJSON invalid =
     prependFailure
-      "Parsing APIError failed, "
+      "Parsing BecknAPIError failed, "
       (typeMismatch "Object" invalid)
 
 instance ToJSON BecknAPIError where

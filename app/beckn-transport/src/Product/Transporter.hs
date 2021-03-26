@@ -44,7 +44,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
         throwError Unauthorized
     validateReq treq =
       unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
-        throwError InvalidRequest
+        throwErrorWithInfo InvalidRequest "Required fields missing."
     mkFarePolicy orgId vehicleVariant now = do
       farePolicyId <- L.generateGUID
       pure $

@@ -6,7 +6,7 @@
 module Beckn.Utils.Common where
 
 import Beckn.Storage.DB.Config
-import Beckn.TypeClass.IsDomainError
+import Beckn.TypeClass.IsAPIError
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack as Ack
@@ -93,14 +93,12 @@ throwDBError err@(ET.DBError dbErrType msg) = do
 
 -- | Get rid of database error
 checkDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> m a
-checkDBError dbres =
-  case dbres of
-    Left dbErr -> throwDBError dbErr
-    Right res -> pure res
+checkDBError =
+  either throwDBError pure
 
 -- | Get rid of database error and empty result
 checkDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m, Log m, IsDomainError b) =>
+  (HasCallStack, L.MonadFlow m, Log m, IsAPIError b) =>
   ET.DBResult (Maybe a) ->
   b ->
   m a
@@ -110,26 +108,21 @@ checkDBErrorOrEmpty dbres domainErrOnEmpty = case dbres of
     Nothing -> throwError domainErrOnEmpty
     Just x -> pure x
 
-fromMaybeM' :: (HasCallStack, L.MonadFlow m, Log m) => ServerError -> Maybe a -> m a
-fromMaybeM' err = maybe logAndThrow pure
+fromMaybeM ::
+  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> Maybe b -> m b
+fromMaybeM err = maybe logAndThrow pure
   where
     logAndThrow = do
-      logError "FROMMAYBE" (decodeUtf8 $ errBody err)
-      L.throwException err
-
-fromMaybeM ::
-  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> Maybe b -> m b
-fromMaybeM err = fromMaybeM' (serverErr {errBody = A.encode $ toError err, errHeaders = [jsonHeader]})
-  where
-    serverErr = (toServerError $ toStatusCode err) {errBody = A.encode $ toError err, errHeaders = [jsonHeader]}
+      throwError err
 
 fromMaybeMWithInfo ::
-  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> Text -> Maybe b -> m b
-fromMaybeMWithInfo err info = fromMaybeM' (serverErr {errBody = buildErrorBodyWithInfo err info, errHeaders = [jsonHeader]})
+  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> Text -> Maybe b -> m b
+fromMaybeMWithInfo err info = maybe logAndThrow pure
   where
-    serverErr = toServerError $ toStatusCode err
+    logAndThrow = do
+      throwErrorWithInfo err info
 
-buildErrorBodyWithInfo :: (IsDomainError a) => a -> Text -> BSL.ByteString
+buildErrorBodyWithInfo :: (IsAPIError a) => a -> Text -> BSL.ByteString
 buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
 
 jsonHeader :: (HeaderName, ByteString)
@@ -228,25 +221,25 @@ throwHttpError err errMsg = do
   L.throwException err {errBody = body, errHeaders = jsonHeader : errHeaders err}
 
 throwError ::
-  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> m b
-throwError err = throwHttpError serverErr $ toError err
+  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> m b
+throwError err = throwHttpError serverErr $ toAPIError err
   where
     serverErr = toServerError $ toStatusCode err
 
 throwErrorWithInfo ::
-  (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => a -> Text -> m b
+  (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => a -> Text -> m b
 throwErrorWithInfo err info = throwHttpError serverErr $ buildAPIErrorWithInfo err info
   where
     serverErr = toServerError $ toStatusCode err
 
-buildAPIErrorWithInfo :: (IsDomainError a) => a -> Text -> APIError
+buildAPIErrorWithInfo :: (IsAPIError a) => a -> Text -> APIError
 buildAPIErrorWithInfo err info =
-  let apiErr = toError err
+  let apiErr = toAPIError err
       defMsg = apiErr ^. #errorMessage
    in apiErr {errorMessage = defMsg <> " " <> info}
 
-throwAuthError :: (HasCallStack, L.MonadFlow m, Log m, IsDomainError a) => [Header] -> a -> m b
-throwAuthError headers = throwHttpError (S.err401 {errHeaders = headers}) . toError
+throwAuthError :: (HasCallStack, L.MonadFlow m, Log m, IsAPIError a) => [Header] -> a -> m b
+throwAuthError headers = throwHttpError (S.err401 {errHeaders = headers}) . toAPIError
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format
