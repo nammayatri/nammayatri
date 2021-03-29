@@ -13,6 +13,7 @@ import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Common (errorCodeWhenLeft)
+import Utils.TestingOrphansIO ()
 
 handle :: StartRide.ServiceHandle IO
 handle =

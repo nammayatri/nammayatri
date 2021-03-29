@@ -31,10 +31,6 @@ class Log m where
   logError :: Log m => Text -> Text -> m ()
   logError tag = logOutput ERROR [tag]
 
--- For unit testing purpose
-instance Log IO where
-  logOutput _logLevel _tags _msg = pure ()
-
 data LoggerConfig = LoggerConfig
   { isAsync :: Bool,
     level :: LogLevel,
