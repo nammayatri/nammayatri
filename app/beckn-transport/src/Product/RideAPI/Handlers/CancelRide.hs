@@ -4,12 +4,12 @@ module Product.RideAPI.Handlers.CancelRide where
 
 import Beckn.TypeClass.IsAPIError
 import qualified Beckn.Types.APIResult as APIResult
+import Beckn.Types.Common (Log)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance (ProductInstance, ProductInstanceStatus (..))
-import Beckn.Utils.Common (throwError)
-import Beckn.Utils.Logging (Log)
+import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Types.App (Ride)

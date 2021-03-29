@@ -14,7 +14,6 @@ import Beckn.Types.Core.Error
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail', withClientTracing)
 import Beckn.Utils.SignatureAuth (SignaturePayload)

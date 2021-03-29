@@ -3,8 +3,8 @@ module Beckn.Storage.Queries.ExternalTrail where
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Config as DB
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Schema (getSchemaName)
 import qualified Beckn.Types.Storage.ExternalTrail as Storage
-import Beckn.Utils.Common (getSchemaName)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T

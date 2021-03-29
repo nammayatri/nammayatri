@@ -13,7 +13,6 @@ import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
 import Beckn.Types.Error
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail')
 import EulerHS.Prelude

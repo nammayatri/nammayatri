@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)

@@ -1,6 +1,6 @@
 module Utils.TestSilentIOLogger where
 
-import Beckn.Utils.Logging (Log (..))
+import Beckn.Types.Common
 import EulerHS.Prelude
 
 instance Log IO where

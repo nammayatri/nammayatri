@@ -5,13 +5,12 @@
 module Beckn.Utils.Servant.SignatureAuth where
 
 import Beckn.Types.App
-import Beckn.Types.Common (FlowR)
+import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (HasLogContext, Log (..))
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (HasEnvEntry (..))

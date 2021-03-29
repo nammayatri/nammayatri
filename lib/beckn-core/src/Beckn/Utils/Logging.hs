@@ -1,45 +1,24 @@
 module Beckn.Utils.Logging where
 
-import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Types.Logging
 import EulerHS.Prelude
-import EulerHS.Runtime (LoggerRuntime, createLoggerRuntime)
-import EulerHS.Types (defaultFlowFormatter)
+import EulerHS.Runtime
 import qualified EulerHS.Types as T
 
-data LogLevel = DEBUG | INFO | WARNING | ERROR
-  deriving (Generic, FromDhall)
+logDebug :: Log m => Text -> Text -> m ()
+logDebug tag = logOutput DEBUG [tag]
 
-class HasLogContext env where
-  getLogContext :: env -> [Text]
-  setLogContext :: [Text] -> env -> env
+logInfo :: Log m => Text -> Text -> m ()
+logInfo tag = logOutput INFO [tag]
+
+logWarning :: Log m => Text -> Text -> m ()
+logWarning tag = logOutput WARNING [tag]
+
+logError :: Log m => Text -> Text -> m ()
+logError tag = logOutput ERROR [tag]
 
 addLogTagToEnv :: HasLogContext env => Text -> env -> env
 addLogTagToEnv tag = getLogContext >>= setLogContext . (++ [tag])
-
-class Log m where
-  logOutput :: LogLevel -> [Text] -> Text -> m ()
-
-  logDebug :: Log m => Text -> Text -> m ()
-  logDebug tag = logOutput DEBUG [tag]
-
-  logInfo :: Log m => Text -> Text -> m ()
-  logInfo tag = logOutput INFO [tag]
-
-  logWarning :: Log m => Text -> Text -> m ()
-  logWarning tag = logOutput WARNING [tag]
-
-  logError :: Log m => Text -> Text -> m ()
-  logError tag = logOutput ERROR [tag]
-
-data LoggerConfig = LoggerConfig
-  { isAsync :: Bool,
-    level :: LogLevel,
-    logToFile :: Bool,
-    logFilePath :: FilePath,
-    logToConsole :: Bool,
-    logRawSql :: Bool
-  }
-  deriving (Generic, FromDhall)
 
 getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
 getEulerLoggerConfig loggerConfig =
@@ -63,4 +42,4 @@ getEulerLoggerConfig loggerConfig =
         else T.SafelyOmitSqlLogs
 
 getEulerLoggerRuntime :: LoggerConfig -> IO LoggerRuntime
-getEulerLoggerRuntime = createLoggerRuntime defaultFlowFormatter . getEulerLoggerConfig
+getEulerLoggerRuntime = createLoggerRuntime T.defaultFlowFormatter . getEulerLoggerConfig

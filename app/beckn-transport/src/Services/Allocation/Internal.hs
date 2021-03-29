@@ -4,12 +4,12 @@ module Services.Allocation.Internal where
 
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
-import Beckn.Types.Common
+import Beckn.Types.Common (FlowR, HasLogContext, LogLevel)
+import qualified Beckn.Types.Common as Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (getCurrTime, throwErrorWithInfo)
 import qualified Beckn.Utils.Common as Common
-import qualified Beckn.Utils.Logging as Log
 import Data.Time
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -126,13 +126,13 @@ cleanupNotifications = QNS.cleanupNotifications
 removeRequest :: Id SRR.RideRequest -> Flow ()
 removeRequest = QRR.removeRequest
 
-logOutput :: Log.LogLevel -> [Text] -> Text -> Flow ()
-logOutput = Log.logOutput
+logOutput :: LogLevel -> [Text] -> Text -> Flow ()
+logOutput = Common.logOutput
 
 runSafely :: (FromJSON a, ToJSON a) => Flow a -> Flow (Either Text a)
 runSafely = Common.runSafeFlow
 
-addLogTag :: Log.HasLogContext env => Text -> FlowR env a -> FlowR env a
+addLogTag :: HasLogContext env => Text -> FlowR env a -> FlowR env a
 addLogTag = Common.addLogTag
 
 allocNotifStatusToStorageStatus ::
@@ -145,7 +145,7 @@ allocNotifStatusToStorageStatus = \case
 
 addAllocationRequest :: Id Ride -> Flow ()
 addAllocationRequest rideId = do
-  guid <- generateGUID
+  guid <- Common.generateGUID
   currTime <- getCurrTime
   let rideRequest =
         SRR.RideRequest
@@ -162,7 +162,7 @@ addNotificationStatus ::
   UTCTime ->
   Flow ()
 addNotificationStatus rideId driverId expiryTime = do
-  uuid <- generateGUID
+  uuid <- Common.generateGUID
   QNS.create
     SNS.NotificationStatus
       { _id = Id uuid,

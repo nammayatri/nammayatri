@@ -3,6 +3,7 @@ module Storage.Queries.TransporterConfig where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
+import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))

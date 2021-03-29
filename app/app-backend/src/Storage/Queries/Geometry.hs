@@ -4,8 +4,8 @@ module Storage.Queries.Geometry where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Schema
 import Beckn.Types.Storage.Geometry as Storage
-import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import Database.Beam.Postgres

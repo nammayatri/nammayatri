@@ -13,7 +13,6 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Storage.Trail as Trail
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (HasLogContext (..), Log (..))
 import Beckn.Utils.Servant.Trail.Types
 import qualified Beckn.Utils.Servant.Trail.Types as T
 import qualified Data.Binary.Builder as B

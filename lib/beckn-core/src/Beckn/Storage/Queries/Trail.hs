@@ -3,8 +3,8 @@ module Beckn.Storage.Queries.Trail where
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Config as DB
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Schema (getSchemaName)
 import qualified Beckn.Types.Storage.Trail as Storage
-import Beckn.Utils.Common (getSchemaName)
 import qualified Beckn.Utils.Servant.Trail.Types as Trail
 import Data.Time.Units (Millisecond)
 import Database.Beam ((<-.), (==.))

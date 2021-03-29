@@ -12,7 +12,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Logging
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude

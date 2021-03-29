@@ -6,8 +6,7 @@ import qualified Beckn.Storage.Queries.ExternalTrail as ExternalTrail
 import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
-import Beckn.Utils.Common (encodeToText', fork, getTraceFlag)
-import Beckn.Utils.Logging (HasLogContext (..), Log (..))
+import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Servant.Trail.Types as TT
 import qualified Data.Aeson as A

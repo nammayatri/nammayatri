@@ -7,7 +7,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as External
 import qualified Models.ProductInstance as MPI

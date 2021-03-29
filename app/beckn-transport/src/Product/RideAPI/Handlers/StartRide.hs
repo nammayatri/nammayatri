@@ -4,12 +4,12 @@ module Product.RideAPI.Handlers.StartRide where
 
 import Beckn.TypeClass.IsAPIError
 import qualified Beckn.Types.APIResult as APIResult
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (fromMaybeM, throwError)
-import Beckn.Utils.Logging (Log)
+import Beckn.Utils.Common
 import EulerHS.Prelude
 
 data ServiceHandle m = ServiceHandle

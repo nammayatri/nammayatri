@@ -2,12 +2,7 @@
 
 module Product.BecknProvider.BP where
 
-import App.Types
-  ( AppEnv (..),
-    Flow,
-    FlowHandler,
-    Log (..),
-  )
+import App.Types (AppEnv (..), Flow, FlowHandler)
 import Beckn.Product.Validation.Context
   ( validateContextCommons,
     validateDomain,

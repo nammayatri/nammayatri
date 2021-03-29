@@ -5,8 +5,9 @@
 module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.DB.Config as DB
-import Beckn.Types.Common (FlowR)
+import Beckn.Types.Common
 import Beckn.Types.Error
+import Beckn.Types.Schema (HasSchemaName, getSchemaName)
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import qualified Database.Beam as B

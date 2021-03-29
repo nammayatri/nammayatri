@@ -3,9 +3,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Utils.Common where
+module Beckn.Utils.Common
+  ( module Beckn.Utils.Common,
+    module Beckn.Utils.Logging,
+  )
+where
 
-import Beckn.Storage.DB.Config
 import Beckn.TypeClass.IsAPIError
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -14,13 +17,13 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error (Error (..))
 import Beckn.Types.Error
+import Beckn.Types.Field
 import Beckn.Utils.Logging
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Control.Monad.Reader
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Generics.Labels as GL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -31,7 +34,6 @@ import EulerHS.Prelude hiding (error, id)
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
-import GHC.TypeLits (Symbol)
 import Network.HTTP.Types (Header, hContentType)
 import Network.HTTP.Types.Header (HeaderName)
 import Network.HTTP.Types.Status
@@ -332,13 +334,6 @@ headMaybe :: [a] -> Maybe a
 headMaybe [] = Nothing
 headMaybe (x : _) = Just x
 
-class HasSchemaName m where
-  getSchemaName :: m Text
-
-instance HasDbCfg r => HasSchemaName (FlowR r) where
-  getSchemaName =
-    asks (schemaName <$> getField @"dbCfg")
-
 -- | Get trace flag from ENV var
 getTraceFlag :: HasTraceFlag r => FlowR r TraceFlag
 getTraceFlag =
@@ -352,21 +347,6 @@ padLeft n c txt =
 -- Suits only for non-negative numbers
 padNumber :: Integral i => Int -> i -> Text
 padNumber n num = padLeft n '0' $ show (fromIntegral num :: Natural)
-
--- | An alias for type-level pair of name and type.
-type (name :: Symbol) ::: (ty :: Type) = '(name, ty)
-
--- | Version of 'HasField' which complies with both record-dot-preprocessor
--- and @^. #field@ syntax supported by generics-lens.
---
--- Re-evaluate this once we decide on a uniform way to access fields.
-type HasFieldSuper name r ty = (HasField name r ty, GL.Field name r r ty ty)
-
--- | Bulk version of @HasField@.
-type family HasFields (r :: Type) (fields :: [(Symbol, Type)]) :: Constraint where
-  HasFields r '[] = () :: Constraint
-  HasFields r ('(name, ty) ': fields) =
-    (HasFieldSuper name r ty, HasFields r fields)
 
 -- | Require monad to be Flow-based and have specified fields in Reader env.
 type HasFlowEnv m r fields =

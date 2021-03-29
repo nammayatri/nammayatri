@@ -7,7 +7,6 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.FMD.API.Track
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import Data.Aeson (encode)
 import EulerHS.Prelude
 

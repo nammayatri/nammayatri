@@ -4,8 +4,7 @@ module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types
 import Beckn.Types.Common
-import Beckn.Utils.Common (fork)
-import Beckn.Utils.Logging (HasLogContext, Log (..))
+import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT

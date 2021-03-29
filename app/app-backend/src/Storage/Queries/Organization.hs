@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Id
+import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Storage
 import Beckn.Utils.Common
 import Data.Time

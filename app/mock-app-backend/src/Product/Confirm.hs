@@ -10,7 +10,6 @@ import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import Control.Lens ((?=))
 import Data.Aeson (encode)
 import EulerHS.Prelude

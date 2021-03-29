@@ -2,8 +2,8 @@
 
 module Services.Allocation.Allocation where
 
+import Beckn.Types.Common (LogLevel (..))
 import Beckn.Types.Id
-import Beckn.Utils.Logging (LogLevel (..))
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)

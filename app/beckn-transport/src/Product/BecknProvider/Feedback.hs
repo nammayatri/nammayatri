@@ -2,7 +2,7 @@
 
 module Product.BecknProvider.Feedback where
 
-import App.Types (Flow, FlowHandler, Log (..))
+import App.Types (Flow, FlowHandler)
 import qualified Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case

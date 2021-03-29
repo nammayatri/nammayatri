@@ -1,12 +1,13 @@
 module Product.FareCalculator.Interpreter (calculateFare) where
 
-import App.Types (Flow, Log (..))
+import App.Types (Flow)
 import Beckn.Product.BusinessRule (runBRFlowFatal)
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude

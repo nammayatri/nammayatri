@@ -1,13 +1,14 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Beckn.Storage.DB.Config where
 
-import Beckn.Types.Common (FlowR)
+import Beckn.Types.Common
+import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import qualified Beckn.Types.Storage.Trail as Trail
-import Beckn.Utils.Dhall (FromDhall (..))
-import Beckn.Utils.Logging (HasLogContext)
+import Beckn.Utils.Dhall (FromDhall)
 import qualified Database.Beam as B
 import Database.Beam.Postgres (Pg)
 import qualified Database.Beam.Schema.Tables as B
@@ -28,6 +29,10 @@ data DBConfig = DBConfig
 type HasDbCfg r = (HasField "dbCfg" r DBConfig)
 
 type FlowWithDb r a = (HasDbCfg r, HasLogContext r) => FlowR r a
+
+instance HasDbCfg r => HasSchemaName (FlowR r) where
+  getSchemaName =
+    asks (schemaName <$> getField @"dbCfg")
 
 handleIt ::
   (T.DBConfig Pg -> FlowR r (T.DBResult (T.SqlConn Pg))) ->

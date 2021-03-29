@@ -15,7 +15,6 @@ import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson

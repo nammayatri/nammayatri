@@ -12,7 +12,6 @@ import Beckn.Types.FMD.API.Search
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.At (ix)
 import Data.Aeson (encode)

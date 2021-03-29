@@ -1,40 +1,20 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Beckn.Types.Common where
+module Beckn.Types.Common
+  ( module Beckn.Types.Common,
+    module Beckn.Types.Flow,
+    module Beckn.Types.Logging,
+  )
+where
 
-import Beckn.Utils.Logging (HasLogContext (..), Log (..), LogLevel (..))
+import Beckn.Types.Flow
+import Beckn.Types.Logging
 import Data.Aeson
 import Data.Generics.Labels ()
 import Data.Swagger hiding (tags)
-import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-
-type FlowR r = ReaderT r L.Flow
-
-instance HasLogContext r => Log (FlowR r) where
-  logOutput logLevel tags message =
-    case logLevel of
-      DEBUG -> logWithFormat L.logDebug tags message
-      INFO -> logWithFormat L.logInfo tags message
-      WARNING -> logWithFormat L.logWarning tags message
-      ERROR -> logWithFormat L.logError tags message
-
-logWithFormat ::
-  ( MonadReader env m,
-    HasLogContext env
-  ) =>
-  (Text -> Text -> m ()) ->
-  [Text] ->
-  Text ->
-  m ()
-logWithFormat logFunction tags msg = do
-  existingTags <- asks getLogContext
-  logFunction (tagsToText (existingTags ++ tags)) msg
-  where
-    tagsToText = T.concat . map block
-    block x = "[" <> x <> "]"
 
 class GuidLike a where
   generateGUID :: FlowR r a

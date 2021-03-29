@@ -4,6 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
 import Beckn.Types.Id
+import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))

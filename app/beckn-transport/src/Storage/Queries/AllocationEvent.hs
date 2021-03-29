@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common (generateGUID)
 import Beckn.Types.Id (Id)
+import Beckn.Types.Schema
 import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B

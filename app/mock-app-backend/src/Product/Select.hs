@@ -10,7 +10,6 @@ import qualified Beckn.Types.FMD.API.Init as API
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Aeson (encode)
 import EulerHS.Prelude

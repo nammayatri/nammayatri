@@ -14,7 +14,6 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Common
-import Beckn.Utils.Logging (Log (..))
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude

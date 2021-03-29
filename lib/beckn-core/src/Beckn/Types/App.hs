@@ -9,8 +9,8 @@ module Beckn.Types.App
 where
 
 import Beckn.Storage.DB.Config (HasDbCfg)
-import Beckn.Types.Common (FlowR)
-import Beckn.Utils.Logging (HasLogContext (..))
+import Beckn.Types.Flow (FlowR)
+import Beckn.Types.Logging (HasLogContext (..))
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend

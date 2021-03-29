@@ -10,7 +10,6 @@ import Beckn.Storage.DB.Config (prepareDBConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Logging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.Server
