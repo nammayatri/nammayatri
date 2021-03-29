@@ -64,7 +64,7 @@ getPerson rideSearchPI = do
 -- | Get person's mobile phone
 getPersonPhone :: Person -> Flow Text
 getPersonPhone Person {..} = do
-  let phonenum = _mobileCountryCode <> _mobileNumber
+  let phonenum = (<>) <$> _mobileCountryCode <*> _mobileNumber
   phonenum & fromMaybeMWithInfo CommonInternalError "Customer has no phone number."
 
 -- | Get phone from Person data type
