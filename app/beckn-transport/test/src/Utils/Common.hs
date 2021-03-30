@@ -1,7 +1,7 @@
 module Utils.Common where
 
+import qualified Beckn.TypeClass.IsAPIError as APIError
 import qualified Beckn.Types.APIResult as APIResult
-import qualified Beckn.Types.Error as APIError
 import Data.Aeson (decode)
 import EulerHS.Prelude
 import qualified Servant.Server.Internal as Servant

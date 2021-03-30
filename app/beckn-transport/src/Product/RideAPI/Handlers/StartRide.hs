@@ -2,12 +2,13 @@
 
 module Product.RideAPI.Handlers.StartRide where
 
+import Beckn.TypeClass.IsAPIError
 import qualified Beckn.Types.APIResult as APIResult
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (fromMaybeMWithInfo400, fromMaybeMWithInfo500, throwErrorWithInfo400)
+import Beckn.Utils.Common (fromMaybeM, throwError)
 import Beckn.Utils.Logging (Log)
 import EulerHS.Prelude
 
@@ -20,19 +21,39 @@ data ServiceHandle m = ServiceHandle
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
   }
 
+data StartRideError
+  = NotAnExecutor
+  | InvalidRideStatus
+  | InvalidRideId
+  | RideMissingOTP
+  | IncorrectOTP
+  deriving (Eq, Show)
+
+instance IsAPIError StartRideError where
+  toAPIError NotAnExecutor = APIError "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride."
+  toAPIError InvalidRideStatus = APIError "INVALID_RIDE_STATUS" "Ride cannot be started."
+  toAPIError InvalidRideId = APIError "INVALID_RIDE_ID" "Invalid ride id."
+  toAPIError RideMissingOTP = APIError "RIDE_OTP_MISSING" "Ride does not have OTP."
+  toAPIError IncorrectOTP = APIError "INCORRECT_RIDE_OTP" "Input OTP is wrong."
+  toStatusCode NotAnExecutor = E400
+  toStatusCode InvalidRideStatus = E400
+  toStatusCode InvalidRideId = E400
+  toStatusCode RideMissingOTP = E500
+  toStatusCode IncorrectOTP = E400
+
 startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> Text -> m APIResult.APIResult
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById $ Id requestorId
   orderPi <- findPIById $ Id rideId
   unless (requestor ^. #_role == Person.ADMIN) do
-    rideDriver <- orderPi ^. #_personId & fromMaybeMWithInfo400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride."
+    rideDriver <- orderPi ^. #_personId & fromMaybeM NotAnExecutor
     when (rideDriver /= Id requestorId || requestor ^. #_role /= Person.DRIVER) $
-      throwErrorWithInfo400 "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride."
-  unless (isValidPiStatus (orderPi ^. #_status)) $ throwErrorWithInfo400 "INVALID_RIDE_STATUS" "Ride cannot be started."
-  searchPiId <- orderPi ^. #_parentId & fromMaybeMWithInfo400 "INVALID_RIDE_ID" "Invalid ride id."
+      throwError NotAnExecutor
+  unless (isValidPiStatus (orderPi ^. #_status)) $ throwError InvalidRideStatus
+  searchPiId <- orderPi ^. #_parentId & fromMaybeM InvalidRideId
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #_udf4 & fromMaybeMWithInfo500 "RIDE_OTP_MISSING" "Ride does not have OTP."
-  when (otp /= inAppOtp) $ throwErrorWithInfo400 "INCORRECT_RIDE_OTP" "Input OTP is wrong."
+  inAppOtp <- orderPi ^. #_udf4 & fromMaybeM RideMissingOTP
+  when (otp /= inAppOtp) $ throwError IncorrectOTP
   piList <- findPIsByParentId searchPiId
   trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER

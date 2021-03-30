@@ -5,7 +5,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common (servantJsonError400, servantJsonError500)
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide

@@ -128,18 +128,6 @@ buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
 
-servantJsonError400,
-  servantJsonError401,
-  servantJsonError404,
-  servantJsonError500,
-  servantJsonError503 ::
-    Text -> Text -> ServerError
-servantJsonError400 err msg = S.err400 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
-servantJsonError401 err msg = S.err401 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
-servantJsonError404 err msg = S.err404 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
-servantJsonError500 err msg = S.err500 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
-servantJsonError503 err msg = S.err503 {errBody = buildErrorBodyWithInfo err msg, errHeaders = [jsonHeader]}
-
 mkOkResponse :: L.MonadFlow m => Context -> m AckResponse
 mkOkResponse context = do
   currTime <- getCurrTime
