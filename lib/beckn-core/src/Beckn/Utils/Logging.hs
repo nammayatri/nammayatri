@@ -1,9 +1,36 @@
-module Beckn.Utils.Logging where
+module Beckn.Utils.Logging
+  ( Log (..),
+    HasLogContext (..),
+    LogLevel (..),
+    LoggerConfig (..),
+    getEulerLoggerRuntime,
+    logDebug,
+    logInfo,
+    logWarning,
+    logError,
+    addLogTagToEnv,
+  )
+where
 
 import Beckn.Types.Logging
+import qualified Data.Aeson as A
+import qualified Data.Text as Text
+import qualified Data.Time as Time
 import EulerHS.Prelude
 import EulerHS.Runtime
 import qualified EulerHS.Types as T
+
+data LogEntry = LogEntry
+  { _timestamp :: Text,
+    _level :: Text,
+    _tag :: Text,
+    _message_number :: Text,
+    _message :: Text
+  }
+  deriving (Generic)
+
+instance ToJSON LogEntry where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 logDebug :: Log m => Text -> Text -> m ()
 logDebug tag = logOutput DEBUG [tag]
@@ -39,4 +66,28 @@ getEulerLoggerConfig loggerConfig =
         else T.SafelyOmitSqlLogs
 
 getEulerLoggerRuntime :: LoggerConfig -> IO LoggerRuntime
-getEulerLoggerRuntime = createLoggerRuntime T.defaultFlowFormatter . getEulerLoggerConfig
+getEulerLoggerRuntime = createLoggerRuntime logFlowFormatter . getEulerLoggerConfig
+
+logFlowFormatter :: T.FlowFormatter
+logFlowFormatter _ = do
+  currTime <- Time.formatTime Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%3Q" <$> Time.getCurrentTime
+  pure $! logFormatterText (Text.pack currTime)
+
+logFormatterText ::
+  Text -> -- timestamp
+  T.MessageFormatter
+logFormatterText
+  timestamp
+  (T.PendingMsg _mbFlowGuid lvl tag msg msgNum _) = res
+    where
+      eulerMsg :: Text
+      eulerMsg = "[" +|| lvl ||+ "] <" +| tag |+ "> " +| msg |+ ""
+      logEntry =
+        LogEntry
+          { _timestamp = timestamp,
+            _level = show lvl,
+            _tag = tag,
+            _message_number = show msgNum,
+            _message = eulerMsg
+          }
+      res = T.SimpleLBS $ A.encode logEntry

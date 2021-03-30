@@ -70,4 +70,4 @@ showResultError (ConversionFailed sqlType _ _ hType msg) = "sql conversion faile
 logQuery :: ToRow q => Query -> q -> Flow ()
 logQuery q qargs =
   withPostgreSQLSimple (\conn -> decodeUtf8 <$> formatQuery conn q qargs)
-    >>= L.logDebug @Text "raw sql query" -- TODO: replace with Beckn.Utils.Logging.logDebug
+    >>= logDebug "raw sql query"
