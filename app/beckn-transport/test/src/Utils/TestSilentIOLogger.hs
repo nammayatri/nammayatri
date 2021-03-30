@@ -1,4 +1,4 @@
-module Utils.TestingOrphansIO where
+module Utils.TestSilentIOLogger where
 
 import Beckn.Utils.Logging (Log (..))
 import EulerHS.Prelude

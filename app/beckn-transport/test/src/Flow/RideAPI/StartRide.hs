@@ -12,7 +12,7 @@ import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Common (errorCodeWhenLeft)
-import Utils.TestingOrphansIO ()
+import Utils.TestSilentIOLogger ()
 
 handle :: StartRide.ServiceHandle IO
 handle =
