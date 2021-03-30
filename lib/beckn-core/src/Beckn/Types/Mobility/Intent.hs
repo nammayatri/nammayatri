@@ -8,6 +8,7 @@ import Beckn.Types.Core.Tag
 import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
+import Beckn.Utils.Example
 import Data.Text
 import EulerHS.Prelude
 
@@ -44,3 +45,19 @@ instance FromJSON TransferAttrs where
 
 instance ToJSON TransferAttrs where
   toJSON = genericToJSON stripAllLensPrefixOptions
+
+instance Example Intent where
+  example =
+    Intent
+      { _query_string = Nothing,
+        _provider_id = Nothing,
+        _category_id = Nothing,
+        _item_id = Nothing,
+        _tags = Just example,
+        _pickups = example,
+        _drops = example,
+        _vehicle = example,
+        _payload = example,
+        _transfer = Nothing,
+        _fare = example
+      }

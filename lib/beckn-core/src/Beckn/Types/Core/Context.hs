@@ -32,7 +32,7 @@ instance Example Context where
       { _domain = example,
         _country = Just "IND",
         _city = Just "BLR",
-        _action = "on_search",
+        _action = "search",
         _core_version = Just "0.8.2",
         _domain_version = Just "0.8.2",
         _bap_uri = parseBaseUrl "https://api.domain.com/",

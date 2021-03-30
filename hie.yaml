@@ -1,8 +1,5 @@
 cradle:
   stack:
-    stackYaml: "./stack-hie.yaml"
-
-    components:
     - path: "app/app-backend/src"
       component: "app-backend:lib"
 
@@ -12,13 +9,22 @@ cradle:
     - path: "app/app-backend/server/Paths_app_backend.hs"
       component: "app-backend:exe:app-backend-exe"
 
+    - path: "app/beckn-cli/src"
+      component: "beckn-cli:lib"
+
+    - path: "app/beckn-cli/app/Main.hs"
+      component: "beckn-cli:exe:beckn-cli-exe"
+
+    - path: "app/beckn-cli/app/Paths_beckn_cli.hs"
+      component: "beckn-cli:exe:beckn-cli-exe"
+
     - path: "app/beckn-transport/src"
       component: "beckn-transport:lib"
 
-    - path: "app/beckn-transport/server/Main.hs"
-      component: "beckn-transport:exe:beckn-transport-exe"
+    - path: "app/beckn-transport/server/BackgroundTaskManagerMain.hs"
+      component: "beckn-transport:exe:beckn-transport-btm-exe"
 
-    - path: "app/beckn-transport/server/Paths_beckn_transport.hs"
+    - path: "app/beckn-transport/server/Main.hs"
       component: "beckn-transport:exe:beckn-transport-exe"
 
     - path: "app/beckn-transport/test/app"
@@ -53,12 +59,6 @@ cradle:
 
     - path: "lib/beckn-core/test/src"
       component: "beckn-core:test:beckn-core-tests"
-
-    - path: "app/beckn-transport/test/app"
-      component: "beckn-transport:test:beckn-transport-tests"
-
-    - path: "app/beckn-transport/test/src"
-      component: "beckn-transport:test:beckn-transport-tests"
 
     - path: "test/src"
       component: "beckn-test:lib"

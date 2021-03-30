@@ -70,6 +70,9 @@ newtype SearchIntent = SearchIntent
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
+instance Example SearchIntent where
+  example = SearchIntent example
+
 instance Example OnSearchServices where
   example =
     OnSearchServices

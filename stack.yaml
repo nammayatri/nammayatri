@@ -30,6 +30,7 @@ resolver: lts-15.15
 #   - wai
 packages:
   - lib/beckn-core
+  - app/beckn-cli
   - app/gateway
   - app/beckn-transport
   - app/app-backend
