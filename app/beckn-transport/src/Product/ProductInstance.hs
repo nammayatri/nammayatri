@@ -220,7 +220,7 @@ updateStatus piId req requestedByDriver = do
       inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM PIOTPNotPresent
       tripOtpCode <- req ^. #_otpCode & fromMaybeMWithInfo InvalidRequest "You should pass OTP."
       if inAppOtpCode == tripOtpCode
-        then updateTrip (prodInst ^. #_id) PI.INPROGRESS req
+        then updateTrip (prodInst ^. #_id) PI.INPROGRESS req requestedByDriver
         else throwError IncorrectOTP
     (Just c, Just _, Just _) ->
       updateTrip (prodInst ^. #_id) c req requestedByDriver

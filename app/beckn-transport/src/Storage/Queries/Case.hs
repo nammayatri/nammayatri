@@ -92,11 +92,10 @@ updateStatus id newStatus = do
           _status <-. B.val_ status
         ]
 
-updateStatusByIds ::
+updateStatusByIdsFlow ::
   [Id Storage.Case] ->
   Storage.CaseStatus ->
   Flow (T.DBResult ())
-
 updateStatusByIdsFlow ids newStatus = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrTime
