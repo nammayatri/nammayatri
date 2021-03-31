@@ -3,11 +3,11 @@ module Storage.Queries.Case where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
-import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -61,7 +61,7 @@ updateStatusFlow ::
 updateStatusFlow id newStatus = do
   dbTable <- getDbTable
   -- update data
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause newStatus currTime)
@@ -99,7 +99,7 @@ updateStatusByIdsFlow ::
   Flow (T.DBResult ())
 updateStatusByIdsFlow ids newStatus = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause newStatus currTime)
@@ -177,7 +177,7 @@ findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
 findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> UTCTime -> UTCTime -> Flow (T.DBResult [Storage.Case])
 findAllExpiredByStatus statuses csType from to = do
   dbTable <- getDbTable
-  (now :: UTCTime) <- getCurrTime
+  (now :: UTCTime) <- getCurrentTime
   DB.findAll dbTable (predicate now)
   where
     predicate now Storage.Case {..} =

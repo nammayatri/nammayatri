@@ -17,7 +17,7 @@ import Beckn.Utils.Servant.Trail.Types
 import qualified Beckn.Utils.Servant.Trail.Types as T
 import qualified Data.Binary.Builder as B
 import qualified Data.ByteString.Lazy as LBS
-import Data.Time
+import Data.Time (UTCTime, diffUTCTime)
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
 import qualified Network.HTTP.Types as HTTP
@@ -160,7 +160,7 @@ traceHandler = TraceHandler {..}
   where
     _preAction req = do
       reqId <- generateGUID
-      now <- getCurrTime
+      now <- getCurrentTime
       let endpointId = toString $ _endpointId $ _content req
       if "v1 GET" /= endpointId && "v1/ GET" /= endpointId
         then do
@@ -169,7 +169,7 @@ traceHandler = TraceHandler {..}
         else pure Nothing
     _postAction Nothing _ = pass
     _postAction (Just (reqId, reqTime, trail)) res = do
-      now <- getCurrTime
+      now <- getCurrentTime
       let duration = roundDiffTimeToUnit $ now `diffUTCTime` reqTime
       fork "save trail" $ do
         Trail.create trail >>= \case

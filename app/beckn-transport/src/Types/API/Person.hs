@@ -5,7 +5,7 @@ module Types.API.Person where
 import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
-import Beckn.Types.Common as BC
+import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
@@ -15,7 +15,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Servant.API
 import qualified Storage.Queries.Location as QL
@@ -116,8 +116,8 @@ transformToLocation req location =
 
 createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation UpdatePersonReq {..} = do
-  _id <- BC.generateGUID
-  _createdAt <- getCurrTime
+  _id <- generateGUID
+  _createdAt <- getCurrentTime
   pure
     SL.Location
       { _locationType = fromMaybe SL.PINCODE _locationType,
@@ -175,8 +175,8 @@ instance ToJSON CreatePersonReq where
 
 instance CreateTransform CreatePersonReq SP.Person Flow where
   createTransform req = do
-    pid <- BC.generateGUID
-    now <- getCurrTime
+    pid <- generateGUID
+    now <- getCurrentTime
     location <- createLocationT req
     return
       SP.Person

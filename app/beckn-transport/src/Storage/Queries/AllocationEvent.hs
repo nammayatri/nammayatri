@@ -3,7 +3,7 @@ module Storage.Queries.AllocationEvent where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common (generateGUID)
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
 import Beckn.Utils.Common
@@ -36,7 +36,7 @@ findAllocationEventById id = do
 logAllocationEvent :: Storage.AllocationEventType -> Id Ride -> Flow ()
 logAllocationEvent eventType rideId = do
   uuid <- generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   create $
     Storage.AllocationEvent
       { _id = uuid,

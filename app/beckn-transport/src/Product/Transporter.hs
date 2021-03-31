@@ -4,6 +4,7 @@ module Product.Transporter where
 
 import App.Types
 import Beckn.TypeClass.Transform
+import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
@@ -65,7 +66,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
 updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id _EntityId) SP.ADMIN orgId
-  now <- getCurrTime
+  now <- getCurrentTime
   case maybePerson of
     Just person -> do
       validate person

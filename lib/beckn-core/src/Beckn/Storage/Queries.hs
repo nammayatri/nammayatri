@@ -58,7 +58,7 @@ runSqlDB' ::
 runSqlDB' runSqlDBFunction query = do
   connection <- DB.getOrInitConn
   schemaName <- getSchemaName
-  currentTime <- getCurrTime
+  currentTime <- getCurrentTime
   let env = DBEnv {..}
   runSqlDBFunction connection (runReaderT query env)
 

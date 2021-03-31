@@ -57,7 +57,7 @@ makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
   let role = fromMaybe SP.USER (req ^. #_role)
   pid <- BC.generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     SP.Person
       { _id = pid,
@@ -92,7 +92,7 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     SR.RegistrationToken
       { _id = rtid,

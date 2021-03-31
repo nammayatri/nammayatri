@@ -8,7 +8,7 @@ import Beckn.Product.Validation.Context
     validateDomain,
   )
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common (GuidLike (..))
+import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Status as API
@@ -118,7 +118,7 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver 
 
 mkContext :: Text -> Text -> Flow Context
 mkContext action tId = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   return
     Context
       { _domain = Domain.MOBILITY,
@@ -167,7 +167,7 @@ mkOnServiceStatusPayload piId trackerPi = do
       }
   where
     mkOrderRes prodInstId productId status = do
-      now <- getCurrTime
+      now <- getCurrentTime
       return $
         Order
           { _id = prodInstId,
@@ -302,7 +302,7 @@ mkCancelTripObj prodInstId = do
 
 getIdShortIdAndTime :: GuidLike b => Flow (UTCTime, b, Text)
 getIdShortIdAndTime = do
-  now <- getCurrTime
+  now <- getCurrentTime
   guid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return (now, guid, shortId)
@@ -315,7 +315,7 @@ validateContext action context = do
 mkRideReq :: Id ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
 mkRideReq prodInstID rideRequestType = do
   guid <- generateGUID
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   pure
     SRideRequest.RideRequest
       { _id = Id guid,

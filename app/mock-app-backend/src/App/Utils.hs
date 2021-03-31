@@ -3,6 +3,7 @@
 module App.Utils where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Core.Address
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
@@ -15,11 +16,10 @@ import Beckn.Types.FMD.Intent
 import Beckn.Types.FMD.Item
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
-import Beckn.Utils.Common
 import Beckn.Utils.Example
 import Control.Lens.Prism (_Just)
 import Data.Default.Class
-import Data.Time
+import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude
 
 address :: Address
@@ -100,7 +100,7 @@ buildIntent utcTime =
 
 buildDraftOrder :: Text -> Flow Order
 buildDraftOrder itemId = do
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     Order
       { _id = Just "draft-task-1",
@@ -138,7 +138,7 @@ buildDraftOrder itemId = do
 
 buildContext :: Text -> Text -> Flow Context
 buildContext act tid = do
-  utcTime <- getCurrTime
+  utcTime <- getCurrentTime
   bapNwAddr <- nwAddress <$> ask
   return $
     Context
@@ -159,12 +159,12 @@ buildContext act tid = do
 getFutureTime :: Flow UTCTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
-  addUTCTime 7200 <$> getCurrTime
+  addUTCTime 7200 <$> getCurrentTime
 
 buildSearchReq :: Text -> Flow SearchReq
 buildSearchReq tid = do
   ctx <- buildContext "search" tid
-  now <- getCurrTime
+  now <- getCurrentTime
   let intent = buildIntent now
   pure $ SearchReq ctx intent
 

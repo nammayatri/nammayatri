@@ -5,11 +5,13 @@ module Beckn.Types.Common
   ( module Beckn.Types.Common,
     module Beckn.Types.Flow,
     module Beckn.Types.Logging,
+    module Beckn.Types.Time,
   )
 where
 
 import Beckn.Types.Flow
 import Beckn.Types.Logging
+import Beckn.Types.Time
 import Data.Aeson
 import Data.Generics.Labels ()
 import Data.Swagger hiding (tags)

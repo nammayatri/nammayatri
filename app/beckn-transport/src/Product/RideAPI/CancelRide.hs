@@ -2,8 +2,9 @@ module Product.RideAPI.CancelRide where
 
 import App.Types (FlowHandler)
 import qualified Beckn.Types.APIResult as APIResult
+import Beckn.Types.Common as Common
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (withFlowHandler)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BecknProvider
@@ -21,5 +22,5 @@ cancelRide SR.RegistrationToken {..} rideId = withFlowHandler $ do
           findPersonById = QPerson.findPersonById,
           cancelRide = BecknProvider.cancelRide,
           generateGUID = L.generateGUID,
-          getCurrentTime = getCurrTime
+          getCurrentTime = Common.getCurrentTime
         }

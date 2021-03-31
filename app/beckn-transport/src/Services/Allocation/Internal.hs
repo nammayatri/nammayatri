@@ -4,13 +4,13 @@ module Services.Allocation.Internal where
 
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
-import Beckn.Types.Common (FlowR, HasLogContext, LogLevel)
+import Beckn.Types.Common (FlowR)
 import qualified Beckn.Types.Common as Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (getCurrTime, throwErrorWithInfo)
+import Beckn.Utils.Common (throwErrorWithInfo)
 import qualified Beckn.Utils.Common as Common
-import Data.Time
+import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.Person as Person
@@ -33,7 +33,7 @@ import qualified Types.Storage.RideRequest as SRR
 import Utils.Notifications
 
 getCurrentTime :: Flow UTCTime
-getCurrentTime = getCurrTime
+getCurrentTime = Common.getCurrentTime
 
 getDriverSortMode :: Flow SortMode
 getDriverSortMode = asks (defaultSortMode . driverAllocationConfig)
@@ -126,13 +126,13 @@ cleanupNotifications = QNS.cleanupNotifications
 removeRequest :: Id SRR.RideRequest -> Flow ()
 removeRequest = QRR.removeRequest
 
-logOutput :: LogLevel -> [Text] -> Text -> Flow ()
+logOutput :: Common.LogLevel -> [Text] -> Text -> Flow ()
 logOutput = Common.logOutput
 
 runSafely :: (FromJSON a, ToJSON a) => Flow a -> Flow (Either Text a)
 runSafely = Common.runSafeFlow
 
-addLogTag :: HasLogContext env => Text -> FlowR env a -> FlowR env a
+addLogTag :: Common.HasLogContext env => Text -> FlowR env a -> FlowR env a
 addLogTag = Common.addLogTag
 
 allocNotifStatusToStorageStatus ::
@@ -146,7 +146,7 @@ allocNotifStatusToStorageStatus = \case
 addAllocationRequest :: Id Ride -> Flow ()
 addAllocationRequest rideId = do
   guid <- Common.generateGUID
-  currTime <- getCurrTime
+  currTime <- Common.getCurrentTime
   let rideRequest =
         SRR.RideRequest
           { _id = Id guid,

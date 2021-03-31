@@ -26,7 +26,8 @@ import qualified Data.ByteString.Base64 as DBB
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time
+import Data.Time (NominalDiffTime, UTCTime)
+import qualified Data.Time as Time
 import Data.Time.Units (TimeUnit, fromMicroseconds)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
@@ -45,15 +46,6 @@ import qualified Servant.Server.Internal as S
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
-
-getCurrLocalTime :: L.MonadFlow m => m LocalTime
-getCurrLocalTime = L.runIO $ do
-  utc' <- getCurrentTime
-  timezone <- getTimeZone utc'
-  pure $ utcToLocalTime timezone utc'
-
-getCurrTime :: L.MonadFlow m => m UTCTime
-getCurrTime = L.runIO getCurrentTime
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
@@ -130,18 +122,18 @@ buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
 jsonHeader :: (HeaderName, ByteString)
 jsonHeader = (hContentType, "application/json;charset=utf-8")
 
-mkOkResponse :: L.MonadFlow m => Context -> m AckResponse
+mkOkResponse :: MonadTime m => Context -> m AckResponse
 mkOkResponse context = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   let context' = context {_timestamp = currTime}
   return $ AckResponse context' (ack "ACK") Nothing
 
-mkAckResponse :: L.MonadFlow m => Text -> Text -> m AckResponse
+mkAckResponse :: MonadTime m => Text -> Text -> m AckResponse
 mkAckResponse txnId action = mkAckResponse' txnId action "ACK"
 
-mkAckResponse' :: L.MonadFlow m => Text -> Text -> Text -> m AckResponse
+mkAckResponse' :: MonadTime m => Text -> Text -> Text -> m AckResponse
 mkAckResponse' txnId action status = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   return
     AckResponse
       { _context =
@@ -248,7 +240,10 @@ throwAuthError headers = throwHttpError (S.err401 {errHeaders = headers}) . toAP
 -- TODO: make a generic function and then pass format
 -- and timezone as arguments. Currently adds +5:30
 showTimeIst :: UTCTime -> Text
-showTimeIst = T.pack . formatTime defaultTimeLocale "%d %b, %I:%M %p" . addUTCTime (60 * 330)
+showTimeIst time =
+  T.pack $
+    Time.formatTime Time.defaultTimeLocale "%d %b, %I:%M %p" $
+      Time.addUTCTime (60 * 330) time
 
 callClient ::
   (ET.JSONEx a, L.MonadFlow m, Log m) =>
@@ -324,10 +319,10 @@ addIfPresent :: [a] -> Maybe a -> [a]
 addIfPresent xs (Just x) = x : xs
 addIfPresent xs _ = xs
 
-isExpired :: L.MonadFlow m => NominalDiffTime -> UTCTime -> m Bool
+isExpired :: MonadTime m => NominalDiffTime -> UTCTime -> m Bool
 isExpired nominal time = do
-  now <- getCurrTime
-  let addedUTCTime = addUTCTime nominal time
+  now <- getCurrentTime
+  let addedUTCTime = Time.addUTCTime nominal time
   return $ now > addedUTCTime
 
 headMaybe :: [a] -> Maybe a

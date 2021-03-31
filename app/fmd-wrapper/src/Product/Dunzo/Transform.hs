@@ -40,11 +40,11 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (foldWIndex, fromMaybeMWithInfo, getCurrTime, headMaybe, throwErrorWithInfo)
+import Beckn.Utils.Common (foldWIndex, fromMaybeMWithInfo, headMaybe, throwErrorWithInfo)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import qualified Data.Text as T
-import Data.Time
+import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude hiding (State, drop)
 import External.Dunzo.Types
 import Types.Error
@@ -123,7 +123,7 @@ mkOnSearchErrReq context err = do
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
 mkOnSearchReq _ context res@QuoteRes {..} = do
-  now <- getCurrTime
+  now <- getCurrentTime
   cid <- generateGUID
   return $
     CallbackReq
@@ -193,7 +193,7 @@ mkSearchItem index QuoteRes {..} =
 mkQuote :: Integer -> QuoteRes -> Flow Quotation
 mkQuote quotationTTLinMin QuoteRes {..} = do
   qid <- generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
   return $ Quotation {_id = qid, _price = Just price, _ttl = Just validTill, _breakup = Nothing}
   where
@@ -236,7 +236,7 @@ mkOnSelectErrReq context err =
 mkOnInitMessage :: Text -> Integer -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
 mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
-  now <- getCurrTime
+  now <- getCurrentTime
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
   quotation <- fromMaybeMWithInfo CommonInternalError "Invalid order, no quotation." $ order ^. #_quotation
   return $
@@ -266,7 +266,7 @@ mkOnInitErrReq context err =
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
 mkOnStatusMessage :: Text -> Order -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
 mkOnStatusMessage orgName order payee status = do
-  now <- getCurrTime
+  now <- getCurrentTime
   return $ StatusResMessage (updateOrder orgName now order payee status)
 
 updateOrder :: Text -> UTCTime -> Order -> PaymentEndpoint -> TaskStatus -> Order
@@ -539,7 +539,7 @@ mapTaskStateToOrderState s = do
 
 updateTaskEta :: Task -> Eta -> Flow Task
 updateTaskEta task eta = do
-  now <- getCurrTime
+  now <- getCurrentTime
   let pickup = task ^. #_pickup
   let drop = task ^. #_drop
 

@@ -3,10 +3,11 @@ module Storage.Queries.TripReference where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -60,7 +61,7 @@ update ::
   Flow (T.DBResult ())
 update id status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status currTime)

@@ -3,6 +3,7 @@
 module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
+import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.Ack as Ack
@@ -17,7 +18,7 @@ import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import qualified Data.Text as T
-import Data.Time
+import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -101,7 +102,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
       _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
       pure ()
     notifyErrorGateway err callbackUrl bppShortId = do
-      currTime <- getCurrTime
+      currTime <- getCurrentTime
       appEnv <- ask
       let context =
             Context.Context

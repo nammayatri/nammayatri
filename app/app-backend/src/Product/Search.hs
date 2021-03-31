@@ -26,7 +26,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Time
+import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -72,7 +72,7 @@ search person req = withFlowHandler $ do
   return $ API.AckResponse (getId (case_ ^. #_id)) sAck Nothing
   where
     validateDateTime sreq = do
-      currTime <- getCurrTime
+      currTime <- getCurrentTime
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
         throwErrorWithInfo InvalidRequest "Invalid start time."
@@ -140,14 +140,14 @@ searchCbService req catalog = do
   where
     extendCaseExpiry :: Case.Case -> Flow ()
     extendCaseExpiry Case.Case {..} = do
-      now <- getCurrTime
+      now <- getCurrentTime
       confirmExpiry <- fromMaybe 1800 . searchConfirmExpiry <$> ask
       let newValidTill = fromInteger confirmExpiry `addUTCTime` now
       when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
 
 mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do
-  now <- getCurrTime
+  now <- getCurrentTime
   cid <- generateGUID
   distance <- getDistance req
   orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
@@ -190,7 +190,7 @@ mkCase req userId from to = do
   where
     getCaseExpiry :: UTCTime -> Flow UTCTime
     getCaseExpiry startTime = do
-      now <- getCurrTime
+      now <- getCurrentTime
       caseExpiry <- fromMaybe 7200 . searchCaseExpiry <$> ask
       let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
@@ -200,7 +200,7 @@ mkCase req userId from to = do
 mkLocation :: BS.Stop -> Flow Location.Location
 mkLocation BS.Stop {..} = do
   let loc = _location
-  now <- getCurrTime
+  now <- getCurrentTime
   locId <- generateGUID
   let mgps = loc ^. #_gps
   return
@@ -223,7 +223,7 @@ mkLocation BS.Stop {..} = do
 
 mkProduct :: Case.Case -> Core.Item -> Flow Products.Products
 mkProduct case_ item = do
-  now <- getCurrTime
+  now <- getCurrentTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
       Nothing -> throwErrorWithInfo InvalidRequest "convertDecimalValueToAmount returns Nothing."
@@ -256,7 +256,7 @@ mkProduct case_ item = do
 mkProductInstance ::
   Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> Core.Item -> Flow PI.ProductInstance
 mkProductInstance case_ bppOrg provider personId item = do
-  now <- getCurrTime
+  now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
@@ -298,7 +298,7 @@ mkProductInstance case_ bppOrg provider personId item = do
 
 mkDeclinedProductInstance :: Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> Flow PI.ProductInstance
 mkDeclinedProductInstance case_ bppOrg provider personId = do
-  now <- getCurrTime
+  now <- getCurrentTime
   piId <- generateGUID
   let info = ProductInfo (Just provider) Nothing
   return

@@ -5,6 +5,7 @@ module Storage.Queries.ProductInstance where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Case
@@ -14,7 +15,7 @@ import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle (Vehicle)
 import Beckn.Utils.Common
-import Data.Time
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -90,7 +91,7 @@ findAllByIds' ids = do
 updateStatusForProducts :: Id Product.Products -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateStatusForProducts productId status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -109,7 +110,7 @@ updateStatusFlow ::
   Flow (T.DBResult ())
 updateStatusFlow prodInstId status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -184,7 +185,7 @@ updateCaseId ::
   Flow (T.DBResult ())
 updateCaseId prodInstId caseId = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause caseId currTime)

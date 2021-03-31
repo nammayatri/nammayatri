@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
+import Beckn.Types.Common
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
@@ -56,7 +57,7 @@ makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
   role <- fromMaybeMWithInfo InvalidRequest "You should pass person's role." (req ^. #_role)
   pid <- BC.generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     SP.Person
       { _id = pid,
@@ -91,7 +92,7 @@ makeSession SmsSessionConfig {..} req entityId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     SR.RegistrationToken
       { _id = rtid,

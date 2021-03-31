@@ -5,6 +5,7 @@
 module Product.CustomerSupport where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
@@ -56,7 +57,7 @@ createSupportRegToken :: Text -> Flow SR.RegistrationToken
 createSupportRegToken entityId = do
   rtid <- L.generateGUID
   token <- L.generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     SR.RegistrationToken
       { _id = rtid,

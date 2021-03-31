@@ -2,9 +2,10 @@ module Product.HealthCheck (healthCheck) where
 
 import qualified App.Types as App
 import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Types.Common
 import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
-import Data.Time
+import Data.Time (diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Types.Error
@@ -20,7 +21,7 @@ healthCheck shutdown = withFlowHandler $ do
   where
     markAsDead = throwError ServiceUnavailable
     checkLastUpdateTime lastUpdateTime = do
-      now <- getCurrTime
+      now <- getCurrentTime
       let diffTime = diffUTCTime now lastUpdateTime
       if diffTime > 10
         then markAsDead

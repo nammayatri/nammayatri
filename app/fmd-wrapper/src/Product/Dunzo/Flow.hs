@@ -5,6 +5,7 @@
 module Product.Dunzo.Flow where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
@@ -178,7 +179,7 @@ init org req = do
     sendCb _ _ _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId order quote = do
-      now <- getCurrTime
+      now <- getCurrentTime
       let caseId = Id $ fromJust $ order ^. #_id
       let case_ =
             Case
@@ -273,7 +274,7 @@ confirm org req = do
     sendCb case_ orderDetails context cbUrl payeeDetails res = do
       case res of
         Right taskStatus -> do
-          currTime <- getCurrTime
+          currTime <- getCurrentTime
           let uOrder = updateOrder (org ^. #_name) currTime (orderDetails ^. #order) payeeDetails taskStatus
           checkAndLogPriceDiff (orderDetails ^. #order) uOrder
           updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
@@ -302,7 +303,7 @@ confirm org req = do
         _ -> pass
 
     validateDelayFromInit dzQuotationTTLinMin case_ = do
-      now <- getCurrTime
+      now <- getCurrentTime
       let orderCreatedAt = case_ ^. #_createdAt
       let thresholdTime = addUTCTime (fromInteger (dzQuotationTTLinMin * 60)) orderCreatedAt
       when (thresholdTime < now) $

@@ -7,12 +7,13 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -110,7 +111,7 @@ findByRoleAndMobileNumberWithoutCC role mobileNumber = do
 updateMultiple :: Id Storage.Person -> Storage.Person -> Flow ()
 updateMultiple personId person = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause now person) (predicate personId)
     >>= either throwDBError pure
   where
@@ -147,7 +148,7 @@ update ::
   Flow ()
 update id statusM nameM emailM roleM identTypeM identM = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause statusM nameM emailM roleM identM identTypeM currTime)
@@ -170,7 +171,7 @@ update id statusM nameM emailM roleM identTypeM identM = do
 updatePersonOrgId :: Text -> Id Storage.Person -> Flow ()
 updatePersonOrgId orgId personId = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either throwDBError pure
   where
@@ -181,7 +182,7 @@ updatePersonOrgId orgId personId = do
 updatePersonalInfo :: Id Storage.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe Text -> Maybe FCM.FCMRecipientToken -> Flow ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken) (predicate personId)
     >>= either throwDBError pure
   where

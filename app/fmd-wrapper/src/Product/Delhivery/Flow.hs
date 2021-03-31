@@ -3,6 +3,7 @@
 module Product.Delhivery.Flow where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Error
@@ -148,7 +149,7 @@ init org req = do
     sendCb _ _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId order quote = do
-      now <- getCurrTime
+      now <- getCurrentTime
       let caseId = Id $ fromJust $ order ^. #_id
       let case_ =
             Case

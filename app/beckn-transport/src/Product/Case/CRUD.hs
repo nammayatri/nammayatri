@@ -4,6 +4,7 @@ module Product.Case.CRUD where
 
 import App.Types
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
@@ -18,7 +19,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import qualified Data.List as List
 import qualified Data.Text as T
-import Data.Time
+import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import External.Gateway.Flow as Gateway
@@ -38,7 +39,7 @@ import qualified Utils.Defaults as Default
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
 list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ do
   person <- QP.findPersonById (Id _EntityId)
-  now <- getCurrTime
+  now <- getCurrentTime
   case person ^. #_organizationId of
     Just orgId -> do
       org <- OQ.findOrganizationById (Id orgId)
@@ -69,7 +70,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do
   piId <- L.generateGUID
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let productInst = getProdInst piId shortId currTime
   QPI.create productInst
@@ -120,7 +121,7 @@ notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis orgInfo = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   appEnv <- ask
   let context =
         Context

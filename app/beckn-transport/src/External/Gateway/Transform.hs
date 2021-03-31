@@ -3,6 +3,7 @@
 module External.Gateway.Transform where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Core.Brand
 import Beckn.Types.Core.Category
 import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
@@ -25,7 +26,7 @@ import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common (fromMaybeM, getCurrTime)
+import Beckn.Utils.Common (fromMaybeM)
 import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
@@ -130,7 +131,7 @@ mkPrice prodInst =
 
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
 mkOrder _c pri trip = do
-  now <- getCurrTime
+  now <- getCurrentTime
   searchPiId <- pri ^. #_parentId & fromMaybeM PIParentIdNotPresent
   return
     Mobility.Order

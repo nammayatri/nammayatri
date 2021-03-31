@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import Beckn.Types.Storage.Case (Case)
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Common
-import Data.Time
+import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
 import Types.Error

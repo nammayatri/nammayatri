@@ -2,10 +2,11 @@ module Product.Cron where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (authenticate, getCurrTime, withFlowHandler)
-import Data.Time
+import Beckn.Utils.Common (authenticate, withFlowHandler)
+import Data.Time (addUTCTime)
 import EulerHS.Prelude
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
@@ -31,7 +32,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
 expireProductInstances :: Maybe CronAuthKey -> FlowHandler API.ExpireRes
 expireProductInstances maybeAuth = withFlowHandler $ do
   authenticate maybeAuth
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   let timeToExpire = addUTCTime (-3 * 60 * 60) currTime
   piList <- MPI.findAllExpiredByStatus [PI.CONFIRMED, PI.INSTOCK] timeToExpire
   traverse_

@@ -31,11 +31,11 @@ import qualified Beckn.Types.FMD.Item as FMD
 import Beckn.Types.FMD.Order
 import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (fromMaybeMWithInfo, getCurrTime, headMaybe, throwErrorWithInfo)
+import Beckn.Utils.Common
 import Control.Lens ((?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
-import Data.Time
+import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import External.Delhivery.Types
 import Types.Wrapper
@@ -76,7 +76,7 @@ mkQuoteReqFromSearch SearchReq {..} = do
 
 mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
 mkOnSearchReq _ context res@QuoteRes {..} = do
-  now <- getCurrTime
+  now <- getCurrentTime
   cid <- generateGUID
   itemId <- generateGUID
   return $
@@ -146,7 +146,7 @@ mkOnSelectReq context msg =
 
 updateTaskEta :: Task -> Integer -> Flow Task
 updateTaskEta task eta = do
-  now <- getCurrTime
+  now <- getCurrentTime
   let pickup = task ^. #_pickup
   let pickupEta = addUTCTime (fromInteger eta) now
   let pickup' = pickup & #_time ?~ pickupEta

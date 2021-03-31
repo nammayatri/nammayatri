@@ -1,14 +1,14 @@
 module Utils.Routes where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Utils.Common (getCurrTime)
 import EulerHS.Prelude
 
 buildContext :: Text -> Text -> Text -> Flow Context
 buildContext action txnId msgId = do
-  now <- getCurrTime
+  now <- getCurrentTime
   return $
     Context
       { _domain = MOBILITY,

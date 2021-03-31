@@ -3,14 +3,14 @@ module Storage.Queries.ProductInstance where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
-import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -63,7 +63,7 @@ updateCaseId ::
   Flow (T.DBResult ())
 updateCaseId id caseId = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause caseId currTime)
@@ -82,7 +82,7 @@ updateStatus ::
   Flow (T.DBResult ())
 updateStatus id status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -98,7 +98,7 @@ updateStatus id status = do
 updateAllProductInstancesByCaseId :: Id Case.Case -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
 updateAllProductInstancesByCaseId caseId status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -152,7 +152,7 @@ listAllProductInstanceByPerson person id status =
 updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> Flow (T.DBResult ())
 updateMultiple id prdInst@Storage.ProductInstance {..} = do
   dbTable <- getDbTable
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   DB.update dbTable (setClause currTime prdInst) (predicate id)
   where
     predicate piid Storage.ProductInstance {..} = _id ==. B.val_ piid

@@ -5,6 +5,7 @@ module Storage.Queries.FarePolicy where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -57,7 +58,7 @@ findFarePolicyById fpId = do
 updateFarePolicy :: Storage.FarePolicy -> Flow ()
 updateFarePolicy farePolicy = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   let farePolicyId = farePolicy ^. #_id
   DB.update dbTable (setClause farePolicy now) (predicate farePolicyId)
     >>= either throwDBError pure

@@ -8,10 +8,11 @@ where
 
 import qualified App.Types as App
 import qualified Beckn.SesConfig as SesConfig
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common (getCurrTime, withFlowHandler)
+import Beckn.Utils.Common (withFlowHandler)
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
@@ -25,7 +26,7 @@ sendIssue person request@SendIssueReq {..} = withFlowHandler $ do
   let personId = getId $ person ^. #_id
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
-  utcNow <- getCurrTime
+  utcNow <- getCurrentTime
   Queries.insertIssue (mkDBIssue issueId personId request utcNow)
   let mailSubject = mkMailSubject issueId (issue ^. #_reason)
   let mailBody = mkMailBody issueId personId request utcNow

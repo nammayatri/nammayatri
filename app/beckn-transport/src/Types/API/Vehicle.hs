@@ -6,7 +6,6 @@ import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
 import Beckn.Types.Storage.Vehicle as SV
-import Beckn.Utils.Common
 import Data.Swagger
 import EulerHS.Prelude
 
@@ -31,7 +30,7 @@ instance FromJSON CreateVehicleReq where
 instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
   createTransform req = do
     vid <- BC.generateGUID
-    now <- getCurrTime
+    now <- getCurrentTime
     return $
       SV.Vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
@@ -77,7 +76,7 @@ instance FromJSON UpdateVehicleReq where
 
 instance ModifyTransform UpdateVehicleReq SV.Vehicle Flow where
   modifyTransform req vehicle = do
-    now <- getCurrTime
+    now <- getCurrentTime
     return $
       vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also

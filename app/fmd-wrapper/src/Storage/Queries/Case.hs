@@ -3,6 +3,7 @@ module Storage.Queries.Case where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
@@ -33,7 +34,7 @@ findById caseId = do
 update :: Id Storage.Case -> Storage.Case -> Flow ()
 update id case_@Storage.Case {..} = do
   dbTable <- getDbTable
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   DB.update dbTable (setClause currTime case_) (predicate id)
     >>= checkDBError
   where

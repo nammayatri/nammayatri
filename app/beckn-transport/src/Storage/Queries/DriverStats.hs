@@ -5,6 +5,7 @@ module Storage.Queries.DriverStats where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
@@ -22,7 +23,7 @@ getDbTable = DB._driverStats . DB.transporterDb <$> getSchemaName
 createInitialDriverStats :: Id Driver -> Flow ()
 createInitialDriverStats driverId = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   let driverStats =
         Storage.DriverStats
           { _driverId = driverId,
@@ -44,7 +45,7 @@ getFirstDriverInTheQueue ids = do
 updateIdleTimeFlow :: Id Driver -> Flow ()
 updateIdleTimeFlow driverId = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause now) (predicate driverId)
     >>= either throwDBError pure
   where

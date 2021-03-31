@@ -4,6 +4,7 @@ module Product.BecknProvider.Search (search) where
 
 import App.Types
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as Callback
 import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.Ack as Ack
@@ -21,7 +22,7 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
 import qualified Data.List as List
 import qualified Data.Text as T
-import Data.Time
+import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
@@ -47,7 +48,7 @@ search transporterId bapOrg req = withFlowHandler $ do
   transporter <- Org.findOrganizationById transporterId
   when (transporter ^. #_enabled) $ do
     let intent = req ^. #message . #intent
-    now <- getCurrTime
+    now <- getCurrentTime
     let pickup = head $ intent ^. #_pickups
     let dropOff = head $ intent ^. #_drops
     let startTime = pickup ^. #_departure_time . #_est
@@ -178,7 +179,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
 createProductInstance :: Case.Case -> Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
 createProductInstance productCase price status transporterId = do
   productInstanceId <- Id <$> L.generateGUID
-  now <- getCurrTime
+  now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase ^. #_udf1)
   let productInstance =
@@ -217,7 +218,7 @@ createProductInstance productCase price status transporterId = do
 sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow Ack.AckResponse
 sendOnSearchFailed productCase transporterOrg err = do
   appEnv <- ask
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   let context =
         Context.Context
           { _domain = Domain.MOBILITY,
@@ -261,7 +262,7 @@ sendOnSearchSuccess productCase transporterOrg productInstance = do
 
 mkOnSearchPayload :: Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq
 mkOnSearchPayload productCase productInstances transporterOrg = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   appEnv <- ask
   let context =
         Context.Context

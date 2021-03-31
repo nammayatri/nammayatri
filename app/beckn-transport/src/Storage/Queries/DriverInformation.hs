@@ -3,6 +3,7 @@ module Storage.Queries.DriverInformation where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
@@ -52,7 +53,7 @@ fetchAllAvailableByIds driversIds = do
 updateActivity :: Id Driver -> Bool -> Flow ()
 updateActivity driverId active = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause active now) (predicate driverId)
     >>= either throwDBError pure
   where

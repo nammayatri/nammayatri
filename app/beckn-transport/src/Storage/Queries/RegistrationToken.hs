@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Beckn.Utils.Common
@@ -36,7 +37,7 @@ findRegistrationToken id = do
 updateVerified :: Text -> Bool -> Flow ()
 updateVerified id verified = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause verified now) (predicate id)
     >>= either throwDBError pure
   where
@@ -64,7 +65,7 @@ findRegistrationTokenByToken regToken = do
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
 updateAttempts attemps id = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause attemps now) (predicate id)
     >>= either throwDBError pure
   findRegistrationToken id >>= fromMaybeM InvalidToken

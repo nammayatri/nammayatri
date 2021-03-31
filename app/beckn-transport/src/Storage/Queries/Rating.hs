@@ -3,6 +3,7 @@ module Storage.Queries.Rating where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Query
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Person (Person)
@@ -28,7 +29,7 @@ create rating = do
 updateRatingValue :: Id Storage.Rating -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   Query.update
     dbTable
     ( \Storage.Rating {..} ->

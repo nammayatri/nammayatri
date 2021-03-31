@@ -10,13 +10,14 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -163,7 +164,7 @@ findByEmail email = do
 updateOrganizationIdAndMakeAdmin :: Id Storage.Person -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause orgId now) (predicate personId)
     >>= either throwDBError pure
   where
@@ -178,7 +179,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
 updatePersonRec :: Id Storage.Person -> Storage.Person -> Flow ()
 updatePersonRec personId uperson = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   person <- encrypt uperson
   DB.update dbTable (setClause person now) (predicate personId)
     >>= either throwDBError pure
@@ -207,7 +208,7 @@ updatePersonRec personId uperson = do
 updatePerson :: Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
 updatePerson personId verified identifier identifierType mobileNumber = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   mobileNumber' <- encrypt mobileNumber
   DB.update
     dbTable
@@ -233,7 +234,7 @@ update ::
   Flow ()
 update id status verified deviceTokenM = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status verified currTime deviceTokenM)
@@ -294,7 +295,7 @@ findByEntityId entityId = do
 updateAverageRating :: Id Storage.Person -> Text -> Flow ()
 updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause newAverageRating now) (predicate personId)
     >>= either throwDBError pure
   where

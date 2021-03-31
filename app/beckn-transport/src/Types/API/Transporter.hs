@@ -4,13 +4,12 @@ module Types.API.Transporter where
 
 import App.Types
 import Beckn.TypeClass.Transform
-import Beckn.Types.Common as BC
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 import qualified Storage.Queries.Location as QL
 
@@ -44,9 +43,9 @@ instance FromJSON TransporterReq where
 
 instance CreateTransform TransporterReq SO.Organization Flow where
   createTransform req = do
-    oid <- BC.generateGUID
+    oid <- generateGUID
     let shortId = ShortId $ getId oid
-    now <- getCurrTime
+    now <- getCurrentTime
     location <- transformToLocation req
     QL.create location
     return $
@@ -77,8 +76,8 @@ instance CreateTransform TransporterReq SO.Organization Flow where
 
 transformToLocation :: TransporterReq -> Flow SL.Location
 transformToLocation req = do
-  locId <- BC.generateGUID
-  now <- getCurrTime
+  locId <- generateGUID
+  now <- getCurrentTime
   return $
     SL.Location
       { SL._id = locId,
@@ -118,7 +117,7 @@ data UpdateTransporterReq = UpdateTransporterReq
 
 instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
   modifyTransform req org = do
-    now <- getCurrTime
+    now <- getCurrentTime
     return $
       org
         { SO._name = fromMaybe (org ^. #_name) (req ^. #name),

@@ -22,6 +22,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
 import Beckn.Types.Storage.Organization (Organization)
@@ -93,7 +94,7 @@ createPerson orgId req = withFlowHandler $ do
 
 createDriverDetails :: Id SP.Person -> Flow ()
 createDriverDetails personId = do
-  now <- getCurrTime
+  now <- getCurrentTime
   let driverInfo =
         DriverInformation.DriverInformation
           { _driverId = driverId,
@@ -290,7 +291,7 @@ calculateDriverPool locId orgId variant = do
   lat <- location ^. #_lat & fromMaybeM LocationLongLatNotFound
   long <- location ^. #_long & fromMaybeM LocationLongLatNotFound
   radius <- getRadius
-  getNearestDriversStartTime <- getCurrTime
+  getNearestDriversStartTime <- getCurrentTime
   driverPool <-
     map fst
       <$> QP.getNearestDrivers
@@ -298,7 +299,7 @@ calculateDriverPool locId orgId variant = do
         radius
         orgId
         variant
-  getNearestDriversEndTime <- getCurrTime
+  getNearestDriversEndTime <- getCurrentTime
   let getNearestDriversTime = diffUTCTime getNearestDriversEndTime getNearestDriversStartTime
   logInfo "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"
   pure driverPool

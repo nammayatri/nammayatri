@@ -32,7 +32,7 @@ import Utils.Routes
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
 confirm person API.ConfirmReq {..} = withFlowHandler $ do
-  lt <- getCurrTime
+  lt <- getCurrentTime
   case_ <- QCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
     throwError CaseExpired
@@ -52,7 +52,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
   where
     mkOrder productInstance = do
-      now <- getCurrTime
+      now <- getCurrentTime
       return $
         BO.Order
           { _id = getId $ productInstance ^. #_id,
@@ -97,7 +97,7 @@ onConfirm _org req = withFlowHandler $ do
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
-  now <- getCurrTime
+  now <- getCurrentTime
   caseId <- generateGUID
   shortId <- generateShortId
   return
@@ -121,7 +121,7 @@ mkOrderCase Case.Case {..} = do
 
 mkOrderProductInstance :: Id Case.Case -> SPI.ProductInstance -> Flow SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
-  now <- getCurrTime
+  now <- getCurrentTime
   piid <- generateGUID
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return

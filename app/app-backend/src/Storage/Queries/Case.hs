@@ -5,12 +5,12 @@ module Storage.Queries.Case where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
-import Data.Time
+import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -105,7 +105,7 @@ findAllByPerson perId = do
 findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe UTCTime -> Maybe UTCTime -> Flow (T.DBResult [Storage.Case])
 findAllExpiredByStatus statuses maybeFrom maybeTo = do
   dbTable <- getDbTable
-  (now :: UTCTime) <- getCurrTime
+  (now :: UTCTime) <- getCurrentTime
   DB.findAll dbTable (predicate now)
   where
     predicate now Storage.Case {..} =
@@ -122,7 +122,7 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
 updateValidTill :: Id Storage.Case -> UTCTime -> Flow (T.DBResult ())
 updateValidTill id validTill = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause validTill currTime)
@@ -138,7 +138,7 @@ updateValidTill id validTill = do
 updateStatus :: Id Storage.Case -> Storage.CaseStatus -> Flow (T.DBResult ())
 updateStatus id status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status currTime)
@@ -154,7 +154,7 @@ updateStatus id status = do
 updateStatusAndUdfs :: Id Storage.Case -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow (T.DBResult ())
 updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrTime
+  (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status udf1 udf2 udf3 udf4 udf5 currTime)
@@ -204,7 +204,7 @@ complementVal l
 updateInfo :: Id Storage.Case -> Text -> Flow (T.DBResult ())
 updateInfo caseId csInfo = do
   dbTable <- getDbTable
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   DB.update dbTable (setClause csInfo currTime) (predicate caseId)
   where
     setClause cInfo currTime Storage.Case {..} =

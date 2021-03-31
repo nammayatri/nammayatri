@@ -8,6 +8,7 @@ module Storage.Queries.Location where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Location as Storage
@@ -41,7 +42,7 @@ findLocationById id = do
 updateLocationRec :: Id Storage.Location -> Storage.Location -> Flow ()
 updateLocationRec locationId location = do
   dbTable <- getDbTable
-  now <- getCurrTime
+  now <- getCurrentTime
   DB.update dbTable (setClause location now) (predicate locationId)
     >>= either throwDBError pure
   where
@@ -73,7 +74,7 @@ findAllByLocIds fromIds toIds = do
 
 updateGpsCoord :: Id Storage.Location -> Double -> Double -> Flow ()
 updateGpsCoord (Id locId) lat long = do
-  now <- getCurrTime
+  now <- getCurrentTime
   void $
     postgreSQLSimpleExecute
       [sql|

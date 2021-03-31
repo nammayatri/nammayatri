@@ -3,6 +3,7 @@
 module Utils.Common where
 
 import App.Types
+import Beckn.Types.Common
 import Beckn.Types.Core.API.Log
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
@@ -31,7 +32,7 @@ parseBaseUrl url =
 fromMaybe400Log :: Text -> Maybe ErrorCode -> Context -> Maybe a -> Flow a
 fromMaybe400Log _ _ _ (Just a) = return a
 fromMaybe400Log msg errCode ctx Nothing = do
-  currTime <- getCurrTime
+  currTime <- getCurrentTime
   let logCtx =
         Context
           { _domain = FINAL_MILE_DELIVERY,
