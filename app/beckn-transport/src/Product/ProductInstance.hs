@@ -68,10 +68,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
   isAllowed ordPi req
   if user ^. #_role == SP.ADMIN
     then updateStatus piId req False
-    else
-      if user ^. #_role == SP.DRIVER
-        then updateStatus piId req True
-        else pure ()
+    else when (user ^. #_role == SP.DRIVER) $ updateStatus piId req True
   notifyUpdateToBAP searchPi ordPi (req ^. #_status)
   PIQ.findById piId
   where

@@ -117,9 +117,7 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver 
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      if requestedByDriver
-        then QDriverStats.updateIdleTime driverId
-        else pure ()
+      when requestedByDriver $ QDriverStats.updateIdleTime driverId
 
 -- TODO : Add notifying transporter admin with FCM
 

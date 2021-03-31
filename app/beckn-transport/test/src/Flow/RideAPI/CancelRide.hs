@@ -9,10 +9,13 @@ import Control.Monad.Identity
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
+import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
+import Utils.Common (errorCodeWhenLeft)
+import Utils.TestSilentIOLogger ()
 
-handle :: CancelRide.ServiceHandle Identity
+handle :: CancelRide.ServiceHandle IO
 handle =
   CancelRide.ServiceHandle
     { findPIById = \_piId -> pure rideProductInstance,
@@ -41,15 +44,20 @@ cancelRide =
       failedCancellationWhenProductInstanceStatusIsWrong
     ]
 
+runHandler :: CancelRide.ServiceHandle IO -> Text -> Text -> IO (Either ServerError APIResult.APIResult)
+runHandler handle requestorId rideId = try $ CancelRide.cancelRideHandler handle requestorId rideId
+
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =
-  testCase "Cancel successfully if requested by driver executor" $
-    runBR (CancelRide.cancelRideHandler handle "1" "1") @?= pure (Right APIResult.Success)
+  testCase "Cancel successfully if requested by driver executor" $ do
+    result <- runHandler handle "1" "1"
+    result @?= Right APIResult.Success
 
 successfulCancellationByAdmin :: TestTree
 successfulCancellationByAdmin =
-  testCase "Cancel successfully if requested by admin" $
-    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Right APIResult.Success)
+  testCase "Cancel successfully if requested by admin" $ do
+    result <- runHandler handleCase "1" "1"
+    result @?= Right APIResult.Success
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure admin}
     admin =
@@ -60,8 +68,9 @@ successfulCancellationByAdmin =
 
 successfulCancellationWithoutDriverByAdmin :: TestTree
 successfulCancellationWithoutDriverByAdmin =
-  testCase "Cancel successfully if ride has no driver but requested by admin" $
-    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Right APIResult.Success)
+  testCase "Cancel successfully if ride has no driver but requested by admin" $ do
+    result <- runHandler handleCase "1" "1"
+    result @?= Right APIResult.Success
   where
     handleCase =
       handle
@@ -77,17 +86,18 @@ successfulCancellationWithoutDriverByAdmin =
 
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
-  testCase "Fail cancellation if requested by driver not executor" $
-    runBR (CancelRide.cancelRideHandler handleCase "driverNotExecutorId" "1") @?= pure (Left error)
+  testCase "Fail cancellation if requested by driver not executor" $ do
+    result <- runHandler handleCase "driverNotExecutorId" "1"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver {Person._id = Id "driverNotExecutorId"}
-    error = BusinessError "NOT_AN_ORDER_EXECUTOR" "You are not an order executor."
 
 failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
-  testCase "Fail cancellation if requested by neither driver nor admin" $
-    runBR (CancelRide.cancelRideHandler handleCase "managerId" "1") @?= pure (Left error)
+  testCase "Fail cancellation if requested by neither driver nor admin" $ do
+    result <- runHandler handleCase "managerId" "1"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
@@ -95,22 +105,21 @@ failedCancellationByNotDriverAndNotAdmin =
         { Person._id = Id "managerId",
           Person._role = Person.MANAGER
         }
-    error = BusinessError "NOT_AN_ORDER_EXECUTOR" "You are not an order executor."
 
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
-  testCase "Fail cancellation if ride has no driver and requested by not an admin" $
-    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Left error)
+  testCase "Fail cancellation if ride has no driver and requested by not an admin" $ do
+    result <- runHandler handleCase "1" "1"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}
-    error = BusinessError "NOT_AN_ORDER_EXECUTOR" "You are not an order executor."
 
 failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
 failedCancellationWhenProductInstanceStatusIsWrong =
-  testCase "Fail cancellation if product instance has inappropriate ride status" $
-    runBR (CancelRide.cancelRideHandler handleCase "1" "1") @?= pure (Left error)
+  testCase "Fail cancellation if product instance has inappropriate ride status" $ do
+    result <- runHandler handleCase "1" "1"
+    errorCodeWhenLeft result @?= Left "INVALID_RIDE_ID"
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure completedPI}
     completedPI = rideProductInstance {ProductInstance._status = ProductInstance.COMPLETED}
-    error = BusinessError "INVALID_PRODUCT_INSTANCE" "Invalid product instance."
