@@ -64,5 +64,4 @@ in
 , signingKeys = common.signingKeys
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.DUNZO.FMD.BPP.DEV"
-, logContext = [] : List Text
 }

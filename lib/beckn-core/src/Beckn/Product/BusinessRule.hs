@@ -16,7 +16,7 @@ class BusinessLog m where
   logWarning :: Text -> Text -> m ()
   logError :: Text -> Text -> m ()
 
-instance HasLogContext r => BusinessLog (FlowR r) where
+instance BusinessLog (FlowR r) where
   logDebug = Common.logDebug
   logInfo = Common.logInfo
   logWarning = Common.logWarning
@@ -49,7 +49,7 @@ data BusinessError = BusinessError
 runBR :: BusinessRule m a -> m (Either BusinessError a)
 runBR = runExceptT . runBusinessRule
 
-runBRFlowFatal :: (HasCallStack, HasLogContext r) => BusinessRule (FlowR r) a -> FlowR r a
+runBRFlowFatal :: HasCallStack => BusinessRule (FlowR r) a -> FlowR r a
 runBRFlowFatal br =
   runBR br >>= \case
     Left be -> do

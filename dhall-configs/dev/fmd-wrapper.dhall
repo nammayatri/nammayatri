@@ -65,5 +65,4 @@ in
 , signingKeys = common.signingKeys
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.FMD.UAT.1"
-, logContext = [] : List Text
 }

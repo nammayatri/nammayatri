@@ -10,7 +10,6 @@ where
 
 import Beckn.Storage.DB.Config (HasDbCfg)
 import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Logging (HasLogContext (..))
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend
@@ -55,8 +54,7 @@ type HasTraceFlag r = HasField "traceFlag" r TraceFlag
 
 type FlowWithTraceFlag r a =
   ( HasTraceFlag r,
-    HasDbCfg r,
-    HasLogContext r
+    HasDbCfg r
   ) =>
   FlowR r a
 

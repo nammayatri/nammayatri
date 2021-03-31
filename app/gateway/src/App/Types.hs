@@ -50,8 +50,7 @@ data AppEnv = AppEnv
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
     fmdDomainVersion :: Text,
-    signatureExpiry :: NominalDiffTime,
-    logContext :: [Text]
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic)
 
@@ -61,7 +60,6 @@ mkAppEnv AppCfg {..} c =
     { gwId = selfId,
       gwNwAddress = nwAddress,
       cache = c,
-      logContext = [],
       ..
     }
 
@@ -77,11 +75,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasLogContext AppCfg where
-  getLogContext = const []
-  setLogContext _ = id
-
-instance HasLogContext AppEnv where
-  getLogContext = logContext
-  setLogContext ctx env = env {logContext = ctx}

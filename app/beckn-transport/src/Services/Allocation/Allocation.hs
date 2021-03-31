@@ -117,7 +117,7 @@ processRequest handle@ServiceHandle {..} rideRequest = do
   let rideStatus = rideInfo ^. #rideStatus
   let orderTime = rideInfo ^. #orderTime
   eres <- try $ do
-    addLogTag ("RideRequest_" <> rideId ^. #getId) $ do
+    withLogContext ("RideRequest_" <> rideId ^. #getId) $ do
       logInfoText "Start processing request"
       case rideRequest ^. #requestData of
         Allocation ->

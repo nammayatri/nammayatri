@@ -27,8 +27,7 @@ data AppEnv = AppEnv
     dlConfig :: DelhiveryConfig,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    signatureExpiry :: NominalDiffTime,
-    logContext :: [Text]
+    signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 
@@ -46,7 +45,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasLogContext AppEnv where
-  getLogContext = logContext
-  setLogContext ctx env = env {logContext = ctx}

@@ -14,8 +14,7 @@ import Servant.Client.Core (BaseUrl)
 
 autoComplete ::
   ( HasField "dbCfg" r DBConfig,
-    HasField "traceFlag" r TraceFlag,
-    HasLogContext r
+    HasField "traceFlag" r TraceFlag
   ) =>
   BaseUrl ->
   Text ->
@@ -35,8 +34,7 @@ autoComplete url apiKey input location radius components = do
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
-    HasField "traceFlag" r TraceFlag,
-    HasLogContext r
+    HasField "traceFlag" r TraceFlag
   ) =>
   BaseUrl ->
   Text ->
@@ -54,8 +52,7 @@ placeDetails url apiKey placeId fields = do
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
-    HasField "traceFlag" r TraceFlag,
-    HasLogContext r
+    HasField "traceFlag" r TraceFlag
   ) =>
   BaseUrl ->
   Text ->

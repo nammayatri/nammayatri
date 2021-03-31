@@ -75,8 +75,7 @@ createAndroidNotification title body notificationType =
 
 -- | Send FCM message to a person
 notifyPerson ::
-  ( HasLogContext r,
-    HasField "fcmUrl" r BaseUrl,
+  ( HasField "fcmUrl" r BaseUrl,
     HasField "fcmJsonPath" r (Maybe Text)
   ) =>
   FCMNotificationTitle ->
@@ -105,8 +104,7 @@ fcmSendMessageAPI = Proxy
 
 -- | Send FCM message to a registered device
 sendMessage ::
-  ( HasLogContext r,
-    HasField "fcmUrl" r BaseUrl,
+  ( HasField "fcmUrl" r BaseUrl,
     HasField "fcmJsonPath" r (Maybe Text)
   ) =>
   FCMRequest ->
@@ -132,8 +130,7 @@ sendMessage fcmMsg toWhom = fork desc $ do
 
 -- | try to get FCM text token
 getTokenText ::
-  ( HasField "fcmJsonPath" r (Maybe Text),
-    HasLogContext r
+  ( HasField "fcmJsonPath" r (Maybe Text)
   ) =>
   FlowR r (Either Text Text)
 getTokenText = do
@@ -174,8 +171,7 @@ checkAndGetToken fcmAcc = do
 
 -- | Get token (refresh token if expired / invalid)
 getToken ::
-  ( HasField "fcmJsonPath" r (Maybe Text),
-    HasLogContext r
+  ( HasField "fcmJsonPath" r (Maybe Text)
   ) =>
   FlowR r (Either String JWT.JWToken)
 getToken = do

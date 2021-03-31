@@ -46,8 +46,7 @@ data AppEnv = AppEnv
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
-    graphhopperUrl :: BaseUrl,
-    logContext :: [Text]
+    graphhopperUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -65,7 +64,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasLogContext AppEnv where
-  getLogContext = logContext
-  setLogContext ctx env = env {logContext = ctx}

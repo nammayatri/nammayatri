@@ -1,6 +1,5 @@
 module Beckn.Utils.Logging
   ( Log (..),
-    HasLogContext (..),
     LogLevel (..),
     LoggerConfig (..),
     getEulerLoggerRuntime,
@@ -8,12 +7,13 @@ module Beckn.Utils.Logging
     logInfo,
     logWarning,
     logError,
-    addLogTagToEnv,
   )
 where
 
 import Beckn.Types.Logging
+
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import qualified Data.Time as Time
 import EulerHS.Prelude
@@ -23,6 +23,7 @@ import qualified EulerHS.Types as T
 data LogEntry = LogEntry
   { _timestamp :: Text,
     _level :: Text,
+    _log_context :: Text,
     _tag :: Text,
     _message_number :: Text,
     _message :: Text
@@ -78,16 +79,16 @@ logFormatterText ::
   T.MessageFormatter
 logFormatterText
   timestamp
-  (T.PendingMsg _mbFlowGuid lvl tag msg msgNum _) = res
+  (T.PendingMsg _mbFlowGuid lvl tag msg msgNum logContHM) = res
     where
-      eulerMsg :: Text
-      eulerMsg = "[" +|| lvl ||+ "] <" +| tag |+ "> " +| msg |+ ""
+      logCont = HM.lookupDefault "" "log_context" logContHM
       logEntry =
         LogEntry
           { _timestamp = timestamp,
             _level = show lvl,
+            _log_context = logCont,
             _tag = tag,
             _message_number = show msgNum,
-            _message = eulerMsg
+            _message = msg
           }
       res = T.SimpleLBS $ A.encode logEntry

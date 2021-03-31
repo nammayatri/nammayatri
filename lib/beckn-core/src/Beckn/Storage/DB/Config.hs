@@ -28,7 +28,7 @@ data DBConfig = DBConfig
 -- Make the compiler generate instances for us!
 type HasDbCfg r = (HasField "dbCfg" r DBConfig)
 
-type FlowWithDb r a = (HasDbCfg r, HasLogContext r) => FlowR r a
+type FlowWithDb r a = HasDbCfg r => FlowR r a
 
 instance HasDbCfg r => HasSchemaName (FlowR r) where
   getSchemaName =

@@ -93,7 +93,7 @@ instance LookupMethod LookupRegistry where
     "Looks up the given key Id in the Beckn registry."
 
 lookupRegistryAction ::
-  (AuthenticatingEntity r, HasLogContext r) =>
+  AuthenticatingEntity r =>
   (ShortId Organization -> FlowR r (Maybe Organization)) ->
   LookupAction LookupRegistry r
 lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
@@ -123,8 +123,7 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
-    KnownSymbol header,
-    HasLogContext r
+    KnownSymbol header
   ) =>
   HasServer (SignatureAuth header :> api) ctx
   where
@@ -192,7 +191,6 @@ signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
 signatureAuthManager ::
-  HasLogContext r =>
   R.FlowRuntime ->
   r ->
   Text ->
@@ -235,9 +233,7 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
 verifySignature ::
-  ( ToJSON body,
-    HasLogContext r
-  ) =>
+  ToJSON body =>
   Text ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
@@ -281,7 +277,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       throwAuthError [HttpSig.mkSignatureRealm headerName host] AccessDenied
 
 withBecknAuth ::
-  (ToJSON req, HasLogContext r) =>
+  ToJSON req =>
   (LookupResult lookup -> req -> FlowHandlerR r b) ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
@@ -292,7 +288,7 @@ withBecknAuth handler lookupAction sign req = do
   handler lookupResult req
 
 withBecknAuthProxy ::
-  (ToJSON req, HasLogContext r) =>
+  ToJSON req =>
   (LookupResult lookup -> req -> FlowHandlerR r b) ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
@@ -305,7 +301,7 @@ withBecknAuthProxy handler lookupAction sign proxySign req = do
   handler lookupResult req
 
 prepareAuthManager ::
-  (AuthenticatingEntity r, HasLogContext r) =>
+  AuthenticatingEntity r =>
   R.FlowRuntime ->
   r ->
   Text ->
@@ -328,7 +324,7 @@ makeManagerMap :: [String] -> [Http.Manager] -> Map String Http.Manager
 makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
 
 prepareAuthManagers ::
-  (AuthenticatingEntity r, HasLogContext r) =>
+  AuthenticatingEntity r =>
   R.FlowRuntime ->
   r ->
   [Text] ->

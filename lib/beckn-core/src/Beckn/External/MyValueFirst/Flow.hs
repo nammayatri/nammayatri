@@ -9,7 +9,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.Client
 
-submitSms :: HasLogContext r => BaseUrl -> SubmitSms -> FlowR r (Either Text ())
+submitSms :: BaseUrl -> SubmitSms -> FlowR r (Either Text ())
 submitSms url params = do
   res <- L.callAPI url $ API.submitSms params
   whenRight res $ \_ ->

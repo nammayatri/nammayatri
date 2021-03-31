@@ -94,7 +94,7 @@ instance
 data TrailInfo
   = TrailInfo (Either ClientError LByteString) RequestInfo
 
-saveClientTrailFlow :: HasLogContext r => TrailInfo -> FlowWithTraceFlag r ()
+saveClientTrailFlow :: TrailInfo -> FlowWithTraceFlag r ()
 saveClientTrailFlow (TrailInfo res req) = do
   fork "save trail" do
     _id <- generateGUID

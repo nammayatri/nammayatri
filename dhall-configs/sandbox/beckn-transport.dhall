@@ -86,5 +86,4 @@ in
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
-, logContext = [] : List Text
 }

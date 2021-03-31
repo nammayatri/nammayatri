@@ -155,7 +155,7 @@ mkTrail reqId now req =
       _processDuration = Nothing
     }
 
-traceHandler :: (HasDbCfg r, HasLogContext r) => TraceHandler (FlowR r)
+traceHandler :: HasDbCfg r => TraceHandler (FlowR r)
 traceHandler = TraceHandler {..}
   where
     _preAction req = do
@@ -185,12 +185,12 @@ traceHandler = TraceHandler {..}
           Right () -> pass
       pass
 
-traceHandler' :: (HasDbCfg r, HasLogContext r) => EnvR r -> TraceHandler IO
+traceHandler' :: HasDbCfg r => EnvR r -> TraceHandler IO
 traceHandler' env =
   hoistTraceHandler (runFlowR (runTime env) (appEnv env)) traceHandler
 
 toTraceOrNotToTrace ::
-  (HasTraceFlag r, HasDbCfg r, HasLogContext r) =>
+  (HasTraceFlag r, HasDbCfg r) =>
   EnvR r ->
   Wai.Application ->
   Wai.Application

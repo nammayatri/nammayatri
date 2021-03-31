@@ -38,7 +38,7 @@ defaultBaseUrl sid =
     }
 
 initiateCall ::
-  (HasField "exotelCfg" r (Maybe ExotelCfg), HasLogContext r) =>
+  (HasField "exotelCfg" r (Maybe ExotelCfg)) =>
   T.Text ->
   T.Text ->
   FlowR r ()

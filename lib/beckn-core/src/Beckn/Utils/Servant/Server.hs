@@ -5,11 +5,9 @@ module Beckn.Utils.Servant.Server where
 
 import Beckn.Constants.APIErrorCode
 import Beckn.Types.App (EnvR (..), FlowServerR)
-import Beckn.Types.Common
 import Beckn.Types.Core.Ack (NackResponseError (_status))
 import Beckn.Utils.Common hiding (throwError)
 import qualified Data.Aeson as Aeson
-import Data.UUID.V4 (nextRandom)
 import EulerHS.Prelude
 import qualified Network.HTTP.Types as H
 import Network.Wai (Response, responseLBS)
@@ -27,8 +25,7 @@ instance {-# OVERLAPPING #-} HasEnvEntry r (EnvR r ': xs) where
 run ::
   forall a r ctx.
   ( HasContextEntry (ctx .++ '[ErrorFormatters]) ErrorFormatters,
-    HasServer a (EnvR r ': ctx),
-    HasLogContext r
+    HasServer a (EnvR r ': ctx)
   ) =>
   Proxy (a :: Type) ->
   FlowServerR r a ->
@@ -41,9 +38,7 @@ run apis server ctx env =
   where
     f :: ReaderT (EnvR r) (ExceptT ServerError IO) m -> Handler m
     f r = do
-      eResult <- liftIO $ do
-        uuid <- nextRandom
-        runExceptT $ runReaderT r (env {appEnv = addLogTagToEnv (show uuid) $ appEnv env})
+      eResult <- liftIO $ runExceptT $ runReaderT r env
       case eResult of
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err

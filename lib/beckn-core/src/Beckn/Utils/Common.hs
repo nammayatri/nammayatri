@@ -29,6 +29,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (NominalDiffTime, UTCTime)
 import qualified Data.Time as Time
 import Data.Time.Units (TimeUnit, fromMicroseconds)
+import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (error, id)
@@ -45,7 +46,9 @@ import Servant.Client.Core.Response
 import qualified Servant.Server.Internal as S
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
-runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
+runFlowR flowRt r x = do
+  uuid <- nextRandom
+  I.runFlow flowRt . runReaderT (withLogContext (show uuid) x) $ r
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
@@ -192,8 +195,7 @@ encodeToText' s =
         else DT.decodeUtf8 $ BSL.toStrict $ BSL.tail $ BSL.init s'
 
 authenticate ::
-  ( HasField "cronAuthKey" r (Maybe CronAuthKey),
-    HasLogContext r
+  ( HasField "cronAuthKey" r (Maybe CronAuthKey)
   ) =>
   Maybe CronAuthKey ->
   FlowR r ()
@@ -204,7 +206,7 @@ authenticate = check handleKey
       check (flip when throw401 . (key /=)) $
         DT.decodeUtf8 <$> (rightToMaybe . DBB.decode . DT.encodeUtf8 =<< T.stripPrefix "Basic " rauth)
     check = maybe throw401
-    throw401 :: HasLogContext r => FlowR r a
+    throw401 :: FlowR r a
     throw401 =
       throwError AuthBlocked
 
@@ -297,7 +299,7 @@ callClient' mbManager desc context baseUrl cli = do
 
 -- I know it is looking similar to forkAsync but I found it simpler to
 -- be able to use (FlowR r) instead of (FlowR (EnvR r))
-fork :: HasLogContext r => Text -> FlowR r () -> FlowR r ()
+fork :: Text -> FlowR r () -> FlowR r ()
 fork desc f = do
   env <- ask
   lift $ L.forkFlow desc $ handleExc env $ runReaderT f env
@@ -347,8 +349,7 @@ padNumber n num = padLeft n '0' $ show (fromIntegral num :: Natural)
 type HasFlowEnv m r fields =
   ( L.MonadFlow m,
     MonadReader r m,
-    HasFields r fields,
-    HasLogContext r
+    HasFields r fields
   )
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc

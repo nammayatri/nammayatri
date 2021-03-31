@@ -19,7 +19,7 @@ import GHC.Records (HasField (..))
 
 -- | Creates a loop that refreshes FCM token
 doFCMTokenRefresh ::
-  (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) =>
+  (HasField "fcmJsonPath" r (Maybe Text)) =>
   FlowR r ()
 doFCMTokenRefresh = do
   getField @"fcmJsonPath" <$> ask

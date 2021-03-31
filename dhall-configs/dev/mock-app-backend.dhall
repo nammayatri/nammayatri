@@ -32,5 +32,4 @@ in
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , signatureExpiry = common.signatureExpiry
-, logContext = [] : List Text
 }
