@@ -28,4 +28,4 @@ cabal.project.local~
 .ghc.environment.*
 
 # load test files
-./dev/load-test/*.json
+.dev/load-test/*.json

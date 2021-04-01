@@ -82,6 +82,8 @@ dependencies:
   - warp
   - time
   - random-strings
+  - optparse-applicative
+  - directory
 
 ghc-options:
   - -fwrite-ide-info
