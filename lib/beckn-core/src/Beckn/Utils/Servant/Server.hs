@@ -5,9 +5,11 @@ module Beckn.Utils.Servant.Server where
 
 import Beckn.Constants.APIErrorCode
 import Beckn.Types.App (EnvR (..), FlowServerR)
+import Beckn.Utils.Flow
 import Beckn.Types.Core.Ack (NackResponseError (_status))
 import Beckn.Utils.Common hiding (throwError)
 import qualified Data.Aeson as Aeson
+import Data.UUID.V4 (nextRandom)
 import EulerHS.Prelude
 import qualified Network.HTTP.Types as H
 import Network.Wai (Response, responseLBS)
@@ -38,11 +40,17 @@ run apis server ctx env =
   where
     f :: ReaderT (EnvR r) (ExceptT ServerError IO) m -> Handler m
     f r = do
-      eResult <- liftIO $ runExceptT $ runReaderT r env
+      eResult <- liftIO $ do
+        uuid <- nextRandom
+        runExceptT . runReaderT r . modifiedEnvR $ show uuid
       case eResult of
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
+
+    modifiedEnvR uuid =
+      let flowRt = runTime env
+       in env {runTime = addLogContext uuid flowRt}
 
 serverErrorResponse :: ServerError -> Response
 serverErrorResponse ex =

@@ -29,7 +29,6 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (NominalDiffTime, UTCTime)
 import qualified Data.Time as Time
 import Data.Time.Units (TimeUnit, fromMicroseconds)
-import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (error, id)
@@ -46,9 +45,7 @@ import Servant.Client.Core.Response
 import qualified Servant.Server.Internal as S
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
-runFlowR flowRt r x = do
-  uuid <- nextRandom
-  I.runFlow flowRt . runReaderT (withLogContext (show uuid) x) $ r
+runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)

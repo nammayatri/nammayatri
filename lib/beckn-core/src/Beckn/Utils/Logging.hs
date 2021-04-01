@@ -14,24 +14,20 @@ import Beckn.Types.Logging
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as Text
 import qualified Data.Time as Time
 import EulerHS.Prelude
 import EulerHS.Runtime
 import qualified EulerHS.Types as T
 
 data LogEntry = LogEntry
-  { _timestamp :: Text,
-    _level :: Text,
-    _log_context :: Text,
-    _tag :: Text,
-    _message_number :: Text,
-    _message :: Text
+  { timestamp :: Time.UTCTime,
+    level :: LogLevel,
+    logContext :: Text,
+    tag :: Text,
+    messageNumber :: Int,
+    message :: Text
   }
-  deriving (Generic)
-
-instance ToJSON LogEntry where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  deriving (Generic, ToJSON)
 
 logDebug :: Log m => Text -> Text -> m ()
 logDebug tag = logOutput DEBUG [tag]
@@ -46,23 +42,23 @@ logError :: Log m => Text -> Text -> m ()
 logError tag = logOutput ERROR [tag]
 
 getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
-getEulerLoggerConfig loggerConfig =
+getEulerLoggerConfig LoggerConfig {..} =
   T.defaultLoggerConfig
-    { T._isAsync = isAsync loggerConfig,
+    { T._isAsync = isAsync,
       T._logLevel = logLevel,
-      T._logToFile = logToFile loggerConfig,
-      T._logFilePath = logFilePath loggerConfig,
-      T._logToConsole = logToConsole loggerConfig,
+      T._logToFile = logToFile,
+      T._logFilePath = logFilePath,
+      T._logToConsole = logToConsole,
       T._logRawSql = logSql
     }
   where
-    logLevel = case level loggerConfig of
+    logLevel = case level of
       DEBUG -> T.Debug
       INFO -> T.Info
       WARNING -> T.Warning
       ERROR -> T.Error
     logSql =
-      if logRawSql loggerConfig
+      if logRawSql
         then T.UnsafeLogSQL_DO_NOT_USE_IN_PRODUCTION
         else T.SafelyOmitSqlLogs
 
@@ -71,24 +67,29 @@ getEulerLoggerRuntime = createLoggerRuntime logFlowFormatter . getEulerLoggerCon
 
 logFlowFormatter :: T.FlowFormatter
 logFlowFormatter _ = do
-  currTime <- Time.formatTime Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%3Q" <$> Time.getCurrentTime
-  pure $! logFormatterText (Text.pack currTime)
+  currTime <- Time.getCurrentTime
+  pure $! logFormatterText currTime
 
 logFormatterText ::
-  Text -> -- timestamp
+  Time.UTCTime -> -- timestamp
   T.MessageFormatter
 logFormatterText
   timestamp
-  (T.PendingMsg _mbFlowGuid lvl tag msg msgNum logContHM) = res
+  (T.PendingMsg _mbFlowGuid elvl tag msg msgNum logContHM) = res
     where
       logCont = HM.lookupDefault "" "log_context" logContHM
       logEntry =
         LogEntry
-          { _timestamp = timestamp,
-            _level = show lvl,
-            _log_context = logCont,
-            _tag = tag,
-            _message_number = show msgNum,
-            _message = msg
+          { timestamp = timestamp,
+            level = lvl,
+            logContext = logCont,
+            tag = tag,
+            messageNumber = msgNum,
+            message = msg
           }
       res = T.SimpleLBS $ A.encode logEntry
+      lvl = case elvl of
+        T.Debug -> DEBUG
+        T.Warning -> WARNING
+        T.Info -> INFO
+        T.Error -> ERROR

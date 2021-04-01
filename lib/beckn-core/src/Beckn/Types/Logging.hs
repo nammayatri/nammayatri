@@ -7,7 +7,7 @@ import EulerHS.Language as L
 import EulerHS.Prelude
 
 data LogLevel = DEBUG | INFO | WARNING | ERROR
-  deriving (Generic, FromDhall)
+  deriving (Generic, FromDhall, ToJSON)
 
 class Log m where
   logOutput :: LogLevel -> [Text] -> Text -> m ()
