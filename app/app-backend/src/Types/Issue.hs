@@ -1,4 +1,4 @@
-module Beckn.Types.Mobility.Issue (Issue (..)) where
+module Types.Issue (Issue (..)) where
 
 import Data.Text
 import EulerHS.Prelude

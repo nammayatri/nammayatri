@@ -1,9 +1,9 @@
 module Types.API.Support (SendIssueReq (..), SendIssueRes) where
 
-import Beckn.Types.Mobility.Issue (Issue)
 import Data.Text
 import EulerHS.Prelude
 import Types.API.Common (Ack)
+import Types.Issue (Issue)
 
 data SendIssueReq = SendIssueReq
   { contactEmail :: Text,
