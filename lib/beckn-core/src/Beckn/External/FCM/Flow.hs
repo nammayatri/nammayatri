@@ -149,10 +149,10 @@ checkAndGetToken ::
   (L.MonadFlow m, Log m) =>
   JWT.ServiceAccount ->
   m (Either String JWT.JWToken)
-checkAndGetToken sa = do
+checkAndGetToken fcmAcc = do
   token <- Redis.getKeyRedis "beckn:fcm_token"
   case token of
-    Nothing -> refreshToken
+    Nothing -> refreshToken fcmAcc
     Just t -> do
       validityStatus <- L.runIO $ JWT.isValid t
       case validityStatus of
@@ -162,28 +162,17 @@ checkAndGetToken sa = do
             else do
               -- close to expiration, start trying to refresh token
               logInfo fcm "Token is about to be expired, trying to refresh it"
-              refreshToken
+              refreshToken fcmAcc
         JWT.JWTExpired x -> do
           -- token expired
           logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
-          refreshToken
+          refreshToken fcmAcc
         JWT.JWTInvalid -> do
           -- token is invalid
           logInfo fcm "Token is invalid, trying to refresh it"
-          refreshToken
+          refreshToken fcmAcc
   where
     fcm = "FCM"
-    refreshToken = do
-      logInfo fcm "Refreshing token"
-      t <- L.runIO $ JWT.doRefreshToken sa
-      case t of
-        Left err -> do
-          logError fcm $ fromString err
-          pure $ Left $ fromString err
-        Right token -> do
-          logInfo fcm $ fromString "Success"
-          Redis.setKeyRedis "beckn:fcm_token" token
-          pure $ Right token
 
 -- | Get token (refresh token if expired / invalid)
 getToken ::
@@ -228,6 +217,21 @@ getNewToken = do
       L.runIO $ threadDelay 1000000
       getToken
     _ -> do
-      token <- getAndParseFCMAccount >>= either (pure . Left) checkAndGetToken
+      token <- getAndParseFCMAccount >>= either (pure . Left) refreshToken
       Redis.unlockRedis "fcm_token_refresh"
       pure token
+
+refreshToken :: (L.MonadFlow m, Log m) => JWT.ServiceAccount -> m (Either String JWT.JWToken)
+refreshToken fcmAcc = do
+  logInfo fcmTag "Refreshing token"
+  refreshRes <- L.runIO $ JWT.doRefreshToken fcmAcc
+  case refreshRes of
+    Left err -> do
+      logError fcmTag $ fromString err
+      pure $ Left $ fromString err
+    Right token -> do
+      logInfo fcmTag $ fromString "Success"
+      Redis.setKeyRedis "beckn:fcm_token" token
+      pure $ Right token
+  where
+    fcmTag = "FCM"
