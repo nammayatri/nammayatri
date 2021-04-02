@@ -60,14 +60,15 @@ trackerProductInstance =
 trackerCase :: Case.Case
 trackerCase =
   Fixtures.defaultCase
-    { Case._status = Case.CONFIRMED
+    { Case._type = Case.LOCATIONTRACKER,
+      Case._status = Case.CONFIRMED
     }
 
 rideCase :: Case.Case
 rideCase =
   Fixtures.defaultCase
     { Case._id = "2",
-      Case._type = Case.LOCATIONTRACKER,
+      Case._type = Case.RIDEORDER,
       Case._status = Case.CONFIRMED
     }
 
