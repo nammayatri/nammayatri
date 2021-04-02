@@ -8,7 +8,6 @@
 
 module Beckn.External.FCM.Types where
 
-import qualified Beckn.Utils.JWT as JWT
 import Beckn.Utils.TH
 import Control.Lens.TH
 import Data.Aeson
@@ -16,7 +15,6 @@ import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Default.Class
 import EulerHS.Prelude
-import qualified EulerHS.Types as T
 
 -- | Device token
 newtype FCMRecipientToken = FCMRecipientToken
@@ -392,9 +390,3 @@ data FCMResponse = FCMResponse
   deriving (Show, Eq, Read, Generic)
 
 $(deriveFromJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMResponse)
-
--- | Data type for runtime options key
-data FCMTokenKey = FCMTokenKey
-  deriving (Generic, Typeable, Show, Eq, ToJSON, FromJSON)
-
-instance T.OptionEntity FCMTokenKey JWT.JWToken

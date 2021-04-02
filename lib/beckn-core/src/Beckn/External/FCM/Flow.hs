@@ -18,6 +18,7 @@
 module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Person as Person
@@ -86,12 +87,14 @@ notifyPerson ::
 notifyPerson title body msgData person =
   let pid = getId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
+      forkDesc = "Sending notification to person " <> pid
    in case Person._deviceToken person of
         Nothing -> do
           logInfo "FCM" tokenNotFound
           pure ()
         Just token ->
-          sendMessage (FCMRequest (createMessage title body msgData token)) pid
+          fork forkDesc $
+            sendMessage (FCMRequest (createMessage title body msgData token)) pid
 
 -- | Google API interface
 type FCMSendMessageAPI =
@@ -147,7 +150,7 @@ checkAndGetToken ::
   JWT.ServiceAccount ->
   m (Either String JWT.JWToken)
 checkAndGetToken sa = do
-  token <- L.getOption FCMTokenKey
+  token <- Redis.getKeyRedis "beckn:fcm_token"
   case token of
     Nothing -> refreshToken
     Just t -> do
@@ -163,12 +166,10 @@ checkAndGetToken sa = do
         JWT.JWTExpired x -> do
           -- token expired
           logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
-          L.delOption FCMTokenKey
           refreshToken
         JWT.JWTInvalid -> do
           -- token is invalid
           logInfo fcm "Token is invalid, trying to refresh it"
-          L.delOption FCMTokenKey
           refreshToken
   where
     fcm = "FCM"
@@ -181,7 +182,7 @@ checkAndGetToken sa = do
           pure $ Left $ fromString err
         Right token -> do
           logInfo fcm $ fromString "Success"
-          L.setOption FCMTokenKey token
+          Redis.setKeyRedis "beckn:fcm_token" token
           pure $ Right token
 
 -- | Get token (refresh token if expired / invalid)
@@ -192,7 +193,7 @@ getToken ::
   FlowR r (Either String JWT.JWToken)
 getToken = do
   tokenStatus <-
-    L.getOption FCMTokenKey >>= \case
+    Redis.getKeyRedis "beckn:fcm_token" >>= \case
       Nothing -> pure $ Left "Token not found"
       Just jwt -> do
         validityStatus <- L.runIO $ JWT.isValid jwt
@@ -203,7 +204,7 @@ getToken = do
   case tokenStatus of
     Left err -> do
       logWarning "FCM" $ "Refreshing FCM token. Reason: " <> fromString err
-      getAndParseFCMAccount >>= either (pure . Left) checkAndGetToken
+      getNewToken
     jwt -> pure jwt
 
 getAndParseFCMAccount ::
@@ -219,3 +220,14 @@ getAndParseFCMAccount = do
   where
     parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
     parseContent rawContent = rawContent >>= Aeson.eitherDecode
+
+getNewToken :: (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) => FlowR r (Either String JWT.JWToken)
+getNewToken = do
+  Redis.tryLockRedis "fcm_token_refresh" 10 >>= \case
+    False -> do
+      L.runIO $ threadDelay 1000000
+      getToken
+    _ -> do
+      token <- getAndParseFCMAccount >>= either (pure . Left) checkAndGetToken
+      Redis.unlockRedis "fcm_token_refresh"
+      pure token
