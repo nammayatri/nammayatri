@@ -39,12 +39,13 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   let prodInstId = Id $ req ^. #message . #order . #_id
   productInstance <- ProductInstance.findById prodInstId
   let transporterId' = Id $ productInstance ^. #_organizationId
+  unless (productInstance ^. #_status == ProductInstance.INSTOCK) $ throwError PIInvalidStatus
   transporterOrg <- Organization.findOrganizationById transporterId'
-  unless (transporterId' == transporterId) (throwError AccessDenied)
+  unless (transporterId' == transporterId) $ throwError AccessDenied
   let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
   bapOrgId <- searchCase ^. #_udf4 & fromMaybeM CaseBapOrgIdNotPresent
-  unless (bapOrg ^. #_id == Id bapOrgId) (throwError AccessDenied)
+  unless (bapOrg ^. #_id == Id bapOrgId) $ throwError AccessDenied
   orderCase <- mkOrderCase searchCase
   _ <- Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance

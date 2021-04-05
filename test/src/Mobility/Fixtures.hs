@@ -259,18 +259,14 @@ buildUpdateCaseReq =
 buildUpdatePIReq :: TbePI.ProdInstUpdateReq
 buildUpdatePIReq =
   TbePI.ProdInstUpdateReq
-    { _status = Just PI.TRIP_ASSIGNED,
-      _personId = Just testDriverId,
-      _vehicleId = Just testVehicleId,
+    { _status = PI.TRIP_ASSIGNED,
       _otpCode = Nothing
     }
 
 buildUpdateStatusReq :: PI.ProductInstanceStatus -> Maybe Text -> TbePI.ProdInstUpdateReq
 buildUpdateStatusReq status otp =
   TbePI.ProdInstUpdateReq
-    { _status = Just status,
-      _personId = Nothing,
-      _vehicleId = Nothing,
+    { _status = status,
       _otpCode = otp
     }
 

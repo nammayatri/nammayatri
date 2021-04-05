@@ -5,7 +5,6 @@ import qualified Mobility.AppCancelRide as CR
 import qualified Mobility.AppCaseList as CL
 import qualified Mobility.AppRateRide as RateRide
 import qualified Mobility.DriverCancelRide as DCR
-import qualified Mobility.DriverCancelRideAfterStart as DCRAS
 import qualified Mobility.DriversIgnoreRide as DIR
 import qualified Mobility.HealthCheck as HC
 import qualified Mobility.Serviceability as SRV
@@ -21,7 +20,6 @@ mkTestTree = do
   dirSpec <- testSpec "DriversIgnoreRIde" DIR.spec
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
-  dcrasSpec <- testSpec "DriverCancelRideAfterStart" DCRAS.spec
   srvSpec <- testSpec "Serviceability" SRV.spec
   feedbackSpec <- testSpec "RateRide" RateRide.spec
   return $
@@ -37,7 +35,6 @@ mkTestTree = do
               feedbackSpec,
               srvSpec,
               crSpec,
-              dcrSpec,
-              dcrasSpec
+              dcrSpec
             ]
       ]

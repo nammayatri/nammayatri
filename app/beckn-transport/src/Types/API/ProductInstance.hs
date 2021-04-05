@@ -25,9 +25,7 @@ instance ToJSON ProductInstanceRes where
 type ProductInstanceList = [ProductInstanceRes]
 
 data ProdInstUpdateReq = ProdInstUpdateReq
-  { _status :: Maybe ProductInstanceStatus,
-    _personId :: Maybe Text,
-    _vehicleId :: Maybe Text,
+  { _status :: ProductInstanceStatus,
     _otpCode :: Maybe Text
   }
   deriving (Show, Generic, ToSchema)

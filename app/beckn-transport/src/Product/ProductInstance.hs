@@ -14,6 +14,7 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
 import Beckn.Utils.Common
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Models.Case as CQ
 import qualified Product.BecknProvider.BP as BP
@@ -58,23 +59,22 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
 
 update :: SR.RegistrationToken -> Id PI.ProductInstance -> ProdInstUpdateReq -> FlowHandler ProdInstInfo
 update SR.RegistrationToken {..} piId req = withFlowHandler $ do
-  when (maybe False (`elem` forbiddenStatuses) (req ^. #_status)) $
-    throwErrorWithInfo InvalidRequest "Forbidden status."
-  user <- PersQ.findPersonById (Id _EntityId)
-  ordPi <- PIQ.findById piId -- order product instance
-  searchPi <- case ordPi ^. #_parentId of
-    Just pid -> PIQ.findById pid
-    Nothing -> throwError PIParentIdNotPresent
-  isAllowed ordPi req
-  if user ^. #_role == SP.ADMIN
-    then updateStatus piId req False
-    else when (user ^. #_role == SP.DRIVER) $ updateStatus piId req True
-  notifyUpdateToBAP searchPi ordPi (req ^. #_status)
+  requestor <- PersQ.findPersonById (Id _EntityId)
+  ordPi <- PIQ.findById piId
+  searchPi <-
+    ordPi ^. #_parentId & fromMaybeM PIParentIdNotPresent
+      >>= PIQ.findById
+  PI.validateStatusTransition (ordPi ^. #_status) newStatus
+    & either (throwErrorWithInfo InvalidRequest) pure
+  validateRequest ordPi req requestor
+  let requestedByDriver = requestor ^. #_role == SP.DRIVER
+  updateTrip ordPi newStatus requestedByDriver
+  notifyUpdateToBAP searchPi ordPi newStatus
   PIQ.findById piId
   where
-    forbiddenStatuses = [PI.TRIP_ASSIGNED, PI.TRIP_REASSIGNMENT]
+    newStatus = req ^. #_status
 
-notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> Flow ()
+notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> Flow ()
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
   -- Send callback to BAP
   bapOrg <- fetchBapOrganization $ orderPi ^. #_caseId
@@ -168,13 +168,6 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 
 -- Core Utility methods are below
 
-isAllowed :: PI.ProductInstance -> ProdInstUpdateReq -> Flow ()
-isAllowed orderPi req = do
-  newStatus <- fromMaybeMWithInfo InvalidRequest "You should pass status." (req ^. #_status)
-  case PI.validateStatusTransition (orderPi ^. #_status) newStatus of
-    Left _ -> throwError PIInvalidStatus
-    Right _ -> return ()
-
 assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
@@ -195,7 +188,7 @@ assignDriver productInstanceId driverId = do
 
   DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle driver)
 
-  notifyUpdateToBAP searchPi ordPi (Just PI.TRIP_ASSIGNED)
+  notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
   Notify.notifyDriver notificationType notificationTitle (message headPi) driver
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -207,23 +200,32 @@ assignDriver productInstanceId driverId = do
           "Check the app for more details."
         ]
 
-updateStatus :: Id PI.ProductInstance -> ProdInstUpdateReq -> Bool -> Flow ()
-updateStatus piId req requestedByDriver = do
-  prodInst <- PIQ.findById piId
-  _ <- case (req ^. #_status, prodInst ^. #_entityId, prodInst ^. #_personId) of
-    (Just PI.CANCELLED, _, _) ->
-      updateTrip (prodInst ^. #_id) PI.CANCELLED req requestedByDriver
-    (Just PI.INPROGRESS, Just _, Just _) -> do
-      inAppOtpCode <- prodInst ^. #_udf4 & fromMaybeM PIOTPNotPresent
+validateRequest :: PI.ProductInstance -> ProdInstUpdateReq -> SP.Person -> Flow ()
+validateRequest ride req requestor = do
+  when (requestor ^. #_role == SP.DRIVER) checkIfDriverBelongsToRide
+  case (ride ^. #_status, newStatus, requestor ^. #_role) of
+    (PI.TRIP_ASSIGNED, PI.CANCELLED, SP.DRIVER) -> ok
+    (PI.TRIP_ASSIGNED, PI.CANCELLED, SP.ADMIN) -> ok
+    (PI.TRIP_ASSIGNED, PI.INPROGRESS, SP.DRIVER) -> do
+      inAppOtpCode <- ride ^. #_udf4 & fromMaybeM PIOTPNotPresent
       tripOtpCode <- req ^. #_otpCode & fromMaybeMWithInfo InvalidRequest "You should pass OTP."
-      if inAppOtpCode == tripOtpCode
-        then updateTrip (prodInst ^. #_id) PI.INPROGRESS req requestedByDriver
-        else throwError IncorrectOTP
-    (Just c, Just _, Just _) ->
-      updateTrip (prodInst ^. #_id) c req requestedByDriver
-    (Nothing, Just _, Just _) -> return ()
-    _ -> throwErrorWithInfo PIFieldNotPresent "_entityId or _personId is null. Driver or vehicle unassigned."
-  return ()
+      unless (inAppOtpCode == tripOtpCode) $ throwError IncorrectOTP
+    (PI.INPROGRESS, PI.COMPLETED, SP.DRIVER) ->
+      DSQ.updateIdleTimeFlow . cast $ requestor ^. #_id
+    (oldStatus', newStatus', who) -> do
+      logError "Invalid update operation" . T.pack $
+        "From " <> show oldStatus'
+          <> " to "
+          <> show newStatus'
+          <> " by "
+          <> show who
+      throwErrorWithInfo InvalidRequest "Invalid update operation."
+  where
+    newStatus = req ^. #_status
+    ok = pure ()
+    checkIfDriverBelongsToRide = do
+      rideDriver <- ride ^. #_personId & fromMaybeM Unauthorized
+      unless (requestor ^. #_id == rideDriver) $ throwError Unauthorized
 
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
 notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
@@ -235,49 +237,15 @@ notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
     (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
     _ -> return ()
 
-unAssignDriverInfo :: [PI.ProductInstance] -> ProdInstUpdateReq -> Flow ()
-unAssignDriverInfo productInstances request = do
-  when (null productInstances) $
-    do
-      logError
-        "unAssignDriverInfo"
-        "Can't unassign driver info for null ProductInstance."
-      throwError PIDoesNotExist
-  _ <- PIQ.updateVehicleFlow (PI._id <$> productInstances) Nothing
-  _ <- PIQ.updateDriverFlow (PI._id <$> productInstances) Nothing
-  notifyDriver (request ^. #_personId)
-  where
-    notifyDriver Nothing = pure ()
-    notifyDriver (Just driverId) = do
-      let notificationType = FCM.DRIVER_UNASSIGNED
-      let notificationTitle = "Driver has refused the ride!"
-      let message =
-            unwords
-              [ "You have refused the ride.",
-                "Check the app for more details."
-              ]
-      driver <- PersQ.findPersonById (Id driverId)
-      Notify.notifyDriver notificationType notificationTitle message driver
-
-updateTrip :: Id PI.ProductInstance -> PI.ProductInstanceStatus -> ProdInstUpdateReq -> Bool -> Flow ()
-updateTrip piId newStatus request requestedByDriver = do
-  prodInst <- PIQ.findById piId
+updateTrip :: PI.ProductInstance -> PI.ProductInstanceStatus -> Bool -> Flow ()
+updateTrip prodInst newStatus requestedByDriver = do
   piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
   trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
   case newStatus of
-    -- Only admin can send CANCELLED status to cancel ride
     PI.CANCELLED -> do
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       BP.cancelRide (cast $ orderPi ^. #_id) requestedByDriver
-    -- Sent by Driver for order reassignment
-    PI.TRIP_REASSIGNMENT -> do
-      trackerPi <- PIQ.findByIdType (PI._id <$> piList) Case.LOCATIONTRACKER
-      orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
-      _ <- PIQ.updateStatusFlow (PI._id trackerPi) PI.TRIP_REASSIGNMENT
-      _ <- PIQ.updateStatusFlow (PI._id orderPi) PI.TRIP_REASSIGNMENT
-      _ <- unAssignDriverInfo piList request
-      pure ()
     PI.INPROGRESS -> do
       _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) newStatus
       CQ.updateStatus (Case._id trackerCase_) Case.INPROGRESS
@@ -291,30 +259,25 @@ updateTrip piId newStatus request requestedByDriver = do
       updateOnRide (cast <$> PI._personId orderPi) False
       whenJust (orderPi ^. #_personId) (DSQ.updateIdleTimeFlow . cast)
       return ()
-    PI.TRIP_ASSIGNED -> do
-      _ <- PIQ.updateStatusByIdsFlow (PI._id <$> piList) PI.TRIP_ASSIGNED
-      pure ()
     _ -> return ()
   where
     updateOnRide Nothing _ = pure ()
     updateOnRide (Just personId) status = DriverInformation.updateOnRideFlow personId status
 
-notifyStatusUpdateReq :: PI.ProductInstance -> Maybe PI.ProductInstanceStatus -> BaseUrl -> Flow ()
+notifyStatusUpdateReq :: PI.ProductInstance -> PI.ProductInstanceStatus -> BaseUrl -> Flow ()
 notifyStatusUpdateReq searchPi status callbackUrl = do
   transporterOrg <- findOrganization
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   case status of
-    Just k -> case k of
-      PI.CANCELLED -> do
-        admins <- getAdmins transporterOrg
-        BP.notifyCancelToGateway (getId $ searchPi ^. #_id) callbackUrl bppShortId
-        Notify.notifyCancelReqByBP searchPi admins
-      PI.TRIP_REASSIGNMENT -> do
-        admins <- getAdmins transporterOrg
-        Notify.notifyDriverCancelledRideRequest searchPi admins
-        notifyStatusToGateway bppShortId
-      _ -> notifyStatusToGateway bppShortId
-    Nothing -> return ()
+    PI.CANCELLED -> do
+      admins <- getAdmins transporterOrg
+      BP.notifyCancelToGateway (getId $ searchPi ^. #_id) callbackUrl bppShortId
+      Notify.notifyCancelReqByBP searchPi admins
+    PI.TRIP_REASSIGNMENT -> do
+      admins <- getAdmins transporterOrg
+      Notify.notifyDriverCancelledRideRequest searchPi admins
+      notifyStatusToGateway bppShortId
+    _ -> notifyStatusToGateway bppShortId
   where
     findOrganization = OQ.findOrganizationById $ Id $ searchPi ^. #_organizationId
     getAdmins transporterOrg = do

@@ -125,21 +125,9 @@ spec = do
       completedStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate appRegistrationToken transporterOrderPiId (buildUpdateStatusReq PI.COMPLETED Nothing))
+          (rideUpdate driverToken transporterOrderPiId (buildUpdateStatusReq PI.COMPLETED (transporterOrderPi ^. #_udf4)))
       completedStatusResult `shouldSatisfy` isRight
-
-      completedPiListResult <- runClient appClientEnv (buildListPIs PI.COMPLETED)
-      completedPiListResult `shouldSatisfy` isRight
-
-      -- Check if app RIDEORDER PI got updated to status COMPLETED
-      checkPiInResult completedPiListResult productInstanceId
   where
-    -- initiate exotel call (uncomment this for call tests)
-    -- callTranId <- UUID.nextUUID
-    -- cReq <- buildCallReq (UUID.toText $ fromJust callTranId) "4bf94783-cce4-4692-9a3d-605d279015ee"
-    -- callResult <- runClient appClientEnv (appCallToProvider appRegistrationToken cReq)
-    -- callResult `shouldSatisfy` isRight
-
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase._productInstance
 

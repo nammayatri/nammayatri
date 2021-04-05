@@ -97,16 +97,20 @@ spec = do
         return $ nonEmpty orders
       tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
 
+      -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
         runClient
           transporterClient
-          $ F.rideUpdate F.appRegistrationToken transporterOrderId (F.buildUpdateStatusReq PI.INPROGRESS (transporterOrder ^. #_udf4))
+          $ F.rideUpdate F.driverToken transporterOrderId (F.buildUpdateStatusReq PI.INPROGRESS (transporterOrder ^. #_udf4))
       inProgressStatusResult `shouldSatisfy` isRight
+
+      inprogressPiListResult <- runClient appClient (F.buildListPIs PI.INPROGRESS)
+      inprogressPiListResult `shouldSatisfy` isRight
 
       completeStatusResult <-
         runClient
           transporterClient
-          $ F.rideUpdate F.appRegistrationToken transporterOrderId (F.buildUpdateStatusReq PI.COMPLETED Nothing)
+          $ F.rideUpdate F.driverToken transporterOrderId (F.buildUpdateStatusReq PI.COMPLETED Nothing)
       completeStatusResult `shouldSatisfy` isRight
 
       appPiListResult <- runClient appClient $ F.buildListPIs PI.COMPLETED
