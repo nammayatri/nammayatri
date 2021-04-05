@@ -212,13 +212,13 @@ getAndParseFCMAccount = do
 
 getNewToken :: (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) => FlowR r (Either String JWT.JWToken)
 getNewToken = do
-  Redis.tryLockRedis "fcm_token_refresh" 10 >>= \case
+  Redis.tryLockRedis "beckn:fcm_token_refresh" 10 >>= \case
     False -> do
       L.runIO $ threadDelay 1000000
       getToken
     _ -> do
       token <- getAndParseFCMAccount >>= either (pure . Left) refreshToken
-      Redis.unlockRedis "fcm_token_refresh"
+      Redis.unlockRedis "beckn:fcm_token_refresh"
       pure token
 
 refreshToken :: (L.MonadFlow m, Log m) => JWT.ServiceAccount -> m (Either String JWT.JWToken)
