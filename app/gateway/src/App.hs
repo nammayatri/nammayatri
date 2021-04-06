@@ -58,13 +58,17 @@ runGateway configModifier = do
       let appEnv = mkAppEnv appCfg cache
       let shortOrgId = appEnv ^. #gwId
       case prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId of
-        Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
+        Left err -> do
+          putStrLn @String ("Could not prepare authentication manager: " <> show err)
+          handleShutdown shutdown
         Right getManager -> do
           authManager <- getManager
           let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
           putStrLn @String "Initializing Redis Connections..."
           try (runFlowR flowRt' appCfg $ prepareRedisConnections redisCfg) >>= \case
-            Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
+            Left (e :: SomeException) -> do
+              putStrLn @String ("Exception thrown: " <> show e)
+              handleShutdown shutdown
             Right _ -> do
               void $ migrateIfNeeded migrationPath dbCfg autoMigrate
               runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
