@@ -3,7 +3,7 @@ module App.Routes where
 import App.Routes.FarePolicy
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.Types.APIResult (APIResult)
+import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as API
@@ -400,7 +400,7 @@ type DriverInformationAPI =
            :<|> "setActivity"
            :> TokenAuth
            :> MandatoryQueryParam "active" Bool
-           :> Post '[JSON] APIResult
+           :> Post '[JSON] APISuccess
            :<|> "notification"
            :> TokenAuth
            :> QueryParam "productInstanceId" (Id Ride)
@@ -423,11 +423,11 @@ type RideAPI =
              :> Capture "rideId" Text
              :> "start"
              :> ReqBody '[JSON] RideAPI.StartRideReq
-             :> Post '[JSON] APIResult
+             :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" Text
              :> "cancel"
-             :> Post '[JSON] APIResult
+             :> Post '[JSON] APISuccess
        )
 
 rideFlow :: FlowServer RideAPI

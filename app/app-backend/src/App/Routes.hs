@@ -5,7 +5,7 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
@@ -421,7 +421,7 @@ type PersonAPI =
            :<|> "update"
              :> TokenAuth
              :> ReqBody '[JSON] Person.UpdateReq
-             :> Post '[JSON] APIResult.APIResult
+             :> Post '[JSON] APISuccess.APISuccess
        )
 
 personFlow :: FlowServer PersonAPI

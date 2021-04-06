@@ -3,7 +3,7 @@
 module Product.Person where
 
 import App.Types (FlowHandler)
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common (withFlowHandler)
 import EulerHS.Prelude
@@ -23,7 +23,7 @@ getPersonDetails auth =
         email = auth ^. #_email
       }
 
-updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APIResult.APIResult
+updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
 updatePerson auth req = withFlowHandler $ do
   QPerson.updatePersonalInfo
     (auth ^. #_id)
@@ -34,4 +34,4 @@ updatePerson auth req = withFlowHandler $ do
     (req ^. #gender)
     (req ^. #email)
     (req ^. #deviceToken)
-  pure APIResult.Success
+  pure APISuccess.Success

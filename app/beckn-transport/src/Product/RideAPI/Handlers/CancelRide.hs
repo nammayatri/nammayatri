@@ -3,7 +3,7 @@
 module Product.RideAPI.Handlers.CancelRide where
 
 import Beckn.TypeClass.IsAPIError
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common (Log)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
@@ -33,7 +33,7 @@ instance IsAPIError CancelRideError where
   toStatusCode InvalidRideId = E400
   toStatusCode NotAnExecutor = E400
 
-cancelRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> m APIResult.APIResult
+cancelRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById $ Id rideId
   unless (isValidPI prodInst) $ throwError InvalidRideId
@@ -47,7 +47,7 @@ cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
       if adminOrRideDriver authPerson driverId
         then cancelRide (Id rideId) True
         else throwError NotAnExecutor
-  pure APIResult.Success
+  pure APISuccess.Success
   where
     isValidPI prodInst =
       prodInst ^. #_type == Case.RIDEORDER

@@ -3,7 +3,7 @@ module Mobility.Fixtures where
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
-import Beckn.Types.APIResult
+import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
@@ -137,7 +137,7 @@ cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
 rideRespond :<|> _ = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
-setDriverOnline :: Text -> Bool -> ClientM APIResult
+setDriverOnline :: Text -> Bool -> ClientM APISuccess
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
 _ :<|> setDriverOnline :<|> getNotificationInfo = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 

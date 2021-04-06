@@ -3,7 +3,7 @@
 module Product.RideAPI.Handlers.StartRide where
 
 import Beckn.TypeClass.IsAPIError
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
@@ -41,7 +41,7 @@ instance IsAPIError StartRideError where
   toStatusCode RideMissingOTP = E500
   toStatusCode IncorrectOTP = E400
 
-startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> Text -> m APIResult.APIResult
+startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> Text -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById $ Id requestorId
   orderPi <- findPIById $ Id rideId
@@ -59,6 +59,6 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER
   startRide (ProductInstance._id <$> piList) (Case._id trackerCase) (Case._id orderCase)
   notifyBAPRideStarted searchPi orderPi
-  pure APIResult.Success
+  pure APISuccess.Success
   where
     isValidPiStatus status = status `elem` [ProductInstance.CONFIRMED, ProductInstance.TRIP_ASSIGNED, ProductInstance.INSTOCK]

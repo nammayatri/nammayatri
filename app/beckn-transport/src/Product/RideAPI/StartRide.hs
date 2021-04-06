@@ -4,7 +4,7 @@ module Product.RideAPI.StartRide where
 
 import App.Types (AppEnv (dbCfg), Flow, FlowHandler)
 import qualified Beckn.Storage.Queries as DB
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -19,7 +19,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import Types.API.Ride (StartRideReq (..))
 
-startRide :: SR.RegistrationToken -> Text -> StartRideReq -> FlowHandler APIResult.APIResult
+startRide :: SR.RegistrationToken -> Text -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide SR.RegistrationToken {..} rideId req = withFlowHandler $ do
   Handler.startRideHandler handle _EntityId rideId (req ^. #otp)
   where

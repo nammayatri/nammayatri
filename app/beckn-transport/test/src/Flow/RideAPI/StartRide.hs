@@ -1,6 +1,6 @@
 module Flow.RideAPI.StartRide where
 
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -85,20 +85,20 @@ startRide =
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Text -> Text -> Text -> IO (Either ServerError APIResult.APIResult)
+runHandler :: StartRide.ServiceHandle IO -> Text -> Text -> Text -> IO (Either ServerError APISuccess.APISuccess)
 runHandler handle requestorId rideId otp = try $ StartRide.startRideHandler handle requestorId rideId otp
 
 successfulStartByDriver :: TestTree
 successfulStartByDriver =
   testCase "Start successfully if requested by driver executor" $ do
     result <- runHandler handle "1" "1" "otp"
-    result @?= Right APIResult.Success
+    result @?= Right APISuccess.Success
 
 successfulStartByAdmin :: TestTree
 successfulStartByAdmin =
   testCase "Start successfully if requested by admin" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    result @?= Right APIResult.Success
+    result @?= Right APISuccess.Success
   where
     handleCase =
       handle

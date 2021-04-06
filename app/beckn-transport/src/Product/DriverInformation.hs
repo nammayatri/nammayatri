@@ -3,7 +3,7 @@
 module Product.DriverInformation where
 
 import qualified App.Types as App
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -39,12 +39,12 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
         driverInformation = driverInfo
       }
 
-setActivity :: RegistrationToken -> Bool -> App.FlowHandler APIResult.APIResult
+setActivity :: RegistrationToken -> Bool -> App.FlowHandler APISuccess.APISuccess
 setActivity RegistrationToken {..} isActive = withFlowHandler $ do
   _ <- Registration.checkPersonExists _EntityId
   let driverId = Id _EntityId
   QDriverInformation.updateActivity driverId isActive
-  pure APIResult.Success
+  pure APISuccess.Success
 
 getRideInfo :: RegistrationToken -> Maybe (Id Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
 getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do

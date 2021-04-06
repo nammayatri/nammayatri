@@ -1,7 +1,7 @@
 module Flow.RideAPI.CancelRide where
 
 import Beckn.Product.BusinessRule (BusinessError (..), runBR)
-import qualified Beckn.Types.APIResult as APIResult
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -44,20 +44,20 @@ cancelRide =
       failedCancellationWhenProductInstanceStatusIsWrong
     ]
 
-runHandler :: CancelRide.ServiceHandle IO -> Text -> Text -> IO (Either ServerError APIResult.APIResult)
+runHandler :: CancelRide.ServiceHandle IO -> Text -> Text -> IO (Either ServerError APISuccess.APISuccess)
 runHandler handle requestorId rideId = try $ CancelRide.cancelRideHandler handle requestorId rideId
 
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =
   testCase "Cancel successfully if requested by driver executor" $ do
     result <- runHandler handle "1" "1"
-    result @?= Right APIResult.Success
+    result @?= Right APISuccess.Success
 
 successfulCancellationByAdmin :: TestTree
 successfulCancellationByAdmin =
   testCase "Cancel successfully if requested by admin" $ do
     result <- runHandler handleCase "1" "1"
-    result @?= Right APIResult.Success
+    result @?= Right APISuccess.Success
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure admin}
     admin =
@@ -70,7 +70,7 @@ successfulCancellationWithoutDriverByAdmin :: TestTree
 successfulCancellationWithoutDriverByAdmin =
   testCase "Cancel successfully if ride has no driver but requested by admin" $ do
     result <- runHandler handleCase "1" "1"
-    result @?= Right APIResult.Success
+    result @?= Right APISuccess.Success
   where
     handleCase =
       handle
