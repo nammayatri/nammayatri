@@ -6,7 +6,6 @@
 
 module Beckn.Utils.TH where
 
-import Beckn.Types.Common
 import Data.Swagger (ToParamSchema, ToSchema)
 import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
 import Database.Beam.Postgres as Posgres
@@ -24,8 +23,6 @@ deriveIdentifierInstances name = do
     deriving stock instance Eq $tyQ
 
     deriving stock instance Ord $tyQ
-
-    deriving newtype instance GuidLike $tyQ
 
     deriving newtype instance ToJSON $tyQ
 

@@ -6,23 +6,20 @@ module Beckn.Types.Common
     module Beckn.Types.Flow,
     module Beckn.Types.Logging,
     module Beckn.Types.Time,
+    module Beckn.Types.MonadGuid,
+    module Beckn.Types.GuidLike,
   )
 where
 
 import Beckn.Types.Flow
+import Beckn.Types.GuidLike
 import Beckn.Types.Logging
+import Beckn.Types.MonadGuid
 import Beckn.Types.Time
 import Data.Aeson
 import Data.Generics.Labels ()
 import Data.Swagger hiding (tags)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-
-class GuidLike a where
-  generateGUID :: FlowR r a
-
-instance GuidLike Text where
-  generateGUID = L.generateGUID
 
 data ErrorResponse = ErrorResponse
   { status :: Text,

@@ -3,7 +3,8 @@
 
 module Beckn.Types.Id where
 
-import Beckn.Types.Common (GuidLike (..))
+import Beckn.Types.GuidLike
+import Beckn.Types.MonadGuid
 import Beckn.Utils.Example (Example (..), idExample)
 import Data.Swagger (ToSchema)
 import qualified Data.Text as Text
@@ -42,8 +43,8 @@ instance BeamSqlBackend be => HasSqlEqualityCheck be (Id a)
 instance FromHttpApiData (Id a) where
   parseUrlPiece = pure . Id
 
-instance GuidLike (Id a) where
-  generateGUID = Id <$> generateGUID
+instance (MonadGuid m) => GuidLike m (Id a) where
+  generateGUID = Id <$> generateGUIDText
 
 newtype ShortId domain = ShortId
   { getShortId :: Text
@@ -65,5 +66,5 @@ instance BeamSqlBackend be => HasSqlEqualityCheck be (ShortId a)
 instance FromHttpApiData (ShortId a) where
   parseUrlPiece = pure . ShortId
 
-instance GuidLike (ShortId a) where
-  generateGUID = ShortId <$> generateGUID
+instance (MonadGuid m) => GuidLike m (ShortId a) where
+  generateGUID = ShortId <$> generateGUIDText

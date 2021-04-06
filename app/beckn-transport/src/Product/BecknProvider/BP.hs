@@ -300,7 +300,7 @@ mkCancelTripObj prodInstId = do
         route = Nothing
       }
 
-getIdShortIdAndTime :: GuidLike b => Flow (UTCTime, b, Text)
+getIdShortIdAndTime :: GuidLike Flow b => Flow (UTCTime, b, Text)
 getIdShortIdAndTime = do
   now <- getCurrentTime
   guid <- generateGUID
