@@ -17,6 +17,8 @@ import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
 import Types.App
 import qualified Types.Storage.RideRequest as SRR
+import Utils.GuidGenerator ()
+import Utils.SilentLogger ()
 
 numRequestsToProcess :: Integer
 numRequestsToProcess = 10
@@ -90,8 +92,7 @@ checkRideStatus Repository {..} rideId expectedStatus = do
 handle :: Repository -> ServiceHandle IO
 handle repository@Repository {..} =
   ServiceHandle
-    { getCurrentTime = Time.getCurrentTime,
-      getDriverSortMode = pure ETA,
+    { getDriverSortMode = pure ETA,
       getConfiguredAllocationTime = pure allocationTime,
       getConfiguredNotificationTime = pure notificationTime,
       getRequests = \numRides -> do
@@ -155,10 +156,7 @@ handle repository@Repository {..} =
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
-      runSafely = (Right <$>),
-      addLogTag = \_ action -> action,
-      logEvent = \_ _ -> pure (),
-      logOutput = \_ _ _ -> pure ()
+      logEvent = \_ _ -> pure ()
     }
 
 driverPool1 :: [Id Driver]

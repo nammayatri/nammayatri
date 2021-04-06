@@ -4,12 +4,10 @@ module Services.Allocation.Internal where
 
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
-import Beckn.Types.Common (FlowR)
-import qualified Beckn.Types.Common as Common
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common (throwErrorWithInfo)
-import qualified Beckn.Utils.Common as Common
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -31,9 +29,6 @@ import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Notifications
-
-getCurrentTime :: Flow UTCTime
-getCurrentTime = Common.getCurrentTime
 
 getDriverSortMode :: Flow SortMode
 getDriverSortMode = asks (defaultSortMode . driverAllocationConfig)
@@ -126,15 +121,6 @@ cleanupNotifications = QNS.cleanupNotifications
 removeRequest :: Id SRR.RideRequest -> Flow ()
 removeRequest = QRR.removeRequest
 
-logOutput :: Common.LogLevel -> [Text] -> Text -> Flow ()
-logOutput = Common.logOutput
-
-runSafely :: (FromJSON a, ToJSON a) => Flow a -> Flow (Either Text a)
-runSafely = Common.runSafeFlow
-
-addLogTag :: Common.HasLogContext env => Text -> FlowR env a -> FlowR env a
-addLogTag = Common.addLogTag
-
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->
   SNS.AnswerStatus
@@ -145,8 +131,8 @@ allocNotifStatusToStorageStatus = \case
 
 addAllocationRequest :: Id Ride -> Flow ()
 addAllocationRequest rideId = do
-  guid <- Common.generateGUID
-  currTime <- Common.getCurrentTime
+  guid <- generateGUID
+  currTime <- getCurrentTime
   let rideRequest =
         SRR.RideRequest
           { _id = Id guid,
@@ -162,7 +148,7 @@ addNotificationStatus ::
   UTCTime ->
   Flow ()
 addNotificationStatus rideId driverId expiryTime = do
-  uuid <- Common.generateGUID
+  uuid <- generateGUID
   QNS.create
     SNS.NotificationStatus
       { _id = Id uuid,

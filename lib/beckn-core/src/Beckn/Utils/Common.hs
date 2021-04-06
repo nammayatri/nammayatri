@@ -353,6 +353,3 @@ type HasFlowEnv m r fields =
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
 foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
-
-addLogTag :: HasLogContext env => Text -> FlowR env a -> FlowR env a
-addLogTag = local . addLogTagToEnv

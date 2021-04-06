@@ -15,8 +15,7 @@ import qualified Services.Allocation.Internal as I
 handle :: Allocation.ServiceHandle Flow
 handle =
   Allocation.ServiceHandle
-    { getCurrentTime = I.getCurrentTime,
-      getDriverSortMode = I.getDriverSortMode,
+    { getDriverSortMode = I.getDriverSortMode,
       getConfiguredNotificationTime = I.getConfiguredNotificationTime,
       getConfiguredAllocationTime = I.getConfiguredAllocationTime,
       getRequests = I.getRequests,
@@ -38,10 +37,7 @@ handle =
       getRideInfo = I.getRideInfo,
       cleanupNotifications = I.cleanupNotifications,
       removeRequest = I.removeRequest,
-      runSafely = I.runSafely,
-      addLogTag = I.addLogTag,
-      logEvent = I.logEvent,
-      logOutput = I.logOutput
+      logEvent = I.logEvent
     }
 
 run :: TMVar () -> TMVar () -> Flow ()

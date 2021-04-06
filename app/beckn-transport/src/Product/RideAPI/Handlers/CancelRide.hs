@@ -4,22 +4,19 @@ module Product.RideAPI.Handlers.CancelRide where
 
 import Beckn.TypeClass.IsAPIError
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Common (Log)
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance (ProductInstance, ProductInstanceStatus (..))
 import Beckn.Utils.Common
-import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Types.App (Ride)
 
 data ServiceHandle m = ServiceHandle
   { findPIById :: Id ProductInstance -> m ProductInstance,
     findPersonById :: Id Person.Person -> m Person.Person,
-    cancelRide :: Id Ride -> Bool -> m (),
-    generateGUID :: m Text,
-    getCurrentTime :: m UTCTime
+    cancelRide :: Id Ride -> Bool -> m ()
   }
 
 data CancelRideError
@@ -33,7 +30,7 @@ instance IsAPIError CancelRideError where
   toStatusCode InvalidRideId = E400
   toStatusCode NotAnExecutor = E400
 
-cancelRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> m APISuccess.APISuccess
+cancelRideHandler :: MonadHandler m => ServiceHandle m -> Text -> Text -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById $ Id rideId
   unless (isValidPI prodInst) $ throwError InvalidRideId

@@ -17,9 +17,6 @@ logWarning tag = logOutput WARNING [tag]
 logError :: Log m => Text -> Text -> m ()
 logError tag = logOutput ERROR [tag]
 
-addLogTagToEnv :: HasLogContext env => Text -> env -> env
-addLogTagToEnv tag = getLogContext >>= setLogContext . (++ [tag])
-
 getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
 getEulerLoggerConfig loggerConfig =
   T.defaultLoggerConfig

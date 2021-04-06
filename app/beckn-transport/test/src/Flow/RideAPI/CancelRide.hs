@@ -13,16 +13,15 @@ import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Common (errorCodeWhenLeft)
-import Utils.TestSilentIOLogger ()
+import Utils.GuidGenerator ()
+import Utils.SilentLogger ()
 
 handle :: CancelRide.ServiceHandle IO
 handle =
   CancelRide.ServiceHandle
     { findPIById = \_piId -> pure rideProductInstance,
       findPersonById = \_personid -> pure Fixtures.defaultDriver,
-      cancelRide = \_rideReq _requestedByAdmin -> pure (),
-      generateGUID = pure "",
-      getCurrentTime = pure Fixtures.defaultTime
+      cancelRide = \_rideReq _requestedByAdmin -> pure ()
     }
 
 rideProductInstance :: ProductInstance.ProductInstance

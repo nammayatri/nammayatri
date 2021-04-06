@@ -15,6 +15,7 @@ class HasLogContext env where
 
 class Log m where
   logOutput :: LogLevel -> [Text] -> Text -> m ()
+  addLogTag :: Text -> m a -> m a
 
 data LoggerConfig = LoggerConfig
   { isAsync :: Bool,
@@ -34,6 +35,13 @@ instance HasLogContext r => Log (FlowR r) where
       WARNING -> logWithFormat L.logWarning tags message
       ERROR -> logWithFormat L.logError tags message
 
+  addLogTag = local . addLogTagToEnv
+
+tagsToText :: [Text] -> Text
+tagsToText = T.concat . map block
+  where
+    block x = "[" <> x <> "]"
+
 logWithFormat ::
   ( MonadReader env m,
     HasLogContext env
@@ -45,6 +53,6 @@ logWithFormat ::
 logWithFormat logFunction tags msg = do
   existingTags <- asks getLogContext
   logFunction (tagsToText (existingTags ++ tags)) msg
-  where
-    tagsToText = T.concat . map block
-    block x = "[" <> x <> "]"
+
+addLogTagToEnv :: HasLogContext env => Text -> env -> env
+addLogTagToEnv tag = getLogContext >>= setLogContext . (++ [tag])

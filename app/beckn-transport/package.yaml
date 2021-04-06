@@ -129,5 +129,6 @@ tests:
     dependencies:
       - tasty
       - tasty-hunit
+      - uuid
       - beckn-transport
       - beckn-core
