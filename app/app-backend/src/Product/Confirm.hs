@@ -45,11 +45,9 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
       >>= fromMaybeM OrgNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
-
   DB.runSqlDBTransaction $ do
     QCase.create orderCase_
     QPI.create orderProductInstance
-
   msgId <- L.generateGUID
   context <- buildContext "confirm" caseId msgId
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
@@ -90,13 +88,17 @@ onConfirm _org req = withFlowHandler $ do
       let uPrd =
             prdInst
               { SPI._info = encodeToText <$> uInfo,
-                SPI._udf4 = (^. #id) <$> trip
+                SPI._udf4 = (^. #id) <$> trip,
+                SPI._status = SPI.CONFIRMED
               }
       productInstance <- MPI.findById pid
       Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
-      MCase.updateStatus (SPI._caseId productInstance) Case.COMPLETED
-      MPI.updateMultiple pid uPrd
-      MPI.updateStatus pid SPI.CONFIRMED
+      let newCaseStatus = Case.COMPLETED
+      MCase.validateStatusChange newCaseStatus (productInstance ^. #_caseId)
+      MPI.validatePIStatusChange SPI.CONFIRMED pid
+      DB.runSqlDBTransaction $ do
+        QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
+        QPI.updateMultiple pid uPrd
     Left err -> logError "on_confirm req" $ "on_confirm error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 

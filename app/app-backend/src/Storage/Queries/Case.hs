@@ -138,11 +138,14 @@ updateValidTill id validTill = do
         ]
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
 
-updateStatus :: Id Storage.Case -> Storage.CaseStatus -> Flow (T.DBResult ())
+updateStatusFlow :: Id Storage.Case -> Storage.CaseStatus -> Flow (T.DBResult ())
+updateStatusFlow id status = DB.runSqlDB (updateStatus id status)
+
+updateStatus :: Id Storage.Case -> Storage.CaseStatus -> DB.SqlDB ()
 updateStatus id status = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
+  currTime <- asks DB.currentTime
+  DB.update'
     dbTable
     (setClause status currTime)
     (predicate id)

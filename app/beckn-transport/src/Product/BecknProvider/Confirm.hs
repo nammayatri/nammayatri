@@ -41,7 +41,7 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   logInfo "confirm API Flow" "Reached"
   BP.validateContext "confirm" $ req ^. #context
   let prodInstId = Id $ req ^. #message . #order . #_id
-  productInstance <- ProductInstance.findById prodInstId
+  productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIInvalidId)
   let transporterId' = Id $ productInstance ^. #_organizationId
   unless (productInstance ^. #_status == ProductInstance.INSTOCK) $ throwError PIInvalidStatus
   transporterOrg <- Organization.findOrganizationById transporterId'

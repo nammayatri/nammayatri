@@ -41,7 +41,7 @@ updateAllProductInstancesByCaseId caseId status = do
 updateMultiple :: Id ProductInstance -> ProductInstance -> Flow ()
 updateMultiple piid prdInst = do
   validatePIStatusChange (_status prdInst) piid
-  result <- Q.updateMultiple piid prdInst
+  result <- Q.updateMultipleFlow piid prdInst
   checkDBError result
 
 -- | Find Product Instance by id

@@ -149,6 +149,7 @@ instance IsAPIError CaseError where
 
 data ProductInstanceError
   = PINotFound
+  | PIInvalidId
   | PIDoesNotExist
   | PIInfoNotPresent
   | PIPersonNotPresent
@@ -162,6 +163,7 @@ data ProductInstanceError
 
 instance IsAPIError ProductInstanceError where
   toAPIError PINotFound = APIError "PI_NOT_FOUND" "Product instance not found."
+  toAPIError PIInvalidId = APIError "INVLID_RIDE_ID" "Ride not found."
   toAPIError PIDoesNotExist = APIError "PI_DOES_NOT_EXISTS" "No product instance matches passed data."
   toAPIError PIInfoNotPresent = APIError "PI_INFO_NOT_PRESENT" "_info field is null for this product instance."
   toAPIError PIPersonNotPresent = APIError "PI_PERSON_NOT_PRESENT" "_personId field is null for this product instance."
@@ -172,6 +174,7 @@ instance IsAPIError ProductInstanceError where
   toAPIError PIFieldNotPresent = APIError "PI_FIELD_NOT_PRESENT" "Required field is null for this product instance."
   toAPIError PIInvalidStatus = APIError "PI_INVALID_STATUS" "Attempted to do some action in wrong product instance status."
   toStatusCode PINotFound = E500
+  toStatusCode PIInvalidId = E400
   toStatusCode PIDoesNotExist = E400
   toStatusCode PIInfoNotPresent = E500
   toStatusCode PIPersonNotPresent = E500

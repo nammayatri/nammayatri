@@ -151,11 +151,14 @@ listAllProductInstanceByPerson person id status =
       Case.findIdByPerson person caseId >> listAllProductInstance id status
     _ -> listAllProductInstance id status
 
-updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> Flow (T.DBResult ())
-updateMultiple id prdInst@Storage.ProductInstance {..} = do
+updateMultipleFlow :: Id Storage.ProductInstance -> Storage.ProductInstance -> Flow (T.DBResult ())
+updateMultipleFlow id prdInst = DB.runSqlDB (updateMultiple id prdInst)
+
+updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> DB.SqlDB ()
+updateMultiple id prdInst = do
   dbTable <- getDbTable
-  currTime <- getCurrentTime
-  DB.update dbTable (setClause currTime prdInst) (predicate id)
+  currTime <- asks DB.currentTime
+  DB.update' dbTable (setClause currTime prdInst) (predicate id)
   where
     predicate piid Storage.ProductInstance {..} = _id ==. B.val_ piid
     setClause now prodInst Storage.ProductInstance {..} =

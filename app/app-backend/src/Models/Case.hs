@@ -87,7 +87,7 @@ updateValidTill cid validTill = do
 updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
   validateStatusChange status cid
-  result <- Q.updateStatus cid status
+  result <- Q.updateStatusFlow cid status
   checkDBError result
 
 -- | Validate and update Case status and its udfs
