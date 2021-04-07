@@ -60,7 +60,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
   prodInst <- ProductInstance.findById (Id prodInstId)
   piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
-  RideRequest.create =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
+  RideRequest.createFlow =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
   uuid <- L.generateGUID
   mkAckResponse uuid "cancel"
 

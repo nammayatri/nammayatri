@@ -212,7 +212,7 @@ createProductInstance productCase price status transporterId = do
             _createdAt = now,
             _updatedAt = now
           }
-  ProductInstance.create productInstance
+  ProductInstance.createFlow productInstance
   pure productInstance
 
 sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow Ack.AckResponse

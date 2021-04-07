@@ -3,6 +3,7 @@
 module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
@@ -24,10 +25,12 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import qualified Models.Case as Case
+import qualified Models.ProductInstance as ProductInstance
 import qualified Product.BecknProvider.BP as BP
 import Product.Person (calculateDriverPool, setDriverPool)
+import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Organization
-import qualified Storage.Queries.ProductInstance as ProductInstance
+import qualified Storage.Queries.ProductInstance as QProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Test.RandomStrings as RS
 import qualified Types.Storage.RideRequest as RideRequest
@@ -48,21 +51,29 @@ confirm transporterId bapOrg req = withFlowHandler $ do
   bapOrgId <- searchCase ^. #_udf4 & fromMaybeM CaseBapOrgIdNotPresent
   unless (bapOrg ^. #_id == Id bapOrgId) $ throwError AccessDenied
   orderCase <- mkOrderCase searchCase
-  _ <- Case.create orderCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
-  ProductInstance.create orderProductInstance
-  RideRequest.create
-    =<< BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
-  _ <- Case.updateStatus (orderCase ^. #_id) Case.INPROGRESS
-  _ <- ProductInstance.updateStatusFlow (productInstance ^. #_id) ProductInstance.CONFIRMED
-  --TODO: need to update other product status to VOID for this case
+  rideRequest <- BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
+  let newOrderCaseStatus = Case.INPROGRESS
+  let newSearchCaseStatus = Case.COMPLETED
+  let newProductInstanceStatus = ProductInstance.CONFIRMED
+  Case.validateStatusChange newOrderCaseStatus orderCase
+  Case.validateStatusChange newSearchCaseStatus searchCase
+  ProductInstance.validateStatusChange newProductInstanceStatus productInstance
   (currTime, uuid, shortId) <- BP.getIdShortIdAndTime
   let trackerCase = mkTrackerCase searchCase uuid currTime shortId
-  _ <- Case.create trackerCase
-  uuid1 <- L.generateGUID
-  trackerProductInstance <- mkTrackerProductInstance uuid1 (trackerCase ^. #_id) productInstance currTime
-  ProductInstance.create trackerProductInstance
-  _ <- Case.updateStatus (searchCase ^. #_id) Case.COMPLETED
+  trackerProductInstance <- mkTrackerProductInstance (trackerCase ^. #_id) productInstance currTime
+
+  DB.runSqlDBTransaction $ do
+    QCase.create orderCase
+    QProductInstance.create orderProductInstance
+    RideRequest.create rideRequest
+    QCase.updateStatus (orderCase ^. #_id) newOrderCaseStatus
+    QCase.updateStatus (searchCase ^. #_id) newSearchCaseStatus
+    QProductInstance.updateStatus (productInstance ^. #_id) newProductInstanceStatus
+    QCase.create trackerCase
+    -- TODO: figure out what the next comment means:
+    -- TODO: need to update other product status to VOID for this case
+    QProductInstance.create trackerProductInstance
 
   fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
   mkAckResponse uuid "confirm"
@@ -207,9 +218,10 @@ mkTrackerCase case_@Case.Case {..} uuid now shortId =
       ..
     }
 
-mkTrackerProductInstance :: Text -> Id Case.Case -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
-mkTrackerProductInstance piId caseId prodInst currTime = do
+mkTrackerProductInstance :: Id Case.Case -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
+mkTrackerProductInstance caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
+  piId <- L.generateGUID
   return $
     ProductInstance.ProductInstance
       { _id = Id piId,

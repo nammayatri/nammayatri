@@ -140,7 +140,7 @@ addAllocationRequest rideId = do
             _createdAt = currTime,
             _type = SRR.ALLOCATION
           }
-  QRR.create rideRequest
+  QRR.createFlow rideRequest
 
 addNotificationStatus ::
   Id Ride ->

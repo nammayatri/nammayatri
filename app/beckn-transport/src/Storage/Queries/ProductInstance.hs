@@ -34,11 +34,15 @@ getProdTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Produc
 getProdTable =
   DB._products . DB.transporterDb <$> getSchemaName
 
-create :: Storage.ProductInstance -> Flow ()
-create Storage.ProductInstance {..} = do
+createFlow :: Storage.ProductInstance -> Flow ()
+createFlow =
+  DB.runSqlDB . create
+    >=> either throwDBError pure
+
+create :: Storage.ProductInstance -> DB.SqlDB ()
+create productInstance = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.ProductInstance {..})
-    >>= either throwDBError pure
+  lift $ DB.createOne' dbTable (Storage.insertExpression productInstance)
 
 findAllByIds :: Integer -> Integer -> [Id Product.Products] -> Flow [Storage.ProductInstance]
 findAllByIds limit offset ids = do
@@ -108,21 +112,7 @@ updateStatusFlow ::
   Id Storage.ProductInstance ->
   Storage.ProductInstanceStatus ->
   Flow (T.DBResult ())
-updateStatusFlow prodInstId status = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
-    dbTable
-    (setClause status currTime)
-    (predicate prodInstId)
-  where
-    predicate pId Storage.ProductInstance {..} =
-      _id ==. B.val_ pId
-    setClause scStatus currTime Storage.ProductInstance {..} =
-      mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ scStatus
-        ]
+updateStatusFlow prodInstId status = DB.runSqlDB (updateStatus prodInstId status)
 
 updateStatus ::
   Id Storage.ProductInstance ->

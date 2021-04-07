@@ -73,7 +73,7 @@ createProductInstance cs prod price orgId status = do
   (currTime :: UTCTime) <- getCurrentTime
   shortId <- L.runIO $ RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   let productInst = getProdInst piId shortId currTime
-  QPI.create productInst
+  QPI.createFlow productInst
   return productInst
   where
     getProdInst piId shortId currTime =

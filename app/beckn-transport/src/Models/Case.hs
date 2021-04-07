@@ -23,7 +23,7 @@ create :: Case -> Flow ()
 create c = do
   -- TODO add some validation checks
   -- and `throwDomainError CaseNotCreated` if needed
-  result <- Q.create c
+  result <- Q.createFlow c
   checkDBError result
 
 -- | Find Case by id

@@ -18,10 +18,13 @@ getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB._case . DB.transporterDb <$> getSchemaName
 
-create :: Storage.Case -> Flow (T.DBResult ())
-create Storage.Case {..} = do
+createFlow :: Storage.Case -> Flow (T.DBResult ())
+createFlow = DB.runSqlDB . create
+
+create :: Storage.Case -> DB.SqlDB ()
+create case_ = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
+  lift $ DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByIds :: [Id Storage.Case] -> Flow (T.DBResult [Storage.Case])
 findAllByIds ids = do
@@ -58,21 +61,7 @@ updateStatusFlow ::
   Id Storage.Case ->
   Storage.CaseStatus ->
   Flow (T.DBResult ())
-updateStatusFlow id newStatus = do
-  dbTable <- getDbTable
-  -- update data
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
-    dbTable
-    (setClause newStatus currTime)
-    (predicate id)
-  where
-    predicate cid Storage.Case {..} = _id ==. B.val_ cid
-    setClause status currTime Storage.Case {..} =
-      mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ status
-        ]
+updateStatusFlow id newStatus = DB.runSqlDB (updateStatus id newStatus)
 
 updateStatus ::
   Id Storage.Case ->

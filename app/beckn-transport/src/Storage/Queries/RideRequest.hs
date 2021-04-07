@@ -12,15 +12,19 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.RideRequest as RideRequest
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity RideRequest.RideRequestT))
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity RideRequest.RideRequestT))
 getDbTable =
   DB._rideRequest . DB.transporterDb <$> getSchemaName
 
-create :: RideRequest.RideRequest -> Flow ()
-create RideRequest.RideRequest {..} = do
+createFlow :: RideRequest.RideRequest -> Flow ()
+createFlow =
+  DB.runSqlDB . create
+    >=> either throwDBError pure
+
+create :: RideRequest.RideRequest -> DB.SqlDB ()
+create rideRequest = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression RideRequest.RideRequest {..})
-    >>= either throwDBError pure
+  lift $ DB.createOne' dbTable (Storage.insertExpression rideRequest)
 
 fetchOldest :: Integer -> Flow [RideRequest.RideRequest]
 fetchOldest limit = do
