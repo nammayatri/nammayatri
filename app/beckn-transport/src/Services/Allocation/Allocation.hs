@@ -272,10 +272,10 @@ isNotificationTimeFinished ServiceHandle {..} expiryTime = do
   pure $ currentTime > expiryTime
 
 logInfoText :: MonadHandler m => Text -> m ()
-logInfoText = logOutput INFO []
+logInfoText = logOutput INFO ""
 
 logWarningText :: MonadHandler m => Text -> m ()
-logWarningText = logOutput WARNING []
+logWarningText = logOutput WARNING ""
 
 logErrorText :: MonadHandler m => Text -> m ()
-logErrorText = logOutput ERROR []
+logErrorText = logOutput ERROR ""

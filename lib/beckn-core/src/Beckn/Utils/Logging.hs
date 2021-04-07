@@ -11,35 +11,26 @@ module Beckn.Utils.Logging
 where
 
 import Beckn.Types.Logging
-
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as Txt
 import qualified Data.Time as Time
 import EulerHS.Prelude
 import EulerHS.Runtime
 import qualified EulerHS.Types as T
-
-data LogEntry = LogEntry
-  { timestamp :: Time.UTCTime,
-    level :: LogLevel,
-    logContext :: Text,
-    tag :: Text,
-    messageNumber :: Int,
-    message :: Text
-  }
-  deriving (Generic, ToJSON)
+import System.Environment
 
 logDebug :: Log m => Text -> Text -> m ()
-logDebug tag = logOutput DEBUG [tag]
+logDebug = logOutput DEBUG
 
 logInfo :: Log m => Text -> Text -> m ()
-logInfo tag = logOutput INFO [tag]
+logInfo = logOutput INFO
 
 logWarning :: Log m => Text -> Text -> m ()
-logWarning tag = logOutput WARNING [tag]
+logWarning = logOutput WARNING
 
 logError :: Log m => Text -> Text -> m ()
-logError tag = logOutput ERROR [tag]
+logError = logOutput ERROR
 
 getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
 getEulerLoggerConfig LoggerConfig {..} =
@@ -68,13 +59,13 @@ getEulerLoggerRuntime = createLoggerRuntime logFlowFormatter . getEulerLoggerCon
 logFlowFormatter :: T.FlowFormatter
 logFlowFormatter _ = do
   currTime <- Time.getCurrentTime
-  pure $! logFormatterText currTime
+  hostname <- (Txt.pack <$>) <$> lookupEnv "POD_NAME"
+  pure $! logFormatterText currTime hostname
 
-logFormatterText ::
-  Time.UTCTime -> -- timestamp
-  T.MessageFormatter
+logFormatterText :: Time.UTCTime -> Maybe Text -> T.MessageFormatter
 logFormatterText
   timestamp
+  hostname
   (T.PendingMsg _mbFlowGuid elvl tag msg msgNum logContHM) = res
     where
       logCont = HM.lookupDefault "" "log_context" logContHM
@@ -85,7 +76,8 @@ logFormatterText
             logContext = logCont,
             tag = tag,
             messageNumber = msgNum,
-            message = msg
+            message = msg,
+            hostname = hostname
           }
       res = T.SimpleLBS $ A.encode logEntry
       lvl = case elvl of
