@@ -34,7 +34,7 @@ getProductInfo _person prodInstId = withFlowHandler $ do
                 product = productInstance
               }
     Nothing ->
-      logInfo "get Product info" "No info found in products table"
+      logTagInfo "get Product info" "No info found in products table"
         >> throwError PIInfoNotPresent
 
 -- TODO: fetch tracking URL from tracker info

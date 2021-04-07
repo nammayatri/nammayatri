@@ -11,22 +11,22 @@ import EulerHS.Prelude
 
 -- TODO: replace with Log.Log
 class BusinessLog m where
-  logDebug :: Text -> Text -> m ()
-  logInfo :: Text -> Text -> m ()
-  logWarning :: Text -> Text -> m ()
-  logError :: Text -> Text -> m ()
+  logTagDebug :: Text -> Text -> m ()
+  logTagInfo :: Text -> Text -> m ()
+  logTagWarning :: Text -> Text -> m ()
+  logTagError :: Text -> Text -> m ()
 
 instance BusinessLog (FlowR r) where
-  logDebug = Common.logDebug
-  logInfo = Common.logInfo
-  logWarning = Common.logWarning
-  logError = Common.logError
+  logTagDebug = Common.logTagDebug
+  logTagInfo = Common.logTagInfo
+  logTagWarning = Common.logTagWarning
+  logTagError = Common.logTagError
 
 instance (Monad m, BusinessLog m) => BusinessLog (BusinessRule m) where
-  logDebug code msg = lift $ logDebug code msg
-  logInfo code msg = lift $ logInfo code msg
-  logWarning code msg = lift $ logWarning code msg
-  logError code msg = lift $ logError code msg
+  logTagDebug code msg = lift $ logTagDebug code msg
+  logTagInfo code msg = lift $ logTagInfo code msg
+  logTagWarning code msg = lift $ logTagWarning code msg
+  logTagError code msg = lift $ logTagError code msg
 
 newtype BusinessRule m a = BusinessRule {runBusinessRule :: ExceptT BusinessError m a}
   deriving newtype
@@ -54,7 +54,7 @@ runBRFlowFatal br =
   runBR br >>= \case
     Left be -> do
       let msg = "Error happened when evaluating business rule. Error: " +|| be ||+ ""
-      logError "BusinessRule" msg
+      logTagError "BusinessRule" msg
       Common.throwErrorWithInfo CommonInternalError msg
     Right a -> pure a
 
@@ -62,7 +62,7 @@ runBRFlowMaybe :: (Monad m, BusinessLog m) => BusinessRule m a -> m (Maybe a)
 runBRFlowMaybe br =
   runBR br >>= \case
     Left be -> do
-      logError
+      logTagError
         "BusinessRule"
         $ "Error happened when evaluating business rule. Error: " +|| be ||+ ""
       pure Nothing

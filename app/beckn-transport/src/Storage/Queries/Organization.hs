@@ -32,7 +32,7 @@ create Storage.Organization {..} = do
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
   dbTable <- getDbTable
-  logInfo "verifying token" $ show regToken
+  logTagInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
     >>= either throwDBError pure
     >>= fromMaybeM Unauthorized

@@ -12,7 +12,7 @@ prepareRedisConnections redisCfg = do
   L.runKVDB "redis" (L.setex "dummy" 1 "dummy") >>= throwOnFailedWithLog
   where
     throwOnFailedWithLog (Left err) = do
-      logError "" $ errmsg err
+      logTagError "" $ errmsg err
       L.throwException $ KVDBConnectionFailedException $ errmsg err
     throwOnFailedWithLog _ = pure ()
     errmsg err = "Failed to get or initialize connection to Redis. " <> show err

@@ -46,5 +46,5 @@ doFCMTokenRefresh = do
                   else 10
               _ -> 10 -- just a caution, it should be valid by this moment
     logAndThrowIt err = do
-      logInfo ("fcm" :: Text) err
+      logTagInfo ("fcm" :: Text) err
       throwError UnableToReadFCMJSONFile

@@ -74,7 +74,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
 onConfirm _org req = withFlowHandler $ do
   -- TODO: Verify api key here
-  logInfo "on_confirm req" (show req)
+  logTagInfo "on_confirm req" (show req)
   validateContext "on_confirm" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
@@ -99,7 +99,7 @@ onConfirm _org req = withFlowHandler $ do
       DB.runSqlDBTransaction $ do
         QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
         QPI.updateMultiple pid uPrd
-    Left err -> logError "on_confirm req" $ "on_confirm error: " <> show err
+    Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case

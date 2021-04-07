@@ -19,7 +19,7 @@ selectCb :: Organization -> API.OnSelectReq -> FlowHandler AckResponse
 selectCb _org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
-  logDebug "mock_app_backend" $
+  logTagDebug "mock_app_backend" $
     "select_cb: req: "
       <> decodeUtf8 (encode req)
       <> ", resp: "
@@ -30,10 +30,10 @@ selectCb _org req = withFlowHandler $ do
       let quoteId = quote ^. #_id
       initReq <- buildInitReq ctx quoteId
       case req ^. #context . #_bpp_uri of
-        Nothing -> logError "mock-app-backend" "Bad ac_id"
+        Nothing -> logTagError "mock-app-backend" "Bad ac_id"
         Just url ->
           void $
             callClient' (Just HttpSig.signatureAuthManagerKey) "init" (req ^. #context) url $
               client API.initAPI initReq
-    Left err -> logDebug "mock_app_backend" $ "select_cb error: " <> show err
+    Left err -> logTagDebug "mock_app_backend" $ "select_cb error: " <> show err
   return resp

@@ -24,7 +24,7 @@ import Types.Error
 
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
 feedback _transporterId _organization request = withFlowHandler $ do
-  logInfo "FeedbackAPI" "Received feedback API call."
+  logTagInfo "FeedbackAPI" "Received feedback API call."
   BP.validateContext "feedback" $ request ^. #context
   let productInstanceId = Id $ request ^. #message . #order_id
   productInstances <- ProductInstance.findAllByParentId productInstanceId
@@ -39,12 +39,12 @@ feedback _transporterId _organization request = withFlowHandler $ do
   mbRating <- Rating.findByProductInstanceId orderId
   case mbRating of
     Nothing -> do
-      logInfo "FeedbackAPI" $
+      logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| orderId ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- mkRating orderId ratingValue
       Rating.create newRating
     Just rating -> do
-      logInfo "FeedbackAPI" $
+      logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
       Rating.updateRatingValue (rating ^. #_id) ratingValue
   Person.calculateAverageRating personId

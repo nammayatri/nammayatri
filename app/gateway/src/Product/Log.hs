@@ -19,7 +19,7 @@ log _org req = withFlowHandler $ do
       action = req ^. #_context . #_action
   if action == "log"
     then do
-      logDebug "gateway" $
+      logTagDebug "gateway" $
         "transaction_id: " <> transactionId
           <> "message_id: "
           <> messageId

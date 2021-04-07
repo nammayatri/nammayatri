@@ -22,7 +22,7 @@ searchCb :: Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb _ req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
-  logDebug "mock_app_backend" $ "search_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
+  logTagDebug "mock_app_backend" $ "search_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   case req ^. #contents of
     Right msg -> do
       case msg ^? #catalog . #_items . ix 0 . #_id of
@@ -33,8 +33,8 @@ searchCb _ req = withFlowHandler $ do
               void $
                 callClient' (Just HttpSig.signatureAuthManagerKey) "select" (req ^. #context) url $
                   client API.selectAPI selectReq
-            Nothing -> logError "mock_app_backend" "Bad ac_id"
+            Nothing -> logTagError "mock_app_backend" "Bad ac_id"
         Nothing ->
-          logDebug "mock_app_backend" "search_cb error: no items in the catalog."
-    Left err -> logDebug "mock_app_backend" $ "search_cb error: " <> show err
+          logTagDebug "mock_app_backend" "search_cb error: no items in the catalog."
+    Left err -> logTagDebug "mock_app_backend" $ "search_cb error: " <> show err
   return resp

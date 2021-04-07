@@ -95,7 +95,7 @@ searchCb _bppOrg req = withFlowHandler $ do
       let catalog = msg ^. #catalog
       _ <- searchCbService req catalog
       return ()
-    Left err -> logError "on_search req" $ "on_search error: " <> show err
+    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes

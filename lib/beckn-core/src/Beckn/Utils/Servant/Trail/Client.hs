@@ -106,7 +106,7 @@ saveClientTrailFlow (TrailInfo res req) = do
           }
     case dbResult of
       Left err -> do
-        logError "client_trace" $
+        logTagError "client_trace" $
           "Failed to save request from gateway to " <> toText _endpointId <> ": " <> show err
       Right () -> pure ()
   where
@@ -137,8 +137,8 @@ callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
         Left (ConnectionError _) -> "Connection error"
   _ <- L.runIO $ endTracking status
   case res of
-    Right r -> logInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
-    Left err -> logInfo serviceName $ "Error occured during client call: " <> show err
+    Right r -> logTagInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
+    Left err -> logTagInfo serviceName $ "Error occured during client call: " <> show err
   traceFlag <- getTraceFlag
   case traceFlag of
     TRACE_OUTGOING -> trace res

@@ -217,7 +217,7 @@ validateRequest ride req requestor = do
     (PI.INPROGRESS, PI.COMPLETED, SP.DRIVER) -> ok
     (PI.INPROGRESS, PI.COMPLETED, SP.ADMIN) -> ok
     (oldStatus', newStatus', who) -> do
-      logError "Invalid update operation" . T.pack $
+      logTagError "Invalid update operation" . T.pack $
         "From " <> show oldStatus'
           <> " to "
           <> show newStatus'

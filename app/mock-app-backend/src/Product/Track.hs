@@ -13,11 +13,11 @@ import EulerHS.Prelude
 trackCb :: Organization -> OnTrackReq -> FlowHandler AckResponse
 trackCb _org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
-  logDebug "mock_app_backend" $ "track_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
+  logTagDebug "mock_app_backend" $ "track_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   --  let tracker = req ^. #message .  #tracking
   case req ^. #context . #_bpp_uri of
-    Nothing -> logError "mock-app-backend" "Bad ac_id"
-    Just _ -> logDebug "mock-app-backend" "Tracking Started Successfully"
+    Nothing -> logTagError "mock-app-backend" "Bad ac_id"
+    Just _ -> logTagDebug "mock-app-backend" "Tracking Started Successfully"
   -- TODO: make call to update api
   --      void $
   --        callClient "update" url $

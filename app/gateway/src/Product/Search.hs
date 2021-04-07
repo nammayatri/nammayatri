@@ -51,7 +51,7 @@ search proxySign org req = withFlowHandler $ do
             providerUrl
             (gatewaySearchSignAuth (Just proxySign) req)
             "search"
-        logDebug "gateway_transaction" $
+        logTagDebug "gateway_transaction" $
           messageId
             <> ", search_req: "
             <> T.pack (showBaseUrl providerUrl)
@@ -77,7 +77,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do
       (gatewayOnSearchSignAuth (Just proxySign) req)
       "on_search"
   providerUrl <- provider ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet -- Already checked for existance
-  logDebug "gateway_transaction" $
+  logTagDebug "gateway_transaction" $
     messageId
       <> ", search_cb: "
       <> T.pack (showBaseUrl providerUrl)

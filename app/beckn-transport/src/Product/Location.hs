@@ -48,7 +48,7 @@ getRoute' fromLat fromLon toLat toLon = do
   routeE <- MapSearch.getRoute getRouteRequest
   case routeE of
     Left err -> do
-      logInfo "GetRoute" (show err)
+      logTagInfo "GetRoute" (show err)
       return Nothing
     Right MapSearch.Response {..} ->
       pure $
@@ -91,7 +91,7 @@ calculateDistance source destination = do
   response <- MapSearch.getRoute routeRequest
   case response of
     Left err -> do
-      logWarning "" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
+      logTagWarning "" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
       pure Nothing
     Right result -> pure $ MapSearch.distanceInM <$> headMaybe (result ^. #routes)
   where

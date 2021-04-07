@@ -6,13 +6,7 @@ import EulerHS.Prelude
 import System.IO (hFlush)
 
 instance Log IO where
-  logOutput _ tags msg = do
-    putStrLn message
+  logOutput _ msg = do
+    putStrLn msg
     hFlush stdout
-    where
-      message =
-        case tags of
-          [] -> msg
-          _ -> tagsToText tags <> " " <> msg
-
-  addLogTag _ action = action
+  withLogContext _ action = action

@@ -36,19 +36,19 @@ search url req = do
     _ -> throwError GatewaySelectorNotSet
   case res of
     Left err -> do
-      logError "Search" ("error occurred while search: " <> show err)
+      logTagError "Search" ("error occurred while search: " <> show err)
       return $ Left $ show err
     Right _ -> do
-      logInfo "Search" "Search successfully delivered"
+      logTagInfo "Search" "Search successfully delivered"
       return $ Right ()
 
 confirm :: BaseUrl -> ConfirmReq -> Flow AckResponse
 confirm url req@ConfirmReq {context} = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.confirm req) "confirm"
   whenLeft res $ \err ->
-    logError "error occurred while confirm: " (show err)
+    logTagError "error occurred while confirm: " (show err)
   whenLeft res $ \err ->
-    logError "Confirm" ("error occurred while confirm: " <> show err)
+    logTagError "Confirm" ("error occurred while confirm: " <> show err)
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
@@ -58,15 +58,15 @@ location url req = do
   -- TODO: fix authentication
   res <- callAPIWithTrail' Nothing url (API.location req) "location"
   whenLeft res $ \err ->
-    logError "Location" ("error occurred while getting location: " <> show err)
+    logTagError "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
 track :: BaseUrl -> TrackTripReq -> Flow AckResponse
 track url req@TrackTripReq {context} = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.trackTrip req) "track"
   case res of
-    Left err -> logError "error occurred while track trip: " (show err)
-    Right _ -> logInfo "Track" "Track successfully delivered"
+    Left err -> logTagError "error occurred while track trip: " (show err)
+    Right _ -> logTagInfo "Track" "Track successfully delivered"
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
@@ -76,18 +76,18 @@ cancel url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.cancel req) "cancel"
   case res of
     Left err -> do
-      logError "error occurred while cancel trip: " (show err)
+      logTagError "error occurred while cancel trip: " (show err)
       return $ Left $ show err
     Right _ -> do
-      logInfo "Cancel" "Cancel successfully delivered"
+      logTagInfo "Cancel" "Cancel successfully delivered"
       return $ Right ()
 
 status :: BaseUrl -> StatusReq -> Flow AckResponse
 status url req@StatusReq {context} = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.status req) "status"
   case res of
-    Left err -> logError "error occurred while getting status: " (show err)
-    Right _ -> logInfo "Status" "Status successfully delivered"
+    Left err -> logTagError "error occurred while getting status: " (show err)
+    Right _ -> logTagInfo "Status" "Status successfully delivered"
   case res of
     Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
     Right _ -> return $ AckResponse context (ack "ACK") Nothing
@@ -98,8 +98,8 @@ feedback url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.feedback req) "feedback"
   case res of
     Left err -> do
-      logError "Gateway" $ "Error occurred when sending feedback: " <> show err
+      logTagError "Gateway" $ "Error occurred when sending feedback: " <> show err
       pure $ AckResponse context (ack "ACK") $ Just (domainError $ show err)
     Right _ -> do
-      logInfo "Gateway" "Feedback successfully sent."
+      logTagInfo "Gateway" "Feedback successfully sent."
       pure $ AckResponse context (ack "ACK") Nothing

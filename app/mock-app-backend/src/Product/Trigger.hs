@@ -84,7 +84,7 @@ triggerSearch flow = withFlowHandler $ do
   eRes <-
     callClient' (Just HttpSig.signatureAuthManagerKey) "search" (req ^. #context) baseUrl $
       client API.searchAPI req
-  logDebug "mock_app_backend" $ "search context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  logTagDebug "mock_app_backend" $ "search context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
       { _context = req ^. #context,
@@ -106,7 +106,7 @@ triggerTrack orderId = withFlowHandler $ do
   eRes <-
     callClient' (Just HttpSig.signatureAuthManagerKey) "track" context cbUrl $
       client API.trackAPI req
-  logDebug "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  logTagDebug "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
       { _context = context,
@@ -132,7 +132,7 @@ triggerCancel orderId = withFlowHandler $ do
   eRes <-
     callClient' (Just HttpSig.signatureAuthManagerKey) "cancel" context cbUrl $
       client API.cancelAPI req
-  logDebug "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  logTagDebug "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
       { _context = context,
@@ -186,7 +186,7 @@ triggerUpdate orderId mode = withFlowHandler $ do
   eRes <-
     callClient' (Just HttpSig.signatureAuthManagerKey) "update" context cbUrl $
       client API.updateAPI req
-  logDebug "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
+  logTagDebug "mock_app_backend" $ "track context: " <> show (toJSON $ eRes ^. #_context) <> ", resp: " <> show (toJSON $ eRes ^. #_message)
   return
     AckResponse
       { _context = context,

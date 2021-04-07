@@ -129,5 +129,5 @@ onCancel _org req = withFlowHandler $ do
             Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
             MC.updateStatus caseId Case.CLOSED
         )
-    Left err -> logError "on_cancel req" $ "on_cancel error: " <> show err
+    Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
   mkAckResponse txnId "cancel"

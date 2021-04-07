@@ -32,7 +32,7 @@ calculateFare ::
   Maybe Text ->
   Flow Amount
 calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
-  logInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
+  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
     runBRFlowFatal $
       doCalculateFare
@@ -45,7 +45,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
         startTime
         (mbDistance >>= readMaybe . T.unpack)
   let totalFare = fareSum fareParams
-  logInfo
+  logTagInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ". Total fare: " +|| totalFare ||+ ""
   pure totalFare

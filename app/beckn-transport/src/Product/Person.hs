@@ -248,15 +248,15 @@ mapEntityType entityType = case entityType of
 
 calculateAverageRating :: Id SP.Person -> Flow ()
 calculateAverageRating personId = do
-  logInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
+  logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- Rating.findAllRatingsForPerson personId
   let ratings = sum $ Rating._ratingValue <$> allRatings
   let ratingCount = length allRatings
   when (ratingCount == 0) $
-    logInfo "PersonAPI" "No rating found to calculate"
+    logTagInfo "PersonAPI" "No rating found to calculate"
   when (ratingCount > 0) $ do
     let newAverage = ratings `div` ratingCount
-    logInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
+    logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     QP.updateAverageRating personId $ encodeToText newAverage
 
 driverPoolKey :: Id ProductInstance -> Text
@@ -303,7 +303,7 @@ calculateDriverPool locId orgId variant = do
         variant
   getNearestDriversEndTime <- getCurrentTime
   let getNearestDriversTime = diffUTCTime getNearestDriversEndTime getNearestDriversStartTime
-  logInfo "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"
+  logTagInfo "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"
   pure driverPool
   where
     getRadius =

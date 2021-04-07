@@ -53,17 +53,17 @@ search org req = do
       case res of
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
-          logInfo (req ^. #context . #_transaction_id <> "_on_search req") $ encodeToText onSearchReq
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_search req") $ encodeToText onSearchReq
           onSearchResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSearchAPI onSearchReq
-          logInfo (req ^. #context . #_transaction_id <> "_on_search res") $ show onSearchResp
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_search res") $ show onSearchResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onSearchErrReq = mkOnSearchErrReq context err
-              logInfo (req ^. #context . #_transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
+              logTagInfo (req ^. #context . #_transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
               onSearchResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSearchAPI onSearchErrReq
-              logInfo (req ^. #context . #_transaction_id <> "_on_search err res") $ show onSearchResp
+              logTagInfo (req ^. #context . #_transaction_id <> "_on_search err res") $ show onSearchResp
         _ -> pass
 
 select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
@@ -76,7 +76,7 @@ select org req = do
   fork "Select" $ do
     quoteReq <- mkQuoteReqFromSelect req
     eres <- getQuote dlBACreds config quoteReq
-    logInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
+    logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCallback context cbUrl eres
   returnAck context
   where
@@ -92,17 +92,17 @@ select org req = do
           let quoteId = quote ^. #_id
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
-          logInfo (req ^. #context . #_transaction_id <> "_on_select req") $ encodeToText onSelectReq
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_select req") $ encodeToText onSelectReq
           onSelectResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSelectAPI onSelectReq
-          logInfo (req ^. #context . #_transaction_id <> "_on_select res") $ show onSelectResp
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_select res") $ show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
-              logInfo (req ^. #context . #_transaction_id <> "_on_select err req") $ encodeToText onSelectReq
+              logTagInfo (req ^. #context . #_transaction_id <> "_on_select err req") $ encodeToText onSelectReq
               onSelectResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSelectAPI onSelectReq
-              logInfo (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
+              logTagInfo (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
         _ -> pass
 
 init :: Org.Organization -> API.InitReq -> Flow API.InitRes
@@ -118,7 +118,7 @@ init org req = do
   fork "init" $ do
     quoteReq <- mkQuoteReqFromSelect $ API.SelectReq context (API.SelectOrder (orderDetails ^. #order))
     eres <- getQuote dlBACreds conf quoteReq
-    logInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
+    logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCb orderDetails context cbUrl payeeDetails quoteId eres
   returnAck context
   where
@@ -133,17 +133,17 @@ init org req = do
           res
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (getId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
-      logInfo (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
+      logTagInfo (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
       onInitResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
-      logInfo (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
+      logTagInfo (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
       return ()
     sendCb _ context cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) =
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
-          logInfo (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
           onInitResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
-          logInfo (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
           return ()
         Nothing -> return ()
     sendCb _ _ _ _ _ _ = return ()
@@ -199,9 +199,9 @@ confirm org req = do
   dlBACreds <- getDlBAPCreds org
   fork "confirm" $ do
     createOrderReq <- mkCreateOrderReq order
-    logInfo (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createOrderReq)
+    logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createOrderReq)
     eres <- createOrderAPI dlBACreds dconf createOrderReq
-    logInfo (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
+    logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
     sendCb order ctx cbUrl eres
   returnAck ctx
   where
@@ -226,17 +226,17 @@ confirm org req = do
       case res of
         Right _ -> do
           onConfirmReq <- mkOnConfirmReq context order
-          logInfo (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
           eres <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onConfirmAPI onConfirmReq
-          logInfo (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
+          logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
-              logInfo (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
+              logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
               onConfirmResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onConfirmAPI onConfirmReq
-              logInfo (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
+              logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
         _ -> pass
 
 fetchToken :: DlBAConfig -> DelhiveryConfig -> Flow Token

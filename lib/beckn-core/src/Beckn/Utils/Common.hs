@@ -71,12 +71,12 @@ checkClientError context = \case
   Right x -> pure x
   Left cliErr -> do
     let err = fromClientError cliErr
-    logError "client call error" $ (err ^. #_message) ?: "Some error"
+    logTagError "client call error" $ (err ^. #_message) ?: "Some error"
     L.throwException $ mkErrResponse context err500 err
 
 throwDBError :: (MonadThrow m, Log m) => ET.DBError -> m a
 throwDBError err@(ET.DBError dbErrType msg) = do
-  logError "DB error: " (show err)
+  logTagError "DB error: " (show err)
   uncurry throwErrorWithInfo $
     case dbErrType of
       ET.UnexpectedResult -> (SQLResultError, msg)
@@ -210,7 +210,7 @@ authenticate = check handleKey
 throwHttpError :: forall e m a. (HasCallStack, MonadThrow m, Log m, ToJSON e) => ServerError -> e -> m a
 throwHttpError err errMsg = do
   let body = A.encode errMsg
-  logError "HTTP_ERROR" (decodeUtf8 body)
+  logTagError "HTTP_ERROR" (decodeUtf8 body)
   throwM err {errBody = body, errHeaders = jsonHeader : errHeaders err}
 
 throwError ::
@@ -268,7 +268,7 @@ callClient' mbManager desc context baseUrl cli = do
   _ <- L.runIO $ endTracking $ getResponseCode res
   case res of
     Left err -> do
-      logError "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err
+      logTagError "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err
       L.throwException $ mkErrResponse context err500 (fromClientError err)
     Right x -> pure x
   where
@@ -306,7 +306,7 @@ fork desc f = do
         Right () -> pass
         Left e -> runReaderT (err e) env
     err e =
-      logWarning "Thread" $
+      logTagWarning "Thread" $
         "Thread " <> show desc <> " died with error: " <> show e
 
 runSafeFlow :: (FromJSON a, ToJSON a) => FlowR r a -> FlowR r (Either Text a)

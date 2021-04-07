@@ -88,7 +88,7 @@ notifyPerson title body msgData person =
       tokenNotFound = "device token of a person " <> pid <> " not found"
    in case Person._deviceToken person of
         Nothing -> do
-          logInfo "FCM" tokenNotFound
+          logTagInfo "FCM" tokenNotFound
           pure ()
         Just token ->
           sendMessage (FCMRequest (createMessage title body msgData token)) pid
@@ -116,12 +116,12 @@ sendMessage fcmMsg toWhom = fork desc $ do
     Right token -> do
       fcmUrl <- getField @"fcmUrl" <$> ask
       res <- L.callAPI fcmUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
-      logInfo fcm $ case res of
+      logTagInfo fcm $ case res of
         Right _ -> "message sent successfully to a person with id = " <> toWhom
         Left x -> "error: " <> show x
       pure ()
     Left err -> do
-      logError fcm $ "error: " <> show err
+      logTagError fcm $ "error: " <> show err
       pure ()
   where
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
@@ -156,15 +156,15 @@ checkAndGetToken fcmAcc = do
             then pure $ Right t -- do nothing, token is ok
             else do
               -- close to expiration, start trying to refresh token
-              logInfo fcm "Token is about to be expired, trying to refresh it"
+              logTagInfo fcm "Token is about to be expired, trying to refresh it"
               refreshToken fcmAcc
         JWT.JWTExpired x -> do
           -- token expired
-          logInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
+          logTagInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
           refreshToken fcmAcc
         JWT.JWTInvalid -> do
           -- token is invalid
-          logInfo fcm "Token is invalid, trying to refresh it"
+          logTagInfo fcm "Token is invalid, trying to refresh it"
           refreshToken fcmAcc
   where
     fcm = "FCM"
@@ -186,7 +186,7 @@ getToken = do
           JWT.JWTInvalid -> Left "Token is invalid"
   case tokenStatus of
     Left err -> do
-      logWarning "FCM" $ "Refreshing FCM token. Reason: " <> fromString err
+      logTagWarning "FCM" $ "Refreshing FCM token. Reason: " <> fromString err
       getNewToken
     jwt -> pure jwt
 
@@ -204,19 +204,19 @@ getAndParseFCMAccount = do
     parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
     parseContent rawContent = rawContent >>= Aeson.eitherDecode
 
-getNewToken :: (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) => FlowR r (Either String JWT.JWToken)
+getNewToken :: (HasField "fcmJsonPath" r (Maybe Text)) => FlowR r (Either String JWT.JWToken)
 getNewToken = getAndParseFCMAccount >>= either (pure . Left) refreshToken
 
 refreshToken :: (L.MonadFlow m, Log m) => JWT.ServiceAccount -> m (Either String JWT.JWToken)
 refreshToken fcmAcc = do
-  logInfo fcmTag "Refreshing token"
+  logTagInfo fcmTag "Refreshing token"
   refreshRes <- L.runIO $ JWT.doRefreshToken fcmAcc
   case refreshRes of
     Left err -> do
-      logError fcmTag $ fromString err
+      logTagInfo fcmTag $ fromString err
       pure $ Left $ fromString err
     Right token -> do
-      logInfo fcmTag $ fromString "Success"
+      logTagInfo fcmTag $ fromString "Success"
       Redis.setKeyRedis "beckn:fcm_token" token
       pure $ Right token
   where

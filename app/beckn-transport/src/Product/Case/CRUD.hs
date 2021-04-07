@@ -109,13 +109,13 @@ createProductInstance cs prod price orgId status = do
 
 notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Text -> Flow ()
 notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
-  logInfo "notifyGateway" $ show c
-  logInfo "notifyGateway" $ show prodInst
+  logTagInfo "notifyGateway" $ show c
+  logTagInfo "notifyGateway" $ show prodInst
   transporterOrg <- OQ.findOrganizationById (Id transporterOrgId)
   onSearchPayload <- case piStatus of
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg
-  logInfo "notifyGateway Request" $ show onSearchPayload
+  logTagInfo "notifyGateway Request" $ show onSearchPayload
   _ <- Gateway.onSearch onSearchPayload bppShortId
   return ()
 

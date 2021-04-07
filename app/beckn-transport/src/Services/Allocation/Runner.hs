@@ -51,7 +51,7 @@ run shutdown activeTask = do
       processStartTime <- getCurrentTime
       requestsNum <- asks (requestsNumPerIteration . driverAllocationConfig)
       eres <- runSafeFlow $ Allocation.process handle requestsNum
-      whenLeft eres $ Log.logError "Allocation service"
+      whenLeft eres $ Log.logTagError "Allocation service"
       Redis.unlockRedis "allocation"
       processEndTime <- getCurrentTime
       let processTime = diffUTCTime processEndTime processStartTime

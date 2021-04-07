@@ -1,10 +1,8 @@
 module Beckn.Utils.Flow (addLogContext) where
 
-
 import qualified Data.HashMap.Strict as HM
 import EulerHS.Prelude
 import EulerHS.Runtime
-
 
 addLogContext :: Text -> FlowRuntime -> FlowRuntime
 addLogContext lc currRt = newRt

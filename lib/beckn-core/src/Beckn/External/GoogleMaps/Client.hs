@@ -29,7 +29,7 @@ autoComplete url apiKey input location radius components = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      logError "client Google maps API autoComplete call error" $ (err ^. #_message) ?: "Some error"
+      logTagError "client Google maps API autoComplete call error" $ (err ^. #_message) ?: "Some error"
       throwErrorWithInfo GMAPIError "Google maps API autoComplete error"
 
 placeDetails ::
@@ -47,7 +47,7 @@ placeDetails url apiKey placeId fields = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      logError "client Google maps API placeDetails call error" $ (err ^. #_message) ?: "Some error"
+      logTagError "client Google maps API placeDetails call error" $ (err ^. #_message) ?: "Some error"
       throwErrorWithInfo GMAPIError "Google maps API placeDetails error"
 
 getPlaceName ::
@@ -64,5 +64,5 @@ getPlaceName url latLng apiKey = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      logError "client Google maps API getPlaceName call error" $ (err ^. #_message) ?: "Some error"
+      logTagError "client Google maps API getPlaceName call error" $ (err ^. #_message) ?: "Some error"
       throwErrorWithInfo GMAPIError "Google maps API getPlaceName error"

@@ -72,7 +72,7 @@ trackCb _org req = withFlowHandler $ do
         Left err -> return $ AckResponse context (ack "NACK") $ Just $ domainError err
         Right _ -> return $ AckResponse context (ack "ACK") Nothing
     Left err -> do
-      logError "on_track_trip req" $ "on_track_trip error: " <> show err
+      logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
       return $ AckResponse context (ack "ACK") Nothing
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)

@@ -100,20 +100,20 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
   appEnv <- ask
   let selfUrl = getSelfUrl appEnv
   let registry = getRegistry appEnv
-  logDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
+  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   let uniqueKeyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
   let mCred = Registry.lookupKey uniqueKeyId registry
   cred <- case mCred of
     Just c -> return c
     Nothing -> do
-      logError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
+      logTagError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
       throwErrorWithInfo Unauthorized "Invalid key id."
   org <-
     findOrgByShortId (ShortId $ cred ^. #shortOrgId)
       >>= maybe (throwError OrgNotFound) pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
-      logError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
+      logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
       throwErrorWithInfo Unauthorized "Invalid public key."
     Just key -> return key
   return (org, pk, selfUrl)
@@ -140,26 +140,26 @@ instance
         let headers = Wai.requestHeaders req
         let headerName = fromString $ symbolVal (Proxy @header)
         let mSignature = snd <$> find ((== headerName) . fst) headers
-        liftIO $ runFlowR flowRt (appEnv env) $ logDebug "authCheck" $ "Incoming headers: " +|| headers ||+ ""
+        liftIO $ runFlowR flowRt (appEnv env) $ logTagDebug "authCheck" $ "Incoming headers: " +|| headers ||+ ""
         headerBs <-
           case mSignature of
             Just s -> pure s
             Nothing -> do
               let msg = fromString $ "Signature header " +|| headerName ||+ " missing"
-              liftIO $ runFlowR flowRt appConfig $ logError "authCheck" $ decodeUtf8 msg
+              liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
               delayedFailFatal err401 {errBody = msg}
         sigBs <-
           case fromString <$> parseHeader @String headerBs of
             Right s -> pure s
             Left err -> do
               let msg = fromString $ "Invalid signature header. Error: " +|| err ||+ ""
-              liftIO $ runFlowR flowRt appConfig $ logError "authCheck" $ decodeUtf8 msg
+              liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
               delayedFailFatal err401 {errBody = msg}
         case HttpSig.decode sigBs of
           Right res -> pure res
           Left err -> do
             let msg = fromString $ "Could not decode signature: " +|| err ||+ ""
-            liftIO $ runFlowR flowRt appConfig $ logError "authCheck" $ decodeUtf8 msg
+            liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
             delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
       flowRt = runTime env
@@ -209,8 +209,8 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
       body <- getBody $ Http.requestBody req
       let headers = Http.requestHeaders req
       let signatureMsg = HttpSig.makeSignatureString params body headers
-      logDebug "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
-      logDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
+      logTagDebug "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
+      logTagDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
       case addSignature body params headers req of
         Just signedReq -> pure signedReq
         Nothing -> throwErrorWithInfo CommonInternalError $ "Could not add signature: " <> show params
@@ -245,7 +245,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   let body = BSL.toStrict . J.encode $ req -- TODO: we should be able to receive raw body without using Aeson encoders. Maybe use WAI middleware to catch a raw body before handling a req by Servant?
   isVerified <- performVerification key host body
   unless isVerified $ do
-    logError logTag "Signature is not valid."
+    logTagError logTag "Signature is not valid."
     throwAuthError [HttpSig.mkSignatureRealm getRealm host] AccessDenied
   pure lookupResult
   where
@@ -263,7 +263,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       let signatureParams = signPayload ^. #params
       let signature = signPayload ^. #signature
       let signatureMsg = HttpSig.makeSignatureString signatureParams body headers
-      logDebug logTag $
+      logTagDebug logTag $
         "Start verifying. Signature: " +|| HttpSig.encode signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ", Body: " +|| body ||+ ""
       either (throwVerificationFail host) pure $
         HttpSig.verify
@@ -273,7 +273,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
           headers
           signature
     throwVerificationFail host err = do
-      logError logTag $ "Failed to verify the signature. Error: " <> show err
+      logTagError logTag $ "Failed to verify the signature. Error: " <> show err
       throwAuthError [HttpSig.mkSignatureRealm headerName host] AccessDenied
 
 withBecknAuth ::

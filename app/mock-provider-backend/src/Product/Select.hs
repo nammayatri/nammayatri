@@ -24,7 +24,7 @@ select _org req = withFlowHandler $ do
           { _bpp_uri = Just bppNwAddr
           }
   case mAppUrl of
-    Nothing -> logError "mock_provider_backend" "Bad bap_nw_address"
+    Nothing -> logTagError "mock_provider_backend" "Bad bap_nw_address"
     Just appUrl ->
       fork "Select" $ do
         onSelectMessage <- mkQuote

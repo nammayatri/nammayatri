@@ -141,7 +141,7 @@ calculateDeadDistance organization fromLocation = do
       Just orgLocation -> Location.calculateDistance orgLocation fromLocation
   case eres of
     Left err -> do
-      logWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
+      logTagWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
       pure Nothing
     Right mDistance -> return mDistance
 
@@ -154,7 +154,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
         & fromMaybeM CaseVehicleVariantNotPresent
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
-    logInfo "OnSearchCallback" $
+    logTagInfo "OnSearchCallback" $
       "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
     let piStatus =
           if null pool
@@ -169,11 +169,11 @@ onSearchCallback productCase transporter fromLocation toLocation = do
   case result of
     Right prodInst -> do
       let productStatus = prodInst ^. #_status
-      logInfo "OnSearchCallback" $
+      logTagInfo "OnSearchCallback" $
         "Sending on_search callback with status " +|| productStatus ||+ " for product " +|| prodInst ^. #_id ||+ ""
       void $ sendOnSearchSuccess productCase transporter prodInst
     Left err -> do
-      logError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
+      logTagError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
 createProductInstance :: Case.Case -> Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance

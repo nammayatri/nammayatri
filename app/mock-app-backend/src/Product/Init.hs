@@ -18,11 +18,11 @@ initCb :: Organization -> OnInitReq -> FlowHandler AckResponse
 initCb _org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
   ctx <- updateCaller $ req ^. #context
-  logDebug "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
+  logTagDebug "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   whenRight (req ^. #contents) $ \initResMsg -> do
     confirmReq <- buildConfirmReq ctx (initResMsg ^. #order)
     case req ^. #context . #_bpp_uri of
-      Nothing -> logError "mock-app-backend" "Bad ac_id"
+      Nothing -> logTagError "mock-app-backend" "Bad ac_id"
       Just url ->
         void $
           callClient' (Just HttpSig.signatureAuthManagerKey) "confirm" (req ^. #context) url $

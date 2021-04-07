@@ -50,7 +50,7 @@ updateVerified id verified = do
 
 verifyToken :: RegToken -> Flow Storage.RegistrationToken
 verifyToken regToken = do
-  logInfo "verifying token" $ show regToken
+  logTagInfo "verifying token" $ show regToken
   findRegistrationTokenByToken regToken
 
 findRegistrationTokenByToken :: RegToken -> Flow Storage.RegistrationToken

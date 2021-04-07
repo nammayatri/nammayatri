@@ -21,13 +21,13 @@ import Product.CallsTrack
 confirmCb :: Organization -> OnConfirmReq -> FlowHandler AckResponse
 confirmCb org req = withFlowHandler $ do
   let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
-  logDebug "mock_app_backend" $ "confirm_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
+  logTagDebug "mock_app_backend" $ "confirm_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   -- ctx <- updateCaller $ req ^. #context
   -- quotId = req ^. #message . #order . #_order_id
   -- confirmReq <- buildConfirmReq ctx quotId
   case req ^. #context . #_bpp_uri of
-    Nothing -> logError "mock-app-backend" "Bad ac_id"
-    Just _ -> logInfo "mock-app-backend" "Confirm finished successfully"
+    Nothing -> logTagError "mock-app-backend" "Bad ac_id"
+    Just _ -> logTagInfo "mock-app-backend" "Confirm finished successfully"
   whenRight (req ^. #contents) $ \contents ->
     whenJust (contents ^. #order . #_id) $ \orderId ->
       updateCallsTrack $ do

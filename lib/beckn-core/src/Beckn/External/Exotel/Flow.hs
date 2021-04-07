@@ -58,10 +58,10 @@ initiateCall from to = do
         res <-
           L.callAPI (defaultBaseUrl sid_) $
             callExotel authData exoRequest
-        logInfo exotel $ case res of
+        logTagInfo exotel $ case res of
           Right _ -> "call initiated from " <> from <> " to " <> to
           Left x -> "error: " <> show x
-      _ -> logError exotel "exotel ENV vars are not properly set"
+      _ -> logTagError exotel "exotel ENV vars are not properly set"
   where
     callExotel authData exoRequest = void $ ET.client exotelConnectAPI authData exoRequest
     forkDesc = "Exotel initiate call forked flow " <> from <> " " <> to

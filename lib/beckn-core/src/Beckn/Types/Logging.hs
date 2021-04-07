@@ -1,17 +1,16 @@
 module Beckn.Types.Logging where
 
 import Beckn.Types.Flow
-import Beckn.Utils.Flow
 import Beckn.Utils.Dhall (FromDhall)
-import Data.Time
+import Beckn.Utils.Flow
 import EulerHS.Language as L
 import EulerHS.Prelude
 
 data LogLevel = DEBUG | INFO | WARNING | ERROR
-  deriving (Generic, FromDhall, ToJSON)
+  deriving (Generic, Show, FromDhall, ToJSON)
 
 class Log m where
-  logOutput :: LogLevel -> Text -> Text -> m ()
+  logOutput :: LogLevel -> Text -> m ()
   withLogContext :: Text -> m a -> m a
 
 data LoggerConfig = LoggerConfig
@@ -25,23 +24,12 @@ data LoggerConfig = LoggerConfig
   deriving (Generic, FromDhall)
 
 instance Log (FlowR r) where
-  logOutput logLevel tag message =
+  logOutput logLevel message =
     case logLevel of
-      DEBUG -> L.logDebug tag message
-      INFO -> L.logInfo tag message
-      WARNING -> L.logWarning tag message
-      ERROR -> L.logError tag message
+      DEBUG -> L.logDebug ("" :: Text) message
+      INFO -> L.logInfo ("" :: Text) message
+      WARNING -> L.logWarning ("" :: Text) message
+      ERROR -> L.logError ("" :: Text) message
   withLogContext lc flowR =
     let f = runReaderT flowR
-    in ReaderT $ \v -> L.withModifiedRuntime (addLogContext lc) $ f v
-
-data LogEntry = LogEntry
-  { timestamp :: UTCTime,
-    level :: LogLevel,
-    logContext :: Text,
-    tag :: Text,
-    messageNumber :: Int,
-    message :: Text,
-    hostname :: Maybe Text
-  }
-  deriving (Generic, ToJSON)
+     in ReaderT $ \v -> withModifiedRuntime (addLogContext lc) $ f v

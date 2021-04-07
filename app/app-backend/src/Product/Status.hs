@@ -44,7 +44,7 @@ onStatus _org req = withFlowHandler $ do
       let prodInstId = Id $ msg ^. #order . #_id
           orderState = fromBeckn $ msg ^. #order . #_state
       updateProductInstanceStatus prodInstId orderState
-    Left err -> logError "on_status req" $ "on_status error: " <> show err
+    Left err -> logTagError "on_status req" $ "on_status error: " <> show err
   mkAckResponse txnId "status"
   where
     updateProductInstanceStatus prodInstId piStatus = do

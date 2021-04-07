@@ -174,13 +174,13 @@ traceHandler = TraceHandler {..}
       fork "save trail" $ do
         Trail.create trail >>= \case
           Left err -> do
-            logError "trace" $
+            logTagError "trace" $
               "Saving request failed: " <> show err
           Right () -> pass
         dbres <- Trail.setResponseInfo reqId duration res
         case dbres of
           Left err ->
-            logError "trace" $
+            logTagError "trace" $
               "Saving response on " <> show reqId <> " failed: " <> show err
           Right () -> pass
       pass

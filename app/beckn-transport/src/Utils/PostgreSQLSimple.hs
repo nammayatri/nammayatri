@@ -70,4 +70,4 @@ showResultError (ConversionFailed sqlType _ _ hType msg) = "sql conversion faile
 logQuery :: ToRow q => Query -> q -> Flow ()
 logQuery q qargs =
   withPostgreSQLSimple (\conn -> decodeUtf8 <$> formatQuery conn q qargs)
-    >>= logDebug "raw sql query"
+    >>= logTagDebug "raw sql query"

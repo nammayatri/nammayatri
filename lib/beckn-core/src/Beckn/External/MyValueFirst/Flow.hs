@@ -13,7 +13,7 @@ submitSms :: BaseUrl -> SubmitSms -> FlowR r (Either Text ())
 submitSms url params = do
   res <- L.callAPI url $ API.submitSms params
   whenRight res $ \_ ->
-    logInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
+    logTagInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
   return $ first show res
 
 type OtpTemplate = Text

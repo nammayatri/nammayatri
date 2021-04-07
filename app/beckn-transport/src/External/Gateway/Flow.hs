@@ -84,5 +84,5 @@ initiateCall req = do
     Right x -> return x
     Left cliErr -> do
       let err = fromClientError cliErr
-      logError "client call error" $ (err ^. #_message) ?: "Some error"
+      logTagError "client call error" $ (err ^. #_message) ?: "Some error"
       throwError UnableToCall

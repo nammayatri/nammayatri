@@ -137,7 +137,7 @@ mkContext action tId = do
 
 serviceStatus :: Id Organization.Organization -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
 serviceStatus transporterId bapOrg req = withFlowHandler $ do
-  logInfo "serviceStatus API Flow" $ show req
+  logTagInfo "serviceStatus API Flow" $ show req
   let piId = req ^. #message . #order . #id -- transporter search product instance id
   trackerPi <- ProductInstance.findByParentIdType (Just $ Id piId) Case.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
@@ -151,7 +151,7 @@ serviceStatus transporterId bapOrg req = withFlowHandler $ do
 notifyServiceStatusToGateway :: Text -> ProductInstance.ProductInstance -> BaseUrl -> Text -> Flow ()
 notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi
-  logInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
+  logTagInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
   _ <- Gateway.onStatus callbackUrl onServiceStatusPayload bppShortId
   return ()
 
@@ -183,7 +183,7 @@ mkOnServiceStatusPayload piId trackerPi = do
 
 trackTrip :: Id Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
 trackTrip transporterId org req = withFlowHandler $ do
-  logInfo "track trip API Flow" $ show req
+  logTagInfo "track trip API Flow" $ show req
   validateContext "track" $ req ^. #context
   let tripId = req ^. #message . #order_id
   case_ <- Case.findById $ Id tripId
@@ -202,21 +202,21 @@ trackTrip transporterId org req = withFlowHandler $ do
 notifyTripUrlToGateway :: Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ parentCase
-  logInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
+  logTagInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
   _ <- Gateway.onTrackTrip callbackUrl onTrackTripPayload bppShortId
   return ()
 
 notifyTripInfoToGateway :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl bppShortId = do
   onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
-  logInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
+  logTagInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
   _ <- Gateway.onUpdate callbackUrl onUpdatePayload bppShortId
   return ()
 
 notifyCancelToGateway :: Text -> BaseUrl -> Text -> Flow ()
 notifyCancelToGateway prodInstId callbackUrl bppShortId = do
   onCancelPayload <- mkCancelRidePayload prodInstId -- search product instance id
-  logInfo "notifyGateway Request" $ show onCancelPayload
+  logTagInfo "notifyGateway Request" $ show onCancelPayload
   _ <- Gateway.onCancel callbackUrl onCancelPayload bppShortId
   return ()
 
@@ -237,7 +237,7 @@ mkTrip c orderPi = do
   driver <- mapM mkDriverInfo $ prodInst ^. #_personId
   vehicle <- join <$> mapM mkVehicleInfo (prodInst ^. #_entityId)
   tripCode <- orderPi ^. #_udf4 & fromMaybeM PIOTPNotPresent
-  logInfo "vehicle" $ show vehicle
+  logTagInfo "vehicle" $ show vehicle
   return $
     Trip
       { id = tripCode,

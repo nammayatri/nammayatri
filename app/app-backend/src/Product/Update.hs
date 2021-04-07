@@ -21,7 +21,7 @@ import Utils.Common (validateContext)
 onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
 onUpdate _org req = withFlowHandler $ do
   -- TODO: Verify api key here
-  logInfo "on_update req" (show req)
+  logTagInfo "on_update req" (show req)
   validateContext "on_update" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
@@ -35,7 +35,7 @@ onUpdate _org req = withFlowHandler $ do
               { SPI._info = encodeToText <$> uInfo
               }
       MPI.updateMultiple (orderPi ^. #_id) uPrd
-    Left err -> logError "on_update req" $ "on_update error: " <> show err
+    Left err -> logTagError "on_update req" $ "on_update error: " <> show err
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo

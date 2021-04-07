@@ -38,7 +38,7 @@ import Utils.Common
 
 confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
 confirm transporterId bapOrg req = withFlowHandler $ do
-  logInfo "confirm API Flow" "Reached"
+  logTagInfo "confirm API Flow" "Reached"
   BP.validateContext "confirm" $ req ^. #context
   let prodInstId = Id $ req ^. #message . #order . #_id
   productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIInvalidId)
@@ -95,19 +95,19 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
         & fromMaybeM CaseVehicleVariantNotPresent
     driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
-    logInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
+    logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   case result of
     Right () -> notifySuccessGateway callbackUrl bppShortId
     Left err -> do
-      logError "OnConfirmCallback" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
+      logTagError "OnConfirmCallback" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
       notifyErrorGateway err callbackUrl bppShortId
   where
     notifySuccessGateway callbackUrl bppShortId = do
       allPis <- ProductInstance.findAllByCaseId (searchCase ^. #_id)
       onConfirmPayload <- mkOnConfirmPayload searchCase [orderProductInstance] allPis trackerCase
-      logInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| callbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
+      logTagInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| callbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
       _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
       pure ()
     notifyErrorGateway err callbackUrl bppShortId = do
