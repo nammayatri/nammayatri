@@ -2,19 +2,11 @@
 
 module Main where
 
-import Beckn.Utils.Logging
+import Beckn.Types.Logging
   ( LogLevel (DEBUG),
-    LoggerConfig
-      ( LoggerConfig,
-        isAsync,
-        level,
-        logFilePath,
-        logRawSql,
-        logToConsole,
-        logToFile
-      ),
-    getEulerLoggerRuntime,
+    LoggerConfig (..),
   )
+import Beckn.Utils.Logging (getEulerLoggerRuntime)
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -40,26 +32,36 @@ import PrepareDataForLoadTest
     runK6Script,
   )
 
-data Mode = GenerateRequestsForLoadTest !ByteString !Int deriving (Show, Eq)
+data Mode
+  = GenerateRequestsForLoadTest
+      !ByteString
+      !Int
+      !Text
+      !Text
+  deriving (Show, Eq)
 
 main :: IO ()
 main = do
   mode <- execParser opts
   case mode of
-    GenerateRequestsForLoadTest privateKey requests ->
+    GenerateRequestsForLoadTest privateKey requests url filePath ->
       runWithFlowRuntime $ do
-        prepareDataForLoadTest privateKey requests
+        prepareDataForLoadTest privateKey requests filePath
         L.logInfo @Text "GenerateRequestsForLoadTest" "Start K6 script..."
-        result <- runK6Script
+        result <- runK6Script url filePath
         L.logInfo @Text "GenerateRequestsForLoadTest" $ fromString result
-        cleanupData
+        cleanupData filePath
   exitSuccess
   where
     opts = info (mode <**> helper) fullDesc
 
 mode :: Parser Mode
 mode =
-  GenerateRequestsForLoadTest <$> strOption privateKey <*> option auto requests
+  GenerateRequestsForLoadTest
+    <$> strOption privateKey
+      <*> option auto requests
+      <*> strOption url
+      <*> strOption filePath
   where
     privateKey =
       long "private-key"
@@ -71,6 +73,18 @@ mode =
         <> showDefault
         <> value 100
         <> metavar "INT"
+    url =
+      long "url"
+        <> metavar "URL"
+        <> help "URL to test"
+        <> showDefault
+        <> value "http://127.0.0.1:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f"
+    filePath =
+      long "file-path"
+        <> metavar "FILEPATH"
+        <> help "Path to file with generated data."
+        <> showDefault
+        <> value "/tmp/req-data.json"
 
 runWithFlowRuntime :: L.Flow a -> IO a
 runWithFlowRuntime flow = do

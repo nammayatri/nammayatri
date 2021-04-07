@@ -16,6 +16,7 @@ import qualified Beckn.Utils.SignatureAuth as S
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as T
 import qualified Data.Time.Clock.POSIX as Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -30,8 +31,8 @@ data RequestForLoadTest = RequestForLoadTest
 defaultPrivateKey :: ByteString
 defaultPrivateKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 
-prepareDataForLoadTest :: ByteString -> Int -> L.Flow ()
-prepareDataForLoadTest privateKey nmbOfReq = do
+prepareDataForLoadTest :: ByteString -> Int -> Text -> L.Flow ()
+prepareDataForLoadTest privateKey nmbOfReq filePath = do
   reqs <- replicateM nmbOfReq $ do
     request <- generateSearchRequest
     now <- L.runIO Time.getPOSIXTime
@@ -41,13 +42,19 @@ prepareDataForLoadTest privateKey nmbOfReq = do
       let signatureParams = S.mkSignatureParams "JUSPAY.MOBILITY.APP.UAT.1" "juspay-mobility-bap-1-key" now 600 S.Ed25519
       signature <- S.sign (Base64.decodeLenient privateKey) signatureParams (LBS.toStrict body) headers
       pure $ RequestForLoadTest (decodeUtf8 body) (decodeUtf8 $ S.encode $ S.SignaturePayload signature signatureParams)
-  L.runIO . writeFile "./dev/load-test/reqForLoadTest.json" . decodeUtf8 . J.encode . catMaybes $ reqs
+  L.runIO . writeFile (T.unpack filePath) . decodeUtf8 . J.encode . catMaybes $ reqs
 
-cleanupData :: L.Flow ()
-cleanupData = L.runIO $ removeFile "./dev/load-test/reqForLoadTest.json"
+cleanupData :: Text -> L.Flow ()
+cleanupData = L.runIO . removeFile . T.unpack
 
-runK6Script :: L.Flow String
-runK6Script = L.runSysCmd "k6 run ./dev/load-test/script.js"
+runK6Script :: Text -> Text -> L.Flow String
+runK6Script url filePath =
+  L.runSysCmd $
+    "k6 run -e LOAD_TEST_URL="
+      <> T.unpack url
+      <> " -e FILE_PATH="
+      <> T.unpack filePath
+      <> " ./dev/load-test/script.js"
 
 generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do

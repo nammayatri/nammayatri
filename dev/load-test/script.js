@@ -1,13 +1,12 @@
 import http from "k6/http";
 import { check } from "k6";
 
-const data = JSON.parse(open("./reqForLoadTest.json"));
-const url =
-  "http://127.0.0.1:8014/v1/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f/search";
+const data = JSON.parse(open(__ENV.FILE_PATH));
+const url = __ENV.LOAD_TEST_URL + "/search";
 
-function toBatchRequest(input) {
+function toBatchRequest(input, url) {
   return input.map((elem) => {
-    var params = {
+    const params = {
       headers: {
         "Content-Type": "application/json",
         Authorization: elem.signature,
@@ -19,7 +18,7 @@ function toBatchRequest(input) {
 }
 
 export default function () {
-  let responses = http.batch(toBatchRequest(data));
+  const responses = http.batch(toBatchRequest(data, url));
   responses.forEach((res) => {
     check(res, { "status was 200": (r) => r.status == 200 });
   });
