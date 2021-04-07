@@ -17,14 +17,17 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
 getDbTable =
   DB._case . DB.appDb <$> getSchemaName
 
-create :: Storage.Case -> Flow (T.DBResult ())
-create Storage.Case {..} = do
+createFlow :: Storage.Case -> Flow (T.DBResult ())
+createFlow = DB.runSqlDB . create
+
+create :: Storage.Case -> DB.SqlDB ()
+create case_ = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
+  lift $ DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByTypeAndStatuses ::
   Id Person.Person ->

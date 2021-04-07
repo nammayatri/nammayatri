@@ -18,14 +18,16 @@ import qualified EulerHS.Types as T
 import qualified Models.Case as Case
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT))
-getDbTable =
-  DB._productInstance . DB.appDb <$> getSchemaName
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT))
+getDbTable = DB._productInstance . DB.appDb <$> getSchemaName
 
-create :: Storage.ProductInstance -> Flow (T.DBResult ())
-create Storage.ProductInstance {..} = do
+createFlow :: Storage.ProductInstance -> Flow (T.DBResult ())
+createFlow = DB.runSqlDB . create
+
+create :: Storage.ProductInstance -> DB.SqlDB ()
+create productInstance = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.ProductInstance {..})
+  lift $ DB.createOne' dbTable (Storage.insertExpression productInstance)
 
 findById :: Id Storage.ProductInstance -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findById pid = do

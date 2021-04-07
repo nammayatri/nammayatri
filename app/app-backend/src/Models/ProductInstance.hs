@@ -21,7 +21,7 @@ import Types.Error
 
 create :: ProductInstance -> Flow ()
 create prdInst = do
-  result <- Q.create prdInst
+  result <- Q.createFlow prdInst
   checkDBError result
 
 -- | Validate and update ProductInstance status

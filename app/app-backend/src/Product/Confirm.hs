@@ -3,6 +3,7 @@
 module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
@@ -18,10 +19,11 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
-import qualified Models.Case as MC
-import qualified Models.Case as QCase
+import qualified Models.Case as MCase
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.ProductInstance as QPI
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import Types.Error
@@ -33,7 +35,7 @@ import Utils.Routes
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
 confirm person API.ConfirmReq {..} = withFlowHandler $ do
   lt <- getCurrentTime
-  case_ <- QCase.findIdByPerson person $ Id caseId
+  case_ <- MCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
@@ -42,9 +44,12 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
     OQ.findOrganizationById (Id $ productInstance ^. #_organizationId)
       >>= fromMaybeM OrgNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
-  QCase.create orderCase_
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
-  MPI.create orderProductInstance
+
+  DB.runSqlDBTransaction $ do
+    QCase.create orderCase_
+    QPI.create orderProductInstance
+
   msgId <- L.generateGUID
   context <- buildContext "confirm" caseId msgId
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
@@ -89,7 +94,7 @@ onConfirm _org req = withFlowHandler $ do
               }
       productInstance <- MPI.findById pid
       Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
-      MC.updateStatus (SPI._caseId productInstance) Case.COMPLETED
+      MCase.updateStatus (SPI._caseId productInstance) Case.COMPLETED
       MPI.updateMultiple pid uPrd
       MPI.updateStatus pid SPI.CONFIRMED
     Left err -> logError "on_confirm req" $ "on_confirm error: " <> show err
