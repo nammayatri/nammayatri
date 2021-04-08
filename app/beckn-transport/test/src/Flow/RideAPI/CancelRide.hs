@@ -87,7 +87,7 @@ failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $ do
     result <- runHandler handleCase "driverNotExecutorId" "1"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver {Person._id = Id "driverNotExecutorId"}
@@ -96,7 +96,7 @@ failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
   testCase "Fail cancellation if requested by neither driver nor admin" $ do
     result <- runHandler handleCase "managerId" "1"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
@@ -109,7 +109,7 @@ failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
   testCase "Fail cancellation if ride has no driver and requested by not an admin" $ do
     result <- runHandler handleCase "1" "1"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}
@@ -118,7 +118,7 @@ failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
 failedCancellationWhenProductInstanceStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $ do
     result <- runHandler handleCase "1" "1"
-    errorCodeWhenLeft result @?= Left "INVALID_RIDE_ID"
+    errorCodeWhenLeft result @?= Left "PI_INVALID_STATUS"
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure completedPI}
     completedPI = rideProductInstance {ProductInstance._status = ProductInstance.COMPLETED}

@@ -115,7 +115,7 @@ failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
     result <- runHandler handleCase "2" "1" "otp"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
   where
     handleCase =
       handle
@@ -130,7 +130,7 @@ failedStartRequestedByNotDriverAndNotAdmin :: TestTree
 failedStartRequestedByNotDriverAndNotAdmin = do
   testCase "Fail ride starting if requested by not a driver and not an admin" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR_OF_THIS_RIDE"
+    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
   where
     handleCase =
       handle
@@ -145,7 +145,7 @@ failedStartWhenProductInstanceStatusIsWrong :: TestTree
 failedStartWhenProductInstanceStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    errorCodeWhenLeft result @?= Left "INVALID_RIDE_STATUS"
+    errorCodeWhenLeft result @?= Left "PI_INVALID_STATUS"
   where
     handleCase =
       handle
@@ -160,7 +160,7 @@ failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
 failedStartWhenRideDoesNotHaveParentProductInstance = do
   testCase "Fail ride starting if ride does not have parent ProductInstance" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    errorCodeWhenLeft result @?= Left "INVALID_RIDE_ID"
+    errorCodeWhenLeft result @?= Left "PI_PARENT_ID_NOT_PRESENT"
   where
     handleCase =
       handle
@@ -175,7 +175,7 @@ failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    errorCodeWhenLeft result @?= Left "RIDE_OTP_MISSING"
+    errorCodeWhenLeft result @?= Left "PI_OTP_NOT_PRESENT"
   where
     handleCase =
       handle
@@ -190,4 +190,4 @@ failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
     result <- runHandler handle "1" "1" "otp2"
-    errorCodeWhenLeft result @?= Left "INCORRECT_RIDE_OTP"
+    errorCodeWhenLeft result @?= Left "INCORRECT_OTP"

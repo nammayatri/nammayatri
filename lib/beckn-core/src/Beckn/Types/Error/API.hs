@@ -25,6 +25,12 @@ instance IsAPIError AuthError where
   toStatusCode InvalidToken = E401
   toStatusCode AuthBlocked = E400
 
+data AuthPIError = NotAnExecutor deriving (Eq, Show)
+
+instance IsAPIError AuthPIError where
+  toAPIError NotAnExecutor = APIError "NOT_AN_EXECUTOR" "You are not an executor of this ride."
+  toStatusCode NotAnExecutor = E403
+
 data VehicleError
   = VehicleNotFound
   deriving (Generic, Eq, Show, FromJSON, ToJSON)

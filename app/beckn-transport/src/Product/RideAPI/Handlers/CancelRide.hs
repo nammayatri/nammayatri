@@ -2,7 +2,6 @@
 
 module Product.RideAPI.Handlers.CancelRide where
 
-import Beckn.TypeClass.IsAPIError
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -12,6 +11,7 @@ import Beckn.Types.Storage.ProductInstance (ProductInstance, ProductInstanceStat
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import Types.App (Ride)
+import Types.Error
 
 data ServiceHandle m = ServiceHandle
   { findPIById :: Id ProductInstance -> m ProductInstance,
@@ -19,21 +19,10 @@ data ServiceHandle m = ServiceHandle
     cancelRide :: Id Ride -> Bool -> m ()
   }
 
-data CancelRideError
-  = InvalidRideId
-  | NotAnExecutor
-  deriving (Eq, Show)
-
-instance IsAPIError CancelRideError where
-  toAPIError InvalidRideId = APIError "INVALID_RIDE_ID" "Invalid ride id."
-  toAPIError NotAnExecutor = APIError "NOT_AN_EXECUTOR_OF_THIS_RIDE" "You are not an executor of this ride."
-  toStatusCode InvalidRideId = E400
-  toStatusCode NotAnExecutor = E400
-
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> Text -> Text -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById $ Id rideId
-  unless (isValidPI prodInst) $ throwError InvalidRideId
+  unless (isValidPI prodInst) $ throwError PIInvalidStatus
   authPerson <- findPersonById $ Id authorizedEntityId
   case prodInst ^. #_personId of
     Nothing ->
