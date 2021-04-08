@@ -42,18 +42,9 @@ getFirstDriverInTheQueue ids = do
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ _idleSince
 
+-- TODO: delete in favour of transactional version
 updateIdleTimeFlow :: Id Driver -> Flow ()
-updateIdleTimeFlow driverId = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update dbTable (setClause now) (predicate driverId)
-    >>= either throwDBError pure
-  where
-    setClause now Storage.DriverStats {..} =
-      mconcat
-        [ _idleSince <-. B.val_ now
-        ]
-    predicate id Storage.DriverStats {..} = _driverId ==. B.val_ id
+updateIdleTimeFlow = DB.runSqlDB . updateIdleTime >=> checkDBError
 
 updateIdleTime :: Id Driver -> DB.SqlDB ()
 updateIdleTime driverId = do

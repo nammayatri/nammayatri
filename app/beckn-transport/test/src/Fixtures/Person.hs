@@ -1,4 +1,4 @@
-module Fixtures.Person (defaultDriver) where
+module Fixtures.Person where
 
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
@@ -32,4 +32,14 @@ defaultDriver =
       _description = Nothing,
       _createdAt = Fixtures.defaultTime,
       _updatedAt = Fixtures.defaultTime
+    }
+
+defaultAdmin :: Person.Person
+defaultAdmin =
+  defaultDriver
+    { Person._id = Id "admin",
+      Person._firstName = Just "Admin",
+      Person._lastName = Just "Adminson",
+      Person._role = Person.ADMIN,
+      Person._email = Just "adminson@cool-admins.com"
     }

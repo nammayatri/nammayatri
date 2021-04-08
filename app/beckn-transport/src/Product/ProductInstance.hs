@@ -68,7 +68,7 @@ update SR.RegistrationToken {..} piId req = withFlowHandler $ do
     & either (throwErrorWithInfo InvalidRequest) pure
   validateRequest ordPi req requestor
   let requestedByDriver = requestor ^. #_role == SP.DRIVER
-  updateTrip ordPi newStatus requestedByDriver
+  updateTrip (searchPi ^. #_id) newStatus requestedByDriver
   notifyUpdateToBAP searchPi ordPi newStatus
   PIQ.findById piId
   where
@@ -147,7 +147,9 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
 listCasesByProductInstance :: SR.RegistrationToken -> Text -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
 listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandler $ do
   prodInst <- PIQ.findById (Id piId)
-  piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
+  piList <-
+    prodInst ^. #_parentId & fromMaybeM PIParentIdNotPresent
+      >>= PIQ.findAllByParentId
   caseList <- case csType of
     Just type_ -> CQ.findAllByIdType (PI._caseId <$> piList) type_
     Nothing -> CQ.findAllByIds (PI._caseId <$> piList)
@@ -172,7 +174,9 @@ assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
   searchPi <- PIQ.findById =<< fromMaybeM PIParentIdNotPresent (ordPi ^. #_parentId)
-  piList <- PIQ.findAllByParentId (ordPi ^. #_parentId)
+  piList <-
+    ordPi ^. #_parentId & fromMaybeM PIParentIdNotPresent
+      >>= PIQ.findAllByParentId
   headPi <- case piList of
     p : _ -> pure p
     [] -> throwError PIDoesNotExist
@@ -212,6 +216,7 @@ validateRequest ride req requestor = do
       unless (inAppOtpCode == tripOtpCode) $ throwError IncorrectOTP
     (PI.INPROGRESS, PI.COMPLETED, SP.DRIVER) ->
       DSQ.updateIdleTimeFlow . cast $ requestor ^. #_id
+    (PI.INPROGRESS, PI.COMPLETED, SP.ADMIN) -> ok
     (oldStatus', newStatus', who) -> do
       logError "Invalid update operation" . T.pack $
         "From " <> show oldStatus'
@@ -237,9 +242,9 @@ notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
     (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
     _ -> return ()
 
-updateTrip :: PI.ProductInstance -> PI.ProductInstanceStatus -> Bool -> Flow ()
-updateTrip prodInst newStatus requestedByDriver = do
-  piList <- PIQ.findAllByParentId (prodInst ^. #_parentId)
+updateTrip :: Id PI.ProductInstance -> PI.ProductInstanceStatus -> Bool -> Flow ()
+updateTrip searchPiId newStatus requestedByDriver = do
+  piList <- PIQ.findAllByParentId searchPiId
   trackerCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase_ <- CQ.findByIdType (PI._caseId <$> piList) Case.RIDEORDER
   case newStatus of

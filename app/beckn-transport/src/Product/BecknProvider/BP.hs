@@ -58,7 +58,7 @@ cancel _transporterId _bapOrg req = withFlowHandler $ do
   validateContext "cancel" $ req ^. #context
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
   prodInst <- ProductInstance.findById (Id prodInstId)
-  piList <- ProductInstance.findAllByParentId (Just $ prodInst ^. #_id)
+  piList <- ProductInstance.findAllByParentId (prodInst ^. #_id)
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
   RideRequest.createFlow =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
   uuid <- L.generateGUID
@@ -68,7 +68,7 @@ cancelRide :: Id Ride -> Bool -> Flow ()
 cancelRide rideId requestedByDriver = do
   orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance._parentId orderPi & fromMaybeM PIParentIdNotPresent
-  piList <- ProductInstance.findAllByParentId (Just searchPiId)
+  piList <- ProductInstance.findAllByParentId searchPiId
   trackerPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.LOCATIONTRACKER
   cancelRideTransaction piList searchPiId (trackerPi ^. #_id) (orderPi ^. #_id) requestedByDriver
 

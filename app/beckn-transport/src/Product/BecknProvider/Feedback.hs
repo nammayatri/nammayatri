@@ -27,7 +27,7 @@ feedback _transporterId _organization request = withFlowHandler $ do
   logInfo "FeedbackAPI" "Received feedback API call."
   BP.validateContext "feedback" $ request ^. #context
   let productInstanceId = Id $ request ^. #message . #order_id
-  productInstances <- ProductInstance.findAllByParentId $ Just productInstanceId
+  productInstances <- ProductInstance.findAllByParentId productInstanceId
   personId <- getPersonId productInstances & fromMaybeMWithInfo PIPersonNotPresent "Driver is not assigned."
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
   unless (orderPi ^. #_status == ProductInstance.COMPLETED) $

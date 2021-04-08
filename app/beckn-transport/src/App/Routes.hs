@@ -38,6 +38,7 @@ import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
 import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
+import qualified Product.RideAPI.EndRide as RideAPI.EndRide
 import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
@@ -425,6 +426,10 @@ type RideAPI =
              :> ReqBody '[JSON] RideAPI.StartRideReq
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
+             :> Capture "rideId" (Id ProductInstance)
+             :> "end"
+             :> Get '[JSON] APISuccess
+           :<|> TokenAuth
              :> Capture "rideId" Text
              :> "cancel"
              :> Post '[JSON] APISuccess
@@ -434,6 +439,7 @@ rideFlow :: FlowServer RideAPI
 rideFlow =
   Ride.setDriverAcceptance
     :<|> RideAPI.StartRide.startRide
+    :<|> RideAPI.EndRide.endRide
     :<|> RideAPI.CancelRide.cancelRide
 
 type HealthCheckAPI = Get '[JSON] Text

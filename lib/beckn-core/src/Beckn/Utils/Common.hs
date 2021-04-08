@@ -74,7 +74,7 @@ checkClientError context = \case
     logError "client call error" $ (err ^. #_message) ?: "Some error"
     L.throwException $ mkErrResponse context err500 err
 
-throwDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBError -> m a
+throwDBError :: (MonadThrow m, Log m) => ET.DBError -> m a
 throwDBError err@(ET.DBError dbErrType msg) = do
   logError "DB error: " (show err)
   uncurry throwErrorWithInfo $
@@ -92,7 +92,7 @@ checkDBError =
 
 -- | Get rid of database error and empty result
 checkDBErrorOrEmpty ::
-  (HasCallStack, L.MonadFlow m, Log m, IsAPIError b) =>
+  (MonadThrow m, Log m, IsAPIError b) =>
   ET.DBResult (Maybe a) ->
   b ->
   m a

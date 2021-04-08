@@ -27,7 +27,7 @@ startRide SR.RegistrationToken {..} rideId req = withFlowHandler $ do
       Handler.ServiceHandle
         { findPersonById = QPerson.findPersonById,
           findPIById = QProductInstance.findById,
-          findPIsByParentId = QProductInstance.findAllByParentId . Just,
+          findPIsByParentId = QProductInstance.findAllByParentId,
           findCaseByIdsAndType = Models.Case.findByIdType,
           startRide = startRideTransaction,
           notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS

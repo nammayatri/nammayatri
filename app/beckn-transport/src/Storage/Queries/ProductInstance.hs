@@ -385,13 +385,13 @@ findAllByPersonId id = do
   where
     predicate Storage.ProductInstance {..} = _personId ==. B.val_ (Just id)
 
-findAllByParentId :: Maybe (Id Storage.ProductInstance) -> Flow [Storage.ProductInstance]
+findAllByParentId :: Id Storage.ProductInstance -> Flow [Storage.ProductInstance]
 findAllByParentId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
     >>= either throwDBError pure
   where
-    predicate Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ id
+    predicate Storage.ProductInstance {..} = _parentId ==. B.val_ (Just id)
 
 findByIdType :: [Id Storage.ProductInstance] -> Case.CaseType -> Flow Storage.ProductInstance
 findByIdType ids csType = do

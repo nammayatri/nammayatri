@@ -50,7 +50,7 @@ data PersonError
 
 instance IsAPIError PersonError where
   toAPIError PersonNotFound = APIError "PERSON_NOT_FOUND" "Person not found."
-  toAPIError PersonDoesNotExist = APIError "PERSON_DOES_NOT_EXISTS" "No person matches passed data."
+  toAPIError PersonDoesNotExist = APIError "PERSON_DOES_NOT_EXIST" "No person matches passed data."
   toAPIError PersonFieldNotPresent = APIError "PERSON_NVALID_STATE" "Required field is null for this person."
   toAPIError PersonLocationIdNotPresent = APIError "PERSON_LOCATION_ID_NOT_PRESENT" "_locationId field is null in this person."
   toAPIError PersonOrgIdNotPresent = APIError "PERSON_ORG_ID_NOT_PRESENT" "_organizationId field is null in this person."
