@@ -25,10 +25,12 @@ startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> 
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById $ Id requestorId
   orderPi <- findPIById $ Id rideId
-  unless (requestor ^. #_role == Person.ADMIN) do
-    rideDriver <- orderPi ^. #_personId & fromMaybeM NotAnExecutor
-    when (rideDriver /= Id requestorId || requestor ^. #_role /= Person.DRIVER) $
-      throwError NotAnExecutor
+  case requestor ^. #_role of
+    Person.ADMIN -> pure ()
+    Person.DRIVER -> do
+      rideDriver <- orderPi ^. #_personId & fromMaybeM PIInvalidStatus
+      unless (rideDriver == Id requestorId) $ throwError NotAnExecutor
+    _ -> throwError AccessDenied
   unless (isValidPiStatus (orderPi ^. #_status)) $ throwError PIInvalidStatus
   searchPiId <- orderPi ^. #_parentId & fromMaybeM PIParentIdNotPresent
   searchPi <- findPIById searchPiId

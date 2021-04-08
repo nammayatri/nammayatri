@@ -96,7 +96,7 @@ failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
   testCase "Fail cancellation if requested by neither driver nor admin" $ do
     result <- runHandler handleCase "managerId" "1"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
+    errorCodeWhenLeft result @?= Left "ACCESS_DENIED"
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
@@ -107,9 +107,9 @@ failedCancellationByNotDriverAndNotAdmin =
 
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
-  testCase "Fail cancellation if ride has no driver and requested by not an admin" $ do
+  testCase "Fail cancellation if ride has no driver and requested by driver" $ do
     result <- runHandler handleCase "1" "1"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
+    errorCodeWhenLeft result @?= Left "PI_INVALID_STATUS"
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}

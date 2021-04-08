@@ -130,7 +130,7 @@ failedStartRequestedByNotDriverAndNotAdmin :: TestTree
 failedStartRequestedByNotDriverAndNotAdmin = do
   testCase "Fail ride starting if requested by not a driver and not an admin" $ do
     result <- runHandler handleCase "1" "1" "otp"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
+    errorCodeWhenLeft result @?= Left "ACCESS_DENIED"
   where
     handleCase =
       handle
