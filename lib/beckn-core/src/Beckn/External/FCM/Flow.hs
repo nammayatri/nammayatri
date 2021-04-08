@@ -87,14 +87,12 @@ notifyPerson ::
 notifyPerson title body msgData person =
   let pid = getId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
-      forkDesc = "Sending notification to person " <> pid
    in case Person._deviceToken person of
         Nothing -> do
           logInfo "FCM" tokenNotFound
           pure ()
         Just token ->
-          fork forkDesc $
-            sendMessage (FCMRequest (createMessage title body msgData token)) pid
+          sendMessage (FCMRequest (createMessage title body msgData token)) pid
 
 -- | Google API interface
 type FCMSendMessageAPI =
@@ -211,15 +209,7 @@ getAndParseFCMAccount = do
     parseContent rawContent = rawContent >>= Aeson.eitherDecode
 
 getNewToken :: (HasField "fcmJsonPath" r (Maybe Text), HasLogContext r) => FlowR r (Either String JWT.JWToken)
-getNewToken = do
-  Redis.tryLockRedis "beckn:fcm_token_refresh" 10 >>= \case
-    False -> do
-      L.runIO $ threadDelay 1000000
-      getToken
-    _ -> do
-      token <- getAndParseFCMAccount >>= either (pure . Left) refreshToken
-      Redis.unlockRedis "beckn:fcm_token_refresh"
-      pure token
+getNewToken = getAndParseFCMAccount >>= either (pure . Left) refreshToken
 
 refreshToken :: (L.MonadFlow m, Log m) => JWT.ServiceAccount -> m (Either String JWT.JWToken)
 refreshToken fcmAcc = do
