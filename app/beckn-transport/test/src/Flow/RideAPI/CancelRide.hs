@@ -13,7 +13,6 @@ import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.APIError (errorCodeWhenLeft)
-import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 
 handle :: CancelRide.ServiceHandle IO

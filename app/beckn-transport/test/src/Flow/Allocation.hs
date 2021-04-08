@@ -17,7 +17,6 @@ import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
 import Types.App
 import qualified Types.Storage.RideRequest as SRR
-import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 
 numRequestsToProcess :: Integer

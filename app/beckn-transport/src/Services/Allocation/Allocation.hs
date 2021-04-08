@@ -62,6 +62,8 @@ data RideInfo = RideInfo
   }
   deriving (Generic)
 
+type MonadHandler m = (MonadCatch m, MonadTime m, Log m)
+
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
     getConfiguredNotificationTime :: m NominalDiffTime,

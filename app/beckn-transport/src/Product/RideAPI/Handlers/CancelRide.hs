@@ -13,6 +13,8 @@ import EulerHS.Prelude
 import Types.App (Ride)
 import Types.Error
 
+type MonadHandler m = (MonadThrow m, Log m)
+
 data ServiceHandle m = ServiceHandle
   { findPIById :: Id ProductInstance -> m ProductInstance,
     findPersonById :: Id Person.Person -> m Person.Person,
