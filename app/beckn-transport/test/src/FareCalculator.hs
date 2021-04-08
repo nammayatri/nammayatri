@@ -1,6 +1,5 @@
 module FareCalculator where
 
-import Beckn.Product.BusinessRule
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Id
@@ -10,9 +9,14 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time hiding (parseTime)
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
+import Servant.Server
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Domain.FarePolicy
+import Types.Error
+import Utils.APIError
+import Utils.GuidGenerator ()
+import Utils.SilentLogger ()
 import Utils.Time
 
 defaultFarePolicy :: FarePolicy
@@ -87,18 +91,17 @@ handle =
 hatchback20km :: TestTree
 hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchback" $ do
   fareParams <-
-    runBR $
-      doCalculateFare
-        handle
-        orgID
-        Vehicle.HATCHBACK
-        defaultPickupLocation
-        defaultDropLocation
-        FullReturnTrip
-        startTime
-        distance
-  let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 540.0)
+    doCalculateFare
+      handle
+      orgID
+      Vehicle.HATCHBACK
+      defaultPickupLocation
+      defaultDropLocation
+      FullReturnTrip
+      startTime
+      distance
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 540.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
@@ -106,18 +109,17 @@ hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchb
 sedan20km :: TestTree
 sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ do
   fareParams <-
-    runBR $
-      doCalculateFare
-        handle'
-        orgID
-        Vehicle.SEDAN
-        defaultPickupLocation
-        defaultDropLocation
-        FullReturnTrip
-        startTime
-        distance
-  let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 675.0)
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SEDAN
+      defaultPickupLocation
+      defaultDropLocation
+      FullReturnTrip
+      startTime
+      distance
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 675.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
@@ -136,18 +138,17 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
 suv20km :: TestTree
 suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
   fareParams <-
-    runBR $
-      doCalculateFare
-        handle'
-        orgID
-        Vehicle.SUV
-        defaultPickupLocation
-        defaultDropLocation
-        FullReturnTrip
-        startTime
-        distance
-  let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 800.0)
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SUV
+      defaultPickupLocation
+      defaultDropLocation
+      FullReturnTrip
+      startTime
+      distance
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 800.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
@@ -169,18 +170,17 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
 nightHatchback20km :: TestTree
 nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTrip for Hatchback at 21:00" $ do
   fareParams <-
-    runBR $
-      doCalculateFare
-        handle'
-        orgID
-        Vehicle.HATCHBACK
-        defaultPickupLocation
-        defaultDropLocation
-        OneWayTrip
-        startTime
-        distance
-  let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 347.6)
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.HATCHBACK
+      defaultPickupLocation
+      defaultDropLocation
+      OneWayTrip
+      startTime
+      distance
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 347.6
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
@@ -203,18 +203,17 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
 nightSedan20km :: TestTree
 nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip for Sedan" $ do
   fareParams <-
-    runBR $
-      doCalculateFare
-        handle'
-        orgID
-        Vehicle.SEDAN
-        defaultPickupLocation
-        defaultDropLocation
-        OneWayTrip
-        startTime
-        distance
-  let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 390.5)
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SEDAN
+      defaultPickupLocation
+      defaultDropLocation
+      OneWayTrip
+      startTime
+      distance
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 390.5
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
@@ -237,19 +236,17 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
 nightSuv20km :: TestTree
 nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for SUV" $ do
   fareParams <-
-    runBR $
-      doCalculateFare
-        handle'
-        orgID
-        Vehicle.SUV
-        defaultPickupLocation
-        defaultDropLocation
-        OneWayTrip
-        startTime
-        distance
-
-  let totalFare = fareSum <$> fareParams
-  totalFare @?= Right (Amount 539.0)
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SUV
+      defaultPickupLocation
+      defaultDropLocation
+      OneWayTrip
+      startTime
+      distance
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 539.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 20000.0
@@ -274,7 +271,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
 failOnMissingFareConfig :: TestTree
 failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
   result <-
-    runBR $
+    try $ do
       doCalculateFare
         handle'
         orgID
@@ -284,12 +281,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
         OneWayTrip
         startTime
         distance
-  result
-    @?= Left
-      ( BusinessError
-          "NO_FARE_POLICY"
-          "FarePolicy was not found."
-      )
+  mustBeErrorCode NoFarePolicy result
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 0.0

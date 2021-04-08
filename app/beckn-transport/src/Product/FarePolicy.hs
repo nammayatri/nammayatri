@@ -41,7 +41,7 @@ listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandler $ do
 
 updateFarePolicy :: RegToken.RegistrationToken -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
 updateFarePolicy _ fpId req = withFlowHandler $ do
-  farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM FarePolicyDoesNotExist
+  farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
         farePolicy
           { SFarePolicy._baseFare = req ^. #baseFare,

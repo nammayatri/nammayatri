@@ -7,12 +7,15 @@ import Beckn.Types.Error as Types.Error
 import EulerHS.Prelude
 
 data FarePolicyError
-  = FarePolicyDoesNotExist
+  = NoFarePolicy
+  | CantCalculateDistance
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsAPIError FarePolicyError where
-  toAPIError FarePolicyDoesNotExist = APIError "FARE_POLICY_DOES_NOT_EXIST" "No fare policy matches passed data."
-  toStatusCode FarePolicyDoesNotExist = E400
+  toAPIError NoFarePolicy = APIError "NO_FARE_POLICY" "No fare policy matches passed data."
+  toAPIError CantCalculateDistance = APIError "CANT_CALCULATE_DISTANCE" "Could not calculate distance."
+  toStatusCode NoFarePolicy = E400
+  toStatusCode CantCalculateDistance = E500
 
 data AllocationError
   = EmptyDriverPool

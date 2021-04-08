@@ -1,7 +1,6 @@
 module Product.FareCalculator.Interpreter (calculateFare) where
 
 import App.Types (Flow)
-import Beckn.Product.BusinessRule (runBRFlowFatal)
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
@@ -34,16 +33,15 @@ calculateFare ::
 calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
-    runBRFlowFatal $
-      doCalculateFare
-        serviceHandle
-        orgId
-        vehicleVariant
-        (PickupLocation pickLoc)
-        (DropLocation dropLoc)
-        OneWayTrip -- TODO :: determine the type of trip
-        startTime
-        (mbDistance >>= readMaybe . T.unpack)
+    doCalculateFare
+      serviceHandle
+      orgId
+      vehicleVariant
+      (PickupLocation pickLoc)
+      (DropLocation dropLoc)
+      OneWayTrip -- TODO :: determine the type of trip
+      startTime
+      (mbDistance >>= readMaybe . T.unpack)
   let totalFare = fareSum fareParams
   logTagInfo
     "FareCalculator"
@@ -54,9 +52,9 @@ serviceHandle :: ServiceHandle Flow
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
-        sFarePolicy <- lift $ FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
+        sFarePolicy <- FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
         let farePolicy = FarePolicyS.fromTable <$> sFarePolicy
         pure farePolicy,
       getDistance = \(PickupLocation pickupLoc) (DropLocation dropLoc) ->
-        lift $ Location.calculateDistance pickupLoc dropLoc
+        Location.calculateDistance pickupLoc dropLoc
     }

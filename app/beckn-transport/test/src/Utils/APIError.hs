@@ -1,22 +1,21 @@
 module Utils.APIError where
 
-import qualified Beckn.TypeClass.IsAPIError as APIError
+import Beckn.TypeClass.IsAPIError
 import qualified Beckn.Types.APISuccess as APISuccess
 import Data.Aeson (decode)
 import EulerHS.Prelude
 import qualified Servant.Server.Internal as Servant
 import Test.Tasty.HUnit
 
-errorCodeWhenLeft :: Either Servant.ServerError APISuccess.APISuccess -> Either Text APISuccess.APISuccess
-errorCodeWhenLeft = first (APIError.errorCode . fromJust . mbApiError)
-  where
-    mbApiError err = decode (Servant.errBody err) :: Maybe APIError.APIError
-
 mustBeErrorCode ::
-  APIError.IsAPIError e =>
+  IsAPIError e =>
   e ->
-  Either Servant.ServerError APISuccess.APISuccess ->
+  Either Servant.ServerError a ->
   Assertion
-mustBeErrorCode err result =
-  errorCodeWhenLeft result
-    @?= Left (APIError.errorCode $ APIError.toAPIError err)
+mustBeErrorCode expectedError result =
+  case result of
+    Left err -> resultErrorCode err @?= expectedErrorCode
+    Right _ -> assertFailure "An error result expected"
+  where
+    resultErrorCode err = errorCode $ fromJust $ decode $ Servant.errBody err
+    expectedErrorCode = errorCode $ toAPIError expectedError

@@ -1,7 +1,7 @@
 module Flow.RideAPI.CancelRide where
 
-import Beckn.Product.BusinessRule (BusinessError (..), runBR)
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Error.API
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -12,7 +12,7 @@ import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
 import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
-import Utils.APIError (errorCodeWhenLeft)
+import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()
 
 handle :: CancelRide.ServiceHandle IO
@@ -86,7 +86,7 @@ failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $ do
     result <- runHandler handleCase "driverNotExecutorId" "1"
-    errorCodeWhenLeft result @?= Left "NOT_AN_EXECUTOR"
+    mustBeErrorCode NotAnExecutor result
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver {Person._id = Id "driverNotExecutorId"}
@@ -95,7 +95,7 @@ failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
   testCase "Fail cancellation if requested by neither driver nor admin" $ do
     result <- runHandler handleCase "managerId" "1"
-    errorCodeWhenLeft result @?= Left "ACCESS_DENIED"
+    mustBeErrorCode AccessDenied result
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
@@ -108,7 +108,7 @@ failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
   testCase "Fail cancellation if ride has no driver and requested by driver" $ do
     result <- runHandler handleCase "1" "1"
-    errorCodeWhenLeft result @?= Left "PI_INVALID_STATUS"
+    mustBeErrorCode PIInvalidStatus result
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}
@@ -117,7 +117,7 @@ failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
 failedCancellationWhenProductInstanceStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $ do
     result <- runHandler handleCase "1" "1"
-    errorCodeWhenLeft result @?= Left "PI_INVALID_STATUS"
+    mustBeErrorCode PIInvalidStatus result
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure completedPI}
     completedPI = rideProductInstance {ProductInstance._status = ProductInstance.COMPLETED}
