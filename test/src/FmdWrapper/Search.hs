@@ -115,11 +115,11 @@ processResults transactionId callbackData = do
 dunzoLocationError ::
   Location.GPS ->
   Location.GPS ->
-  Error.Error ->
+  (Error.Error -> Expectation) ->
   ClientEnv ->
   CallbackData ->
   IO ()
-dunzoLocationError pickupGps dropGps expectedError clientEnv callbackData =
+dunzoLocationError pickupGps dropGps check clientEnv callbackData =
   withNewUUID $ \transactionId -> do
     ctx <- buildContext "search" transactionId (Just fmdTestAppBaseUrl) Nothing
 
@@ -128,15 +128,15 @@ dunzoLocationError pickupGps dropGps expectedError clientEnv callbackData =
             & setPickupGps .~ pickupGps
             & setDropGps .~ dropGps
 
-    gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-    assertAck gatewayResponse
+    gatewayResp <- runSearch clientEnv "fmd-test-app" searchReq
+    assertAck gatewayResp
 
-    _ <- waitForCallback (onSearchEndMVar callbackData)
+    waitForCallback
     searchResults <- processResults transactionId callbackData
 
     let errorResults = filter isLeft $ map contents searchResults
     case errorResults of
-      [Left err] -> err `shouldBe` expectedError
+      [Left err] -> check err
       _ -> expectationFailure "Exactly one error result expected."
 
 successfulSearch :: ClientEnv -> CallbackData -> IO ()
@@ -152,14 +152,7 @@ successfulSearch clientEnv callbackData =
     gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResponse
 
-    searchEndResult <- waitForCallback (onSearchEndMVar callbackData)
-
-    case searchEndResult of
-      Just res -> do
-        verifyApiKey $ apiKey res
-        verifyCallbackContext False transactionId $ result res ^. #context
-      Nothing -> expectationFailure "No search end callback received."
-
+    waitForCallback
     searchResults <- processResults transactionId callbackData
 
     let dunzoResults = filter isDunzoResult searchResults
@@ -174,21 +167,39 @@ successfulSearch clientEnv callbackData =
 
 dunzoUnserviceableLocation :: ClientEnv -> CallbackData -> IO ()
 dunzoUnserviceableLocation =
-  dunzoLocationError gps1 example $
-    Error.Error "DOMAIN-ERROR" "FMD001" Nothing $
-      Just "Location is not serviceable."
+  dunzoLocationError
+    gps1
+    example
+    ( const (return ())
+    )
 
 dunzoNearByLocation :: ClientEnv -> CallbackData -> IO ()
 dunzoNearByLocation =
-  dunzoLocationError gps1 gps1 $
-    Error.Error "DOMAIN-ERROR" "FMD001" Nothing $
-      Just "The pickup and drop addresses are near by."
+  dunzoLocationError
+    gps1
+    gps1
+    ( `shouldBe`
+        Error.Error
+          "DOMAIN-ERROR"
+          "CORE002"
+          Nothing
+          ( Just "Something went wrong."
+          )
+    )
 
 dunzoDifferentCity :: ClientEnv -> CallbackData -> IO ()
 dunzoDifferentCity =
-  dunzoLocationError gps1 gps3 $
-    Error.Error "DOMAIN-ERROR" "FMD001" Nothing $
-      Just "Apologies, our services are limited to serviceable areas with in the city only."
+  dunzoLocationError
+    gps1
+    gps3
+    ( `shouldBe`
+        Error.Error
+          "DOMAIN-ERROR"
+          "FMD001"
+          Nothing
+          ( Just "Apologies, our services are limited to serviceable areas with in the city only."
+          )
+    )
 
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
 incorrectApiKey clientEnv _ = do
