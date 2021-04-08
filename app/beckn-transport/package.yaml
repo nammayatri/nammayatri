@@ -80,6 +80,7 @@ dependencies:
   - tasty-hunit
   - postgresql-simple
   - resource-pool
+  - uuid
 
 ghc-options:
   - -fwrite-ide-info
