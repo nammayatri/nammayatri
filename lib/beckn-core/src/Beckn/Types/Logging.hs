@@ -1,9 +1,6 @@
 module Beckn.Types.Logging where
 
-import Beckn.Types.Flow
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Flow
-import EulerHS.Language as L
 import EulerHS.Prelude
 
 data LogLevel = DEBUG | INFO | WARNING | ERROR
@@ -23,13 +20,5 @@ data LoggerConfig = LoggerConfig
   }
   deriving (Generic, FromDhall)
 
-instance Log (FlowR r) where
-  logOutput logLevel message =
-    case logLevel of
-      DEBUG -> L.logDebug ("" :: Text) message
-      INFO -> L.logInfo ("" :: Text) message
-      WARNING -> L.logWarning ("" :: Text) message
-      ERROR -> L.logError ("" :: Text) message
-  withLogContext lc flowR =
-    let f = runReaderT flowR
-     in ReaderT $ \v -> withModifiedRuntime (addLogContext lc) $ f v
+logContextKey :: Text
+logContextKey = "log_context"

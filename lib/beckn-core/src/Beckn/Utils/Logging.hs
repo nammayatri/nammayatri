@@ -11,10 +11,12 @@ module Beckn.Utils.Logging
     logInfo,
     logWarning,
     logError,
+    updateLogContext,
   )
 where
 
 import Beckn.Types.Logging
+import Beckn.Utils.Flow
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Txt
@@ -85,8 +87,8 @@ logFormatterText
   hostname
   (T.PendingMsg _mbFlowGuid elvl eTag msg msgNum logContHM) = res
     where
-      logCont = HM.lookupDefault "" "log_context" logContHM
-      tag = if null eTag || eTag == "\"\"" then "" else "[" <> eTag <> "]"
+      logCont = HM.lookupDefault "" logContextKey logContHM
+      tag = if null eTag || eTag == "\"\"" then "" else formatTag eTag
       lvl = case elvl of
         T.Debug -> DEBUG
         T.Warning -> WARNING
@@ -95,18 +97,23 @@ logFormatterText
       textToLBS = LBS.fromStrict . Txt.encodeUtf8
       res =
         T.SimpleLBS $
-          "\""
-            <> show timestamp
-            <> "\" "
+          show timestamp
+            <> " "
             <> show lvl
             <> " "
             <> show msgNum
-            <> "> Hostname:\""
-            <> show hostname
-            <> "\", "
-            <> " Context:\""
+            <> "> @"
+            <> textToLBS (fromMaybe "null" hostname)
+            <> " "
             <> textToLBS logCont
             <> textToLBS tag
-            <> "\", Message:\""
+            <> " |> "
             <> textToLBS msg
-            <> "\""
+
+formatTag :: Text -> Text
+formatTag tag = "[" <> tag <> "]"
+
+updateLogContext :: Text -> FlowRuntime -> FlowRuntime
+updateLogContext val fr =
+  let oldLc = fromMaybe "" $ lookupLogContext logContextKey fr
+   in insertLogContext logContextKey (oldLc <> formatTag val) fr

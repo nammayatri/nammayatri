@@ -3,7 +3,6 @@
 
 module Beckn.Utils.Servant.Server where
 
-import Beckn.Utils.Flow
 import Beckn.Constants.APIErrorCode
 import Beckn.Types.App (EnvR (..), FlowServerR)
 import Beckn.Types.Core.Ack (NackResponseError (_status))
@@ -50,7 +49,7 @@ run apis server ctx env =
 
     modifiedEnvR uuid =
       let flowRt = runTime env
-       in env {runTime = addLogContext uuid flowRt}
+       in env {runTime = updateLogContext uuid flowRt}
 
 serverErrorResponse :: ServerError -> Response
 serverErrorResponse ex =
