@@ -16,6 +16,7 @@ import Beckn.Utils.Migration
 import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai (Response)
@@ -25,11 +26,13 @@ import Network.Wai.Handler.Warp
     setOnExceptionResponse,
     setPort,
   )
+import System.Environment
 
 runFMDWrapper :: (AppEnv -> AppEnv) -> IO ()
 runFMDWrapper configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
-  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
+  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings

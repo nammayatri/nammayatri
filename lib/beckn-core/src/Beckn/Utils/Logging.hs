@@ -11,21 +11,19 @@ module Beckn.Utils.Logging
     logInfo,
     logWarning,
     logError,
-    updateLogContext,
+    appendLogContext,
   )
 where
 
 import Beckn.Types.Logging
-import Beckn.Utils.Flow
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as Txt
 import qualified Data.Text.Encoding as Txt
 import qualified Data.Time as Time
 import EulerHS.Prelude
 import EulerHS.Runtime
+import EulerHS.Types (LogContext)
 import qualified EulerHS.Types as T
-import System.Environment
 
 logTagDebug :: Log m => Text -> Text -> m ()
 logTagDebug tag = withLogContext tag . logOutput DEBUG
@@ -72,14 +70,13 @@ getEulerLoggerConfig LoggerConfig {..} =
         then T.UnsafeLogSQL_DO_NOT_USE_IN_PRODUCTION
         else T.SafelyOmitSqlLogs
 
-getEulerLoggerRuntime :: LoggerConfig -> IO LoggerRuntime
-getEulerLoggerRuntime = createLoggerRuntime logFlowFormatter . getEulerLoggerConfig
+getEulerLoggerRuntime :: Maybe Text -> LoggerConfig -> IO LoggerRuntime
+getEulerLoggerRuntime hostname = createLoggerRuntime (logFlowFormatter hostname) . getEulerLoggerConfig
 
-logFlowFormatter :: T.FlowFormatter
-logFlowFormatter _ = do
+logFlowFormatter :: Maybe Text -> T.FlowFormatter
+logFlowFormatter hostname _ = do
   currTime <- Time.getCurrentTime
-  hostname <- (Txt.pack <$>) <$> lookupEnv "POD_NAME"
-  pure $! logFormatterText currTime hostname
+  pure $ logFormatterText currTime hostname
 
 logFormatterText :: Time.UTCTime -> Maybe Text -> T.MessageFormatter
 logFormatterText
@@ -113,7 +110,10 @@ logFormatterText
 formatTag :: Text -> Text
 formatTag tag = "[" <> tag <> "]"
 
-updateLogContext :: Text -> FlowRuntime -> FlowRuntime
-updateLogContext val fr =
-  let oldLc = fromMaybe "" $ lookupLogContext logContextKey fr
-   in insertLogContext logContextKey (oldLc <> formatTag val) fr
+appendLogContext :: Text -> LogContext -> LogContext
+appendLogContext val lc =
+  let oldLCText = fromMaybe "" $ HM.lookup logContextKey lc
+   in HM.insert logContextKey (oldLCText <> formatTag val) lc
+
+logContextKey :: Text
+logContextKey = "log_context"

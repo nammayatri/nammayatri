@@ -15,6 +15,7 @@ import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai
@@ -26,6 +27,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import qualified Storage.Queries.Organization as Storage
+import System.Environment
 
 runTransporterBackendApp :: (AppEnv -> AppEnv) -> IO ()
 runTransporterBackendApp configModifier = do
@@ -37,7 +39,8 @@ runTransporterBackendApp configModifier = do
 
 runTransporterBackendApp' :: AppEnv -> Settings -> IO ()
 runTransporterBackendApp' appEnv settings = do
-  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
+  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
     try (runFlowR flowRt appEnv Storage.loadAllProviders) >>= \case

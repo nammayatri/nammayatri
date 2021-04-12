@@ -9,6 +9,7 @@ import Beckn.Types.Core.Ack (NackResponseError (_status))
 import Beckn.Utils.Common hiding (throwError)
 import qualified Data.Aeson as Aeson
 import Data.UUID.V4 (nextRandom)
+import EulerHS.Language
 import EulerHS.Prelude
 import qualified Network.HTTP.Types as H
 import Network.Wai (Response, responseLBS)
@@ -41,15 +42,14 @@ run apis server ctx env =
     f r = do
       eResult <- liftIO $ do
         uuid <- nextRandom
-        runExceptT . runReaderT r . modifiedEnvR $ show uuid
+        let modEnv = modifiedEnvR $ show uuid
+        runExceptT $ runReaderT r modEnv
       case eResult of
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
 
-    modifiedEnvR uuid =
-      let flowRt = runTime env
-       in env {runTime = updateLogContext uuid flowRt}
+    modifiedEnvR uuid = env {runTime = updateLoggerContext (appendLogContext uuid) $ runTime env}
 
 serverErrorResponse :: ServerError -> Response
 serverErrorResponse ex =

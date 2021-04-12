@@ -16,6 +16,7 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import EulerHS.Prelude
 import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
@@ -26,12 +27,14 @@ import Network.Wai.Handler.Warp
     setOnExceptionResponse,
     setPort,
   )
+import System.Environment
 
 runMockProvider :: (AppEnv -> AppEnv) -> IO ()
 runMockProvider configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "mock-provider-backend"
   Metrics.serve (metricsPort appEnv)
-  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
+  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   let settings =
         setOnExceptionResponse mockProviderExceptionResponse $
           setPort (port appEnv) defaultSettings

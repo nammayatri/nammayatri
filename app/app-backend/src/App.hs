@@ -15,6 +15,7 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai
@@ -25,6 +26,7 @@ import Network.Wai.Handler.Warp
     setOnExceptionResponse,
     setPort,
   )
+import System.Environment
 
 runAppBackend :: (AppEnv -> AppEnv) -> IO ()
 runAppBackend configModifier = do
@@ -36,7 +38,8 @@ runAppBackend configModifier = do
 
 runAppBackend' :: AppEnv -> Settings -> IO ()
 runAppBackend' appEnv settings = do
-  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
+  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     putStrLn @String "Setting up for signature auth..."
     let shortOrgId = appEnv ^. #bapSelfId

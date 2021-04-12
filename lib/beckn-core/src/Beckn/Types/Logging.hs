@@ -19,6 +19,3 @@ data LoggerConfig = LoggerConfig
     logRawSql :: Bool
   }
   deriving (Generic, FromDhall)
-
-logContextKey :: Text
-logContextKey = "log_context"

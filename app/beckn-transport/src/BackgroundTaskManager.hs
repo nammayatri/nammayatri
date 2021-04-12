@@ -14,18 +14,21 @@ import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
 import Servant
 import qualified Services.Allocation.Runner as Runner
 import qualified Storage.Queries.Organization as Storage
+import System.Environment
 import System.Posix.Signals
 
 runBackgroundTaskManager :: (AppEnv -> AppEnv) -> IO ()
 runBackgroundTaskManager configModifier = do
   appEnv <- configModifier <$> readDhallConfigDefault "beckn-transport-btm"
-  let loggerRt = getEulerLoggerRuntime $ appEnv ^. #loggerConfig
+  hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
+  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   let redisCfg = appEnv ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appEnv ^. #bgtmPort

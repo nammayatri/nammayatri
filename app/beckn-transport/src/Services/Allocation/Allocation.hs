@@ -4,6 +4,7 @@ module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
@@ -270,12 +271,3 @@ isNotificationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> m 
 isNotificationTimeFinished ServiceHandle {..} expiryTime = do
   currentTime <- getCurrentTime
   pure $ currentTime > expiryTime
-
-logInfo :: MonadHandler m => Text -> m ()
-logInfo = logOutput INFO
-
-logWarning :: MonadHandler m => Text -> m ()
-logWarning = logOutput WARNING
-
-logError :: MonadHandler m => Text -> m ()
-logError = logOutput ERROR

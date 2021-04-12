@@ -17,6 +17,7 @@ import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import EulerHS.Prelude
 import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
@@ -29,6 +30,7 @@ import Network.Wai.Handler.Warp
     setOnOpen,
     setPort,
   )
+import System.Environment
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
 runGateway :: (AppCfg -> AppCfg) -> IO ()
@@ -42,7 +44,8 @@ runGateway configModifier = do
   activeConnections <- newTVarIO (0 :: Int)
   void $ installHandler sigTERM (Catch $ handleShutdown shutdown) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown shutdown) Nothing
-  let loggerRt = getEulerLoggerRuntime $ appCfg ^. #loggerConfig
+  hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
       settings =
         setOnExceptionResponse gatewayExceptionResponse $
           setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
