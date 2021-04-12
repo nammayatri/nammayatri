@@ -27,7 +27,7 @@ onUpdate _org req = withFlowHandler $ do
     Right msg -> do
       let trip = msg ^. #order . #_trip
           pid = Id $ msg ^. #order . #_id
-      orderPi <- MPI.findByParentIdType (Just pid) Case.RIDEORDER
+      orderPi <- MPI.findByParentIdType pid Case.RIDEORDER
       let mprdInfo = decodeFromText =<< (orderPi ^. #_info)
           uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
           uPrd =

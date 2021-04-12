@@ -75,7 +75,7 @@ getDriverPhone Driver.Driver {..} =
 -- | Returns phones pair or throws an error
 getProductAndCustomerPhones :: Id ProductInstance -> Flow (Text, Text)
 getProductAndCustomerPhones rideSearchPid = do
-  rideSearchPI <- ProductInstance.findByParentIdType (Just rideSearchPid) Case.RIDEORDER
+  rideSearchPI <- ProductInstance.findByParentIdType rideSearchPid Case.RIDEORDER
   person <- getPerson rideSearchPI
   driver <- getDriver rideSearchPI
   customerPhone <- getPersonPhone person

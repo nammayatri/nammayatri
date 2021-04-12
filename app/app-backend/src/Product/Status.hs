@@ -48,7 +48,7 @@ onStatus _org req = withFlowHandler $ do
   mkAckResponse txnId "status"
   where
     updateProductInstanceStatus prodInstId piStatus = do
-      orderPi <- QPI.findByParentIdType (Just prodInstId) Case.RIDEORDER
+      orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER
       QPI.updateStatus (orderPi ^. #_id) piStatus
       Notify.notifyOnStatusUpdate orderPi piStatus
       return ()

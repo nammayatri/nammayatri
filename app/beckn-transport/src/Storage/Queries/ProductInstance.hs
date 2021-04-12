@@ -195,7 +195,7 @@ findAllByProdId id = do
   where
     predicate Storage.ProductInstance {..} = _productId ==. B.val_ id
 
-findAllByStatusParentId :: [Storage.ProductInstanceStatus] -> Maybe (Id Storage.ProductInstance) -> Flow [Storage.ProductInstance]
+findAllByStatusParentId :: [Storage.ProductInstanceStatus] -> Id Storage.ProductInstance -> Flow [Storage.ProductInstance]
 findAllByStatusParentId status id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -203,8 +203,7 @@ findAllByStatusParentId status id = do
   where
     predicate Storage.ProductInstance {..} =
       _status `B.in_` (B.val_ <$> status)
-        &&. B.val_ (isJust id)
-        &&. _parentId ==. B.val_ id
+        &&. _parentId ==. B.val_ (Just id)
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l

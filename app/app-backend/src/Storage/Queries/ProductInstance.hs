@@ -172,21 +172,21 @@ updateMultiple id prdInst = do
           _udf4 <-. B.val_ (Storage._udf4 prodInst)
         ]
 
-findByParentIdType :: Maybe (Id Storage.ProductInstance) -> Case.CaseType -> Flow (T.DBResult (Maybe Storage.ProductInstance))
+findByParentIdType :: Id Storage.ProductInstance -> Case.CaseType -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findByParentIdType mparentId csType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
-      B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
+      _parentId ==. B.val_ (Just mparentId)
         &&. _type ==. B.val_ csType
 
-findAllByParentId :: Maybe (Id Storage.ProductInstance) -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByParentId :: Id Storage.ProductInstance -> Flow (T.DBResult [Storage.ProductInstance])
 findAllByParentId id = do
   dbTable <- getDbTable
   DB.findAll dbTable (predicate id)
   where
-    predicate piid Storage.ProductInstance {..} = B.val_ (isJust id) &&. _parentId ==. B.val_ piid
+    predicate piid Storage.ProductInstance {..} = _parentId ==. B.val_ (Just piid)
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l

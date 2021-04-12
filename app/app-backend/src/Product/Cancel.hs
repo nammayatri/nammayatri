@@ -35,7 +35,7 @@ cancelProductInstance person req = do
   let prodInstId = req ^. #message . #entityId
   searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
   cs <- MC.findIdByPerson person (searchPI ^. #_caseId)
-  orderPI <- MPI.findByParentIdType (Just $ searchPI ^. #_id) Case.RIDEORDER
+  orderPI <- MPI.findByParentIdType (searchPI ^. #_id) Case.RIDEORDER
   if isProductInstanceCancellable orderPI
     then sendCancelReq searchPI cs
     else errResp (show (orderPI ^. #_status)) cs
@@ -95,7 +95,7 @@ onCancel _org req = withFlowHandler $ do
       let prodInstId = Id $ msg ^. #id
       -- TODO: Handle usecase where multiple productinstances exists for one product
 
-      piList <- MPI.findAllByParentId (Just prodInstId)
+      piList <- MPI.findAllByParentId prodInstId
       case piList of
         [] -> return ()
         s : _ -> do

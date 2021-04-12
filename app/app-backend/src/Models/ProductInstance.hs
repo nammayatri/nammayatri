@@ -101,12 +101,12 @@ listAllProductInstanceByPerson person piid status = do
   result <- Q.listAllProductInstanceByPerson person piid status
   checkDBError result
 
-findAllByParentId :: Maybe (Id ProductInstance) -> Flow [ProductInstance]
+findAllByParentId :: Id ProductInstance -> Flow [ProductInstance]
 findAllByParentId piid = do
   result <- Q.findAllByParentId piid
   checkDBError result
 
-findByParentIdType :: Maybe (Id ProductInstance) -> Case.CaseType -> Flow ProductInstance
+findByParentIdType :: Id ProductInstance -> Case.CaseType -> Flow ProductInstance
 findByParentIdType mparentId csType = do
   result <- Q.findByParentIdType mparentId csType
   checkDBErrorOrEmpty result PINotFound
