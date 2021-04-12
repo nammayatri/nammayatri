@@ -214,8 +214,7 @@ validateRequest ride req requestor = do
       inAppOtpCode <- ride ^. #_udf4 & fromMaybeM PIOTPNotPresent
       tripOtpCode <- req ^. #_otpCode & fromMaybeMWithInfo InvalidRequest "You should pass OTP."
       unless (inAppOtpCode == tripOtpCode) $ throwError IncorrectOTP
-    (PI.INPROGRESS, PI.COMPLETED, SP.DRIVER) ->
-      DSQ.updateIdleTimeFlow . cast $ requestor ^. #_id
+    (PI.INPROGRESS, PI.COMPLETED, SP.DRIVER) -> ok
     (PI.INPROGRESS, PI.COMPLETED, SP.ADMIN) -> ok
     (oldStatus', newStatus', who) -> do
       logError "Invalid update operation" . T.pack $
@@ -262,8 +261,9 @@ updateTrip searchPiId newStatus requestedByDriver = do
       CQ.updateStatus (Case._id orderCase_) Case.COMPLETED
       orderPi <- PIQ.findByIdType (PI._id <$> piList) Case.RIDEORDER
       updateOnRide (cast <$> PI._personId orderPi) False
-      whenJust (orderPi ^. #_personId) (DSQ.updateIdleTimeFlow . cast)
-      return ()
+      when requestedByDriver $
+        orderPi ^. #_personId & fromMaybeM PIPersonNotPresent
+          >>= DSQ.updateIdleTimeFlow . cast
     _ -> return ()
   where
     updateOnRide Nothing _ = pure ()
