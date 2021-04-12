@@ -71,8 +71,6 @@ confirm transporterId bapOrg req = withFlowHandler $ do
     QCase.updateStatus (searchCase ^. #_id) newSearchCaseStatus
     QProductInstance.updateStatus (productInstance ^. #_id) newProductInstanceStatus
     QCase.create trackerCase
-    -- TODO: figure out what the next comment means:
-    -- TODO: need to update other product status to VOID for this case
     QProductInstance.create trackerProductInstance
 
   fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
