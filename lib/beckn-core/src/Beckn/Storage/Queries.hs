@@ -56,11 +56,13 @@ runSqlDB' ::
   SqlDB a ->
   DB.FlowWithDb r (T.DBResult a)
 runSqlDB' runSqlDBFunction query = do
-  connection <- DB.getOrInitConn
-  schemaName <- getSchemaName
-  currentTime <- getCurrentTime
-  let env = DBEnv {..}
-  runSqlDBFunction connection (runReaderT query env)
+  DB.getOrInitConn >>= \case
+    Left e -> throwErrorWithInfo DBUnknownError $ show e
+    Right connection -> do
+      schemaName <- getSchemaName
+      currentTime <- getCurrentTime
+      let env = DBEnv {..}
+      runSqlDBFunction connection (runReaderT query env)
 
 runSqlDB ::
   (HasCallStack, T.JSONEx a) =>
@@ -76,8 +78,9 @@ runSqlDBTransaction = runSqlDB' L.runTransaction >=> either throwDBError pure
 
 run :: (HasCallStack, T.JSONEx a) => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
 run query = do
-  connection <- DB.getOrInitConn
-  L.runDB connection query
+  DB.getOrInitConn >>= \case
+    Left e -> throwErrorWithInfo DBUnknownError $ show e
+    Right connection -> L.runDB connection query
 
 findOneWithErr ::
   ( HasCallStack,

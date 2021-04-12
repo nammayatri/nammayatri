@@ -36,12 +36,14 @@ instance HasDbCfg r => HasSchemaName (FlowR r) where
 
 handleIt ::
   (T.DBConfig Pg -> FlowR r (T.DBResult (T.SqlConn Pg))) ->
-  FlowWithDb r (T.SqlConn Pg)
-handleIt mf = ask >>= mf . repack . getField @"dbCfg" >>= either (error . show) pure
+  FlowWithDb r (T.DBResult (T.SqlConn Pg))
+handleIt mf = do
+  env <- ask
+  mf . repack $ getField @"dbCfg" env
   where
     repack (DBConfig x y z _) = T.mkPostgresPoolConfig x y z
 
-prepareDBConnections, getOrInitConn :: FlowWithDb r (T.SqlConn Pg)
+prepareDBConnections, getOrInitConn :: FlowWithDb r (T.DBResult (T.SqlConn Pg))
 prepareDBConnections = handleIt L.initSqlDBConnection
 getOrInitConn = handleIt L.getOrInitSqlConn
 

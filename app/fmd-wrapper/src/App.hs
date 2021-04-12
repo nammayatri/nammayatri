@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module App
   ( runFMDWrapper,
@@ -17,6 +16,7 @@ import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai (Response)
@@ -27,6 +27,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment
+import System.Exit (ExitCode (..))
 
 runFMDWrapper :: (AppEnv -> AppEnv) -> IO ()
 runFMDWrapper configModifier = do
@@ -37,18 +38,28 @@ runFMDWrapper configModifier = do
         setOnExceptionResponse fmdWrapperExceptionResponse $
           setPort (port appEnv) defaultSettings
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    putStrLn @String "Initializing Redis Connections..."
-    let shortOrgId = appEnv ^. #selfId
-    case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
-      Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
-      Right getManager -> do
-        authManager <- getManager
-        let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-        try (runFlowR flowRt' appEnv $ prepareRedisConnections $ redisCfg appEnv) >>= \case
-          Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-          Right _ -> do
-            _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-            runSettings settings $ run $ App.EnvR flowRt' appEnv
+    flowRt' <- runFlowR flowRt appEnv $ do
+      withLogContext "Server startup" $ do
+        let shortOrgId = appEnv ^. #selfId
+        case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
+          Left err -> do
+            logError ("Could not prepare authentication manager: " <> show err)
+            L.runIO . exitWith $ ExitFailure 1
+          Right getManager -> do
+            authManager <- L.runIO getManager
+            try (prepareRedisConnections $ redisCfg appEnv) >>= \case
+              Left (e :: SomeException) -> do
+                logError ("Exception thrown: " <> show e)
+                L.runIO . exitWith $ ExitFailure 2
+              Right _ -> do
+                migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
+                  Left e -> do
+                    logError ("Couldn't migrate database: " <> show e)
+                    L.runIO $ exitWith (ExitFailure 3)
+                  Right _ -> do
+                    logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+                    return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+    runSettings settings $ run $ App.EnvR flowRt' appEnv
 
 fmdWrapperExceptionResponse :: SomeException -> Response
 fmdWrapperExceptionResponse = exceptionResponse

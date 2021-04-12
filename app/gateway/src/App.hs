@@ -7,6 +7,7 @@ where
 
 import App.Server
 import App.Types
+import Beckn.Storage.DB.Config (prepareDBConnections)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
@@ -18,6 +19,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
@@ -59,22 +61,37 @@ runGateway configModifier = do
   threadId <- forkIO $
     E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
       let appEnv = mkAppEnv appCfg cache
-      let shortOrgId = appEnv ^. #gwId
-      case prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId of
-        Left err -> do
-          putStrLn @String ("Could not prepare authentication manager: " <> show err)
-          handleShutdown shutdown
-        Right getManager -> do
-          authManager <- getManager
-          let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-          putStrLn @String "Initializing Redis Connections..."
-          try (runFlowR flowRt' appCfg $ prepareRedisConnections redisCfg) >>= \case
-            Left (e :: SomeException) -> do
-              putStrLn @String ("Exception thrown: " <> show e)
-              handleShutdown shutdown
-            Right _ -> do
-              void $ migrateIfNeeded migrationPath dbCfg autoMigrate
-              runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
+      mbFlowRt' <- runFlowR flowRt appEnv $ do
+        withLogContext "Server startup" $ do
+          let shortOrgId = appEnv ^. #gwId
+          case prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId of
+            Left err -> do
+              logError ("Could not prepare authentication manager: " <> show err)
+              return Nothing
+            Right getManager -> do
+              authManager <- L.runIO getManager
+              logInfo "Initializing Redis Connections..."
+              try (prepareRedisConnections redisCfg) >>= \case
+                Left (e :: SomeException) -> do
+                  logError ("Exception thrown: " <> show e)
+                  return Nothing
+                Right _ ->
+                  prepareDBConnections >>= \case
+                    Left e -> do
+                      logError ("Exception thrown: " <> show e)
+                      return Nothing
+                    Right _ -> do
+                      migrateIfNeeded migrationPath dbCfg autoMigrate >>= \case
+                        Left e -> do
+                          logError ("Couldn't migrate database: " <> show e)
+                          return Nothing
+                        Right _ -> do
+                          logInfo ("Runtime created. Starting server at port " <> show port)
+                          return . Just $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+      case mbFlowRt' of
+        Nothing -> handleShutdown shutdown
+        Just flowRt' -> runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
+
   -- Wait for shutdown
   atomically $ readTMVar shutdown
   -- Wait to drain all connections
@@ -85,7 +102,7 @@ runGateway configModifier = do
   exitSuccess
   where
     handleShutdown :: TMVar () -> IO ()
-    handleShutdown shutdown = liftIO . atomically $ putTMVar shutdown ()
+    handleShutdown shutdown = atomically $ putTMVar shutdown ()
 
     waitForDrain :: TVar Int -> Int -> IO ()
     waitForDrain activeConnections ms = do

@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module App where
 
@@ -16,6 +15,7 @@ import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai
@@ -27,6 +27,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment
+import System.Exit (ExitCode (..))
 
 runAppBackend :: (AppEnv -> AppEnv) -> IO ()
 runAppBackend configModifier = do
@@ -41,21 +42,30 @@ runAppBackend' appEnv settings = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    putStrLn @String "Setting up for signature auth..."
-    let shortOrgId = appEnv ^. #bapSelfId
-    case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
-      Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
-      Right getManager -> do
-        authManager <- getManager
-        let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-        putStrLn @String "Initializing DB Connections..."
-        let prepare = prepareDBConnections
-        try (runFlowR flowRt' appEnv prepare) >>= \case
-          Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-          Right _ -> do
-            putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
-            _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-            runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+    flowRt' <- runFlowR flowRt appEnv $ do
+      withLogContext "Server startup" $ do
+        logInfo "Setting up for signature auth..."
+        let shortOrgId = appEnv ^. #bapSelfId
+        case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
+          Left err -> do
+            logError ("Could not prepare authentication manager: " <> show err)
+            L.runIO $ exitWith (ExitFailure 1)
+          Right getManager -> do
+            authManager <- L.runIO getManager
+            logInfo "Initializing DB Connections..."
+            prepareDBConnections >>= \case
+              Left e -> do
+                logError ("Exception thrown: " <> show e)
+                L.runIO $ exitWith (ExitFailure 2)
+              Right _ -> do
+                migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
+                  Left e -> do
+                    logError ("Couldn't migrate database: " <> show e)
+                    L.runIO $ exitWith (ExitFailure 3)
+                  Right _ -> do
+                    logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+                    return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+    runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 
 appExceptionResponse :: SomeException -> Response
 appExceptionResponse = exceptionResponse

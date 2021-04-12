@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module App
   ( runMockProvider,
@@ -17,6 +16,7 @@ import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
@@ -28,6 +28,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment
+import System.Exit (ExitCode (..))
 
 runMockProvider :: (AppEnv -> AppEnv) -> IO ()
 runMockProvider configModifier = do
@@ -39,14 +40,24 @@ runMockProvider configModifier = do
         setOnExceptionResponse mockProviderExceptionResponse $
           setPort (port appEnv) defaultSettings
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-    let selfId = appEnv ^. #selfId
-    case prepareAuthManager flowRt appEnv "Authorization" selfId of
-      Left err -> putStrLn @String ("Could not prepare authentication manager: " <> show err)
-      Right getManager -> do
-        authManager <- getManager
-        let flowRt' = flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-        runSettings settings $ run $ App.EnvR flowRt' appEnv
+    flowRt' <- runFlowR flowRt appEnv $ do
+      withLogContext "Server startup" $ do
+        logInfo "Setting up for signature auth..."
+        let selfId = appEnv ^. #selfId
+        case prepareAuthManager flowRt appEnv "Authorization" selfId of
+          Left err -> do
+            logError ("Could not prepare authentication manager: " <> show err)
+            L.runIO . exitWith $ ExitFailure 1
+          Right getManager -> do
+            authManager <- L.runIO getManager
+            logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+            migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
+              Left e -> do
+                logError ("Couldn't migrate database: " <> show e)
+                L.runIO $ exitWith (ExitFailure 3)
+              Right _ -> do
+                return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+    runSettings settings $ run $ App.EnvR flowRt' appEnv
 
 mockProviderExceptionResponse :: SomeException -> Response
 mockProviderExceptionResponse = exceptionResponse

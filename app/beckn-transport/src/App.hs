@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module App where
 
@@ -16,6 +15,7 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai
@@ -28,6 +28,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
+import System.Exit (ExitCode (..))
 
 runTransporterBackendApp :: (AppEnv -> AppEnv) -> IO ()
 runTransporterBackendApp configModifier = do
@@ -42,25 +43,36 @@ runTransporterBackendApp' appEnv settings = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    putStrLn @String "Setting up for signature auth..."
-    try (runFlowR flowRt appEnv Storage.loadAllProviders) >>= \case
-      Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-      Right allProviders -> do
-        let allShortIds = map (getShortId . Organization._shortId) allProviders
-        case prepareAuthManagers flowRt appEnv allShortIds of
-          Left err -> putStrLn @String ("Could not prepare authentication managers: " <> show err)
-          Right getManagers -> do
-            managerMap <- getManagers
-            putStrLn @Text $ "Loaded http managers - " <> show (keys managerMap)
-            let flowRt' = flowRt {R._httpClientManagers = managerMap}
-            putStrLn @String "Initializing Redis Connections..."
-            try (runFlowR flowRt appEnv $ prepareRedisConnections $ redisCfg appEnv) >>= \case
-              Left (e :: SomeException) -> putStrLn @String ("Exception thrown: " <> show e)
-              Right _ -> do
-                putStrLn @String "Initializing Options..."
-                putStrLn @String ("Runtime created. Starting server at port " <> show (port appEnv))
-                _ <- migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
-                runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+    flowRt' <- runFlowR flowRt appEnv $ do
+      withLogContext "Server startup" $ do
+        logInfo "Setting up for signature auth..."
+        try Storage.loadAllProviders >>= \case
+          Left (e :: SomeException) -> do
+            logError ("Exception thrown: " <> show e)
+            L.runIO . exitWith $ ExitFailure 1
+          Right allProviders -> do
+            let allShortIds = map (getShortId . Organization._shortId) allProviders
+            case prepareAuthManagers flowRt appEnv allShortIds of
+              Left err -> do
+                logError ("Could not prepare authentication managers: " <> show err)
+                L.runIO . exitWith $ ExitFailure 2
+              Right getManagers -> do
+                managerMap <- L.runIO getManagers
+                logInfo $ "Loaded http managers - " <> show (keys managerMap)
+                logInfo "Initializing Redis Connections..."
+                try (prepareRedisConnections $ redisCfg appEnv) >>= \case
+                  Left (e :: SomeException) -> do
+                    logError ("Exception thrown: " <> show e)
+                    L.runIO . exitWith $ ExitFailure 3
+                  Right _ -> do
+                    migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
+                      Left e -> do
+                        logError ("Couldn't migrate database: " <> show e)
+                        L.runIO $ exitWith (ExitFailure 4)
+                      Right _ -> do
+                        logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+                        return $ flowRt {R._httpClientManagers = managerMap}
+    runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 
 transporterExceptionResponse :: SomeException -> Response
 transporterExceptionResponse = exceptionResponse
