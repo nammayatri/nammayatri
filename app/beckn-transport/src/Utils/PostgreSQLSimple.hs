@@ -38,7 +38,7 @@ withPostgreSQLSimple :: (FromJSON a, ToJSON a) => (Connection -> IO a) -> Flow a
 withPostgreSQLSimple f = do
   DBConfig {..} <- asks dbCfg
   pool <-
-    L.getSqlDBConnection (mkPostgresPoolConfig connTag pgConfig poolConfig)
+    L.getOrInitSqlConn (mkPostgresPoolConfig connTag pgConfig poolConfig)
       >>= either throwDBError pure
       >>= \case
         PostgresPool _connTag pool -> pure pool

@@ -7,6 +7,7 @@ import qualified Mobility.AppRateRide as RateRide
 import qualified Mobility.DriverCancelRide as DCR
 import qualified Mobility.DriversIgnoreRide as DIR
 import qualified Mobility.HealthCheck as HC
+import qualified Mobility.NearestDrivers as ND
 import qualified Mobility.Serviceability as SRV
 import qualified Mobility.SuccessFlow as SF
 import Test.Tasty
@@ -21,6 +22,7 @@ mkTestTree = do
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   srvSpec <- testSpec "Serviceability" SRV.spec
+  ndSpec <- testSpec "NearestDriver" ND.spec
   feedbackSpec <- testSpec "RateRide" RateRide.spec
   return $
     testGroup
@@ -29,7 +31,8 @@ mkTestTree = do
         after AllSucceed "HealthCheck" $
           testGroup
             "APIs"
-            [ clSpec,
+            [ ndSpec,
+              clSpec,
               sfSpec,
               dirSpec,
               feedbackSpec,

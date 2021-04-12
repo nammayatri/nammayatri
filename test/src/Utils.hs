@@ -1,6 +1,10 @@
 module Utils where
 
+import qualified "beckn-transport" App.Types as BecknTransport
+import Beckn.Utils.Common
+import Beckn.Utils.Dhall (readDhallConfig)
 import EulerHS.Prelude
+import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as T
 import Servant.Client
 
@@ -42,3 +46,9 @@ getLoggerCfg t =
       T._logFilePath = "/tmp/log-" <> t,
       T._isAsync = False
     }
+
+runTransportFlow :: BecknTransport.Flow a -> IO a
+runTransportFlow flow = do
+  (appEnv :: BecknTransport.AppEnv) <- readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
+  R.withFlowRuntime Nothing $ \flowRt -> do
+    runFlowR flowRt appEnv flow
