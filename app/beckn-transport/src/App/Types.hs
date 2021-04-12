@@ -21,6 +21,8 @@ data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     redisCfg :: T.RedisConfig,
     smsCfg :: SmsConfig,
+    otpSmsTemplate :: Text,
+    inviteSmsTemplate :: Text,
     port :: Int,
     bgtmPort :: Int,
     metricsPort :: Int,

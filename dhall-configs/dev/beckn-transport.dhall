@@ -34,6 +34,7 @@ let smsConfig =
     , otpHash = sec.smsOtpHash
     }
   , useFakeSms = Some 7891
+  , url = "https://http.myvfirst.com"
   }
 
 let appUri = "http://localhost:8013/v1"
@@ -54,6 +55,8 @@ in
 { dbCfg = pgcfg
 , redisCfg = rcfg
 , smsCfg = smsConfig
+, otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
+, inviteSmsTemplate = "Welcome to the Beckn Mobility network! Your agency ({#org#}) has added you as a driver. Start your rides by installing the app: https://jspy.in/rr/F4n7dy"
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9997

@@ -46,7 +46,8 @@ initiateFlow req smsCfg = do
     Nothing -> do
       token <- makeSession scfg req entityId SR.USER Nothing
       QR.create token
-      sendOTP (credConfig smsCfg) (countryCode <> mobileNumber) (SR._authValueHash token)
+      otpSmsTemplate <- otpSmsTemplate <$> ask
+      sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -111,18 +112,21 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
         _info = Nothing
       }
 
-sendOTP :: SmsCredConfig -> Text -> Text -> Flow ()
-sendOTP SmsCredConfig {..} phoneNumber otpCode = do
+sendOTP :: SmsConfig -> Text -> Text -> Text -> Flow ()
+sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
+  let smsCred = smsCfg ^. #credConfig
+  let url = smsCfg ^. #url
+  let otpHash = smsCred ^. #otpHash
+  let
   res <-
     SF.submitSms
-      SF.defaultBaseUrl
+      url
       SMS.SubmitSms
-        { SMS._username = username,
-          SMS._password = password,
+        { SMS._username = smsCred ^. #username,
+          SMS._password = smsCred ^. #password,
           SMS._from = SMS.JUSPAY,
           SMS._to = phoneNumber,
-          SMS._category = SMS.BULK,
-          SMS._text = SF.constructOtpSms otpCode otpHash
+          SMS._text = SF.constructOtpSms otpCode otpHash otpSmsTemplate
         }
   whenLeft res $ \err -> throwErrorWithInfo UnableToSendSMS err
 
@@ -173,10 +177,11 @@ reInitiateLogin tokenId req =
     void $ checkPersonExists _EntityId
     if _attempts > 0
       then do
-        credCfg <- credConfig . smsCfg <$> ask
+        smsCfg <- smsCfg <$> ask
+        otpSmsTemplate <- otpSmsTemplate <$> ask
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
-        sendOTP credCfg (countryCode <> mobileNumber) _authValueHash
+        sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
         _ <- QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else throwErrorWithInfo AuthBlocked "Limit exceeded."

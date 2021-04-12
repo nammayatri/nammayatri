@@ -78,8 +78,9 @@ createPerson orgId req = withFlowHandler $ do
   org <- OQ.findOrganizationById (Id orgId)
   case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
-      credCfg <- credConfig . smsCfg <$> ask
-      sendInviteSms credCfg (countryCode <> mobileNumber) (org ^. #_name)
+      smsCfg <- smsCfg <$> ask
+      inviteSmsTemplate <- inviteSmsTemplate <$> ask
+      sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org ^. #_name)
       return $ UpdatePersonRes person
     _ -> return $ UpdatePersonRes person
   where
@@ -224,18 +225,19 @@ mkPersonRes person = do
         _linkedEntity = entity
       }
 
-sendInviteSms :: SmsCredConfig -> Text -> Text -> Flow ()
-sendInviteSms SmsCredConfig {..} phoneNumber orgName = do
+sendInviteSms :: SmsConfig -> Text -> Text -> Text -> Flow ()
+sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
+  let url = smsCfg ^. #url
+  let smsCred = smsCfg ^. #credConfig
   res <-
     SF.submitSms
-      SF.defaultBaseUrl
+      url
       SMS.SubmitSms
-        { SMS._username = username,
-          SMS._password = password,
+        { SMS._username = smsCred ^. #username,
+          SMS._password = smsCred ^. #password,
           SMS._from = SMS.JUSPAY,
           SMS._to = phoneNumber,
-          SMS._category = SMS.BULK,
-          SMS._text = SF.constructInviteSms orgName
+          SMS._text = SF.constructInviteSms orgName inviteTemplate
         }
   whenLeft res $ \_err -> return () -- ignore error silently
 

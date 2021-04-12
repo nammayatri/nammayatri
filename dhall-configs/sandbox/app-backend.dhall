@@ -26,6 +26,7 @@ let smsConfig =
     , otpHash = sec.smsOtpHash
     }
   , useFakeSms = None Natural
+  , url = "https://http.myvfirst.com"
   }
 
 let sesConfig =
@@ -51,6 +52,7 @@ in
 
 { dbCfg = pgcfg
 , smsCfg = smsConfig
+, otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , sesCfg = sesConfig
 , port = +8013
 , metricsPort = +9999

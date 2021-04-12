@@ -12,12 +12,8 @@ data SubmitSms = SubmitSms
     -- | Phone number.
     _to :: Text,
     -- | SMS contents.
-    _text :: Text,
-    -- | Set to bulk for DLT
-    _category :: SmsCategory
+    _text :: Text
   }
   deriving (Show)
-
-data SmsCategory = BULK deriving (Show, Eq)
 
 data SmsSender = JUSPAY deriving (Show, Eq)

@@ -16,6 +16,7 @@ import Types.Geofencing
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     smsCfg :: SmsConfig,
+    otpSmsTemplate :: Text,
     sesCfg :: SesConfig,
     port :: Int,
     metricsPort :: Int,

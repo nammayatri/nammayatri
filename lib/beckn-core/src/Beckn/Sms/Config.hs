@@ -2,6 +2,7 @@ module Beckn.Sms.Config where
 
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
+import Servant.Client (BaseUrl)
 
 data SmsSessionConfig = SmsSessionConfig
   { attempts :: Int,
@@ -20,6 +21,7 @@ data SmsCredConfig = SmsCredConfig
 data SmsConfig = SmsConfig
   { sessionConfig :: SmsSessionConfig,
     credConfig :: SmsCredConfig,
-    useFakeSms :: Maybe Word16 -- 4 digit
+    useFakeSms :: Maybe Word16, -- 4 digit
+    url :: BaseUrl
   }
   deriving (Generic, FromDhall)
