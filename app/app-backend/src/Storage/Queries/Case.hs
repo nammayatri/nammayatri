@@ -122,11 +122,14 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
             <> maybe [] (\to -> [_createdAt B.<=. B.val_ to]) maybeTo
         )
 
-updateValidTill :: Id Storage.Case -> UTCTime -> Flow (T.DBResult ())
+updateValidTillFlow :: Id Storage.Case -> UTCTime -> Flow (T.DBResult ())
+updateValidTillFlow id validTill = DB.runSqlDB (updateValidTill id validTill)
+
+updateValidTill :: Id Storage.Case -> UTCTime -> DB.SqlDB ()
 updateValidTill id validTill = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
+  (currTime :: UTCTime) <- asks DB.currentTime
+  DB.update'
     dbTable
     (setClause validTill currTime)
     (predicate id)
@@ -207,15 +210,19 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-updateInfo :: Id Storage.Case -> Text -> Flow (T.DBResult ())
+updateInfoFlow :: Id Storage.Case -> Text -> Flow (T.DBResult ())
+updateInfoFlow caseId csInfo = do
+  DB.runSqlDB (updateInfo caseId csInfo)
+
+updateInfo :: Id Storage.Case -> Text -> DB.SqlDB ()
 updateInfo caseId csInfo = do
   dbTable <- getDbTable
-  currTime <- getCurrentTime
-  DB.update dbTable (setClause csInfo currTime) (predicate caseId)
+  currTime <- asks DB.currentTime
+  DB.update' dbTable (setClause csInfo currTime) (predicate caseId)
   where
-    setClause cInfo currTime Storage.Case {..} =
+    setClause cInfo currTime' Storage.Case {..} =
       mconcat
         [ _info <-. B.val_ (Just cInfo),
-          _updatedAt <-. B.val_ currTime
+          _updatedAt <-. B.val_ currTime'
         ]
     predicate pcaseId Storage.Case {..} = _id ==. B.val_ pcaseId

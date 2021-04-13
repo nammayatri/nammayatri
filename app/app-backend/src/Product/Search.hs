@@ -4,6 +4,7 @@ module Product.Search where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
@@ -31,11 +32,13 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
-import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
 import Product.Serviceability
+import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Organization as Org
+import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Products as QProducts
 import qualified Types.API.Case as API
 import qualified Types.API.Common as API
 import qualified Types.API.Search as API
@@ -52,13 +55,14 @@ search person req = withFlowHandler $ do
   validateServiceability req
   fromLocation <- mkLocation $ toBeckn $ req ^. #origin
   toLocation <- mkLocation $ toBeckn $ req ^. #destination
-  Location.create fromLocation
-  Location.create toLocation
   case_ <- mkCase req (getId $ person ^. #_id) fromLocation toLocation
-  Case.create case_
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   now <- L.runIO getCurrentTime
   msgId <- L.generateGUID
+  DB.runSqlDBTransaction $ do
+    Location.create fromLocation
+    Location.create toLocation
+    QCase.create case_
   env <- ask
   let bapNwAddr = env ^. #bapNwAddress
       context = mkContext "search" (getId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
@@ -111,39 +115,38 @@ searchCbService req catalog = do
         (throwError CaseRequestorNotPresent)
         (return . Id)
         (Case._requestor case_)
-    case (catalog ^. #_categories, catalog ^. #_items) of
+    transaction <- case (catalog ^. #_categories, catalog ^. #_items) of
       ([], _) -> throwErrorWithInfo InvalidRequest "Missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
         declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
-        MPI.create declinedPI
-        return ()
+        return $ QPI.create declinedPI
       (category : _, items) -> do
         when
           (case_ ^. #_status == Case.CLOSED)
           (throwError CaseExpired)
         let provider = fromBeckn category
         products <- traverse (mkProduct case_) items
-        traverse_ Products.create products
         productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
-        traverse_ MPI.create productInstances
-        extendCaseExpiry case_
+        currTime <- getCurrentTime
+        confirmExpiry <- fromMaybe 1800 . searchConfirmExpiry <$> ask
+        let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
+        return $ do
+          traverse_ QProducts.create products
+          traverse_ QPI.create productInstances
+          when (case_ ^. #_validTill < newValidTill) $ QCase.updateValidTill (case_ ^. #_id) newValidTill
     piList <- MPI.findAllByCaseId (case_ ^. #_id)
     let piStatusCount = Map.fromListWith (+) $ zip (PI._status <$> piList) $ repeat (1 :: Integer)
         accepted = Map.lookup PI.INSTOCK piStatusCount
         declined = Map.lookup PI.OUTOFSTOCK piStatusCount
         mCaseInfo :: (Maybe API.CaseInfo) = decodeFromText =<< (case_ ^. #_info)
-    whenJust mCaseInfo $ \info -> do
-      let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
-      Case.updateInfo (case_ ^. #_id) (encodeToText uInfo)
+
+    DB.runSqlDBTransaction $ do
+      transaction
+      whenJust mCaseInfo $ \info -> do
+        let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
+        QCase.updateInfo (case_ ^. #_id) (encodeToText uInfo)
   return $ AckResponse (req ^. #context) (ack "ACK") Nothing
-  where
-    extendCaseExpiry :: Case.Case -> Flow ()
-    extendCaseExpiry Case.Case {..} = do
-      now <- getCurrentTime
-      confirmExpiry <- fromMaybe 1800 . searchConfirmExpiry <$> ask
-      let newValidTill = fromInteger confirmExpiry `addUTCTime` now
-      when (_validTill < newValidTill) $ Case.updateValidTill _id newValidTill
 
 mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do

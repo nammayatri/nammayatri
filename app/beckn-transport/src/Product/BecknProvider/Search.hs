@@ -3,6 +3,7 @@
 module Product.BecknProvider.Search (search) where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as Callback
@@ -27,12 +28,12 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified External.Gateway.Transform as GT
-import qualified Models.Case as Case
 import qualified Models.ProductInstance as MPI
 import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
 import qualified Product.Location as Location
 import qualified Product.Person as Person
+import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Loc
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
@@ -55,12 +56,13 @@ search transporterId bapOrg req = withFlowHandler $ do
     validity <- getValidTime now startTime
     fromLocation <- mkFromStop now pickup
     toLocation <- mkFromStop now dropOff
-    Loc.create fromLocation
-    Loc.create toLocation
     let bapOrgId = bapOrg ^. #_id
     deadDistance <- calculateDeadDistance transporter fromLocation
     let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
-    Case.create productCase
+    DB.runSqlDBTransaction $ do
+      Loc.create fromLocation
+      Loc.create toLocation
+      QCase.create productCase
     fork "OnSearchCallback" $ onSearchCallback productCase transporter fromLocation toLocation
   mkAckResponse uuid "search"
 
@@ -161,10 +163,12 @@ onSearchCallback productCase transporter fromLocation toLocation = do
             then ProductInstance.OUTOFSTOCK
             else ProductInstance.INSTOCK
     price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
-    prodInst <- createProductInstance productCase price piStatus transporterId
+    prodInst <- mkProductInstance productCase price piStatus transporterId
     let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
         caseStatus _ = Case.CLOSED
-    Case.updateStatus (productCase ^. #_id) (caseStatus $ prodInst ^. #_status)
+    DB.runSqlDBTransaction $ do
+      ProductInstance.create prodInst
+      QCase.updateStatus (productCase ^. #_id) (caseStatus $ prodInst ^. #_status)
     pure prodInst
   case result of
     Right prodInst -> do
@@ -176,8 +180,8 @@ onSearchCallback productCase transporter fromLocation toLocation = do
       logTagError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
-createProductInstance :: Case.Case -> Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
-createProductInstance productCase price status transporterId = do
+mkProductInstance :: Case.Case -> Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
+mkProductInstance productCase price status transporterId = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -212,7 +216,6 @@ createProductInstance productCase price status transporterId = do
             _createdAt = now,
             _updatedAt = now
           }
-  ProductInstance.createFlow productInstance
   pure productInstance
 
 sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow Ack.AckResponse

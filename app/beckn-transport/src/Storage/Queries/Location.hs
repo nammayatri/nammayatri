@@ -20,15 +20,19 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import Utils.PostgreSQLSimple (postgreSQLSimpleExecute)
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
 getDbTable =
   DB._location . DB.transporterDb <$> getSchemaName
 
-create :: Storage.Location -> Flow ()
-create Storage.Location {..} = do
+createFlow :: Storage.Location -> Flow ()
+createFlow =
+  DB.runSqlDB . create
+    >=> either throwDBError pure
+
+create :: Storage.Location -> DB.SqlDB ()
+create location = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
-    >>= either throwDBError pure
+  lift $ DB.createOne' dbTable (Storage.insertExpression location)
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)

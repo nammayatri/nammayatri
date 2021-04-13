@@ -16,7 +16,7 @@ import Types.Error
 
 create :: Products -> Flow ()
 create product = do
-  result <- Q.create product
+  result <- Q.createFlow product
   checkDBError result
 
 -- | Find Product by id

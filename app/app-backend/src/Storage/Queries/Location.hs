@@ -12,15 +12,19 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT))
 getDbTable =
   DB._location . DB.appDb <$> getSchemaName
 
-create :: Storage.Location -> Flow ()
+createFlow :: Storage.Location -> Flow ()
+createFlow = do
+  DB.runSqlDB . create
+    >=> either throwDBError pure
+
+create :: Storage.Location -> DB.SqlDB ()
 create Storage.Location {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Location {..})
-    >>= either throwDBError pure
+  lift $ DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)

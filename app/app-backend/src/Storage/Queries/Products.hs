@@ -12,14 +12,18 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductsT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductsT))
 getDbTable =
   DB._products . DB.appDb <$> getSchemaName
 
-create :: Storage.Products -> Flow (T.DBResult ())
+createFlow :: Storage.Products -> Flow (T.DBResult ())
+createFlow =
+  DB.runSqlDB . create
+
+create :: Storage.Products -> DB.SqlDB ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
+  lift $ DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
 
 findById :: Id Storage.Products -> Flow (T.DBResult (Maybe Storage.Products))
 findById pid = do

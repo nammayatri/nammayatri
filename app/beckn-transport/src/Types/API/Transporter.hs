@@ -47,7 +47,7 @@ instance CreateTransform TransporterReq SO.Organization Flow where
     let shortId = ShortId $ getId oid
     now <- getCurrentTime
     location <- transformToLocation req
-    QL.create location
+    QL.createFlow location
     return $
       SO.Organization
         { SO._id = oid,

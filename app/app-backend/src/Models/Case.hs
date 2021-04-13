@@ -80,7 +80,7 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
 -- | Update Case validity date
 updateValidTill :: Id Case -> UTCTime -> Flow ()
 updateValidTill cid validTill = do
-  result <- Q.updateValidTill cid validTill
+  result <- Q.updateValidTillFlow cid validTill
   checkDBError result
 
 -- | Validate and update Case status
@@ -129,5 +129,5 @@ validateStatusChange newStatus caseId = do
 
 updateInfo :: Id Case -> Text -> Flow ()
 updateInfo cId info = do
-  result <- Q.updateInfo cId info
+  result <- Q.updateInfoFlow cId info
   checkDBError result

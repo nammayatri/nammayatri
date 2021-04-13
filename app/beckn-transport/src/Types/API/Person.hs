@@ -89,7 +89,7 @@ instance ModifyTransform UpdatePersonReq SP.Person Flow where
 updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> Flow SL.Location
 updateOrCreateLocation req Nothing = do
   location <- createLocation req
-  QL.create location
+  QL.createFlow location
   return location
 updateOrCreateLocation req (Just locId) = do
   location <-
@@ -210,7 +210,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
 createLocationT :: CreatePersonReq -> Flow SL.Location
 createLocationT req = do
   location <- createLocationRec req
-  QL.create location
+  QL.createFlow location
   return location
 
 -- FIXME? This is to silence hlint reusing as much code from `createLocation`
