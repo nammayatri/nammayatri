@@ -70,7 +70,7 @@ instance
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
-      subserver `addAuthCheck` withRequest (authCheck (runTime env))
+      subserver `addAuthCheck` withRequest (authCheck (flowRuntime env))
     where
       authCheck :: R.FlowRuntime -> Request -> DelayedIO (VerificationResult verify)
       authCheck flowRt req = do

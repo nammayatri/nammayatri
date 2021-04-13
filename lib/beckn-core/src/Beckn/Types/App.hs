@@ -23,7 +23,7 @@ import Servant
 import qualified Servant.Client.Core as Servant
 
 data EnvR r = EnvR
-  { runTime :: R.FlowRuntime,
+  { flowRuntime :: R.FlowRuntime,
     appEnv :: r
   }
 

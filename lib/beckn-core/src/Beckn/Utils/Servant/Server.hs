@@ -49,7 +49,8 @@ run apis server ctx env =
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
 
-    modifiedEnvR uuid = env {runTime = updateLoggerContext (appendLogContext uuid) $ runTime env}
+    modifiedEnvR uuid =
+      env {flowRuntime = updateLoggerContext (appendLogContext uuid) $ flowRuntime env}
 
 serverErrorResponse :: ServerError -> Response
 serverErrorResponse ex =

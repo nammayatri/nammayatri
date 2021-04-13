@@ -17,8 +17,9 @@ instance Log (FlowR r) where
       WARNING -> L.logWarning EmtpyTag message
       ERROR -> L.logError EmtpyTag message
   withLogContext lc flowR =
-    let f = runReaderT flowR
-     in ReaderT $ \v -> L.withLoggerContext (appendLogContext lc) $ f v
+    ReaderT $ \env ->
+      L.withLoggerContext (appendLogContext lc) $
+        runReaderT flowR env
 
 data EmtpyTag = EmtpyTag
 

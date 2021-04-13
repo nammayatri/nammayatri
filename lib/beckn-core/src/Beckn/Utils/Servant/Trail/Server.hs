@@ -187,7 +187,7 @@ traceHandler = TraceHandler {..}
 
 traceHandler' :: HasDbCfg r => EnvR r -> TraceHandler IO
 traceHandler' env =
-  hoistTraceHandler (runFlowR (runTime env) (appEnv env)) traceHandler
+  hoistTraceHandler (runFlowR (flowRuntime env) (appEnv env)) traceHandler
 
 toTraceOrNotToTrace ::
   (HasTraceFlag r, HasDbCfg r) =>

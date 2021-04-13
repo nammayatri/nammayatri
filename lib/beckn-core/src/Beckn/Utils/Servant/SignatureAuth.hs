@@ -162,7 +162,7 @@ instance
             liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
             delayedFailFatal err401 {errBody = msg}
       env = getEnvEntry ctx
-      flowRt = runTime env
+      flowRt = flowRuntime env
       appConfig = appEnv env
 
   hoistServerWithContext _ ctxp hst serv =
