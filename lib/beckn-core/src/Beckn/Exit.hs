@@ -1,0 +1,27 @@
+module Beckn.Exit where
+
+import System.Exit (ExitCode (..))
+
+exitSuccess :: ExitCode
+exitSuccess = ExitSuccess
+
+exitAuthManagerPrepFailure :: ExitCode
+exitAuthManagerPrepFailure = ExitFailure 1
+
+exitDBConnPrepFailure :: ExitCode
+exitDBConnPrepFailure = ExitFailure 2
+
+exitDBMigrationFailure :: ExitCode
+exitDBMigrationFailure = ExitFailure 3
+
+exitLoadAllProvidersFailure :: ExitCode
+exitLoadAllProvidersFailure = ExitFailure 4
+
+exitRedisConnPrepFailure :: ExitCode
+exitRedisConnPrepFailure = ExitFailure 5
+
+exitSigTERMFailure :: ExitCode
+exitSigTERMFailure = ExitFailure 6
+
+exitSigINTFailure :: ExitCode
+exitSigINTFailure = ExitFailure 7

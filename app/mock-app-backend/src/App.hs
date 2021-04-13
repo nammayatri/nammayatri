@@ -7,6 +7,7 @@ where
 
 import App.Server
 import App.Types
+import Beckn.Exit
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -28,7 +29,6 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment
-import System.Exit (ExitCode (..))
 
 runMockApp :: (AppEnv -> AppEnv) -> IO ()
 runMockApp configModifier = do
@@ -47,14 +47,14 @@ runMockApp configModifier = do
         case prepareAuthManager flowRt appEnv "Authorization" selfId of
           Left err -> do
             logError ("Could not prepare authentication manager: " <> show err)
-            L.runIO . exitWith $ ExitFailure 1
+            L.runIO $ exitWith exitAuthManagerPrepFailure
           Right getManager -> do
             authManager <- L.runIO getManager
             logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
             migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
               Left e -> do
                 logError ("Couldn't migrate database: " <> show e)
-                L.runIO $ exitWith (ExitFailure 2)
+                L.runIO $ exitWith exitDBMigrationFailure
               Right _ -> do
                 return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ run $ App.EnvR flowRt' appEnv

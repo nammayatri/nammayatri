@@ -5,6 +5,7 @@ module App where
 
 import qualified App.Server as App
 import App.Types
+import Beckn.Exit
 import Beckn.Storage.DB.Config (prepareDBConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.Common
@@ -27,7 +28,6 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment
-import System.Exit (ExitCode (..))
 
 runAppBackend :: (AppEnv -> AppEnv) -> IO ()
 runAppBackend configModifier = do
@@ -49,19 +49,19 @@ runAppBackend' appEnv settings = do
         case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
           Left err -> do
             logError ("Could not prepare authentication manager: " <> show err)
-            L.runIO $ exitWith (ExitFailure 1)
+            L.runIO $ exitWith exitAuthManagerPrepFailure
           Right getManager -> do
             authManager <- L.runIO getManager
             logInfo "Initializing DB Connections..."
             prepareDBConnections >>= \case
               Left e -> do
                 logError ("Exception thrown: " <> show e)
-                L.runIO $ exitWith (ExitFailure 2)
+                L.runIO $ exitWith exitDBConnPrepFailure
               Right _ -> do
                 migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
                   Left e -> do
                     logError ("Couldn't migrate database: " <> show e)
-                    L.runIO $ exitWith (ExitFailure 3)
+                    L.runIO $ exitWith exitDBMigrationFailure
                   Right _ -> do
                     logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
                     return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}

@@ -4,6 +4,7 @@ module App where
 
 import qualified App.Server as App
 import App.Types
+import Beckn.Exit
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Id
@@ -28,7 +29,6 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
-import System.Exit (ExitCode (..))
 
 runTransporterBackendApp :: (AppEnv -> AppEnv) -> IO ()
 runTransporterBackendApp configModifier = do
@@ -49,13 +49,13 @@ runTransporterBackendApp' appEnv settings = do
         try Storage.loadAllProviders >>= \case
           Left (e :: SomeException) -> do
             logError ("Exception thrown: " <> show e)
-            L.runIO . exitWith $ ExitFailure 1
+            L.runIO $ exitWith  exitLoadAllProvidersFailure
           Right allProviders -> do
             let allShortIds = map (getShortId . Organization._shortId) allProviders
             case prepareAuthManagers flowRt appEnv allShortIds of
               Left err -> do
                 logError ("Could not prepare authentication managers: " <> show err)
-                L.runIO . exitWith $ ExitFailure 2
+                L.runIO $ exitWith exitAuthManagerPrepFailure
               Right getManagers -> do
                 managerMap <- L.runIO getManagers
                 logInfo $ "Loaded http managers - " <> show (keys managerMap)
@@ -63,12 +63,12 @@ runTransporterBackendApp' appEnv settings = do
                 try (prepareRedisConnections $ redisCfg appEnv) >>= \case
                   Left (e :: SomeException) -> do
                     logError ("Exception thrown: " <> show e)
-                    L.runIO . exitWith $ ExitFailure 3
+                    L.runIO $ exitWith exitRedisConnPrepFailure
                   Right _ -> do
                     migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
                       Left e -> do
                         logError ("Couldn't migrate database: " <> show e)
-                        L.runIO $ exitWith (ExitFailure 4)
+                        L.runIO $ exitWith exitDBMigrationFailure
                       Right _ -> do
                         logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
                         return $ flowRt {R._httpClientManagers = managerMap}
