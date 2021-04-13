@@ -2,11 +2,21 @@ module Utils where
 
 import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (readDhallConfig)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as T
 import Servant.Client
+
+defaultTestLoggerConfig :: LoggerConfig
+defaultTestLoggerConfig =
+  LoggerConfig
+    { isAsync = True,
+      level = DEBUG,
+      logToFile = True,
+      logFilePath = "/tmp/beckn-integ-test.log",
+      logToConsole = False,
+      logRawSql = True
+    }
 
 runClient :: ClientEnv -> ClientM a -> IO (Either ClientError a)
 runClient clientEnv x = runClientM x clientEnv
@@ -47,8 +57,9 @@ getLoggerCfg t =
       T._isAsync = False
     }
 
-runTransportFlow :: BecknTransport.Flow a -> IO a
+runTransportFlow :: BecknTransport.Flow a -> ReaderT BecknTransport.AppEnv IO a
 runTransportFlow flow = do
-  (appEnv :: BecknTransport.AppEnv) <- readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
-  R.withFlowRuntime Nothing $ \flowRt -> do
+  appEnv <- ask
+  let loggerRt = getEulerLoggerRuntime (Just "Test_Transport_flow") defaultTestLoggerConfig
+  lift . R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlowR flowRt appEnv flow
