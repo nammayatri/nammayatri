@@ -32,15 +32,15 @@ packages:
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
 - completed:
     name: euler-hs
-    version: 2.0.4.1
+    version: 2.0.4.4
     git: git@bitbucket.org:juspay/euler-hs.git
     pantry-tree:
-      size: 7784
-      sha256: 638af81efd1fa963448d2aeea7380e0ef64d4afc2822ac8185c8303911437856
-    commit: 68f16e054d57ad525c14255e303118fe328e979f
+      size: 7785
+      sha256: b7913783c3e9c5db4e27d5323f33489821e34b2ebbaafcf394de5ecad2190d4a
+    commit: b9bf8f6b32f593f49aff782690e8029f74a9947e
   original:
     git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 68f16e054d57ad525c14255e303118fe328e979f
+    commit: b9bf8f6b32f593f49aff782690e8029f74a9947e
 - completed:
     name: hedis
     version: 0.12.8.1

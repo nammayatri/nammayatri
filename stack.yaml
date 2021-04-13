@@ -55,7 +55,7 @@ extra-deps:
       - core
       - client
   - git: git@bitbucket.org:juspay/euler-hs.git
-    commit: 68f16e054d57ad525c14255e303118fe328e979f
+    commit: b9bf8f6b32f593f49aff782690e8029f74a9947e
   - git: https://github.com/juspay/hedis
     commit: 46ea0ea78e6d8d1a2b1a66e6f08078a37864ad80
   - git: https://github.com/juspay/beam-mysql
