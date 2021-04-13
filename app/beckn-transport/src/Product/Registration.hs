@@ -47,7 +47,7 @@ initiateFlow req smsCfg = do
       token <- makeSession scfg req entityId SR.USER Nothing
       QR.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
-      sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
+      SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) (SR._authValueHash token)
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -112,24 +112,6 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
         _info = Nothing
       }
 
-sendOTP :: SmsConfig -> Text -> Text -> Text -> Flow ()
-sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
-  let smsCred = smsCfg ^. #credConfig
-  let url = smsCfg ^. #url
-  let otpHash = smsCred ^. #otpHash
-  let
-  res <-
-    SF.submitSms
-      url
-      SMS.SubmitSms
-        { SMS._username = smsCred ^. #username,
-          SMS._password = smsCred ^. #password,
-          SMS._from = SMS.JUSPAY,
-          SMS._to = phoneNumber,
-          SMS._text = SF.constructOtpSms otpCode otpHash otpSmsTemplate
-        }
-  whenLeft res $ \err -> throwErrorWithInfo UnableToSendSMS err
-
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandler $ do
@@ -181,7 +163,7 @@ reInitiateLogin tokenId req =
         otpSmsTemplate <- otpSmsTemplate <$> ask
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
-        sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
+        SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) _authValueHash
         _ <- QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else throwErrorWithInfo AuthBlocked "Limit exceeded."
