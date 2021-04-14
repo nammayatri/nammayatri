@@ -14,24 +14,30 @@ spec :: Spec
 spec = do
   (appEnv :: BecknTransport.AppEnv) <- runIO $ readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
   describe "getNearestDrivers function" $ do
-    it "Test ordering" $ runReaderT testOrder appEnv
-    it "Test radius filtration" $ runReaderT testInRadius appEnv
-    it "Test outside radius filtration" $ runReaderT testNotInRadius appEnv
+    it "Test ordering" $ testOrder appEnv
+    it "Test radius filtration" $ testInRadius appEnv
+    it "Test outside radius filtration" $ testNotInRadius appEnv
 
-testOrder :: ReaderT BecknTransport.AppEnv IO ()
-testOrder = do
-  rez <- runTransportFlow $ Q.getNearestDrivers pickupPoint 5000 org1 SUV <&> map (getId . fst)
-  lift $ rez `shouldBe` ["002093df-4f7c-440f-ba-closest_driver", "001093df-4f7c-440f-b-furthest_driver"]
+testOrder :: BecknTransport.AppEnv -> IO ()
+testOrder appEnv = do
+  res <-
+    runTransportFlow "Test ordering" appEnv $
+      Q.getNearestDrivers pickupPoint 5000 org1 SUV <&> map (getId . fst)
+  res `shouldBe` ["002093df-4f7c-440f-ba-closest_driver", "001093df-4f7c-440f-b-furthest_driver"]
 
-testInRadius :: ReaderT BecknTransport.AppEnv IO ()
-testInRadius = do
-  rez <- runTransportFlow $ Q.getNearestDrivers pickupPoint 800 org1 SUV <&> map (getId . fst)
-  lift $ rez `shouldBe` ["002093df-4f7c-440f-ba-closest_driver"]
+testInRadius :: BecknTransport.AppEnv -> IO ()
+testInRadius appEnv = do
+  res <-
+    runTransportFlow "Test readius filtration" appEnv $
+      Q.getNearestDrivers pickupPoint 800 org1 SUV <&> map (getId . fst)
+  res `shouldBe` ["002093df-4f7c-440f-ba-closest_driver"]
 
-testNotInRadius :: ReaderT BecknTransport.AppEnv IO ()
-testNotInRadius = do
-  rez <- runTransportFlow $ Q.getNearestDrivers pickupPoint 0 org1 SUV <&> map (getId . fst)
-  lift $ rez `shouldBe` []
+testNotInRadius :: BecknTransport.AppEnv -> IO ()
+testNotInRadius appEnv = do
+  res <-
+    runTransportFlow "Test outside radius filtration" appEnv $
+      Q.getNearestDrivers pickupPoint 0 org1 SUV <&> map (getId . fst)
+  res `shouldBe` []
 
 pickupPoint :: LatLong
 pickupPoint = LatLong 12.994927 77.596386

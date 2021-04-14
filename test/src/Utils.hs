@@ -57,9 +57,8 @@ getLoggerCfg t =
       T._isAsync = False
     }
 
-runTransportFlow :: BecknTransport.Flow a -> ReaderT BecknTransport.AppEnv IO a
-runTransportFlow flow = do
-  appEnv <- ask
+runTransportFlow :: Text -> BecknTransport.AppEnv -> BecknTransport.Flow a -> IO a
+runTransportFlow tag appEnv flow = do
   let loggerRt = getEulerLoggerRuntime (Just "Test_Transport_flow") defaultTestLoggerConfig
-  lift . R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    runFlowR flowRt appEnv flow
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlowR flowRt appEnv $ withLogContext tag flow
