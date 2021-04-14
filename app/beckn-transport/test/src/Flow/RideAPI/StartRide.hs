@@ -78,9 +78,8 @@ startRide =
   testGroup
     "Starting ride"
     [ successfulStartByDriver,
-      successfulStartByAdmin,
       failedStartRequestedByDriverNotAnOrderExecutor,
-      failedStartRequestedByNotDriverAndNotAdmin,
+      failedStartRequestedNotByDriver,
       failedStartWhenProductInstanceStatusIsWrong,
       failedStartWhenRideDoesNotHaveParentProductInstance,
       failedStartWhenRideMissingOTP,
@@ -93,29 +92,13 @@ runHandler handle requestorId rideId otp = try $ StartRide.startRideHandler hand
 successfulStartByDriver :: TestTree
 successfulStartByDriver =
   testCase "Start successfully if requested by driver executor" $ do
-    result <- runHandler handle (Id "1") (Id "1") "otp"
+    result <- runHandler handle "1" "1" "otp"
     result @?= Right APISuccess.Success
-
-successfulStartByAdmin :: TestTree
-successfulStartByAdmin =
-  testCase "Start successfully if requested by admin" $ do
-    result <- runHandler handleCase (Id "1") (Id "1") "otp"
-    result @?= Right APISuccess.Success
-  where
-    handleCase =
-      handle
-        { StartRide.findPersonById = \personId ->
-            pure
-              Fixtures.defaultDriver
-                { Person._id = "adminId",
-                  Person._role = Person.ADMIN
-                }
-        }
 
 failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
-    result <- runHandler handleCase (Id "2") (Id "1") "otp"
+    result <- runHandler handleCase "2" "1" "otp"
     mustBeErrorCode NotAnExecutor result
   where
     handleCase =
@@ -127,10 +110,10 @@ failedStartRequestedByDriverNotAnOrderExecutor = do
                 }
         }
 
-failedStartRequestedByNotDriverAndNotAdmin :: TestTree
-failedStartRequestedByNotDriverAndNotAdmin = do
-  testCase "Fail ride starting if requested by not a driver and not an admin" $ do
-    result <- runHandler handleCase (Id "1") (Id "1") "otp"
+failedStartRequestedNotByDriver :: TestTree
+failedStartRequestedNotByDriver = do
+  testCase "Fail ride starting if requested not by driver" $ do
+    result <- runHandler handleCase "1" "1" "otp"
     mustBeErrorCode AccessDenied result
   where
     handleCase =
@@ -138,14 +121,14 @@ failedStartRequestedByNotDriverAndNotAdmin = do
         { StartRide.findPersonById = \personId ->
             pure
               Fixtures.defaultDriver
-                { Person._role = Person.MANAGER
+                { Person._role = Person.ADMIN
                 }
         }
 
 failedStartWhenProductInstanceStatusIsWrong :: TestTree
 failedStartWhenProductInstanceStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
-    result <- runHandler handleCase (Id "1") (Id "1") "otp"
+    result <- runHandler handleCase "1" "1" "otp"
     mustBeErrorCode PIInvalidStatus result
   where
     handleCase =
@@ -160,7 +143,7 @@ failedStartWhenProductInstanceStatusIsWrong = do
 failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
 failedStartWhenRideDoesNotHaveParentProductInstance = do
   testCase "Fail ride starting if ride does not have parent ProductInstance" $ do
-    result <- runHandler handleCase (Id "1") (Id "1") "otp"
+    result <- runHandler handleCase "1" "1" "otp"
     mustBeErrorCode PIParentIdNotPresent result
   where
     handleCase =
@@ -175,7 +158,7 @@ failedStartWhenRideDoesNotHaveParentProductInstance = do
 failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
-    result <- runHandler handleCase (Id "1") (Id "1") "otp"
+    result <- runHandler handleCase "1" "1" "otp"
     mustBeErrorCode PIOTPNotPresent result
   where
     handleCase =
@@ -190,5 +173,5 @@ failedStartWhenRideMissingOTP = do
 failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
-    result <- runHandler handle (Id "1") (Id "1") "otp2"
+    result <- runHandler handle "1" "1" "otp2"
     mustBeErrorCode IncorrectOTP result

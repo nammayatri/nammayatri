@@ -26,7 +26,6 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById requestorId
   orderPi <- findPIById $ cast rideId
   case requestor ^. #_role of
-    Person.ADMIN -> pure ()
     Person.DRIVER -> do
       rideDriver <- orderPi ^. #_personId & fromMaybeM PIInvalidStatus
       unless (rideDriver == requestorId) $ throwError NotAnExecutor

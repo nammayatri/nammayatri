@@ -34,7 +34,6 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   orderPi <- findPIById (cast rideId) >>= (`checkDBErrorOrEmpty` PIInvalidId)
   driverId <- orderPi ^. #_personId & fromMaybeM PIPersonNotPresent
   case requestor ^. #_role of
-    Person.ADMIN -> ok
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (orderPi ^. #_status == PI.INPROGRESS) $ throwError PIInvalidStatus
@@ -50,5 +49,3 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   notifyUpdateToBAP searchPi orderPi PI.COMPLETED
 
   return APISuccess.Success
-  where
-    ok = pure ()

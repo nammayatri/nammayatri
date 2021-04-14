@@ -23,14 +23,13 @@ endRideTests =
   testGroup
     "Ending ride"
     [ testGroup
-        "Successfull"
-        [ successfulEndByDriver,
-          successfulEndByAdmin
+        "Successful"
+        [ successfulEndByDriver
         ],
       testGroup
         "Failing"
         [ failedEndRequestedByWrongDriver,
-          failedEndRequestedByNotDriverAndNotAdmin,
+          failedEndRequestedNotByDriver,
           failedEndWhenRideStatusIsWrong,
           failedEndNonexistentRide,
           failedEndNonexistentDriver
@@ -43,12 +42,6 @@ handle =
     { findPersonById = \case
         Id "1" -> pure Fixtures.defaultDriver
         Id "2" -> pure $ Fixtures.defaultDriver {Person._id = "2"}
-        Id "manager" ->
-          pure $
-            Fixtures.defaultDriver
-              { Person._id = "manager",
-                Person._role = Person.MANAGER
-              }
         Id "admin" -> pure Fixtures.defaultAdmin
         _ -> throwError PersonDoesNotExist,
       findPIById = \piId -> pure . Right $ case piId of
@@ -124,32 +117,27 @@ successfulEndByDriver =
   testCase "Requested by correct driver" $
     endRide "1" "ride" >>= (@?= Right APISuccess.Success)
 
-successfulEndByAdmin :: TestTree
-successfulEndByAdmin =
-  testCase "Requested by admin" $
-    endRide "admin" "ride" >>= (@?= Right APISuccess.Success)
-
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
     endRide "2" "ride" >>= mustBeErrorCode NotAnExecutor
 
-failedEndRequestedByNotDriverAndNotAdmin :: TestTree
-failedEndRequestedByNotDriverAndNotAdmin =
-  testCase "Requested by neither a driver nor an admin" $
-    endRide "manager" "ride" >>= mustBeErrorCode AccessDenied
+failedEndRequestedNotByDriver :: TestTree
+failedEndRequestedNotByDriver =
+  testCase "Requested not by driver" $
+    endRide "admin" "ride" >>= mustBeErrorCode AccessDenied
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
-  testCase "A ride has wrong status" $
+  testCase "Ride has wrong status" $
     endRide "1" "completed_ride" >>= mustBeErrorCode PIInvalidStatus
 
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
-  testCase "A ride does not even exist" $
-    endRide "admin" "nonexistent_ride" >>= mustBeErrorCode PIInvalidId
+  testCase "Ride does not exist" $
+    endRide "1" "nonexistent_ride" >>= mustBeErrorCode PIInvalidId
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =
-  testCase "A driver does not even exist" $
+  testCase "Driver does not exist" $
     endRide "nonexistent_driver" "ride" >>= mustBeErrorCode PersonDoesNotExist
