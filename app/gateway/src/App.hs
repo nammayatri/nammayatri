@@ -8,9 +8,10 @@ where
 import App.Server
 import App.Types
 import Beckn.Exit
-import Beckn.Storage.DB.Config (prepareDBConnections)
+import Beckn.Storage.Common (prepareDBConnections)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
+import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
@@ -60,48 +61,35 @@ runGateway configModifier = do
   let dbCfg = appCfg ^. #dbCfg
   let autoMigrate = appCfg ^. #autoMigrate
   cache <- C.newCache Nothing
-  threadId <- forkIO $
-    E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-      let appEnv = mkAppEnv appCfg cache
-      ethFlowRt' <- runFlowR flowRt appEnv $ do
-        withLogContext "Server startup" $ do
-          let shortOrgId = appEnv ^. #gwId
-          case prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId of
-            Left err -> do
-              logError ("Could not prepare authentication manager: " <> show err)
-              return $ Left exitAuthManagerPrepFailure
-            Right getManager -> do
-              authManager <- L.runIO getManager
-              logInfo "Initializing Redis Connections..."
-              try (prepareRedisConnections redisCfg) >>= \case
-                Left (e :: SomeException) -> do
-                  logError ("Exception thrown: " <> show e)
-                  return $ Left exitRedisConnPrepFailure
-                Right _ ->
-                  prepareDBConnections >>= \case
-                    Left e -> do
-                      logError ("Exception thrown: " <> show e)
-                      return $ Left exitDBConnPrepFailure
-                    Right _ -> do
-                      migrateIfNeeded migrationPath dbCfg autoMigrate >>= \case
-                        Left e -> do
-                          logError ("Couldn't migrate database: " <> show e)
-                          return $ Left exitDBMigrationFailure
-                        Right _ -> do
-                          logInfo ("Runtime created. Starting server at port " <> show port)
-                          return . Right $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-      case ethFlowRt' of
-        Left a -> handleShutdown shutdown a
-        Right flowRt' -> runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
+  E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    let appEnv = mkAppEnv appCfg cache
+    flowRt' <- runFlowR flowRt appEnv $ do
+      withLogContext "Server startup" $ do
+        let shortOrgId = appEnv ^. #gwId
+        getManager <-
+          handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: " $
+            prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId
+        authManager <- L.runIO getManager
+        logInfo "Initializing Redis Connections..."
+        try (prepareRedisConnections redisCfg)
+          >>= handleLeft exitRedisConnPrepFailure "Exception thrown: " . first (id @SomeException)
+        _ <-
+          prepareDBConnections
+            >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
+        migrateIfNeeded migrationPath dbCfg autoMigrate
+          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        logInfo ("Runtime created. Starting server at port " <> show port)
+        return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+    threadId <- forkIO $ runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
 
-  -- Wait for shutdown
-  _ <- atomically $ readTMVar shutdown
-  -- Wait to drain all connections
-  putStrLn @String "Draining connections"
-  waitForDrain activeConnections 120000000
-  -- Kill the thread
-  killThread threadId
-  exitWith exitSuccess
+    -- Wait for shutdown
+    exitCode <- atomically $ readTMVar shutdown
+    -- Wait to drain all connections
+    putStrLn @String "Draining connections"
+    waitForDrain activeConnections 120000000
+    -- Kill the thread
+    killThread threadId
+    exitWith exitCode
   where
     handleShutdown :: TMVar ExitCode -> ExitCode -> IO ()
     handleShutdown shutdown code = atomically $ putTMVar shutdown code

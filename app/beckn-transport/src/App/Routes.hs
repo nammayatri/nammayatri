@@ -44,6 +44,7 @@ import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
+import System.Exit (ExitCode)
 import Types.API.Case
 import Types.API.Cron
 import qualified Types.API.DriverInformation as DriverInformationAPI
@@ -420,7 +421,7 @@ rideFlow =
 
 type HealthCheckAPI = Get '[JSON] Text
 
-healthCheckServer :: TMVar () -> FlowServer HealthCheckAPI
+healthCheckServer :: TMVar ExitCode -> FlowServer HealthCheckAPI
 healthCheckServer = HealthCheck.healthCheck
 
 healthCheckAPI :: Proxy HealthCheckAPI

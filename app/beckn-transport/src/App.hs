@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module App where
 
@@ -9,6 +10,7 @@ import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Organization
+import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
@@ -46,32 +48,22 @@ runTransporterBackendApp' appEnv settings = do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogContext "Server startup" $ do
         logInfo "Setting up for signature auth..."
-        try Storage.loadAllProviders >>= \case
-          Left (e :: SomeException) -> do
-            logError ("Exception thrown: " <> show e)
-            L.runIO $ exitWith  exitLoadAllProvidersFailure
-          Right allProviders -> do
-            let allShortIds = map (getShortId . Organization._shortId) allProviders
-            case prepareAuthManagers flowRt appEnv allShortIds of
-              Left err -> do
-                logError ("Could not prepare authentication managers: " <> show err)
-                L.runIO $ exitWith exitAuthManagerPrepFailure
-              Right getManagers -> do
-                managerMap <- L.runIO getManagers
-                logInfo $ "Loaded http managers - " <> show (keys managerMap)
-                logInfo "Initializing Redis Connections..."
-                try (prepareRedisConnections $ redisCfg appEnv) >>= \case
-                  Left (e :: SomeException) -> do
-                    logError ("Exception thrown: " <> show e)
-                    L.runIO $ exitWith exitRedisConnPrepFailure
-                  Right _ -> do
-                    migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
-                      Left e -> do
-                        logError ("Couldn't migrate database: " <> show e)
-                        L.runIO $ exitWith exitDBMigrationFailure
-                      Right _ -> do
-                        logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
-                        return $ flowRt {R._httpClientManagers = managerMap}
+        allProviders <-
+          try Storage.loadAllProviders
+            >>= handleLeft exitLoadAllProvidersFailure "Exception thrown: " . first (id @SomeException)
+        let allShortIds = map (getShortId . Organization._shortId) allProviders
+        getManagers <-
+          prepareAuthManagers flowRt appEnv allShortIds
+            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
+        managerMap <- L.runIO getManagers
+        logInfo $ "Loaded http managers - " <> show (keys managerMap)
+        logInfo "Initializing Redis Connections..."
+        try (prepareRedisConnections $ redisCfg appEnv)
+          >>= handleLeft exitRedisConnPrepFailure "Exception thrown: " . first (id @SomeException)
+        migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
+          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+        return $ flowRt {R._httpClientManagers = managerMap}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 
 transporterExceptionResponse :: SomeException -> Response

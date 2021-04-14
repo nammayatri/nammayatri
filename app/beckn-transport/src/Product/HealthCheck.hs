@@ -8,9 +8,10 @@ import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Data.Time (diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import System.Exit (ExitCode)
 import Types.Error
 
-healthCheck :: TMVar () -> App.FlowHandler Text
+healthCheck :: TMVar ExitCode -> App.FlowHandler Text
 healthCheck shutdown = withFlowHandler $ do
   isNotShuttingDown <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
   if isNotShuttingDown

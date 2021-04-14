@@ -25,3 +25,6 @@ exitSigTERMFailure = ExitFailure 6
 
 exitSigINTFailure :: ExitCode
 exitSigINTFailure = ExitFailure 7
+
+exitConnCheckFailure :: ExitCode
+exitConnCheckFailure = ExitFailure 8

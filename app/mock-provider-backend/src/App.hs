@@ -9,6 +9,7 @@ import App.Server
 import App.Types
 import Beckn.Exit
 import qualified Beckn.Types.App as App
+import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
@@ -44,19 +45,14 @@ runMockProvider configModifier = do
       withLogContext "Server startup" $ do
         logInfo "Setting up for signature auth..."
         let selfId = appEnv ^. #selfId
-        case prepareAuthManager flowRt appEnv "Authorization" selfId of
-          Left err -> do
-            logError ("Could not prepare authentication manager: " <> show err)
-            L.runIO $ exitWith exitAuthManagerPrepFailure
-          Right getManager -> do
-            authManager <- L.runIO getManager
-            logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
-            migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
-              Left e -> do
-                logError ("Couldn't migrate database: " <> show e)
-                L.runIO $ exitWith exitDBMigrationFailure
-              Right _ -> do
-                return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        getManager <-
+          prepareAuthManager flowRt appEnv "Authorization" selfId
+            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
+        authManager <- L.runIO getManager
+        logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+        migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
+          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ run $ App.EnvR flowRt' appEnv
 
 mockProviderExceptionResponse :: SomeException -> Response

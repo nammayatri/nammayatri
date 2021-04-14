@@ -6,8 +6,9 @@ module App where
 import qualified App.Server as App
 import App.Types
 import Beckn.Exit
-import Beckn.Storage.DB.Config (prepareDBConnections)
+import Beckn.Storage.Common (prepareDBConnections)
 import qualified Beckn.Types.App as App
+import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
@@ -46,25 +47,16 @@ runAppBackend' appEnv settings = do
       withLogContext "Server startup" $ do
         logInfo "Setting up for signature auth..."
         let shortOrgId = appEnv ^. #bapSelfId
-        case prepareAuthManager flowRt appEnv "Authorization" shortOrgId of
-          Left err -> do
-            logError ("Could not prepare authentication manager: " <> show err)
-            L.runIO $ exitWith exitAuthManagerPrepFailure
-          Right getManager -> do
-            authManager <- L.runIO getManager
-            logInfo "Initializing DB Connections..."
-            prepareDBConnections >>= \case
-              Left e -> do
-                logError ("Exception thrown: " <> show e)
-                L.runIO $ exitWith exitDBConnPrepFailure
-              Right _ -> do
-                migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv) >>= \case
-                  Left e -> do
-                    logError ("Couldn't migrate database: " <> show e)
-                    L.runIO $ exitWith exitDBMigrationFailure
-                  Right _ -> do
-                    logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
-                    return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        getManager <-
+          prepareAuthManager flowRt appEnv "Authorization" shortOrgId
+            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
+        authManager <- L.runIO getManager
+        logInfo "Initializing DB Connections..."
+        _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
+        migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
+          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+        return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 
 appExceptionResponse :: SomeException -> Response

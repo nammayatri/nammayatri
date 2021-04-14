@@ -11,6 +11,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
+import System.Exit (ExitCode)
 
 handle :: Allocation.ServiceHandle Flow
 handle =
@@ -40,7 +41,7 @@ handle =
       logEvent = I.logEvent
     }
 
-run :: TMVar () -> TMVar () -> Flow ()
+run :: TMVar ExitCode -> TMVar () -> Flow ()
 run shutdown activeTask = do
   Redis.tryLockRedis "allocation" 10 >>= \case
     False -> L.runIO $ threadDelay 5000000 -- sleep for a bit

@@ -10,9 +10,7 @@ import qualified Beckn.Types.Storage.ExternalTrail as ExternalTrail
 import qualified Beckn.Types.Storage.Trail as Trail
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Database.Beam as B
-import Database.Beam.Postgres (Pg)
 import qualified Database.Beam.Schema.Tables as B
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import GHC.Records (HasField (..))
@@ -33,19 +31,6 @@ type FlowWithDb r a = HasDbCfg r => FlowR r a
 instance HasDbCfg r => HasSchemaName (FlowR r) where
   getSchemaName =
     asks (schemaName <$> getField @"dbCfg")
-
-handleIt ::
-  (T.DBConfig Pg -> FlowR r (T.DBResult (T.SqlConn Pg))) ->
-  FlowWithDb r (T.DBResult (T.SqlConn Pg))
-handleIt mf = do
-  env <- ask
-  mf . repack $ getField @"dbCfg" env
-  where
-    repack (DBConfig x y z _) = T.mkPostgresPoolConfig x y z
-
-prepareDBConnections, getOrInitConn :: FlowWithDb r (T.DBResult (T.SqlConn Pg))
-prepareDBConnections = handleIt L.initSqlDBConnection
-getOrInitConn = handleIt L.getOrInitSqlConn
 
 data TrailDb f = TrailDb
   { _trail :: f (B.TableEntity Trail.TrailT),
