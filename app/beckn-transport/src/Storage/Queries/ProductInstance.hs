@@ -401,13 +401,13 @@ findByIdType ids csType = do
       _id `B.in_` (B.val_ <$> ids)
         &&. _type ==. B.val_ csType
 
-findByParentIdType :: Maybe (Id Storage.ProductInstance) -> Case.CaseType -> Flow Storage.ProductInstance
+findByParentIdType :: Id Storage.ProductInstance -> Case.CaseType -> Flow Storage.ProductInstance
 findByParentIdType mparentId csType = do
   dbTable <- getDbTable
   DB.findOneWithErr dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
-      B.val_ (isJust mparentId) &&. _parentId ==. B.val_ mparentId
+      _parentId ==. B.val_ (Just mparentId)
         &&. _type ==. B.val_ csType
 
 findAllExpiredByStatus :: [Storage.ProductInstanceStatus] -> UTCTime -> Flow (T.DBResult [Storage.ProductInstance])

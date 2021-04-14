@@ -139,7 +139,7 @@ serviceStatus :: Id Organization.Organization -> Organization.Organization -> AP
 serviceStatus transporterId bapOrg req = withFlowHandler $ do
   logTagInfo "serviceStatus API Flow" $ show req
   let piId = req ^. #message . #order . #id -- transporter search product instance id
-  trackerPi <- ProductInstance.findByParentIdType (Just $ Id piId) Case.LOCATIONTRACKER
+  trackerPi <- ProductInstance.findByParentIdType (Id piId) Case.LOCATIONTRACKER
   --TODO : use forkFlow to notify gateway
   callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   transporter <- Organization.findOrganizationById transporterId

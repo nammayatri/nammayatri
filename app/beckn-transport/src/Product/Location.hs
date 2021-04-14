@@ -31,7 +31,7 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
 
 getLocation :: Id QPI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandler $ do
-  orderProductInstance <- ProductInstance.findByParentIdType (Just piId) Case.RIDEORDER
+  orderProductInstance <- ProductInstance.findByParentIdType piId Case.RIDEORDER
   driver <-
     orderProductInstance ^. #_personId & fromMaybeMWithInfo PIPersonNotPresent "Driver is not assigned."
       >>= Person.findPersonById

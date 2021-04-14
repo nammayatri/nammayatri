@@ -288,5 +288,5 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
         else pure []
     notifyStatusToGateway bppShortId = do
-      trackerPi <- PIQ.findByParentIdType (Just $ searchPi ^. #_id) Case.LOCATIONTRACKER
+      trackerPi <- PIQ.findByParentIdType (searchPi ^. #_id) Case.LOCATIONTRACKER
       BP.notifyServiceStatusToGateway (getId $ searchPi ^. #_id) trackerPi callbackUrl bppShortId
