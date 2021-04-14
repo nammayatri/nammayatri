@@ -12,7 +12,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (logTagInfo, withFlowHandler)
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
@@ -32,7 +32,9 @@ sendIssue person request@SendIssueReq {..} = withFlowHandler $ do
   let mailBody = mkMailBody issueId personId request utcNow
   responseError <- L.runIO $ SES.sendEmail issuesConfig mailSubject mailBody
   case responseError of
-    Just resError -> pure $ API.Ack {_action = "Error", _message = resError}
+    Just resError -> do
+      logTagInfo "SES" resError
+      pure $ API.Ack {_action = "Error", _message = resError}
     Nothing -> pure $ API.Ack {_action = "Successful", _message = ""}
 
 mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> SIssue.Issue

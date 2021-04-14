@@ -27,9 +27,9 @@ sendEmail sesConfig@SesConfig.EmailRequestConfig {..} subject body = do
 
 mkSendEmailQuery :: SesConfig.EmailRequestConfig -> Text -> Text -> AWS.SendEmail
 mkSendEmailQuery SesConfig.EmailRequestConfig {..} subject body =
-  let dest = AWS.dToAddresses .~ [to] $ AWS.destination
+  let dest = AWS.dCCAddresses .~ cc $ AWS.dToAddresses .~ to $ AWS.destination
       msg = AWS.message (AWS.content subject) (AWS.bText ?~ AWS.content body $ AWS.body)
-   in AWS.seReplyToAddresses .~ [replyTo] $ AWS.sendEmail from dest msg
+   in AWS.seReplyToAddresses .~ replyTo $ AWS.sendEmail from dest msg
 
 mkSesEnv :: (MonadIO m, MonadCatch m) => Text -> m AWS.Env
 mkSesEnv region = do
