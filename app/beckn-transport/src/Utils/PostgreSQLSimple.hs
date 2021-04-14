@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) where
 
 import App.Types
