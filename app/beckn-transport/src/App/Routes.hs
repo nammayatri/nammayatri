@@ -428,7 +428,7 @@ type RideAPI =
            :<|> TokenAuth
              :> Capture "rideId" (Id ProductInstance)
              :> "end"
-             :> Get '[JSON] APISuccess
+             :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" Text
              :> "cancel"
