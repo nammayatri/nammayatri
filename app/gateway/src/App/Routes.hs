@@ -16,7 +16,6 @@ import qualified Product.Log as P
 import qualified Product.Search as P
 import Servant hiding (throwError)
 import Storage.Queries.Organization
-import System.Exit (ExitCode)
 import Types.API.Search
 import Types.Beckn.API.Log
 import Utils.Auth (VerifyAPIKey)
@@ -38,14 +37,14 @@ type GatewayAPI = HealthAPI :<|> GatewayAPI'
 gatewayAPI :: Proxy GatewayAPI
 gatewayAPI = Proxy
 
-gatewayServer :: TMVar ExitCode -> FlowServerR AppEnv GatewayAPI
+gatewayServer :: TMVar () -> FlowServerR AppEnv GatewayAPI
 gatewayServer shutdown =
   healthHandler :<|> gatewayHandler shutdown
 
 healthHandler :: FlowServerR AppEnv HealthAPI
 healthHandler = pure "UP"
 
-gatewayHandler :: TMVar ExitCode -> FlowServerR AppEnv GatewayAPI'
+gatewayHandler :: TMVar () -> FlowServerR AppEnv GatewayAPI'
 gatewayHandler shutdown = do
   pure "Gateway is UP"
     :<|> handleIfUp (HttpSig.withBecknAuthProxy P.search lookup)

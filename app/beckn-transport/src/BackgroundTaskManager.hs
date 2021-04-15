@@ -11,7 +11,7 @@ import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Organization
-import Beckn.Utils.App
+import Beckn.Utils.App hiding (handleShutdown)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
@@ -41,8 +41,8 @@ runBackgroundTaskManager configModifier = do
   shutdown <- newEmptyTMVarIO
   activeTask <- newEmptyTMVarIO
 
-  void $ installHandler sigTERM (Catch $ handleShutdown shutdown exitSigTERMFailure) Nothing
-  void $ installHandler sigINT (Catch $ handleShutdown shutdown exitSigINTFailure) Nothing
+  void $ installHandler sigTERM (Catch $ handleShutdown shutdown exitSigTERM) Nothing
+  void $ installHandler sigINT (Catch $ handleShutdown shutdown exitSigINT) Nothing
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do

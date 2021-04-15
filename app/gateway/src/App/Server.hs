@@ -11,10 +11,9 @@ import qualified Beckn.Utils.Servant.Server as BU
 import qualified Beckn.Utils.Servant.Trail.Server as Trail
 import EulerHS.Prelude
 import Servant
-import System.Exit (ExitCode)
 import Utils.Auth
 
-run :: TMVar ExitCode -> EnvR AppEnv -> Application
+run :: TMVar () -> EnvR AppEnv -> Application
 run shutdown env = do
   addServantInfo gatewayAPI $
     Trail.toTraceOrNotToTrace env $
