@@ -7,6 +7,7 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import Beckn.Types.Common as BC
+import qualified Beckn.Types.Error.API as Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -47,7 +48,8 @@ initiateFlow req smsCfg = do
       token <- makeSession scfg req entityId SR.USER Nothing
       QR.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
-      SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) (SR._authValueHash token)
+      otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) (SR._authValueHash token)
+      whenLeft otpSendingRes $ \err -> throwErrorWithInfo Error.UnableToSendSMS err
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -163,7 +165,8 @@ reInitiateLogin tokenId req =
         otpSmsTemplate <- otpSmsTemplate <$> ask
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
-        SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) _authValueHash
+        otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) _authValueHash
+        whenLeft otpSendingRes $ \err -> throwErrorWithInfo Error.UnableToSendSMS err
         _ <- QR.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else throwErrorWithInfo AuthBlocked "Limit exceeded."
