@@ -31,7 +31,7 @@ endRideHandler ::
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId
-  orderPi <- findPIById rideId >>= (`checkDBErrorOrEmpty` PIInvalidId)
+  orderPi <- findPIById (cast rideId) >>= (`checkDBErrorOrEmpty` PIInvalidId)
   driverId <- orderPi ^. #_personId & fromMaybeM PIPersonNotPresent
   case requestor ^. #_role of
     Person.ADMIN -> ok

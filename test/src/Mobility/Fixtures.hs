@@ -14,6 +14,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import qualified Beckn.Types.Storage.Vehicle as SV
 import Data.Time
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -213,9 +214,9 @@ buildListLeads :: ClientM [TbeCase.CaseRes]
 buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing
 
 listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
-listDriverRides :: Text -> Text -> ClientM TbePI.RideListRes
-listVehicleRides :: Text -> Text -> ClientM TbePI.RideListRes
-listCasesByProductInstance :: Text -> Text -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
+listDriverRides :: Text -> Id Person.Person -> ClientM TbePI.RideListRes
+listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
+listCasesByProductInstance :: Text -> Id PI.ProductInstance -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
 rideUpdate :: Text -> Id PI.ProductInstance -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
 listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> rideUpdate = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
@@ -227,10 +228,10 @@ buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Ju
 
 createPerson :: Text -> TbePerson.CreatePersonReq -> ClientM TbePerson.UpdatePersonRes
 listPerson :: Text -> [Person.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
-updatePerson :: Text -> Text -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
-getPerson :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Person.IdentifierType -> ClientM TbePerson.PersonEntityRes
-deletePerson :: Text -> Text -> ClientM TbePerson.DeletePersonRes
-linkEntity :: Text -> Text -> TbePerson.LinkReq -> ClientM TbePerson.PersonEntityRes
+updatePerson :: Text -> Id Person.Person -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
+getPerson :: Text -> Maybe (Id Person.Person) -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Person.IdentifierType -> ClientM TbePerson.PersonEntityRes
+deletePerson :: Text -> Id Person.Person -> ClientM TbePerson.DeletePersonRes
+linkEntity :: Text -> Id Person.Person -> TbePerson.LinkReq -> ClientM TbePerson.PersonEntityRes
 createPerson
   :<|> listPerson
   :<|> updatePerson
@@ -242,7 +243,7 @@ callGetPerson :: Id Person.Person -> ClientM TbePerson.PersonEntityRes
 callGetPerson personId =
   getPerson
     appRegistrationToken
-    (Just $ getId personId)
+    (Just personId)
     Nothing
     Nothing
     Nothing

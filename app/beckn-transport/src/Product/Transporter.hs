@@ -63,14 +63,14 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
             _updatedAt = now
           }
 
-updateTransporter :: SR.RegistrationToken -> Text -> UpdateTransporterReq -> FlowHandler TransporterRec
+updateTransporter :: SR.RegistrationToken -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id _EntityId) SP.ADMIN orgId
   now <- getCurrentTime
   case maybePerson of
     Just person -> do
       validate person
-      org <- QO.findOrganizationById $ Id orgId
+      org <- QO.findOrganizationById orgId
       organization <-
         if req ^. #enabled /= Just False
           then modifyTransform req org >>= addTime (Just now)

@@ -21,15 +21,15 @@ data ServiceHandle m = ServiceHandle
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
   }
 
-startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Text -> Text -> Text -> m APISuccess.APISuccess
+startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
-  requestor <- findPersonById $ Id requestorId
-  orderPi <- findPIById $ Id rideId
+  requestor <- findPersonById requestorId
+  orderPi <- findPIById $ cast rideId
   case requestor ^. #_role of
     Person.ADMIN -> pure ()
     Person.DRIVER -> do
       rideDriver <- orderPi ^. #_personId & fromMaybeM PIInvalidStatus
-      unless (rideDriver == Id requestorId) $ throwError NotAnExecutor
+      unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (isValidPiStatus (orderPi ^. #_status)) $ throwError PIInvalidStatus
   searchPiId <- orderPi ^. #_parentId & fromMaybeM PIParentIdNotPresent

@@ -189,10 +189,10 @@ caseFlow regToken =
 type InfoAPI =
   TokenAuth
     :> ( "product"
-           :> Capture "id" Text
+           :> Capture "id" (Id ProductInstance)
            :> Get '[JSON] GetProductInfoRes
            :<|> "location"
-           :> Capture "caseId" Text
+           :> Capture "caseId" (Id Case.Case)
            :> Get '[JSON] Location.GetLocationRes
        )
 

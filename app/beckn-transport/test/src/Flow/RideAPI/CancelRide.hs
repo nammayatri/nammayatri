@@ -12,6 +12,7 @@ import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
 import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
+import Types.App
 import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()
 
@@ -42,7 +43,7 @@ cancelRide =
       failedCancellationWhenProductInstanceStatusIsWrong
     ]
 
-runHandler :: CancelRide.ServiceHandle IO -> Text -> Text -> IO (Either ServerError APISuccess.APISuccess)
+runHandler :: CancelRide.ServiceHandle IO -> Text -> Id Ride -> IO (Either ServerError APISuccess.APISuccess)
 runHandler handle requestorId rideId = try $ CancelRide.cancelRideHandler handle requestorId rideId
 
 successfulCancellationByDriver :: TestTree

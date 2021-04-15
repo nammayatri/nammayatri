@@ -9,6 +9,7 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as QPI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common
 import EulerHS.Prelude hiding (state)
@@ -28,9 +29,9 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandler $ do
   Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
   return $ UpdateLocationRes "ACK"
 
-getLocation :: Text -> FlowHandler GetLocationRes
+getLocation :: Id QPI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandler $ do
-  orderProductInstance <- ProductInstance.findByParentIdType (Just $ Id piId) Case.RIDEORDER
+  orderProductInstance <- ProductInstance.findByParentIdType (Just piId) Case.RIDEORDER
   driver <-
     orderProductInstance ^. #_personId & fromMaybeMWithInfo PIPersonNotPresent "Driver is not assigned."
       >>= Person.findPersonById

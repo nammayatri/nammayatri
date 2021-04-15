@@ -2,6 +2,8 @@ module Product.RideAPI.CancelRide where
 
 import App.Types (FlowHandler)
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Id
+import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common (withFlowHandler)
 import EulerHS.Prelude
@@ -10,9 +12,9 @@ import qualified Product.RideAPI.Handlers.CancelRide as Handler
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
 
-cancelRide :: SR.RegistrationToken -> Text -> FlowHandler APISuccess.APISuccess
+cancelRide :: SR.RegistrationToken -> Id SPI.ProductInstance -> FlowHandler APISuccess.APISuccess
 cancelRide SR.RegistrationToken {..} rideId = withFlowHandler $ do
-  Handler.cancelRideHandler handle _EntityId rideId
+  Handler.cancelRideHandler handle _EntityId $ cast rideId
   where
     handle =
       Handler.ServiceHandle

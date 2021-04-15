@@ -53,8 +53,8 @@ import Types.App (ConfigKey (..), Driver)
 import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInformation
 
-updatePerson :: SR.RegistrationToken -> Text -> UpdatePersonReq -> FlowHandler UpdatePersonRes
-updatePerson SR.RegistrationToken {..} personId req = withFlowHandler $ do
+updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
+updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandler $ do
   verifyPerson _EntityId
   person <- QP.findPersonById (Id _EntityId)
   isValidUpdate person
@@ -117,7 +117,7 @@ listPerson orgId roles limitM offsetM = withFlowHandler $ do
 
 getPerson ::
   SR.RegistrationToken ->
-  Maybe Text ->
+  Maybe (Id SP.Person) ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
@@ -131,7 +131,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     -- And maybe have a way to handle the case when Id is
     -- passed and identifierType is null. Throw validation errors
     person <- case identifierTypeM of
-      Nothing -> QP.findPersonById (Id $ fromJust idM)
+      Nothing -> QP.findPersonById (fromJust idM)
       Just SP.MOBILENUMBER -> do
         countryCode <- fromMaybeMWithInfo InvalidRequest "You should pass country code." countryCodeM
         mobile <- fromMaybeMWithInfo InvalidRequest "You should pass mobile number." mobileM
@@ -156,8 +156,8 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         )
         $ throwError Unauthorized
 
-deletePerson :: Text -> Text -> FlowHandler DeletePersonRes
-deletePerson orgId personId = withFlowHandler $ do
+deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
+deletePerson orgId (Id personId) = withFlowHandler $ do
   person <- QP.findPersonById (Id personId)
   if person ^. #_organizationId == Just orgId
     then do
@@ -168,8 +168,8 @@ deletePerson orgId personId = withFlowHandler $ do
       return $ DeletePersonRes personId
     else throwError Unauthorized
 
-linkEntity :: Text -> Text -> LinkReq -> FlowHandler PersonEntityRes
-linkEntity orgId personId req = withFlowHandler $ do
+linkEntity :: Text -> Id SP.Person -> LinkReq -> FlowHandler PersonEntityRes
+linkEntity orgId (Id personId) req = withFlowHandler $ do
   person <- QP.findPersonById (Id personId)
   _ <- case req ^. #_entityType of
     VEHICLE ->

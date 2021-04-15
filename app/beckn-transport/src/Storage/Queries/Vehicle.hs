@@ -104,14 +104,14 @@ deleteById id = do
   where
     predicate vid Storage.Vehicle {..} = _id ==. B.val_ vid
 
-findByAnyOf :: Maybe Text -> Maybe Text -> Flow (Maybe Storage.Vehicle)
+findByAnyOf :: Maybe Text -> Maybe (Id Storage.Vehicle) -> Flow (Maybe Storage.Vehicle)
 findByAnyOf registrationNoM vehicleIdM = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= either throwDBError pure
   where
     predicate Storage.Vehicle {..} =
-      (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (Id (fromMaybe "DONT_MATCH" vehicleIdM)))
+      (B.val_ (isNothing vehicleIdM) ||. _id ==. B.val_ (fromMaybe "DONT_MATCH" vehicleIdM))
         &&. (B.val_ (isNothing registrationNoM) ||. _registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
 
 findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> Maybe Storage.EnergyType -> Integer -> Integer -> Text -> Flow [Storage.Vehicle]

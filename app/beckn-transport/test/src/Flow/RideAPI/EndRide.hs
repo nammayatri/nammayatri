@@ -13,6 +13,7 @@ import qualified Product.RideAPI.Handlers.EndRide as Handle
 import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
+import Types.App
 import Types.Error
 import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()

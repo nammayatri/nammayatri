@@ -368,13 +368,13 @@ updateInfo prodInstId info = do
       mconcat
         [_info <-. B.val_ (Just pInfo)]
 
-findAllByVehicleId :: Maybe Text -> Flow [Storage.ProductInstance]
+findAllByVehicleId :: Maybe (Id Vehicle) -> Flow [Storage.ProductInstance]
 findAllByVehicleId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
     >>= either throwDBError pure
   where
-    predicate Storage.ProductInstance {..} = B.val_ (isJust id) &&. _entityId ==. B.val_ id
+    predicate Storage.ProductInstance {..} = B.val_ (isJust id) &&. _entityId ==. B.val_ (getId <$> id)
 
 findAllByPersonId :: Id Person -> Flow [Storage.ProductInstance]
 findAllByPersonId id = do

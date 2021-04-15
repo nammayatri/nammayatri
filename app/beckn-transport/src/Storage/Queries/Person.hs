@@ -50,7 +50,7 @@ findPersonById id = do
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
 
-findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Text -> Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Id Org.Organization -> Flow (Maybe Storage.Person)
 findPersonByIdAndRoleAndOrgId id role orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -60,7 +60,7 @@ findPersonByIdAndRoleAndOrgId id role orgId = do
     predicate Storage.Person {..} =
       _id ==. B.val_ id
         &&. _role ==. B.val_ role
-        &&. _organizationId ==. B.val_ (Just orgId)
+        &&. _organizationId ==. B.val_ (Just $ getId orgId)
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do

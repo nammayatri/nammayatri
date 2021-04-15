@@ -90,10 +90,10 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
       prodCase <- QCase.findById caseId
       checkDBError prodCase
 
-listDriverRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
+listDriverRides :: SR.RegistrationToken -> Id SP.Person -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
   user <- PersQ.findPersonById (Id _EntityId)
-  person <- PersQ.findPersonById (Id personId)
+  person <- PersQ.findPersonById personId
   hasAccess user person
   rideList <- PIQ.findAllByPersonId (SP._id person)
   locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
@@ -117,10 +117,10 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
               _toLocation = to
             }
 
-listVehicleRides :: SR.RegistrationToken -> Text -> FlowHandler RideListRes
+listVehicleRides :: SR.RegistrationToken -> Id V.Vehicle -> FlowHandler RideListRes
 listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
   user <- PersQ.findPersonById (Id _EntityId)
-  vehicle <- VQ.findVehicleById (Id vehicleId)
+  vehicle <- VQ.findVehicleById vehicleId
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
   locList <- LQ.findAllByLocIds (catMaybes (PI._fromLocation <$> rideList)) (catMaybes (PI._toLocation <$> rideList))
@@ -144,9 +144,9 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
               _toLocation = to
             }
 
-listCasesByProductInstance :: SR.RegistrationToken -> Text -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
+listCasesByProductInstance :: SR.RegistrationToken -> Id PI.ProductInstance -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
 listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandler $ do
-  prodInst <- PIQ.findById (Id piId)
+  prodInst <- PIQ.findById piId
   piList <-
     prodInst ^. #_parentId & fromMaybeM PIParentIdNotPresent
       >>= PIQ.findAllByParentId

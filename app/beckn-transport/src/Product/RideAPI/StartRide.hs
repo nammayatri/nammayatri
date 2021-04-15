@@ -19,9 +19,9 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import Types.API.Ride (StartRideReq (..))
 
-startRide :: SR.RegistrationToken -> Text -> StartRideReq -> FlowHandler APISuccess.APISuccess
+startRide :: SR.RegistrationToken -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide SR.RegistrationToken {..} rideId req = withFlowHandler $ do
-  Handler.startRideHandler handle _EntityId rideId (req ^. #otp)
+  Handler.startRideHandler handle (Id _EntityId) (cast rideId) (req ^. #otp)
   where
     handle =
       Handler.ServiceHandle

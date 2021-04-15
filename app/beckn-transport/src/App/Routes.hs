@@ -114,12 +114,12 @@ type PersonAPI =
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes
            :<|> TokenAuth
-             :> Capture "personId" Text
+             :> Capture "personId" (Id Person)
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
            :<|> TokenAuth
-             :> QueryParam "personId" Text
+             :> QueryParam "personId" (Id Person)
              :> QueryParam "mobileNumber" Text
              :> QueryParam "mobileCountryCode" Text
              :> QueryParam "email" Text
@@ -127,10 +127,10 @@ type PersonAPI =
              :> QueryParam "identifierType" SP.IdentifierType
              :> Get '[JSON] PersonEntityRes
            :<|> AdminTokenAuth
-             :> Capture "personId" Text
+             :> Capture "personId" (Id Person)
              :> Delete '[JSON] DeletePersonRes
            :<|> AdminTokenAuth
-             :> Capture "personId" Text
+             :> Capture "personId" (Id Person)
              :> "link"
              :> ReqBody '[JSON] LinkReq
              :> Post '[JSON] PersonEntityRes
@@ -160,15 +160,15 @@ type VehicleAPI =
              :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
            :<|> DriverTokenAuth
-             :> Capture "vehicleId" Text
+             :> Capture "vehicleId" (Id Vehicle)
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
            :<|> DriverTokenAuth
-             :> Capture "vehicleId" Text
+             :> Capture "vehicleId" (Id Vehicle)
              :> Delete '[JSON] DeleteVehicleRes
            :<|> TokenAuth
              :> QueryParam "registrationNo" Text
-             :> QueryParam "vehicleId" Text
+             :> QueryParam "vehicleId" (Id Vehicle)
              :> Get '[JSON] CreateVehicleRes
        )
 
@@ -189,7 +189,7 @@ type OrganizationAPI =
            :> ReqBody '[JSON] TransporterReq
            :> Post '[JSON] TransporterRes
            :<|> TokenAuth
-           :> Capture "orgId" Text
+           :> Capture "orgId" (Id Organization)
            :> ReqBody '[JSON] UpdateTransporterReq
            :> Post '[JSON] TransporterRec
        )
@@ -227,14 +227,14 @@ type ProductInstanceAPI =
            :> Get '[JSON] ProductInstanceList
            :<|> "person"
            :> TokenAuth
-           :> Capture "personId" Text
+           :> Capture "personId" (Id Person)
            :> Get '[JSON] RideListRes
            :<|> "vehicle"
            :> TokenAuth
-           :> Capture "vehicleId" Text
+           :> Capture "vehicleId" (Id Vehicle)
            :> Get '[JSON] RideListRes
            :<|> TokenAuth
-           :> Capture "productInstanceId" Text
+           :> Capture "productInstanceId" (Id ProductInstance)
            :> "cases"
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
@@ -244,29 +244,7 @@ type ProductInstanceAPI =
            :> Post '[JSON] ProdInstInfo
        )
 
-productInstanceFlow ::
-  ( RegistrationToken ->
-    [ProductInstanceStatus] ->
-    [CaseType] ->
-    Maybe Int ->
-    Maybe Int ->
-    FlowHandler ProductInstanceList
-  )
-    :<|> ( (RegistrationToken -> Text -> FlowHandler RideListRes)
-             :<|> ( (RegistrationToken -> Text -> FlowHandler RideListRes)
-                      :<|> ( ( RegistrationToken ->
-                               Text ->
-                               Maybe CaseType ->
-                               FlowHandler CaseListRes
-                             )
-                               :<|> ( RegistrationToken ->
-                                      Id ProductInstance ->
-                                      ProdInstUpdateReq ->
-                                      FlowHandler ProdInstInfo
-                                    )
-                           )
-                  )
-         )
+productInstanceFlow :: FlowServer ProductInstanceAPI
 productInstanceFlow =
   ProductInstance.list
     :<|> ProductInstance.listDriverRides
@@ -289,16 +267,14 @@ productFlow =
 -- Location update and get for tracking is as follows
 type LocationAPI =
   "location"
-    :> ( Capture "productInstanceId" Text -- TODO: add auth
+    :> ( Capture "productInstanceId" (Id ProductInstance) -- TODO: add auth
            :> Get '[JSON] GetLocationRes
            :<|> TokenAuth
              :> ReqBody '[JSON] UpdateLocationReq
              :> Post '[JSON] UpdateLocationRes
        )
 
-locationFlow ::
-  (Text -> FlowHandler GetLocationRes)
-    :<|> (RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes)
+locationFlow :: FlowServer LocationAPI
 locationFlow =
   Location.getLocation
     :<|> Location.updateLocation
@@ -421,7 +397,7 @@ type RideAPI =
            :> ReqBody '[JSON] RideAPI.SetDriverAcceptanceReq
            :> Post '[JSON] RideAPI.SetDriverAcceptanceRes
            :<|> TokenAuth
-             :> Capture "rideId" Text
+             :> Capture "rideId" (Id ProductInstance)
              :> "start"
              :> ReqBody '[JSON] RideAPI.StartRideReq
              :> Post '[JSON] APISuccess
@@ -430,7 +406,7 @@ type RideAPI =
              :> "end"
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
-             :> Capture "rideId" Text
+             :> Capture "rideId" (Id ProductInstance)
              :> "cancel"
              :> Post '[JSON] APISuccess
        )

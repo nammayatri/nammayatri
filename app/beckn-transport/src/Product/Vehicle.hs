@@ -38,25 +38,25 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandl
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
 
-updateVehicle :: Text -> Text -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
+updateVehicle :: Text -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandler $ do
-  vehicle <- QV.findByIdAndOrgId (Id {getId = vehicleId}) orgId
+  vehicle <- QV.findByIdAndOrgId vehicleId orgId
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
-deleteVehicle :: Text -> Text -> FlowHandler DeleteVehicleRes
+deleteVehicle :: Text -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
 deleteVehicle orgId vehicleId = withFlowHandler $ do
   vehicle <-
-    QV.findVehicleById (Id vehicleId)
+    QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
   if vehicle ^. #_organizationId == orgId
     then do
-      QV.deleteById (Id vehicleId)
-      return $ DeleteVehicleRes vehicleId
+      QV.deleteById vehicleId
+      return . DeleteVehicleRes $ getId vehicleId
     else throwError Unauthorized
 
-getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe Text -> FlowHandler CreateVehicleRes
+getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandler $ do
   user <- QP.findPersonById (Id _EntityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
