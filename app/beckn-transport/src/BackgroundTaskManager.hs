@@ -15,6 +15,8 @@ import Beckn.Utils.App hiding (handleShutdown)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
+import Control.Concurrent
+import Control.Concurrent.STM.TMVar
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (exitSuccess)
@@ -35,14 +37,9 @@ runBackgroundTaskManager configModifier = do
   let redisCfg = appCfg ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appCfg ^. #bgtmPort
-  appEnv <- buildAppEnv appCfg
-  putStrLn @Text $ "Starting Background Task Manager on port " <> show port
-
-  shutdown <- newEmptyTMVarIO
   activeTask <- newEmptyTMVarIO
-
-  void $ installHandler sigTERM (Catch $ handleShutdown shutdown exitSigTERM) Nothing
-  void $ installHandler sigINT (Catch $ handleShutdown shutdown exitSigINT) Nothing
+  appEnv <- buildAppEnv appCfg
+  let shutdown = appEnv ^. #isShutdown
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
@@ -60,21 +57,27 @@ runBackgroundTaskManager configModifier = do
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
         managerMap <- L.runIO getManagers
         logInfo ("Loaded http managers - " <> show (keys managerMap))
+        logInfo $ "Starting Background Task Manager on port " <> show port
         return $ flowRt {R._httpClientManagers = managerMap}
     let settings = setPort port defaultSettings
-    appThreadId <- forkIO $ runFlowR flowRt' appEnv $ Runner.run shutdown activeTask
     apiThreadId <- forkIO $ runSettings settings $ Server.run healthCheckAPI (healthCheckServer shutdown) EmptyContext (App.EnvR flowRt' appEnv)
-    putStrLn @Text "Background Task Manager is ready."
-    exitCode <- atomically $ readTMVar shutdown
-    waitForTaskToComplete activeTask
-    putStrLn @Text "Shutting down..."
-    killThread appThreadId
-    killThread apiThreadId
-    exitWith exitCode
+    btmThreadId <- myThreadId
+    void $ installHandler sigTERM (Catch $ handleShutdown shutdown activeTask exitSigTERM apiThreadId btmThreadId) Nothing
+    void $ installHandler sigINT (Catch $ handleShutdown shutdown activeTask exitSigINT apiThreadId btmThreadId) Nothing
+    runFlowR flowRt' appEnv $ Runner.run activeTask
   where
-    handleShutdown shutdown exitcode = do
-      putStrLn @Text "Received shutdown signal. Handling..."
-      liftIO . atomically $ putTMVar shutdown exitcode
+    handleShutdown shutdown activeTask exitcode apiThreadId btmThreadId = do
+      isLocked <- atomically $ do
+        isEmptyTMVar shutdown >>= \case
+          True -> do
+            putTMVar shutdown ()
+            return True
+          False -> return False
+      when isLocked $ do
+        putStrLn @Text "Received shutdown signal. Handling..."
+        waitForTaskToComplete activeTask
+        throwTo apiThreadId exitcode
+        throwTo btmThreadId exitcode
     waitForTaskToComplete activeTask = do
       putStrLn @Text "Waiting for active task to complete."
       _ <- atomically $ putTMVar activeTask ()

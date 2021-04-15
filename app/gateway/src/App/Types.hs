@@ -52,15 +52,15 @@ data AppEnv = AppEnv
   }
   deriving (Generic)
 
-buildAppEnv :: AppCfg -> C.Cache Text Text -> TMVar () -> IO AppEnv
-buildAppEnv AppCfg {..} c isShutdown = do
+buildAppEnv :: AppCfg -> IO AppEnv
+buildAppEnv AppCfg {..} = do
+  cache <- C.newCache Nothing
+  isShutdown <- newEmptyTMVarIO
   metricsRequestLatency <- registerRequestLatencyMetric
   return $
     AppEnv
       { gwId = selfId,
         gwNwAddress = nwAddress,
-        cache = c,
-        isShutdown = isShutdown,
         ..
       }
 

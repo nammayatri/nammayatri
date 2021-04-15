@@ -10,7 +10,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
-import System.Exit (ExitCode)
 import Utils.Common
 
 handle :: Allocation.ServiceHandle Flow
@@ -41,8 +40,8 @@ handle =
       logEvent = I.logEvent
     }
 
-run :: TMVar ExitCode -> TMVar () -> Flow ()
-run shutdown activeTask = do
+run :: TMVar () -> Flow ()
+run activeTask = do
   Redis.tryLockRedis "allocation" 10 >>= \case
     False -> L.runIO $ threadDelay 5000000 -- sleep for a bit
     _ -> do
@@ -60,7 +59,7 @@ run shutdown activeTask = do
       -- If process handling took less than processDelay we delay for remain to processDelay time
       processDelay <- asks (processDelay . driverAllocationConfig)
       L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
-  isRunning <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
-  when isRunning $ run shutdown activeTask
+  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks isShutdown
+  when isRunning $ run activeTask
   where
     fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds

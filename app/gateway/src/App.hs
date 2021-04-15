@@ -15,8 +15,6 @@ import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import Control.Concurrent
-import Control.Concurrent.STM.TMVar
-import qualified Data.Cache as C
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -41,7 +39,8 @@ runGateway configModifier = do
   let metricsPort = appCfg ^. #metricsPort
   Metrics.serve metricsPort
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
-  shutdown <- newEmptyTMVarIO
+  appEnv <- buildAppEnv appCfg 
+  let shutdown = appEnv ^. #isShutdown
   activeConnections <- newTVarIO (0 :: Int)
   threadId <- myThreadId
   void $ installHandler sigTERM (Catch $ handleShutdown activeConnections shutdown exitSigTERM threadId) Nothing
@@ -56,8 +55,6 @@ runGateway configModifier = do
   let migrationPath = appCfg ^. #migrationPath
   let dbCfg = appCfg ^. #dbCfg
   let autoMigrate = appCfg ^. #autoMigrate
-  cache <- C.newCache Nothing
-  appEnv <- buildAppEnv appCfg cache shutdown
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
