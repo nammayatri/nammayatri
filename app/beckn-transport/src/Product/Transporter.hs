@@ -26,7 +26,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
   person <- QP.findPersonById (Id _EntityId)
   validate person
   organization <- createTransform req
-  validateReq req
+  validateReq
   sedanFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.SEDAN (organization ^. #_createdAt)
   suvFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.SUV (organization ^. #_createdAt)
   hatchbackFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.HATCHBACK (organization ^. #_createdAt)
@@ -39,13 +39,15 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
     validate person = do
       unless (SP._verified person) $
         throwError AccessDenied
-      when (isJust $ SP._organizationId person) $
-        throwError PersonOrgExists
       when (SP._role person /= SP.ADMIN) $
         throwError Unauthorized
-    validateReq treq =
-      unless (all (== True) (isJust <$> transporterMandatoryFields treq)) $
-        throwErrorWithInfo InvalidRequest "Required fields missing."
+      when (isJust $ SP._organizationId person) $
+        throwError PersonOrgExists
+    validateReq = do
+      let countryCode = req ^. #_mobileCountryCode
+          mobileNumber = req ^. #_mobileNumber
+      whenJustM (QO.findOrgByMobileNumber countryCode mobileNumber) $
+        \_ -> throwError OrgMobilePhoneUsed
     mkFarePolicy orgId vehicleVariant now = do
       farePolicyId <- L.generateGUID
       pure $
@@ -94,12 +96,3 @@ getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
   where
     validate person =
       unless (SP._verified person) $ throwError AccessDenied
-
-transporterMandatoryFields :: TransporterReq -> [Maybe Text]
-transporterMandatoryFields req =
-  [ req ^. #_mobileNumber,
-    req ^. #_mobileCountryCode,
-    req ^. #_district,
-    req ^. #_city,
-    req ^. #_country
-  ]

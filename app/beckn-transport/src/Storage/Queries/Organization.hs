@@ -156,3 +156,13 @@ findOrgByShortId shortId = do
     >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId
+
+findOrgByMobileNumber :: Text -> Text -> Flow (Maybe Storage.Organization)
+findOrgByMobileNumber countryCode mobileNumber = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+    >>= checkDBError
+  where
+    predicate Storage.Organization {..} =
+      _mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. _mobileNumber ==. B.val_ (Just mobileNumber)

@@ -108,6 +108,7 @@ data OrganizationError
   = OrgNotFound
   | OrgDoesNotExist
   | OrgFieldNotPresent
+  | OrgMobilePhoneUsed
   | OrgCallbackUrlNotSet
   | OrgCallbackApiKeyNotSet
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
@@ -116,11 +117,13 @@ instance IsAPIError OrganizationError where
   toAPIError OrgNotFound = APIError "ORGANIZATION_NOT_FOUND" "Organization not found."
   toAPIError OrgDoesNotExist = APIError "ORGANIZATION_DOES_NOT_EXISTS" "No organization matches passed data."
   toAPIError OrgFieldNotPresent = APIError "ORGANIZATION_FIELD_NOT_PRESENT" "Required field is null for this organization."
+  toAPIError OrgMobilePhoneUsed = APIError "ORGANIZATION_MOBILE_PHONE_USED" "Mobile phone already used by another organization."
   toAPIError OrgCallbackUrlNotSet = APIError "ORGANIZATION_CALLBACK_URL_NOT_SET" "Callback url for organization is not set."
   toAPIError OrgCallbackApiKeyNotSet = APIError "ORGANIZATION_CALLBACK_API_KEY_NOT_SET" "Callback api key for organization is not set."
   toStatusCode OrgNotFound = E500
   toStatusCode OrgDoesNotExist = E400
   toStatusCode OrgFieldNotPresent = E500
+  toStatusCode OrgMobilePhoneUsed = E400
   toStatusCode OrgCallbackUrlNotSet = E500
   toStatusCode OrgCallbackApiKeyNotSet = E500
 
