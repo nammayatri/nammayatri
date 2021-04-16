@@ -35,6 +35,7 @@ let smsConfig =
     }
   , useFakeSms = Some 7891
   , url = "https://http.myvfirst.com"
+  , sender = "JUSPAY"
   }
 
 let appUri = "http://localhost:8013/v1"

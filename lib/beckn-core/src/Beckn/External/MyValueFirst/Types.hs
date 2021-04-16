@@ -8,12 +8,10 @@ data SubmitSms = SubmitSms
     -- | Password of that account.
     _password :: Text,
     -- | Author name assigned to SMS.
-    _from :: SmsSender,
+    _from :: Text,
     -- | Phone number.
     _to :: Text,
     -- | SMS contents.
     _text :: Text
   }
   deriving (Show)
-
-data SmsSender = JUSPAY deriving (Show, Eq)

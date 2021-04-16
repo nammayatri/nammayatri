@@ -22,6 +22,7 @@ data SmsConfig = SmsConfig
   { sessionConfig :: SmsSessionConfig,
     credConfig :: SmsCredConfig,
     useFakeSms :: Maybe Word16, -- 4 digit
-    url :: BaseUrl
+    url :: BaseUrl,
+    sender :: Text
   }
   deriving (Generic, FromDhall)

@@ -1,7 +1,7 @@
 module Beckn.External.MyValueFirst.Flow where
 
 import qualified Beckn.External.MyValueFirst.API as API
-import Beckn.External.MyValueFirst.Types (SmsSender (..), SubmitSms (..))
+import Beckn.External.MyValueFirst.Types (SubmitSms (..))
 import Beckn.Sms.Config (SmsConfig (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
@@ -32,8 +32,8 @@ type InviteTemplate = Text
 constructInviteSms :: OrgName -> InviteTemplate -> Text
 constructInviteSms = T.replace "{#org#}"
 
-sendOTP :: HasLogContext r => SmsConfig -> Text -> SmsSender -> Text -> Text -> FlowR r (Either Text ())
-sendOTP smsCfg otpSmsTemplate sender phoneNumber otpCode = do
+sendOTP :: SmsConfig -> Text -> Text -> Text -> FlowR r (Either Text ())
+sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
   let smsCred = smsCfg ^. #credConfig
   let url = smsCfg ^. #url
   let otpHash = smsCred ^. #otpHash
@@ -42,7 +42,7 @@ sendOTP smsCfg otpSmsTemplate sender phoneNumber otpCode = do
     SubmitSms
       { _username = smsCred ^. #username,
         _password = smsCred ^. #password,
-        _from = sender,
+        _from = smsCfg ^. #sender,
         _to = phoneNumber,
         _text = constructOtpSms otpCode otpHash otpSmsTemplate
       }

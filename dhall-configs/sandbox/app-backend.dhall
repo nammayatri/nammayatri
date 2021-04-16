@@ -27,6 +27,7 @@ let smsConfig =
     }
   , useFakeSms = None Natural
   , url = "https://http.myvfirst.com"
+  , sender = "JUSPAY"
   }
 
 let sesConfig =

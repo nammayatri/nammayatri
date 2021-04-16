@@ -4,7 +4,6 @@ module Product.Registration (initiateLogin, login, reInitiateLogin) where
 
 import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
-import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import Beckn.Types.Common
 import qualified Beckn.Types.Common as BC
@@ -48,7 +47,7 @@ initiateFlow req smsCfg = do
       token <- makeSession scfg req entityId Nothing
       RegistrationToken.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
-      otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) (SR._authValueHash token)
+      otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
       whenLeft otpSendingRes $ \err -> throwErrorWithInfo Error.UnableToSendSMS err
       return token
   let attempts = SR._attempts regToken
@@ -174,7 +173,7 @@ reInitiateLogin tokenId req =
         otpSmsTemplate <- otpSmsTemplate <$> ask
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
-        otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate SMS.JUSPAY (countryCode <> mobileNumber) _authValueHash
+        otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
         whenLeft otpSendingRes $ \err -> throwErrorWithInfo Error.UnableToSendSMS err
         _ <- RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)

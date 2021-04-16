@@ -229,13 +229,14 @@ sendInviteSms :: SmsConfig -> Text -> Text -> Text -> Flow ()
 sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
   let url = smsCfg ^. #url
   let smsCred = smsCfg ^. #credConfig
+  let sender = smsCfg ^. #sender
   res <-
     SF.submitSms
       url
       SMS.SubmitSms
         { SMS._username = smsCred ^. #username,
           SMS._password = smsCred ^. #password,
-          SMS._from = SMS.JUSPAY,
+          SMS._from = sender,
           SMS._to = phoneNumber,
           SMS._text = SF.constructInviteSms orgName inviteTemplate
         }

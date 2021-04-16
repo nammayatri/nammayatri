@@ -35,6 +35,7 @@ let smsConfig =
     }
   , useFakeSms = None Natural
   , url = "https://http.myvfirst.com"
+  , sender = "JUSPAY"
   }
 
 let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
