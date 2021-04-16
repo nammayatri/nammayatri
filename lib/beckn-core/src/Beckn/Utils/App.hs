@@ -2,11 +2,14 @@
 
 module Beckn.Utils.App where
 
-import Beckn.Utils.Logging
+import Beckn.Types.App
+import Beckn.Types.Error
+import Beckn.Utils.Common
 import Control.Concurrent
 import Control.Concurrent.STM.TMVar
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import GHC.Records
 import System.Exit (ExitCode)
 
 handleLeft :: forall a b m. (Show a, Log m, L.MonadFlow m) => ExitCode -> Text -> Either a b -> m b
@@ -37,3 +40,17 @@ handleShutdown activeConnections shutdown code threadId = do
         let sleep = 100000
         threadDelay sleep
         waitForDrain $ ms - sleep
+
+class HandleIfUp b where
+  handleIfUp :: b -> b
+
+instance (HandleIfUp b) => HandleIfUp (a -> b) where
+  handleIfUp f = handleIfUp . f
+
+instance (HasField "isShutdown" r (TMVar ())) => HandleIfUp (FlowHandlerR r a) where
+  handleIfUp flowHandler = do
+    shutdown <- getField @"isShutdown" <$> asks appEnv
+    shouldRun <- liftIO $ atomically $ isEmptyTMVar shutdown
+    if shouldRun
+      then flowHandler
+      else withFlowHandlerAPI $ throwError ServerUnavailable

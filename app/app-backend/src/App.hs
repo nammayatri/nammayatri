@@ -14,32 +14,43 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
+import Control.Concurrent
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
-  ( Settings,
-    defaultSettings,
+  ( defaultSettings,
     runSettings,
+    setOnClose,
+    setOnOpen,
     setPort,
   )
 import System.Environment
 import Utils.Common
+import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
 runAppBackend :: (AppCfg -> AppCfg) -> IO ()
 runAppBackend configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "app-backend"
   Metrics.serve (appCfg ^. #metricsPort)
-  runAppBackend' appCfg $
-    setPort (appCfg ^. #port) defaultSettings
+  runAppBackend' appCfg
 
-runAppBackend' :: AppCfg -> Settings -> IO ()
-runAppBackend' appCfg settings = do
+runAppBackend' :: AppCfg -> IO ()
+runAppBackend' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
   appEnv <- buildAppEnv appCfg
+  let shutdown = appEnv ^. #isShutdown
+  activeConnections <- newTVarIO (0 :: Int)
+  threadId <- myThreadId
+  void $ installHandler sigTERM (Catch $ handleShutdown activeConnections shutdown exitSigTERM threadId) Nothing
+  void $ installHandler sigINT (Catch $ handleShutdown activeConnections shutdown exitSigINT threadId) Nothing
+  let settings =
+        setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
+          setOnClose (\_ -> atomically $ modifyTVar' activeConnections (subtract 1)) $
+            setPort (appCfg ^. #port) defaultSettings
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

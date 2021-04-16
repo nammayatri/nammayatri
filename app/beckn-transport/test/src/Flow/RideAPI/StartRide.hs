@@ -8,8 +8,8 @@ import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide
-import Servant.Server (ServerError)
 import Test.Hspec
+import Servant.Server as Serv (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error

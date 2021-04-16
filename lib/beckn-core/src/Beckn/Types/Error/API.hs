@@ -332,3 +332,14 @@ instance IsAPIError RouteError where
   toMessage = \case
     RouteRequestError url err -> externalAPICallErrorMessage url err
     RouteNotLatLong -> Just "Not supporting waypoints other than LatLong."
+
+data ServerError
+  = ServerUnavailable
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''ServerError
+
+instance IsAPIError ServerError where
+  toErrorCode ServerUnavailable = "SERVER_UNAVAILABLE"
+  toMessage ServerUnavailable = Just "Server is working, but is not available."
+  toHttpCode ServerUnavailable = E503

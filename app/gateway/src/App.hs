@@ -73,4 +73,4 @@ runGateway configModifier = do
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show port)
         return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
-    runSettings settings $ run shutdown (App.EnvR flowRt' appEnv)
+    runSettings settings $ run (App.EnvR flowRt' appEnv)
