@@ -51,12 +51,8 @@ assignDriver = PI.assignDriver . cast
 rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
 rideRequestToRideRequest SRR.RideRequest {..} =
   Alloc.RideRequest
-    { requestHeader =
-        RequestHeader
-          { requestId = _id,
-            rideId = _rideId,
-            requestTime = _createdAt
-          },
+    { requestId = _id,
+      rideId = _rideId,
       requestData = case _type of
         SRR.ALLOCATION -> Alloc.Allocation
         SRR.CANCELLATION -> Alloc.Cancellation

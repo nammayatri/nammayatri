@@ -64,12 +64,8 @@ addRequest requestData Repository {..} rideId = do
   currTime <- Time.getCurrentTime
   let request =
         RideRequest
-          { requestHeader =
-              RequestHeader
-                { requestId = requestId,
-                  rideId = rideId,
-                  requestTime = currTime
-                },
+          { requestId = requestId,
+            rideId = rideId,
             requestData = requestData
           }
   modifyIORef currentIdVar (+ 1)

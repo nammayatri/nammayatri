@@ -24,15 +24,9 @@ data RequestData
   | Cancellation
   deriving (Show)
 
-data RequestHeader = RequestHeader
+data RideRequest = RideRequest
   { requestId :: Id SRR.RideRequest,
     rideId :: Id Ride,
-    requestTime :: UTCTime
-  }
-  deriving (Generic, Show)
-
-data RideRequest = RideRequest
-  { requestHeader :: RequestHeader,
     requestData :: RequestData
   }
   deriving (Generic, Show)
@@ -111,27 +105,25 @@ process handle@ServiceHandle {..} requestsNum = do
 
 processRequest :: MonadHandler m => ServiceHandle m -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} rideRequest = do
-  let requestHeader = rideRequest ^. #requestHeader
-  let requestId = requestHeader ^. #requestId
-  let rideId = requestHeader ^. #rideId
+  let requestId = rideRequest ^. #requestId
+  let rideId = rideRequest ^. #rideId
   rideInfo <- getRideInfo rideId
   let rideStatus = rideInfo ^. #rideStatus
-  let orderTime = rideInfo ^. #orderTime
   eres <- try $ do
     withLogContext ("RideRequest_" <> rideId ^. #getId) $ do
       logInfo "Start processing request"
       case rideRequest ^. #requestData of
         Allocation ->
           case rideStatus of
-            Confirmed -> processAllocation handle requestHeader orderTime
+            Confirmed -> processAllocation handle rideInfo
             Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
             _ ->
               logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
         Cancellation ->
           case rideStatus of
             status | status == Confirmed || status == Assigned -> do
-              cancel handle requestHeader
-              logEvent ConsumerCancelled (requestHeader ^. #rideId)
+              cancel handle rideId
+              logEvent ConsumerCancelled rideId
             _ ->
               logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
 
@@ -141,43 +133,44 @@ processRequest handle@ServiceHandle {..} rideRequest = do
       let message = "Error processing request " <> show requestId <> ": " <> show err
       logError message
 
-  removeRequest $ requestHeader ^. #requestId
+  removeRequest requestId
 
-processAllocation :: MonadHandler m => ServiceHandle m -> RequestHeader -> OrderTime -> m ()
-processAllocation handle@ServiceHandle {..} requestHeader orderTime = do
+processAllocation :: MonadHandler m => ServiceHandle m -> RideInfo -> m ()
+processAllocation handle@ServiceHandle {..} rideInfo = do
+  let rideId = rideInfo ^. #rideId
+  let orderTime = rideInfo ^. #orderTime
   allocationTimeFinished <- isAllocationTimeFinished handle orderTime
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
   if allocationTimeFinished
     then do
-      cancel handle requestHeader
-      logEvent AllocationTimeFinished (requestHeader ^. #rideId)
+      cancel handle rideId
+      logEvent AllocationTimeFinished rideId
     else do
-      mCurrentNotification <- getCurrentNotification (requestHeader ^. #rideId)
+      mCurrentNotification <- getCurrentNotification rideId
       logInfo $ "getCurrentNotification " <> show mCurrentNotification
       case mCurrentNotification of
         Just currentNotification ->
-          processCurrentNotification handle requestHeader currentNotification
+          processCurrentNotification handle rideId currentNotification
         Nothing ->
-          proceedToNextDriver handle requestHeader
+          proceedToNextDriver handle rideId
 
 processCurrentNotification ::
   MonadHandler m =>
   ServiceHandle m ->
-  RequestHeader ->
+  Id Ride ->
   CurrentNotification ->
   m ()
 processCurrentNotification
   handle@ServiceHandle {..}
-  requestHeader
+  rideId
   (CurrentNotification driverId expiryTime) = do
-    let rideId = requestHeader ^. #rideId
     notificationTimeFinished <- isNotificationTimeFinished handle expiryTime
     logInfo $ "isNotificationTimeFinished " <> show notificationTimeFinished
     if notificationTimeFinished
       then do
         logInfo $ "Notified ride not assigned to driver " <> getId driverId
         sendRideNotAssignedNotification rideId driverId
-        processRejection handle True requestHeader driverId
+        processRejection handle True rideId driverId
       else do
         mResponse <- getDriverResponse rideId driverId
         logInfo $ "getDriverResponse " <> show mResponse
@@ -187,28 +180,26 @@ processCurrentNotification
               DriverResponse.ACCEPT -> do
                 logInfo $ "assigning driver" <> show driverId
                 assignDriver rideId driverId
-                cleanupNotifications $ requestHeader ^. #rideId
-                logEvent AcceptedByDriver (requestHeader ^. #rideId)
+                cleanupNotifications rideId
+                logEvent AcceptedByDriver rideId
               DriverResponse.REJECT ->
-                processRejection handle False requestHeader driverId
+                processRejection handle False rideId driverId
           Nothing ->
-            checkRideLater handle requestHeader
+            checkRideLater handle rideId
 
-processRejection :: MonadHandler m => ServiceHandle m -> Bool -> RequestHeader -> Id Driver -> m ()
-processRejection handle@ServiceHandle {..} ignored requestHeader driverId = do
+processRejection :: MonadHandler m => ServiceHandle m -> Bool -> Id Ride -> Id Driver -> m ()
+processRejection handle@ServiceHandle {..} ignored rideId driverId = do
   logInfo "processing rejection"
-  let rideId = requestHeader ^. #rideId
   let status = if ignored then Ignored else Rejected
   let event = if ignored then IgnoredByDriver else RejectedByDriver
   resetLastRejectionTime driverId
   updateNotificationStatus rideId driverId status
-  logEvent event (requestHeader ^. #rideId)
-  proceedToNextDriver handle requestHeader
+  logEvent event rideId
+  proceedToNextDriver handle rideId
 
-proceedToNextDriver :: MonadHandler m => ServiceHandle m -> RequestHeader -> m ()
-proceedToNextDriver handle@ServiceHandle {..} requestHeader = do
+proceedToNextDriver :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()
+proceedToNextDriver handle@ServiceHandle {..} rideId = do
   logInfo "proceed to next driver"
-  let rideId = requestHeader ^. #rideId
   driverPool <- getDriverPool rideId
   logInfo $ "DriverPool " <> T.intercalate ", " (getId <$> driverPool)
 
@@ -224,12 +215,11 @@ proceedToNextDriver handle@ServiceHandle {..} requestHeader = do
               && driver `notElem` driversWithNotification
 
       let filteredPool = filter canNotify driverPool
-      processFilteredPool handle requestHeader filteredPool
-    [] -> cancel handle requestHeader
+      processFilteredPool handle rideId filteredPool
+    [] -> cancel handle rideId
 
-processFilteredPool :: MonadHandler m => ServiceHandle m -> RequestHeader -> [Id Driver] -> m ()
-processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
-  let rideId = requestHeader ^. #rideId
+processFilteredPool :: MonadHandler m => ServiceHandle m -> Id Ride -> [Id Driver] -> m ()
+processFilteredPool handle@ServiceHandle {..} rideId driverPool = do
   case driverPool of
     driverId : driverIds -> do
       sortMode <- getDriverSortMode
@@ -243,22 +233,22 @@ processFilteredPool handle@ServiceHandle {..} requestHeader driverPool = do
       sendNewRideNotification rideId firstDriver
       addNotificationStatus rideId firstDriver expiryTime
       logInfo $ "Notified driver " <> getId firstDriver
-      logEvent NotificationSent (requestHeader ^. #rideId)
-      checkRideLater handle requestHeader
+      logEvent NotificationSent rideId
+      checkRideLater handle rideId
     [] -> do
-      cancel handle requestHeader
-      logEvent EmptyDriverPool (requestHeader ^. #rideId)
+      cancel handle rideId
+      logEvent EmptyDriverPool rideId
 
-checkRideLater :: MonadHandler m => ServiceHandle m -> RequestHeader -> m ()
-checkRideLater ServiceHandle {..} requestHeader = do
-  addAllocationRequest (requestHeader ^. #rideId)
+checkRideLater :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()
+checkRideLater ServiceHandle {..} rideId = do
+  addAllocationRequest rideId
   logInfo "Check ride later"
 
-cancel :: MonadHandler m => ServiceHandle m -> RequestHeader -> m ()
-cancel ServiceHandle {..} requestHeader = do
+cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()
+cancel ServiceHandle {..} rideId = do
   logInfo "Cancelling ride"
-  cancelRide $ requestHeader ^. #rideId
-  cleanupNotifications $ requestHeader ^. #rideId
+  cancelRide rideId
+  cleanupNotifications rideId
 
 isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> OrderTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} orderTime = do
