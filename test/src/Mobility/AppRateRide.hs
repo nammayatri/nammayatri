@@ -101,7 +101,7 @@ spec = do
       inProgressStatusResult <-
         runClient
           transporterClient
-          $ F.rideUpdate F.driverToken transporterOrderId (F.buildUpdateStatusReq PI.INPROGRESS (transporterOrder ^. #_udf4))
+          $ F.rideStart F.driverToken transporterOrderId (F.buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrder ^. #_udf4)
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClient (F.buildListPIs PI.INPROGRESS)
@@ -110,7 +110,7 @@ spec = do
       completeStatusResult <-
         runClient
           transporterClient
-          $ F.rideUpdate F.driverToken transporterOrderId (F.buildUpdateStatusReq PI.COMPLETED Nothing)
+          $ F.rideEnd F.driverToken transporterOrderId
       completeStatusResult `shouldSatisfy` isRight
 
       appPiListResult <- runClient appClient $ F.buildListPIs PI.COMPLETED

@@ -112,7 +112,7 @@ spec = do
       inProgressStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate driverToken transporterOrderPiId (buildUpdateStatusReq PI.INPROGRESS (transporterOrderPi ^. #_udf4)))
+          (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi ^. #_udf4))
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)
@@ -125,7 +125,7 @@ spec = do
       completedStatusResult <-
         runClient
           tbeClientEnv
-          (rideUpdate driverToken transporterOrderPiId (buildUpdateStatusReq PI.COMPLETED (transporterOrderPi ^. #_udf4)))
+          (rideEnd driverToken transporterOrderPiId)
       completedStatusResult `shouldSatisfy` isRight
   where
     productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]

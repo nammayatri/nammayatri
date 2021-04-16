@@ -136,7 +136,10 @@ cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
-rideRespond :<|> _ = client (Proxy :: Proxy TbeRoutes.RideAPI)
+rideStart :: Text -> Id PI.ProductInstance -> RideAPI.StartRideReq -> ClientM APISuccess
+rideEnd :: Text -> Id PI.ProductInstance -> ClientM APISuccess
+rideCancel :: Text -> Id PI.ProductInstance -> ClientM APISuccess
+rideRespond :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
@@ -217,8 +220,7 @@ listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe I
 listDriverRides :: Text -> Id Person.Person -> ClientM TbePI.RideListRes
 listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
 listCasesByProductInstance :: Text -> Id PI.ProductInstance -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
-rideUpdate :: Text -> Id PI.ProductInstance -> TbePI.ProdInstUpdateReq -> ClientM TbePI.ProdInstInfo
-listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> rideUpdate = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
+listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> _ = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
 listPIs :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
 listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
@@ -257,11 +259,10 @@ buildUpdateCaseReq =
       _transporterChoice = "ACCEPTED"
     }
 
-buildUpdatePIReq :: TbePI.ProdInstUpdateReq
-buildUpdatePIReq =
-  TbePI.ProdInstUpdateReq
-    { _status = PI.TRIP_ASSIGNED,
-      _otpCode = Nothing
+buildStartRideReq :: Text -> RideAPI.StartRideReq
+buildStartRideReq otp =
+  RideAPI.StartRideReq
+    { RideAPI.otp = otp
     }
 
 buildUpdateStatusReq :: PI.ProductInstanceStatus -> Maybe Text -> TbePI.ProdInstUpdateReq
