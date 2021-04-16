@@ -13,7 +13,6 @@ let mkSigningKey =
   , signPrivKey = signPrivKey
   }
 
-let TraceFlag = < TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING >
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
@@ -48,7 +47,6 @@ in { defaultPoolConfig = defaultPoolConfig
    , smsSessionConfig = smsSessionConfig
    , autoMigrate = False
    , loggerConfig = loggerConfig
-   , TraceFlag = TraceFlag
    , LogLevel = LogLevel
    , ExotelCfg = ExotelCfg
    , signatureExpiry = +600 -- in seconds

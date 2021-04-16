@@ -79,7 +79,6 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
-, traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
 , driverAllocationConfig = driverAllocationConfig

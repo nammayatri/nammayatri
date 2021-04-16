@@ -10,10 +10,10 @@ import App.Types
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
-import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail', withClientTracing)
 import Beckn.Utils.SignatureAuth (SignaturePayload)
 import Data.Aeson (encode)
 import qualified Data.Text as T
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
@@ -33,7 +33,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
     validateContext "search" (req ^. #context)
     unless (isJust (req ^. #context . #_bap_uri)) $
       throwError $ InvalidRequest "No bap URI in context."
-    let gatewaySearchSignAuth = ET.client $ withClientTracing GatewayAPI.searchAPI
+    let gatewaySearchSignAuth = ET.client GatewayAPI.searchAPI
         context = req ^. #context
         messageId = context ^. #_transaction_id
     case (Org._callbackUrl org, Org._callbackApiKey org) of
@@ -48,11 +48,10 @@ search proxySign org req = withFlowHandlerBecknAPI $
           providerUrl <- provider ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
           -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
           eRes <-
-            callAPIWithTrail'
+            L.callAPI'
               (Just signatureAuthManagerKey)
               providerUrl
               (gatewaySearchSignAuth (Just proxySign) req)
-              "search"
           logTagDebug "gateway_transaction" $
             messageId
               <> ", search_req: "
@@ -67,16 +66,15 @@ searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler A
 searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "on_search" context
-    let gatewayOnSearchSignAuth = ET.client $ withClientTracing GatewayAPI.onSearchAPI
+    let gatewayOnSearchSignAuth = ET.client GatewayAPI.onSearchAPI
         messageId = req ^. #context . #_transaction_id
     bgSession <- BA.lookup messageId >>= fromMaybeM (InvalidRequest "Message not found.")
     let baseUrl = bgSession ^. #cbUrl
     eRes <-
-      callAPIWithTrail'
+      L.callAPI'
         (Just signatureAuthManagerKey)
         baseUrl
         (gatewayOnSearchSignAuth (Just proxySign) req)
-        "on_search"
     providerUrl <- provider ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
     logTagDebug "gateway_transaction" $
       messageId

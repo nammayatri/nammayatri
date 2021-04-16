@@ -8,7 +8,6 @@ import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack (Ack, AckResponse)
-import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
@@ -21,11 +20,11 @@ type OnSearchAPI =
 onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
 
-onSearch :: OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
-onSearch = ET.client (withClientTracing onSearchAPI)
+onSearch :: OnSearchReq -> ET.EulerClient AckResponse
+onSearch = ET.client onSearchAPI
 
-nsdlOnSearch :: OnSearchReq -> (RequestInfo, ET.EulerClient AckResponse)
-nsdlOnSearch = ET.client $ withClientTracing nsdlOnSearchAPI
+nsdlOnSearch :: OnSearchReq -> ET.EulerClient AckResponse
+nsdlOnSearch = ET.client nsdlOnSearchAPI
 
 type OnTrackAPI =
   "on_track"
@@ -35,8 +34,8 @@ type OnTrackAPI =
 onTrackTripAPI :: Proxy OnTrackAPI
 onTrackTripAPI = Proxy
 
-onTrackTrip :: OnTrackTripReq -> (RequestInfo, ET.EulerClient AckResponse)
-onTrackTrip = ET.client (withClientTracing onTrackTripAPI)
+onTrackTrip :: OnTrackTripReq -> ET.EulerClient AckResponse
+onTrackTrip = ET.client onTrackTripAPI
 
 type OnConfirmAPI =
   "on_confirm"
@@ -46,8 +45,8 @@ type OnConfirmAPI =
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy
 
-onConfirm :: OnConfirmReq -> (RequestInfo, ET.EulerClient AckResponse)
-onConfirm = ET.client (withClientTracing onConfirmAPI)
+onConfirm :: OnConfirmReq -> ET.EulerClient AckResponse
+onConfirm = ET.client onConfirmAPI
 
 type OnCancelAPI =
   "on_cancel"
@@ -57,8 +56,8 @@ type OnCancelAPI =
 cancelAPI :: Proxy OnCancelAPI
 cancelAPI = Proxy
 
-onCancel :: OnCancelReq -> (RequestInfo, ET.EulerClient AckResponse)
-onCancel = ET.client (withClientTracing cancelAPI)
+onCancel :: OnCancelReq -> ET.EulerClient AckResponse
+onCancel = ET.client cancelAPI
 
 type OnStatusAPI =
   "on_status"
@@ -68,8 +67,8 @@ type OnStatusAPI =
 statusAPI :: Proxy OnStatusAPI
 statusAPI = Proxy
 
-onStatus :: OnStatusReq -> (RequestInfo, ET.EulerClient AckResponse)
-onStatus = ET.client (withClientTracing statusAPI)
+onStatus :: OnStatusReq -> ET.EulerClient AckResponse
+onStatus = ET.client statusAPI
 
 type CallAPI =
   "call"
@@ -80,8 +79,8 @@ type CallAPI =
 callsAPI :: Proxy CallAPI
 callsAPI = Proxy
 
-initiateCall :: CallReq -> (RequestInfo, ET.EulerClient Ack)
-initiateCall = ET.client $ withClientTracing callsAPI
+initiateCall :: CallReq -> ET.EulerClient Ack
+initiateCall = ET.client callsAPI
 
 type UpdateAPI =
   "on_update"
@@ -91,5 +90,5 @@ type UpdateAPI =
 updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
 
-onUpdate :: OnUpdateReq -> (RequestInfo, ET.EulerClient AckResponse)
-onUpdate = ET.client (withClientTracing updateAPI)
+onUpdate :: OnUpdateReq -> ET.EulerClient AckResponse
+onUpdate = ET.client updateAPI

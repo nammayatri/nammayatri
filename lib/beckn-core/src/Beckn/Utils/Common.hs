@@ -126,11 +126,6 @@ headMaybe :: [a] -> Maybe a
 headMaybe [] = Nothing
 headMaybe (x : _) = Just x
 
--- | Get trace flag from ENV var
-getTraceFlag :: HasTraceFlag r => FlowR r TraceFlag
-getTraceFlag =
-  getField @"traceFlag" <$> ask
-
 padLeft :: Int -> Char -> Text -> Text
 padLeft n c txt =
   let prefix = replicate (max 0 $ n - length txt) c

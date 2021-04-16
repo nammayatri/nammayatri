@@ -91,7 +91,6 @@ in
 , coreVersion = "0.8.2"
 , domainVersion = "0.8.2"
 , geofencingConfig = geofencingConfig
-, traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , signatureExpiry = common.signatureExpiry
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"

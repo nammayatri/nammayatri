@@ -2,7 +2,6 @@ module Beckn.External.GoogleMaps.API where
 
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.App (MandatoryQueryParam)
-import Beckn.Utils.Servant.Trail.Client (RequestInfo, withClientTracing)
 import EulerHS.Prelude
 import EulerHS.Types (EulerClient, client)
 import Servant
@@ -28,7 +27,7 @@ type GoogleMapsAPI =
 googleMapsAPI :: Proxy GoogleMapsAPI
 googleMapsAPI = Proxy
 
-autoComplete :: Text -> Text -> Text -> Integer -> Text -> (RequestInfo, EulerClient GoogleMaps.SearchLocationResp)
-placeDetails :: Text -> Text -> Text -> (RequestInfo, EulerClient GoogleMaps.PlaceDetailsResp)
-getPlaceName :: Text -> Text -> (RequestInfo, EulerClient GoogleMaps.GetPlaceNameResp)
-autoComplete :<|> placeDetails :<|> getPlaceName = client $ withClientTracing googleMapsAPI
+autoComplete :: Text -> Text -> Text -> Integer -> Text -> EulerClient GoogleMaps.SearchLocationResp
+placeDetails :: Text -> Text -> Text -> EulerClient GoogleMaps.PlaceDetailsResp
+getPlaceName :: Text -> Text -> EulerClient GoogleMaps.GetPlaceNameResp
+autoComplete :<|> placeDetails :<|> getPlaceName = client googleMapsAPI

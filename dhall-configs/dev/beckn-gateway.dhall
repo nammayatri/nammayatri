@@ -39,7 +39,6 @@ in
 , migrationPath = Some (env:BECKN_GATEWAY_MIGRATION_PATH as Text ? "dev/migrations/beckn-gateway")
 , autoMigrate = True
 , searchTimeout = None Integer
-, traceFlag = common.TraceFlag.TRACE_ALL
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
 , mobilityCoreVersion = "0.8.2"
 , mobilityDomainVersion = "0.8.2"

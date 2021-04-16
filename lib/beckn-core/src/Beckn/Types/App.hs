@@ -8,17 +8,14 @@ module Beckn.Types.App
   )
 where
 
-import Beckn.Storage.DB.Config (HasDbCfg)
-import Beckn.Types.Flow (FlowR)
+import Beckn.Storage.DB.Config ()
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.Beam.Query
-import Dhall (FromDhall)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import GHC.Records (HasField (..))
 import Servant
 import qualified Servant.Client.Core as Servant
 
@@ -45,18 +42,6 @@ type CronAuthKey = Text
 
 -- FIXME: remove this
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
-
--- | Requests / responses track condiguration flag
-data TraceFlag = TRACE_INCOMING | TRACE_OUTGOING | TRACE_ALL | TRACE_NOTHING
-  deriving (Generic, FromDhall)
-
-type HasTraceFlag r = HasField "traceFlag" r TraceFlag
-
-type FlowWithTraceFlag r a =
-  ( HasTraceFlag r,
-    HasDbCfg r
-  ) =>
-  FlowR r a
 
 instance S.ToSchema Servant.BaseUrl where
   declareNamedSchema _ = do

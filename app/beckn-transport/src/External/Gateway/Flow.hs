@@ -12,7 +12,7 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client (BaseUrl)
@@ -30,49 +30,46 @@ onSearch req bppShortId = do
   case gatewayShortId of
     "NSDL.BG.1" -> do
       nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM NSDLBaseUrlNotSet
-      callAPIWithTrail' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
+      L.callAPI' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req)
         >>= fromEitherM (ExternalAPICallError nsdlBaseUrl)
     "JUSPAY.BG.1" -> do
       callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      callAPIWithTrail' (Just authKey) callbackUrl (API.onSearch req) "on_search"
+      L.callAPI' (Just authKey) callbackUrl (API.onSearch req)
         >>= fromEitherM (ExternalAPICallError callbackUrl)
     _ -> throwError GatewaySelectorNotSet
 
 onTrackTrip :: BaseUrl -> OnTrackTripReq -> Text -> Flow AckResponse
 onTrackTrip url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  callAPIWithTrail' (Just authKey) url (API.onTrackTrip req) "on_track"
+  L.callAPI' (Just authKey) url (API.onTrackTrip req)
     >>= fromEitherM (ExternalAPICallError url)
-
--- TODO: can we just return AckResponse returned by client call?
--- Will it have the same context?
 
 onUpdate :: BaseUrl -> OnUpdateReq -> Text -> Flow AckResponse
 onUpdate url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  callAPIWithTrail' (Just authKey) url (API.onUpdate req) "on_update"
+  L.callAPI' (Just authKey) url (API.onUpdate req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onConfirm :: BaseUrl -> OnConfirmReq -> Text -> Flow AckResponse
 onConfirm url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  callAPIWithTrail' (Just authKey) url (API.onConfirm req) "on_confirm"
+  L.callAPI' (Just authKey) url (API.onConfirm req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onCancel :: BaseUrl -> OnCancelReq -> Text -> Flow AckResponse
 onCancel url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  callAPIWithTrail' (Just authKey) url (API.onCancel req) "on_cancel"
+  L.callAPI' (Just authKey) url (API.onCancel req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onStatus :: BaseUrl -> OnStatusReq -> Text -> Flow AckResponse
 onStatus url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  callAPIWithTrail' (Just authKey) url (API.onStatus req) "on_status"
+  L.callAPI' (Just authKey) url (API.onStatus req)
     >>= fromEitherM (ExternalAPICallError url)
 
 initiateCall :: CallReq -> Flow Ack
 initiateCall req = do
   url <- xAppUri <$> ask
-  callAPIWithTrail url (API.initiateCall req) "call_to_customer"
+  L.callAPI url (API.initiateCall req)
     >>= fromEitherM (ExternalAPICallErrorWithCode "UNABLE_TO_CALL" url)
