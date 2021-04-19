@@ -1,6 +1,13 @@
 module App.Types
-  ( module App.Types,
+  ( AppCfg (),
+    AppEnv (..),
+    DriverAllocationConfig (..),
+    Env,
+    Flow,
+    FlowHandler,
+    FlowServer,
     Log (..),
+    mkAppEnv,
   )
 where
 
@@ -17,7 +24,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.App (SortMode)
 
-data AppEnv = AppEnv
+data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     redisCfg :: T.RedisConfig,
     smsCfg :: SmsConfig,
@@ -53,6 +60,35 @@ data AppEnv = AppEnv
   }
   deriving (Generic, FromDhall)
 
+data AppEnv = AppEnv
+  { dbCfg :: DBConfig,
+    smsCfg :: SmsConfig,
+    otpSmsTemplate :: Text,
+    inviteSmsTemplate :: Text,
+    xGatewaySelector :: Maybe Text,
+    xGatewayNsdlUrl :: Maybe BaseUrl,
+    xAppUri :: BaseUrl,
+    selfId :: Text,
+    nwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    caseExpiry :: Maybe Integer,
+    cronAuthKey :: Maybe CronAuthKey,
+    encService :: (String, Word16),
+    fcmJsonPath :: Maybe Text,
+    exotelCfg :: Maybe ExotelCfg,
+    coreVersion :: Text,
+    domainVersion :: Text,
+    traceFlag :: TraceFlag,
+    signatureExpiry :: NominalDiffTime,
+    driverAllocationConfig :: DriverAllocationConfig,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text,
+    fcmUrl :: BaseUrl,
+    graphhopperUrl :: BaseUrl
+  }
+  deriving (Generic, FromDhall)
+
 data DriverAllocationConfig = DriverAllocationConfig
   { driverNotificationExpiry :: NominalDiffTime,
     rideAllocationExpiry :: NominalDiffTime,
@@ -62,6 +98,12 @@ data DriverAllocationConfig = DriverAllocationConfig
     processDelay :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
+
+mkAppEnv :: AppCfg -> AppEnv
+mkAppEnv AppCfg {..} =
+  AppEnv
+    { ..
+    }
 
 type Env = EnvR AppEnv
 

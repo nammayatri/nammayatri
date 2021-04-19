@@ -27,14 +27,15 @@ import qualified Storage.Queries.Organization as Storage
 import System.Environment
 import System.Posix.Signals
 
-runBackgroundTaskManager :: (AppEnv -> AppEnv) -> IO ()
+runBackgroundTaskManager :: (AppCfg -> AppCfg) -> IO ()
 runBackgroundTaskManager configModifier = do
-  appEnv <- configModifier <$> readDhallConfigDefault "beckn-transport-btm"
+  appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport-btm"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
-  let redisCfg = appEnv ^. #redisCfg
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
+  let redisCfg = appCfg ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
-  let port = appEnv ^. #bgtmPort
+  let port = appCfg ^. #bgtmPort
+  let appEnv = mkAppEnv appCfg
   putStrLn @Text $ "Starting Background Task Manager on port " <> show port
 
   shutdown <- newEmptyTMVarIO
