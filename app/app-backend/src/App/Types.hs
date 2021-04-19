@@ -1,4 +1,13 @@
-module App.Types where
+module App.Types
+  ( Env,
+    Flow,
+    FlowHandler,
+    FlowServer,
+    AppCfg (),
+    AppEnv (..),
+    mkAppEnv,
+  )
+where
 
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.SesConfig (SesConfig)
@@ -13,7 +22,7 @@ import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.Geofencing
 
-data AppEnv = AppEnv
+data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
@@ -49,6 +58,43 @@ data AppEnv = AppEnv
     graphhopperUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
+
+data AppEnv = AppEnv
+  { dbCfg :: DBConfig,
+    smsCfg :: SmsConfig,
+    otpSmsTemplate :: Text,
+    sesCfg :: SesConfig,
+    xGatewayUri :: BaseUrl,
+    xGatewaySelector :: Maybe Text,
+    xGatewayNsdlUrl :: Maybe BaseUrl,
+    xProviderUri :: BaseUrl,
+    bapSelfId :: Text,
+    bapNwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    searchConfirmExpiry :: Maybe Integer,
+    searchCaseExpiry :: Maybe Integer,
+    cronAuthKey :: Maybe CronAuthKey,
+    encService :: (String, Word16),
+    fcmJsonPath :: Maybe Text,
+    exotelCfg :: Maybe ExotelCfg,
+    coreVersion :: Text,
+    domainVersion :: Text,
+    geofencingConfig :: GeofencingConfig,
+    traceFlag :: TraceFlag,
+    signatureExpiry :: NominalDiffTime,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text,
+    fcmUrl :: BaseUrl,
+    graphhopperUrl :: BaseUrl
+  }
+  deriving (Generic)
+
+mkAppEnv :: AppCfg -> AppEnv
+mkAppEnv AppCfg {..} =
+  AppEnv
+    { ..
+    }
 
 type Env = EnvR AppEnv
 

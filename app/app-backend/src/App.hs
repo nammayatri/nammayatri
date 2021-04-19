@@ -30,32 +30,33 @@ import Network.Wai.Handler.Warp
   )
 import System.Environment
 
-runAppBackend :: (AppEnv -> AppEnv) -> IO ()
+runAppBackend :: (AppCfg -> AppCfg) -> IO ()
 runAppBackend configModifier = do
-  appEnv <- configModifier <$> readDhallConfigDefault "app-backend"
-  Metrics.serve (metricsPort appEnv)
-  runAppBackend' appEnv $
+  appCfg <- configModifier <$> readDhallConfigDefault "app-backend"
+  Metrics.serve (appCfg ^. #metricsPort)
+  runAppBackend' appCfg $
     setOnExceptionResponse appExceptionResponse $
-      setPort (port appEnv) defaultSettings
+      setPort (appCfg ^. #port) defaultSettings
 
-runAppBackend' :: AppEnv -> Settings -> IO ()
-runAppBackend' appEnv settings = do
+runAppBackend' :: AppCfg -> Settings -> IO ()
+runAppBackend' appCfg settings = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appEnv ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
+      appEnv = mkAppEnv appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogContext "Server startup" $ do
         logInfo "Setting up for signature auth..."
-        let shortOrgId = appEnv ^. #bapSelfId
+        let shortOrgId = appCfg ^. #bapSelfId
         getManager <-
           prepareAuthManager flowRt appEnv "Authorization" shortOrgId
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
         authManager <- L.runIO getManager
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (migrationPath appEnv) (dbCfg appEnv) (autoMigrate appEnv)
+        migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        logInfo ("Runtime created. Starting server at port " <> show (port appEnv))
+        logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
         return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
 
