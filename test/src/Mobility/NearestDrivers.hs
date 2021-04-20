@@ -12,7 +12,7 @@ import Utils
 
 spec :: Spec
 spec = do
-  (appEnv :: BecknTransport.AppEnv) <- runIO $ readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
+  (appEnv :: BecknTransport.AppEnv) <- runIO $ BecknTransport.mkAppEnv <$> readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
   describe "getNearestDrivers function" $ do
     it "Test ordering" $ testOrder appEnv
     it "Test radius filtration" $ testInRadius appEnv

@@ -87,7 +87,7 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl
   }
-  deriving (Generic, FromDhall)
+  deriving (Generic)
 
 data DriverAllocationConfig = DriverAllocationConfig
   { driverNotificationExpiry :: NominalDiffTime,
