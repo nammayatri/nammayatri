@@ -1,6 +1,11 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Beckn.Utils.App where
+module Beckn.Utils.App
+  ( handleLeft,
+    handleShutdown,
+    handleIfUp,
+  )
+where
 
 import Beckn.Types.App
 import Beckn.Types.Error

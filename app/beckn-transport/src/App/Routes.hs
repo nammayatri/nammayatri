@@ -17,8 +17,8 @@ import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
-import Beckn.Types.Storage.RegistrationToken
 import Beckn.Types.Storage.Vehicle
+import Beckn.Utils.App
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
@@ -96,9 +96,9 @@ type RegistrationAPI =
 
 registrationFlow :: FlowServer RegistrationAPI
 registrationFlow =
-  Registration.initiateLogin
-    :<|> Registration.login
-    :<|> Registration.reInitiateLogin
+  handleIfUp Registration.initiateLogin
+    :<|> handleIfUp Registration.login
+    :<|> handleIfUp Registration.reInitiateLogin
 
 -- Following is person flow
 type PersonAPI =
@@ -137,12 +137,12 @@ type PersonAPI =
 
 personFlow :: FlowServer PersonAPI
 personFlow =
-  Person.createPerson
-    :<|> Person.listPerson
-    :<|> Person.updatePerson
-    :<|> Person.getPerson
-    :<|> Person.deletePerson
-    :<|> Person.linkEntity
+  handleIfUp Person.createPerson
+    :<|> handleIfUp Person.listPerson
+    :<|> handleIfUp Person.updatePerson
+    :<|> handleIfUp Person.getPerson
+    :<|> handleIfUp Person.deletePerson
+    :<|> handleIfUp Person.linkEntity
 
 -- Following is vehicle flow
 type VehicleAPI =
@@ -173,11 +173,11 @@ type VehicleAPI =
 
 vehicleFlow :: FlowServer VehicleAPI
 vehicleFlow =
-  Vehicle.createVehicle
-    :<|> Vehicle.listVehicles
-    :<|> Vehicle.updateVehicle
-    :<|> Vehicle.deleteVehicle
-    :<|> Vehicle.getVehicle
+  handleIfUp Vehicle.createVehicle
+    :<|> handleIfUp Vehicle.listVehicles
+    :<|> handleIfUp Vehicle.updateVehicle
+    :<|> handleIfUp Vehicle.deleteVehicle
+    :<|> handleIfUp Vehicle.getVehicle
 
 -- Following is organization creation
 type OrganizationAPI =
@@ -195,9 +195,9 @@ type OrganizationAPI =
 
 organizationFlow :: FlowServer OrganizationAPI
 organizationFlow =
-  Transporter.getTransporter
-    :<|> Transporter.createTransporter
-    :<|> Transporter.updateTransporter
+  handleIfUp Transporter.getTransporter
+    :<|> handleIfUp Transporter.createTransporter
+    :<|> handleIfUp Transporter.updateTransporter
 
 -----------------------------
 -------- Case Flow----------
@@ -211,9 +211,8 @@ type CaseAPI =
            :> Get '[JSON] CaseListRes
        )
 
-caseFlow ::
-  (RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes)
-caseFlow = Case.list
+caseFlow :: FlowServer CaseAPI
+caseFlow = handleIfUp Case.list
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
@@ -241,10 +240,10 @@ type ProductInstanceAPI =
 
 productInstanceFlow :: FlowServer ProductInstanceAPI
 productInstanceFlow =
-  ProductInstance.list
-    :<|> ProductInstance.listDriverRides
-    :<|> ProductInstance.listVehicleRides
-    :<|> ProductInstance.listCasesByProductInstance
+  handleIfUp ProductInstance.list
+    :<|> handleIfUp ProductInstance.listDriverRides
+    :<|> handleIfUp ProductInstance.listVehicleRides
+    :<|> handleIfUp ProductInstance.listCasesByProductInstance
 
 -------- Product Flow----------
 type ProductAPI =
@@ -254,9 +253,9 @@ type ProductAPI =
            :> Post '[JSON] ProdRes
        )
 
-productFlow :: Text -> CreateProdReq -> FlowHandler ProdRes
+productFlow :: FlowServer ProductAPI
 productFlow =
-  Product.createProduct
+  handleIfUp Product.createProduct
 
 -- Location update and get for tracking is as follows
 type LocationAPI =
@@ -270,8 +269,8 @@ type LocationAPI =
 
 locationFlow :: FlowServer LocationAPI
 locationFlow =
-  Location.getLocation
-    :<|> Location.updateLocation
+  handleIfUp Location.getLocation
+    :<|> handleIfUp Location.updateLocation
 
 -- location flow over
 
@@ -321,12 +320,12 @@ type OrgBecknAPI =
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
-  (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.confirm orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.cancel orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup)
+  handleIfUp (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookup)
+    :<|> handleIfUp (\orgId -> HttpSig.withBecknAuth (BP.confirm orgId) lookup)
+    :<|> handleIfUp (\orgId -> HttpSig.withBecknAuth (BP.cancel orgId) lookup)
+    :<|> handleIfUp (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup)
+    :<|> handleIfUp (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup)
+    :<|> handleIfUp (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup)
 
 type CronAPI =
   "cron"
@@ -340,8 +339,8 @@ type CronAPI =
 
 cronFlow :: FlowServer CronAPI
 cronFlow =
-  Cron.expireCases
-    :<|> Cron.expireProductInstances
+  handleIfUp Cron.expireCases
+    :<|> handleIfUp Cron.expireProductInstances
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
@@ -353,7 +352,7 @@ type CallAPIs =
 
 callFlow :: FlowServer CallAPIs
 callFlow =
-  Call.initiateCall
+  handleIfUp Call.initiateCall
 
 type RouteAPI =
   "route"
@@ -362,7 +361,7 @@ type RouteAPI =
     :> Post '[JSON] Location.Response
 
 routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoute
+routeApiFlow = handleIfUp Location.getRoute
 
 type DriverInformationAPI =
   "driver"
@@ -385,10 +384,10 @@ type DriverInformationAPI =
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
-  DriverInformation.getInformation
-    :<|> DriverInformation.setActivity
-    :<|> DriverInformation.getRideInfo
-    :<|> DriverInformation.listDriver
+  handleIfUp DriverInformation.getInformation
+    :<|> handleIfUp DriverInformation.setActivity
+    :<|> handleIfUp DriverInformation.getRideInfo
+    :<|> handleIfUp DriverInformation.listDriver
 
 type RideAPI =
   "ride"
@@ -413,15 +412,15 @@ type RideAPI =
 
 rideFlow :: FlowServer RideAPI
 rideFlow =
-  Ride.setDriverAcceptance
-    :<|> RideAPI.StartRide.startRide
-    :<|> RideAPI.EndRide.endRide
-    :<|> RideAPI.CancelRide.cancelRide
+  handleIfUp Ride.setDriverAcceptance
+    :<|> handleIfUp RideAPI.StartRide.startRide
+    :<|> handleIfUp RideAPI.EndRide.endRide
+    :<|> handleIfUp RideAPI.CancelRide.cancelRide
 
 type HealthCheckAPI = Get '[JSON] Text
 
-healthCheckServer :: TMVar () -> FlowServer HealthCheckAPI
-healthCheckServer = HealthCheck.healthCheck
+healthCheckServer :: FlowServer HealthCheckAPI
+healthCheckServer = handleIfUp HealthCheck.healthCheck
 
 healthCheckAPI :: Proxy HealthCheckAPI
 healthCheckAPI = Proxy
@@ -446,6 +445,6 @@ type GoogleMapsProxyAPI =
 
 googleMapsProxyFlow :: FlowServer GoogleMapsProxyAPI
 googleMapsProxyFlow =
-  GoogleMapsFlow.autoComplete
-    :<|> GoogleMapsFlow.placeDetails
-    :<|> GoogleMapsFlow.getPlaceName
+  handleIfUp GoogleMapsFlow.autoComplete
+    :<|> handleIfUp GoogleMapsFlow.placeDetails
+    :<|> handleIfUp GoogleMapsFlow.getPlaceName

@@ -60,7 +60,7 @@ runBackgroundTaskManager configModifier = do
         logInfo $ "Starting Background Task Manager on port " <> show port
         return $ flowRt {R._httpClientManagers = managerMap}
     let settings = setPort port defaultSettings
-    apiThreadId <- forkIO $ runSettings settings $ Server.run healthCheckAPI (healthCheckServer shutdown) EmptyContext (App.EnvR flowRt' appEnv)
+    apiThreadId <- forkIO $ runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' appEnv)
     btmThreadId <- myThreadId
     void $ installHandler sigTERM (Catch $ handleShutdown shutdown activeTask exitSigTERM apiThreadId btmThreadId) Nothing
     void $ installHandler sigINT (Catch $ handleShutdown shutdown activeTask exitSigINT apiThreadId btmThreadId) Nothing

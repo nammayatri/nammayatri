@@ -1,7 +1,8 @@
 module App.Routes.FarePolicy where
 
-import App.Types (FlowServer)
+import App.Types
 import Beckn.Types.Id (Id)
+import Beckn.Utils.App
 import Product.FarePolicy (listFarePolicies, updateFarePolicy)
 import Servant
 import Types.API.FarePolicy
@@ -22,4 +23,6 @@ type FarePolicyAPI =
        )
 
 farePolicyFlow :: FlowServer FarePolicyAPI
-farePolicyFlow = listFarePolicies :<|> updateFarePolicy
+farePolicyFlow =
+  handleIfUp listFarePolicies
+    :<|> handleIfUp updateFarePolicy

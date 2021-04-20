@@ -3,21 +3,15 @@ module Product.HealthCheck (healthCheck) where
 import qualified App.Types as App
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Data.Time (diffUTCTime)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Types.Error
 import Utils.Common
 
-healthCheck :: TMVar () -> App.FlowHandler Text
-healthCheck shutdown = withFlowHandlerAPI $ do
-  isNotShuttingDown <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
-  if isNotShuttingDown
-    then do
-      mbTime <- Redis.getKeyRedis "beckn:allocation:service"
-      maybe markAsDead checkLastUpdateTime mbTime
-    else markAsDead
+healthCheck :: App.FlowHandler Text
+healthCheck = withFlowHandlerAPI $ do
+  mbTime <- Redis.getKeyRedis "beckn:allocation:service"
+  maybe markAsDead checkLastUpdateTime mbTime
   where
     markAsDead = throwError ServiceUnavailable
     checkLastUpdateTime lastUpdateTime = do
