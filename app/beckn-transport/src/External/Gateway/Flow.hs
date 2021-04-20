@@ -12,7 +12,6 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
 import Servant.Client (BaseUrl)
@@ -30,46 +29,46 @@ onSearch req bppShortId = do
   case gatewayShortId of
     "NSDL.BG.1" -> do
       nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM NSDLBaseUrlNotSet
-      L.callAPI' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req)
+      callAPI' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req)
         >>= fromEitherM (ExternalAPICallError nsdlBaseUrl)
     "JUSPAY.BG.1" -> do
       callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      L.callAPI' (Just authKey) callbackUrl (API.onSearch req)
+      callAPI' (Just authKey) callbackUrl (API.onSearch req)
         >>= fromEitherM (ExternalAPICallError callbackUrl)
     _ -> throwError GatewaySelectorNotSet
 
 onTrackTrip :: BaseUrl -> OnTrackTripReq -> Text -> Flow AckResponse
 onTrackTrip url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  L.callAPI' (Just authKey) url (API.onTrackTrip req)
+  callAPI' (Just authKey) url (API.onTrackTrip req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onUpdate :: BaseUrl -> OnUpdateReq -> Text -> Flow AckResponse
 onUpdate url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  L.callAPI' (Just authKey) url (API.onUpdate req)
+  callAPI' (Just authKey) url (API.onUpdate req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onConfirm :: BaseUrl -> OnConfirmReq -> Text -> Flow AckResponse
 onConfirm url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  L.callAPI' (Just authKey) url (API.onConfirm req)
+  callAPI' (Just authKey) url (API.onConfirm req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onCancel :: BaseUrl -> OnCancelReq -> Text -> Flow AckResponse
 onCancel url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  L.callAPI' (Just authKey) url (API.onCancel req)
+  callAPI' (Just authKey) url (API.onCancel req)
     >>= fromEitherM (ExternalAPICallError url)
 
 onStatus :: BaseUrl -> OnStatusReq -> Text -> Flow AckResponse
 onStatus url req bppShortId = do
   authKey <- getHttpManagerKey bppShortId
-  L.callAPI' (Just authKey) url (API.onStatus req)
+  callAPI' (Just authKey) url (API.onStatus req)
     >>= fromEitherM (ExternalAPICallError url)
 
 initiateCall :: CallReq -> Flow Ack
 initiateCall req = do
   url <- xAppUri <$> ask
-  L.callAPI url (API.initiateCall req)
+  callAPI url (API.initiateCall req)
     >>= fromEitherM (ExternalAPICallErrorWithCode "UNABLE_TO_CALL" url)

@@ -7,13 +7,12 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.Client
 
 submitSms :: BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do
-  res <- L.callAPI url $ API.submitSms params
+  res <- callAPI url $ API.submitSms params
   whenRight res $ \_ ->
     logTagInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
   res & fromEitherM (ExternalAPICallErrorWithCode "UNABLE_TO_SEND_SMS" url)

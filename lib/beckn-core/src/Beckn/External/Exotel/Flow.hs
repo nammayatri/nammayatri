@@ -8,7 +8,6 @@ import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
@@ -56,7 +55,7 @@ initiateCall from to = do
                 (DT.encodeUtf8 $ getExotelApiKey apiKey_)
                 (DT.encodeUtf8 $ getExotelApiToken apiToken_)
         res <-
-          L.callAPI (defaultBaseUrl sid_) $
+          callAPI (defaultBaseUrl sid_) $
             callExotel authData exoRequest
         logTagInfo exotel $ case res of
           Right _ -> "call initiated from " <> from <> " to " <> to

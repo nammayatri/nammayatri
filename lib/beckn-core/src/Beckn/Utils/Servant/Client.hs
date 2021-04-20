@@ -11,6 +11,8 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
 import qualified Servant.Client as S
 import Servant.Client.Core
+import qualified Data.Aeson as A
+import Beckn.Utils.Logging (logInfo)
 
 callClient ::
   (ET.JSONEx a, L.MonadFlow m, HasCoreMetrics m, Log m) =>
@@ -44,3 +46,24 @@ callClient' mbManager desc _ baseUrl cli = do
         Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
+
+callAPI ::
+  (HasCallStack, L.MonadFlow m, Log m, ET.JSONEx a, ToJSON a) =>
+  BaseUrl ->
+  ET.EulerClient a ->
+  m (Either ClientError a)
+callAPI = callAPI' Nothing
+
+callAPI' ::
+  (HasCallStack, L.MonadFlow m, Log m, ET.JSONEx a, ToJSON a) =>
+  Maybe ET.ManagerSelector ->
+  BaseUrl ->
+  ET.EulerClient a ->
+  m (Either ClientError a)
+callAPI' mbManagerSelector baseUrl eulerClient = do
+  withLogTag "callAPI" $ do
+    res <- L.callAPI' mbManagerSelector baseUrl eulerClient
+    case res of
+      Right r -> logInfo $ "Ok response: " <> decodeUtf8 (A.encode r)
+      Left err -> logInfo $ "Error occured during client call: " <> show err
+    return res

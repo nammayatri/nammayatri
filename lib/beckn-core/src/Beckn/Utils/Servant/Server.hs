@@ -4,9 +4,6 @@
 module Beckn.Utils.Servant.Server where
 
 import Beckn.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
-import Beckn.Utils.Common hiding (throwError)
-import Data.UUID.V4 (nextRandom)
-import EulerHS.Language
 import EulerHS.Prelude
 import Servant
 
@@ -35,13 +32,8 @@ run apis server ctx env =
   where
     f :: FlowHandlerR r m -> Handler m
     f r = do
-      eResult <- liftIO $ do
-        uuid <- nextRandom
-        let modEnv = modifiedEnvR $ show uuid
-        try $ runReaderT r modEnv
+      eResult <- liftIO . try $ runReaderT r env
       case eResult of
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
-    modifiedEnvR uuid =
-      env {flowRuntime = updateLoggerContext (appendLogContext uuid) $ flowRuntime env}

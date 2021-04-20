@@ -18,7 +18,6 @@ import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
 import Data.Aeson
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified External.Delhivery.Flow as API
@@ -52,7 +51,7 @@ search org req = do
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
           logTagInfo (req ^. #context . #_transaction_id <> "_on_search req") $ encodeToText onSearchReq
-          onSearchResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSearchAPI onSearchReq
+          onSearchResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSearchAPI onSearchReq
           logTagInfo (req ^. #context . #_transaction_id <> "_on_search res") $ show onSearchResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -60,7 +59,7 @@ search org req = do
             handleError err = do
               let onSearchErrReq = mkOnSearchErrReq context err
               logTagInfo (req ^. #context . #_transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
-              onSearchResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSearchAPI onSearchErrReq
+              onSearchResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSearchAPI onSearchErrReq
               logTagInfo (req ^. #context . #_transaction_id <> "_on_search err res") $ show onSearchResp
         _ -> pass
 
@@ -91,7 +90,7 @@ select org req = do
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
           logTagInfo (req ^. #context . #_transaction_id <> "_on_select req") $ encodeToText onSelectReq
-          onSelectResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSelectAPI onSelectReq
+          onSelectResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSelectAPI onSelectReq
           logTagInfo (req ^. #context . #_transaction_id <> "_on_select res") $ show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -99,7 +98,7 @@ select org req = do
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
               logTagInfo (req ^. #context . #_transaction_id <> "_on_select err req") $ encodeToText onSelectReq
-              onSelectResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSelectAPI onSelectReq
+              onSelectResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onSelectAPI onSelectReq
               logTagInfo (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
         _ -> pass
 
@@ -132,7 +131,7 @@ init org req = do
       let onInitReq = mkOnInitReq context onInitMessage
       createCaseIfNotPresent (getId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
       logTagInfo (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
-      onInitResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
+      onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
       logTagInfo (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
       return ()
     sendCb _ context cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) =
@@ -140,7 +139,7 @@ init org req = do
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
           logTagInfo (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
-          onInitResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
+          onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onInitAPI onInitReq
           logTagInfo (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
           return ()
         Nothing -> return ()
@@ -225,7 +224,7 @@ confirm org req = do
         Right _ -> do
           onConfirmReq <- mkOnConfirmReq context order
           logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
-          eres <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onConfirmAPI onConfirmReq
+          eres <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onConfirmAPI onConfirmReq
           logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
@@ -233,7 +232,7 @@ confirm org req = do
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
               logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
-              onConfirmResp <- L.callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onConfirmAPI onConfirmReq
+              onConfirmResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl $ ET.client API.onConfirmAPI onConfirmReq
               logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
         _ -> pass
 

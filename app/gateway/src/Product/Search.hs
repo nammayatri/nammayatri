@@ -13,7 +13,6 @@ import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.SignatureAuth (SignaturePayload)
 import Data.Aeson (encode)
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
@@ -48,7 +47,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
           providerUrl <- provider ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
           -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
           eRes <-
-            L.callAPI'
+            callAPI'
               (Just signatureAuthManagerKey)
               providerUrl
               (gatewaySearchSignAuth (Just proxySign) req)
@@ -71,7 +70,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI 
     bgSession <- BA.lookup messageId >>= fromMaybeM (InvalidRequest "Message not found.")
     let baseUrl = bgSession ^. #cbUrl
     eRes <-
-      L.callAPI'
+      callAPI'
         (Just signatureAuthManagerKey)
         baseUrl
         (gatewayOnSearchSignAuth (Just proxySign) req)

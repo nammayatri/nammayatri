@@ -7,7 +7,6 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records (HasField)
 import Servant.Client.Core (BaseUrl, ClientError)
@@ -24,7 +23,7 @@ autoComplete ::
   Text ->
   FlowR r GoogleMaps.SearchLocationResp
 autoComplete url apiKey input location radius components = do
-  L.callAPI url (API.autoComplete apiKey input location radius components)
+  callAPI url (API.autoComplete apiKey input location radius components)
     >>= fromEitherM (googleMapsError url)
 
 placeDetails ::
@@ -37,7 +36,7 @@ placeDetails ::
   Text ->
   FlowR r GoogleMaps.PlaceDetailsResp
 placeDetails url apiKey placeId fields = do
-  L.callAPI url (API.placeDetails apiKey placeId fields)
+  callAPI url (API.placeDetails apiKey placeId fields)
     >>= fromEitherM (googleMapsError url)
 
 getPlaceName ::
@@ -49,7 +48,7 @@ getPlaceName ::
   Text ->
   FlowR r GoogleMaps.GetPlaceNameResp
 getPlaceName url latLng apiKey = do
-  L.callAPI url (API.getPlaceName latLng apiKey)
+  callAPI url (API.getPlaceName latLng apiKey) 
     >>= fromEitherM (googleMapsError url)
 
 googleMapsError :: BaseUrl -> ClientError -> ExternalAPICallError

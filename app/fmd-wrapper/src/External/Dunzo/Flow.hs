@@ -3,7 +3,7 @@
 module External.Dunzo.Flow where
 
 import Beckn.Types.Common (FlowR)
-import qualified EulerHS.Language as L
+import Beckn.Utils.Common (callAPI)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import External.Dunzo.Types
@@ -21,7 +21,7 @@ getTokenAPI :: Proxy GetTokenAPI
 getTokenAPI = Proxy
 
 getToken :: BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
-getToken url req = L.callAPI url tokenReq
+getToken url req = callAPI url tokenReq
   where
     clientId = Just $ getClientId $ req ^. #client_id
     clientSecret = Just $ getClientSecret $ req ^. #client_secret
@@ -42,7 +42,7 @@ quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
 getQuote :: ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
-getQuote clientId token url req = L.callAPI url quoteReq
+getQuote clientId token url req = callAPI url quoteReq
   where
     quoteReq =
       T.client
@@ -67,7 +67,7 @@ createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
 createTask :: ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
-createTask clientId token url isTestMode req = L.callAPI url task
+createTask clientId token url isTestMode req = callAPI url task
   where
     task =
       T.client
@@ -90,7 +90,7 @@ taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
 taskStatus :: ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
-taskStatus clientId token url isTestMode taskId = L.callAPI url status
+taskStatus clientId token url isTestMode taskId = callAPI url status
   where
     status =
       T.client
@@ -114,7 +114,7 @@ cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
 cancelTask :: ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
-cancelTask clientId token url isTestMode taskId cancellationReason = L.callAPI url cancel
+cancelTask clientId token url isTestMode taskId cancellationReason = callAPI url cancel
   where
     cancel =
       void $

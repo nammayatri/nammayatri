@@ -109,7 +109,7 @@ sendMessage fcmMsg toWhom = fork desc $ do
   case authToken of
     Right token -> do
       fcmUrl <- getField @"fcmUrl" <$> ask
-      res <- L.callAPI fcmUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
+      res <- callAPI fcmUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
       logTagInfo fcm $ case res of
         Right _ -> "message sent successfully to a person with id = " <> toWhom
         Left x -> "error: " <> show x

@@ -3,7 +3,7 @@
 module External.Delhivery.Flow where
 
 import Beckn.Types.Common (FlowR)
-import qualified EulerHS.Language as L
+import Beckn.Utils.Common (callAPI)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import External.Delhivery.Types
@@ -20,7 +20,7 @@ tokenAPI :: Proxy TokenAPI
 tokenAPI = Proxy
 
 getToken :: BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
-getToken url req = L.callAPI url tokenReq
+getToken url req = callAPI url tokenReq
   where
     tokenReq = T.client tokenAPI req
 
@@ -34,7 +34,7 @@ quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
 getQuote :: Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
-getQuote token url req = L.callAPI url quoteReq
+getQuote token url req = callAPI url quoteReq
   where
     quoteReq = T.client quoteAPI (Just token) req
 
@@ -48,6 +48,6 @@ createOrderAPI :: Proxy CreateOrderAPI
 createOrderAPI = Proxy
 
 createOrder :: Token -> BaseUrl -> CreateOrderReq -> FlowR e (Either ClientError CreateOrderRes)
-createOrder token url req = L.callAPI url createOrderReq
+createOrder token url req = callAPI url createOrderReq
   where
     createOrderReq = T.client createOrderAPI (Just token) req

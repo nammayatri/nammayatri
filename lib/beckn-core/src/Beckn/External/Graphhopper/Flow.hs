@@ -3,9 +3,9 @@ module Beckn.External.Graphhopper.Flow where
 import qualified Beckn.External.Graphhopper.Types as GrphrSearch
 import Beckn.Types.App (MandatoryQueryParam)
 import Beckn.Types.Common
+import Beckn.Utils.Common (callAPI)
 import Data.Geospatial
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
@@ -26,7 +26,7 @@ grphrAPI = Proxy
 
 search :: BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
-  L.callAPI url clientM
+  callAPI url clientM
   where
     encodePoint :: PointXY -> Text
     encodePoint point = show (_xyX point) <> "," <> show (_xyY point)
