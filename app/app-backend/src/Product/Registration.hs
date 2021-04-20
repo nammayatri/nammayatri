@@ -48,7 +48,7 @@ initiateFlow req smsCfg = do
       RegistrationToken.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
       otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
-      whenLeft otpSendingRes $ \err -> throwErrorWithInfo Error.UnableToSendSMS err
+      whenLeft otpSendingRes $ throwErrorWithInfo Error.UnableToSendSMS
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -174,7 +174,7 @@ reInitiateLogin tokenId req =
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
         otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
-        whenLeft otpSendingRes $ \err -> throwErrorWithInfo Error.UnableToSendSMS err
+        whenLeft otpSendingRes $ throwErrorWithInfo Error.UnableToSendSMS
         _ <- RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else throwErrorWithInfo AuthBlocked "Attempts limit exceed."
