@@ -35,16 +35,11 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
-    redisCfg :: T.RedisConfig,
     gwId :: Text,
     gwNwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     cache :: C.Cache Text Text,
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
-    loggerConfig :: LoggerConfig,
-    searchTimeout :: Maybe Int, -- In seconds
     traceFlag :: TraceFlag,
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
