@@ -1,4 +1,13 @@
-module App.Types where
+module App.Types
+  ( AppCfg (),
+    AppEnv (..),
+    Env,
+    Flow,
+    FlowHandler,
+    FlowServer,
+    mkAppEnv,
+  )
+where
 
 import Beckn.Storage.DB.Config
 import Beckn.Types.App
@@ -9,7 +18,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time
 import EulerHS.Prelude
 
-data AppEnv = AppEnv
+data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     port :: Int,
     metricsPort :: Int,
@@ -24,6 +33,23 @@ data AppEnv = AppEnv
     signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
+
+data AppEnv = AppEnv
+  { dbCfg :: DBConfig,
+    xGatewayUri :: BaseUrl,
+    selfId :: Text,
+    nwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    signatureExpiry :: NominalDiffTime
+  }
+  deriving (Generic)
+
+mkAppEnv :: AppCfg -> AppEnv
+mkAppEnv AppCfg {..} =
+  AppEnv
+    { ..
+    }
 
 type Env = EnvR AppEnv
 
