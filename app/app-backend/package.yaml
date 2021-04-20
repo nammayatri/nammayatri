@@ -83,7 +83,6 @@ dependencies:
   - time
   - random-strings
   - unix
-  - stm
 
 ghc-options:
   - -fwrite-ide-info
