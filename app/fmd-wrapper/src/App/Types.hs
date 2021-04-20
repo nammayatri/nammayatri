@@ -1,4 +1,13 @@
-module App.Types where
+module App.Types
+  ( AppCfg (),
+    AppEnv (..),
+    Env,
+    Flow,
+    FlowHandler,
+    FlowServer,
+    mkAppEnv,
+  )
+where
 
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
@@ -11,7 +20,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Wrapper (DelhiveryConfig, DunzoConfig)
 
-data AppEnv = AppEnv
+data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     redisCfg :: T.RedisConfig,
     port :: Int,
@@ -30,6 +39,27 @@ data AppEnv = AppEnv
     signatureExpiry :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
+
+data AppEnv = AppEnv
+  { dbCfg :: DBConfig,
+    selfId :: Text,
+    xGatewayUri :: BaseUrl,
+    xGatewayApiKey :: Maybe Text,
+    coreVersion :: Text,
+    domainVersion :: Text,
+    dzConfig :: DunzoConfig,
+    dlConfig :: DelhiveryConfig,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    signatureExpiry :: NominalDiffTime
+  }
+  deriving (Generic)
+
+mkAppEnv :: AppCfg -> AppEnv
+mkAppEnv AppCfg {..} =
+  AppEnv
+    { ..
+    }
 
 type Env = EnvR AppEnv
 
