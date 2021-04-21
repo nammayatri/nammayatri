@@ -42,15 +42,14 @@ runAppBackend' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
   appEnv <- buildAppEnv appCfg
-  let shutdown = appEnv ^. #isShutdown
+  let shutdown = appEnv ^. #isShuttingDown
   activeConnections <- newTVarIO (0 :: Int)
   threadId <- myThreadId
   void $ installHandler sigTERM (Catch $ handleShutdown activeConnections shutdown exitSigTERM threadId) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown activeConnections shutdown exitSigINT threadId) Nothing
-  let settings =
-        setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
-          setOnClose (\_ -> atomically $ modifyTVar' activeConnections (subtract 1)) $
-            setPort (appCfg ^. #port) defaultSettings
+  let settings = setOnOpen (\_ -> atomically $ modifyTVar' activeConnections succ >> return True)
+          . setOnClose (\_ -> atomically $ modifyTVar' activeConnections pred)
+          $ setPort (appCfg ^. #port) defaultSettings
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

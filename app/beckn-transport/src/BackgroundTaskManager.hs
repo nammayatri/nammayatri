@@ -39,7 +39,7 @@ runBackgroundTaskManager configModifier = do
   let port = appCfg ^. #bgtmPort
   activeTask <- newEmptyTMVarIO
   appEnv <- buildAppEnv appCfg
-  let shutdown = appEnv ^. #isShutdown
+  let shutdown = appEnv ^. #isShuttingDown
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do

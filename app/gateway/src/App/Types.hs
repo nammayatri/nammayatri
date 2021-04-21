@@ -47,7 +47,7 @@ data AppEnv = AppEnv
     fmdCoreVersion :: Text,
     fmdDomainVersion :: Text,
     signatureExpiry :: NominalDiffTime,
-    isShutdown :: TMVar (),
+    isShuttingDown :: TMVar (),
     metricsRequestLatency :: RequestLatencyMetric
   }
   deriving (Generic)
@@ -55,7 +55,7 @@ data AppEnv = AppEnv
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   cache <- C.newCache Nothing
-  isShutdown <- newEmptyTMVarIO
+  isShuttingDown <- newEmptyTMVarIO
   metricsRequestLatency <- registerRequestLatencyMetric
   return $
     AppEnv

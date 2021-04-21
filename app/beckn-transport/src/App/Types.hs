@@ -87,7 +87,7 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    isShutdown :: TMVar (),
+    isShuttingDown :: TMVar (),
     metricsRequestLatency :: RequestLatencyMetric
   }
   deriving (Generic)
@@ -105,7 +105,7 @@ data DriverAllocationConfig = DriverAllocationConfig
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   metricsRequestLatency <- registerRequestLatencyMetric
-  isShutdown <- newEmptyTMVarIO
+  isShuttingDown <- newEmptyTMVarIO
   return $
     AppEnv
       { ..

@@ -91,7 +91,7 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    isShutdown :: TMVar (),
+    isShuttingDown :: TMVar (),
     metricsCaseCounter :: CaseCounterMetric,
     metricsSearchDurationTimeout :: Int,
     metricsSearchDuration :: SearchDurationMetric,
@@ -101,7 +101,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
-  isShutdown <- newEmptyTMVarIO
+  isShuttingDown <- newEmptyTMVarIO
   metricsCaseCounter <- registerCaseCounter
   metricsSearchDuration <- registerSearchDurationMetric metricsSearchDurationTimeout
   metricsRequestLatency <- registerRequestLatencyMetric

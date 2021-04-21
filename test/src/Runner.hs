@@ -34,9 +34,8 @@ withAppSettings settings port mkApp action = do
   app <- mkApp
   started <- mkWaiter
   let appSettings =
-        settings
-          & setPort port
-          & setBeforeMainLoop (notify started ())
+        setPort port $
+          setBeforeMainLoop (notify started ()) settings
   result <-
     race
       (runSettings appSettings app)

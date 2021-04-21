@@ -36,19 +36,19 @@ withUnblockableFlowHandlerAPI = withFlowHandler . apiHandler
 withUnblockableFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
 withUnblockableFlowHandlerBecknAPI = withFlowHandler . becknApiHandler
 
-withFlowHandlerAPI :: (HasField "isShutdown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
+withFlowHandlerAPI :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
 withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
 
-withFlowHandlerBecknAPI :: (HasField "isShutdown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
+withFlowHandlerBecknAPI :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
 withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler . handleIfUp
 
 handleIfUp ::
-  (HasField "isShutdown" r (TMVar ())) =>
+  (HasField "isShuttingDown" r (TMVar ())) =>
   FlowR r a ->
   FlowR r a
 handleIfUp flow = do
   appEnv <- ask
-  let shutdown = getField @"isShutdown" appEnv
+  let shutdown = getField @"isShuttingDown" appEnv
   shouldRun <- L.runIO $ atomically $ isEmptyTMVar shutdown
   if shouldRun
     then flow

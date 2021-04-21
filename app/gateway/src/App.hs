@@ -43,17 +43,16 @@ runGateway configModifier = do
   Metrics.serve metricsPort
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
   appEnv <- buildAppEnv appCfg 
-  let shutdown = appEnv ^. #isShutdown
+  let shutdown = appEnv ^. #isShuttingDown
   activeConnections <- newTVarIO (0 :: Int)
   threadId <- myThreadId
   void $ installHandler sigTERM (Catch $ handleShutdown activeConnections shutdown exitSigTERM threadId) Nothing
   void $ installHandler sigINT (Catch $ handleShutdown activeConnections shutdown exitSigINT threadId) Nothing
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
-      settings =
-        setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
-          setOnClose (\_ -> atomically $ modifyTVar' activeConnections (subtract 1)) $
-            setPort port defaultSettings
+      settings = setOnOpen (\_ -> atomically $ modifyTVar' activeConnections succ >> return True)
+          . setOnClose (\_ -> atomically $ modifyTVar' activeConnections pred)
+          $ setPort port defaultSettings
   let redisCfg = appCfg ^. #redisCfg
   let migrationPath = appCfg ^. #migrationPath
   let dbCfg = appCfg ^. #dbCfg

@@ -59,7 +59,7 @@ run activeTask = do
       -- If process handling took less than processDelay we delay for remain to processDelay time
       processDelay <- asks (processDelay . driverAllocationConfig)
       L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
-  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks isShutdown
+  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks isShuttingDown
   when isRunning $ run activeTask
   where
     fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds
