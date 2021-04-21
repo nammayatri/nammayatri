@@ -1,6 +1,6 @@
 module Product.RideAPI.CancelRide where
 
-import App.Types (FlowHandler)
+import App.Types
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as SPI

@@ -9,7 +9,6 @@ import App.Types
 import Beckn.Types.App (FlowServerR)
 import Beckn.Types.Core.API.Log
 import Beckn.Utils.Servant.SignatureAuth (lookupRegistryAction)
-import Beckn.Utils.App
 import EulerHS.Prelude
 import qualified Product.Log as P
 import qualified Product.Search as P
@@ -45,8 +44,8 @@ healthHandler = pure "UP"
 gatewayHandler :: FlowServerR AppEnv GatewayAPI'
 gatewayHandler = do
   pure "Gateway is UP"
-    :<|> handleIfUp (HttpSig.withBecknAuthProxy P.search lookup)
-    :<|> handleIfUp (HttpSig.withBecknAuthProxy P.searchCb lookup)
-    :<|> handleIfUp P.log
+    :<|> HttpSig.withBecknAuthProxy P.search lookup
+    :<|> HttpSig.withBecknAuthProxy P.searchCb lookup
+    :<|> P.log
   where
     lookup = lookupRegistryAction findOrgByShortId

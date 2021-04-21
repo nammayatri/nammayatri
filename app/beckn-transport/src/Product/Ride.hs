@@ -5,7 +5,7 @@ module Product.Ride
   )
 where
 
-import App.Types (FlowHandler)
+import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack (Ack (..), Status (..))

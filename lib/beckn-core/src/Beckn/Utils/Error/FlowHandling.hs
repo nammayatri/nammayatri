@@ -1,6 +1,8 @@
 module Beckn.Utils.Error.FlowHandling
   ( withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
+    withUnblockableFlowHandlerAPI,
+    withUnblockableFlowHandlerBecknAPI,
     apiHandler,
     becknApiHandler,
   )
@@ -8,14 +10,17 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Error.API
+import Beckn.Types.Error.API as Err
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Utils.Logging
+import Control.Concurrent.STM (isEmptyTMVar)
 import Control.Monad.Catch (Handler (..), catches)
 import Control.Monad.Reader
 import qualified Data.Aeson as A
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import GHC.Records
 import Network.HTTP.Types (Header, hContentType)
 import Network.HTTP.Types.Header (HeaderName)
 import Servant (ServerError (..))
@@ -25,11 +30,29 @@ withFlowHandler flow = do
   (EnvR flowRt appEnv) <- ask
   liftIO . runFlowR flowRt appEnv $ flow
 
-withFlowHandlerAPI :: FlowR r a -> FlowHandlerR r a
-withFlowHandlerAPI = withFlowHandler . apiHandler
+withUnblockableFlowHandlerAPI :: FlowR r a -> FlowHandlerR r a
+withUnblockableFlowHandlerAPI = withFlowHandler . apiHandler
 
-withFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
-withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler
+withUnblockableFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
+withUnblockableFlowHandlerBecknAPI = withFlowHandler . becknApiHandler
+
+withFlowHandlerAPI :: (HasField "isShutdown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
+withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
+
+withFlowHandlerBecknAPI :: (HasField "isShutdown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
+withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler . handleIfUp
+
+handleIfUp ::
+  (HasField "isShutdown" r (TMVar ())) =>
+  FlowR r a ->
+  FlowR r a
+handleIfUp flow = do
+  appEnv <- ask
+  let shutdown = getField @"isShutdown" appEnv
+  shouldRun <- L.runIO $ atomically $ isEmptyTMVar shutdown
+  if shouldRun
+    then flow
+    else throwApiError ServerUnavailable
 
 apiHandler :: (MonadCatch m, Log m) => m a -> m a
 apiHandler =

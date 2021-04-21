@@ -2,7 +2,7 @@
 
 module Product.Person where
 
-import App.Types (FlowHandler)
+import App.Types
 import qualified Beckn.Types.APISuccess as APISuccess
 import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude

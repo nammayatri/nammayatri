@@ -22,55 +22,55 @@ import Utils.Common
 
 -- TODO: add switching logic to figure out the client instance
 search :: Organization -> SearchReq -> FlowHandler SearchRes
-search org req = withFlowHandlerBecknAPI $
+search org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "search" $ req ^. #context
     DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
-select org req = withFlowHandlerBecknAPI $
+select org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "select" $ req ^. #context
     validateBapUrl org $ req ^. #context
     DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
-init org req = withFlowHandlerBecknAPI $
+init org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "init" $ req ^. #context
     validateBapUrl org $ req ^. #context
     DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
-confirm org req = withFlowHandlerBecknAPI $
+confirm org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "confirm" $ req ^. #context
     validateBapUrl org $ req ^. #context
     DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
-track org req = withFlowHandlerBecknAPI $
+track org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "track" $ req ^. #context
     validateBapUrl org $ req ^. #context
     DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
-status org req = withFlowHandlerBecknAPI $
+status org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "status" $ req ^. #context
     validateBapUrl org $ req ^. #context
     DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
-cancel org req = withFlowHandlerBecknAPI $
+cancel org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "cancel" $ req ^. #context
     validateBapUrl org $ req ^. #context
     DZ.cancel org req
 
 update :: Organization -> UpdateReq -> FlowHandler UpdateRes
-update org req = withFlowHandlerBecknAPI $
+update org req = withUnblockableFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "update" $ req ^. #context
     validateBapUrl org $ req ^. #context

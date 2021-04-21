@@ -2,7 +2,7 @@
 
 module Product.FarePolicy where
 
-import App.Types (FlowHandler)
+import App.Types
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken

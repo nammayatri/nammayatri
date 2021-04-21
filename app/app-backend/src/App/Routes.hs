@@ -18,7 +18,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
-import Beckn.Utils.App
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
@@ -128,9 +127,9 @@ type RegistrationAPI =
 
 registrationFlow :: FlowServer RegistrationAPI
 registrationFlow =
-  handleIfUp Registration.initiateLogin
-    :<|> handleIfUp Registration.login
-    :<|> handleIfUp Registration.reInitiateLogin
+  Registration.initiateLogin
+    :<|> Registration.login
+    :<|> Registration.reInitiateLogin
 
 -------- Search Flow --------
 type SearchAPI =
@@ -144,8 +143,8 @@ type SearchAPI =
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
-  handleIfUp Search.search
-    :<|> handleIfUp HttpSig.withBecknAuthProxy Search.searchCb lookup
+  Search.search
+    :<|> HttpSig.withBecknAuthProxy Search.searchCb lookup
 
 -------- Confirm Flow --------
 type ConfirmAPI =
@@ -161,8 +160,8 @@ type ConfirmAPI =
 
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
-  handleIfUp Confirm.confirm
-    :<|> handleIfUp HttpSig.withBecknAuth Confirm.onConfirm lookup
+  Confirm.confirm
+    :<|> HttpSig.withBecknAuth Confirm.onConfirm lookup
 
 ------- Case Flow -------
 type CaseAPI =
@@ -180,8 +179,8 @@ type CaseAPI =
 
 caseFlow :: FlowServer CaseAPI
 caseFlow regToken =
-  handleIfUp Case.list regToken
-    :<|> handleIfUp Case.status regToken
+  Case.list regToken
+    :<|> Case.status regToken
 
 -------- Info Flow ------
 type InfoAPI =
@@ -196,8 +195,8 @@ type InfoAPI =
 
 infoFlow :: FlowServer InfoAPI
 infoFlow regToken =
-  handleIfUp Info.getProductInfo regToken
-    :<|> handleIfUp Info.getLocation regToken
+  Info.getProductInfo regToken
+    :<|> Info.getLocation regToken
 
 ------- Track trip Flow -------
 type TrackTripAPI =
@@ -212,8 +211,8 @@ type TrackTripAPI =
 
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
-  handleIfUp TrackTrip.track
-    :<|> handleIfUp HttpSig.withBecknAuth TrackTrip.trackCb lookup
+  TrackTrip.track
+    :<|> HttpSig.withBecknAuth TrackTrip.trackCb lookup
 
 ------- Update Flow -------
 type UpdateAPI =
@@ -224,7 +223,7 @@ type UpdateAPI =
 
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
-  handleIfUp HttpSig.withBecknAuth Update.onUpdate lookup
+  HttpSig.withBecknAuth Update.onUpdate lookup
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
@@ -245,7 +244,7 @@ productInstanceFlow ::
   Maybe Int ->
   FlowHandler ProductInstance.ProductInstanceList
 productInstanceFlow =
-  handleIfUp ProductInstance.list
+  ProductInstance.list
 
 -------- Cancel Flow----------
 type CancelAPI =
@@ -260,8 +259,8 @@ type CancelAPI =
 
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
-  handleIfUp Cancel.cancel
-    :<|> handleIfUp HttpSig.withBecknAuth Cancel.onCancel lookup
+  Cancel.cancel
+    :<|> HttpSig.withBecknAuth Cancel.onCancel lookup
 
 -------- Cron API --------
 type CronAPI =
@@ -276,8 +275,8 @@ type CronAPI =
 
 cronFlow :: FlowServer CronAPI
 cronFlow =
-  handleIfUp Cron.updateCases
-    :<|> handleIfUp Cron.expireProductInstances
+  Cron.updateCases
+    :<|> Cron.expireProductInstances
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
@@ -293,8 +292,8 @@ type CallAPIs =
 
 callFlow :: FlowServer CallAPIs
 callFlow =
-  handleIfUp Call.initiateCallToProvider
-    :<|> handleIfUp Call.initiateCallToCustomer
+  Call.initiateCallToProvider
+    :<|> Call.initiateCallToCustomer
 
 type RouteAPI =
   "route"
@@ -303,7 +302,7 @@ type RouteAPI =
     :> Post '[JSON] Location.Response
 
 routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = handleIfUp Location.getRoute
+routeApiFlow = Location.getRoute
 
 -------- Status Flow----------
 type StatusAPI =
@@ -318,8 +317,8 @@ type StatusAPI =
 
 statusFlow :: FlowServer StatusAPI
 statusFlow =
-  handleIfUp Status.status
-    :<|> handleIfUp HttpSig.withBecknAuth Status.onStatus lookup
+  Status.status
+    :<|> HttpSig.withBecknAuth Status.onStatus lookup
 
 -------- Support Flow----------
 type SupportAPI =
@@ -331,7 +330,7 @@ type SupportAPI =
        )
 
 supportFlow :: FlowServer SupportAPI
-supportFlow = handleIfUp Support.sendIssue
+supportFlow = Support.sendIssue
 
 -------- Serviceability----------
 type ServiceabilityAPI =
@@ -350,9 +349,9 @@ type ServiceabilityAPI =
 
 serviceabilityFlow :: FlowServer ServiceabilityAPI
 serviceabilityFlow regToken =
-  handleIfUp Serviceability.checkServiceability origin regToken
-    :<|> handleIfUp Serviceability.checkServiceability destination regToken
-    :<|> handleIfUp Serviceability.checkRideServiceability regToken
+  Serviceability.checkServiceability origin regToken
+    :<|> Serviceability.checkServiceability destination regToken
+    :<|> Serviceability.checkRideServiceability regToken
 
 -------- Feedback Flow ----------
 type FeedbackAPI =
@@ -364,7 +363,7 @@ type FeedbackAPI =
        )
 
 feedbackFlow :: FlowServer FeedbackAPI
-feedbackFlow = handleIfUp Feedback.feedback
+feedbackFlow = Feedback.feedback
 
 -- Customer Support Flow --
 
@@ -387,9 +386,9 @@ type CustomerSupportAPI =
 
 customerSupportFlow :: FlowServer CustomerSupportAPI
 customerSupportFlow =
-  handleIfUp CS.login
-    :<|> handleIfUp CS.logout
-    :<|> handleIfUp CS.listOrder
+  CS.login
+    :<|> CS.logout
+    :<|> CS.listOrder
 
 type GoogleMapsProxyAPI =
   "googleMaps"
@@ -411,9 +410,9 @@ type GoogleMapsProxyAPI =
 
 googleMapsProxyFlow :: FlowServer GoogleMapsProxyAPI
 googleMapsProxyFlow =
-  handleIfUp GoogleMapsFlow.autoComplete
-    :<|> handleIfUp GoogleMapsFlow.placeDetails
-    :<|> handleIfUp GoogleMapsFlow.getPlaceName
+  GoogleMapsFlow.autoComplete
+    :<|> GoogleMapsFlow.placeDetails
+    :<|> GoogleMapsFlow.getPlaceName
 
 type PersonAPI =
   "person"
@@ -427,5 +426,5 @@ type PersonAPI =
 
 personFlow :: FlowServer PersonAPI
 personFlow =
-  handleIfUp Person.getPersonDetails
-    :<|> handleIfUp Person.updatePerson
+  Person.getPersonDetails
+    :<|> Person.updatePerson

@@ -2,7 +2,7 @@
 
 module Product.RideAPI.StartRide where
 
-import App.Types (AppEnv (dbCfg), Flow, FlowHandler)
+import App.Types (AppEnv (..), Flow, FlowHandler)
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
