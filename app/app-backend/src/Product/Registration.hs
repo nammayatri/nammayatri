@@ -7,7 +7,6 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import Beckn.Types.Common
 import qualified Beckn.Types.Common as BC
-import qualified Beckn.Types.Error.API as Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -48,7 +47,7 @@ initiateFlow req smsCfg = do
       RegistrationToken.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
       otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
-      whenLeft otpSendingRes $ throwErrorWithInfo Error.UnableToSendSMS
+      whenLeft otpSendingRes $ throwErrorWithInfo UnableToSendSMS
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -174,7 +173,7 @@ reInitiateLogin tokenId req =
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
         otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
-        whenLeft otpSendingRes $ throwErrorWithInfo Error.UnableToSendSMS
+        whenLeft otpSendingRes $ throwErrorWithInfo UnableToSendSMS
         _ <- RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
       else throwErrorWithInfo AuthBlocked "Attempts limit exceed."

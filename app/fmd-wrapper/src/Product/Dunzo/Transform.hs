@@ -25,7 +25,6 @@ import Beckn.Types.Core.Price
 import Beckn.Types.Core.Quotation
 import Beckn.Types.Core.State
 import Beckn.Types.Core.Tracking
-import Beckn.Types.Error
 import Beckn.Types.FMD.API.Cancel
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init

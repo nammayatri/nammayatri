@@ -1,13 +1,13 @@
 module Utils.Auth where
 
 import App.Types
-import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common (fromMaybeMWithInfo)
 import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude
 import qualified Storage.Queries.App as BA
 import qualified Storage.Queries.Provider as BP
+import Types.Error
 
 -- | TODO: Perform some API key verification.
 data VerifyAPIKey = VerifyAPIKey

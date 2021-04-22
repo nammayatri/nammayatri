@@ -6,7 +6,6 @@ import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import Beckn.Types.Common as BC
-import qualified Beckn.Types.Error.API as Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
@@ -18,6 +17,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
 import Types.Error
+import qualified Types.Error as Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
 

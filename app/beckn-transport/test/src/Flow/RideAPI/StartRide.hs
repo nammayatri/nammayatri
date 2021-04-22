@@ -1,7 +1,6 @@
 module Flow.RideAPI.StartRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Error.API
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -12,6 +11,7 @@ import qualified Product.RideAPI.Handlers.StartRide as StartRide
 import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
+import Types.Error
 import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()
 

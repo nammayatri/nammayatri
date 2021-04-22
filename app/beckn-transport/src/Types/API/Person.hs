@@ -6,7 +6,6 @@ import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
@@ -19,6 +18,7 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Servant.API
 import qualified Storage.Queries.Location as QL
+import Types.Error
 
 data EntityType = VEHICLE | PASS | TICKET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

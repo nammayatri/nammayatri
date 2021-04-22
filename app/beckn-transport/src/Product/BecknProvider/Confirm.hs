@@ -11,7 +11,6 @@ import qualified Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Error
-import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -33,6 +32,7 @@ import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Test.RandomStrings as RS
+import Types.Error
 import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 

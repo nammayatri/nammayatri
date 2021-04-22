@@ -4,9 +4,9 @@ import App.Types
 import Beckn.Product.Validation.Context (validateAction, validateCity, validateCountry)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Types.Error
 import Beckn.Utils.Common
 import EulerHS.Prelude
+import Types.Error
 
 validateContext :: Text -> Context -> Flow ()
 validateContext expectedAction context = do

@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Product.Validation.Context
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Types.Error
 import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq, InitRes)
@@ -19,6 +18,7 @@ import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
+import Types.Error
 
 -- TODO: add switching logic to figure out the client instance
 search :: Organization -> SearchReq -> FlowHandler SearchRes

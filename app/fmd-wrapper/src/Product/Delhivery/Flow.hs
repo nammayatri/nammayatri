@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Context
-import Beckn.Types.Error
 import qualified Beckn.Types.FMD.API.Confirm as API
 import qualified Beckn.Types.FMD.API.Init as API
 import qualified Beckn.Types.FMD.API.Search as API

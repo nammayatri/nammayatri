@@ -1,5 +1,10 @@
-module Types.Error where
+module Types.Error
+  ( module Types.Error,
+    module Beckn.Types.Error,
+  )
+where
 
+import Beckn.Types.Error
 import EulerHS.Prelude
 
 data ErrorCode

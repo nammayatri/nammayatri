@@ -1,7 +1,6 @@
 module Flow.RideAPI.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Error.API
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -13,6 +12,7 @@ import Servant.Server (ServerError)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
+import Types.Error
 import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()
 

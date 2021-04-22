@@ -10,7 +10,6 @@ import App.Types
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
 import Beckn.Types.Core.Error
-import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
@@ -26,6 +25,7 @@ import Product.Validation
 import Servant.Client (showBaseUrl)
 import qualified Types.API.Gateway.Search as GatewayAPI
 import Types.API.Search (OnSearchReq, SearchReq)
+import Types.Error
 
 search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckResponse
 search proxySign org req = withFlowHandler $ do

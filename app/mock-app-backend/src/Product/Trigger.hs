@@ -19,7 +19,6 @@ import Beckn.Types.App
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.FmdError
-import Beckn.Types.Error
 import qualified Beckn.Types.FMD.API.Cancel as API
 import qualified Beckn.Types.FMD.API.Search as API
 import qualified Beckn.Types.FMD.API.Track as API
@@ -39,6 +38,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 import Product.CallsTrack
 import Servant hiding (Context)
+import Types.Error
 
 data TriggerFlow
   = SimpleConfirm

@@ -1,7 +1,6 @@
 module Utils.Auth where
 
 import App.Types
-import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common (fromMaybeM)
 import Beckn.Utils.Servant.HeaderAuth
@@ -9,6 +8,7 @@ import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Monad ()
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as Org
+import Types.Error
 
 -- | TODO: Perform some API key verification.
 data VerifyAPIKey = VerifyAPIKey

@@ -5,7 +5,6 @@ module Product.Select where
 import App.Types
 import App.Utils
 import Beckn.Types.Core.Ack (AckResponse (..), ack)
-import Beckn.Types.Error
 import qualified Beckn.Types.FMD.API.Init as API
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
@@ -14,6 +13,7 @@ import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Data.Aeson (encode)
 import EulerHS.Prelude
 import EulerHS.Types (client)
+import Types.Error
 
 selectCb :: Organization -> API.OnSelectReq -> FlowHandler AckResponse
 selectCb _org req = withFlowHandler $ do
