@@ -22,7 +22,6 @@ import Types.API.Person (validatePersonReqEntity)
 import qualified Types.API.Person as PersonAPI
 import Types.API.Registration
 import qualified Types.API.Vehicle as VehAPI
-import Types.Storage.DriverInformation
 import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as Organization
 import Types.Storage.Person (Person)
@@ -31,8 +30,7 @@ import Types.Storage.Vehicle (Vehicle)
 
 data DriverInformationResponse = DriverInformationResponse
   { transporter :: Organization.Organization,
-    person :: PersonAPI.PersonEntityRes,
-    driverInformation :: DriverInformation
+    driver :: DriverEntityRes
   }
   deriving (Generic, ToJSON, FromJSON)
 

@@ -35,7 +35,6 @@ import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.TransporterConfig as QTC
-import qualified Storage.Queries.Vehicle as QV
 import Types.API.Person
 import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)
@@ -74,7 +73,7 @@ getPersonDetails personId = withFlowHandlerAPI $ do
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [Id orgId]
-  respList <- traverse mkPersonRes personList
+  respList <- mapM mkPersonRes personList
   return $ ListPersonRes respList
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
@@ -92,38 +91,14 @@ deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
 
 -- Utility Functions
 
-mkPersonRes :: (DBFlow m r, EncFlow m r) => SP.Person -> m PersonEntityRes
-mkPersonRes person = do
-  entity <- case person.udf2 >>= mapEntityType of
-    Just VEHICLE -> do
-      vehicle <- QV.findVehicleById $ Id $ fromMaybe "" (person.udf1)
-      return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)
-    _ -> return Nothing
-  decMobNum <- decrypt person.mobileNumber
+mkPersonRes :: EncFlow m r => SP.Person -> m PersonEntityRes
+mkPersonRes SP.Person {..} = do
+  decMobNum <- decrypt mobileNumber
   return $
     PersonEntityRes
-      { id = person.id,
-        firstName = person.firstName,
-        middleName = person.middleName,
-        lastName = person.lastName,
-        fullName = person.fullName,
-        role = person.role,
-        gender = person.gender,
-        email = person.email,
-        identifier = person.identifier,
-        identifierType = person.identifierType,
-        mobileNumber = decMobNum,
-        mobileCountryCode = person.mobileCountryCode,
-        rating = round <$> person.rating,
-        deviceToken = person.deviceToken,
-        udf1 = person.udf1,
-        udf2 = person.udf2,
-        organizationId = person.organizationId,
-        description = person.description,
-        locationId = person.locationId,
-        createdAt = person.createdAt,
-        updatedAt = person.updatedAt,
-        linkedEntity = entity
+      { mobileNumber = decMobNum,
+        rating = round <$> rating,
+        ..
       }
 
 sendInviteSms ::
@@ -148,11 +123,6 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
         SMS.to = phoneNumber,
         SMS.text = SF.constructInviteSms orgName inviteTemplate
       }
-
-mapEntityType :: Text -> Maybe EntityType
-mapEntityType entityType = case entityType of
-  "VEHICLE" -> Just VEHICLE
-  _ -> Nothing
 
 calculateAverageRating ::
   (DBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>

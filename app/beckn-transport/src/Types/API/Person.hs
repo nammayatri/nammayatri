@@ -255,9 +255,9 @@ newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, FromJSON)
 
-data LinkedEntity = LinkedEntity
-  { entityType :: EntityType,
-    entityValue :: Maybe Text
+data LinkReq = LinkReq
+  { entityId :: Text,
+    entityType :: EntityType
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -282,8 +282,7 @@ data PersonEntityRes = PersonEntityRes
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    linkedEntity :: Maybe LinkedEntity
+    updatedAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 

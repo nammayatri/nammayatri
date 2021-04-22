@@ -1,4 +1,14 @@
-module Product.DriverInformation where
+module Product.DriverInformation
+  ( getInformation,
+    setActivity,
+    getRideInfo,
+    listDriver,
+    linkVehicle,
+    enableDriver,
+    disableDriver,
+    createDriver
+  )
+where
 
 import App.Types
 import qualified App.Types as App
@@ -15,7 +25,6 @@ import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id, state)
 import qualified Product.Location as Location
 import Product.Person (sendInviteSms)
-import qualified Product.Person as Person
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -35,6 +44,7 @@ import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
+import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
 
 createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
 createDriver orgId req = withFlowHandlerAPI $ do
@@ -92,17 +102,16 @@ getInformation personId = withFlowHandlerAPI $ do
   _ <- Registration.checkPersonExists $ getId personId
   let driverId = cast personId
   person <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
-  personEntity <- Person.mkPersonRes person
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverEntity <- buildDriverEntityRes (person, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <-
     QOrganization.findOrganizationById orgId
       >>= fromMaybeM OrgNotFound
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
     DriverInformationAPI.DriverInformationResponse
       { transporter = organization,
-        person = personEntity,
-        driverInformation = driverInfo
+        driver = driverEntity
       }
 
 setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
@@ -163,25 +172,26 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
 listDriver :: Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
   personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset $ Id orgId
-  respPersonList <- traverse convertToRes personList
+  respPersonList <- traverse buildDriverEntityRes personList
   return $ DriverInformationAPI.ListDriverRes respPersonList
-  where
-    convertToRes (person, driverInfo) = do
-      vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person.udf1
-      decMobNum <- decrypt person.mobileNumber
-      return $
-        DriverInformationAPI.DriverEntityRes
-          { id = person.id,
-            firstName = person.firstName,
-            middleName = person.middleName,
-            lastName = person.lastName,
-            mobileNumber = decMobNum,
-            linkedVehicle = vehicle,
-            rating = round <$> person.rating,
-            active = driverInfo.active,
-            onRide = driverInfo.onRide,
-            registeredAt = person.createdAt
-          }
+
+buildDriverEntityRes :: (DBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverInformationAPI.DriverEntityRes
+buildDriverEntityRes (person, driverInfo) = do
+  vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person.udf1
+  decMobNum <- decrypt person.mobileNumber
+  return $
+    DriverInformationAPI.DriverEntityRes
+      { id = person.id,
+        firstName = person.firstName,
+        middleName = person.middleName,
+        lastName = person.lastName,
+        mobileNumber = decMobNum,
+        rating = round <$> person.rating,
+        linkedVehicle = vehicle,
+        active = driverInfo.active,
+        onRide = driverInfo.onRide,
+        registeredAt = person.createdAt
+      }
 
 linkVehicle :: Text -> Id SP.Person -> DriverInformationAPI.LinkVehicleReq -> FlowHandler DriverInformationAPI.LinkVehicleRes
 linkVehicle orgId personId req = withFlowHandlerAPI $ do
