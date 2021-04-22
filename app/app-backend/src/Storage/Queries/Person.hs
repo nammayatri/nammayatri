@@ -28,14 +28,14 @@ create person = do
   dbTable <- getDbTable
   person' <- encrypt person
   DB.createOne dbTable (Storage.insertExpression person')
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findById ::
   Id Storage.Person -> Flow (Maybe Storage.Person)
 findById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} = _id ==. B.val_ id
@@ -65,7 +65,7 @@ findByIdentifier ::
 findByIdentifier idType mb = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -77,7 +77,7 @@ findByUsernameAndPassword ::
 findByUsernameAndPassword email password = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -89,7 +89,7 @@ findByRoleAndMobileNumber ::
 findByRoleAndMobileNumber role countryCode mobileNumber = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -101,7 +101,7 @@ findByRoleAndMobileNumberWithoutCC :: Storage.Role -> Text -> Flow (Maybe Storag
 findByRoleAndMobileNumberWithoutCC role mobileNumber = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -113,7 +113,7 @@ updateMultiple personId person = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause now person) (predicate personId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause now (sPerson :: Storage.Person) Storage.Person {..} =
       mconcat
@@ -153,7 +153,7 @@ update id statusM nameM emailM roleM identTypeM identM = do
     dbTable
     (setClause statusM nameM emailM roleM identM identTypeM currTime)
     (predicate id)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause scStatusM scNameM scEmailM scRoleM scIdentM scIdentTypeM currTime Storage.Person {..} =
       mconcat
@@ -173,7 +173,7 @@ updatePersonOrgId orgId personId = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause orgId now) (predicate personId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause a n Storage.Person {..} =
       mconcat [_organizationId <-. B.val_ (Just a), _updatedAt <-. B.val_ n]
@@ -184,7 +184,7 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGen
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken) (predicate personId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause now mbFirstN mbMiddleN mbLastN mbFullN mbG mbE mbDToken Storage.Person {..} =
       mconcat
@@ -203,7 +203,7 @@ findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> Flow
 findAllWithLimitOffsetByRole mlimit moffset roles = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit
@@ -217,7 +217,7 @@ findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Orga
 findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit
@@ -232,6 +232,6 @@ deleteById :: Id Storage.Person -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate pid Storage.Person {..} = _id ==. B.val_ pid

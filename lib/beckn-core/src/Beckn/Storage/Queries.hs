@@ -73,7 +73,7 @@ runSqlDBTransaction ::
   (HasCallStack, T.JSONEx a) =>
   SqlDB a ->
   DB.FlowWithDb r a
-runSqlDBTransaction = runSqlDB' L.runTransaction >=> either throwDBError pure
+runSqlDBTransaction = runSqlDB' L.runTransaction >=> checkDBError
 
 run :: (HasCallStack, T.JSONEx a) => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
 run query = do

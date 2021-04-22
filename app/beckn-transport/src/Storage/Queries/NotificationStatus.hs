@@ -21,13 +21,13 @@ create :: NotificationStatus.NotificationStatus -> Flow ()
 create NotificationStatus.NotificationStatus {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression NotificationStatus.NotificationStatus {..})
-    >>= either throwDBError pure
+    >>= checkDBError
 
 updateStatus :: Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> Flow ()
 updateStatus rideId driverId status = do
   dbTable <- getDbTable
   DB.update dbTable (setClause status) (predicate rideId driverId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause s NotificationStatus.NotificationStatus {..} = _status <-. B.val_ s
     predicate rId dId NotificationStatus.NotificationStatus {..} =
@@ -55,7 +55,7 @@ findActiveNotificationByRideId :: Id Ride -> Flow (Maybe NotificationStatus.Noti
 findActiveNotificationByRideId rideId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate NotificationStatus.NotificationStatus {..} =
       _rideId ==. B.val_ rideId
@@ -65,7 +65,7 @@ findActiveNotificationByDriverId :: Id Driver -> Maybe (Id Ride) -> Flow (Maybe 
 findActiveNotificationByDriverId driverId rideId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate NotificationStatus.NotificationStatus {..} =
       _driverId ==. B.val_ driverId
@@ -76,6 +76,6 @@ cleanupNotifications :: Id Ride -> Flow ()
 cleanupNotifications rideId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate rideId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate id NotificationStatus.NotificationStatus {..} = _rideId ==. B.val_ id

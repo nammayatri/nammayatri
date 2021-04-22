@@ -30,13 +30,13 @@ createInitialDriverStats driverId = do
             _idleSince = now
           }
   DB.createOne dbTable (Storage.Common.insertExpression driverStats)
-    >>= either throwDBError pure
+    >>= checkDBError
 
 getFirstDriverInTheQueue :: [Id Driver] -> Flow (Id Driver)
 getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
-    >>= either throwDBError pure
+    >>= checkDBError
     >>= fromMaybeM EmptyDriverPool . listToMaybe . map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
@@ -62,12 +62,12 @@ fetchAll :: Flow [Storage.DriverStats]
 fetchAll = do
   dbTable <- getDbTable
   DB.findAllRows dbTable
-    >>= either throwDBError pure
+    >>= checkDBError
 
 deleteById :: Id Driver -> Flow ()
 deleteById driverId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate driverId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate dId Storage.DriverStats {..} = _driverId ==. B.val_ dId

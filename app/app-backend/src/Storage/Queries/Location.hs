@@ -19,7 +19,7 @@ getDbTable =
 createFlow :: Storage.Location -> Flow ()
 createFlow = do
   DB.runSqlDB . create
-    >=> either throwDBError pure
+    >=> checkDBError
 
 create :: Storage.Location -> DB.SqlDB ()
 create Storage.Location {..} = do
@@ -31,7 +31,7 @@ findLocationById ::
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
@@ -44,7 +44,7 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = 
     limit
     offset
     orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

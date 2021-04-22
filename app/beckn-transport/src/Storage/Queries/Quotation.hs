@@ -23,14 +23,14 @@ create :: Storage.Quotation -> Flow ()
 create Storage.Quotation {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Quotation {..})
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findQuotationById ::
   Id Storage.Quotation -> Flow (Maybe Storage.Quotation)
 findQuotationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.Quotation {..} = _id ==. B.val_ id
 
@@ -38,7 +38,7 @@ listQuotations :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.Qu
 listQuotations mlimit moffset status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

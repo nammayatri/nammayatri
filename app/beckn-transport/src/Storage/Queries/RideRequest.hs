@@ -19,7 +19,7 @@ getDbTable =
 createFlow :: RideRequest.RideRequest -> Flow ()
 createFlow =
   DB.runSqlDB . create
-    >=> either throwDBError pure
+    >=> checkDBError
 
 create :: RideRequest.RideRequest -> DB.SqlDB ()
 create rideRequest = do
@@ -32,12 +32,12 @@ fetchOldest limit = do
   let noOffset = 0
   let order RideRequest.RideRequest {..} = B.asc_ _createdAt
   DB.findAllWithLimitOffset dbTable limit noOffset order
-    >>= either throwDBError pure
+    >>= checkDBError
 
 removeRequest :: Id RideRequest.RideRequest -> Flow ()
 removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id

@@ -26,14 +26,14 @@ create :: Storage.FarePolicy -> Flow ()
 create Storage.FarePolicy {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.FarePolicy {..})
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findFarePolicyByOrgAndVehicleVariant ::
   Id Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.FarePolicy {..} =
       _organizationId ==. B.val_ orgId
@@ -43,7 +43,7 @@ findFarePoliciesByOrgId :: Id Organization.Organization -> Flow [Storage.FarePol
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.FarePolicy {..} = _organizationId ==. B.val_ orgId
 
@@ -51,7 +51,7 @@ findFarePolicyById :: Id D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.FarePolicy {..} = _id ==. B.val_ fpId
 
@@ -61,7 +61,7 @@ updateFarePolicy farePolicy = do
   now <- getCurrentTime
   let farePolicyId = farePolicy ^. #_id
   DB.update dbTable (setClause farePolicy now) (predicate farePolicyId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause fp now Storage.FarePolicy {..} =
       mconcat

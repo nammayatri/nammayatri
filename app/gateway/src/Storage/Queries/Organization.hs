@@ -20,7 +20,7 @@ findOrgById :: Text -> Flow (Maybe Org.Organization)
 findOrgById oId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Org.Organization {..} =
       _id ==. B.val_ (Id oId)
@@ -29,7 +29,7 @@ findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Org.Organization {..} =
       _shortId ==. B.val_ shortOrgId
@@ -39,7 +39,7 @@ findOrgByApiKey ::
 findOrgByApiKey oType apiKey = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Org.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
@@ -54,7 +54,7 @@ listOrganizations ::
 listOrganizations mlimit moffset oType oDomain = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

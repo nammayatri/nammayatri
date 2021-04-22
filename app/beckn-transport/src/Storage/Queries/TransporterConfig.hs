@@ -21,7 +21,7 @@ findValueByOrgIdAndKey :: Id Organization -> ConfigKey -> Flow (Maybe Transporte
 findValueByOrgIdAndKey orgId key = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate TransporterConfig.TransporterConfig {..} =
       _transporterId ==. B.val_ orgId

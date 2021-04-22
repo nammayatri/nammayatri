@@ -20,13 +20,13 @@ create :: Storage.Leads -> Flow ()
 create Storage.Leads {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Leads {..})
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findLeadsById ::
   Id Storage.Leads -> Flow (Maybe Storage.Leads)
 findLeadsById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.Leads {..} = _id ==. B.val_ id

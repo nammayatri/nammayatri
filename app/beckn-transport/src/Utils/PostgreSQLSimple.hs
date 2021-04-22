@@ -37,7 +37,7 @@ withPostgreSQLSimple f = do
   DBConfig {..} <- asks dbCfg
   pool <-
     L.getOrInitSqlConn (mkPostgresPoolConfig connTag pgConfig poolConfig)
-      >>= either throwDBError pure
+      >>= checkDBError
       >>= \case
         PostgresPool _connTag pool -> pure pool
         _ -> throwError NotPostgresBackend

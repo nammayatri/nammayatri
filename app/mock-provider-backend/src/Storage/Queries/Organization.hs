@@ -20,7 +20,7 @@ findOrgByApiKey :: App.APIKey -> Flow (Maybe Org.Organization)
 findOrgByApiKey apiKey = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Org.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
@@ -29,6 +29,6 @@ findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Org.Organization {..} = _shortId ==. B.val_ shortId

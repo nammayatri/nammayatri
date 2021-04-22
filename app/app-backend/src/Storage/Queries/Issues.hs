@@ -18,4 +18,4 @@ insertIssue :: Issue.Issue -> App.Flow ()
 insertIssue Issue.Issue {..} = do
   dbTable <- getDbTable
   Queries.createOne dbTable (Storage.insertExpression Issue.Issue {..})
-    >>= either throwDBError pure
+    >>= checkDBError

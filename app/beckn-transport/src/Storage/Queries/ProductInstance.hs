@@ -37,7 +37,7 @@ getProdTable =
 createFlow :: Storage.ProductInstance -> Flow ()
 createFlow =
   DB.runSqlDB . create
-    >=> either throwDBError pure
+    >=> checkDBError
 
 create :: Storage.ProductInstance -> DB.SqlDB ()
 create productInstance = do
@@ -48,7 +48,7 @@ findAllByIds :: Integer -> Integer -> [Id Product.Products] -> Flow [Storage.Pro
 findAllByIds limit offset ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     orderByDesc Storage.ProductInstance {..} = B.desc_ _createdAt
     predicate Storage.ProductInstance {..} =
@@ -138,7 +138,7 @@ findAllByCaseIds :: [Id Case.Case] -> Flow [Storage.ProductInstance]
 findAllByCaseIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} =
       B.in_ _caseId (B.val_ <$> ids)
@@ -199,7 +199,7 @@ findAllByStatusParentId :: [Storage.ProductInstanceStatus] -> Id Storage.Product
 findAllByStatusParentId status id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} =
       _status `B.in_` (B.val_ <$> status)
@@ -250,7 +250,7 @@ productInstanceJoin _limit _offset csTypes orgId status = do
       offset
       orderByDesc
       (productInstancejoinQuery csTable prodTable dbTable csPred prodPred piPred)
-      >>= either throwDBError pure
+      >>= checkDBError
   return $ mkJoinRes <$> joinedValues
   where
     limit = toInteger _limit
@@ -280,7 +280,7 @@ productInstanceJoinWithoutLimits csType orgId status = do
     DB.findAllByJoinWithoutLimits
       orderByDesc
       (productInstancejoinQuery csTable prodTable dbTable csPred prodPred cprPred)
-      >>= either throwDBError pure
+      >>= checkDBError
   return $ mkJoinRes <$> joinedValues
   where
     orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ _createdAt
@@ -309,7 +309,7 @@ findById pid = do
 updateDriverFlow :: [Id Storage.ProductInstance] -> Maybe (Id Person) -> Flow ()
 updateDriverFlow ids driverId =
   DB.runSqlDB (updateDriver ids driverId)
-    >>= either throwDBError pure
+    >>= checkDBError
 
 updateDriver ::
   [Id Storage.ProductInstance] ->
@@ -334,7 +334,7 @@ updateDriver ids driverId = do
 updateVehicleFlow :: [Id Storage.ProductInstance] -> Maybe Text -> Flow ()
 updateVehicleFlow ids vehId = do
   DB.runSqlDB (updateVehicle ids (Id <$> vehId))
-    >>= either throwDBError pure
+    >>= checkDBError
 
 updateVehicle ::
   [Id Storage.ProductInstance] ->
@@ -372,7 +372,7 @@ findAllByVehicleId :: Maybe (Id Vehicle) -> Flow [Storage.ProductInstance]
 findAllByVehicleId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} = B.val_ (isJust id) &&. _entityId ==. B.val_ (getId <$> id)
 
@@ -380,7 +380,7 @@ findAllByPersonId :: Id Person -> Flow [Storage.ProductInstance]
 findAllByPersonId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} = _personId ==. B.val_ (Just id)
 
@@ -388,7 +388,7 @@ findAllByParentId :: Id Storage.ProductInstance -> Flow [Storage.ProductInstance
 findAllByParentId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} = _parentId ==. B.val_ (Just id)
 

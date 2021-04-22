@@ -95,12 +95,12 @@ listOrder supportP mCaseId mMobile mlimit moffset =
           >>= fromMaybeMWithInfo PersonDoesNotExist "User with this mobile number doesn't exists."
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
-          >>= either throwDBError pure
+          >>= checkDBError
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
-          >>= either throwDBError pure
+          >>= checkDBError
           >>= fromMaybeMWithInfo CaseDoesNotExist "RIDESEARCH case with this id is not found."
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
@@ -112,7 +112,7 @@ makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
 makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
-      >>= either throwDBError pure
+      >>= checkDBError
   let (status :: Maybe CaseStatus) = ((\x -> Just $ x ^. #_status) =<< confiremedOrder) <|> Just _status
   fromLocation <- Location.findLocationById $ Id _fromLocationId
   toLocation <- Location.findLocationById $ Id _toLocationId
@@ -143,7 +143,7 @@ makeTripDetails caseM = case caseM of
     ProductInstance.ProductInstance {_id, _status, _info, _price} <-
       head
         <$> ( PI.findAllByCaseId (_case ^. #_id)
-                >>= either throwDBError pure
+                >>= checkDBError
             )
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< _info
         provider = (\x -> x ^. #_provider) =<< mproductInfo

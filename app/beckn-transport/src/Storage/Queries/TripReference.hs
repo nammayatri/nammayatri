@@ -23,14 +23,14 @@ create :: Storage.TripReference -> Flow ()
 create Storage.TripReference {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.TripReference {..})
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findTripReferenceById ::
   Id Storage.TripReference -> Flow (Maybe Storage.TripReference)
 findTripReferenceById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.TripReference {..} = _id ==. B.val_ id
 
@@ -38,7 +38,7 @@ listTripReferences :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storag
 listTripReferences mlimit moffset status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

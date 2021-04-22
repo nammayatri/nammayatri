@@ -24,7 +24,7 @@ create :: Storage.Rating -> Flow ()
 create rating = do
   dbTable <- getDbTable
   Query.createOne dbTable (Storage.insertExpression rating)
-    >>= either throwDBError pure
+    >>= checkDBError
 
 updateRatingValue :: Id Storage.Rating -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
@@ -39,13 +39,13 @@ updateRatingValue ratingId newRatingValue = do
           ]
     )
     (\Storage.Rating {..} -> _id ==. B.val_ ratingId)
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findByProductInstanceId :: Id PI.ProductInstance -> Flow (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
   Query.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.Rating {..} = _productInstanceId ==. B.val_ productInsId
 
@@ -56,7 +56,7 @@ findAllRatingsForPerson personId = do
   Query.findAllByJoinWithoutLimits
     orderBy
     (joinPredicate ratingTable productInstanceTable)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     orderBy Storage.Rating {..} = B.desc_ _createdAt
     joinPredicate ratingTable productInstanceTable = do

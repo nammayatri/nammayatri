@@ -24,12 +24,12 @@ create :: Storage.RegistrationToken -> Flow ()
 create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
-    >>= either throwDBError pure
+    >>= checkDBError
 
 findById :: Text -> Flow (Maybe Storage.RegistrationToken)
 findById id = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= either throwDBError pure
+  DB.findOne dbTable predicate >>= checkDBError
   where
     predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
 
@@ -37,7 +37,7 @@ findByToken :: Text -> Flow (Maybe Storage.RegistrationToken)
 findByToken token = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate token)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate rtoken Storage.RegistrationToken {..} = _token ==. B.val_ rtoken
 
@@ -46,7 +46,7 @@ updateAttempts attemps id = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause attemps now) (predicate id)
-    >>= either throwDBError pure
+    >>= checkDBError
   findById id >>= fromMaybeM InvalidToken
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
@@ -57,6 +57,6 @@ deleteByPersonId :: Text -> Flow ()
 deleteByPersonId id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate rtid Storage.RegistrationToken {..} = _EntityId ==. B.val_ rtid

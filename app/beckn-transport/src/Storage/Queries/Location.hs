@@ -27,7 +27,7 @@ getDbTable =
 createFlow :: Storage.Location -> Flow ()
 createFlow =
   DB.runSqlDB . create
-    >=> either throwDBError pure
+    >=> checkDBError
 
 create :: Storage.Location -> DB.SqlDB ()
 create location = do
@@ -39,7 +39,7 @@ findLocationById ::
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
@@ -48,7 +48,7 @@ updateLocationRec locationId location = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause location now) (predicate locationId)
-    >>= either throwDBError pure
+    >>= checkDBError
   where
     setClause loc n Storage.Location {..} =
       mconcat
