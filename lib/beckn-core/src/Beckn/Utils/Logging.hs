@@ -26,16 +26,16 @@ import EulerHS.Types (LogContext)
 import qualified EulerHS.Types as T
 
 logTagDebug :: Log m => Text -> Text -> m ()
-logTagDebug tag = withLogContext tag . logOutput DEBUG
+logTagDebug tag = withLogTag tag . logOutput DEBUG
 
 logTagInfo :: Log m => Text -> Text -> m ()
-logTagInfo tag = withLogContext tag . logOutput INFO
+logTagInfo tag = withLogTag tag . logOutput INFO
 
 logTagWarning :: Log m => Text -> Text -> m ()
-logTagWarning tag = withLogContext tag . logOutput WARNING
+logTagWarning tag = withLogTag tag . logOutput WARNING
 
 logTagError :: Log m => Text -> Text -> m ()
-logTagError tag = withLogContext tag . logOutput ERROR
+logTagError tag = withLogTag tag . logOutput ERROR
 
 logDebug :: Log m => Text -> m ()
 logDebug = logOutput DEBUG

@@ -64,7 +64,7 @@ runGateway configModifier = do
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     let appEnv = mkAppEnv appCfg cache
     flowRt' <- runFlowR flowRt appEnv $ do
-      withLogContext "Server startup" $ do
+      withLogTag "Server startup" $ do
         let shortOrgId = appEnv ^. #gwId
         getManager <-
           handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: " $

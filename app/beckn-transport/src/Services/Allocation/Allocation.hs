@@ -90,7 +90,7 @@ process handle@ServiceHandle {..} requestsNum = do
   rides <- getRequests requestsNum
   let ridesNum = length rides
   unless (ridesNum == 0) $
-    withLogContext "Allocation service" $ do
+    withLogTag "Allocation service" $ do
       getRequestsEndTime <- getCurrentTime
       let getRequestsTime = diffUTCTime getRequestsEndTime getRequestsStartTime
       logInfo $ show getRequestsTime <> " time spent for getRequests"
@@ -110,7 +110,7 @@ processRequest handle@ServiceHandle {..} rideRequest = do
   rideInfo <- getRideInfo rideId
   let rideStatus = rideInfo ^. #rideStatus
   eres <- try $ do
-    withLogContext ("RideRequest_" <> rideId ^. #getId) $ do
+    withLogTag ("RideRequest_" <> rideId ^. #getId) $ do
       logInfo "Start processing request"
       case rideRequest ^. #requestData of
         Allocation ->

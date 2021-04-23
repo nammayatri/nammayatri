@@ -46,7 +46,7 @@ runBackgroundTaskManager configModifier = do
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
-      withLogContext "BTM startup" $ do
+      withLogTag "BTM startup" $ do
         _ <-
           try checkConnections
             >>= handleLeft exitConnCheckFailure "Connections check failed. Exception thrown: " . first (id @SomeException)

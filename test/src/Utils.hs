@@ -61,4 +61,4 @@ runTransportFlow :: Text -> BecknTransport.AppEnv -> BecknTransport.Flow a -> IO
 runTransportFlow tag appEnv flow = do
   let loggerRt = getEulerLoggerRuntime (Just "Test_Transport_flow") defaultTestLoggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    runFlowR flowRt appEnv $ withLogContext tag flow
+    runFlowR flowRt appEnv $ withLogTag tag flow

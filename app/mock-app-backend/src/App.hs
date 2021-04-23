@@ -43,7 +43,7 @@ runMockApp configModifier = do
       appEnv = mkAppEnv appCfg
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
-      withLogContext "Server startup" $ do
+      withLogTag "Server startup" $ do
         logInfo "Setting up for signature auth..."
         let selfId = appCfg ^. #selfId
         getManager <-

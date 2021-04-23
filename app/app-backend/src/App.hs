@@ -45,7 +45,7 @@ runAppBackend' appCfg settings = do
       appEnv = mkAppEnv appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
-      withLogContext "Server startup" $ do
+      withLogTag "Server startup" $ do
         logInfo "Setting up for signature auth..."
         let shortOrgId = appCfg ^. #bapSelfId
         getManager <-

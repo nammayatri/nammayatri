@@ -9,4 +9,4 @@ instance Log IO where
   logOutput _ msg = do
     putStrLn msg
     hFlush stdout
-  withLogContext _ action = action
+  withLogTag _ action = action

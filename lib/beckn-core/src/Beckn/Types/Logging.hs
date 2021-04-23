@@ -8,7 +8,7 @@ data LogLevel = DEBUG | INFO | WARNING | ERROR
 
 class Log m where
   logOutput :: LogLevel -> Text -> m ()
-  withLogContext :: Text -> m a -> m a
+  withLogTag :: Text -> m a -> m a
 
 data LoggerConfig = LoggerConfig
   { isAsync :: Bool,
