@@ -180,13 +180,13 @@ findOrCreateOne ::
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
 findOrCreateOne dbTable findPredicate insertExpression = do
-  rez <- run $ do
+  res <- run $ do
     findAll' dbTable findPredicate >>= \case
       [] -> do
         createOne' dbTable insertExpression
         findAll' dbTable findPredicate
       xs -> pure xs
-  case rez of
+  case res of
     Right [] -> throwErrorWithInfo SQLResultError "Row not found"
     Right [s] -> pure $ pure (Just s)
     Right _ -> throwErrorWithInfo SQLResultError "Multiple rows found"

@@ -5,6 +5,7 @@ module Product.BecknProvider.Feedback where
 import App.Types (Flow, FlowHandler)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Feedback as API
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Organization (Organization)
@@ -25,7 +26,8 @@ import Types.Error
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
 feedback _transporterId _organization request = withFlowHandler $ do
   logTagInfo "FeedbackAPI" "Received feedback API call."
-  BP.validateContext "feedback" $ request ^. #context
+  let context = request ^. #context
+  BP.validateContext "feedback" context
   let productInstanceId = Id $ request ^. #message . #order_id
   productInstances <- ProductInstance.findAllByParentId productInstanceId
   personId <- getPersonId productInstances & fromMaybeMWithInfo PIPersonNotPresent "Driver is not assigned."
@@ -48,8 +50,7 @@ feedback _transporterId _organization request = withFlowHandler $ do
         "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
       Rating.updateRatingValue (rating ^. #_id) ratingValue
   Person.calculateAverageRating personId
-  uuid <- L.generateGUID
-  mkAckResponse uuid "feedback"
+  return $ AckResponse context (ack ACK) Nothing
   where
     getPersonId (productI : _) = productI ^. #_personId
     getPersonId _ = Nothing

@@ -47,7 +47,7 @@ spec = do
       searchACK `shouldSatisfy` isRight
 
       let Right searchResponse = searchACK
-      let appCaseId = Id $ searchResponse ^. #message . #_message
+      let appCaseId = Id $ searchResponse ^. #_context . #_transaction_id
 
       productInstance :| [] <- poll $ do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)

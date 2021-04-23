@@ -9,6 +9,7 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
+import Beckn.Types.Core.Error
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
@@ -40,7 +41,6 @@ import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Products as QProducts
 import qualified Types.API.Case as API
-import qualified Types.API.Common as API
 import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
@@ -49,7 +49,7 @@ import Types.ProductInfo
 import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 
-search :: Person.Person -> API.SearchReq -> FlowHandler API.AckResponse
+search :: Person.Person -> API.SearchReq -> FlowHandler AckResponse
 search person req = withFlowHandler $ do
   validateDateTime req
   validateServiceability req
@@ -57,7 +57,7 @@ search person req = withFlowHandler $ do
   toLocation <- mkLocation $ toBeckn $ req ^. #destination
   case_ <- mkCase req (getId $ person ^. #_id) fromLocation toLocation
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
-  now <- L.runIO getCurrentTime
+  now <- getCurrentTime
   msgId <- L.generateGUID
   DB.runSqlDBTransaction $ do
     Location.create fromLocation
@@ -68,12 +68,10 @@ search person req = withFlowHandler $ do
       context = mkContext "search" (getId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
       intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
-  eres <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
-  let sAck =
-        case eres of
-          Left err -> API.Ack "Error" (show err)
-          Right _ -> API.Ack "Successful" (getId $ case_ ^. #_id)
-  return $ API.AckResponse (getId (case_ ^. #_id)) sAck Nothing
+  searchRes <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
+  case searchRes of
+    Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack ACK) Nothing
   where
     validateDateTime sreq = do
       currTime <- getCurrentTime
@@ -100,7 +98,7 @@ searchCb _bppOrg req = withFlowHandler $ do
       _ <- searchCbService req catalog
       return ()
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
-  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
+  return $ AckResponse (req ^. #context) (ack ACK) Nothing
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do
@@ -146,7 +144,7 @@ searchCbService req catalog = do
       whenJust mCaseInfo $ \info -> do
         let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
         QCase.updateInfo (case_ ^. #_id) (encodeToText uInfo)
-  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
+  return $ AckResponse (req ^. #context) (ack ACK) Nothing
 
 mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do

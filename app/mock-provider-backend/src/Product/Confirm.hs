@@ -7,7 +7,7 @@ where
 
 import App.Types
 import Beckn.Types.Core.API.Callback
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Confirm as API
 import Beckn.Types.Storage.Organization (Organization)
@@ -43,7 +43,7 @@ confirm _org req = withFlowHandler $ do
   pure
     AckResponse
       { _context = context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
 

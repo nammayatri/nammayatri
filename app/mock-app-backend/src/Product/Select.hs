@@ -4,7 +4,7 @@ module Product.Select where
 
 import App.Types
 import App.Utils
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import qualified Beckn.Types.FMD.API.Init as API
 import qualified Beckn.Types.FMD.API.Select as API
 import Beckn.Types.Storage.Organization (Organization)
@@ -17,7 +17,7 @@ import Types.Error
 
 selectCb :: Organization -> API.OnSelectReq -> FlowHandler AckResponse
 selectCb _org req = withFlowHandler $ do
-  let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
+  let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   ctx <- updateCaller $ req ^. #context
   logTagDebug "mock_app_backend" $
     "select_cb: req: "

@@ -123,7 +123,7 @@ getFutureTime =
 searchServices ::
   Text ->
   AppBESearch.SearchReq ->
-  ClientM AppBESearch.AckResponse
+  ClientM AckResponse
 searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: Text -> IO AppBESearch.SearchReq

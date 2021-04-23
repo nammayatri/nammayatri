@@ -4,7 +4,7 @@ module Product.Log where
 
 import App.Types
 import Beckn.Types.Core.API.Log (LogReq)
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
@@ -27,7 +27,7 @@ log _org req = withFlowHandler $ do
           <> decodeUtf8 (encode req)
           <> ", context: "
           <> decodeUtf8 (encode context)
-      return $ AckResponse (req ^. #_message . #_context) (ack "ACK") Nothing
+      return $ AckResponse (req ^. #_message . #_context) (ack ACK) Nothing
     else do
       let err = Just $ Error "CONTEXT-ERROR" "" Nothing $ Just $ "Invalid action: " <> action
-      return $ AckResponse (req ^. #_message . #_context) (ack "NACK") err
+      return $ AckResponse (req ^. #_message . #_context) (ack NACK) err

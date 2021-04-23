@@ -34,7 +34,7 @@ assertAck :: Either ClientError AckResponse -> IO ()
 assertAck response =
   case response of
     Left _ -> expectationFailure $ "Received an error response: " <> show response
-    Right ackResponse -> _status (_ack (_message ackResponse)) `shouldBe` "ACK"
+    Right ackResponse -> _status (_ack (_message ackResponse)) `shouldBe` ACK
 
 withNewUUID :: (Text -> IO ()) -> IO ()
 withNewUUID action = do

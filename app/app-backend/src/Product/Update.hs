@@ -36,7 +36,7 @@ onUpdate _org req = withFlowHandler $ do
               }
       MPI.updateMultiple (orderPi ^. #_id) uPrd
     Left err -> logTagError "on_update req" $ "on_update error: " <> show err
-  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
+  return $ AckResponse (req ^. #context) (ack ACK) Nothing
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo
     getUpdatedProdInfo (Just trip) (Just prdInfo) mtracking =

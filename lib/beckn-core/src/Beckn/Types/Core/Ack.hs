@@ -3,12 +3,13 @@ module Beckn.Types.Core.Ack where
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Data.Aeson
-import Data.Text
 import EulerHS.Prelude
 import qualified Network.HTTP.Types as H
 
+data Status = ACK | NACK deriving (Generic, Eq, Show, Read, FromJSON, ToJSON)
+
 newtype Ack = Ack
-  { _status :: Text
+  { _status :: Status
   }
   deriving (Generic, Show)
 
@@ -48,7 +49,7 @@ instance FromJSON AckMessage where
 instance ToJSON AckMessage where
   toJSON = genericToJSON stripLensPrefixOptions
 
-ack :: Text -> AckMessage
+ack :: Status -> AckMessage
 ack = AckMessage . Ack
 
 data NackResponseError = NackResponseError

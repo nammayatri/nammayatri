@@ -38,7 +38,7 @@ callbackServer = onSearch
 onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> OnSearchReq -> Handler AckResponse
 onSearch callbackData sPayload req = do
   atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (^. #params . #keyId . #subscriberId)) req :)
-  pure $ AckResponse (req ^. #context) (ack "ACK") Nothing
+  pure $ AckResponse (req ^. #context) (ack ACK) Nothing
 
 mkCallbackData :: IO CallbackData
 mkCallbackData = do

@@ -8,7 +8,7 @@ where
 
 import App.Types
 import Beckn.Types.Core.API.Callback
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Core.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
@@ -60,8 +60,8 @@ search proxySign org req = withFlowHandler $ do
             <> ", resp: "
             <> show eRes
       if null providers
-        then return $ AckResponse context (ack "NACK") (Just $ domainError "No providers")
-        else return $ AckResponse context (ack "ACK") Nothing
+        then return $ AckResponse context (ack NACK) (Just $ domainError "No providers")
+        else return $ AckResponse context (ack ACK) Nothing
 
 searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb proxySign provider req@CallbackReq {context} = withFlowHandler $ do

@@ -139,7 +139,7 @@ type SearchAPI =
   "search"
     :> TokenAuth
     :> ReqBody '[JSON] Search'.SearchReq
-    :> Post '[JSON] Search'.AckResponse
+    :> Post '[JSON] AckResponse
     :<|> SignatureAuth "Authorization"
     :> SignatureAuth "Proxy-Authorization"
     :> Search.OnSearchAPI

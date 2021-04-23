@@ -52,4 +52,4 @@ updateFarePolicy _ fpId req = withFlowHandler $ do
             SFarePolicy._nightShiftRate = req ^. #nightShiftRate
           }
   _ <- SFarePolicy.updateFarePolicy updatedFarePolicy
-  pure $ Ack {_status = "ACK"}
+  pure $ Ack {_status = ACK}

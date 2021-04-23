@@ -4,7 +4,7 @@ module Product.Delhivery.Flow where
 
 import App.Types
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.FMD.API.Confirm as API
 import qualified Beckn.Types.FMD.API.Init as API
@@ -251,7 +251,7 @@ getQuote ba@DlBAConfig {..} conf@DelhiveryConfig {..} quoteReq = do
   API.getQuote token dlUrl quoteReq
 
 returnAck :: Context -> Flow AckResponse
-returnAck context = return $ AckResponse context (ack "ACK") Nothing
+returnAck context = return $ AckResponse context (ack ACK) Nothing
 
 getBearerToken :: Token -> Token
 getBearerToken a = Token (T.pack "Bearer " <> getToken a)

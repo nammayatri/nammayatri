@@ -7,7 +7,7 @@ where
 
 import App.Types
 import Beckn.Types.Core.API.Callback
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Beckn.Types.Core.FmdError
@@ -42,7 +42,7 @@ search _org req = withFlowHandler $ do
   return
     AckResponse
       { _context = context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
   where

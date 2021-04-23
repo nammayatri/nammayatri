@@ -6,7 +6,7 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.FMD.API.Cancel as API
@@ -462,7 +462,7 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
     Just token -> return token
 
 returnAck :: Context -> Flow AckResponse
-returnAck context = return $ AckResponse context (ack "ACK") Nothing
+returnAck context = return $ AckResponse context (ack ACK) Nothing
 
 validateReturn :: Order -> Flow ()
 validateReturn currOrder =

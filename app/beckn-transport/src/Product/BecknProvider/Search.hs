@@ -8,6 +8,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as Callback
 import qualified Beckn.Types.Core.API.Search as API
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import qualified Beckn.Types.Core.Ack as Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
@@ -44,7 +45,8 @@ import Types.Error
 
 search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
 search transporterId bapOrg req = withFlowHandler $ do
-  BP.validateContext "search" $ req ^. #context
+  let context = req ^. #context
+  BP.validateContext "search" context
   uuid <- L.generateGUID
   transporter <- Org.findOrganizationById transporterId
   when (transporter ^. #_enabled) $ do
@@ -64,7 +66,7 @@ search transporterId bapOrg req = withFlowHandler $ do
       Loc.create toLocation
       QCase.create productCase
     fork "OnSearchCallback" $ onSearchCallback productCase transporter fromLocation toLocation
-  mkAckResponse uuid "search"
+  return $ AckResponse context (ack ACK) Nothing
 
 mkFromStop :: UTCTime -> Stop.Stop -> Flow Location.Location
 mkFromStop now stop = do

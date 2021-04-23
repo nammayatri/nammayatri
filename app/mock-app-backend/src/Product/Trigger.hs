@@ -88,7 +88,7 @@ triggerSearch flow = withFlowHandler $ do
   return
     AckResponse
       { _context = req ^. #context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
 
@@ -110,7 +110,7 @@ triggerTrack orderId = withFlowHandler $ do
   return
     AckResponse
       { _context = context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
 
@@ -136,7 +136,7 @@ triggerCancel orderId = withFlowHandler $ do
   return
     AckResponse
       { _context = context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
 
@@ -190,7 +190,7 @@ triggerUpdate orderId mode = withFlowHandler $ do
   return
     AckResponse
       { _context = context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
 

@@ -16,7 +16,6 @@ import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Case as AppCase
 -- import qualified "beckn-transport" Types.API.Case as TbeCase
-import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "beckn-transport" Types.API.Ride as RideAPI
@@ -43,7 +42,7 @@ spec = do
       ackResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right ackResponse = ackResult
-          appCaseid = AppCommon._message $ ackResponse ^. #message
+          appCaseid = ackResponse ^. #_context . #_transaction_id
 
       -- All rides are accepted by default and has fare calculated
 

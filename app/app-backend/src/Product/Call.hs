@@ -83,4 +83,4 @@ getProductAndCustomerPhones rideSearchPid = do
   return (customerPhone, driverPhone)
 
 mkAckResponse :: Flow CallRes
-mkAckResponse = return $ Ack {_status = "ACK"}
+mkAckResponse = return $ Ack {_status = ACK}

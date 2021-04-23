@@ -40,7 +40,7 @@ select _org req = withFlowHandler $ do
   return
     AckResponse
       { _context = context,
-        _message = ack "ACK",
+        _message = ack ACK,
         _error = Nothing
       }
 

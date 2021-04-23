@@ -12,7 +12,6 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
 import qualified "app-backend" Types.API.Case as AppCase
-import qualified "app-backend" Types.API.Common as AppCommon
 import Utils
 
 spec :: Spec
@@ -39,7 +38,7 @@ spec = do
           ackResult `shouldSatisfy` isRight
           -- If we reach here, the 'Right' pattern match will always succeed
           let Right ackResponse = ackResult
-              appCaseid = AppCommon._message $ ackResponse ^. #message
+              appCaseid = ackResponse ^. #_context . #_transaction_id
 
           productInstance :| [] <- poll $ do
             -- Do a Case Status request for getting case product to confirm ride

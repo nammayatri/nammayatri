@@ -14,7 +14,6 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack as Ack
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Error (Error (..))
 import Beckn.Types.Error
 import Beckn.Types.Field
@@ -126,35 +125,7 @@ mkOkResponse :: MonadTime m => Context -> m AckResponse
 mkOkResponse context = do
   currTime <- getCurrentTime
   let context' = context {_timestamp = currTime}
-  return $ AckResponse context' (ack "ACK") Nothing
-
-mkAckResponse :: MonadTime m => Text -> Text -> m AckResponse
-mkAckResponse txnId action = mkAckResponse' txnId action "ACK"
-
-mkAckResponse' :: MonadTime m => Text -> Text -> Text -> m AckResponse
-mkAckResponse' txnId action status = do
-  currTime <- getCurrentTime
-  return
-    AckResponse
-      { _context =
-          Context
-            { _domain = MOBILITY,
-              _country = Just "IND",
-              _city = Nothing,
-              _action = action,
-              _core_version = Nothing,
-              _domain_version = Nothing,
-              _bap_uri = Nothing,
-              _bpp_uri = Nothing,
-              _transaction_id = txnId,
-              _message_id = txnId,
-              _timestamp = currTime,
-              _ttl = Nothing
-            },
-        _message =
-          ack status,
-        _error = Nothing
-      }
+  return $ AckResponse context' (ack Ack.ACK) Nothing
 
 mkErrResponse :: Context -> ServerError -> Error -> NackResponseError
 mkErrResponse context errBase err =
@@ -168,7 +139,7 @@ compileErrResponse :: NackResponseError -> AckResponse
 compileErrResponse NackResponseError {..} =
   AckResponse
     { _context = _context,
-      _message = ack "NACK",
+      _message = ack Ack.NACK,
       _error = Just _error
     }
 

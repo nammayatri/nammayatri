@@ -6,7 +6,7 @@ module Product.Confirm
 where
 
 import App.Types
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
@@ -20,7 +20,7 @@ import Product.CallsTrack
 
 confirmCb :: Organization -> OnConfirmReq -> FlowHandler AckResponse
 confirmCb org req = withFlowHandler $ do
-  let resp = AckResponse (req ^. #context) (ack "ACK") Nothing
+  let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   logTagDebug "mock_app_backend" $ "confirm_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   -- ctx <- updateCaller $ req ^. #context
   -- quotId = req ^. #message . #order . #_order_id

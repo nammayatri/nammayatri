@@ -4,7 +4,9 @@ module Product.Feedback where
 
 import qualified App.Types as App
 import qualified Beckn.Types.Core.API.Feedback as Beckn
+import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Description as Beckn
+import Beckn.Types.Core.Error
 import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
@@ -59,4 +61,7 @@ feedback person request = withFlowHandler $ do
                 }
           }
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
-  Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg
+  feedbackRes <- Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg
+  case feedbackRes of
+    Left err -> pure $ AckResponse context (ack NACK) $ Just (domainError $ show err)
+    Right _ -> pure $ AckResponse context (ack ACK) Nothing

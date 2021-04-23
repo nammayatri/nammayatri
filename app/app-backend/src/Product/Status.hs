@@ -5,6 +5,8 @@ module Product.Status (status, onStatus) where
 import App.Types
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
+import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
+import Beckn.Types.Core.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -33,19 +35,21 @@ status person StatusReq {..} = withFlowHandler $ do
       >>= fromMaybeM OrgNotFound
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
-  Gateway.status baseUrl $ API.StatusReq context statusMessage
+  statusRes <- Gateway.status baseUrl $ API.StatusReq context statusMessage
+  case statusRes of
+    Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack ACK) Nothing
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus _org req = withFlowHandler $ do
   let context = req ^. #context
-      txnId = context ^. #_transaction_id
   case req ^. #contents of
     Right msg -> do
       let prodInstId = Id $ msg ^. #order . #_id
           orderState = fromBeckn $ msg ^. #order . #_state
       updateProductInstanceStatus prodInstId orderState
     Left err -> logTagError "on_status req" $ "on_status error: " <> show err
-  mkAckResponse txnId "status"
+  return $ AckResponse context (ack ACK) Nothing
   where
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER

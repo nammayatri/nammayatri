@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module External.Gateway.Flow where
 
 import App.Types
@@ -9,8 +7,8 @@ import Beckn.Types.Core.API.Feedback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
-import Beckn.Types.Core.Ack (AckResponse (..), ack)
-import Beckn.Types.Core.Error
+import Beckn.Types.Core.Ack (AckResponse (..))
+import Beckn.Types.Error
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail')
@@ -18,10 +16,9 @@ import EulerHS.Prelude
 import qualified External.Gateway.Types as API
 import Servant.Client
 import Types.API.Location
-import Types.Error
 
 search ::
-  BaseUrl -> SearchReq -> Flow (Either Text ())
+  BaseUrl -> SearchReq -> Flow (Either Text AckResponse)
 search url req = do
   mGatewaySelector <- xGatewaySelector <$> ask
   res <- case mGatewaySelector of
@@ -36,22 +33,17 @@ search url req = do
     _ -> throwError GatewaySelectorNotSet
   case res of
     Left err -> do
-      logTagError "Search" ("error occurred while search: " <> show err)
-      return $ Left $ show err
+      logTagInfo "Search" ("error occurred while search: " <> show err)
     Right _ -> do
       logTagInfo "Search" "Search successfully delivered"
-      return $ Right ()
+  return $ first show res
 
-confirm :: BaseUrl -> ConfirmReq -> Flow AckResponse
-confirm url req@ConfirmReq {context} = do
+confirm :: BaseUrl -> ConfirmReq -> Flow (Either Text AckResponse)
+confirm url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.confirm req) "confirm"
   whenLeft res $ \err ->
-    logTagError "error occurred while confirm: " (show err)
-  whenLeft res $ \err ->
     logTagError "Confirm" ("error occurred while confirm: " <> show err)
-  case res of
-    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack "ACK") Nothing
+  return $ first show res
 
 location :: BaseUrl -> Text -> Flow (Either Text GetLocationRes)
 location url req = do
@@ -61,45 +53,38 @@ location url req = do
     logTagError "Location" ("error occurred while getting location: " <> show err)
   return $ first show res
 
-track :: BaseUrl -> TrackTripReq -> Flow AckResponse
-track url req@TrackTripReq {context} = do
+track :: BaseUrl -> TrackTripReq -> Flow (Either Text AckResponse)
+track url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.trackTrip req) "track"
   case res of
     Left err -> logTagError "error occurred while track trip: " (show err)
     Right _ -> logTagInfo "Track" "Track successfully delivered"
-  case res of
-    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack "ACK") Nothing
+  return $ first show res
 
-cancel :: BaseUrl -> CancelReq -> Flow (Either Text ())
+cancel :: BaseUrl -> CancelReq -> Flow (Either Text AckResponse)
 cancel url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.cancel req) "cancel"
   case res of
     Left err -> do
       logTagError "error occurred while cancel trip: " (show err)
-      return $ Left $ show err
     Right _ -> do
       logTagInfo "Cancel" "Cancel successfully delivered"
-      return $ Right ()
+  return $ first show res
 
-status :: BaseUrl -> StatusReq -> Flow AckResponse
-status url req@StatusReq {context} = do
+status :: BaseUrl -> StatusReq -> Flow (Either Text AckResponse)
+status url req = do
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.status req) "status"
   case res of
     Left err -> logTagError "error occurred while getting status: " (show err)
     Right _ -> logTagInfo "Status" "Status successfully delivered"
-  case res of
-    Left err -> return $ AckResponse context (ack "ACK") $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack "ACK") Nothing
+  return $ first show res
 
-feedback :: BaseUrl -> FeedbackReq -> Flow AckResponse
+feedback :: BaseUrl -> FeedbackReq -> Flow (Either Text AckResponse)
 feedback url req = do
-  let context = req ^. #context
   res <- callAPIWithTrail' (Just signatureAuthManagerKey) url (API.feedback req) "feedback"
   case res of
     Left err -> do
       logTagError "Gateway" $ "Error occurred when sending feedback: " <> show err
-      pure $ AckResponse context (ack "ACK") $ Just (domainError $ show err)
     Right _ -> do
       logTagInfo "Gateway" "Feedback successfully sent."
-      pure $ AckResponse context (ack "ACK") Nothing
+  return $ first show res

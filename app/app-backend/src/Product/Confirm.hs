@@ -7,6 +7,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Error
 import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
@@ -52,7 +53,10 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
   context <- buildContext "confirm" caseId msgId
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
   order <- mkOrder productInstance
-  Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
+  confirmRes <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
+  case confirmRes of
+    Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
+    Right _ -> return $ AckResponse context (ack ACK) Nothing
   where
     mkOrder productInstance = do
       now <- getCurrentTime
@@ -100,7 +104,7 @@ onConfirm _org req = withFlowHandler $ do
         QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
         QPI.updateMultiple pid uPrd
     Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
-  return $ AckResponse (req ^. #context) (ack "ACK") Nothing
+  return $ AckResponse (req ^. #context) (ack ACK) Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do

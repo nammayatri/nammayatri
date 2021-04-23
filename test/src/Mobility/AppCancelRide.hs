@@ -15,7 +15,6 @@ import Servant.Client
 import Test.Hspec
 import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
-import qualified "app-backend" Types.API.Common as AppCommon
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import Utils
 
@@ -35,7 +34,7 @@ spec = do
       ackResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right ackResponse = ackResult
-          appCaseid = AppCommon._message $ ackResponse ^. #message
+          appCaseid = ackResponse ^. #_context . #_transaction_id
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride

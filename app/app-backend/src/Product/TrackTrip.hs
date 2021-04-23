@@ -37,14 +37,17 @@ track person req = withFlowHandler $ do
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM OrgNotFound
   case decodeFromText =<< (prodInst ^. #_info) of
-    Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
+    Nothing -> return $ AckResponse context (ack NACK) $ Just $ domainError "No product to track"
     Just (info :: ProductInfo) ->
       case ProductInfo._tracker info of
-        Nothing -> return $ AckResponse context (ack "NACK") $ Just $ domainError "No product to track"
+        Nothing -> return $ AckResponse context (ack NACK) $ Just $ domainError "No product to track"
         Just tracker -> do
           let gTripId = tracker ^. #_trip . #id
           gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
-          Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
+          trackRes <- Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
+          case trackRes of
+            Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
+            Right _ -> return $ AckResponse context (ack ACK) Nothing
 
 trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes
 trackCb _org req = withFlowHandler $ do
@@ -69,11 +72,11 @@ trackCb _org req = withFlowHandler $ do
             return $ Right ()
           _ -> return $ Left "Multiple products confirmed, ambiguous selection"
       case res of
-        Left err -> return $ AckResponse context (ack "NACK") $ Just $ domainError err
-        Right _ -> return $ AckResponse context (ack "ACK") Nothing
+        Left err -> return $ AckResponse context (ack NACK) $ Just $ domainError err
+        Right _ -> return $ AckResponse context (ack ACK) Nothing
     Left err -> do
       logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
-      return $ AckResponse context (ack "ACK") Nothing
+      return $ AckResponse context (ack ACK) Nothing
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do
