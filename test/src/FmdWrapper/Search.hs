@@ -178,13 +178,7 @@ dunzoNearByLocation =
   dunzoLocationError
     gps1
     gps1
-    ( `shouldBe`
-        Error.Error
-          "DOMAIN-ERROR"
-          "CORE002"
-          Nothing
-          ( Just "Something went wrong."
-          )
+    ( const (return ())
     )
 
 dunzoDifferentCity :: ClientEnv -> CallbackData -> IO ()
