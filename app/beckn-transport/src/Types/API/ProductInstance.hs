@@ -24,20 +24,6 @@ instance ToJSON ProductInstanceRes where
 
 type ProductInstanceList = [ProductInstanceRes]
 
-data ProdInstUpdateReq = ProdInstUpdateReq
-  { _status :: ProductInstanceStatus,
-    _otpCode :: Maybe Text
-  }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON ProdInstUpdateReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
-
-instance ToJSON ProdInstUpdateReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
-
-type ProdInstInfo = ProductInstance
-
 data DriverVehicleInfo = DriverVehicleInfo
   { driverInfo :: Text,
     vehicleInfo :: Text

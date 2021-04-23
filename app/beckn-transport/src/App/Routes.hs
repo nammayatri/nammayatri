@@ -239,10 +239,6 @@ type ProductInstanceAPI =
            :> "cases"
            :> QueryParam "type" CaseType
            :> Get '[JSON] CaseListRes
-           :<|> TokenAuth
-           :> Capture "productInstanceId" (Id ProductInstance)
-           :> ReqBody '[JSON] ProdInstUpdateReq
-           :> Post '[JSON] ProdInstInfo
        )
 
 productInstanceFlow :: FlowServer ProductInstanceAPI
@@ -251,7 +247,6 @@ productInstanceFlow =
     :<|> ProductInstance.listDriverRides
     :<|> ProductInstance.listVehicleRides
     :<|> ProductInstance.listCasesByProductInstance
-    :<|> ProductInstance.update
 
 -------- Product Flow----------
 type ProductAPI =

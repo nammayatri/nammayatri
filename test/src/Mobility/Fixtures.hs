@@ -220,7 +220,7 @@ listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe I
 listDriverRides :: Text -> Id Person.Person -> ClientM TbePI.RideListRes
 listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
 listCasesByProductInstance :: Text -> Id PI.ProductInstance -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
-listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance :<|> _ = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
+listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
 listPIs :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
 listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
@@ -263,13 +263,6 @@ buildStartRideReq :: Text -> RideAPI.StartRideReq
 buildStartRideReq otp =
   RideAPI.StartRideReq
     { RideAPI.otp = otp
-    }
-
-buildUpdateStatusReq :: PI.ProductInstanceStatus -> Maybe Text -> TbePI.ProdInstUpdateReq
-buildUpdateStatusReq status otp =
-  TbePI.ProdInstUpdateReq
-    { _status = status,
-      _otpCode = otp
     }
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
