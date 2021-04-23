@@ -232,17 +232,12 @@ deleteById personId = do
   where
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-updateEntity :: DBFlow m r => Id Storage.Person -> Text -> Text -> m ()
-updateEntity personId entityId entityType = do
+updateVehicle :: DBFlow m r => Id Storage.Person -> Maybe (Id Vehicle.Vehicle) -> m ()
+updateVehicle personId mbVehicleId = do
   dbTable <- getDbTable
-  let mEntityId =
-        if null entityId
-          then Nothing
-          else Just entityId
-      mEntityType =
-        if null entityType
-          then Nothing
-          else Just entityType
+  let (mEntityId, mEntityType) = case mbVehicleId of
+        Just vehicleId -> (Just (getId vehicleId), Just "VEHICLE")
+        Nothing -> (Nothing, Nothing)
   DB.update
     dbTable
     (setClause mEntityId mEntityType)
@@ -255,13 +250,13 @@ updateEntity personId entityId entityType = do
         ]
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
-findByEntityId :: DBFlow m r => Text -> m (Maybe Storage.Person)
-findByEntityId entityId = do
+findByVehicleId :: DBFlow m r => Id Vehicle.Vehicle -> m (Maybe Storage.Person)
+findByVehicleId (Id vehicleId) = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Person {..} =
-      udf1 ==. B.val_ (Just entityId)
+      udf1 ==. B.val_ (Just vehicleId)
 
 updateAverageRating :: DBFlow m r => Id Storage.Person -> Text -> m ()
 updateAverageRating personId newAverageRating = do

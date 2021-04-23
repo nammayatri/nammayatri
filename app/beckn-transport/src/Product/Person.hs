@@ -4,7 +4,7 @@ module Product.Person
     listPerson,
     updatePerson,
     deletePerson,
-    linkEntity,
+    linkVehicle,
     calculateAverageRating,
     mkPersonRes,
     getDriverPool,
@@ -22,6 +22,7 @@ import Beckn.Sms.Config
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
+import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
@@ -143,26 +144,18 @@ deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
     QR.deleteByEntitiyId personId
   return $ DeletePersonRes personId
 
-linkEntity :: Text -> Id SP.Person -> LinkReq -> FlowHandler PersonEntityRes
-linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
+linkVehicle :: Text -> Id SP.Person -> LinkVehicleReq -> FlowHandler LinkVehicleRes
+linkVehicle orgId personId req = withFlowHandlerAPI $ do
   person <-
-    QP.findPersonById (Id personId)
+    QP.findPersonById personId
       >>= fromMaybeM PersonDoesNotExist
-  _ <- case req.entityType of
-    VEHICLE ->
-      QV.findVehicleById (Id (req.entityId))
-        >>= fromMaybeM VehicleNotFound
-    _ -> throwError $ InvalidRequest "Unsupported entity type."
   when
     (person.organizationId /= Just (Id orgId))
     (throwError Unauthorized)
-  prevPerson <- QP.findByEntityId (req.entityId)
-  whenJust prevPerson (\p -> QP.updateEntity (p.id) T.empty T.empty)
-  QP.updateEntity (Id personId) (req.entityId) (T.pack $ show $ req.entityType)
-  updatedPerson <-
-    QP.findPersonById person.id
-      >>= fromMaybeM PersonNotFound
-  mkPersonRes updatedPerson
+  prevPerson <- QP.findByVehicleId (req.vehicleId)
+  whenJust prevPerson (\p -> QP.updateVehicle (p.id) Nothing)
+  QP.updateVehicle personId $ Just (req.vehicleId)
+  return Success
 
 -- Utility Functions
 

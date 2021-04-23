@@ -126,8 +126,8 @@ type PersonAPI =
            :<|> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> "link"
-             :> ReqBody '[JSON] LinkReq
-             :> Post '[JSON] PersonEntityRes
+             :> ReqBody '[JSON] LinkVehicleReq
+             :> Post '[JSON] LinkVehicleRes
        )
 
 personFlow :: FlowServer PersonAPI
@@ -137,7 +137,7 @@ personFlow =
     :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.deletePerson
-    :<|> Person.linkEntity
+    :<|> Person.linkVehicle
 
 -- Following is vehicle flow
 type VehicleAPI =
