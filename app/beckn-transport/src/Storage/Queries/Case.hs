@@ -24,7 +24,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Case -> DB.SqlDB ()
 create case_ = do
   dbTable <- getDbTable
-  lift $ DB.createOne' dbTable (Storage.insertExpression case_)
+  DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByIds :: [Id Storage.Case] -> Flow (T.DBResult [Storage.Case])
 findAllByIds ids = do

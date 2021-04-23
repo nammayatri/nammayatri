@@ -88,7 +88,7 @@ findOneWithErr ::
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (table Identity)
 findOneWithErr dbTable predicate = do
-  res <- run $ findOne' dbTable predicate
+  res <- runSqlDB $ findOne' dbTable predicate
   case res of
     Right (Just val) -> return val
     Right Nothing -> throwError SQLResultError
@@ -101,7 +101,7 @@ findOne ::
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
-findOne dbTable predicate = run $ findOne' dbTable predicate
+findOne dbTable predicate = runSqlDB $ findOne' dbTable predicate
 
 findOne' ::
   ( HasCallStack,
@@ -109,9 +109,9 @@ findOne' ::
   ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.SqlDB Pg (Maybe (table Identity))
+  SqlDB (Maybe (table Identity))
 findOne' dbTable predicate =
-  L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
+  lift . L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAllOrErr ::
   ( HasCallStack,
@@ -121,7 +121,7 @@ findAllOrErr ::
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r [table Identity]
 findAllOrErr dbTable predicate = do
-  res <- run $ findAll' dbTable predicate
+  res <- runSqlDB $ findAll' dbTable predicate
   case res of
     Right val -> return val
     Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
@@ -133,15 +133,15 @@ findAll ::
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (T.DBResult [table Identity])
-findAll dbTable predicate = run $ findAll' dbTable predicate
+findAll dbTable predicate = runSqlDB $ findAll' dbTable predicate
 
 findAll' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  L.SqlDB Pg [table Identity]
+  SqlDB [table Identity]
 findAll' dbTable predicate =
-  L.findRows $ B.select $ B.filter_ predicate $ B.all_ dbTable
+  lift . L.findRows $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 -- TODO: protect from multiple inserts
 createOne ::
@@ -155,7 +155,7 @@ createOne' ::
   (HasCallStack, PgTable table db) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  L.SqlDB Pg ()
+  SqlDB ()
 createOne' = bulkInsert'
 
 bulkInsert ::
@@ -163,15 +163,15 @@ bulkInsert ::
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   DB.FlowWithDb r (T.DBResult ())
-bulkInsert dbTable = run . bulkInsert' dbTable
+bulkInsert dbTable = runSqlDB . bulkInsert' dbTable
 
 bulkInsert' ::
   (HasCallStack, PgTable table db) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  L.SqlDB Pg ()
+  SqlDB ()
 bulkInsert' dbTable =
-  L.insertRows . B.insert dbTable
+  lift . L.insertRows . B.insert dbTable
 
 findOrCreateOne ::
   (HasCallStack, RunReadablePgTable table db) =>
@@ -180,7 +180,7 @@ findOrCreateOne ::
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
 findOrCreateOne dbTable findPredicate insertExpression = do
-  res <- run $ do
+  res <- runSqlDB $ do
     findAll' dbTable findPredicate >>= \case
       [] -> do
         createOne' dbTable insertExpression
@@ -196,13 +196,13 @@ findAllRows ::
   (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   DB.FlowWithDb r (T.DBResult [table Identity])
-findAllRows dbTable = run $ findAllRows' dbTable
+findAllRows dbTable = runSqlDB $ findAllRows' dbTable
 
 findAllRows' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
-  L.SqlDB Pg [table Identity]
-findAllRows' dbTable = L.findRows $ B.select $ B.all_ dbTable
+  SqlDB [table Identity]
+findAllRows' dbTable = lift . L.findRows $ B.select $ B.all_ dbTable
 
 -- use this only for single sql statement, for multiple use transactions
 update ::
@@ -226,14 +226,14 @@ delete ::
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   DB.FlowWithDb r (T.DBResult ())
-delete dbTable predicate = run $ delete' dbTable predicate
+delete dbTable predicate = runSqlDB $ delete' dbTable predicate
 
 delete' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  L.SqlDB Pg ()
-delete' dbTable predicate = L.deleteRows $ B.delete dbTable predicate
+  SqlDB ()
+delete' dbTable predicate = lift . L.deleteRows $ B.delete dbTable predicate
 
 type Scope2 = BI.QNested (BI.QNested B.QBaseScope)
 

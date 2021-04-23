@@ -24,7 +24,7 @@ createFlow =
 create :: RideRequest.RideRequest -> DB.SqlDB ()
 create rideRequest = do
   dbTable <- getDbTable
-  lift $ DB.createOne' dbTable (Storage.insertExpression rideRequest)
+  DB.createOne' dbTable (Storage.insertExpression rideRequest)
 
 fetchOldest :: Integer -> Flow [RideRequest.RideRequest]
 fetchOldest limit = do
