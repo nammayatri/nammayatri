@@ -33,8 +33,6 @@ packages:
   - app/gateway
   - app/beckn-transport
   - app/app-backend
-  - app/mock-app-backend
-  - app/mock-provider-backend
   - app/fmd-wrapper
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.

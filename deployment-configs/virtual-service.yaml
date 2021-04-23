@@ -138,28 +138,6 @@ spec:
               number: 8013
     - match:
         - uri:
-            prefix: /dev/mock/app/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-mock-app-backend-master
-            port:
-              number: 8016
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /dev/mock/provider/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-mock-provider-backend-master
-            port:
-              number: 8017
-      timeout: 40s
-    - match:
-        - uri:
             prefix: /dev/transport/
       rewrite:
         uri: /

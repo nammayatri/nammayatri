@@ -6,15 +6,11 @@ import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
-import qualified "mock-app-backend" App as MockAppBackend
-import qualified "mock-provider-backend" App as MockProviderBackend
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
 import qualified Mobility.Spec as Mobility
-import qualified MockAppBackend.Spec as MockAppBackend
-import qualified MockProviderBackend.Spec as MockProviderBackend
 import System.Environment (setEnv)
 import Test.Tasty
 import "app-backend" Types.Geofencing
@@ -30,8 +26,6 @@ main = do
       "beckn-transport",
       "beckn-transport-btm",
       "beckn-gateway",
-      "mock-app-backend",
-      "mock-provider-backend",
       "fmd-wrapper"
     ]
   -- ... and run
@@ -50,8 +44,6 @@ main = do
 specs :: IO TestTree
 specs = do
   mobilityTests <- Mobility.mkTestTree
-  mockAppBackendTests <- MockAppBackend.mkTestTree
-  mockProviderBackendTests <- MockProviderBackend.mkTestTree
   fmdTests <- FmdWrapper.mkTestTree
 
   return $
@@ -62,8 +54,6 @@ specs = do
           testGroup
             "all"
             [ mobilityTests,
-              mockAppBackendTests,
-              mockProviderBackendTests,
               fmdTests
             ]
       )
@@ -87,12 +77,6 @@ specs = do
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False,
         FmdWrapper.runFMDWrapper $ \cfg ->
-          cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False,
-        MockAppBackend.runMockApp $ \cfg ->
-          cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False,
-        MockProviderBackend.runMockProvider $ \cfg ->
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False
       ]
