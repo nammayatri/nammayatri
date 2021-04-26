@@ -17,7 +17,7 @@ import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
   ( decodeFromText,
     fromMaybeM,
-    withFlowHandlerBecknAPI,
+    withFlowHandlerAPI,
   )
 import Data.Maybe
 import Data.Semigroup
@@ -30,7 +30,7 @@ import Types.ProductInfo as ProductInfo
 
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
-initiateCallToProvider _ req = withFlowHandlerBecknAPI $ do
+initiateCallToProvider _ req = withFlowHandlerAPI $ do
   let piId = req ^. #productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall customerPhone providerPhone
@@ -38,7 +38,7 @@ initiateCallToProvider _ req = withFlowHandlerBecknAPI $ do
 
 -- | Try to initiate a call provider -> customer
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
-initiateCallToCustomer req = withFlowHandlerBecknAPI $ do
+initiateCallToCustomer req = withFlowHandlerAPI $ do
   let piId = req ^. #productInstanceId -- RIDESEARCH PI
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall providerPhone customerPhone

@@ -40,8 +40,8 @@ getLocation piId = withFlowHandlerAPI $ do
       & fromMaybeM (PersonFieldNotPresent "location_id")
       >>= Location.findLocationById
       >>= fromMaybeM LocationNotFound
-  lat <- currLocation ^. #_lat & fromMaybeM (LocationFieldNotPresent "Driver current lat is null")
-  long <- currLocation ^. #_long & fromMaybeM (LocationFieldNotPresent "Driver current long is null")
+  lat <- currLocation ^. #_lat & fromMaybeM (LocationFieldNotPresent "lat")
+  long <- currLocation ^. #_long & fromMaybeM (LocationFieldNotPresent "long")
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
 getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
@@ -78,10 +78,10 @@ calculateDistance source destination = do
   fmap MapSearch.distanceInM <$> MapSearch.getRouteMb routeRequest
   where
     mkRouteRequest = do
-      sourceLat <- source ^. #_lat & fromMaybeM (LocationFieldNotPresent "Source._lat is null.")
-      sourceLng <- source ^. #_long & fromMaybeM (LocationFieldNotPresent "Source._long is null.")
-      destinationLat <- destination ^. #_lat & fromMaybeM (LocationFieldNotPresent "Dest._lat is null.")
-      destinationLng <- destination ^. #_long & fromMaybeM (LocationFieldNotPresent "Dest._long is null.")
+      sourceLat <- source ^. #_lat & fromMaybeM (LocationFieldNotPresent "source.lat")
+      sourceLng <- source ^. #_long & fromMaybeM (LocationFieldNotPresent "source.long")
+      destinationLat <- destination ^. #_lat & fromMaybeM (LocationFieldNotPresent "dest.lat")
+      destinationLng <- destination ^. #_long & fromMaybeM (LocationFieldNotPresent "dest.long")
       let sourceMapPoint = mkMapPoint sourceLat sourceLng
       let destinationMapPoint = mkMapPoint destinationLat destinationLng
       pure $

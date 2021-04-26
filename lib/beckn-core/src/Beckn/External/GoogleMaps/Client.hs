@@ -10,7 +10,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
 import EulerHS.Prelude
 import GHC.Records (HasField)
-import Servant.Client.Core (BaseUrl)
+import Servant.Client.Core (BaseUrl, ClientError)
 
 autoComplete ::
   ( HasField "dbCfg" r DBConfig,
@@ -25,7 +25,7 @@ autoComplete ::
   FlowR r GoogleMaps.SearchLocationResp
 autoComplete url apiKey input location radius components = do
   callAPIWithTrail url (API.autoComplete apiKey input location radius components) "autoComplete"
-    >>= fromEitherM (withGoogleMapsErrorCode . ExternalAPICallError url)
+    >>= fromEitherM (googleMapsError url)
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
@@ -38,7 +38,7 @@ placeDetails ::
   FlowR r GoogleMaps.PlaceDetailsResp
 placeDetails url apiKey placeId fields = do
   callAPIWithTrail url (API.placeDetails apiKey placeId fields) "placeDetails"
-    >>= fromEitherM (withGoogleMapsErrorCode . ExternalAPICallError url)
+    >>= fromEitherM (googleMapsError url)
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
@@ -50,7 +50,7 @@ getPlaceName ::
   FlowR r GoogleMaps.GetPlaceNameResp
 getPlaceName url latLng apiKey = do
   callAPIWithTrail url (API.getPlaceName latLng apiKey) "getPlaceName"
-    >>= fromEitherM (withGoogleMapsErrorCode . ExternalAPICallError url)
+    >>= fromEitherM (googleMapsError url)
 
-withGoogleMapsErrorCode :: base_err -> WithErrorCode base_err
-withGoogleMapsErrorCode = WithErrorCode "GOOGLE_MAPS_API_ERROR"
+googleMapsError :: BaseUrl -> ClientError -> ExternalAPICallError
+googleMapsError = ExternalAPICallErrorWithCode "GOOGLE_MAPS_API_ERROR"

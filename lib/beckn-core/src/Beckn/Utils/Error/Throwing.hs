@@ -4,6 +4,7 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Error.API
 import Beckn.Types.Error.APIError
+import Beckn.Utils.Logging
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -15,14 +16,16 @@ import Servant.Client.Core
 type IsAPIException e = (IsAPIError e, Exception e)
 
 throwError :: (MonadThrow m, Log m, IsAPIException e) => e -> m b
-throwError = throwM
+throwError err = do
+  logWarning $ toLogMessageAPIError err
+  throwM err
 
 fromMaybeM ::
   (MonadThrow m, Log m, IsAPIException e) => e -> Maybe b -> m b
 fromMaybeM err = maybe (throwError err) pure
 
 fromEitherM ::
-  (MonadThrow m, Log m, IsAPIException e) => (de -> e) -> Either de b -> m b
+  (MonadThrow m, Log m, IsAPIException e) => (left -> e) -> Either left b -> m b
 fromEitherM toerr = either (throwError . toerr) pure
 
 throwDBError :: (MonadThrow m, Log m) => ET.DBError -> m a
@@ -43,6 +46,7 @@ checkDBErrorOrEmpty ::
 checkDBErrorOrEmpty dbres domainErrOnEmpty =
   either throwDBError (fromMaybeM domainErrOnEmpty) dbres
 
+-- TODO: move these functions somewhere else:
 callClient ::
   (ET.JSONEx a, L.MonadFlow m, Log m) =>
   Text ->
@@ -76,6 +80,3 @@ callClient' mbManager desc _ baseUrl cli = do
         Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
-
-checkClientError :: (Log m, L.MonadFlow m) => b -> Either S.ClientError a -> m a
-checkClientError _ = fromEitherM ExternalAPICallError2

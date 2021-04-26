@@ -138,7 +138,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeM (OrgFieldNotPresent "_locationId")
+    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeM (OrgFieldNotPresent "location_id")
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
       Nothing -> throwError LocationNotFound

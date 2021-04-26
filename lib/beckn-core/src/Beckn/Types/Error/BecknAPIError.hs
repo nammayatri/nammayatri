@@ -17,10 +17,6 @@ import Prelude (Show (..))
 class IsAPIError e => IsBecknAPIError e where
   toType :: e -> Error.ErrorType
 
-  -- TODO: merge with app/fmd-wrapper/src/Types/Error.hs ErrorType
-  toBecknCode :: e -> Text
-  toBecknCode = toErrorCode
-
   toPath :: e -> Maybe Text
   toPath _ = Nothing
 
@@ -58,7 +54,7 @@ toBecknAPIError e =
   BecknAPIError
     Error.Error
       { _type = toType e,
-        _code = toBecknCode e,
+        _code = toErrorCode e,
         _path = toPath e,
         _message = toMessageIfNotInternal e
       }

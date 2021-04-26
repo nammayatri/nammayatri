@@ -17,8 +17,7 @@ data GatewayError
 instanceExceptionWithParent 'BecknAPIException ''GatewayError
 
 instance IsAPIError GatewayError where
-  toErrorCode NoProviders = "NO_PROVIDERS"
+  toErrorCode NoProviders = "CORE001"
 
 instance IsBecknAPIError GatewayError where
   toType NoProviders = DOMAIN_ERROR
-  toBecknCode NoProviders = "CORE001"

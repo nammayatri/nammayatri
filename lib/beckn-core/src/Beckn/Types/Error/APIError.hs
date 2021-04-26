@@ -8,7 +8,8 @@ where
 import Beckn.Types.Error.HttpCode
 import Beckn.Utils.Error.Hierarchy (instanceExceptionWithParent)
 import Control.Exception
-import EulerHS.Prelude hiding (Show, show)
+import Data.Text (pack)
+import EulerHS.Prelude hiding (Show, pack, show)
 import Network.HTTP.Types (Header)
 import Prelude (Show (..))
 
@@ -46,3 +47,10 @@ toAPIError e =
 
 toMessageIfNotInternal :: IsAPIError e => e -> Maybe Text
 toMessageIfNotInternal e = if isInternalError (toHttpCode e) then Nothing else toMessage e
+
+toLogMessageAPIError :: IsAPIError e => e -> Text
+toLogMessageAPIError err =
+  pack (show (toHttpCode err))
+    <> " "
+    <> toErrorCode err
+    <> maybe "" (": " <>) (toMessage err)

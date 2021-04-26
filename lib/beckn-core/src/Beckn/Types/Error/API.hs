@@ -1,14 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Types.Error.API
-  ( module Beckn.Types.Error.API,
-    WithErrorCode (..),
-  )
-where
+module Beckn.Types.Error.API where
 
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
-import Beckn.Types.Error.WithErrorCode
 import EulerHS.Prelude
 import Network.HTTP.Types (Header)
 import Servant.Client (BaseUrl, ClientError, showBaseUrl)
@@ -119,23 +114,12 @@ instance IsAPIError LocationError where
     LocationDoesNotExist -> E400
     LocationFieldNotPresent _ -> E500
 
-newtype RouteError
-  = UnableToGetRoute Text
-  deriving (Eq, Show)
-
-instanceExceptionWithParent 'APIException ''RouteError
-
-instance IsAPIError RouteError where
-  toErrorCode (UnableToGetRoute _) = "UNABLE_TO_GET_ROUTE"
-  toMessage (UnableToGetRoute msg) = Just msg
-  toHttpCode (UnableToGetRoute _) = E500
-
 data GenericError
   = InternalError Text
   | InvalidRequest Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'BecknAPIException ''GenericError
+instanceExceptionWithParent 'APIException ''GenericError
 
 instance IsAPIError GenericError where
   toErrorCode = \case
@@ -147,11 +131,6 @@ instance IsAPIError GenericError where
   toHttpCode = \case
     InternalError _ -> E500
     InvalidRequest _ -> E400
-
-instance IsBecknAPIError GenericError where
-  toType = \case
-    InternalError _ -> INTERNAL_ERROR
-    InvalidRequest _ -> DOMAIN_ERROR
 
 data OrganizationError
   = OrgNotFound
@@ -297,34 +276,53 @@ instance IsAPIError ContextError where
   toErrorCode InvalidAction = "INVALID_ACTION"
   toHttpCode _ = E400
 
+instance IsBecknAPIError ContextError where
+  toType _ = CONTEXT_ERROR
+
 data ExternalAPICallError
   = ExternalAPICallError BaseUrl ClientError
-  | ExternalAPICallError2 ClientError -- TODO: remove
+  | ExternalAPICallErrorWithCode Text BaseUrl ClientError
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''ExternalAPICallError
 
 instance IsAPIError ExternalAPICallError where
-  toErrorCode (ExternalAPICallError _ _) = "EXTERNAL_API_CALL_ERROR"
-  toErrorCode (ExternalAPICallError2 _) = "EXTERNAL_API_CALL_ERROR"
-  toMessage (ExternalAPICallError baseUrl clientErr) =
-    Just $
-      "Failure in the external API call to " <> toText (showBaseUrl baseUrl) <> ": " <> show clientErr
-  toMessage (ExternalAPICallError2 clientErr) =
-    Just $
-      "Failure in an extenral API call: " <> show clientErr
-  toHttpCode _ = E500
+  toErrorCode = \case
+    ExternalAPICallError _ _ -> "EXTERNAL_API_CALL_ERROR"
+    ExternalAPICallErrorWithCode code _ _ -> code
+  toMessage = \case
+    ExternalAPICallError url err -> externalAPICallErrorMessage url err
+    ExternalAPICallErrorWithCode _ url err -> externalAPICallErrorMessage url err
+
+externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
+externalAPICallErrorMessage baseUrl clientErr =
+  Just $
+    "Failure in the external API call to "
+      <> toText (showBaseUrl baseUrl)
+      <> ": "
+      <> show clientErr
 
 data HealthCheckError
   = ServiceUnavailable
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'BecknAPIException ''HealthCheckError
+instanceExceptionWithParent 'APIException ''HealthCheckError
 
 instance IsAPIError HealthCheckError where
   toErrorCode ServiceUnavailable = "SERVICE_UNAVAILABLE"
   toHttpCode ServiceUnavailable = E503
 
-instance IsBecknAPIError HealthCheckError where
-  toType ServiceUnavailable = INTERNAL_ERROR
-  toBecknCode ServiceUnavailable = "CORE002"
+data RouteError
+  = RouteRequestError BaseUrl ClientError
+  | RouteNotLatLong
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''RouteError
+
+instance IsAPIError RouteError where
+  toErrorCode = \case
+    RouteRequestError _ _ -> "UNABLE_TO_GET_ROUTE"
+    RouteNotLatLong -> "GET_ROUTE_UNSUPPORTED_FORMAT"
+  toMessage = \case
+    RouteRequestError url err -> externalAPICallErrorMessage url err
+    RouteNotLatLong -> Just "Not supporting waypoints other than LatLong."

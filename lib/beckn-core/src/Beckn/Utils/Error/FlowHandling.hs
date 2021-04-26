@@ -11,6 +11,7 @@ import Beckn.Types.Common
 import Beckn.Types.Error.API
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
+import Beckn.Utils.Logging
 import Control.Monad.Catch (Handler (..), catches)
 import Control.Monad.Reader
 import qualified Data.Aeson as A
@@ -30,7 +31,7 @@ withFlowHandlerAPI = withFlowHandler . apiHandler
 withFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
 withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler
 
-apiHandler :: (MonadCatch m, MonadThrow m, Log m) => m a -> m a
+apiHandler :: (MonadCatch m, Log m) => m a -> m a
 apiHandler =
   flip
     catches
@@ -45,7 +46,8 @@ becknApiHandler =
     [ Handler \(BecknAPIException err) -> throwBecknApiError err,
       Handler \(APIException err) ->
         throwIsApiError becknAPIErrorFromAPIError err,
-      Handler \(SomeException e) -> throwBecknApiError . InternalError $ show e
+      Handler \(SomeException e) ->
+        throwIsApiError becknAPIErrorFromAPIError (InternalError $ show e)
     ]
 
 throwApiError :: (Log m, MonadThrow m, IsAPIError e) => e -> m a
@@ -56,10 +58,8 @@ throwBecknApiError = throwIsApiError toBecknAPIError
 
 throwIsApiError :: (ToJSON j, Log m, MonadThrow m, IsAPIError e) => (e -> j) -> e -> m b
 throwIsApiError toJsonError err = do
-  let httpCode = toHttpCode err
-  let logLevel = if isInternalError httpCode then ERROR else WARNING
-  logOutput logLevel $ show httpCode <> " " <> toErrorCode err <> maybe "" (": " <>) (toMessage err)
-  throwServantError httpCode (toCustomHeaders err) (toJsonError err)
+  logError $ toLogMessageAPIError err
+  throwServantError (toHttpCode err) (toCustomHeaders err) (toJsonError err)
 
 throwServantError ::
   (ToJSON a, Log m, MonadThrow m) =>

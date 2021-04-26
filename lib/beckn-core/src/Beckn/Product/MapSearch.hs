@@ -9,7 +9,6 @@ import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Data.Geospatial
-import qualified Data.Text as T
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
 import Servant.Client (BaseUrl)
@@ -21,34 +20,27 @@ getRouteMb ::
   FlowR r (Maybe MapSearch.Route)
 getRouteMb request =
   (headMaybe . (^. #routes) <$> getRoute request)
-    `catch` \(UnableToGetRoute err) -> do
-      logTagWarning "graphhopper" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
-      pure Nothing
+    `catch` \(_ :: RouteError) -> pure Nothing
 
 getRoute ::
   (HasField "graphhopperUrl" r BaseUrl) =>
   MapSearch.Request ->
   FlowR r MapSearch.Response
-getRoute MapSearch.Request {..} =
+getRoute MapSearch.Request {..} = do
   -- Currently integrated only with graphhopper
-  if all isLatLong waypoints
-    then do
-      let points = map (\(MapSearch.LatLong point) -> point) waypoints
-          mode' = fromMaybe MapSearch.CAR mode
-          vehicle = mapToVehicle mode'
-      graphhopperUrl <- getField @"graphhopperUrl" <$> ask
-      res <- Grphr.search graphhopperUrl (grphrReq points vehicle)
-      case res of
-        Left err -> do
-          logTagError "graphhopper" (T.pack $ show err)
-          throwError $ UnableToGetRoute "Route service request failed"
-        Right Grphr.Response {..} ->
-          return $
-            MapSearch.Response
-              { status = "OK",
-                routes = mapToRoute mode' <$> _paths
-              }
-    else throwError $ UnableToGetRoute "Not supporting waypoints other than LatLong."
+  unless (all isLatLong waypoints) $ throwError RouteNotLatLong
+  let points = map (\(MapSearch.LatLong point) -> point) waypoints
+      mode' = fromMaybe MapSearch.CAR mode
+      vehicle = mapToVehicle mode'
+  graphhopperUrl <- getField @"graphhopperUrl" <$> ask
+  Grphr.Response {..} <-
+    Grphr.search graphhopperUrl (grphrReq points vehicle)
+      >>= fromEitherM (RouteRequestError graphhopperUrl)
+  return $
+    MapSearch.Response
+      { status = "OK",
+        routes = mapToRoute mode' <$> _paths
+      }
   where
     isLatLong :: MapSearch.MapPoint -> Bool
     isLatLong (MapSearch.LatLong _) = True
