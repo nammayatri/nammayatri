@@ -4,7 +4,6 @@ module Product.Person
     listPerson,
     updatePerson,
     deletePerson,
-    linkVehicle,
     calculateAverageRating,
     mkPersonRes,
     getDriverPool,
@@ -22,7 +21,6 @@ import Beckn.Sms.Config
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
-import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
@@ -143,19 +141,6 @@ deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
     QDriverInformation.deleteById $ Id personId
     QR.deleteByEntitiyId personId
   return $ DeletePersonRes personId
-
-linkVehicle :: Text -> Id SP.Person -> LinkVehicleReq -> FlowHandler LinkVehicleRes
-linkVehicle orgId personId req = withFlowHandlerAPI $ do
-  person <-
-    QP.findPersonById personId
-      >>= fromMaybeM PersonDoesNotExist
-  when
-    (person.organizationId /= Just (Id orgId))
-    (throwError Unauthorized)
-  prevPerson <- QP.findByVehicleId (req.vehicleId)
-  whenJust prevPerson (\p -> QP.updateVehicle (p.id) Nothing)
-  QP.updateVehicle personId $ Just (req.vehicleId)
-  return Success
 
 -- Utility Functions
 

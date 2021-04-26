@@ -5,14 +5,12 @@ module Types.API.Person where
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
-import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.Vehicle (Vehicle)
 import Beckn.Utils.JSON
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
@@ -245,13 +243,6 @@ newtype PersonRes = PersonRes
 newtype DeletePersonRes = DeletePersonRes
   {personId :: Text}
   deriving (Generic, ToJSON, FromJSON)
-
-newtype LinkVehicleReq = LinkVehicleReq
-  { vehicleId :: Id Vehicle
-  }
-  deriving (Show, Generic, FromJSON, ToJSON)
-
-type LinkVehicleRes = APISuccess
 
 data LinkedEntity = LinkedEntity
   { entityType :: EntityType,

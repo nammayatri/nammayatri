@@ -4,9 +4,12 @@ module Types.API.DriverInformation
     RideInfo (..),
     ListDriverRes (..),
     DriverEntityRes (..),
+    LinkVehicleReq (..),
+    LinkVehicleRes,
   )
 where
 
+import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -57,3 +60,10 @@ data DriverEntityRes = DriverEntityRes
     onRide :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON)
+
+newtype LinkVehicleReq = LinkVehicleReq
+  { vehicleId :: Id Vehicle
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+type LinkVehicleRes = APISuccess

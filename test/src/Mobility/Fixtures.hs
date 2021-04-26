@@ -232,13 +232,11 @@ createPerson :: Text -> TbePerson.CreatePersonReq -> ClientM TbePerson.UpdatePer
 listPerson :: Text -> [Person.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
 updatePerson :: Text -> Id Person.Person -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
 deletePerson :: Text -> Id Person.Person -> ClientM TbePerson.DeletePersonRes
-linkVehicle :: Text -> Id Person.Person -> TbePerson.LinkVehicleReq -> ClientM TbePerson.LinkVehicleRes
 createPerson
   :<|> _
   :<|> listPerson
   :<|> updatePerson
-  :<|> deletePerson
-  :<|> linkVehicle = client (Proxy :: Proxy TbeRoutes.PersonAPI)
+  :<|> deletePerson = client (Proxy :: Proxy TbeRoutes.PersonAPI)
 
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =

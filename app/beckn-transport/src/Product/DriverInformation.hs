@@ -7,6 +7,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import EulerHS.Prelude hiding (id)
 import qualified Product.Location as Location
@@ -22,7 +23,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.App
 import Types.Error
-import Utils.Common (fromMaybeM, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
@@ -102,3 +103,21 @@ listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
             active = driverInfo.active,
             onRide = driverInfo.onRide
           }
+
+linkVehicle :: Text -> Id SP.Person -> DriverInformationAPI.LinkVehicleReq -> FlowHandler DriverInformationAPI.LinkVehicleRes
+linkVehicle orgId personId req = withFlowHandlerAPI $ do
+  person <-
+    QPerson.findPersonById personId
+      >>= fromMaybeM PersonDoesNotExist
+  vehicle <-
+    QVehicle.findVehicleById (req.vehicleId)
+      >>= fromMaybeM VehicleDoesNotExist
+  unless
+    ( person.organizationId == Just (Id orgId)
+        && vehicle.organizationId == Id orgId
+    )
+    (throwError Unauthorized)
+  prevPerson <- QPerson.findByVehicleId $ req.vehicleId
+  whenJust prevPerson (\p -> QPerson.updateVehicle (p.id) Nothing)
+  QPerson.updateVehicle personId $ Just (req.vehicleId)
+  return APISuccess.Success

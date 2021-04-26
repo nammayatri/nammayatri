@@ -123,11 +123,6 @@ type PersonAPI =
            :<|> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> Delete '[JSON] DeletePersonRes
-           :<|> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> "link"
-             :> ReqBody '[JSON] LinkVehicleReq
-             :> Post '[JSON] LinkVehicleRes
        )
 
 personFlow :: FlowServer PersonAPI
@@ -137,7 +132,6 @@ personFlow =
     :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.deletePerson
-    :<|> Person.linkVehicle
 
 -- Following is vehicle flow
 type VehicleAPI =
@@ -363,18 +357,23 @@ type DriverInformationAPI =
     :> ( TokenAuth
            :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
            :<|> "setActivity"
-           :> TokenAuth
-           :> MandatoryQueryParam "active" Bool
-           :> Post '[JSON] APISuccess
+             :> TokenAuth
+             :> MandatoryQueryParam "active" Bool
+             :> Post '[JSON] APISuccess
            :<|> "notification"
-           :> TokenAuth
-           :> QueryParam "productInstanceId" (Id Ride)
-           :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
+             :> TokenAuth
+             :> QueryParam "productInstanceId" (Id Ride)
+             :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
            :<|> "list"
-           :> AdminTokenAuth
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> Get '[JSON] DriverInformationAPI.ListDriverRes
+             :> AdminTokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] DriverInformationAPI.ListDriverRes
+           :<|> AdminTokenAuth
+             :> "linkVehicle"
+             :> Capture "personId" (Id Person)
+             :> ReqBody '[JSON] DriverInformationAPI.LinkVehicleReq
+             :> Post '[JSON] DriverInformationAPI.LinkVehicleRes
        )
 
 driverInformationFlow :: FlowServer DriverInformationAPI
@@ -383,6 +382,7 @@ driverInformationFlow =
     :<|> DriverInformation.setActivity
     :<|> DriverInformation.getRideInfo
     :<|> DriverInformation.listDriver
+    :<|> DriverInformation.linkVehicle
 
 type RideAPI =
   "ride"
