@@ -27,7 +27,7 @@ data EnvR r = EnvR
     appEnv :: r
   }
 
-type FlowHandlerR r = ReaderT (EnvR r) (ExceptT ServerError IO)
+type FlowHandlerR r = ReaderT (EnvR r) IO
 
 type FlowServerR r api = ServerT api (FlowHandlerR r)
 

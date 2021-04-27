@@ -31,14 +31,14 @@ endRideHandler ::
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId
-  orderPi <- findPIById (cast rideId) >>= (`checkDBErrorOrEmpty` PIInvalidId)
-  driverId <- orderPi ^. #_personId & fromMaybeM PIPersonNotPresent
+  orderPi <- findPIById (cast rideId) >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
+  driverId <- orderPi ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
   case requestor ^. #_role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (orderPi ^. #_status == PI.INPROGRESS) $ throwError PIInvalidStatus
+  unless (orderPi ^. #_status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
 
-  searchPiId <- orderPi ^. #_parentId & fromMaybeM PIParentIdNotPresent
+  searchPiId <- orderPi ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId >>= (`checkDBErrorOrEmpty` PINotFound)
   piList <- findAllPIByParentId searchPiId
   trackerCase <- findCaseByIdAndType (PI._caseId <$> piList) Case.LOCATIONTRACKER

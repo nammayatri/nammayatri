@@ -38,7 +38,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 import Product.CallsTrack
 import Servant hiding (Context)
-import Types.Error
+import Types.Error hiding (ServiceUnavailable)
 
 data TriggerFlow
   = SimpleConfirm
@@ -72,7 +72,7 @@ instance ToHttpApiData TriggerFlow where
   toUrlPiece = DT.decodeUtf8 . toHeader
 
 triggerSearch :: TriggerFlow -> FlowHandler AckResponse
-triggerSearch flow = withFlowHandler $ do
+triggerSearch flow = withFlowHandlerBecknAPI $ do
   baseUrl <- xGatewayUri <$> ask
   transactionId <-
     case flow of
@@ -93,7 +93,7 @@ triggerSearch flow = withFlowHandler $ do
       }
 
 triggerTrack :: Text -> FlowHandler AckResponse
-triggerTrack orderId = withFlowHandler $ do
+triggerTrack orderId = withFlowHandlerBecknAPI $ do
   tid <- EL.generateGUID
   context <- buildContext "track" tid
   let reqMsg =
@@ -118,7 +118,7 @@ triggerTrackForLast :: FlowHandler AckResponse
 triggerTrackForLast = getLastOrderId >>= triggerTrack
 
 triggerCancel :: Text -> FlowHandler AckResponse
-triggerCancel orderId = withFlowHandler $ do
+triggerCancel orderId = withFlowHandlerBecknAPI $ do
   tid <- EL.generateGUID
   context <- buildContext "cancel" tid
   let reqMsg =
@@ -164,7 +164,7 @@ instance ToHttpApiData TriggerUpdateMode where
     LeaveIntact -> "leave-intact"
 
 triggerUpdate :: Text -> TriggerUpdateMode -> FlowHandler AckResponse
-triggerUpdate orderId mode = withFlowHandler $ do
+triggerUpdate orderId mode = withFlowHandlerBecknAPI $ do
   tid <- EL.generateGUID
   context <- buildContext "update" tid
   let req = case mode of
@@ -201,12 +201,14 @@ triggerUpdateForLast mode = do
 
 getOrderCallbackCoords :: Text -> Flow (BaseUrl, Text)
 getOrderCallbackCoords orderId = do
-  OrderInfo {bppOrg = org} <- readingCallsTrack (#orderConfirms . at orderId) >>= fromMaybeMWithInfo CommonInternalError "Unknown order id."
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
-  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM OrgCallbackApiKeyNotSet
+  OrderInfo {bppOrg = org} <-
+    readingCallsTrack (#orderConfirms . at orderId)
+      >>= fromMaybeM (InternalError "Unknown order id.")
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  cbApiKey <- org ^. #_callbackApiKey & fromMaybeM (OrgFieldNotPresent "callback_api_key")
   return (cbUrl, cbApiKey)
 
 getLastOrderId :: FlowHandler Text
 getLastOrderId =
-  withFlowHandler $
-    readingCallsTrack #lastOrderId >>= fromMaybeMWithInfo InvalidRequest "No orders registered."
+  withFlowHandlerAPI $
+    readingCallsTrack #lastOrderId >>= fromMaybeM (InvalidRequest "No orders registered.")

@@ -21,7 +21,7 @@ status ::
   Person.Person ->
   Id Case.Case ->
   FlowHandler StatusRes
-status person caseId = withFlowHandler $ do
+status person caseId = withFlowHandlerAPI $ do
   case_ <- Case.findIdByPerson person caseId
   prodInstRes <- getProdInstances case_
   fromLocation <-
@@ -40,7 +40,7 @@ list ::
   Maybe Integer ->
   FlowHandler CaseListRes
 list person caseType statuses mlimit moffset =
-  withFlowHandler $
+  withFlowHandlerAPI $
     Case.findAllByTypeAndStatuses (person ^. #_id) caseType statuses mlimit moffset
       >>= traverse mapProductInstance
   where

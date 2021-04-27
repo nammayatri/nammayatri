@@ -13,7 +13,7 @@ import qualified Storage.Queries.ProductInstance as PI
 import Types.Error
 
 initiateCall :: SR.RegistrationToken -> CallReq -> FlowHandler CallRes
-initiateCall _ req = withFlowHandler $ do
+initiateCall _ req = withFlowHandlerBecknAPI $ do
   prdInstance <- PI.findById $ Id $ req ^. #productInstanceId -- RIDEORDER PI
-  Id rideSearchProductInstanceId <- prdInstance ^. #_parentId & fromMaybeM PIParentIdNotPresent
+  Id rideSearchProductInstanceId <- prdInstance ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   Gateway.initiateCall $ CallReq rideSearchProductInstanceId -- RIDESEARCH PI

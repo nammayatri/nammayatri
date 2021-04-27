@@ -11,7 +11,7 @@ import Data.Aeson (encode)
 import EulerHS.Prelude
 
 trackCb :: Organization -> OnTrackReq -> FlowHandler AckResponse
-trackCb _org req = withFlowHandler $ do
+trackCb _org req = withFlowHandlerBecknAPI $ do
   let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   logTagDebug "mock_app_backend" $ "track_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   --  let tracker = req ^. #message .  #tracking

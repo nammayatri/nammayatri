@@ -5,7 +5,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (authenticate, withFlowHandler)
+import Beckn.Utils.Common (authenticate, withFlowHandlerAPI)
 import Data.Time (addUTCTime)
 import EulerHS.Prelude
 import qualified Models.Case as MC
@@ -15,7 +15,7 @@ import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 updateCases :: Maybe CronAuthKey -> API.ExpireCaseReq -> FlowHandler API.ExpireRes
-updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
+updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandlerAPI $ do
   authenticate maybeAuth
   cases <- MC.findAllExpiredByStatus [Case.NEW] from to
   traverse_
@@ -30,7 +30,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandler $ do
   pure $ API.ExpireRes $ length cases
 
 expireProductInstances :: Maybe CronAuthKey -> FlowHandler API.ExpireRes
-expireProductInstances maybeAuth = withFlowHandler $ do
+expireProductInstances maybeAuth = withFlowHandlerAPI $ do
   authenticate maybeAuth
   currTime <- getCurrentTime
   let timeToExpire = addUTCTime (-3 * 60 * 60) currTime

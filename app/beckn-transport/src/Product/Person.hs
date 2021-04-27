@@ -54,7 +54,7 @@ import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
-updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandler $ do
+updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ do
   verifyPerson _EntityId
   person <- QP.findPersonById (Id _EntityId)
   isValidUpdate person
@@ -70,7 +70,7 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandler $ do
         throwError Unauthorized
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
-createPerson orgId req = withFlowHandler $ do
+createPerson orgId req = withFlowHandlerAPI $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
@@ -90,8 +90,8 @@ createPerson orgId req = withFlowHandler $ do
         case (preq ^. #_mobileNumber, req ^. #_mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
-              throwErrorWithInfo InvalidRequest "Person with this mobile number already exists."
-          _ -> throwErrorWithInfo InvalidRequest "You should pass mobile number and country code."
+              throwError $ InvalidRequest "Person with this mobile number already exists."
+          _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
 
 createDriverDetails :: Id SP.Person -> Flow ()
 createDriverDetails personId = do
@@ -110,7 +110,7 @@ createDriverDetails personId = do
     driverId = cast personId
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson orgId roles limitM offsetM = withFlowHandler $ do
+listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
   respList <- traverse mkPersonRes personList
   return $ ListPersonRes respList
@@ -125,7 +125,7 @@ getPerson ::
   Maybe SP.IdentifierType ->
   FlowHandler PersonEntityRes
 getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM identifierTypeM =
-  withFlowHandler $ do
+  withFlowHandlerAPI $ do
     user <- QP.findPersonById (Id _EntityId)
     -- TODO: fix this to match based on identifierType
     -- And maybe have a way to handle the case when Id is
@@ -133,16 +133,16 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     person <- case identifierTypeM of
       Nothing -> QP.findPersonById (fromJust idM)
       Just SP.MOBILENUMBER -> do
-        countryCode <- fromMaybeMWithInfo InvalidRequest "You should pass country code." countryCodeM
-        mobile <- fromMaybeMWithInfo InvalidRequest "You should pass mobile number." mobileM
+        countryCode <- countryCodeM & fromMaybeM (InvalidRequest "You should pass country code.")
+        mobile <- mobileM & fromMaybeM (InvalidRequest "You should pass mobile number.")
         QP.findByMobileNumber countryCode mobile
           >>= fromMaybeM PersonDoesNotExist
       Just SP.EMAIL ->
-        fromMaybeMWithInfo InvalidRequest "You should pass email." emailM
+        emailM & fromMaybeM (InvalidRequest "You should pass email.")
           >>= QP.findByEmail
           >>= fromMaybeM PersonDoesNotExist
       Just SP.AADHAAR ->
-        fromMaybeMWithInfo InvalidRequest "You should pass identifier." identifierM
+        identifierM & fromMaybeM (InvalidRequest "You should pass identifier.")
           >>= QP.findByIdentifier
           >>= fromMaybeM PersonDoesNotExist
     hasAccess user person
@@ -157,7 +157,7 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
         $ throwError Unauthorized
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
-deletePerson orgId (Id personId) = withFlowHandler $ do
+deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id personId)
   if person ^. #_organizationId == Just orgId
     then do
@@ -169,13 +169,13 @@ deletePerson orgId (Id personId) = withFlowHandler $ do
     else throwError Unauthorized
 
 linkEntity :: Text -> Id SP.Person -> LinkReq -> FlowHandler PersonEntityRes
-linkEntity orgId (Id personId) req = withFlowHandler $ do
+linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id personId)
   _ <- case req ^. #_entityType of
     VEHICLE ->
       QV.findVehicleById (Id (req ^. #_entityId))
         >>= fromMaybeM VehicleNotFound
-    _ -> throwErrorWithInfo InvalidRequest "Unsupported entity type."
+    _ -> throwError $ InvalidRequest "Unsupported entity type."
   when
     (person ^. #_organizationId /= Just orgId)
     (throwError Unauthorized)
@@ -230,17 +230,15 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
   let url = smsCfg ^. #url
   let smsCred = smsCfg ^. #credConfig
   let sender = smsCfg ^. #sender
-  res <-
-    SF.submitSms
-      url
-      SMS.SubmitSms
-        { SMS._username = smsCred ^. #username,
-          SMS._password = smsCred ^. #password,
-          SMS._from = sender,
-          SMS._to = phoneNumber,
-          SMS._text = SF.constructInviteSms orgName inviteTemplate
-        }
-  whenLeft res $ \_err -> return () -- ignore error silently
+  SF.submitSms
+    url
+    SMS.SubmitSms
+      { SMS._username = smsCred ^. #username,
+        SMS._password = smsCred ^. #password,
+        SMS._from = sender,
+        SMS._to = phoneNumber,
+        SMS._text = SF.constructInviteSms orgName inviteTemplate
+      }
 
 mapEntityType :: Text -> Maybe EntityType
 mapEntityType entityType = case entityType of
@@ -273,10 +271,10 @@ getDriverPool piId =
       case_ <- Case.findById (prodInst ^. #_caseId)
       vehicleVariant :: SV.Variant <-
         (case_ ^. #_udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM CaseVehicleVariantNotPresent
+          & fromMaybeM (CaseFieldNotPresent "udf1")
       pickupPoint <-
         Id <$> prodInst ^. #_fromLocation
-          & fromMaybeM PIFromLocationIdNotPresent
+          & fromMaybeM (PIFieldNotPresent "location_id")
       let orgId = Id (prodInst ^. #_organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
@@ -291,8 +289,8 @@ calculateDriverPool ::
   Flow [Id Driver]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
-  lat <- location ^. #_lat & fromMaybeM LocationLongLatNotFound
-  long <- location ^. #_long & fromMaybeM LocationLongLatNotFound
+  lat <- location ^. #_lat & fromMaybeM (LocationFieldNotPresent "lat")
+  long <- location ^. #_long & fromMaybeM (LocationFieldNotPresent "lon")
   radius <- getRadius
   getNearestDriversStartTime <- getCurrentTime
   driverPool <-
@@ -313,7 +311,7 @@ calculateDriverPool locId orgId variant = do
           (asks (defaultRadiusOfSearch . driverAllocationConfig))
           radiusFromTransporterConfig
     radiusFromTransporterConfig conf =
-      fromMaybeMWithInfo CommonInternalError "The radius is not a number."
+      fromMaybeM (InternalError "The radius is not a number.")
         . readMaybe
         . toString
         $ conf ^. #_value

@@ -11,11 +11,11 @@ import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.EndRide as Handle
 import Servant.Server (ServerError)
+import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 import Types.Error
-import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()
 
 endRideTests :: TestTree
@@ -67,8 +67,8 @@ handle =
 endRide ::
   Id Person.Person ->
   Id PI.ProductInstance ->
-  IO (Either ServerError APISuccess.APISuccess)
-endRide requestorId rideId = try $ Handle.endRideHandler handle requestorId rideId
+  IO APISuccess.APISuccess
+endRide = Handle.endRideHandler handle
 
 rideProductInstance :: PI.ProductInstance
 rideProductInstance =
@@ -115,29 +115,29 @@ rideCase =
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    endRide "1" "ride" >>= (@?= Right APISuccess.Success)
+    endRide "1" "ride" `shouldReturn` APISuccess.Success
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    endRide "2" "ride" >>= mustBeErrorCode NotAnExecutor
+    endRide "2" "ride" `shouldThrow` (== NotAnExecutor)
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    endRide "admin" "ride" >>= mustBeErrorCode AccessDenied
+    endRide "admin" "ride" `shouldThrow` (== AccessDenied)
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
-  testCase "Ride has wrong status" $
-    endRide "1" "completed_ride" >>= mustBeErrorCode PIInvalidStatus
+  testCase "A ride has wrong status" $
+    endRide "1" "completed_ride" `shouldThrow` (\(PIInvalidStatus _) -> True)
 
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
-  testCase "Ride does not exist" $
-    endRide "1" "nonexistent_ride" >>= mustBeErrorCode PIInvalidId
+  testCase "A ride does not even exist" $
+    endRide "1" "nonexistent_ride" `shouldThrow` (== PIDoesNotExist)
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =
-  testCase "Driver does not exist" $
-    endRide "nonexistent_driver" "ride" >>= mustBeErrorCode PersonDoesNotExist
+  testCase "A driver does not even exist" $
+    endRide "nonexistent_driver" "ride" `shouldThrow` (== PersonDoesNotExist)

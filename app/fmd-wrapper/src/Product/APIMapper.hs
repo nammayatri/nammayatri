@@ -22,48 +22,48 @@ import Types.Error
 
 -- TODO: add switching logic to figure out the client instance
 search :: Organization -> SearchReq -> FlowHandler SearchRes
-search org req = withFlowHandler $ do
+search org req = withFlowHandlerBecknAPI $ do
   validateContext "search" $ req ^. #context
   DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
-select org req = withFlowHandler $ do
+select org req = withFlowHandlerBecknAPI $ do
   validateContext "select" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
-init org req = withFlowHandler $ do
+init org req = withFlowHandlerBecknAPI $ do
   validateContext "init" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
-confirm org req = withFlowHandler $ do
+confirm org req = withFlowHandlerBecknAPI $ do
   validateContext "confirm" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
-track org req = withFlowHandler $ do
+track org req = withFlowHandlerBecknAPI $ do
   validateContext "track" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
-status org req = withFlowHandler $ do
+status org req = withFlowHandlerBecknAPI $ do
   validateContext "status" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
-cancel org req = withFlowHandler $ do
+cancel org req = withFlowHandlerBecknAPI $ do
   validateContext "cancel" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.cancel org req
 
 update :: Organization -> UpdateReq -> FlowHandler UpdateRes
-update org req = withFlowHandler $ do
+update org req = withFlowHandlerBecknAPI $ do
   validateContext "update" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.update org req
@@ -79,4 +79,4 @@ validateBapUrl org context = do
         Nothing -> False
         Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
   unless satisfied $
-    throwErrorWithInfo InvalidRequest "Invalid bap URL."
+    throwError (InvalidRequest "Invalid bap URL.")

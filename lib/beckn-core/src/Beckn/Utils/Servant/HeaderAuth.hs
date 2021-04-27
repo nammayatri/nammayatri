@@ -6,7 +6,6 @@ module Beckn.Utils.Servant.HeaderAuth where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Server
 import Control.Lens ((?=))

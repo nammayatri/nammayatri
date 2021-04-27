@@ -123,9 +123,8 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
 validateStatusChange :: CaseStatus -> Id Case -> Flow ()
 validateStatusChange newStatus caseId = do
   c <- findById caseId
-  case validateStatusTransition (_status c) newStatus of
-    Left msg -> throwErrorWithInfo CaseInvalidStatus msg
-    _ -> pure ()
+  validateStatusTransition (_status c) newStatus
+    & fromEitherM CaseInvalidStatus
 
 updateInfo :: Id Case -> Text -> Flow ()
 updateInfo cId info = do

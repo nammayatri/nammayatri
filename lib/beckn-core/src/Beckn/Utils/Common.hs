@@ -6,19 +6,21 @@
 module Beckn.Utils.Common
   ( module Beckn.Utils.Common,
     module Beckn.Utils.Logging,
+    module Beckn.Utils.Error,
+    module Beckn.Types.Flow,
   )
 where
 
-import Beckn.TypeClass.IsAPIError
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack as Ack
 import Beckn.Types.Core.Context
-import Beckn.Types.Core.Error (Error (..))
 import Beckn.Types.Error
+import Beckn.Types.Error.APIError
 import Beckn.Types.Field
+import Beckn.Types.Flow
+import Beckn.Utils.Error
 import Beckn.Utils.Logging
-import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Control.Monad.Reader
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
@@ -28,98 +30,12 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (NominalDiffTime, UTCTime)
 import qualified Data.Time as Time
 import Data.Time.Units (TimeUnit, fromMicroseconds)
-import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (error, id)
-import qualified EulerHS.Runtime as R
-import qualified EulerHS.Types as ET
+import EulerHS.Prelude hiding (id)
 import GHC.Records (HasField (..))
-import Network.HTTP.Types (Header, hContentType)
-import Network.HTTP.Types.Header (HeaderName)
-import Network.HTTP.Types.Status
-import Servant (ServerError (..), err500)
-import qualified Servant.Client as S
-import Servant.Client.Core.ClientError
-import Servant.Client.Core.Response
-import qualified Servant.Server.Internal as S
-
-runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
-runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
-
-fromClientError :: ClientError -> Error
-fromClientError err =
-  Error
-    { _type = "INTERNAL-ERROR",
-      _code = "",
-      _path = Nothing,
-      _message = Just message
-    }
-  where
-    message = case err of
-      FailureResponse _ resp -> decodeUtf8 $ responseBody resp
-      DecodeFailure _ resp -> decodeUtf8 $ responseBody resp
-      UnsupportedContentType _ resp -> decodeUtf8 $ responseBody resp
-      InvalidContentTypeHeader resp -> decodeUtf8 $ responseBody resp
-      ConnectionError exc -> show exc
-
-checkClientError :: (Log m, L.MonadFlow m) => Context -> Either S.ClientError a -> m a
-checkClientError context = \case
-  Right x -> pure x
-  Left cliErr -> do
-    let err = fromClientError cliErr
-    logTagError "client call error" $ (err ^. #_message) ?: "Some error"
-    L.throwException $ mkErrResponse context err500 err
-
-throwDBError :: (MonadThrow m, Log m) => ET.DBError -> m a
-throwDBError err@(ET.DBError dbErrType msg) = do
-  logTagError "DB error: " (show err)
-  uncurry throwErrorWithInfo $
-    case dbErrType of
-      ET.UnexpectedResult -> (SQLResultError, msg)
-      ET.SQLError sqlErr -> (SQLRequestError, makeSqlErrMsg sqlErr msg)
-      _ -> (DBUnknownError, msg)
-  where
-    makeSqlErrMsg sqlErr desc = "SQLError: " <> show sqlErr <> " Description: " <> desc
-
--- | Get rid of database error
-checkDBError :: (HasCallStack, L.MonadFlow m, Log m) => ET.DBResult a -> m a
-checkDBError =
-  either throwDBError pure
-
--- | Get rid of database error and empty result
-checkDBErrorOrEmpty ::
-  (MonadThrow m, Log m, IsAPIError b) =>
-  ET.DBResult (Maybe a) ->
-  b ->
-  m a
-checkDBErrorOrEmpty dbres domainErrOnEmpty = case dbres of
-  Left err -> throwDBError err
-  Right maybeRes -> case maybeRes of
-    Nothing -> throwError domainErrOnEmpty
-    Just x -> pure x
-
-fromMaybeM ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> Maybe b -> m b
-fromMaybeM err = maybe logAndThrow pure
-  where
-    logAndThrow = do
-      throwError err
-
-fromMaybeMWithInfo ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> Text -> Maybe b -> m b
-fromMaybeMWithInfo err info = maybe logAndThrow pure
-  where
-    logAndThrow = do
-      throwErrorWithInfo err info
-
-buildErrorBodyWithInfo :: (IsAPIError a) => a -> Text -> BSL.ByteString
-buildErrorBodyWithInfo err info = A.encode $ buildAPIErrorWithInfo err info
-
-jsonHeader :: (HeaderName, ByteString)
-jsonHeader = (hContentType, "application/json;charset=utf-8")
 
 mkOkResponse :: MonadTime m => Context -> m AckResponse
 mkOkResponse context = do
@@ -127,40 +43,11 @@ mkOkResponse context = do
   let context' = context {_timestamp = currTime}
   return $ AckResponse context' (ack Ack.ACK) Nothing
 
-mkErrResponse :: Context -> ServerError -> Error -> NackResponseError
-mkErrResponse context errBase err =
-  NackResponseError
-    { _context = context,
-      _error = err,
-      _status = mkStatus (errHTTPCode errBase) (encodeUtf8 $ errReasonPhrase errBase)
-    }
-
-compileErrResponse :: NackResponseError -> AckResponse
-compileErrResponse NackResponseError {..} =
-  AckResponse
-    { _context = _context,
-      _message = ack Ack.NACK,
-      _error = Just _error
-    }
-
-withFlowHandler :: FlowR r a -> FlowHandlerR r a
-withFlowHandler flow = do
-  (EnvR flowRt appEnv) <- ask
-  lift . ExceptT . try . runFlowR flowRt appEnv $ flow
-
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 
 encodeToText :: ToJSON a => a -> Text
 encodeToText = DT.decodeUtf8 . BSL.toStrict . A.encode
-
--- strips double quotes from encoded text
-encodeToText' :: ToJSON a => a -> Text
-encodeToText' s =
-  let s' = A.encode s
-   in if BSL.length s' < 2
-        then DT.decodeUtf8 $ BSL.toStrict s'
-        else DT.decodeUtf8 $ BSL.toStrict $ BSL.tail $ BSL.init s'
 
 authenticate ::
   ( HasField "cronAuthKey" r (Maybe CronAuthKey)
@@ -175,35 +62,7 @@ authenticate = check handleKey
         DT.decodeUtf8 <$> (rightToMaybe . DBB.decode . DT.encodeUtf8 =<< T.stripPrefix "Basic " rauth)
     check = maybe throw401
     throw401 :: FlowR r a
-    throw401 =
-      throwError AuthBlocked
-
-throwHttpError :: forall e m a. (HasCallStack, MonadThrow m, Log m, ToJSON e) => ServerError -> e -> m a
-throwHttpError err errMsg = do
-  let body = A.encode errMsg
-  logTagError "HTTP_ERROR" (decodeUtf8 body)
-  throwM err {errBody = body, errHeaders = jsonHeader : errHeaders err}
-
-throwError ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> m b
-throwError err = throwHttpError serverErr $ toAPIError err
-  where
-    serverErr = toServerError $ toStatusCode err
-
-throwErrorWithInfo ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIError a) => a -> Text -> m b
-throwErrorWithInfo err info = throwHttpError serverErr $ buildAPIErrorWithInfo err info
-  where
-    serverErr = toServerError $ toStatusCode err
-
-buildAPIErrorWithInfo :: (IsAPIError a) => a -> Text -> APIError
-buildAPIErrorWithInfo err info =
-  let apiErr = toAPIError err
-      defMsg = apiErr ^. #errorMessage
-   in apiErr {errorMessage = defMsg <> " " <> info}
-
-throwAuthError :: (HasCallStack, MonadThrow m, Log m, IsAPIError a) => [Header] -> a -> m b
-throwAuthError headers = throwHttpError (S.err401 {errHeaders = headers}) . toAPIError
+    throw401 = throwError (AuthBlocked "Bad auth key")
 
 -- | Format time in IST and return it as text
 -- Converts and Formats in the format
@@ -214,43 +73,6 @@ showTimeIst time =
   T.pack $
     Time.formatTime Time.defaultTimeLocale "%d %b, %I:%M %p" $
       Time.addUTCTime (60 * 330) time
-
-callClient ::
-  (ET.JSONEx a, L.MonadFlow m, Log m) =>
-  Text ->
-  Context ->
-  S.BaseUrl ->
-  ET.EulerClient a ->
-  m a
-callClient = callClient' Nothing
-
--- TODO: the @desc@ argument should become part of monadic context
-callClient' ::
-  (ET.JSONEx a, L.MonadFlow m, Log m) =>
-  Maybe String ->
-  Text ->
-  Context ->
-  S.BaseUrl ->
-  ET.EulerClient a ->
-  m a
-callClient' mbManager desc context baseUrl cli = do
-  endTracking <- L.runIO $ Metrics.startTracking (encodeToText' baseUrl) desc
-  res <- L.callAPI' mbManager baseUrl cli
-  _ <- L.runIO $ endTracking $ getResponseCode res
-  case res of
-    Left err -> do
-      logTagError "cli" $ "Failure in " <> show desc <> " call to " <> toText (S.showBaseUrl baseUrl) <> ": " <> show err
-      L.throwException $ mkErrResponse context err500 (fromClientError err)
-    Right x -> pure x
-  where
-    getResponseCode res =
-      case res of
-        Right _ -> "200"
-        Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
-        Left (DecodeFailure _ (Response code _ _ _)) -> T.pack $ show code
-        Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
-        Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
-        Left (ConnectionError _) -> "Connection error"
 
 -- | A replacement for 'L.forkFlow' which works in 'FlowR'.
 -- It's main use case is to perform an action asynchronously without waiting for

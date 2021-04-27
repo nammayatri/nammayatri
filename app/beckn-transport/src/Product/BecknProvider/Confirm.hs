@@ -38,19 +38,20 @@ import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
 confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
-confirm transporterId bapOrg req = withFlowHandler $ do
+confirm transporterId bapOrg req = withFlowHandlerBecknAPI $ do
   logTagInfo "confirm API Flow" "Reached"
   let context = req ^. #context
   BP.validateContext "confirm" $ req ^. #context
   let prodInstId = Id $ req ^. #message . #order . #_id
-  productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIInvalidId)
+  productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
   let transporterId' = Id $ productInstance ^. #_organizationId
-  unless (productInstance ^. #_status == ProductInstance.INSTOCK) $ throwError PIInvalidStatus
+  unless (productInstance ^. #_status == ProductInstance.INSTOCK) $
+    throwError $ PIInvalidStatus "This ride cannot be confirmed"
   transporterOrg <- Organization.findOrganizationById transporterId'
   unless (transporterId' == transporterId) $ throwError AccessDenied
   let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
   searchCase <- Case.findBySid caseShortId
-  bapOrgId <- searchCase ^. #_udf4 & fromMaybeM CaseBapOrgIdNotPresent
+  bapOrgId <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
   unless (bapOrg ^. #_id == Id bapOrgId) $ throwError AccessDenied
   orderCase <- mkOrderCase searchCase
   orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
@@ -91,14 +92,14 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
   let transporterId = transporterOrg ^. #_id
   let prodInstId = productInstance ^. #_id
   result <- runSafeFlow $ do
-    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM PIFromLocationIdNotPresent
+    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
     vehicleVariant :: Vehicle.Variant <-
       (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
-        & fromMaybeM CaseVehicleVariantNotPresent
+        & fromMaybeM (CaseFieldNotPresent "udf1")
     driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
     logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   case result of
     Right () -> notifySuccessGateway callbackUrl bppShortId
@@ -136,7 +137,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
                 contents =
                   Left $
                     Error.Error
-                      { _type = "DOMAIN-ERROR",
+                      { _type = Error.DOMAIN_ERROR,
                         _code = err,
                         _path = Nothing,
                         _message = Nothing

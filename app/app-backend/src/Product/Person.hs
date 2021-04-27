@@ -5,7 +5,7 @@ module Product.Person where
 import App.Types (FlowHandler)
 import qualified Beckn.Types.APISuccess as APISuccess
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
 import qualified Types.API.Person as Person
@@ -24,7 +24,7 @@ getPersonDetails auth =
       }
 
 updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
-updatePerson auth req = withFlowHandler $ do
+updatePerson auth req = withFlowHandlerAPI $ do
   QPerson.updatePersonalInfo
     (auth ^. #_id)
     (req ^. #firstName)

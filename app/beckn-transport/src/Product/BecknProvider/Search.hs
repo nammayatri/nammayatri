@@ -44,7 +44,7 @@ import qualified Types.API.Case as APICase
 import Types.Error
 
 search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
-search transporterId bapOrg req = withFlowHandler $ do
+search transporterId bapOrg req = withFlowHandlerBecknAPI $ do
   let context = req ^. #context
   BP.validateContext "search" context
   uuid <- L.generateGUID
@@ -138,7 +138,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeMWithInfo OrgFieldNotPresent "_locationId is null."
+    orgLocId <- Id <$> organization ^. #_locationId & fromMaybeM (OrgFieldNotPresent "_locationId")
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
       Nothing -> throwError LocationNotFound
@@ -155,7 +155,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
   result <- runSafeFlow $ do
     vehicleVariant :: Vehicle.Variant <-
       (productCase ^. #_udf1 >>= readMaybe . T.unpack)
-        & fromMaybeM CaseVehicleVariantNotPresent
+        & fromMaybeM (CaseFieldNotPresent "udf1")
     pool <-
       Person.calculateDriverPool (fromLocation ^. #_id) transporterId vehicleVariant
     logTagInfo "OnSearchCallback" $
@@ -245,7 +245,7 @@ sendOnSearchFailed productCase transporterOrg err = do
             contents =
               Left $
                 Core.Error
-                  { _type = "DOMAIN-ERROR",
+                  { _type = Core.DOMAIN_ERROR,
                     _code = err,
                     _path = Nothing,
                     _message = Nothing

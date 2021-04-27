@@ -19,7 +19,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 searchCb :: Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb _ req = withFlowHandler $ do
+searchCb _ req = withFlowHandlerBecknAPI $ do
   let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   ctx <- updateCaller $ req ^. #context
   logTagDebug "mock_app_backend" $ "search_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp

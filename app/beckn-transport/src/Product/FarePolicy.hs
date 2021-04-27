@@ -6,7 +6,7 @@ import App.Types (FlowHandler)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Utils.Common (fromMaybeM, withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM, withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as SPerson
@@ -21,9 +21,9 @@ import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
 
 listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
-listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandler $ do
+listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandlerAPI $ do
   person <- SPerson.findPersonById (Id _EntityId)
-  orgId <- person ^. #_organizationId & fromMaybeM PersonOrgIdNotPresent
+  orgId <- person ^. #_organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   farePolicies <- SFarePolicy.findFarePoliciesByOrgId (Id orgId)
   pure $ ListFarePolicyResponse $ toResponse <$> farePolicies
   where
@@ -40,7 +40,7 @@ listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandler $ do
         }
 
 updateFarePolicy :: RegToken.RegistrationToken -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
-updateFarePolicy _ fpId req = withFlowHandler $ do
+updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
         farePolicy

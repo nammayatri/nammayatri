@@ -13,19 +13,16 @@ import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Network.Wai
 import Network.Wai.Handler.Warp
   ( Settings,
     defaultSettings,
     runSettings,
-    setOnExceptionResponse,
     setPort,
   )
 import System.Environment
@@ -35,8 +32,7 @@ runAppBackend configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "app-backend"
   Metrics.serve (appCfg ^. #metricsPort)
   runAppBackend' appCfg $
-    setOnExceptionResponse appExceptionResponse $
-      setPort (appCfg ^. #port) defaultSettings
+    setPort (appCfg ^. #port) defaultSettings
 
 runAppBackend' :: AppCfg -> Settings -> IO ()
 runAppBackend' appCfg settings = do
@@ -59,6 +55,3 @@ runAppBackend' appCfg settings = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
         return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
-
-appExceptionResponse :: SomeException -> Response
-appExceptionResponse = exceptionResponse

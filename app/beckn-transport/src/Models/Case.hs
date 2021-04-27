@@ -130,6 +130,5 @@ validateCasesStatusesChange' newStatus =
 -- | Get Case and validate its status change
 validateStatusChange :: CaseStatus -> Case -> Flow ()
 validateStatusChange newStatus case_ =
-  case validateStatusTransition (_status case_) newStatus of
-    Left msg -> throwErrorWithInfo CaseInvalidStatus msg
-    _ -> pure ()
+  validateStatusTransition (_status case_) newStatus
+    & fromEitherM CaseInvalidStatus

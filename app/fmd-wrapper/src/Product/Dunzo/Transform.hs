@@ -39,7 +39,7 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common (foldWIndex, fromMaybeMWithInfo, headMaybe, throwErrorWithInfo)
+import Beckn.Utils.Common
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import qualified Data.Text as T
@@ -82,10 +82,10 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> oneDropLocationExpected
     _ -> onePickupLocationExpected
   where
-    onePickupLocationExpected = throwErrorWithInfo InvalidRequest "One pickup location expected."
-    oneDropLocationExpected = throwErrorWithInfo InvalidRequest "One drop location expected."
-    pickupLocationNotFound = throwErrorWithInfo InvalidRequest "Pickup location not found."
-    dropLocationNotFound = throwErrorWithInfo InvalidRequest "Drop location not found."
+    onePickupLocationExpected = throwError $ InvalidRequest "One pickup location expected."
+    oneDropLocationExpected = throwError $ InvalidRequest "One drop location expected."
+    pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
+    dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
@@ -110,8 +110,8 @@ mkQuoteReqFromSelect SelectReq {..} = do
 
 readCoord :: Text -> Flow Double
 readCoord text = do
-  let mCoord = readMaybe $ T.unpack text
-  maybe (throwErrorWithInfo InvalidRequest "Location read error.") pure mCoord
+  readMaybe (T.unpack text)
+    & fromMaybeM (InvalidRequest "Location read error.")
 
 mkOnSearchErrReq :: Context -> Error -> OnSearchReq
 mkOnSearchErrReq context err = do
@@ -237,7 +237,7 @@ mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order ^. #_tasks) eta
   now <- getCurrentTime
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  quotation <- fromMaybeMWithInfo CommonInternalError "Invalid order, no quotation." $ order ^. #_quotation
+  quotation <- (order ^. #_quotation) & fromMaybeM (InternalError "Invalid order, no quotation.")
   return $
     InitOrder $
       order & #_id ?~ orderId
@@ -353,7 +353,7 @@ mkOnTrackErrReq context message = do
   where
     mkError =
       Err.Error
-        { _type = "DOMAIN-ERROR",
+        { _type = Err.DOMAIN_ERROR,
           _code = "FMD000",
           _path = Nothing,
           _message = Just message
@@ -497,7 +497,7 @@ mkOnUpdateErrReq context = do
   where
     mkError =
       Err.Error
-        { _type = "DOMAIN-ERROR",
+        { _type = Err.DOMAIN_ERROR,
           _code = "FMD000",
           _path = Nothing,
           _message = Just "UPDATE_NOT_SUPPORTED"

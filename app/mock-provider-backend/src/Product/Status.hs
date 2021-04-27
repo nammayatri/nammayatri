@@ -16,7 +16,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 status :: Organization -> API.StatusReq -> FlowHandler AckResponse
-status _org req = withFlowHandler $ do
+status _org req = withFlowHandlerBecknAPI $ do
   bppNwAddr <- nwAddress <$> ask
   let mAppUrl = req ^. #context . #_bap_uri
       context =

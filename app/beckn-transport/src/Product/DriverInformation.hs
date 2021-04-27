@@ -9,7 +9,7 @@ import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
-import Beckn.Utils.Common (fromMaybeM, withFlowHandler)
+import Beckn.Utils.Common (fromMaybeM, withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Product.Location as Location
 import qualified Product.Person as Person
@@ -26,12 +26,12 @@ import Types.App
 import Types.Error
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
-getInformation RegistrationToken {..} = withFlowHandler $ do
+getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
   _ <- Registration.checkPersonExists _EntityId
   let driverId = Id _EntityId
   person <- QPerson.findPersonById (Id _EntityId)
   personEntity <- Person.mkPersonRes person
-  orgId <- person ^. #_organizationId & fromMaybeM PersonOrgIdNotPresent
+  orgId <- person ^. #_organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <- QOrganization.findOrganizationById $ Id orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
@@ -42,14 +42,14 @@ getInformation RegistrationToken {..} = withFlowHandler $ do
       }
 
 setActivity :: RegistrationToken -> Bool -> App.FlowHandler APISuccess.APISuccess
-setActivity RegistrationToken {..} isActive = withFlowHandler $ do
+setActivity RegistrationToken {..} isActive = withFlowHandlerAPI $ do
   _ <- Registration.checkPersonExists _EntityId
   let driverId = Id _EntityId
   QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
 getRideInfo :: RegistrationToken -> Maybe (Id Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
-getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
+getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
@@ -58,11 +58,11 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
       let notificationExpiryTime = notification ^. #_expiresAt
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById $ cast driverId
-      driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM PersonLocationIdNotPresent
-      fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM PIFromLocationIdNotPresent
-      toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM PIToLocationIdNotPresent
-      (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM LocationLongLatNotFound
-      (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM LocationLongLatNotFound
+      driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
+      fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
+      toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")
+      (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM (LocationFieldNotPresent "from")
+      (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM (LocationFieldNotPresent "driver")
       mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
       return $
         DriverInformationAPI.GetRideInfoRes $
@@ -82,7 +82,7 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandler $ do
     extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long
 
 listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
-listDriver orgId mbLimit mbOffset = withFlowHandler $ do
+listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
   personList <- QDriverInformation.findAllWithLimitOffsetByOrgIds mbLimit mbOffset [orgId]
   respPersonList <- traverse convertToRes personList
   return $ DriverInformationAPI.ListDriverRes respPersonList

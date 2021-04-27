@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
-import Beckn.Types.Core.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -26,7 +25,7 @@ import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
-cancel person req = withFlowHandler $ do
+cancel person req = withFlowHandlerBecknAPI $ do
   let entityType = req ^. #message . #entityType
   case entityType of
     Cancel.CASE -> searchCancel person req
@@ -40,7 +39,7 @@ cancelProductInstance person req = do
   orderPI <- MPI.findByParentIdType (searchPI ^. #_id) Case.RIDEORDER
   if isProductInstanceCancellable orderPI
     then sendCancelReq searchPI cs
-    else throwError PIInvalidStatus
+    else throwError $ PIInvalidStatus "Cannot cancel with this ride"
   where
     sendCancelReq prodInst cs = do
       let txnId = getId $ cs ^. #_id
@@ -52,29 +51,24 @@ cancelProductInstance person req = do
       organization <-
         OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
           >>= fromMaybeM OrgNotFound
-      baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
-      cancelRes <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
-      case cancelRes of
-        Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
-        Right _ -> return $ AckResponse context (ack ACK) Nothing
+      baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+      AckResponse {} <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
+      return $ AckResponse context (ack ACK) Nothing
 
 searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
 searchCancel person req = do
   let caseId = req ^. #message . #entityId
   let txnId = caseId
   case_ <- MC.findIdByPerson person (Id caseId)
-  if isCaseCancellable case_
-    then do
-      Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
-      piList <- MPI.findAllByCaseId (case_ ^. #_id)
-      traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> filter isProductInstanceCancellable piList)
-      MC.updateStatus (case_ ^. #_id) Case.CLOSED
-      currTime <- getCurrentTime
-      msgId <- L.generateGUID
-      let context = mkContext "cancel" txnId msgId currTime Nothing Nothing
-      return $ AckResponse context (ack ACK) Nothing
-    else do
-      throwError PIInvalidStatus
+  unless (isCaseCancellable case_) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
+  Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
+  piList <- MPI.findAllByCaseId (case_ ^. #_id)
+  traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> filter isProductInstanceCancellable piList)
+  MC.updateStatus (case_ ^. #_id) Case.CLOSED
+  currTime <- getCurrentTime
+  msgId <- L.generateGUID
+  let context = mkContext "cancel" txnId msgId currTime Nothing Nothing
+  return $ AckResponse context (ack ACK) Nothing
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =
@@ -88,7 +82,7 @@ isCaseCancellable case_ =
     _ -> False
 
 onCancel :: Organization.Organization -> API.OnCancelReq -> FlowHandler API.OnCancelRes
-onCancel _org req = withFlowHandler $ do
+onCancel _org req = withFlowHandlerBecknAPI $ do
   validateContext "on_cancel" $ req ^. #context
   let context = req ^. #context
   case req ^. #contents of

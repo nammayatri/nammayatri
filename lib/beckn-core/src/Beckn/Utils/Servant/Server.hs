@@ -3,16 +3,11 @@
 
 module Beckn.Utils.Servant.Server where
 
-import Beckn.Constants.APIErrorCode
-import Beckn.Types.App (EnvR (..), FlowServerR)
-import Beckn.Types.Core.Ack (NackResponseError (_status))
+import Beckn.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
 import Beckn.Utils.Common hiding (throwError)
-import qualified Data.Aeson as Aeson
 import Data.UUID.V4 (nextRandom)
 import EulerHS.Language
 import EulerHS.Prelude
-import qualified Network.HTTP.Types as H
-import Network.Wai (Response, responseLBS)
 import Servant
 
 class HasEnvEntry r (context :: [Type]) | context -> r where
@@ -38,43 +33,15 @@ run apis server ctx env =
   serveWithContext apis (env :. ctx) $
     hoistServerWithContext apis (Proxy @(EnvR r ': ctx)) f server
   where
-    f :: ReaderT (EnvR r) (ExceptT ServerError IO) m -> Handler m
+    f :: FlowHandlerR r m -> Handler m
     f r = do
       eResult <- liftIO $ do
         uuid <- nextRandom
         let modEnv = modifiedEnvR $ show uuid
-        runExceptT $ runReaderT r modEnv
+        try $ runReaderT r modEnv
       case eResult of
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
-
     modifiedEnvR uuid =
       env {flowRuntime = updateLoggerContext (appendLogContext uuid) $ flowRuntime env}
-
-serverErrorResponse :: ServerError -> Response
-serverErrorResponse ex =
-  responseLBS
-    (H.Status (errHTTPCode ex) $ encodeUtf8 $ errReasonPhrase ex)
-    ((H.hContentType, "application/json") : errHeaders ex)
-    $ errBody ex
-
-internalErrorResponse :: Response
-internalErrorResponse =
-  responseLBS
-    H.internalServerError500
-    [(H.hContentType, "application/json")]
-    (Aeson.encode internalServerErr)
-
-nackErrorResponse :: NackResponseError -> Response
-nackErrorResponse ex =
-  responseLBS
-    (_status ex)
-    [(H.hContentType, "application/json")]
-    (Aeson.encode $ compileErrResponse ex)
-
-exceptionResponse :: SomeException -> Response
-exceptionResponse exception
-  | Just ex <- fromException exception = serverErrorResponse ex
-  | Just ex <- fromException exception = nackErrorResponse ex
-  | otherwise = internalErrorResponse

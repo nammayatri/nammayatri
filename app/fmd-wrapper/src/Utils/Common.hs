@@ -7,7 +7,6 @@ import Beckn.Types.Common
 import Beckn.Types.Core.API.Log
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Types.Core.Error
 import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
@@ -16,13 +15,12 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import qualified Servant.Client as S (BaseUrl (..), parseBaseUrl)
-import Servant.Server hiding (Context)
 import Types.Error
 
 getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =
   let mconfig = org ^. #_info >>= decodeFromText
-   in fromMaybeMWithInfo CommonInternalError "Client config decode error." mconfig
+   in fromMaybeM (InternalError "Client config decode error.") mconfig
 
 parseBaseUrl :: Text -> Flow S.BaseUrl
 parseBaseUrl url =
@@ -70,13 +68,7 @@ fromMaybe400Log msg errCode ctx Nothing = do
                       _context = ctx
                     }
               }
-  L.throwException $
-    mkErrResponse
-      ctx
-      err400
-      Error
-        { _type = "DOMAIN-ERROR",
-          _code = maybe "" show errCode,
-          _path = Nothing,
-          _message = Just msg
-        }
+  throwError $
+    ErrorCodeWithMessage
+      msg
+      (fromMaybe CORE001 errCode) -- FIXME

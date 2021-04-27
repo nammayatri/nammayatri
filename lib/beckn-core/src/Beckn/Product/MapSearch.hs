@@ -5,15 +5,30 @@ module Beckn.Product.MapSearch where
 import qualified Beckn.External.Graphhopper.Flow as Grphr
 import qualified Beckn.External.Graphhopper.Types as Grphr
 import Beckn.Types.Common
+import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import Data.Geospatial
+import qualified Data.Text as T
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
-import Servant
 import Servant.Client (BaseUrl)
 import Prelude (atan2)
 
-getRoute :: HasField "graphhopperUrl" r BaseUrl => MapSearch.Request -> FlowR r (Either SomeException MapSearch.Response)
+getRouteMb ::
+  (HasField "graphhopperUrl" r BaseUrl) =>
+  MapSearch.Request ->
+  FlowR r (Maybe MapSearch.Route)
+getRouteMb request =
+  (headMaybe . (^. #routes) <$> getRoute request)
+    `catch` \(UnableToGetRoute err) -> do
+      logTagWarning "graphhopper" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
+      pure Nothing
+
+getRoute ::
+  (HasField "graphhopperUrl" r BaseUrl) =>
+  MapSearch.Request ->
+  FlowR r MapSearch.Response
 getRoute MapSearch.Request {..} =
   -- Currently integrated only with graphhopper
   if all isLatLong waypoints
@@ -24,14 +39,16 @@ getRoute MapSearch.Request {..} =
       graphhopperUrl <- getField @"graphhopperUrl" <$> ask
       res <- Grphr.search graphhopperUrl (grphrReq points vehicle)
       case res of
-        Left err -> return $ Left $ toException err
+        Left err -> do
+          logTagError "graphhopper" (T.pack $ show err)
+          throwError $ UnableToGetRoute "Route service request failed"
         Right Grphr.Response {..} ->
-          return . Right $
+          return $
             MapSearch.Response
               { status = "OK",
                 routes = mapToRoute mode' <$> _paths
               }
-    else return . Left . toException $ err400 {errBody = "Not supporting waypoints other than LatLong."}
+    else throwError $ UnableToGetRoute "Not supporting waypoints other than LatLong."
   where
     isLatLong :: MapSearch.MapPoint -> Bool
     isLatLong (MapSearch.LatLong _) = True

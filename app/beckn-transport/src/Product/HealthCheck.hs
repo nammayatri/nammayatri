@@ -12,7 +12,7 @@ import System.Exit (ExitCode)
 import Types.Error
 
 healthCheck :: TMVar ExitCode -> App.FlowHandler Text
-healthCheck shutdown = withFlowHandler $ do
+healthCheck shutdown = withFlowHandlerAPI $ do
   isNotShuttingDown <- L.runIO $ liftIO $ atomically $ isEmptyTMVar shutdown
   if isNotShuttingDown
     then do

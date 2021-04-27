@@ -39,7 +39,7 @@ search org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  bapUrl <- context ^. #_bap_uri & fromMaybeMWithInfo InvalidRequest "You should pass bap uri."
+  bapUrl <- context ^. #_bap_uri & fromMaybeM (InvalidRequest "You should pass bap uri.")
   bap <- Org.findByBapUrl bapUrl >>= fromMaybeM OrgDoesNotExist
   dlBACreds <- getDlBAPCreds bap
   fork "Search" $ do
@@ -48,7 +48,7 @@ search org req = do
   returnAck context
   where
     sendCb context res = do
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+      cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       case res of
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
@@ -70,7 +70,7 @@ select org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
   --  validateOrderRequest $ req ^. #message . #order
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dlBACreds <- getDlBAPCreds org
   fork "Select" $ do
     quoteReq <- mkQuoteReqFromSelect req
@@ -108,10 +108,10 @@ init :: Org.Organization -> API.InitReq -> Flow API.InitRes
 init org req = do
   conf@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
   let quoteId = quote ^. #_id
-  payeeDetails <- dlPayee & decodeFromText & fromMaybeMWithInfo CommonInternalError "Decode error."
+  payeeDetails <- dlPayee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
   dlBACreds <- getDlBAPCreds org
   fork "init" $ do
@@ -188,7 +188,7 @@ confirm :: Org.Organization -> API.ConfirmReq -> Flow API.ConfirmRes
 confirm org req = do
   dconf@DelhiveryConfig {..} <- dlConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req ^. (#message . #order)
   orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) ctx $ reqOrder ^. #_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) ctx
@@ -219,7 +219,7 @@ confirm org req = do
           & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
       if confirmAmount == orderAmount
         then pass
-        else throwErrorWithInfo InvalidRequest "Invalid order amount."
+        else throwError $ InvalidRequest "Invalid order amount."
 
     sendCb order context cbUrl res =
       case res of
@@ -239,11 +239,10 @@ confirm org req = do
         _ -> pass
 
 fetchToken :: DlBAConfig -> DelhiveryConfig -> Flow Token
-fetchToken DlBAConfig {..} DelhiveryConfig {..} = do
-  eres <- API.getToken dlTokenUrl (TokenReq dlClientId dlClientSecret "client_credentials")
-  case eres of
-    Left err -> throwErrorWithInfo CommonInternalError $ show err
-    Right tokenRes -> return (tokenRes ^. #access_token)
+fetchToken DlBAConfig {..} DelhiveryConfig {..} =
+  API.getToken dlTokenUrl (TokenReq dlClientId dlClientSecret "client_credentials")
+    >>= fromEitherM (InternalError . show)
+    <&> (^. #access_token)
 
 getQuote :: DlBAConfig -> DelhiveryConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
 getQuote ba@DlBAConfig {..} conf@DelhiveryConfig {..} quoteReq = do

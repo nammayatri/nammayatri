@@ -7,7 +7,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (throwErrorWithInfo)
+import Beckn.Utils.Common (throwError)
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -180,4 +180,4 @@ getRideInfo rideId = do
       PI.INPROGRESS -> pure InProgress
       PI.COMPLETED -> pure Completed
       PI.CANCELLED -> pure Cancelled
-      _ -> throwErrorWithInfo CommonInternalError "Unknown status to cast."
+      _ -> throwError $ InternalError "Unknown status to cast."

@@ -11,7 +11,7 @@ import Data.Aeson (encode)
 import EulerHS.Prelude
 
 updateCb :: Organization -> OnUpdateReq -> FlowHandler AckResponse
-updateCb _org req = withFlowHandler $ do
+updateCb _org req = withFlowHandlerBecknAPI $ do
   let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   logTagDebug "mock_app_backend" $ "update_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   case req ^. #context . #_bpp_uri of

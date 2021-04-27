@@ -12,7 +12,6 @@ where
 
 import Beckn.Storage.DB.Config
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -40,4 +39,4 @@ prepareDBConnections :: FlowWithDb r (T.DBResult (T.SqlConn Pg))
 prepareDBConnections = handleIt L.initSqlDBConnection
 
 getOrInitConn :: FlowWithDb r (T.SqlConn Pg)
-getOrInitConn = handleIt L.getOrInitSqlConn >>= either (throwErrorWithInfo DBUnknownError . show) pure
+getOrInitConn = handleIt L.getOrInitSqlConn >>= checkDBError

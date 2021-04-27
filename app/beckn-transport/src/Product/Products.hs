@@ -7,7 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -16,7 +16,7 @@ import qualified Test.RandomStrings as RS
 import Types.API.Products
 
 createProduct :: Text -> CreateProdReq -> FlowHandler ProdRes
-createProduct _orgId req = withFlowHandler $ do
+createProduct _orgId req = withFlowHandlerAPI $ do
   prod <- mkProduct req
   PQ.create prod
   return prod

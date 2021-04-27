@@ -25,7 +25,7 @@ rideServiceable RideServiceabilityReq {..} = do
 
 checkRideServiceability :: Person.Person -> RideServiceabilityReq -> FlowHandler RideServiceabilityRes
 checkRideServiceability _ req =
-  withFlowHandler $
+  withFlowHandlerAPI $
     RideServiceabilityRes <$> rideServiceable req
 
 checkServiceability ::
@@ -33,7 +33,7 @@ checkServiceability ::
   Person.Person ->
   ServiceabilityReq ->
   FlowHandler ServiceabilityRes
-checkServiceability settingAccessor _ ServiceabilityReq {..} = withFlowHandler $ do
+checkServiceability settingAccessor _ ServiceabilityReq {..} = withFlowHandlerAPI $ do
   geoRestriction <- asks $ settingAccessor . geofencingConfig
   locationServiceable <-
     case geoRestriction of

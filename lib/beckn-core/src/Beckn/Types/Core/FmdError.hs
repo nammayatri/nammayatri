@@ -40,7 +40,7 @@ fmdErrorDesc (FmdError bareCode) =
 fromFmdError :: FmdError -> Error
 fromFmdError fmd =
   Error
-    { _type = "DOMAIN-ERROR",
+    { _type = DOMAIN_ERROR,
       _code = fmdErrorCode fmd,
       _path = Nothing,
       _message = Just $ fmdErrorDesc fmd

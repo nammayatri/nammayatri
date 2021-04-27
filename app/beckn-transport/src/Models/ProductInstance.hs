@@ -64,9 +64,8 @@ validatePIStatusesChange' newStatus =
 -- | Validate status change and return appropriate DomainError
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus productInstance =
-  case validateStatusTransition (_status productInstance) newStatus of
-    Left msg -> throwErrorWithInfo PIInvalidStatus msg
-    _ -> pure ()
+  validateStatusTransition (_status productInstance) newStatus
+    & fromEitherM PIInvalidStatus
 
 findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do

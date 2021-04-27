@@ -87,12 +87,10 @@ findOneWithErr ::
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r (table Identity)
-findOneWithErr dbTable predicate = do
-  res <- runSqlDB $ findOne' dbTable predicate
-  case res of
-    Right (Just val) -> return val
-    Right Nothing -> throwError SQLResultError
-    Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
+findOneWithErr dbTable predicate =
+  runSqlDB (findOne' dbTable predicate)
+    >>= checkDBError
+    >>= fromMaybeM (SQLResultError "Expected at least one row")
 
 findOne ::
   ( HasCallStack,
@@ -121,10 +119,8 @@ findAllOrErr ::
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   DB.FlowWithDb r [table Identity]
 findAllOrErr dbTable predicate = do
-  res <- runSqlDB $ findAll' dbTable predicate
-  case res of
-    Right val -> return val
-    Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
+  runSqlDB (findAll' dbTable predicate)
+    >>= checkDBError
 
 findAll ::
   ( HasCallStack,
@@ -173,12 +169,13 @@ bulkInsert' ::
 bulkInsert' dbTable =
   lift . L.insertRows . B.insert dbTable
 
+-- TODO: remove this function in favour of transactions
 findOrCreateOne ::
   (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
+  DB.FlowWithDb r (Maybe (table Identity))
 findOrCreateOne dbTable findPredicate insertExpression = do
   res <- runSqlDB $ do
     findAll' dbTable findPredicate >>= \case
@@ -186,11 +183,10 @@ findOrCreateOne dbTable findPredicate insertExpression = do
         createOne' dbTable insertExpression
         findAll' dbTable findPredicate
       xs -> pure xs
-  case res of
-    Right [] -> throwErrorWithInfo SQLResultError "Row not found"
-    Right [s] -> pure $ pure (Just s)
-    Right _ -> throwErrorWithInfo SQLResultError "Multiple rows found"
-    Left err -> throwErrorWithInfo SQLRequestError $ "DBError: " <> show err
+  checkDBError res >>= \case
+    [] -> throwError $ SQLResultError "Just created row not found"
+    [s] -> pure $ Just s
+    _ -> throwError $ SQLResultError "Multiple rows found"
 
 findAllRows ::
   (HasCallStack, RunReadablePgTable table db) =>

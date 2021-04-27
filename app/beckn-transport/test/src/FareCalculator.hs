@@ -10,11 +10,11 @@ import Data.Time hiding (parseTime)
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
 import Servant.Server
+import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Domain.FarePolicy
 import Types.Error
-import Utils.APIError
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 import Utils.Time
@@ -270,18 +270,16 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
 
 failOnMissingFareConfig :: TestTree
 failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
-  result <-
-    try $ do
-      doCalculateFare
-        handle'
-        orgID
-        Vehicle.SEDAN
-        defaultPickupLocation
-        defaultDropLocation
-        OneWayTrip
-        startTime
-        distance
-  mustBeErrorCode NoFarePolicy result
+  doCalculateFare
+    handle'
+    orgID
+    Vehicle.SEDAN
+    defaultPickupLocation
+    defaultDropLocation
+    OneWayTrip
+    startTime
+    distance
+    `shouldThrow` (== NoFarePolicy)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = Just 0.0

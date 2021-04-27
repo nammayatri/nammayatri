@@ -16,7 +16,6 @@ import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import Beckn.Utils.Servant.Server (exceptionResponse)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import qualified Data.Map.Strict as Map
@@ -25,12 +24,10 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (exitSuccess)
 import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
-import Network.Wai (Response)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
     setOnClose,
-    setOnExceptionResponse,
     setOnOpen,
     setPort,
   )
@@ -52,10 +49,9 @@ runGateway configModifier = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
       settings =
-        setOnExceptionResponse gatewayExceptionResponse $
-          setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
-            setOnClose (\_ -> atomically $ modifyTVar' activeConnections (subtract 1)) $
-              setPort port defaultSettings
+        setOnOpen (\_ -> atomically $ modifyTVar' activeConnections (+ 1) >> return True) $
+          setOnClose (\_ -> atomically $ modifyTVar' activeConnections (subtract 1)) $
+            setPort port defaultSettings
   let redisCfg = appCfg ^. #redisCfg
   let migrationPath = appCfg ^. #migrationPath
   let dbCfg = appCfg ^. #dbCfg
@@ -102,6 +98,3 @@ runGateway configModifier = do
         let sleep = 100000
         threadDelay sleep
         waitForDrain activeConnections $ ms - sleep
-
-gatewayExceptionResponse :: SomeException -> Response
-gatewayExceptionResponse = exceptionResponse

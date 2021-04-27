@@ -9,7 +9,7 @@ import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Models.Case as Case
 import qualified Models.Product as Products
@@ -18,7 +18,7 @@ import Storage.Queries.Location as Loc
 import Types.API.ProductInstance
 
 list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list person status csTypes mlimit moffset = withFlowHandler $ do
+list person status csTypes mlimit moffset = withFlowHandlerAPI $ do
   piList <-
     ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId $ person ^. #_id) status csTypes
   caseList <- Case.findAllByIds (SPI._caseId <$> piList)

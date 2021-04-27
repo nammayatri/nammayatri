@@ -27,13 +27,13 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   orderPi <- findPIById $ cast rideId
   case requestor ^. #_role of
     Person.DRIVER -> do
-      rideDriver <- orderPi ^. #_personId & fromMaybeM PIInvalidStatus
+      rideDriver <- orderPi ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
       unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (isValidPiStatus (orderPi ^. #_status)) $ throwError PIInvalidStatus
-  searchPiId <- orderPi ^. #_parentId & fromMaybeM PIParentIdNotPresent
+  unless (isValidPiStatus (orderPi ^. #_status)) $ throwError $ PIInvalidStatus "This ride cannot be started"
+  searchPiId <- orderPi ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #_udf4 & fromMaybeM PIOTPNotPresent
+  inAppOtp <- orderPi ^. #_udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   piList <- findPIsByParentId searchPiId
   trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER

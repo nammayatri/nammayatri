@@ -9,10 +9,10 @@ import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide
 import Servant.Server (ServerError)
+import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
-import Utils.APIError (mustBeErrorCode)
 import Utils.SilentLogger ()
 
 handle :: StartRide.ServiceHandle IO
@@ -86,20 +86,20 @@ startRide =
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> IO (Either ServerError APISuccess.APISuccess)
-runHandler handle requestorId rideId otp = try $ StartRide.startRideHandler handle requestorId rideId otp
+runHandler :: StartRide.ServiceHandle IO -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> IO APISuccess.APISuccess
+runHandler = StartRide.startRideHandler
 
 successfulStartByDriver :: TestTree
 successfulStartByDriver =
   testCase "Start successfully if requested by driver executor" $ do
-    result <- runHandler handle "1" "1" "otp"
-    result @?= Right APISuccess.Success
+    runHandler handle "1" "1" "otp"
+      `shouldReturn` APISuccess.Success
 
 failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
-    result <- runHandler handleCase "2" "1" "otp"
-    mustBeErrorCode NotAnExecutor result
+    runHandler handleCase "2" "1" "otp"
+      `shouldThrow` (== NotAnExecutor)
   where
     handleCase =
       handle
@@ -113,8 +113,8 @@ failedStartRequestedByDriverNotAnOrderExecutor = do
 failedStartRequestedNotByDriver :: TestTree
 failedStartRequestedNotByDriver = do
   testCase "Fail ride starting if requested not by driver" $ do
-    result <- runHandler handleCase "1" "1" "otp"
-    mustBeErrorCode AccessDenied result
+    runHandler handleCase "1" "1" "otp"
+      `shouldThrow` (== AccessDenied)
   where
     handleCase =
       handle
@@ -128,8 +128,8 @@ failedStartRequestedNotByDriver = do
 failedStartWhenProductInstanceStatusIsWrong :: TestTree
 failedStartWhenProductInstanceStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
-    result <- runHandler handleCase "1" "1" "otp"
-    mustBeErrorCode PIInvalidStatus result
+    runHandler handleCase "1" "1" "otp"
+      `shouldThrow` (\(PIInvalidStatus _) -> True)
   where
     handleCase =
       handle
@@ -143,8 +143,8 @@ failedStartWhenProductInstanceStatusIsWrong = do
 failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
 failedStartWhenRideDoesNotHaveParentProductInstance = do
   testCase "Fail ride starting if ride does not have parent ProductInstance" $ do
-    result <- runHandler handleCase "1" "1" "otp"
-    mustBeErrorCode PIParentIdNotPresent result
+    runHandler handleCase "1" "1" "otp"
+      `shouldThrow` (== (PIFieldNotPresent "parent_id"))
   where
     handleCase =
       handle
@@ -158,8 +158,8 @@ failedStartWhenRideDoesNotHaveParentProductInstance = do
 failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
-    result <- runHandler handleCase "1" "1" "otp"
-    mustBeErrorCode PIOTPNotPresent result
+    runHandler handleCase "1" "1" "otp"
+      `shouldThrow` (== (PIFieldNotPresent "udf4"))
   where
     handleCase =
       handle
@@ -173,5 +173,5 @@ failedStartWhenRideMissingOTP = do
 failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
-    result <- runHandler handle "1" "1" "otp2"
-    mustBeErrorCode IncorrectOTP result
+    runHandler handle "1" "1" "otp2"
+      `shouldThrow` (== IncorrectOTP)

@@ -6,7 +6,7 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as C
 import qualified Beckn.Types.Storage.Person as PS
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (authenticate, withFlowHandler)
+import Beckn.Utils.Common (authenticate, withFlowHandlerAPI)
 import Data.Time (addUTCTime)
 import EulerHS.Prelude
 import qualified Models.Case as MC
@@ -17,7 +17,7 @@ import Types.API.Cron
 import qualified Utils.Notifications as Notify
 
 expireCases :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireRes
-expireCases maybeAuth ExpireCaseReq {..} = withFlowHandler $ do
+expireCases maybeAuth ExpireCaseReq {..} = withFlowHandlerAPI $ do
   authenticate maybeAuth
   cases <- MC.findAllExpiredByStatus [C.NEW, C.CONFIRMED] C.RIDESEARCH from to
   productInstances <- CPQ.findAllByCaseIds (C._id <$> cases)
@@ -41,7 +41,7 @@ notifyTransporters cases =
     )
 
 expireProductInstances :: Maybe CronAuthKey -> FlowHandler ExpireRes
-expireProductInstances maybeAuth = withFlowHandler $ do
+expireProductInstances maybeAuth = withFlowHandlerAPI $ do
   authenticate maybeAuth
   currTime <- getCurrentTime
   let timeToExpire = addUTCTime (-3 * 60 * 60) currTime

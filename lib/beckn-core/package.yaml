@@ -63,8 +63,10 @@ dependencies:
   - containers
   - cryptonite
   - data-default-class
+  - exceptions
   - euler-hs
   - hex-text
+  - hspec
   - http-api-data
   - http-client
   - http-client-tls

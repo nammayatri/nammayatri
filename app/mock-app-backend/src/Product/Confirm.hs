@@ -19,7 +19,7 @@ import Product.CallsTrack
 -- import qualified Beckn.Types.Core.API.Confirm as Confirm
 
 confirmCb :: Organization -> OnConfirmReq -> FlowHandler AckResponse
-confirmCb org req = withFlowHandler $ do
+confirmCb org req = withFlowHandlerBecknAPI $ do
   let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   logTagDebug "mock_app_backend" $ "confirm_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp
   -- ctx <- updateCaller $ req ^. #context

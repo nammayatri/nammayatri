@@ -9,7 +9,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Models.Case
 import Product.ProductInstance (notifyUpdateToBAP)
@@ -20,7 +20,7 @@ import qualified Storage.Queries.ProductInstance as QProductInstance
 import Types.API.Ride (StartRideReq (..))
 
 startRide :: SR.RegistrationToken -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
-startRide SR.RegistrationToken {..} rideId req = withFlowHandler $ do
+startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
   Handler.startRideHandler handle (Id _EntityId) (cast rideId) (req ^. #otp)
   where
     handle =

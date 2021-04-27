@@ -22,7 +22,7 @@ import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
-createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
+createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id _EntityId)
   validate person
   organization <- createTransform req
@@ -66,7 +66,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandler $ do
           }
 
 updateTransporter :: SR.RegistrationToken -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
-updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
+updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id _EntityId) SP.ADMIN orgId
   now <- getCurrentTime
   case maybePerson of
@@ -87,12 +87,12 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandler $ do
       return $ org {SO._fromTime = fromTime}
 
 getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
-getTransporter SR.RegistrationToken {..} = withFlowHandler $ do
+getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id _EntityId)
   validate person
   case person ^. #_organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
-    Nothing -> throwError PersonOrgIdNotPresent
+    Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     validate person =
       unless (SP._verified person) $ throwError AccessDenied

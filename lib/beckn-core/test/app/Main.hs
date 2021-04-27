@@ -1,5 +1,6 @@
 module Main where
 
+import APIExceptions
 import Amount
 import DecimalValue
 import EulerHS.Prelude
@@ -10,6 +11,13 @@ main :: IO ()
 main = defaultMain =<< specs
 
 specs :: IO TestTree
-specs = do
-  let unitTests = testGroup "Unit tests" [amountTests, decimalValueTests, signatureAuthTests]
-  return $ testGroup "Tests" [unitTests]
+specs = return $ testGroup "Tests" [unitTests]
+  where
+    unitTests =
+      testGroup
+        "Unit tests"
+        [ amountTests,
+          decimalValueTests,
+          signatureAuthTests,
+          apiExceptionTests
+        ]

@@ -16,7 +16,7 @@ import EulerHS.Types (client)
 import Types.Error
 
 selectCb :: Organization -> API.OnSelectReq -> FlowHandler AckResponse
-selectCb _org req = withFlowHandler $ do
+selectCb _org req = withFlowHandlerBecknAPI $ do
   let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   ctx <- updateCaller $ req ^. #context
   logTagDebug "mock_app_backend" $
@@ -26,7 +26,7 @@ selectCb _org req = withFlowHandler $ do
       <> show resp
   case req ^. #contents of
     Right msg -> do
-      quote <- (msg ^. #order . #_quotation) & fromMaybeMWithInfo InvalidRequest "You should pass quotation."
+      quote <- (msg ^. #order . #_quotation) & fromMaybeM (InvalidRequest "You should pass quotation.")
       let quoteId = quote ^. #_id
       initReq <- buildInitReq ctx quoteId
       case req ^. #context . #_bpp_uri of

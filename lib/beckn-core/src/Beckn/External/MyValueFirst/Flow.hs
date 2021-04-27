@@ -4,18 +4,19 @@ import qualified Beckn.External.MyValueFirst.API as API
 import Beckn.External.MyValueFirst.Types (SubmitSms (..))
 import Beckn.Sms.Config (SmsConfig (..))
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant.Client
 
-submitSms :: BaseUrl -> SubmitSms -> FlowR r (Either Text ())
+submitSms :: BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do
   res <- L.callAPI url $ API.submitSms params
   whenRight res $ \_ ->
     logTagInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
-  return $ first show res
+  res & fromEitherM (WithErrorCode "UNABLE_TO_SEND_SMS" . ExternalAPICallError url)
 
 type OtpTemplate = Text
 
@@ -32,7 +33,7 @@ type InviteTemplate = Text
 constructInviteSms :: OrgName -> InviteTemplate -> Text
 constructInviteSms = T.replace "{#org#}"
 
-sendOTP :: SmsConfig -> Text -> Text -> Text -> FlowR r (Either Text ())
+sendOTP :: SmsConfig -> Text -> Text -> Text -> FlowR r ()
 sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
   let smsCred = smsCfg ^. #credConfig
   let url = smsCfg ^. #url

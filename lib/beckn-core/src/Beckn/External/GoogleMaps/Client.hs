@@ -24,13 +24,8 @@ autoComplete ::
   Text ->
   FlowR r GoogleMaps.SearchLocationResp
 autoComplete url apiKey input location radius components = do
-  res <- callAPIWithTrail url (API.autoComplete apiKey input location radius components) "autoComplete"
-  case res of
-    Right x -> return x
-    Left cliErr -> do
-      let err = fromClientError cliErr
-      logTagError "client Google maps API autoComplete call error" $ (err ^. #_message) ?: "Some error"
-      throwErrorWithInfo GMAPIError "Google maps API autoComplete error"
+  callAPIWithTrail url (API.autoComplete apiKey input location radius components) "autoComplete"
+    >>= fromEitherM (withGoogleMapsErrorCode . ExternalAPICallError url)
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
@@ -42,13 +37,8 @@ placeDetails ::
   Text ->
   FlowR r GoogleMaps.PlaceDetailsResp
 placeDetails url apiKey placeId fields = do
-  res <- callAPIWithTrail url (API.placeDetails apiKey placeId fields) "placeDetails"
-  case res of
-    Right x -> return x
-    Left cliErr -> do
-      let err = fromClientError cliErr
-      logTagError "client Google maps API placeDetails call error" $ (err ^. #_message) ?: "Some error"
-      throwErrorWithInfo GMAPIError "Google maps API placeDetails error"
+  callAPIWithTrail url (API.placeDetails apiKey placeId fields) "placeDetails"
+    >>= fromEitherM (withGoogleMapsErrorCode . ExternalAPICallError url)
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
@@ -59,10 +49,8 @@ getPlaceName ::
   Text ->
   FlowR r GoogleMaps.GetPlaceNameResp
 getPlaceName url latLng apiKey = do
-  res <- callAPIWithTrail url (API.getPlaceName latLng apiKey) "getPlaceName"
-  case res of
-    Right x -> return x
-    Left cliErr -> do
-      let err = fromClientError cliErr
-      logTagError "client Google maps API getPlaceName call error" $ (err ^. #_message) ?: "Some error"
-      throwErrorWithInfo GMAPIError "Google maps API getPlaceName error"
+  callAPIWithTrail url (API.getPlaceName latLng apiKey) "getPlaceName"
+    >>= fromEitherM (withGoogleMapsErrorCode . ExternalAPICallError url)
+
+withGoogleMapsErrorCode :: base_err -> WithErrorCode base_err
+withGoogleMapsErrorCode = WithErrorCode "GOOGLE_MAPS_API_ERROR"

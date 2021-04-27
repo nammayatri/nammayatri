@@ -7,7 +7,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Error
 import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
@@ -34,7 +33,7 @@ import qualified Utils.Metrics as Metrics
 import Utils.Routes
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
-confirm person API.ConfirmReq {..} = withFlowHandler $ do
+confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
   lt <- getCurrentTime
   case_ <- MCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
@@ -51,12 +50,10 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
     QPI.create orderProductInstance
   msgId <- L.generateGUID
   context <- buildContext "confirm" caseId msgId
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
-  confirmRes <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
-  case confirmRes of
-    Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack ACK) Nothing
+  AckResponse {} <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
+  return $ AckResponse context (ack ACK) Nothing
   where
     mkOrder productInstance = do
       now <- getCurrentTime
@@ -76,7 +73,7 @@ confirm person API.ConfirmReq {..} = withFlowHandler $ do
           }
 
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
-onConfirm _org req = withFlowHandler $ do
+onConfirm _org req = withFlowHandlerBecknAPI $ do
   -- TODO: Verify api key here
   logTagInfo "on_confirm req" (show req)
   validateContext "on_confirm" $ req ^. #context

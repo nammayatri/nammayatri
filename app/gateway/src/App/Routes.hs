@@ -8,14 +8,14 @@ where
 import App.Types
 import Beckn.Types.App (FlowServerR)
 import Beckn.Types.Core.API.Log
-import Beckn.Utils.Common (withFlowHandler)
+import Beckn.Types.Error
+import Beckn.Utils.Error
 import Beckn.Utils.Servant.SignatureAuth (lookupRegistryAction)
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.Log as P
 import qualified Product.Search as P
-import Servant
+import Servant hiding (throwError)
 import Storage.Queries.Organization
 import System.Exit (ExitCode)
 import Types.API.Search
@@ -57,6 +57,6 @@ gatewayHandler shutdown = do
       shouldRun <- liftIO $ atomically $ isEmptyTMVar shutdown
       if shouldRun
         then handler a b
-        else withFlowHandler $ L.throwException err503
+        else withFlowHandlerBecknAPI $ throwError ServiceUnavailable
 
     lookup = lookupRegistryAction findOrgByShortId

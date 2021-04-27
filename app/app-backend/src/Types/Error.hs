@@ -1,21 +1,28 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Types.Error (module Types.Error) where
 
-import Beckn.TypeClass.IsAPIError
 import Beckn.Types.Error as Types.Error
+import Beckn.Types.Error.APIError
 import EulerHS.Prelude
 
 data RatingError
   = InvalidRatingValue
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''RatingError
 
 instance IsAPIError RatingError where
-  toAPIError InvalidRatingValue = APIError "INVALID_RATING_VALUE" "Invalid rating value."
-  toStatusCode InvalidRatingValue = E400
+  toErrorCode InvalidRatingValue = "INVALID_RATING_VALUE"
+  toHttpCode InvalidRatingValue = E400
 
-data ServiceabilityError
-  = ProductNotServiceable
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+newtype ServiceabilityError
+  = ProductNotServiceable Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''ServiceabilityError
 
 instance IsAPIError ServiceabilityError where
-  toAPIError ProductNotServiceable = APIError "PRODUCT_NOT_SERVICEABLE" "Requested product is not serviceable for some reason."
-  toStatusCode ProductNotServiceable = E400
+  toErrorCode (ProductNotServiceable _) = "PRODUCT_NOT_SERVICEABLE"
+  toMessage (ProductNotServiceable reason) = Just $ "Requested product is not serviceable " <> reason <> "."
+  toHttpCode (ProductNotServiceable _) = E400

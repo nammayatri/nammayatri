@@ -24,19 +24,19 @@ import qualified Storage.Queries.Rating as Rating
 import Types.Error
 
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
-feedback _transporterId _organization request = withFlowHandler $ do
+feedback _transporterId _organization request = withFlowHandlerBecknAPI $ do
   logTagInfo "FeedbackAPI" "Received feedback API call."
   let context = request ^. #context
   BP.validateContext "feedback" context
   let productInstanceId = Id $ request ^. #message . #order_id
   productInstances <- ProductInstance.findAllByParentId productInstanceId
-  personId <- getPersonId productInstances & fromMaybeMWithInfo PIPersonNotPresent "Driver is not assigned."
+  personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
   orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
   unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
-    throwErrorWithInfo PIInvalidStatus "Order is not ready for rating."
+    throwError $ PIInvalidStatus "Order is not ready for rating."
   ratingValue :: Int <-
     decodeFromText (request ^. #message . #rating . #_value)
-      & fromMaybeMWithInfo InvalidRequest "Invalid rating type."
+      & fromMaybeM (InvalidRequest "Invalid rating type.")
   let orderId = orderPi ^. #_id
   mbRating <- Rating.findByProductInstanceId orderId
   case mbRating of

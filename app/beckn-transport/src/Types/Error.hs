@@ -1,9 +1,10 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Types.Error (module Types.Error) where
 
-import Beckn.TypeClass.IsAPIError
 import Beckn.Types.Error as Types.Error
+import Beckn.Types.Error.APIError
 import EulerHS.Prelude
 
 data FarePolicyError
@@ -12,31 +13,29 @@ data FarePolicyError
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 instance IsAPIError FarePolicyError where
-  toAPIError NoFarePolicy = APIError "NO_FARE_POLICY" "No fare policy matches passed data."
-  toAPIError CantCalculateDistance = APIError "CANT_CALCULATE_DISTANCE" "Could not calculate distance."
-  toStatusCode NoFarePolicy = E400
-  toStatusCode CantCalculateDistance = E500
+  toErrorCode NoFarePolicy = "NO_FARE_POLICY"
+  toErrorCode CantCalculateDistance = "CANT_CALCULATE_DISTANCE"
+  toMessage NoFarePolicy = Just "No fare policy matches passed data."
+  toMessage _ = Nothing
+  toHttpCode NoFarePolicy = E400
+  toHttpCode CantCalculateDistance = E500
+
+instanceExceptionWithParent 'APIException ''FarePolicyError
 
 data AllocationError
   = EmptyDriverPool
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''AllocationError
 
 instance IsAPIError AllocationError where
-  toAPIError EmptyDriverPool = APIError "EMPTY_DRIVER_POOL" "No drivers nearby."
-  toStatusCode EmptyDriverPool = E500
+  toErrorCode EmptyDriverPool = "EMPTY_DRIVER_POOL"
 
 data DriverInformationError
   = DriverInfoNotFound
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''DriverInformationError
 
 instance IsAPIError DriverInformationError where
-  toAPIError DriverInfoNotFound = APIError "DRIVER_INFORMATON_NOT_FOUND" "Driver information not found."
-  toStatusCode DriverInfoNotFound = E500
-
-data HealthCheckError
-  = ServiceUnavailable
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-instance IsAPIError HealthCheckError where
-  toAPIError ServiceUnavailable = APIError "SERVICE_UNAVAILABLE" "Service is down."
-  toStatusCode ServiceUnavailable = E503
+  toErrorCode DriverInfoNotFound = "DRIVER_INFORMATON_NOT_FOUND"

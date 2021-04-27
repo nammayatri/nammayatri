@@ -37,7 +37,7 @@ import Types.Error
 import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
-list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ do
+list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id _EntityId)
   now <- getCurrentTime
   case person ^. #_organizationId of
@@ -51,7 +51,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandler $ 
           else Case.findAllByTypeStatuses limit offset csType status orgId now
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
-    Nothing -> throwError PersonOrgIdNotPresent
+    Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM

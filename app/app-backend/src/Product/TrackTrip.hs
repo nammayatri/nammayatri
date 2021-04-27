@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Error
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
@@ -26,7 +25,7 @@ import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
-track person req = withFlowHandler $ do
+track person req = withFlowHandlerBecknAPI $ do
   let prodInstId = req ^. #message . #order_id
   prodInst <- MPI.findById $ Id prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
@@ -36,21 +35,17 @@ track person req = withFlowHandler $ do
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM OrgNotFound
-  case decodeFromText =<< (prodInst ^. #_info) of
-    Nothing -> return $ AckResponse context (ack NACK) $ Just $ domainError "No product to track"
-    Just (info :: ProductInfo) ->
-      case ProductInfo._tracker info of
-        Nothing -> return $ AckResponse context (ack NACK) $ Just $ domainError "No product to track"
-        Just tracker -> do
-          let gTripId = tracker ^. #_trip . #id
-          gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
-          trackRes <- Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
-          case trackRes of
-            Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
-            Right _ -> return $ AckResponse context (ack ACK) Nothing
+  (info :: ProductInfo) <-
+    (decodeFromText =<< (prodInst ^. #_info))
+      & fromMaybeM (PIFieldNotPresent "info")
+  tracker <- info ^. #_tracker & fromMaybeM (InternalError "PI.info has no tracker field")
+  let gTripId = tracker ^. #_trip . #id
+  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  AckResponse {} <- Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
+  return $ AckResponse context (ack ACK) Nothing
 
 trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes
-trackCb _org req = withFlowHandler $ do
+trackCb _org req = withFlowHandlerBecknAPI $ do
   validateContext "on_track" $ req ^. #context
   let context = req ^. #context
   case req ^. #contents of
@@ -71,9 +66,8 @@ trackCb _org req = withFlowHandler $ do
             whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
             return $ Right ()
           _ -> return $ Left "Multiple products confirmed, ambiguous selection"
-      case res of
-        Left err -> return $ AckResponse context (ack NACK) $ Just $ domainError err
-        Right _ -> return $ AckResponse context (ack ACK) Nothing
+      res & fromEitherM InvalidRequest
+      return $ AckResponse context (ack ACK) Nothing
     Left err -> do
       logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
       return $ AckResponse context (ack ACK) Nothing

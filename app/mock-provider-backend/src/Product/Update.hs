@@ -21,7 +21,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 update :: Organization -> API.UpdateReq -> FlowHandler AckResponse
-update _org req = withFlowHandler $ do
+update _org req = withFlowHandlerBecknAPI $ do
   bppNwAddr <- nwAddress <$> ask
   let mAppUrl = req ^. #context . #_bap_uri
       context =
@@ -66,7 +66,7 @@ mkUpdateMessage = do
 locationTooFarError :: Error
 locationTooFarError =
   Error
-    { _type = "DOMAIN-ERROR",
+    { _type = DOMAIN_ERROR,
       _code = "CORE003",
       _path = Nothing,
       _message = Just "Location too far from last location"

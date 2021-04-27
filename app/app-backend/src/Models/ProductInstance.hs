@@ -82,9 +82,8 @@ validatePIStatusesChange' newStatus =
 -- | Validate status change and return appropriate DomainError
 validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
 validateStatusChange newStatus caseProduct =
-  case validateStatusTransition (_status caseProduct) newStatus of
-    Left msg -> throwErrorWithInfo PIInvalidStatus msg
-    _ -> pure ()
+  validateStatusTransition (_status caseProduct) newStatus
+    & fromEitherM PIInvalidStatus
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
 listAllProductInstanceWithOffset limit offset piid stats csTypes = do

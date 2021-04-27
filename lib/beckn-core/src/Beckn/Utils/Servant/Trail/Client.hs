@@ -118,6 +118,7 @@ saveClientTrailFlow (TrailInfo res req) = do
     _response = decodeUtf8 <$> rightToMaybe res
     _error = show <$> leftToMaybe res
 
+-- TODO: merge with lib/beckn-core/src/Beckn/Utils/Error/Throwing.hs callCLient'
 callAPIWithTrail' ::
   (JSONEx a, ToJSON a) =>
   Maybe String ->
@@ -126,7 +127,7 @@ callAPIWithTrail' ::
   Text ->
   FlowWithTraceFlag r (Either ClientError a)
 callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
-  endTracking <- L.runIO $ Metrics.startTracking (encodeToText' baseUrl) serviceName
+  endTracking <- L.runIO $ Metrics.startTracking (T.pack $ showBaseUrl baseUrl) serviceName
   res <- L.callAPI' mbManager baseUrl req
   let status = case res of
         Right _ -> "200"

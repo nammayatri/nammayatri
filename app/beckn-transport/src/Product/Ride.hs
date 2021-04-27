@@ -15,7 +15,7 @@ import EulerHS.Prelude
 import Types.API.Ride
 
 setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
-setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandler $ do
+setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandlerAPI $ do
   now <- getCurrentTime
   Redis.setExRedis redisKey (driverResponse now) 600
   pure $ Ack {_status = ACK}

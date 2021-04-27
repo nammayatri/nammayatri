@@ -6,7 +6,6 @@ import App.Types
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
 import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
-import Beckn.Types.Core.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -24,7 +23,7 @@ import qualified Utils.Notifications as Notify
 import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
-status person StatusReq {..} = withFlowHandler $ do
+status person StatusReq {..} = withFlowHandlerBecknAPI $ do
   prodInst <- QPI.findById (Id productInstanceId)
   case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
   let caseId = getId $ case_ ^. #_id
@@ -33,15 +32,13 @@ status person StatusReq {..} = withFlowHandler $ do
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM OrgNotFound
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
-  statusRes <- Gateway.status baseUrl $ API.StatusReq context statusMessage
-  case statusRes of
-    Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack ACK) Nothing
+  AckResponse {} <- Gateway.status baseUrl $ API.StatusReq context statusMessage
+  return $ AckResponse context (ack ACK) Nothing
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
-onStatus _org req = withFlowHandler $ do
+onStatus _org req = withFlowHandlerBecknAPI $ do
   let context = req ^. #context
   case req ^. #contents of
     Right msg -> do

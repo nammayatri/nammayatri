@@ -23,7 +23,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 search :: Organization -> API.SearchReq -> FlowHandler AckResponse
-search _org req = withFlowHandler $ do
+search _org req = withFlowHandlerBecknAPI $ do
   bppNwAddr <- nwAddress <$> ask
   let context =
         (req ^. #context)
@@ -63,7 +63,7 @@ search _org req = withFlowHandler $ do
 noServicesFoundError :: Error
 noServicesFoundError =
   Error
-    { _type = "DOMAIN-ERROR",
+    { _type = DOMAIN_ERROR,
       _code = "CORE001",
       _path = Nothing,
       _message = Just "No services found"
@@ -72,7 +72,7 @@ noServicesFoundError =
 serviceUnavailableError :: Error
 serviceUnavailableError =
   Error
-    { _type = "DOMAIN-ERROR",
+    { _type = DOMAIN_ERROR,
       _code = "CORE002",
       _path = Nothing,
       _message = Just "Service unavailable"

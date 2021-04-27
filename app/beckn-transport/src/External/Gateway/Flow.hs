@@ -33,7 +33,7 @@ onSearch req@CallbackReq {context} bppShortId = do
       nsdlBaseUrl <- xGatewayNsdlUrl appConfig & fromMaybeM NSDLBaseUrlNotSet
       callAPIWithTrail' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
     "JUSPAY.BG.1" -> do
-      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       callAPIWithTrail' (Just authKey) callbackUrl (API.onSearch req) "on_search"
     _ -> throwError GatewaySelectorNotSet
   AckResponse {} <- checkClientError context res
@@ -79,10 +79,5 @@ onStatus url req@CallbackReq {context} bppShortId = do
 initiateCall :: CallReq -> Flow Ack
 initiateCall req = do
   url <- xAppUri <$> ask
-  res <- callAPIWithTrail url (API.initiateCall req) "call_to_customer"
-  case res of
-    Right x -> return x
-    Left cliErr -> do
-      let err = fromClientError cliErr
-      logTagError "client call error" $ (err ^. #_message) ?: "Some error"
-      throwError UnableToCall
+  callAPIWithTrail url (API.initiateCall req) "call_to_customer"
+    >>= fromEitherM (WithErrorCode "UNABLE_TO_CALL" . ExternalAPICallError url)

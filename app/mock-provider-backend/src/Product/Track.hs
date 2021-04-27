@@ -16,7 +16,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 track :: Organization -> API.TrackReq -> FlowHandler AckResponse
-track _org req = withFlowHandler $ do
+track _org req = withFlowHandlerBecknAPI $ do
   bppNwAddr <- nwAddress <$> ask
   let orderId = req ^. (#message . #order_id)
   let mAppUrl = req ^. #context . #_bap_uri

@@ -22,10 +22,10 @@ import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
-  withFlowHandler $
+  withFlowHandlerAPI $
     case (req ^. #_medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
-      _ -> throwError InvalidRequest
+      _ -> throwError $ InvalidRequest "medium and type must be sms and otp respectively"
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
@@ -46,8 +46,7 @@ initiateFlow req smsCfg = do
       token <- makeSession scfg req entityId Nothing
       RegistrationToken.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
-      otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
-      whenLeft otpSendingRes $ throwErrorWithInfo UnableToSendSMS
+      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
       return token
   let attempts = SR._attempts regToken
       tokenId = SR._id regToken
@@ -56,7 +55,7 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  role <- fromMaybeMWithInfo InvalidRequest "You should pass person's role." (req ^. #_role)
+  role <- (req ^. #_role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID
   now <- getCurrentTime
   return $
@@ -118,9 +117,9 @@ generateOTPCode =
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
-  withFlowHandler $ do
+  withFlowHandlerAPI $ do
     SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-    when _verified $ throwErrorWithInfo AuthBlocked "Already verified."
+    when _verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry _authExpiry _updatedAt
     let isValid =
           _authMedium == req ^. #_medium
@@ -163,7 +162,7 @@ checkPersonExists _EntityId =
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
-  withFlowHandler $ do
+  withFlowHandlerAPI $ do
     SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
     void $ checkPersonExists _EntityId
     if _attempts > 0
@@ -172,11 +171,10 @@ reInitiateLogin tokenId req =
         otpSmsTemplate <- otpSmsTemplate <$> ask
         let mobileNumber = req ^. #_mobileNumber
             countryCode = req ^. #_mobileCountryCode
-        otpSendingRes <- SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
-        whenLeft otpSendingRes $ throwErrorWithInfo UnableToSendSMS
+        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
         _ <- RegistrationToken.updateAttempts (_attempts - 1) _id
         return $ InitiateLoginRes tokenId (_attempts - 1)
-      else throwErrorWithInfo AuthBlocked "Attempts limit exceed."
+      else throwError $ AuthBlocked "Attempts limit exceed."
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do

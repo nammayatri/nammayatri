@@ -15,18 +15,15 @@ import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
-import Beckn.Utils.Servant.Server
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Network.Wai
 import Network.Wai.Handler.Warp
   ( Settings,
     defaultSettings,
     runSettings,
-    setOnExceptionResponse,
     setPort,
   )
 import qualified Storage.Queries.Organization as Storage
@@ -37,8 +34,7 @@ runTransporterBackendApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport"
   Metrics.serve (appCfg ^. #metricsPort)
   runTransporterBackendApp' appCfg $
-    setOnExceptionResponse transporterExceptionResponse $
-      setPort (appCfg ^. #port) defaultSettings
+    setPort (appCfg ^. #port) defaultSettings
 
 runTransporterBackendApp' :: AppCfg -> Settings -> IO ()
 runTransporterBackendApp' appCfg settings = do
@@ -66,6 +62,3 @@ runTransporterBackendApp' appCfg settings = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
         return $ flowRt {R._httpClientManagers = managerMap}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
-
-transporterExceptionResponse :: SomeException -> Response
-transporterExceptionResponse = exceptionResponse

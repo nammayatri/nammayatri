@@ -44,7 +44,7 @@ withPostgreSQLSimple f = do
   res <-
     L.runIO . withResource pool $
       runPostgresqlSimple . fmap Right . f
-  either (throwErrorWithInfo SQLRequestError) pure res
+  res & fromEitherM (SQLRequestError "postgresql-simple")
 
 runPostgresqlSimple :: IO (Either Text a) -> IO (Either Text a)
 runPostgresqlSimple = (`catches` handlers)

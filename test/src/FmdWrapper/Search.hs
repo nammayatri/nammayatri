@@ -188,7 +188,7 @@ dunzoDifferentCity =
     gps3
     ( `shouldBe`
         Error.Error
-          "DOMAIN-ERROR"
+          Error.DOMAIN_ERROR
           "FMD001"
           Nothing
           ( Just "Apologies, our services are limited to serviceable areas with in the city only."
@@ -241,7 +241,7 @@ missingBapUri clientEnv _ = do
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "API_REQUEST_ERROR" gatewayResponse
+  verifyError 400 "INVALID_REQUEST" gatewayResponse
 
 missingCountry :: ClientEnv -> CallbackData -> IO ()
 missingCountry clientEnv _ = do

@@ -62,8 +62,8 @@ mkQuoteReqFromSearch SearchReq {..} = do
     ([_], _) -> onePickupLocationExpected
     _ -> oneDropLocationExpected
   where
-    onePickupLocationExpected = throwErrorWithInfo InvalidRequest "One pickup location expected."
-    oneDropLocationExpected = throwErrorWithInfo InvalidRequest "One drop location expected"
+    onePickupLocationExpected = throwError $ InvalidRequest "One pickup location expected."
+    oneDropLocationExpected = throwError $ InvalidRequest "One drop location expected"
     mkLocDetails loc = do
       address <- mkAddress (loc ^. #_location)
       return $
@@ -106,7 +106,7 @@ mkOnSearchErrReq context err =
   where
     errResp =
       CoreErr.Error
-        { _type = "DOMAIN-ERROR",
+        { _type = CoreErr.DOMAIN_ERROR,
           _code = "",
           _path = Nothing,
           _message = Just $ err ^. #message
@@ -162,7 +162,7 @@ mkOnSelectErrReq context err =
   where
     errResp =
       CoreErr.Error
-        { _type = "DOMAIN-ERROR",
+        { _type = CoreErr.DOMAIN_ERROR,
           _code = "",
           _path = Nothing,
           _message = Just $ err ^. #message
@@ -196,7 +196,7 @@ mkOnInitErrReq context err =
   where
     errResp =
       CoreErr.Error
-        { _type = "DOMAIN-ERROR",
+        { _type = CoreErr.DOMAIN_ERROR,
           _code = "",
           _path = Nothing,
           _message = Just $ err ^. #message
@@ -236,7 +236,7 @@ mkOnConfirmErrReq context err =
   where
     errResp =
       CoreErr.Error
-        { _type = "DOMAIN-ERROR",
+        { _type = CoreErr.DOMAIN_ERROR,
           _code = "",
           _path = Nothing,
           _message = Just $ err ^. #message
@@ -254,7 +254,7 @@ mkItemDetails item =
 
 mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
 mkLocationDetails PickupOrDrop {..} = do
-  phone <- headMaybe (_poc ^. #phones) & fromMaybeMWithInfo CommonInternalError "Person phone number is not present."
+  phone <- headMaybe (_poc ^. #phones) & fromMaybeM (InternalError "Person phone number is not present.")
   address <- mkAddress _location
   return $
     LocationDetails
@@ -275,8 +275,8 @@ mkLocationDetails PickupOrDrop {..} = do
 
 mkAddress :: CoreLoc.Location -> Flow Address
 mkAddress location = do
-  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeMWithInfo CommonInternalError "Lat/long not found."
-  address <- CoreLoc._address location & fromMaybeMWithInfo CommonInternalError "Address not found."
+  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeM (InternalError "Lat/long not found.")
+  address <- CoreLoc._address location & fromMaybeM (InternalError "Address not found.")
   return $
     Address
       { cty = CoreAddr._city address,

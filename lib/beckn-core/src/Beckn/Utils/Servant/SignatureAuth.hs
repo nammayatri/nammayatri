@@ -107,14 +107,14 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
     Just c -> return c
     Nothing -> do
       logTagError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
-      throwErrorWithInfo Unauthorized "Invalid key id."
+      throwError Unauthorized
   org <-
     findOrgByShortId (ShortId $ cred ^. #shortOrgId)
       >>= maybe (throwError OrgNotFound) pure
   pk <- case Registry.decodeKey $ cred ^. #signPubKey of
     Nothing -> do
       logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
-      throwErrorWithInfo Unauthorized "Invalid public key."
+      throwError $ InternalError "Invalid public key."
     Just key -> return key
   return (org, pk, selfUrl)
 
@@ -211,9 +211,8 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
       let signatureMsg = HttpSig.makeSignatureString params body headers
       logTagDebug "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
       logTagDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
-      case addSignature body params headers req of
-        Just signedReq -> pure signedReq
-        Nothing -> throwErrorWithInfo CommonInternalError $ "Could not add signature: " <> show params
+      addSignature body params headers req
+        & fromMaybeM (InternalError $ "Could not add signature: " <> show params)
     getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
     getBody (Http.RequestBodyBS body) = pure body
     getBody _ = pure "<MISSING_BODY>"
@@ -246,7 +245,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
   isVerified <- performVerification key host body
   unless isVerified $ do
     logTagError logTag "Signature is not valid."
-    throwAuthError [HttpSig.mkSignatureRealm getRealm host] AccessDenied
+    throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm getRealm host]
   pure lookupResult
   where
     logTag = "verifySignature-" <> headerName
@@ -274,7 +273,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
           signature
     throwVerificationFail host err = do
       logTagError logTag $ "Failed to verify the signature. Error: " <> show err
-      throwAuthError [HttpSig.mkSignatureRealm headerName host] AccessDenied
+      throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm headerName host]
 
 withBecknAuth ::
   ToJSON req =>
@@ -284,7 +283,7 @@ withBecknAuth ::
   req ->
   FlowHandlerR r b
 withBecknAuth handler lookupAction sign req = do
-  lookupResult <- withFlowHandler $ verifySignature "Authorization" lookupAction sign req
+  lookupResult <- withFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
   handler lookupResult req
 
 withBecknAuthProxy ::
@@ -296,8 +295,8 @@ withBecknAuthProxy ::
   req ->
   FlowHandlerR r b
 withBecknAuthProxy handler lookupAction sign proxySign req = do
-  lookupResult <- withFlowHandler $ verifySignature "Authorization" lookupAction sign req
-  _ <- withFlowHandler $ verifySignature "Proxy-Authorization" lookupAction proxySign req
+  lookupResult <- withFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
+  _ <- withFlowHandlerAPI $ verifySignature "Proxy-Authorization" lookupAction proxySign req
   handler lookupResult req
 
 prepareAuthManager ::

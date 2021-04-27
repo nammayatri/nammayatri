@@ -24,12 +24,12 @@ data ServiceHandle m = ServiceHandle
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> Text -> Id Ride -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById $ cast rideId
-  unless (isValidPI prodInst) $ throwError PIInvalidStatus
+  unless (isValidPI prodInst) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
   authPerson <- findPersonById $ Id authorizedEntityId
   case authPerson ^. #_role of
     Person.ADMIN -> cancelRide rideId False
     Person.DRIVER -> do
-      driverId <- prodInst ^. #_personId & fromMaybeM PIInvalidStatus
+      driverId <- prodInst ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
       unless (authPerson ^. #_id == driverId) $ throwError NotAnExecutor
       cancelRide rideId True
     _ -> throwError AccessDenied

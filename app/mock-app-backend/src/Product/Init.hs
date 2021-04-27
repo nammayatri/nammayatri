@@ -15,7 +15,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 initCb :: Organization -> OnInitReq -> FlowHandler AckResponse
-initCb _org req = withFlowHandler $ do
+initCb _org req = withFlowHandlerBecknAPI $ do
   let resp = AckResponse (req ^. #context) (ack ACK) Nothing
   ctx <- updateCaller $ req ^. #context
   logTagDebug "mock_app_backend" $ "init_cb: req: " <> decodeUtf8 (encode req) <> ", resp: " <> show resp

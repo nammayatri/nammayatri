@@ -19,7 +19,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 cancel :: Organization -> API.CancelReq -> FlowHandler AckResponse
-cancel _org req = withFlowHandler $ do
+cancel _org req = withFlowHandlerBecknAPI $ do
   bppNwAddr <- nwAddress <$> ask
   let mAppUrl = req ^. #context . #_bap_uri
       context =

@@ -9,7 +9,6 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
-import Beckn.Types.Core.Error
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
@@ -50,7 +49,7 @@ import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 
 search :: Person.Person -> API.SearchReq -> FlowHandler AckResponse
-search person req = withFlowHandler $ do
+search person req = withFlowHandlerBecknAPI $ do
   validateDateTime req
   validateServiceability req
   fromLocation <- mkLocation $ toBeckn $ req ^. #origin
@@ -68,29 +67,27 @@ search person req = withFlowHandler $ do
       context = mkContext "search" (getId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
       intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
-  searchRes <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
-  case searchRes of
-    Left err -> return $ AckResponse context (ack NACK) $ Just (domainError (show err))
-    Right _ -> return $ AckResponse context (ack ACK) Nothing
+  AckResponse {} <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
+  return $ AckResponse context (ack ACK) Nothing
   where
     validateDateTime sreq = do
       currTime <- getCurrentTime
       let allowedStartTime = addUTCTime (-2 * 60) currTime
       when ((sreq ^. #origin . #departureTime . #estimated) < allowedStartTime) $
-        throwErrorWithInfo InvalidRequest "Invalid start time."
+        throwError $ InvalidRequest "Invalid start time."
     validateServiceability sreq = do
       originGps <-
         sreq ^. #origin . #location . #gps
-          & fromMaybeMWithInfo InvalidRequest "GPS coordinates required for the origin location"
+          & fromMaybeM (InvalidRequest "GPS coordinates required for the origin location")
       destinationGps <-
         req ^. #destination . #location . #gps
-          & fromMaybeMWithInfo InvalidRequest "GPS coordinates required for the destination location"
+          & fromMaybeM (InvalidRequest "GPS coordinates required for the destination location")
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
-        throwErrorWithInfo ProductNotServiceable "Ride not serviceable due to georestrictions"
+        throwError $ ProductNotServiceable "due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCb _bppOrg req = withFlowHandler $ do
+searchCb _bppOrg req = withFlowHandlerBecknAPI $ do
   validateContext "on_search" $ req ^. #context
   case req ^. #contents of
     Right msg -> do
@@ -108,13 +105,9 @@ searchCbService req catalog = do
     bpp <-
       Org.findOrganizationByCallbackUri (req ^. #context . #_bpp_uri) Org.PROVIDER
         >>= fromMaybeM OrgDoesNotExist
-    personId <-
-      maybe
-        (throwError CaseRequestorNotPresent)
-        (return . Id)
-        (Case._requestor case_)
+    personId <- (Id <$> Case._requestor case_) & fromMaybeM (CaseFieldNotPresent "requestor")
     transaction <- case (catalog ^. #_categories, catalog ^. #_items) of
-      ([], _) -> throwErrorWithInfo InvalidRequest "Missing provider"
+      ([], _) -> throwError $ InvalidRequest "Missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
         declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
@@ -227,7 +220,7 @@ mkProduct case_ item = do
   now <- getCurrentTime
   price <-
     case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwErrorWithInfo InvalidRequest "convertDecimalValueToAmount returns Nothing."
+      Nothing -> throwError $ InvalidRequest "convertDecimalValueToAmount returns Nothing."
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -260,9 +253,8 @@ mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
   price <-
-    case convertDecimalValueToAmount =<< item ^. #_price . #_listed_value of
-      Nothing -> throwErrorWithInfo InvalidRequest "convertDecimalValueToAmount returns Nothing."
-      Just p -> return p
+    (convertDecimalValueToAmount =<< item ^. #_price . #_listed_value)
+      & fromMaybeM (InvalidRequest "Cannot read decimal")
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -334,18 +326,15 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
       }
 
 getDistance :: API.SearchReq -> Flow (Maybe Float)
-getDistance req = do
-  routeReq <- mkRouteRequest (req ^. #origin . #location) (req ^. #destination . #location)
-  distRes <- MapSearch.getRoute routeReq
-  case distRes of
-    Left _ -> return Nothing
-    Right MapSearch.Response {..} ->
-      return $ MapSearch.distanceInM <$> headMaybe routes
+getDistance req =
+  mkRouteRequest (req ^. #origin . #location) (req ^. #destination . #location)
+    >>= MapSearch.getRouteMb
+    <&> fmap MapSearch.distanceInM
 
 mkRouteRequest :: Common.Location -> Common.Location -> Flow MapSearch.Request
 mkRouteRequest pickupLoc dropLoc = do
-  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeMWithInfo InvalidRequest "No long / lat."
-  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeMWithInfo InvalidRequest "No long / lat."
+  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeM (InvalidRequest "No long / lat.")
+  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeM (InvalidRequest "No long / lat.")
   pickupMapPoint <- mkMapPoint pickupLat pickupLon
   dropMapPoint <- mkMapPoint dropLat dropLon
   return $
@@ -365,5 +354,4 @@ mkMapPoint lat' lon' = do
 
 readLatLng :: Text -> Flow Double
 readLatLng text = do
-  let mCoord = readMaybe $ T.unpack text
-  maybe (throwErrorWithInfo InvalidRequest "LOCATION_READ_ERROR") pure mCoord
+  readMaybe (T.unpack text) & fromMaybeM (InternalError "Location read error")

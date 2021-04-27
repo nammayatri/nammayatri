@@ -24,7 +24,7 @@ import Types.Error
 import Types.ProductInfo as ProductInfo
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
-login T.LoginReq {..} = withFlowHandler $ do
+login T.LoginReq {..} = withFlowHandlerAPI $ do
   personM <- Person.findByUsernameAndPassword _email _password
   case personM of
     Nothing -> throwError Unauthorized
@@ -46,7 +46,7 @@ generateToken SP.Person {..} = do
 
 logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
-  withFlowHandler $
+  withFlowHandlerAPI $
     if person ^. #_role /= SP.CUSTOMER_SUPPORT
       then throwError Unauthorized -- Do we need this Check?
       else do
@@ -78,21 +78,21 @@ createSupportRegToken entityId = do
 
 listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
 listOrder supportP mCaseId mMobile mlimit moffset =
-  withFlowHandler $
+  withFlowHandlerAPI $
     if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
       then throwError AccessDenied
       else do
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
           (Just caseId, _) -> getByCaseId caseId
           (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwErrorWithInfo InvalidRequest "You should pass CaseId or mobile number."
+          (_, _) -> throwError $ InvalidRequest "You should pass CaseId or mobile number."
         traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
-          >>= fromMaybeMWithInfo PersonDoesNotExist "User with this mobile number doesn't exists."
+          >>= fromMaybeM PersonDoesNotExist
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
           >>= checkDBError
@@ -101,7 +101,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= checkDBError
-          >>= fromMaybeMWithInfo CaseDoesNotExist "RIDESEARCH case with this id is not found."
+          >>= fromMaybeM CaseDoesNotExist
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
         Person.findById (Id personId)

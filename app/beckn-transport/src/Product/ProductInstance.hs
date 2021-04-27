@@ -32,7 +32,7 @@ import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $ do
+list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAPI $ do
   person <- PersQ.findPersonById (Id _EntityId)
   case SP._organizationId person of
     Just orgId -> do
@@ -40,7 +40,7 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandler $
       locList <- LQ.findAllByLocIds (Case._fromLocationId <$> (_case <$> result)) (Case._toLocationId <$> (_case <$> result))
       return $ buildResponse locList <$> result
     Nothing ->
-      throwError PersonOrgIdNotPresent
+      throwError (PersonFieldNotPresent "organization_id")
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM
@@ -58,20 +58,20 @@ notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInsta
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
   -- Send callback to BAP
   bapOrg <- fetchBapOrganization $ orderPi ^. #_caseId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
+  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   notifyTripDetailsToGateway searchPi orderPi callbackUrl
   notifyStatusUpdateReq searchPi updatedStatus callbackUrl
   where
     fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM CaseNotFound
-      bapOrgId <- prodCase ^. #_udf4 & fromMaybeM CaseBapOrgIdNotPresent
+      bapOrgId <- prodCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
       OQ.findOrganizationById $ Id bapOrgId
     fetchCase caseId = do
       prodCase <- QCase.findById caseId
       checkDBError prodCase
 
 listDriverRides :: SR.RegistrationToken -> Id SP.Person -> FlowHandler RideListRes
-listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
+listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
   user <- PersQ.findPersonById (Id _EntityId)
   person <- PersQ.findPersonById personId
   hasAccess user person
@@ -98,7 +98,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandler $ do
             }
 
 listVehicleRides :: SR.RegistrationToken -> Id V.Vehicle -> FlowHandler RideListRes
-listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
+listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
   user <- PersQ.findPersonById (Id _EntityId)
   vehicle <- VQ.findVehicleById vehicleId
   hasAccess user vehicle
@@ -125,10 +125,10 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandler $ do
             }
 
 listCasesByProductInstance :: SR.RegistrationToken -> Id PI.ProductInstance -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
-listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandler $ do
+listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandlerAPI $ do
   prodInst <- PIQ.findById piId
   piList <-
-    prodInst ^. #_parentId & fromMaybeM PIParentIdNotPresent
+    prodInst ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
       >>= PIQ.findAllByParentId
   caseList <- case csType of
     Just type_ -> CQ.findAllByIdType (PI._caseId <$> piList) type_
@@ -153,9 +153,9 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
-  searchPi <- PIQ.findById =<< fromMaybeM PIParentIdNotPresent (ordPi ^. #_parentId)
+  searchPi <- PIQ.findById =<< fromMaybeM (PIFieldNotPresent "parent_id") (ordPi ^. #_parentId)
   piList <-
-    ordPi ^. #_parentId & fromMaybeM PIParentIdNotPresent
+    ordPi ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
       >>= PIQ.findAllByParentId
   headPi <- case piList of
     p : _ -> pure p
@@ -163,7 +163,7 @@ assignDriver productInstanceId driverId = do
   driver <- PersQ.findPersonById $ cast driverId
   vehicleId <-
     driver ^. #_udf1
-      & fromMaybeMWithInfo PersonFieldNotPresent "_udf1 is null. Vehicle is not set."
+      & fromMaybeM (PersonFieldNotPresent "_udf1 - vehicle")
       <&> Id
   vehicle <-
     VQ.findVehicleById vehicleId

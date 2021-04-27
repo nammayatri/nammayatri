@@ -19,7 +19,7 @@ import EulerHS.Prelude
 import EulerHS.Types (client)
 
 confirm :: Organization -> API.ConfirmReq -> FlowHandler AckResponse
-confirm _org req = withFlowHandler $ do
+confirm _org req = withFlowHandlerBecknAPI $ do
   bppNwAddr <- nwAddress <$> ask
   let mAppUrl = req ^. #context . #_bap_uri
       context =

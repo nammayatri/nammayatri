@@ -80,7 +80,7 @@ verifyAdmin user = do
     throwError AccessDenied
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> throwError PersonOrgIdNotPresent
+    Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
@@ -88,7 +88,7 @@ verifyDriver user = do
     throwError AccessDenied
   case user ^. #_organizationId of
     Just orgId -> return orgId
-    Nothing -> throwError PersonOrgIdNotPresent
+    Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do

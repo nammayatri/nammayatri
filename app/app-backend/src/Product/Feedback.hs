@@ -4,16 +4,14 @@ module Product.Feedback where
 
 import qualified App.Types as App
 import qualified Beckn.Types.Core.API.Feedback as Beckn
-import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Description as Beckn
-import Beckn.Types.Core.Error
 import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
   ( fromMaybeM,
     throwError,
-    withFlowHandler,
+    withFlowHandlerBecknAPI,
   )
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (product)
@@ -26,7 +24,7 @@ import Types.Error
 import Utils.Routes (buildContext)
 
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
-feedback person request = withFlowHandler $ do
+feedback person request = withFlowHandlerBecknAPI $ do
   let ratingValue = request ^. #rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let prodInstId = request ^. #productInstanceId
@@ -60,8 +58,5 @@ feedback person request = withFlowHandler $ do
                   _3d_render = Nothing
                 }
           }
-  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM OrgCallbackUrlNotSet
-  feedbackRes <- Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg
-  case feedbackRes of
-    Left err -> pure $ AckResponse context (ack NACK) $ Just (domainError $ show err)
-    Right _ -> pure $ AckResponse context (ack ACK) Nothing
+  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg
