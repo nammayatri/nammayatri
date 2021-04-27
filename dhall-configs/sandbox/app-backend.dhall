@@ -17,6 +17,16 @@ let pgcfg =
   , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_app"
   }
+  
+let rcfg =
+  { connectHost = "ec-redis-beta.bfw4iw.ng.0001.apse1.cache.amazonaws.com"
+  , connectPort = 6379
+  , connectAuth = None Text
+  , connectDatabase = +1
+  , connectMaxConnections = +50
+  , connectMaxIdleTime = +30
+  , connectTimeout = Some +100
+  }
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
@@ -53,6 +63,7 @@ let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 in
 
 { dbCfg = pgcfg
+, redisCfg = rcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , sesCfg = sesConfig

@@ -18,6 +18,16 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
+let rcfg =
+  { connectHost = "localhost"
+  , connectPort = 6379
+  , connectAuth = None Text
+  , connectDatabase = +0
+  , connectMaxConnections = +50
+  , connectMaxIdleTime = +30
+  , connectTimeout = None Integer
+  }
+
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
   , credConfig = {
@@ -52,6 +62,7 @@ let providerUri = "http://localhost:8014/v1"
 in
 
 { dbCfg = pgcfg
+, redisCfg = rcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , sesCfg = sesConfig

@@ -20,10 +20,12 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
+import qualified EulerHS.Types as T
 import Types.Geofencing
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
+    redisCfg :: T.RedisConfig,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     sesCfg :: SesConfig,

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module App where
 
@@ -7,6 +7,7 @@ import qualified App.Server as App
 import App.Types
 import Beckn.Exit
 import Beckn.Storage.Common (prepareDBConnections)
+import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.App
 import Beckn.Utils.Common
@@ -50,6 +51,9 @@ runAppBackend' appCfg settings = do
         authManager <- L.runIO getManager
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
+        logInfo "Initializing Redis Connections..."
+        try (prepareRedisConnections $ appCfg ^. #redisCfg)
+          >>= handleLeft exitRedisConnPrepFailure "Exception thrown: " . first (id @SomeException)
         migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
