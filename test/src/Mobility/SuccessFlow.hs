@@ -57,7 +57,7 @@ spec = do
       let productInstanceId = getId $ AppCase._id productInstance
 
       -- check if calculated price is greater than 0
-      let prodPrice = productInstance ^. #_price
+      let (Just prodPrice) = productInstance ^. #_price
       prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
 
       -- Confirm ride from app backend

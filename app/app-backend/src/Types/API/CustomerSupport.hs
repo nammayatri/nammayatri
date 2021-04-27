@@ -46,7 +46,7 @@ data TripDetails = TripDetails
     _driver :: Maybe Driver, -- _info -> driver
     _vehicle :: Maybe Vehicle,
     _provider :: Maybe Provider,
-    _price :: Amount
+    _price :: Maybe Amount
   }
   deriving (Show, Generic)
 

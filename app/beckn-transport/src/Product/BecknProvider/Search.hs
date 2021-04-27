@@ -164,7 +164,10 @@ onSearchCallback productCase transporter fromLocation toLocation = do
           if null pool
             then ProductInstance.OUTOFSTOCK
             else ProductInstance.INSTOCK
-    price <- calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
+    price <-
+      if null pool
+        then return Nothing
+        else Just <$> calculateFare transporterId vehicleVariant fromLocation toLocation (productCase ^. #_startTime) (productCase ^. #_udf5)
     prodInst <- mkProductInstance productCase price piStatus transporterId
     let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
         caseStatus _ = Case.CLOSED
@@ -182,7 +185,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
       logTagError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
       void $ sendOnSearchFailed productCase transporter err
 
-mkProductInstance :: Case.Case -> Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
+mkProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
 mkProductInstance productCase price status transporterId = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime

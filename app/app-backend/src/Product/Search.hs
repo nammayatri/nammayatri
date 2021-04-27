@@ -253,9 +253,7 @@ mkProductInstance ::
 mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
-  price <-
-    (convertDecimalValueToAmount =<< item ^. #_price . #_listed_value)
-      & fromMaybeM (InvalidRequest "Cannot read decimal")
+      price = convertDecimalValueToAmount =<< item ^. #_price . #_listed_value
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -311,7 +309,7 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         _validTill = case_ ^. #_validTill,
         _parentId = Nothing,
         _entityId = Nothing,
-        _price = 0,
+        _price = Nothing,
         _type = Case.RIDESEARCH,
         _udf1 = Nothing,
         _udf2 = Nothing,

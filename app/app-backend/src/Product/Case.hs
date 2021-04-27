@@ -8,6 +8,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Models.Case as Case
@@ -51,7 +52,7 @@ list person caseType statuses mlimit moffset =
       return $ API.CaseRes case_ prodInstRes fromLocation toLocation
 
 -- Core Utility functions are below
-
+mkProdRes :: [Products.Products] -> PI.ProductInstance -> ProdInstRes
 mkProdRes prodList prodInst =
   ProdInstRes
     { _id = prodInst ^. #_id,

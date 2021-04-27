@@ -75,7 +75,7 @@ data ProductInstanceT f = ProductInstance
     _entityType :: B.C f EntityType,
     _entityId :: B.C f (Maybe Text),
     _quantity :: B.C f Int,
-    _price :: B.C f Amount,
+    _price :: B.C f (Maybe Amount),
     _type :: B.C f ProductInstanceType,
     _status :: B.C f ProductInstanceStatus,
     _startTime :: B.C f UTCTime,

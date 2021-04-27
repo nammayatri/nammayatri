@@ -74,7 +74,7 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = amountToString $ productInstance ^. #_price
+                estimatedPrice = amountToString <$> productInstance ^. #_price
               }
   where
     driverId = Id _EntityId

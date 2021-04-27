@@ -117,16 +117,16 @@ mkItem prodInst =
 
 mkPrice :: ProductInstance -> Price
 mkPrice prodInst =
-  let amt = convertAmountToDecimalValue $ prodInst ^. #_price
+  let amt = convertAmountToDecimalValue <$> prodInst ^. #_price
    in Price
         { _currency = "INR", -- TODO : Fetch this from product
-          _value = Just amt,
-          _estimated_value = Just amt,
-          _computed_value = Just amt,
-          _listed_value = Just amt,
-          _offered_value = Just amt,
-          _minimum_value = Just amt,
-          _maximum_value = Just amt
+          _value = amt,
+          _estimated_value = amt,
+          _computed_value = amt,
+          _listed_value = amt,
+          _offered_value = amt,
+          _minimum_value = amt,
+          _maximum_value = amt
         }
 
 mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order

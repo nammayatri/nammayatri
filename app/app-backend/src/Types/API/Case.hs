@@ -62,7 +62,7 @@ data ProdInstRes = ProdInstRes
     _entityType :: EntityType,
     _entityId :: Maybe Text,
     _quantity :: Int,
-    _price :: Amount,
+    _price :: Maybe Amount,
     _status :: ProductInstanceStatus,
     _startTime :: UTCTime,
     _endTime :: Maybe UTCTime,
