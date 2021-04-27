@@ -12,11 +12,8 @@ import Servant
 import Utils.Auth
 
 run :: Env -> Application
-run env = \req resp -> do
-  modifiedEnv <- modifyEnvR env
-  let app =
-        logRequestAndResponse modifiedEnv $
-          BU.run wrapperAPI fmdWrapperBackendServer context modifiedEnv
-  app req resp
+run = withModifiedEnv $ \modifiedEnv ->
+  logRequestAndResponse modifiedEnv $
+    BU.run wrapperAPI fmdWrapperBackendServer context modifiedEnv
   where
     context = verifyApiKey :. EmptyContext

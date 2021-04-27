@@ -4,29 +4,36 @@ module Beckn.Utils.App
   ( handleLeft,
     handleShutdown,
     logRequestAndResponse,
-    modifyEnvR,
+    withModifiedEnv,
   )
 where
 
 import Beckn.Types.App
 import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar
-import qualified Data.Binary.Builder as B
 import qualified Data.CaseInsensitive as CI
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Network.HTTP.Types (Method, RequestHeaders)
 import qualified Network.HTTP.Types as HTTP
 import Network.Wai
+import Network.Wai.Internal
 import System.Exit (ExitCode)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
+
+data RequestInfo = RequestInfo
+  { requestMethod :: Method,
+    rawPathInfo :: ByteString,
+    rawQueryString :: ByteString,
+    requestHeaders :: RequestHeaders
+  }
+  deriving (Show)
 
 data ResponseInfo = ResponseInfo
   { statusCode :: Int,
     statusMessage :: Text,
-    responseSucceeded :: Bool,
-    responseBody :: LByteString,
-    responseHeaders :: [(Text, Text)]
+    headers :: [(Text, Text)]
   }
   deriving (Show)
 
@@ -54,38 +61,32 @@ handleShutdown shutdown closeSocket = do
 
 logRequestAndResponse :: EnvR f -> Application -> Application
 logRequestAndResponse (EnvR flowRt appEnv) f req respF = do
-  logInfoIO "Request" $ show req
+  logInfoIO "Request" . show $ toRequestInfo req
   f req loggedRespF
   where
     logInfoIO tag info = runFlowR flowRt appEnv $ logTagInfo tag info
+    toRequestInfo Request {..} = RequestInfo {..}
+    logResponseInfo resp = do
+      let (status, headers, _) = responseToStream resp
+          code = HTTP.statusCode status
+          decodeHeader = bimap (decodeUtf8 . CI.original) decodeUtf8
+      when (code >= 300) $
+        logInfoIO "Error response" . show $
+          ResponseInfo
+            { statusCode = code,
+              statusMessage = decodeUtf8 $ HTTP.statusMessage status,
+              headers = decodeHeader <$> headers
+            }
     loggedRespF resp = do
-      logInfoIO "Response" . show =<< toResponseInfo resp
+      logResponseInfo resp
       respF resp
 
-toResponseInfo :: Response -> IO ResponseInfo
-toResponseInfo resp = do
-  let (status, headers, bodyWriter) = responseToStream resp
-  body <- bodyWriter bodyToBytestring
-  let code = HTTP.statusCode status
-  return
-    ResponseInfo
-      { statusCode = code,
-        statusMessage = decodeUtf8 $ HTTP.statusMessage status,
-        responseSucceeded = code >= 200 && code < 300,
-        responseBody = body,
-        responseHeaders = decodeHeader <$> headers
-      }
+withModifiedEnv :: (EnvR f -> Application) -> EnvR f -> Application
+withModifiedEnv f env = \req resp -> do
+  modifiedEnv <- modifyEnvR
+  let app = f modifiedEnv
+  app req resp
   where
-    bodyToBytestring :: StreamingBody -> IO LByteString
-    bodyToBytestring streamingBody = do
-      content <- newIORef mempty
-      streamingBody (\chunk -> modifyIORef' content (<> chunk)) pass
-      -- Someday can do lazy IO above to spare some memory allocations
-      B.toLazyByteString <$> readIORef content
-    decodeHeader =
-      bimap (decodeUtf8 . CI.original) decodeUtf8
-
-modifyEnvR :: EnvR f -> IO (EnvR f)
-modifyEnvR env = do
-  uuid <- show <$> nextRandom
-  return $ env {flowRuntime = L.updateLoggerContext (appendLogContext uuid) $ flowRuntime env}
+    modifyEnvR = do
+      uuid <- show <$> nextRandom
+      return $ env {flowRuntime = L.updateLoggerContext (appendLogContext uuid) $ flowRuntime env}

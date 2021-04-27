@@ -10,13 +10,10 @@ import Servant
 import Utils.Auth
 
 run :: Env -> Application
-run env = \req resp -> do
-  modifiedEnv <- modifyEnvR env
-  let app =
-        addServantInfo transporterAPI $
-          logRequestAndResponse modifiedEnv $
-            BU.run transporterAPI transporterServer context modifiedEnv
-  app req resp
+run = withModifiedEnv $ \modifiedEnv ->
+  addServantInfo transporterAPI $
+    logRequestAndResponse modifiedEnv $
+      BU.run transporterAPI transporterServer context modifiedEnv
   where
     context =
       verifyApiKey

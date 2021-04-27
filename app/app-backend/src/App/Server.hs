@@ -10,13 +10,10 @@ import Servant
 import Utils.Auth
 
 run :: Env -> Application
-run env = \req resp -> do
-  modifiedEnv <- modifyEnvR env
-  let app =
-        addServantInfo appAPI $
-          logRequestAndResponse modifiedEnv $
-            BU.run appAPI appServer context modifiedEnv
-  app req resp
+run = withModifiedEnv $ \modifiedEnv ->
+  addServantInfo appAPI $
+    logRequestAndResponse modifiedEnv $
+      BU.run appAPI appServer context modifiedEnv
   where
     context =
       verifyApiKey
