@@ -30,6 +30,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
+import GHC.Records (HasField)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
@@ -276,18 +277,18 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm headerName host]
 
 withBecknAuth ::
-  ToJSON req =>
+  (HasField "isShuttingDown" r (TMVar ()), ToJSON req) =>
   (LookupResult lookup -> req -> FlowHandlerR r b) ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
   req ->
   FlowHandlerR r b
 withBecknAuth handler lookupAction sign req = do
-  lookupResult <- withUnblockableFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
+  lookupResult <- withFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
   handler lookupResult req
 
 withBecknAuthProxy ::
-  ToJSON req =>
+  (HasField "isShuttingDown" r (TMVar ()), ToJSON req) =>
   (LookupResult lookup -> req -> FlowHandlerR r b) ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
@@ -295,8 +296,8 @@ withBecknAuthProxy ::
   req ->
   FlowHandlerR r b
 withBecknAuthProxy handler lookupAction sign proxySign req = do
-  lookupResult <- withUnblockableFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
-  _ <- withUnblockableFlowHandlerAPI $ verifySignature "Proxy-Authorization" lookupAction proxySign req
+  lookupResult <- withFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
+  _ <- withFlowHandlerAPI $ verifySignature "Proxy-Authorization" lookupAction proxySign req
   handler lookupResult req
 
 prepareAuthManager ::

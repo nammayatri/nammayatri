@@ -1,14 +1,21 @@
 module Utils.Common
-  ( module Utils.Common,
-    module Common,
+  ( module Common,
+    withFlowHandlerAPI,
+    withFlowHandlerBecknAPI,
   )
 where
 
-import Beckn.Types.App (FlowHandlerR)
-import Beckn.Utils.Common as Common hiding (withFlowHandlerBecknAPI, withFlowHandlerAPI)
+import Beckn.Types.App (EnvR (..), FlowHandlerR)
+import Beckn.Utils.Common as Common hiding (withFlowHandlerAPI, withFlowHandlerBecknAPI)
+import EulerHS.Prelude
 
-withFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
-withFlowHandlerBecknAPI = Common.withUnblockableFlowHandlerBecknAPI
+withFlowHandler :: FlowR r a -> FlowHandlerR r a
+withFlowHandler flow = do
+  (EnvR flowRt appEnv) <- ask
+  liftIO . runFlowR flowRt appEnv $ flow
 
 withFlowHandlerAPI :: FlowR r a -> FlowHandlerR r a
-withFlowHandlerAPI = Common.withUnblockableFlowHandlerAPI
+withFlowHandlerAPI = withFlowHandler . Common.apiHandler
+
+withFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
+withFlowHandlerBecknAPI = withFlowHandler . Common.becknApiHandler

@@ -15,7 +15,6 @@ import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import Beckn.Utils.Servant.SignatureAuth
-import Control.Concurrent (myThreadId)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -24,12 +23,11 @@ import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
-    setOnClose,
-    setOnOpen,
+    setGracefulShutdownTimeout,
+    setInstallShutdownHandler,
     setPort,
   )
 import System.Environment
-import System.Posix.Signals
 import Utils.Common
 
 runFMDWrapper :: (AppCfg -> AppCfg) -> IO ()
@@ -38,14 +36,9 @@ runFMDWrapper configModifier = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
   appEnv <- buildAppEnv appCfg
-  let shutdown = appEnv ^. #isShuttingDown
-  activeConnections <- newTVarIO (0 :: Int)
-  threadId <- myThreadId
-  void $ installHandler sigTERM (Catch $ handleShutdown activeConnections shutdown exitSigTERM threadId) Nothing
-  void $ installHandler sigINT (Catch $ handleShutdown activeConnections shutdown exitSigINT threadId) Nothing
   let settings =
-        setOnOpen (\_ -> atomically $ modifyTVar' activeConnections succ >> return True)
-          . setOnClose (\_ -> atomically $ modifyTVar' activeConnections pred)
+        setGracefulShutdownTimeout (Just 120)
+          . setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
           $ setPort (appCfg ^. #port) defaultSettings
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do

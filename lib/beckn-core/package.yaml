@@ -112,6 +112,7 @@ dependencies:
   - mtl
   - uuid
   - stm
+  - unix
 
 ghc-options:
   - -fwrite-ide-info

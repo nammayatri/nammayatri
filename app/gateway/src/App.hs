@@ -17,7 +17,6 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
-import Control.Concurrent
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -27,12 +26,11 @@ import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
-    setOnClose,
-    setOnOpen,
+    setGracefulShutdownTimeout,
+    setInstallShutdownHandler,
     setPort,
   )
 import System.Environment
-import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Utils.Common
 
 runGateway :: (AppCfg -> AppCfg) -> IO ()
@@ -42,16 +40,12 @@ runGateway configModifier = do
   let metricsPort = appCfg ^. #metricsPort
   Metrics.serve metricsPort
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
-  appEnv <- buildAppEnv appCfg 
-  let shutdown = appEnv ^. #isShuttingDown
-  activeConnections <- newTVarIO (0 :: Int)
-  threadId <- myThreadId
-  void $ installHandler sigTERM (Catch $ handleShutdown activeConnections shutdown exitSigTERM threadId) Nothing
-  void $ installHandler sigINT (Catch $ handleShutdown activeConnections shutdown exitSigINT threadId) Nothing
+  appEnv <- buildAppEnv appCfg
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
-      settings = setOnOpen (\_ -> atomically $ modifyTVar' activeConnections succ >> return True)
-          . setOnClose (\_ -> atomically $ modifyTVar' activeConnections pred)
+      settings =
+        setGracefulShutdownTimeout (Just 120)
+          . setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
           $ setPort port defaultSettings
   let redisCfg = appCfg ^. #redisCfg
   let migrationPath = appCfg ^. #migrationPath

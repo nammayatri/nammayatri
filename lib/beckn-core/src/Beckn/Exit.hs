@@ -20,11 +20,5 @@ exitLoadAllProvidersFailure = ExitFailure 4
 exitRedisConnPrepFailure :: ExitCode
 exitRedisConnPrepFailure = ExitFailure 5
 
-exitSigTERM :: ExitCode
-exitSigTERM = ExitFailure 6
-
-exitSigINT :: ExitCode
-exitSigINT = ExitFailure 7
-
 exitConnCheckFailure :: ExitCode
 exitConnCheckFailure = ExitFailure 8

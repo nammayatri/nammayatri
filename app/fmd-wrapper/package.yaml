@@ -73,7 +73,6 @@ dependencies:
   - wai-extra
   - warp
   - time
-  - unix
 
 ghc-options:
   - -fwrite-ide-info

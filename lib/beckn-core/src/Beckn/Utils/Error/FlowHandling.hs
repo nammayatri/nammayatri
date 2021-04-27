@@ -1,8 +1,8 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Utils.Error.FlowHandling
   ( withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
-    withUnblockableFlowHandlerAPI,
-    withUnblockableFlowHandlerBecknAPI,
     apiHandler,
     becknApiHandler,
   )
@@ -29,12 +29,6 @@ withFlowHandler :: FlowR r a -> FlowHandlerR r a
 withFlowHandler flow = do
   (EnvR flowRt appEnv) <- ask
   liftIO . runFlowR flowRt appEnv $ flow
-
-withUnblockableFlowHandlerAPI :: FlowR r a -> FlowHandlerR r a
-withUnblockableFlowHandlerAPI = withFlowHandler . apiHandler
-
-withUnblockableFlowHandlerBecknAPI :: FlowR r a -> FlowHandlerR r a
-withUnblockableFlowHandlerBecknAPI = withFlowHandler . becknApiHandler
 
 withFlowHandlerAPI :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
 withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp

@@ -85,7 +85,6 @@ library:
     - text
     - time
     - time-units
-    - unix
     - wai
     - wai-extra
     - warp
