@@ -9,7 +9,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Data.Time (UTCTime)
 import EulerHS.Prelude
 import qualified Storage.Queries.Location as QL
 
@@ -19,10 +18,6 @@ data TransporterReq = TransporterReq
     _mobileNumber :: Text,
     _mobileCountryCode :: Text,
     _gstin :: Maybe Text,
-    _orgType :: SO.OrganizationType,
-    _orgDomain :: Maybe SO.OrganizationDomain,
-    _fromTime :: Maybe UTCTime,
-    _toTime :: Maybe UTCTime,
     _headCount :: Maybe Int,
     _locationType :: Maybe SL.LocationType,
     _lat :: Maybe Double,
@@ -33,8 +28,7 @@ data TransporterReq = TransporterReq
     _state :: Maybe Text,
     _country :: Text,
     _pincode :: Maybe Text,
-    _address :: Maybe Text,
-    _bound :: Maybe Text
+    _address :: Maybe Text
   }
   deriving (Generic)
 
@@ -58,10 +52,10 @@ instance CreateTransform TransporterReq SO.Organization Flow where
           SO._mobileCountryCode = Just $ req ^. #_mobileCountryCode,
           SO._gstin = req ^. #_gstin,
           SO._locationId = Just (getId $ SL._id location),
-          SO._type = req ^. #_orgType,
-          SO._domain = req ^. #_orgDomain,
-          SO._fromTime = req ^. #_fromTime,
-          SO._toTime = req ^. #_toTime,
+          SO._type = SO.PROVIDER,
+          SO._domain = Just SO.MOBILITY,
+          SO._fromTime = Nothing,
+          SO._toTime = Nothing,
           SO._headCount = req ^. #_headCount,
           SO._apiKey = Nothing,
           SO._callbackUrl = Nothing,
@@ -91,7 +85,7 @@ transformToLocation req = do
         SL._country = Just $ req ^. #_country,
         SL._pincode = req ^. #_pincode,
         SL._address = req ^. #_address,
-        SL._bound = req ^. #_bound,
+        SL._bound = Nothing,
         SL._createdAt = now,
         SL._updatedAt = now
       }
