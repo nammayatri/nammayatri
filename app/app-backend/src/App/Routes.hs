@@ -10,11 +10,10 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
 import qualified Beckn.Types.Core.API.Confirm as Confirm
-import qualified Beckn.Types.Core.API.Search as Search
+import qualified Beckn.Types.Core.API.Search as Search (OnSearchAPI)
 import qualified Beckn.Types.Core.API.Status as Status
-import Beckn.Types.Core.API.Track
+import qualified Beckn.Types.Core.API.Track as TrackTrip (OnTrackTripReq, OnTrackTripRes)
 import qualified Beckn.Types.Core.API.Update as Update
-import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -53,10 +52,11 @@ import qualified Types.API.Person as Person
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
-import qualified Types.API.Search as Search'
+import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import Types.API.Status
 import qualified Types.API.Support as Support
+import qualified Types.API.Track as TrackTrip
 import Types.Geofencing
 import Utils.Auth
   ( lookup,
@@ -138,8 +138,8 @@ registrationFlow =
 type SearchAPI =
   "search"
     :> TokenAuth
-    :> ReqBody '[JSON] Search'.SearchReq
-    :> Post '[JSON] AckResponse
+    :> ReqBody '[JSON] Search.SearchReq
+    :> Post '[JSON] Search.SearchRes
     :<|> SignatureAuth "Authorization"
     :> SignatureAuth "Proxy-Authorization"
     :> Search.OnSearchAPI
@@ -154,7 +154,7 @@ type ConfirmAPI =
   ( "confirm"
       :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
-      :> Post '[JSON] AckResponse
+      :> Post '[JSON] ConfirmAPI.ConfirmRes
       :<|> SignatureAuth "Authorization"
       :> "on_confirm"
       :> ReqBody '[JSON] Confirm.OnConfirmReq
@@ -205,12 +205,12 @@ infoFlow regToken =
 type TrackTripAPI =
   "track"
     :> TokenAuth
-    :> ReqBody '[JSON] TrackTripReq
-    :> Post '[JSON] TrackTripRes
+    :> ReqBody '[JSON] TrackTrip.TrackTripReq
+    :> Post '[JSON] TrackTrip.TrackTripRes
     :<|> SignatureAuth "Authorization"
     :> "on_track"
-    :> ReqBody '[JSON] OnTrackTripReq
-    :> Post '[JSON] OnTrackTripRes
+    :> ReqBody '[JSON] TrackTrip.OnTrackTripReq
+    :> Post '[JSON] TrackTrip.OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =

@@ -4,6 +4,7 @@ module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
@@ -32,7 +33,7 @@ import Utils.Common (generateShortId, validateContext)
 import qualified Utils.Metrics as Metrics
 import Utils.Routes
 
-confirm :: Person.Person -> API.ConfirmReq -> FlowHandler AckResponse
+confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
 confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
   lt <- getCurrentTime
   case_ <- MCase.findIdByPerson person $ Id caseId
@@ -53,7 +54,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   AckResponse {} <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
-  return $ AckResponse context (ack ACK) Nothing
+  return Success
   where
     mkOrder productInstance = do
       now <- getCurrentTime

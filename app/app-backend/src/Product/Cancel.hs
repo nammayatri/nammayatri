@@ -3,6 +3,7 @@
 module Product.Cancel (cancel, onCancel) where
 
 import App.Types
+import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
@@ -26,14 +27,14 @@ import qualified Utils.Notifications as Notify
 
 cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
 cancel person req = withFlowHandlerBecknAPI $ do
-  let entityType = req ^. #message . #entityType
+  let entityType = req ^. #entityType
   case entityType of
     Cancel.CASE -> searchCancel person req
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
 cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
 cancelProductInstance person req = do
-  let prodInstId = req ^. #message . #entityId
+  let prodInstId = req ^. #entityId
   searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
   cs <- MC.findIdByPerson person (searchPI ^. #_caseId)
   orderPI <- MPI.findByParentIdType (searchPI ^. #_id) Case.RIDEORDER
@@ -53,22 +54,18 @@ cancelProductInstance person req = do
           >>= fromMaybeM OrgNotFound
       baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       AckResponse {} <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
-      return $ AckResponse context (ack ACK) Nothing
+      return Success
 
 searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
 searchCancel person req = do
-  let caseId = req ^. #message . #entityId
-  let txnId = caseId
+  let caseId = req ^. #entityId
   case_ <- MC.findIdByPerson person (Id caseId)
   unless (isCaseCancellable case_) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
   Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
   piList <- MPI.findAllByCaseId (case_ ^. #_id)
   traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> filter isProductInstanceCancellable piList)
   MC.updateStatus (case_ ^. #_id) Case.CLOSED
-  currTime <- getCurrentTime
-  msgId <- L.generateGUID
-  let context = mkContext "cancel" txnId msgId currTime Nothing Nothing
-  return $ AckResponse context (ack ACK) Nothing
+  return Success
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =

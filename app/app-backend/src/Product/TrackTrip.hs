@@ -3,8 +3,9 @@
 module Product.TrackTrip where
 
 import App.Types
+import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common
-import Beckn.Types.Core.API.Track
+import qualified Beckn.Types.Core.API.Track as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Id
@@ -19,19 +20,21 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
+import Types.API.Track
 import Types.Error
 import Types.ProductInfo as ProductInfo
 import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
+import Utils.Routes (buildContext)
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandlerBecknAPI $ do
-  let prodInstId = req ^. #message . #order_id
-  prodInst <- MPI.findById $ Id prodInstId
+  let prodInstId = req ^. #rideId
+  prodInst <- MPI.findById prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
   msgId <- L.generateGUID
   let txnId = getId $ case_ ^. #_id
-  let context = req ^. #context & #_transaction_id .~ txnId & #_message_id .~ msgId
+  context <- buildContext "feedback" txnId msgId
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM OrgNotFound
@@ -41,10 +44,10 @@ track person req = withFlowHandlerBecknAPI $ do
   tracker <- info ^. #_tracker & fromMaybeM (InternalError "PI.info has no tracker field")
   let gTripId = tracker ^. #_trip . #id
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  AckResponse {} <- Gateway.track gatewayUrl $ req & #context .~ context & ((#message . #order_id) .~ gTripId)
-  return $ AckResponse context (ack ACK) Nothing
+  AckResponse {} <- Gateway.track gatewayUrl . API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing
+  return Success
 
-trackCb :: Organization.Organization -> OnTrackTripReq -> FlowHandler OnTrackTripRes
+trackCb :: Organization.Organization -> API.OnTrackTripReq -> FlowHandler API.OnTrackTripRes
 trackCb _org req = withFlowHandlerBecknAPI $ do
   validateContext "on_track" $ req ^. #context
   let context = req ^. #context

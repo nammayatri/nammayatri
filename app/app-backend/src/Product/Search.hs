@@ -48,7 +48,7 @@ import Types.ProductInfo
 import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 
-search :: Person.Person -> API.SearchReq -> FlowHandler AckResponse
+search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search person req = withFlowHandlerBecknAPI $ do
   validateDateTime req
   validateServiceability req
@@ -63,12 +63,13 @@ search person req = withFlowHandlerBecknAPI $ do
     Location.create toLocation
     QCase.create case_
   env <- ask
-  let bapNwAddr = env ^. #bapNwAddress
-      context = mkContext "search" (getId (case_ ^. #_id)) msgId now (Just bapNwAddr) Nothing
+  let txnId = getId (case_ ^. #_id)
+      bapNwAddr = env ^. #bapNwAddress
+      context = mkContext "search" txnId msgId now (Just bapNwAddr) Nothing
       intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
   AckResponse {} <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
-  return $ AckResponse context (ack ACK) Nothing
+  return $ API.SearchRes txnId
   where
     validateDateTime sreq = do
       currTime <- getCurrentTime

@@ -5,7 +5,6 @@ import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
 import Beckn.Types.Id
@@ -123,7 +122,7 @@ getFutureTime =
 searchServices ::
   Text ->
   AppBESearch.SearchReq ->
-  ClientM AckResponse
+  ClientM AppBESearch.SearchRes
 searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: Text -> IO AppBESearch.SearchReq
@@ -145,11 +144,11 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
 _ :<|> setDriverOnline :<|> getNotificationInfo :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
-buildAppCancelReq :: Text -> Text -> CancelAPI.Entity -> CancelAPI.CancelReq
-buildAppCancelReq guid entityId entityType =
+buildAppCancelReq :: Text -> CancelAPI.Entity -> CancelAPI.CancelReq
+buildAppCancelReq entityId entityType =
   CancelAPI.CancelReq
-    { transaction_id = guid,
-      message = CancelAPI.Cancel entityId entityType
+    { entityId = entityId,
+      entityType = entityType
     }
 
 -- For the idea behind generating a client, when nested routes are involved,
@@ -187,13 +186,13 @@ buildCaseStatusRes caseId = do
       appCaseId = Id caseId
   getCaseStatusRes appCaseId
 
-appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM AckResponse
+appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM APISuccess
 appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
-appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM AckResponse
+appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> Id PI.ProductInstance -> Id Case.Case -> ClientM AckResponse
+callAppFeedback :: Int -> Id PI.ProductInstance -> Id Case.Case -> ClientM APISuccess
 callAppFeedback ratingValue productInstanceId caseId =
   let request =
         AppFeedback.FeedbackReq

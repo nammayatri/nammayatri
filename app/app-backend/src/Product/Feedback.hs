@@ -3,7 +3,9 @@
 module Product.Feedback where
 
 import qualified App.Types as App
+import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.API.Feedback as Beckn
+import Beckn.Types.Core.Ack (AckResponse (AckResponse))
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
@@ -59,4 +61,5 @@ feedback person request = withFlowHandlerBecknAPI $ do
                 }
           }
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg
+  AckResponse {} <- Gateway.feedback gatewayUrl $ Beckn.FeedbackReq context feedbackMsg
+  return Success

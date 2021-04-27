@@ -1,6 +1,6 @@
 module Types.API.Status where
 
-import Beckn.Types.Core.Ack (AckResponse)
+import Beckn.Types.APISuccess (APISuccess)
 import EulerHS.Prelude
 
 newtype StatusReq = StatusReq
@@ -8,4 +8,4 @@ newtype StatusReq = StatusReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-type StatusRes = AckResponse
+type StatusRes = APISuccess

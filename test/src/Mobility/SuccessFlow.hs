@@ -42,7 +42,7 @@ spec = do
       ackResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right ackResponse = ackResult
-          appCaseid = ackResponse ^. #_context . #_transaction_id
+          appCaseid = ackResponse ^. #caseId
 
       -- All rides are accepted by default and has fare calculated
 

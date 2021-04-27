@@ -3,6 +3,7 @@
 module Product.Status (status, onStatus) where
 
 import App.Types
+import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
 import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
@@ -17,7 +18,7 @@ import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
 import qualified Storage.Queries.Organization as OQ
-import Types.API.Status as Status
+import Types.API.Status
 import Types.Error
 import qualified Utils.Notifications as Notify
 import Utils.Routes
@@ -35,7 +36,7 @@ status person StatusReq {..} = withFlowHandlerBecknAPI $ do
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   AckResponse {} <- Gateway.status baseUrl $ API.StatusReq context statusMessage
-  return $ AckResponse context (ack ACK) Nothing
+  return Success
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus _org req = withFlowHandlerBecknAPI $ do

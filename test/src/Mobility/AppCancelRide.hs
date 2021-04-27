@@ -34,7 +34,7 @@ spec = do
       ackResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right ackResponse = ackResult
-          appCaseid = ackResponse ^. #_context . #_transaction_id
+          appCaseid = ackResponse ^. #caseId
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride
@@ -52,12 +52,11 @@ spec = do
       confirmResult `shouldSatisfy` isRight
 
       -- cancel request initiated by App
-      txnId <- UUID.nextUUID
       cancelResult <-
         runClient
           appClientEnv
           ( cancelRide appRegistrationToken $
-              buildAppCancelReq (UUID.toText $ fromJust txnId) productInstanceId CancelAPI.PRODUCT_INSTANCE
+              buildAppCancelReq productInstanceId CancelAPI.PRODUCT_INSTANCE
           )
       cancelResult `shouldSatisfy` isRight
 

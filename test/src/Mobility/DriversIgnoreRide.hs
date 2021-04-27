@@ -40,7 +40,7 @@ spec = do
       ackResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right ackResponse = ackResult
-          appCaseid = ackResponse ^. #_context . #_transaction_id
+          appCaseid = ackResponse ^. #caseId
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride

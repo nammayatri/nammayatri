@@ -4,7 +4,7 @@ module Types.API.Feedback
   )
 where
 
-import Beckn.Types.Core.Ack (AckResponse)
+import Beckn.Types.APISuccess (APISuccess)
 import EulerHS.Prelude
 
 data FeedbackReq = FeedbackReq
@@ -14,4 +14,4 @@ data FeedbackReq = FeedbackReq
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-type FeedbackRes = AckResponse
+type FeedbackRes = APISuccess

@@ -14,3 +14,8 @@ data SearchReq = SearchReq
     fare :: DecimalValue
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+newtype SearchRes = SearchRes
+  { caseId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)

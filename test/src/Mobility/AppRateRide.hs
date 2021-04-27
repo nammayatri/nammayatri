@@ -47,7 +47,7 @@ spec = do
       searchACK `shouldSatisfy` isRight
 
       let Right searchResponse = searchACK
-      let appCaseId = Id $ searchResponse ^. #_context . #_transaction_id
+      let appCaseId = Id $ searchResponse ^. #caseId
 
       productInstance :| [] <- poll $ do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)
@@ -120,8 +120,6 @@ spec = do
         runClient appClient $
           F.callAppFeedback 5 appProductInstanceId appCaseId
       appFeedbackResult `shouldSatisfy` isRight
-      let Right appFeedbackResponse = appFeedbackResult
-      appFeedbackResponse ^. #_error `shouldSatisfy` isNothing
 
       driverInfoResult <-
         runClient transporterClient $ F.callGetPerson (Id F.testDriverId)
