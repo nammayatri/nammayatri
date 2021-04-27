@@ -8,6 +8,7 @@ module Beckn.Utils.Common
     module Beckn.Utils.Logging,
     module Beckn.Utils.Error,
     module Beckn.Types.Flow,
+    module Beckn.Utils.Servant.Client,
   )
 where
 
@@ -21,6 +22,7 @@ import Beckn.Types.Field
 import Beckn.Types.Flow
 import Beckn.Utils.Error
 import Beckn.Utils.Logging
+import Beckn.Utils.Servant.Client
 import Control.Monad.Reader
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Base64 as DBB
