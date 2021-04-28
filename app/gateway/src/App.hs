@@ -68,7 +68,7 @@ runGateway configModifier = do
         authManager <- L.runIO getManager
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections redisCfg)
-          >>= handleLeft exitRedisConnPrepFailure "Exception thrown: " . first (id @SomeException)
+          >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         _ <-
           prepareDBConnections
             >>= handleLeft exitDBConnPrepFailure "Exception thrown: "

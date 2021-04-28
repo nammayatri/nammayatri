@@ -49,11 +49,11 @@ runBackgroundTaskManager configModifier = do
       withLogTag "BTM startup" $ do
         _ <-
           try checkConnections
-            >>= handleLeft exitConnCheckFailure "Connections check failed. Exception thrown: " . first (id @SomeException)
+            >>= handleLeft @SomeException exitConnCheckFailure "Connections check failed. Exception thrown: "
         logInfo "Setting up for signature auth..."
         allProviders <-
           try Storage.loadAllProviders
-            >>= handleLeft exitLoadAllProvidersFailure "Exception thrown: " . first (id @SomeException)
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map (getShortId . Organization._shortId) allProviders
         getManagers <-
           prepareAuthManagers flowRt appEnv allShortIds

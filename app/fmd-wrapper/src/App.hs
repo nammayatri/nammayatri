@@ -44,7 +44,7 @@ runFMDWrapper configModifier = do
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
         authManager <- L.runIO getManager
         try (prepareRedisConnections $ appCfg ^. #redisCfg)
-          >>= handleLeft exitRedisConnPrepFailure "Exception thrown: " . first (id @SomeException)
+          >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))

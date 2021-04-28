@@ -47,7 +47,7 @@ runTransporterBackendApp' appCfg settings = do
         logInfo "Setting up for signature auth..."
         allProviders <-
           try Storage.loadAllProviders
-            >>= handleLeft exitLoadAllProvidersFailure "Exception thrown: " . first (id @SomeException)
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map (getShortId . Organization._shortId) allProviders
         getManagers <-
           prepareAuthManagers flowRt appEnv allShortIds
@@ -56,7 +56,7 @@ runTransporterBackendApp' appCfg settings = do
         logInfo $ "Loaded http managers - " <> show (keys managerMap)
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg ^. #redisCfg)
-          >>= handleLeft exitRedisConnPrepFailure "Exception thrown: " . first (id @SomeException)
+          >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))

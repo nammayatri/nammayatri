@@ -5,7 +5,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import System.Exit (ExitCode)
 
-handleLeft :: (Log m, Show a, L.MonadFlow m) => ExitCode -> Text -> Either a b -> m b
+handleLeft :: (Show a, Log m, L.MonadFlow m) => ExitCode -> Text -> Either a b -> m b
 handleLeft exitCode msg = \case
   Left err -> do
     logError (msg <> show err)
