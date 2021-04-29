@@ -37,22 +37,34 @@ type RunReadablePgTable table db =
 type Table table db = B.DatabaseEntity Postgres db (B.TableEntity table)
 
 class DBUser m where
+  findOne ::
+    ( HasCallStack,
+      ReadablePgTable table db
+    ) =>
+    Table table db ->
+    (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
+    m (T.DBResult (Maybe (table Identity)))
+  findAll ::
+    (HasCallStack, ReadablePgTable table db) =>
+    Table table db ->
+    (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
+    m (T.DBResult [table Identity])
   update ::
     (HasCallStack, RunReadablePgTable table db) =>
     Table table db ->
     (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
     (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-    m (Either T.DBError ())
+    m (T.DBResult ())
   createOne ::
     (HasCallStack, PgTable table db) =>
     Table table db ->
     B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-    m (Either T.DBError ())
+    m (T.DBResult ())
   delete ::
     (HasCallStack, RunReadablePgTable table db) =>
     Table table db ->
     (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-    m (Either T.DBError ())
+    m (T.DBResult ())
 
 data DBEnv = DBEnv
   { schemaName :: Text,
@@ -65,45 +77,59 @@ instance HasSchemaName SqlDB where
   getSchemaName = asks schemaName
 
 instance DBUser SqlDB where
-  update = update'
-  delete = delete'
-  createOne = createOne'
+  findOne a b = Right <$> findOne' a b
+  findAll a b = Right <$> findAll' a b
+  update a b c = Right <$> update' a b c
+  delete a b = Right <$> delete' a b
+  createOne a b = Right <$> createOne' a b
+
+findOne' ::
+  ( HasCallStack,
+    ReadablePgTable table db
+  ) =>
+  Table table db ->
+  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
+  SqlDB (Maybe (table Identity))
+findOne' dbTable predicate = lift . L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
+
+findAll' ::
+  (HasCallStack, ReadablePgTable table db) =>
+  Table table db ->
+  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
+  SqlDB [table Identity]
+findAll' dbTable predicate = lift . L.findRows $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 update' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  SqlDB (Either T.DBError ())
-update' dbTable setClause predicate = do
-  lift $ L.updateRows (B.update dbTable setClause predicate)
-  return $ Right ()
+  SqlDB ()
+update' dbTable setClause predicate = lift $ L.updateRows (B.update dbTable setClause predicate)
 
 createOne' ::
   (HasCallStack, PgTable table db) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  SqlDB (Either T.DBError ())
-createOne' dbTable value = do
-  lift . L.insertRows $ B.insert dbTable value
-  return $ Right ()
+  SqlDB ()
+createOne' dbTable value = lift . L.insertRows $ B.insert dbTable value
 
 delete' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  SqlDB (Either T.DBError ())
-delete' dbTable predicate = do
-  lift . L.deleteRows $ B.delete dbTable predicate
-  return $ Right ()
+  SqlDB ()
+delete' dbTable predicate = lift . L.deleteRows $ B.delete dbTable predicate
 
 instance (DB.HasDbCfg r) => DBUser (FlowR r) where
-  update dbTable setClause predicate = runSqlDB (update' dbTable setClause predicate) >>= checkDBError
-  delete dbTable predicate = runSqlDB (delete' dbTable predicate) >>= checkDBError
-  createOne dbTable value = runSqlDB (createOne' dbTable value) >>= checkDBError
+  findOne dbTable predicate = runSqlDB (findOne' dbTable predicate)
+  findAll dbTable predicate = runSqlDB (findAll' dbTable predicate)
+  update dbTable setClause predicate = runSqlDB (update' dbTable setClause predicate)
+  delete dbTable predicate = runSqlDB (delete' dbTable predicate)
+  createOne dbTable value = runSqlDB (createOne' dbTable value)
 
 runSqlDB' ::
-  (HasCallStack, T.JSONEx a) =>
+  HasCallStack =>
   ( T.SqlConn Pg ->
     L.SqlDB Pg a ->
     FlowR r (T.DBResult a)
@@ -118,13 +144,13 @@ runSqlDB' runSqlDBFunction query = do
   runSqlDBFunction connection (runReaderT query env)
 
 runSqlDB ::
-  (HasCallStack, T.JSONEx a) =>
+  HasCallStack =>
   SqlDB a ->
   DB.FlowWithDb r (T.DBResult a)
 runSqlDB = runSqlDB' L.runDB
 
 runSqlDBTransaction ::
-  (HasCallStack, T.JSONEx a) =>
+  HasCallStack =>
   SqlDB a ->
   DB.FlowWithDb r a
 runSqlDBTransaction = runSqlDB' L.runTransaction >=> checkDBError

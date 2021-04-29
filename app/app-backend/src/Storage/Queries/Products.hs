@@ -3,7 +3,6 @@ module Storage.Queries.Products where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Types as DB
-import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Products as Storage

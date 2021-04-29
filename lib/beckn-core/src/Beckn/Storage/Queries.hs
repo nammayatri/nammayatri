@@ -33,25 +33,6 @@ findOneWithErr dbTable predicate =
     >>= checkDBError
     >>= fromMaybeM (SQLResultError "Expected at least one row")
 
-findOne ::
-  ( HasCallStack,
-    RunReadablePgTable table db
-  ) =>
-  Table table db ->
-  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  DB.FlowWithDb r (T.DBResult (Maybe (table Identity)))
-findOne dbTable predicate = runSqlDB $ findOne' dbTable predicate
-
-findOne' ::
-  ( HasCallStack,
-    ReadablePgTable table db
-  ) =>
-  Table table db ->
-  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  SqlDB (Maybe (table Identity))
-findOne' dbTable predicate =
-  lift . L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
-
 findAllOrErr ::
   ( HasCallStack,
     RunReadablePgTable table db
@@ -62,23 +43,6 @@ findAllOrErr ::
 findAllOrErr dbTable predicate = do
   runSqlDB (findAll' dbTable predicate)
     >>= checkDBError
-
-findAll ::
-  ( HasCallStack,
-    RunReadablePgTable table db
-  ) =>
-  Table table db ->
-  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  DB.FlowWithDb r (T.DBResult [table Identity])
-findAll dbTable predicate = runSqlDB $ findAll' dbTable predicate
-
-findAll' ::
-  (HasCallStack, ReadablePgTable table db) =>
-  Table table db ->
-  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  SqlDB [table Identity]
-findAll' dbTable predicate =
-  lift . L.findRows $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAllRows ::
   (HasCallStack, RunReadablePgTable table db) =>
