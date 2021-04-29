@@ -2,7 +2,7 @@ module Storage.Queries.Issues (insertIssue) where
 
 import qualified App.Types as App
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as Queries
+import qualified Beckn.Storage.DB.Types as DB
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Issue as Issue
 import qualified Database.Beam as B
@@ -17,5 +17,5 @@ getDbTable =
 insertIssue :: Issue.Issue -> App.Flow ()
 insertIssue Issue.Issue {..} = do
   dbTable <- getDbTable
-  Queries.createOne dbTable (Storage.insertExpression Issue.Issue {..})
+  DB.createOne dbTable (Storage.insertExpression Issue.Issue {..})
     >>= checkDBError

@@ -4,6 +4,7 @@ module Storage.Queries.ProductInstance where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -42,7 +43,7 @@ createFlow =
 create :: Storage.ProductInstance -> DB.SqlDB ()
 create productInstance = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression productInstance)
+  void $ DB.createOne' dbTable (Storage.insertExpression productInstance)
 
 findAllByIds :: Integer -> Integer -> [Id Product.Products] -> Flow [Storage.ProductInstance]
 findAllByIds limit offset ids = do
@@ -121,10 +122,11 @@ updateStatus ::
 updateStatus prodInstId status = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause status currTime)
-    (predicate prodInstId)
+  void $
+    DB.update'
+      dbTable
+      (setClause status currTime)
+      (predicate prodInstId)
   where
     predicate pId Storage.ProductInstance {..} =
       _id ==. B.val_ pId
@@ -157,10 +159,11 @@ updateStatusByIds ::
 updateStatusByIds ids status = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause status currTime)
-    (predicate ids)
+  void $
+    DB.update'
+      dbTable
+      (setClause status currTime)
+      (predicate ids)
   where
     predicate pids Storage.ProductInstance {..} = B.in_ _id (B.val_ <$> pids)
     setClause scStatus currTime' Storage.ProductInstance {..} =
@@ -318,10 +321,11 @@ updateDriver ::
 updateDriver ids driverId = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause driverId now)
-    (predicate ids)
+  void $
+    DB.update'
+      dbTable
+      (setClause driverId now)
+      (predicate ids)
   where
     predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)
     setClause sDriverId currTime Storage.ProductInstance {..} =
@@ -343,10 +347,11 @@ updateVehicle ::
 updateVehicle ids vehId = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause (getId <$> vehId) now)
-    (predicate ids)
+  void $
+    DB.update'
+      dbTable
+      (setClause (getId <$> vehId) now)
+      (predicate ids)
   where
     predicate pids Storage.ProductInstance {..} = _id `B.in_` (B.val_ <$> pids)
     setClause vehicleId currTime' Storage.ProductInstance {..} =
@@ -358,10 +363,11 @@ updateVehicle ids vehId = do
 updateInfo :: Id Storage.ProductInstance -> Text -> DB.SqlDB ()
 updateInfo prodInstId info = do
   dbTable <- getDbTable
-  DB.update'
-    dbTable
-    (setClause info)
-    (predicate prodInstId)
+  void $
+    DB.update'
+      dbTable
+      (setClause info)
+      (predicate prodInstId)
   where
     predicate id Storage.ProductInstance {..} = _id ==. B.val_ id
     setClause pInfo Storage.ProductInstance {..} =

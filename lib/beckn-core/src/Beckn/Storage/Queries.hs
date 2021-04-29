@@ -6,74 +6,15 @@ module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.Common as DB
 import qualified Beckn.Storage.DB.Config as DB
-import Beckn.Types.Common
+import Beckn.Storage.DB.Types
 import Beckn.Types.Error
-import Beckn.Types.Schema (HasSchemaName, getSchemaName)
 import Beckn.Utils.Common
-import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
-
-type PgTable table db =
-  ( B.Beamable table,
-    B.Database Postgres db
-  )
-
-type RunPgTable table db =
-  PgTable table db
-
-type ReadablePgTable table db =
-  ( PgTable table db,
-    B.FromBackendRow Postgres (table Identity)
-  )
-
-type RunReadablePgTable table db =
-  ( ReadablePgTable table db,
-    T.JSONEx (table Identity)
-  )
-
-type Table table db = B.DatabaseEntity Postgres db (B.TableEntity table)
-
-data DBEnv = DBEnv
-  { schemaName :: Text,
-    currentTime :: UTCTime
-  }
-
-type SqlDB = ReaderT DBEnv (L.SqlDB Pg)
-
-instance HasSchemaName SqlDB where
-  getSchemaName = asks schemaName
-
-runSqlDB' ::
-  (HasCallStack, T.JSONEx a) =>
-  ( T.SqlConn Pg ->
-    L.SqlDB Pg a ->
-    FlowR r (T.DBResult a)
-  ) ->
-  SqlDB a ->
-  DB.FlowWithDb r (T.DBResult a)
-runSqlDB' runSqlDBFunction query = do
-  connection <- DB.getOrInitConn
-  schemaName <- getSchemaName
-  currentTime <- getCurrentTime
-  let env = DBEnv {..}
-  runSqlDBFunction connection (runReaderT query env)
-
-runSqlDB ::
-  (HasCallStack, T.JSONEx a) =>
-  SqlDB a ->
-  DB.FlowWithDb r (T.DBResult a)
-runSqlDB = runSqlDB' L.runDB
-
-runSqlDBTransaction ::
-  (HasCallStack, T.JSONEx a) =>
-  SqlDB a ->
-  DB.FlowWithDb r a
-runSqlDBTransaction = runSqlDB' L.runTransaction >=> checkDBError
 
 run :: (HasCallStack, T.JSONEx a) => L.SqlDB Pg a -> DB.FlowWithDb r (T.DBResult a)
 run query = do
@@ -139,55 +80,6 @@ findAll' ::
 findAll' dbTable predicate =
   lift . L.findRows $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
--- TODO: protect from multiple inserts
-createOne ::
-  (HasCallStack, RunPgTable table db) =>
-  Table table db -> -- dbTable
-  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  DB.FlowWithDb r (T.DBResult ())
-createOne = bulkInsert
-
-createOne' ::
-  (HasCallStack, PgTable table db) =>
-  Table table db ->
-  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  SqlDB ()
-createOne' = bulkInsert'
-
-bulkInsert ::
-  (HasCallStack, RunPgTable table db) =>
-  Table table db ->
-  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  DB.FlowWithDb r (T.DBResult ())
-bulkInsert dbTable = runSqlDB . bulkInsert' dbTable
-
-bulkInsert' ::
-  (HasCallStack, PgTable table db) =>
-  Table table db ->
-  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  SqlDB ()
-bulkInsert' dbTable =
-  lift . L.insertRows . B.insert dbTable
-
--- TODO: remove this function in favour of transactions
-findOrCreateOne ::
-  (HasCallStack, RunReadablePgTable table db) =>
-  Table table db ->
-  (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  DB.FlowWithDb r (Maybe (table Identity))
-findOrCreateOne dbTable findPredicate insertExpression = do
-  res <- runSqlDB $ do
-    findAll' dbTable findPredicate >>= \case
-      [] -> do
-        createOne' dbTable insertExpression
-        findAll' dbTable findPredicate
-      xs -> pure xs
-  checkDBError res >>= \case
-    [] -> throwError $ SQLResultError "Just created row not found"
-    [s] -> pure $ Just s
-    _ -> throwError $ SQLResultError "Multiple rows found"
-
 findAllRows ::
   (HasCallStack, RunReadablePgTable table db) =>
   Table table db ->
@@ -199,37 +91,6 @@ findAllRows' ::
   Table table db ->
   SqlDB [table Identity]
 findAllRows' dbTable = lift . L.findRows $ B.select $ B.all_ dbTable
-
--- use this only for single sql statement, for multiple use transactions
-update ::
-  (HasCallStack, RunReadablePgTable table db) =>
-  Table table db ->
-  (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
-  (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  DB.FlowWithDb r (T.DBResult ())
-update dbTable setClause predicate = runSqlDB $ update' dbTable setClause predicate
-
-update' ::
-  (HasCallStack, ReadablePgTable table db) =>
-  Table table db ->
-  (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
-  (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  SqlDB ()
-update' dbTable setClause predicate = lift . L.updateRows $ B.update dbTable setClause predicate
-
-delete ::
-  (HasCallStack, RunReadablePgTable table db) =>
-  Table table db ->
-  (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  DB.FlowWithDb r (T.DBResult ())
-delete dbTable predicate = runSqlDB $ delete' dbTable predicate
-
-delete' ::
-  (HasCallStack, ReadablePgTable table db) =>
-  Table table db ->
-  (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  SqlDB ()
-delete' dbTable predicate = lift . L.deleteRows $ B.delete dbTable predicate
 
 type Scope2 = BI.QNested (BI.QNested B.QBaseScope)
 

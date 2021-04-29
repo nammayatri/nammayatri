@@ -3,7 +3,7 @@
 module Product.BecknProvider.Search (search) where
 
 import App.Types
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.DB.Types as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as Callback

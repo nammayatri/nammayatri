@@ -3,7 +3,7 @@
 module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.DB.Types as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Confirm

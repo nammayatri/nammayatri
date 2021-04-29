@@ -2,6 +2,7 @@ module Storage.Queries.RideRequest where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -24,7 +25,7 @@ createFlow =
 create :: RideRequest.RideRequest -> DB.SqlDB ()
 create rideRequest = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression rideRequest)
+  void $ DB.createOne' dbTable (Storage.insertExpression rideRequest)
 
 fetchOldest :: Integer -> Flow [RideRequest.RideRequest]
 fetchOldest limit = do

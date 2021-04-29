@@ -4,6 +4,7 @@ module Storage.Queries.DriverStats where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -50,7 +51,7 @@ updateIdleTime :: Id Driver -> DB.SqlDB ()
 updateIdleTime driverId = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  DB.update' dbTable (setClause now) (predicate driverId)
+  void $ DB.update' dbTable (setClause now) (predicate driverId)
   where
     setClause now Storage.DriverStats {..} =
       mconcat

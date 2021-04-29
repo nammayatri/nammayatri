@@ -5,6 +5,7 @@ module Storage.Queries.DriverInformation where
 import App.Types
 import Beckn.External.Encryption
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -85,7 +86,7 @@ updateOnRide ::
 updateOnRide driverId onRide = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  DB.update' dbTable (setClause onRide now) (predicate personId)
+  void $ DB.update' dbTable (setClause onRide now) (predicate personId)
   where
     personId = cast driverId
     setClause onR now' DriverInformation.DriverInformation {..} =

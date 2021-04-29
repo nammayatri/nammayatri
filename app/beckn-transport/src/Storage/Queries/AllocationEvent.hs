@@ -2,6 +2,7 @@ module Storage.Queries.AllocationEvent where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)

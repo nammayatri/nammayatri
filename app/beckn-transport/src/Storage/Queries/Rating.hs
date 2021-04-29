@@ -2,7 +2,8 @@ module Storage.Queries.Rating where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as Query
+import qualified Beckn.Storage.DB.Types as DB
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -23,14 +24,14 @@ getDbTable =
 create :: Storage.Rating -> Flow ()
 create rating = do
   dbTable <- getDbTable
-  Query.createOne dbTable (Storage.insertExpression rating)
+  DB.createOne dbTable (Storage.insertExpression rating)
     >>= checkDBError
 
 updateRatingValue :: Id Storage.Rating -> Int -> Flow ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  Query.update
+  DB.update
     dbTable
     ( \Storage.Rating {..} ->
         mconcat
@@ -44,7 +45,7 @@ updateRatingValue ratingId newRatingValue = do
 findByProductInstanceId :: Id PI.ProductInstance -> Flow (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
-  Query.findOne dbTable predicate
+  DB.findOne dbTable predicate
     >>= checkDBError
   where
     predicate Storage.Rating {..} = _productInstanceId ==. B.val_ productInsId
@@ -53,7 +54,7 @@ findAllRatingsForPerson :: Id Person -> Flow [Storage.Rating]
 findAllRatingsForPerson personId = do
   ratingTable <- getDbTable
   productInstanceTable <- PI.getDbTable
-  Query.findAllByJoinWithoutLimits
+  DB.findAllByJoinWithoutLimits
     orderBy
     (joinPredicate ratingTable productInstanceTable)
     >>= checkDBError

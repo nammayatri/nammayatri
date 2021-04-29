@@ -7,7 +7,7 @@ import Beckn.Product.Validation.Context
   ( validateContextCommons,
     validateDomain,
   )
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.DB.Types as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Cancel as API

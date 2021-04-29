@@ -2,6 +2,7 @@ module Storage.Queries.ProductInstance where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -27,7 +28,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.ProductInstance -> DB.SqlDB ()
 create productInstance = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression productInstance)
+  void $ DB.createOne' dbTable (Storage.insertExpression productInstance)
 
 findById :: Id Storage.ProductInstance -> Flow (T.DBResult (Maybe Storage.ProductInstance))
 findById pid = do
@@ -158,7 +159,7 @@ updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> DB.Sq
 updateMultiple id prdInst = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update' dbTable (setClause currTime prdInst) (predicate id)
+  void $ DB.update' dbTable (setClause currTime prdInst) (predicate id)
   where
     predicate piid Storage.ProductInstance {..} = _id ==. B.val_ piid
     setClause now prodInst Storage.ProductInstance {..} =

@@ -4,7 +4,7 @@ module Product.ProductInstance where
 
 import App.Types
 import Beckn.External.FCM.Types as FCM
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.DB.Types as DB
 import Beckn.Types.App as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case

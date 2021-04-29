@@ -2,6 +2,7 @@ module Storage.Queries.Location where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -24,7 +25,7 @@ createFlow = do
 create :: Storage.Location -> DB.SqlDB ()
 create Storage.Location {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
+  void $ DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)

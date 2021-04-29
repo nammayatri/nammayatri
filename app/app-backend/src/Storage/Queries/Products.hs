@@ -2,6 +2,7 @@ module Storage.Queries.Products where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -23,7 +24,7 @@ createFlow =
 create :: Storage.Products -> DB.SqlDB ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
+  void $ DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
 
 findById :: Id Storage.Products -> Flow (T.DBResult (Maybe Storage.Products))
 findById pid = do

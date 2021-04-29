@@ -2,6 +2,7 @@ module Storage.Queries.Case where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -24,7 +25,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Case -> DB.SqlDB ()
 create case_ = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression case_)
+  void $ DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByIds :: [Id Storage.Case] -> Flow (T.DBResult [Storage.Case])
 findAllByIds ids = do
@@ -70,10 +71,11 @@ updateStatus ::
 updateStatus id newStatus = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause newStatus currTime)
-    (predicate id)
+  void $
+    DB.update'
+      dbTable
+      (setClause newStatus currTime)
+      (predicate id)
   where
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
     setClause status currTime Storage.Case {..} =
@@ -108,10 +110,11 @@ updateStatusByIds ::
 updateStatusByIds ids newStatus = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause newStatus currTime)
-    (predicate ids)
+  void $
+    DB.update'
+      dbTable
+      (setClause newStatus currTime)
+      (predicate ids)
   where
     predicate cids Storage.Case {..} = B.in_ _id (B.val_ <$> cids)
     setClause status currTime Storage.Case {..} =

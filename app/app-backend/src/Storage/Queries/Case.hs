@@ -4,6 +4,7 @@ module Storage.Queries.Case where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
+import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -27,7 +28,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Case -> DB.SqlDB ()
 create case_ = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression case_)
+  void $ DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByTypeAndStatuses ::
   Id Person.Person ->
@@ -129,10 +130,11 @@ updateValidTill :: Id Storage.Case -> UTCTime -> DB.SqlDB ()
 updateValidTill id validTill = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause validTill currTime)
-    (predicate id)
+  void $
+    DB.update'
+      dbTable
+      (setClause validTill currTime)
+      (predicate id)
   where
     setClause scValidTill currTime Storage.Case {..} =
       mconcat
@@ -148,10 +150,11 @@ updateStatus :: Id Storage.Case -> Storage.CaseStatus -> DB.SqlDB ()
 updateStatus id status = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause status currTime)
-    (predicate id)
+  void $
+    DB.update'
+      dbTable
+      (setClause status currTime)
+      (predicate id)
   where
     setClause pStatus currTime Storage.Case {..} =
       mconcat
@@ -197,7 +200,7 @@ updateInfo :: Id Storage.Case -> Text -> DB.SqlDB ()
 updateInfo caseId csInfo = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  DB.update' dbTable (setClause csInfo currTime) (predicate caseId)
+  void $ DB.update' dbTable (setClause csInfo currTime) (predicate caseId)
   where
     setClause cInfo currTime' Storage.Case {..} =
       mconcat
