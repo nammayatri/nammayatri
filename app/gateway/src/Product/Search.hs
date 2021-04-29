@@ -84,5 +84,6 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI 
       <> decodeUtf8 (encode req)
       <> ", resp: "
       <> show eRes
-  AckResponse {} <- eRes & fromEitherM (ExternalAPICallError providerUrl)
+  eRes & fromEitherM (ExternalAPICallError providerUrl)
+    >>= checkAckResponseError (ExternalAPIResponseError "on_search")
   mkOkResponse (req ^. #context)

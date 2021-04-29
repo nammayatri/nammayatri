@@ -53,7 +53,8 @@ cancelProductInstance person req = do
         OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
           >>= fromMaybeM OrgNotFound
       baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      AckResponse {} <- Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
+      Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
+        >>= checkAckResponseError (ExternalAPIResponseError "cancel")
       return Success
 
 searchCancel :: Person.Person -> CancelReq -> Flow CancelRes

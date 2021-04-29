@@ -68,7 +68,8 @@ search person req = withFlowHandlerBecknAPI $ do
       context = mkContext "search" txnId msgId now (Just bapNwAddr) Nothing
       intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
-  AckResponse {} <- Gateway.search (xGatewayUri env) $ Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags)
+  Gateway.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags))
+    >>= checkAckResponseError (ExternalAPIResponseError "search")
   return $ API.SearchRes txnId
   where
     validateDateTime sreq = do

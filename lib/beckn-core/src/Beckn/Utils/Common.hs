@@ -16,6 +16,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack as Ack
 import Beckn.Types.Core.Context
+import Beckn.Types.Core.Error
 import Beckn.Types.Error
 import Beckn.Types.Error.APIError
 import Beckn.Types.Field
@@ -146,3 +147,6 @@ type HasFlowEnv m r fields =
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
 foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
+
+checkAckResponseError :: (MonadThrow m, Log m, IsAPIException e) => (Error -> e) -> AckResponse -> m ()
+checkAckResponseError err ackResp = whenJust (ackResp ^. #_error) (throwError . err)

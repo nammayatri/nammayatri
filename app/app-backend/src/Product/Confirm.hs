@@ -53,7 +53,8 @@ confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
   context <- buildContext "confirm" caseId msgId
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
-  AckResponse {} <- Gateway.confirm baseUrl $ ConfirmReq context $ ConfirmOrder order
+  Gateway.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
+    >>= checkAckResponseError (ExternalAPIResponseError "confirm")
   return Success
   where
     mkOrder productInstance = do

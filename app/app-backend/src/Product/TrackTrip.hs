@@ -44,7 +44,8 @@ track person req = withFlowHandlerBecknAPI $ do
   tracker <- info ^. #_tracker & fromMaybeM (InternalError "PI.info has no tracker field")
   let gTripId = tracker ^. #_trip . #id
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  AckResponse {} <- Gateway.track gatewayUrl . API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing
+  Gateway.track gatewayUrl (API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing)
+    >>= checkAckResponseError (ExternalAPIResponseError "track")
   return Success
 
 trackCb :: Organization.Organization -> API.OnTrackTripReq -> FlowHandler API.OnTrackTripRes

@@ -282,6 +282,7 @@ instance IsBecknAPIError ContextError where
 data ExternalAPICallError
   = ExternalAPICallError BaseUrl ClientError
   | ExternalAPICallErrorWithCode Text BaseUrl ClientError
+  | ExternalAPIResponseError Text Error
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''ExternalAPICallError
@@ -290,9 +291,14 @@ instance IsAPIError ExternalAPICallError where
   toErrorCode = \case
     ExternalAPICallError _ _ -> "EXTERNAL_API_CALL_ERROR"
     ExternalAPICallErrorWithCode code _ _ -> code
+    ExternalAPIResponseError _ _ -> "EXTERNAL_ANSWER_ERROR"
   toMessage = \case
     ExternalAPICallError url err -> externalAPICallErrorMessage url err
     ExternalAPICallErrorWithCode _ url err -> externalAPICallErrorMessage url err
+    ExternalAPIResponseError ep err ->
+      Just $
+        "Beckn " <> ep <> " request returned error code " <> _code err
+          <> maybe "" ("with message: " <>) (_message err)
 
 externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
 externalAPICallErrorMessage baseUrl clientErr =
