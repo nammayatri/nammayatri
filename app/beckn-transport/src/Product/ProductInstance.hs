@@ -69,8 +69,7 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
       bapOrgId <- prodCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
       OQ.findOrganizationById $ Id bapOrgId
     fetchCase caseId = do
-      prodCase <- QCase.findById caseId
-      checkDBError prodCase
+      QCase.findById caseId
 
 listDriverRides :: SR.RegistrationToken -> Id SP.Person -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do

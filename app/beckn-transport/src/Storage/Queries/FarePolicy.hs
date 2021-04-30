@@ -5,7 +5,6 @@ module Storage.Queries.FarePolicy where
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.DB.Types as DB
-import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -16,7 +15,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
-import Utils.Common
+import Beckn.Types.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =
@@ -26,14 +25,12 @@ create :: Storage.FarePolicy -> Flow ()
 create Storage.FarePolicy {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.FarePolicy {..})
-    >>= checkDBError
 
 findFarePolicyByOrgAndVehicleVariant ::
   Id Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.FarePolicy {..} =
       _organizationId ==. B.val_ orgId
@@ -43,7 +40,6 @@ findFarePoliciesByOrgId :: Id Organization.Organization -> Flow [Storage.FarePol
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.FarePolicy {..} = _organizationId ==. B.val_ orgId
 
@@ -51,7 +47,6 @@ findFarePolicyById :: Id D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.FarePolicy {..} = _id ==. B.val_ fpId
 
@@ -61,7 +56,6 @@ updateFarePolicy farePolicy = do
   now <- getCurrentTime
   let farePolicyId = farePolicy ^. #_id
   DB.update dbTable (setClause farePolicy now) (predicate farePolicyId)
-    >>= checkDBError
   where
     setClause fp now Storage.FarePolicy {..} =
       mconcat

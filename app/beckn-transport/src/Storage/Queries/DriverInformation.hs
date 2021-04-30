@@ -19,7 +19,6 @@ import qualified Storage.Queries.Person as QPerson
 import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
-import Utils.Common
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
 getDbTable = DB._driverInformation . DB.transporterDb <$> getSchemaName
@@ -28,13 +27,11 @@ create :: DriverInformation.DriverInformation -> Flow ()
 create DriverInformation.DriverInformation {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
-    >>= checkDBError
 
 findById :: Id Driver -> Flow (Maybe DriverInformation.DriverInformation)
 findById driverId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     personId = cast driverId
     predicate DriverInformation.DriverInformation {..} = _driverId ==. B.val_ personId
@@ -64,7 +61,6 @@ updateActivity driverId active = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause active now) (predicate personId)
-    >>= checkDBError
   where
     personId = cast driverId
     setClause a now DriverInformation.DriverInformation {..} =
@@ -77,7 +73,6 @@ updateActivity driverId active = do
 updateOnRideFlow :: Id Driver -> Bool -> Flow ()
 updateOnRideFlow driverId onRide =
   DB.runSqlDB (updateOnRide driverId onRide)
-    >>= checkDBError
 
 updateOnRide ::
   Id Driver ->
@@ -100,7 +95,6 @@ deleteById :: Id Driver -> Flow ()
 deleteById driverId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate personId)
-    >>= checkDBError
   where
     personId = cast driverId
     predicate pid DriverInformation.DriverInformation {..} = _driverId ==. B.val_ pid
@@ -111,7 +105,6 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
   driverInfoDbTable <- getDbTable
 
   DB.findAllByJoin limit offset orderByDesc (joinQuery personDbTable driverInfoDbTable)
-    >>= checkDBError
     >>= traverse (bimapM decrypt return)
   where
     orderByDesc (Person.Person {..}, _) = B.desc_ _createdAt

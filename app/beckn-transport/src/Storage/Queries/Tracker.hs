@@ -10,7 +10,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Tracker as Storage
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.TrackerT))
 getDbTable =
@@ -20,13 +19,11 @@ create :: Storage.Tracker -> Flow ()
 create Storage.Tracker {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Tracker {..})
-    >>= checkDBError
 
 findTrackerById ::
   Id Storage.Tracker -> Flow (Maybe Storage.Tracker)
 findTrackerById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Tracker {..} = _id ==. B.val_ id

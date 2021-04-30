@@ -23,8 +23,7 @@ create :: Case -> Flow ()
 create c = do
   -- TODO add some validation checks
   -- and `throwDomainError CaseNotCreated` if needed
-  result <- Q.createFlow c
-  checkDBError result
+  Q.createFlow c
 
 -- | Find Cases
 findAllByTypeAndStatuses ::
@@ -35,26 +34,22 @@ findAllByTypeAndStatuses ::
   Maybe Integer ->
   Flow [Case]
 findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
-  result <- Q.findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset
-  checkDBError result
+  Q.findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset
 
 -- | Find Case by id
 findById :: Id Case -> Flow Case
 findById caseId = do
-  result <- Q.findById caseId
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findById caseId >>= fromMaybeM CaseNotFound
 
 -- | Find Case by id and type
 findByIdAndType :: Id Case -> CaseType -> Flow Case
 findByIdAndType caseId caseType = do
-  result <- Q.findByIdAndType caseId caseType
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findByIdAndType caseId caseType >>= fromMaybeM CaseNotFound
 
 -- | Find Case by id and a requestor id
 findIdByPerson :: Person.Person -> Id Case -> Flow Case
 findIdByPerson person caseId = do
-  result <- Q.findIdByPerson person caseId
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findIdByPerson person caseId >>= fromMaybeM CaseNotFound
 
 -- | Find Cases by list of ids
 findAllByIds :: [Id Case] -> Flow [Case]
@@ -62,32 +57,27 @@ findAllByIds caseIds =
   if null caseIds
     then pure []
     else do
-      result <- Q.findAllByIds caseIds
-      checkDBError result
+      Q.findAllByIds caseIds
 
 -- | Find Cases by a requestor id
 findAllByPerson :: Text -> Flow [Case]
 findAllByPerson perId = do
-  result <- Q.findAllByPerson perId
-  checkDBError result
+  Q.findAllByPerson perId
 
 -- | Find Cases by status and expirtaion date
 findAllExpiredByStatus :: [CaseStatus] -> Maybe UTCTime -> Maybe UTCTime -> Flow [Case]
 findAllExpiredByStatus statuses maybeFrom maybeTo = do
-  result <- Q.findAllExpiredByStatus statuses maybeFrom maybeTo
-  checkDBError result
+  Q.findAllExpiredByStatus statuses maybeFrom maybeTo
 
 -- | Update Case validity date
 updateValidTill :: Id Case -> UTCTime -> Flow ()
 updateValidTill cid validTill = do
-  result <- Q.updateValidTillFlow cid validTill
-  checkDBError result
+  Q.updateValidTillFlow cid validTill
 
 -- | Validate and update Case status
 updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
-  result <- Q.updateStatusFlow cid status
-  checkDBError result
+  Q.updateStatusFlow cid status
 
 -- | Find Cases by locations
 findAllWithLimitOffsetWhere ::
@@ -100,10 +90,8 @@ findAllWithLimitOffsetWhere ::
   Maybe Int ->
   Flow [Case]
 findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
-  result <- Q.findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset
-  checkDBError result
+  Q.findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset
 
 updateInfo :: Id Case -> Text -> Flow ()
 updateInfo cId info = do
-  result <- Q.updateInfoFlow cId info
-  checkDBError result
+  Q.updateInfoFlow cId info

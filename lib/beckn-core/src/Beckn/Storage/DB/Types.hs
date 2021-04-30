@@ -43,28 +43,28 @@ class DBUser m where
     ) =>
     Table table db ->
     (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-    m (T.DBResult (Maybe (table Identity)))
+    m (Maybe (table Identity))
   findAll ::
     (HasCallStack, ReadablePgTable table db) =>
     Table table db ->
     (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-    m (T.DBResult [table Identity])
+    m [table Identity]
   update ::
     (HasCallStack, RunReadablePgTable table db) =>
     Table table db ->
     (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
     (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-    m (T.DBResult ())
+    m ()
   createOne ::
     (HasCallStack, PgTable table db) =>
     Table table db ->
     B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-    m (T.DBResult ())
+    m ()
   delete ::
     (HasCallStack, RunReadablePgTable table db) =>
     Table table db ->
     (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-    m (T.DBResult ())
+    m ()
 
 data DBEnv = DBEnv
   { schemaName :: Text,
@@ -77,11 +77,11 @@ instance HasSchemaName SqlDB where
   getSchemaName = asks schemaName
 
 instance DBUser SqlDB where
-  findOne a b = Right <$> findOne' a b
-  findAll a b = Right <$> findAll' a b
-  update a b c = Right <$> update' a b c
-  delete a b = Right <$> delete' a b
-  createOne a b = Right <$> createOne' a b
+  findOne = findOne'
+  findAll = findAll'
+  update = update'
+  delete = delete'
+  createOne = createOne'
 
 findOne' ::
   ( HasCallStack,
@@ -135,22 +135,22 @@ runSqlDB' ::
     FlowR r (T.DBResult a)
   ) ->
   SqlDB a ->
-  DB.FlowWithDb r (T.DBResult a)
+  DB.FlowWithDb r a
 runSqlDB' runSqlDBFunction query = do
   connection <- DB.getOrInitConn
   schemaName <- getSchemaName
   currentTime <- getCurrentTime
   let env = DBEnv {..}
-  runSqlDBFunction connection (runReaderT query env)
+  runSqlDBFunction connection (runReaderT query env) >>= checkDBError
 
 runSqlDB ::
   HasCallStack =>
   SqlDB a ->
-  DB.FlowWithDb r (T.DBResult a)
+  DB.FlowWithDb r a
 runSqlDB = runSqlDB' L.runDB
 
 runSqlDBTransaction ::
   HasCallStack =>
   SqlDB a ->
   DB.FlowWithDb r a
-runSqlDBTransaction = runSqlDB' L.runTransaction >=> checkDBError
+runSqlDBTransaction = runSqlDB' L.runTransaction

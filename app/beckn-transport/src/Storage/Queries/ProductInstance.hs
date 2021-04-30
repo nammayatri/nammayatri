@@ -19,10 +19,8 @@ import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
 import Types.API.ProductInstance
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB._productInstance . DB.transporterDb <$> getSchemaName
@@ -38,7 +36,6 @@ getProdTable =
 createFlow :: Storage.ProductInstance -> Flow ()
 createFlow =
   DB.runSqlDB . create
-    >=> checkDBError
 
 create :: Storage.ProductInstance -> DB.SqlDB ()
 create productInstance = do
@@ -49,7 +46,6 @@ findAllByIds :: Integer -> Integer -> [Id Product.Products] -> Flow [Storage.Pro
 findAllByIds limit offset ids = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= checkDBError
   where
     orderByDesc Storage.ProductInstance {..} = B.desc_ _createdAt
     predicate Storage.ProductInstance {..} =
@@ -69,7 +65,7 @@ findByCaseId id = do
   where
     predicate Storage.ProductInstance {..} = _caseId ==. B.val_ id
 
-findById' :: Id Storage.ProductInstance -> Flow (T.DBResult (Maybe Storage.ProductInstance))
+findById' :: Id Storage.ProductInstance -> Flow (Maybe Storage.ProductInstance)
 findById' productInstanceId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -77,7 +73,7 @@ findById' productInstanceId = do
     predicate Storage.ProductInstance {..} =
       _id ==. B.val_ productInstanceId
 
-findAllByCaseId' :: Id Case.Case -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByCaseId' :: Id Case.Case -> Flow [Storage.ProductInstance]
 findAllByCaseId' caseId = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -85,7 +81,7 @@ findAllByCaseId' caseId = do
     predicate Storage.ProductInstance {..} =
       _caseId ==. B.val_ caseId
 
-findAllByIds' :: [Id Storage.ProductInstance] -> Flow (T.DBResult [Storage.ProductInstance])
+findAllByIds' :: [Id Storage.ProductInstance] -> Flow [Storage.ProductInstance]
 findAllByIds' ids = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -93,7 +89,7 @@ findAllByIds' ids = do
     predicate Storage.ProductInstance {..} =
       B.in_ _id (B.val_ <$> ids)
 
-updateStatusForProducts :: Id Product.Products -> Storage.ProductInstanceStatus -> Flow (T.DBResult ())
+updateStatusForProducts :: Id Product.Products -> Storage.ProductInstanceStatus -> Flow ()
 updateStatusForProducts productId status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -112,7 +108,7 @@ updateStatusForProducts productId status = do
 updateStatusFlow ::
   Id Storage.ProductInstance ->
   Storage.ProductInstanceStatus ->
-  Flow (T.DBResult ())
+  Flow ()
 updateStatusFlow prodInstId status = DB.runSqlDB (updateStatus prodInstId status)
 
 updateStatus ::
@@ -140,7 +136,6 @@ findAllByCaseIds :: [Id Case.Case] -> Flow [Storage.ProductInstance]
 findAllByCaseIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} =
       B.in_ _caseId (B.val_ <$> ids)
@@ -148,7 +143,7 @@ findAllByCaseIds ids = do
 updateStatusByIdsFlow ::
   [Id Storage.ProductInstance] ->
   Storage.ProductInstanceStatus ->
-  Flow (T.DBResult ())
+  Flow ()
 updateStatusByIdsFlow ids status =
   DB.runSqlDB (updateStatusByIds ids status)
 
@@ -175,7 +170,7 @@ updateStatusByIds ids status = do
 updateCaseId ::
   Id Storage.ProductInstance ->
   Id Case.Case ->
-  Flow (T.DBResult ())
+  Flow ()
 updateCaseId prodInstId caseId = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -202,7 +197,6 @@ findAllByStatusParentId :: [Storage.ProductInstanceStatus] -> Id Storage.Product
 findAllByStatusParentId status id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} =
       _status `B.in_` (B.val_ <$> status)
@@ -253,7 +247,6 @@ productInstanceJoin _limit _offset csTypes orgId status = do
       offset
       orderByDesc
       (productInstancejoinQuery csTable prodTable dbTable csPred prodPred piPred)
-      >>= checkDBError
   return $ mkJoinRes <$> joinedValues
   where
     limit = toInteger _limit
@@ -283,7 +276,6 @@ productInstanceJoinWithoutLimits csType orgId status = do
     DB.findAllByJoinWithoutLimits
       orderByDesc
       (productInstancejoinQuery csTable prodTable dbTable csPred prodPred cprPred)
-      >>= checkDBError
   return $ mkJoinRes <$> joinedValues
   where
     orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ _createdAt
@@ -312,7 +304,6 @@ findById pid = do
 updateDriverFlow :: [Id Storage.ProductInstance] -> Maybe (Id Person) -> Flow ()
 updateDriverFlow ids driverId =
   DB.runSqlDB (updateDriver ids driverId)
-    >>= checkDBError
 
 updateDriver ::
   [Id Storage.ProductInstance] ->
@@ -338,7 +329,6 @@ updateDriver ids driverId = do
 updateVehicleFlow :: [Id Storage.ProductInstance] -> Maybe Text -> Flow ()
 updateVehicleFlow ids vehId = do
   DB.runSqlDB (updateVehicle ids (Id <$> vehId))
-    >>= checkDBError
 
 updateVehicle ::
   [Id Storage.ProductInstance] ->
@@ -378,7 +368,6 @@ findAllByVehicleId :: Maybe (Id Vehicle) -> Flow [Storage.ProductInstance]
 findAllByVehicleId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} = B.val_ (isJust id) &&. _entityId ==. B.val_ (getId <$> id)
 
@@ -386,7 +375,6 @@ findAllByPersonId :: Id Person -> Flow [Storage.ProductInstance]
 findAllByPersonId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} = _personId ==. B.val_ (Just id)
 
@@ -394,7 +382,6 @@ findAllByParentId :: Id Storage.ProductInstance -> Flow [Storage.ProductInstance
 findAllByParentId id = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.ProductInstance {..} = _parentId ==. B.val_ (Just id)
 
@@ -416,7 +403,7 @@ findByParentIdType mparentId csType = do
       _parentId ==. B.val_ (Just mparentId)
         &&. _type ==. B.val_ csType
 
-findAllExpiredByStatus :: [Storage.ProductInstanceStatus] -> UTCTime -> Flow (T.DBResult [Storage.ProductInstance])
+findAllExpiredByStatus :: [Storage.ProductInstanceStatus] -> UTCTime -> Flow [Storage.ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
   dbTable <- getDbTable
   DB.findAll dbTable predicate
@@ -425,7 +412,7 @@ findAllExpiredByStatus statuses expiryTime = do
       B.in_ _status (B.val_ <$> statuses)
         &&. _startTime B.<=. B.val_ expiryTime
 
-getCountByStatus' :: Text -> Storage.ProductInstanceType -> Flow (T.DBResult [(Storage.ProductInstanceStatus, Int)])
+getCountByStatus' :: Text -> Storage.ProductInstanceType -> Flow [(Storage.ProductInstanceStatus, Int)]
 getCountByStatus' orgId piType = do
   dbTable <- getDbTable
   DB.aggregate dbTable aggregator predicate
@@ -435,7 +422,7 @@ getCountByStatus' orgId piType = do
       _organizationId ==. B.val_ orgId
         &&. _type ==. B.val_ piType
 
-findByStartTimeBuffer :: Storage.ProductInstanceType -> UTCTime -> NominalDiffTime -> [Storage.ProductInstanceStatus] -> Flow (T.DBResult [Storage.ProductInstance])
+findByStartTimeBuffer :: Storage.ProductInstanceType -> UTCTime -> NominalDiffTime -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
 findByStartTimeBuffer piType startTime buffer statuses = do
   dbTable <- getDbTable
   let fromTime = addUTCTime (- buffer * 60 * 60) startTime
@@ -452,7 +439,7 @@ findByStartTimeBuffer piType startTime buffer statuses = do
 getDriverCompletedRides :: Id Person -> UTCTime -> UTCTime -> Flow [Storage.ProductInstance]
 getDriverCompletedRides driverId fromTime toTime = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate >>= checkDBError
+  DB.findAll dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       _type ==. B.val_ Case.RIDEORDER

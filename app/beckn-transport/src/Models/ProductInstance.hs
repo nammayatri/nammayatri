@@ -20,45 +20,37 @@ import Utils.Common
 -- | Validate and update ProductInstance status
 updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus prodInstId newStatus = do
-  result <- Q.updateStatusFlow prodInstId newStatus
-  checkDBError result
+  Q.updateStatusFlow prodInstId newStatus
 
 -- | Validate and update ProductInstances statusses
 updateStatusByIds :: [Id ProductInstance] -> ProductInstanceStatus -> Flow ()
 updateStatusByIds ids status = do
-  result <- Q.updateStatusByIdsFlow ids status
-  checkDBError result
+  Q.updateStatusByIdsFlow ids status
 
 -- | Find Product Instance by id
 findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
-  result <- Q.findById' caseProductId
-  checkDBErrorOrEmpty result PINotFound
+  Q.findById' caseProductId >>= fromMaybeM PINotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: Id Case -> Flow [ProductInstance]
 findAllByCaseId caseId = do
-  result <- Q.findAllByCaseId' caseId
-  checkDBError result
+  Q.findAllByCaseId' caseId
 
 -- | Find Product Instances
 findAllByIds :: [Id ProductInstance] -> Flow [ProductInstance]
 findAllByIds ids = do
-  result <- Q.findAllByIds' ids
-  checkDBError result
+  Q.findAllByIds' ids
 
 findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
-  result <- Q.findAllExpiredByStatus statuses expiryTime
-  checkDBError result
+  Q.findAllExpiredByStatus statuses expiryTime
 
 -- | Get ProductInstance By OrganizationId groupBy status
 getCountByStatus :: Text -> ProductInstanceType -> Flow [(ProductInstanceStatus, Int)]
 getCountByStatus orgId piType = do
-  result <- Q.getCountByStatus' orgId piType
-  checkDBError result
+  Q.getCountByStatus' orgId piType
 
 findByStartTimeBuffer :: ProductInstanceType -> UTCTime -> NominalDiffTime -> [ProductInstanceStatus] -> Flow [ProductInstance]
 findByStartTimeBuffer piType startTime buffer statuses = do
-  result <- Q.findByStartTimeBuffer piType startTime buffer statuses
-  checkDBError result
+  Q.findByStartTimeBuffer piType startTime buffer statuses

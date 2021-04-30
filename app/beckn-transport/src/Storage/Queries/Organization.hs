@@ -15,7 +15,6 @@ import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
 import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
@@ -28,14 +27,12 @@ create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
-    >>= checkDBError
 
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
   dbTable <- getDbTable
   logTagInfo "verifying token" $ show regToken
   DB.findOne dbTable (predicate regToken)
-    >>= checkDBError
     >>= fromMaybeM Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
@@ -44,7 +41,6 @@ findOrganizationById :: Id Storage.Organization -> Flow Storage.Organization
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
@@ -53,7 +49,6 @@ findOrganizationByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage
 findOrganizationByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable (\Storage.Organization {..} -> _shortId ==. B.val_ shortId)
-    >>= checkDBError
 
 listOrganizations ::
   Maybe Int ->
@@ -64,7 +59,6 @@ listOrganizations ::
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -98,7 +92,7 @@ complementVal l
 update ::
   Id Storage.Organization ->
   Storage.Status ->
-  Flow (T.DBResult ())
+  Flow ()
 update id status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -118,7 +112,6 @@ updateOrganizationRec :: Storage.Organization -> Flow ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
   DB.update dbTable (setClause org) (predicate $ org ^. #_id)
-    >>= checkDBError
   where
     setClause sOrg Storage.Organization {..} =
       mconcat
@@ -135,7 +128,6 @@ findOrgByApiKey :: APIKey -> Flow (Maybe Storage.Organization)
 findOrgByApiKey apiKey = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
@@ -144,7 +136,6 @@ findOrgByCbUrl :: BaseUrl -> Flow Storage.Organization
 findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
@@ -153,7 +144,6 @@ findOrgByShortId :: ShortId Storage.Organization -> Flow Storage.Organization
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId
@@ -162,7 +152,6 @@ findOrgByMobileNumber :: Text -> Text -> Flow (Maybe Storage.Organization)
 findOrgByMobileNumber countryCode mobileNumber = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Organization {..} =
       _mobileCountryCode ==. B.val_ (Just countryCode)

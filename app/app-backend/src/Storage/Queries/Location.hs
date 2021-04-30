@@ -11,7 +11,6 @@ import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT))
 getDbTable =
@@ -20,7 +19,6 @@ getDbTable =
 createFlow :: Storage.Location -> Flow ()
 createFlow = do
   DB.runSqlDB . create
-    >=> checkDBError
 
 create :: Storage.Location -> DB.SqlDB ()
 create Storage.Location {..} = do
@@ -32,7 +30,6 @@ findLocationById ::
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
@@ -45,7 +42,6 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = 
     limit
     offset
     orderByDesc
-    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

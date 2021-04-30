@@ -10,9 +10,7 @@ import qualified Beckn.Types.Storage.Products as Storage
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductsT))
 getDbTable =
@@ -22,7 +20,6 @@ create :: Storage.Products -> Flow ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
-    >>= checkDBError
 
 findAllById :: [Id Storage.Products] -> Flow [Storage.Products]
 findAllById ids = do
@@ -39,7 +36,7 @@ findById pid = do
   where
     predicate Storage.Products {..} = _id ==. B.val_ pid
 
-findById' :: Id Storage.Products -> Flow (T.DBResult (Maybe Storage.Products))
+findById' :: Id Storage.Products -> Flow (Maybe Storage.Products)
 findById' pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

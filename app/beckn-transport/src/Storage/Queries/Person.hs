@@ -38,14 +38,12 @@ create person = do
   dbTable <- getDbTable
   person' <- encrypt person
   DB.createOne dbTable (Storage.insertExpression person')
-    >>= checkDBError
 
 findPersonById ::
   Id Storage.Person -> Flow Storage.Person
 findPersonById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= fromMaybeM PersonDoesNotExist
     >>= decrypt
   where
@@ -55,7 +53,6 @@ findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Id Org.Org
 findPersonByIdAndRoleAndOrgId id role orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -67,7 +64,6 @@ findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Rol
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
-    >>= checkDBError
     >>= decrypt
   where
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
@@ -133,7 +129,6 @@ findByMobileNumber ::
 findByMobileNumber countryCode mobileNumber = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -145,7 +140,6 @@ findByIdentifier ::
 findByIdentifier identifier = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -156,7 +150,6 @@ findByEmail ::
 findByEmail email = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -167,7 +160,6 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause orgId now) (predicate personId)
-    >>= checkDBError
   where
     setClause sOrgId n Storage.Person {..} =
       mconcat
@@ -183,7 +175,6 @@ updatePersonRec personId uperson = do
   now <- getCurrentTime
   person <- encrypt uperson
   DB.update dbTable (setClause person now) (predicate personId)
-    >>= checkDBError
   where
     setClause person n Storage.Person {..} =
       mconcat
@@ -215,7 +206,6 @@ updatePerson personId verified identifier identifierType mobileNumber = do
     dbTable
     (setClause identifier identifierType mobileNumber' verified now)
     (predicate personId)
-    >>= checkDBError
   where
     setClause i it mn v n Storage.Person {..} =
       mconcat
@@ -240,7 +230,6 @@ update id status verified deviceTokenM = do
     dbTable
     (setClause status verified currTime deviceTokenM)
     (predicate id)
-    >>= checkDBError
   where
     setClause sStatus sVerified currTime deviceToken Storage.Person {..} =
       mconcat
@@ -255,7 +244,6 @@ deleteById :: Id Storage.Person -> Flow ()
 deleteById id = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id)
-    >>= checkDBError
   where
     predicate pid Storage.Person {..} = _id ==. B.val_ pid
 
@@ -274,7 +262,6 @@ updateEntity personId entityId entityType = do
     dbTable
     (setClause mEntityId mEntityType)
     (predicate personId)
-    >>= checkDBError
   where
     setClause mEntityId mEntityType Storage.Person {..} =
       mconcat
@@ -287,7 +274,6 @@ findByEntityId :: Text -> Flow (Maybe Storage.Person)
 findByEntityId entityId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -298,7 +284,6 @@ updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause newAverageRating now) (predicate personId)
-    >>= checkDBError
   where
     setClause rating now Storage.Person {..} =
       mconcat

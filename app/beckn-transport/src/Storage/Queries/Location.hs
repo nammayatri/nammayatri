@@ -15,7 +15,6 @@ import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
 getDbTable =
@@ -24,7 +23,6 @@ getDbTable =
 createFlow :: Storage.Location -> Flow ()
 createFlow =
   DB.runSqlDB . create
-    >=> checkDBError
 
 create :: Storage.Location -> DB.SqlDB ()
 create location = do
@@ -36,7 +34,6 @@ findLocationById ::
 findLocationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Location {..} = _id ==. B.val_ id
 
@@ -45,7 +42,6 @@ updateLocationRec locationId location = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause location now) (predicate locationId)
-    >>= checkDBError
   where
     setClause loc n Storage.Location {..} =
       mconcat
@@ -78,7 +74,6 @@ updateGpsCoord locationId lat long = do
   locTable <- getDbTable
   now <- getCurrentTime
   DB.update locTable (setClause lat long now) (predicate locationId)
-    >>= either throwDBError pure
   where
     setClause mLat mLong now Storage.Location {..} =
       let point = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"

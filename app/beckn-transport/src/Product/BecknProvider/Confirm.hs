@@ -40,7 +40,7 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
     logTagInfo "confirm API Flow" "Reached"
     BP.validateContext "confirm" $ req ^. #context
     let prodInstId = Id $ req ^. #message . #order . #_id
-    productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
+    productInstance <- QProductInstance.findById' prodInstId >>= fromMaybeM PIDoesNotExist
     let transporterId' = Id $ productInstance ^. #_organizationId
     unless (productInstance ^. #_status == ProductInstance.INSTOCK) $
       throwError $ PIInvalidStatus "This ride cannot be confirmed"

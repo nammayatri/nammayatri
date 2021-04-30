@@ -44,7 +44,7 @@ handle =
         Id "2" -> pure $ Fixtures.defaultDriver {Person._id = "2"}
         Id "admin" -> pure Fixtures.defaultAdmin
         _ -> throwError PersonDoesNotExist,
-      findPIById = \piId -> pure . Right $ case piId of
+      findPIById = \piId -> pure $ case piId of
         Id "search" -> Just searchProductInstance
         Id "ride" -> Just rideProductInstance
         Id "tracker" -> Just trackerProductInstance

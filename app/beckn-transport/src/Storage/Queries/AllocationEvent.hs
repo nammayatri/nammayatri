@@ -12,7 +12,6 @@ import EulerHS.Prelude hiding (id)
 import Types.App
 import qualified Types.Storage.AllocationEvent as Storage
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.AllocationEventT))
 getDbTable =
@@ -22,14 +21,12 @@ create :: Storage.AllocationEvent -> Flow ()
 create allocationEvent = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression allocationEvent)
-    >>= checkDBError
 
 findAllocationEventById ::
   Id Storage.AllocationEvent -> Flow (Maybe Storage.AllocationEvent)
 findAllocationEventById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.AllocationEvent {..} = _id ==. B.val_ id
 

@@ -31,11 +31,3 @@ throwDBError (ET.DBError dbErrType msg) = throwError $
 
 checkDBError :: (MonadThrow m, Log m) => ET.DBResult a -> m a
 checkDBError = either throwDBError pure
-
-checkDBErrorOrEmpty ::
-  (MonadThrow m, Log m, IsAPIException b) =>
-  ET.DBResult (Maybe a) ->
-  b ->
-  m a
-checkDBErrorOrEmpty dbres domainErrOnEmpty =
-  either throwDBError (fromMaybeM domainErrOnEmpty) dbres

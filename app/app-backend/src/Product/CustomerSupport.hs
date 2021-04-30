@@ -95,12 +95,10 @@ listOrder supportP mCaseId mMobile mlimit moffset =
           >>= fromMaybeM PersonDoesNotExist
       searchcases <-
         Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
-          >>= checkDBError
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
-          >>= checkDBError
           >>= fromMaybeM CaseDoesNotExist
       let personId = fromMaybe "_ID" (_case ^. #_requestor)
       person <-
@@ -112,7 +110,6 @@ makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
 makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType _id C.RIDEORDER
-      >>= checkDBError
   let (status :: Maybe CaseStatus) = ((\x -> Just $ x ^. #_status) =<< confiremedOrder) <|> Just _status
   fromLocation <- Location.findLocationById $ Id _fromLocationId
   toLocation <- Location.findLocationById $ Id _toLocationId
@@ -142,9 +139,7 @@ makeTripDetails caseM = case caseM of
     -- Note: In case of Confirmed Order only one Product Instance will be Present
     ProductInstance.ProductInstance {_id, _status, _info, _price} <-
       head
-        <$> ( PI.findAllByCaseId (_case ^. #_id)
-                >>= checkDBError
-            )
+        <$> PI.findAllByCaseId (_case ^. #_id)
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< _info
         provider = (\x -> x ^. #_provider) =<< mproductInfo
         mtracker = (\x -> x ^. #_tracker) =<< mproductInfo

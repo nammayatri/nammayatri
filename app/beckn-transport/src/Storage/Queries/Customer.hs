@@ -11,7 +11,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Customer as Storage
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT))
 getDbTable =
@@ -22,14 +21,12 @@ create customer = do
   dbTable <- getDbTable
   customer' <- encrypt customer
   DB.createOne dbTable (Storage.insertExpression customer')
-    >>= checkDBError
 
 findCustomerById ::
   Id Storage.Customer -> Flow (Maybe Storage.Customer)
 findCustomerById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
     >>= decrypt
   where
     predicate Storage.Customer {..} = _id ==. B.val_ id

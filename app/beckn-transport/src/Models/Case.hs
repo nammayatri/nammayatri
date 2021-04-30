@@ -23,56 +23,47 @@ create :: Case -> Flow ()
 create c = do
   -- TODO add some validation checks
   -- and `throwDomainError CaseNotCreated` if needed
-  result <- Q.createFlow c
-  checkDBError result
+  Q.createFlow c
 
 -- | Find Case by id
 findById :: Id Case -> Flow Case
 findById caseId = do
-  result <- Q.findById caseId
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findById caseId >>= fromMaybeM CaseNotFound
 
 -- | Find Cases by id list
 findAllByIds :: [Id Case] -> Flow [Case]
 findAllByIds ids = do
-  result <- Q.findAllByIds ids
-  checkDBError result
+  Q.findAllByIds ids
 
 -- | Find Case by parent case id and type
 findByParentCaseIdAndType :: Id Case -> CaseType -> Flow (Maybe Case)
 findByParentCaseIdAndType pCaseId cType = do
-  result <- Q.findByParentCaseIdAndType pCaseId cType
-  checkDBError result
+  Q.findByParentCaseIdAndType pCaseId cType
 
 -- | Find Case by short id
 findBySid :: Text -> Flow Case
 findBySid sid = do
-  result <- Q.findBySid sid
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findBySid sid >>= fromMaybeM CaseNotFound
 
 -- | Validate and update Case status
 updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
-  result <- Q.updateStatusFlow cid status
-  checkDBError result
+  Q.updateStatusFlow cid status
 
 -- | Validate and update Cases statuses
 updateStatusByIds :: [Id Case] -> CaseStatus -> Flow ()
 updateStatusByIds ids status = do
-  result <- Q.updateStatusByIdsFlow ids status
-  checkDBError result
+  Q.updateStatusByIdsFlow ids status
 
 -- | Find Case by id and type
 findByIdType :: [Id Case] -> CaseType -> Flow Case
 findByIdType ids type_ = do
-  result <- Q.findByIdType ids type_
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findByIdType ids type_ >>= fromMaybeM CaseNotFound
 
 -- | Find Cases by id and type
 findAllByIdType :: [Id Case] -> CaseType -> Flow [Case]
 findAllByIdType ids type_ = do
-  result <- Q.findAllByIdType ids type_
-  checkDBError result
+  Q.findAllByIdType ids type_
 
 -- | Find Cases
 findAllByTypeStatuses ::
@@ -84,8 +75,7 @@ findAllByTypeStatuses ::
   UTCTime ->
   Flow [Case]
 findAllByTypeStatuses limit offset csType statuses orgId now = do
-  result <- Q.findAllByTypeStatuses limit offset csType statuses orgId now
-  checkDBError result
+  Q.findAllByTypeStatuses limit offset csType statuses orgId now
 
 -- | Find Cases
 findAllByTypeStatusTime ::
@@ -98,11 +88,9 @@ findAllByTypeStatusTime ::
   UTCTime ->
   Flow [Case]
 findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
-  result <- Q.findAllByTypeStatusTime limit offset csType statuses orgId now fromTime
-  checkDBError result
+  Q.findAllByTypeStatusTime limit offset csType statuses orgId now fromTime
 
 -- | Find Cases by status and expirtaion date
 findAllExpiredByStatus :: [CaseStatus] -> CaseType -> UTCTime -> UTCTime -> Flow [Case]
 findAllExpiredByStatus statuses csType from to = do
-  result <- Q.findAllExpiredByStatus statuses csType from to
-  checkDBError result
+  Q.findAllExpiredByStatus statuses csType from to

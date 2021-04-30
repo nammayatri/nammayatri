@@ -9,14 +9,13 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import EulerHS.Prelude
-import qualified EulerHS.Types as ET
 import Types.App (Driver)
 import Types.Error
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m Person.Person,
-    findPIById :: Id PI.ProductInstance -> m (ET.DBResult (Maybe PI.ProductInstance)),
+    findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
     endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m (),
     findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m Case.Case,
@@ -31,7 +30,7 @@ endRideHandler ::
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId
-  orderPi <- findPIById (cast rideId) >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
+  orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   driverId <- orderPi ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
   case requestor ^. #_role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
@@ -39,7 +38,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   unless (orderPi ^. #_status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
 
   searchPiId <- orderPi ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-  searchPi <- findPIById searchPiId >>= (`checkDBErrorOrEmpty` PINotFound)
+  searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
   piList <- findAllPIByParentId searchPiId
   trackerCase <- findCaseByIdAndType (PI._caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdAndType (PI._caseId <$> piList) Case.RIDEORDER

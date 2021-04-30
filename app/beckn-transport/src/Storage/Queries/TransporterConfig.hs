@@ -11,7 +11,6 @@ import EulerHS.Prelude
 import Types.App (ConfigKey)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.TransporterConfig as TransporterConfig
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity TransporterConfig.TransporterConfigT))
 getDbTable =
@@ -21,7 +20,6 @@ findValueByOrgIdAndKey :: Id Organization -> ConfigKey -> Flow (Maybe Transporte
 findValueByOrgIdAndKey orgId key = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate TransporterConfig.TransporterConfig {..} =
       _transporterId ==. B.val_ orgId

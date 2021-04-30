@@ -13,7 +13,6 @@ import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as T
 import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
@@ -26,13 +25,11 @@ create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
-    >>= checkDBError
 
 verifyApiKey :: RegToken -> Flow Storage.Organization
 verifyApiKey regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
-    >>= checkDBError
     >>= fromMaybeM Unauthorized
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
@@ -42,7 +39,6 @@ findOrganizationById ::
 findOrganizationById id = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Organization {..} = _id ==. B.val_ id
 
@@ -51,7 +47,6 @@ findOrganizationByCallbackUri ::
 findOrganizationByCallbackUri url oType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Organization {..} =
       _callbackUrl ==. B.val_ url
@@ -66,7 +61,6 @@ listOrganizations ::
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate oType status) limit offset orderByDesc
-    >>= checkDBError
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -87,7 +81,7 @@ complementVal l
 update ::
   Id Storage.Organization ->
   Storage.Status ->
-  Flow (T.DBResult ())
+  Flow ()
 update id status = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -107,6 +101,5 @@ findOrgByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organiza
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Organization {..} = _shortId ==. B.val_ shortId

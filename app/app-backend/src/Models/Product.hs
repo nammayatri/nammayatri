@@ -3,6 +3,7 @@ module Models.Product where
 import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Products
+import EulerHS.Prelude
 import qualified Storage.Queries.Products as Q
 import Types.Error
 import Utils.Common
@@ -15,17 +16,13 @@ import Utils.Common
 -- Convert it to DomainError with a proper description
 
 create :: Products -> Flow ()
-create product = do
-  result <- Q.createFlow product
-  checkDBError result
+create = Q.createFlow
 
 -- | Find Product by id
 findById :: Id Products -> Flow Products
 findById pid = do
-  result <- Q.findById pid
-  checkDBErrorOrEmpty result CaseNotFound
+  Q.findById pid >>= fromMaybeM CaseNotFound
 
 findAllByIds :: [Id Products] -> Flow [Products]
 findAllByIds pids = do
-  result <- Q.findAllByIds pids
-  checkDBError result
+  Q.findAllByIds pids

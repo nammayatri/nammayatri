@@ -11,7 +11,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.RideRequest as RideRequest
-import Utils.Common
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity RideRequest.RideRequestT))
 getDbTable =
@@ -20,7 +19,6 @@ getDbTable =
 createFlow :: RideRequest.RideRequest -> Flow ()
 createFlow =
   DB.runSqlDB . create
-    >=> checkDBError
 
 create :: RideRequest.RideRequest -> DB.SqlDB ()
 create rideRequest = do
@@ -33,12 +31,10 @@ fetchOldest limit = do
   let noOffset = 0
   let order RideRequest.RideRequest {..} = B.asc_ _createdAt
   DB.findAllWithLimitOffset dbTable limit noOffset order
-    >>= checkDBError
 
 removeRequest :: Id RideRequest.RideRequest -> Flow ()
 removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)
-    >>= checkDBError
   where
     predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id

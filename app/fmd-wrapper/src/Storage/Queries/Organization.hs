@@ -11,7 +11,6 @@ import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
 getDbTable =
@@ -21,7 +20,6 @@ findOrgByApiKey :: App.APIKey -> Flow (Maybe Org.Organization)
 findOrgByApiKey apiKey = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Org.Organization {..} =
       _apiKey ==. B.val_ (Just apiKey)
@@ -35,7 +33,6 @@ listOrganizations ::
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
   DB.findAllWithLimitOffsetWhere dbTable (predicate status) limit offset orderByDesc
-    >>= checkDBError
   where
     complementVal l
       | null l = B.val_ True
@@ -55,7 +52,6 @@ findByBapUrl :: BaseUrl -> Flow (Maybe Org.Organization)
 findByBapUrl bapUrl = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Org.Organization {..} =
       _callbackUrl ==. B.val_ (Just bapUrl)
@@ -66,6 +62,5 @@ findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Org.Organization {..} = _shortId ==. B.val_ shortId

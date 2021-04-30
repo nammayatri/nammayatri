@@ -21,75 +21,61 @@ import Utils.Common
 
 create :: ProductInstance -> Flow ()
 create prdInst = do
-  result <- Q.createFlow prdInst
-  checkDBError result
+  Q.createFlow prdInst
 
 -- | Validate and update ProductInstance status
 updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus piid status = do
-  result <- Q.updateStatus piid status
-  checkDBError result
+  Q.updateStatus piid status
 
 -- | Bulk validate and update Case's ProductInstances statuses
 updateAllProductInstancesByCaseId :: Id Case.Case -> ProductInstanceStatus -> Flow ()
 updateAllProductInstancesByCaseId caseId status = do
-  result <- Q.updateAllProductInstancesByCaseId caseId status
-  checkDBError result
+  Q.updateAllProductInstancesByCaseId caseId status
 
 updateMultiple :: Id ProductInstance -> ProductInstance -> Flow ()
 updateMultiple piid prdInst = do
-  result <- Q.updateMultipleFlow piid prdInst
-  checkDBError result
+  Q.updateMultipleFlow piid prdInst
 
 -- | Find Product Instance by id
 findById :: Id ProductInstance -> Flow ProductInstance
 findById caseProductId = do
-  result <- Q.findById caseProductId
-  checkDBErrorOrEmpty result PINotFound
+  Q.findById caseProductId >>= fromMaybeM PINotFound
 
 -- | Find Product Instances by Case Id
 findAllByCaseId :: Id Case.Case -> Flow [ProductInstance]
 findAllByCaseId caseId = do
-  result <- Q.findAllByCaseId caseId
-  checkDBError result
+  Q.findAllByCaseId caseId
 
 -- | Find Product Instance by Product Id
 findByProductId :: Id Products -> Flow ProductInstance
 findByProductId pId = do
-  result <- Q.findByProductId pId
-  checkDBErrorOrEmpty result PINotFound
+  Q.findByProductId pId >>= fromMaybeM PINotFound
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
 listAllProductInstanceWithOffset limit offset piid stats csTypes = do
-  result <- Q.listAllProductInstanceWithOffset limit offset piid stats csTypes
-  checkDBError result
+  Q.listAllProductInstanceWithOffset limit offset piid stats csTypes
 
 listAllProductInstance :: ListById -> [ProductInstanceStatus] -> Flow [ProductInstance]
 listAllProductInstance piid status = do
-  result <- Q.listAllProductInstance piid status
-  checkDBError result
+  Q.listAllProductInstance piid status
 
 listAllProductInstanceByPerson :: Person.Person -> ListById -> [ProductInstanceStatus] -> Flow [ProductInstance]
 listAllProductInstanceByPerson person piid status = do
-  result <- Q.listAllProductInstanceByPerson person piid status
-  checkDBError result
+  Q.listAllProductInstanceByPerson person piid status
 
 findAllByParentId :: Id ProductInstance -> Flow [ProductInstance]
 findAllByParentId piid = do
-  result <- Q.findAllByParentId piid
-  checkDBError result
+  Q.findAllByParentId piid
 
 findByParentIdType :: Id ProductInstance -> Case.CaseType -> Flow ProductInstance
 findByParentIdType mparentId csType = do
-  result <- Q.findByParentIdType mparentId csType
-  checkDBErrorOrEmpty result PINotFound
+  Q.findByParentIdType mparentId csType >>= fromMaybeM PINotFound
 
 findAllByPerson :: Id Person.Person -> Flow [ProductInstance]
 findAllByPerson perId = do
-  result <- Q.findAllByPerson perId
-  checkDBError result
+  Q.findAllByPerson perId
 
 findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
-  result <- Q.findAllExpiredByStatus statuses expiryTime
-  checkDBError result
+  Q.findAllExpiredByStatus statuses expiryTime

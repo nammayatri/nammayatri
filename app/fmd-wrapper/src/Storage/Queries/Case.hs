@@ -11,7 +11,6 @@ import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
 getDbTable =
@@ -21,13 +20,11 @@ create :: Storage.Case -> Flow ()
 create Storage.Case {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
-    >>= checkDBError
 
 findById :: Id Storage.Case -> Flow (Maybe Storage.Case)
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= checkDBError
   where
     predicate Storage.Case {..} = _id ==. B.val_ caseId
 
@@ -36,7 +33,6 @@ update id case_@Storage.Case {..} = do
   dbTable <- getDbTable
   currTime <- getCurrentTime
   DB.update dbTable (setClause currTime case_) (predicate id)
-    >>= checkDBError
   where
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
     setClause now c Storage.Case {..} =
