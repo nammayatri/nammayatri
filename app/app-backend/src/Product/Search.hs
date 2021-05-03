@@ -55,13 +55,14 @@ search person req = withFlowHandlerAPI $ do
   toLocation <- mkLocation $ toBeckn $ req ^. #destination
   case_ <- mkCase req (getId $ person ^. #_id) fromLocation toLocation
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
+  let txnId = getId (case_ ^. #_id)
+  Metrics.startSearchMetrics txnId
   DB.runSqlDBTransaction $ do
     Location.create fromLocation
     Location.create toLocation
     QCase.create case_
   env <- ask
-  let txnId = getId (case_ ^. #_id)
-      bapNwAddr = env ^. #bapNwAddress
+  let bapNwAddr = env ^. #bapNwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
@@ -89,6 +90,7 @@ searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearc
 searchCb _bppOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "on_search" $ req ^. #context
+    Metrics.finishSearchMetrics $ req ^. #context . #_transaction_id
     case req ^. #contents of
       Right msg -> do
         let catalog = msg ^. #catalog
