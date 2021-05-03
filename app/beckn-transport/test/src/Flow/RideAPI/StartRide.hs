@@ -144,7 +144,7 @@ failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
 failedStartWhenRideDoesNotHaveParentProductInstance = do
   testCase "Fail ride starting if ride does not have parent ProductInstance" $ do
     runHandler handleCase "1" "1" "otp"
-      `shouldThrow` (== (PIFieldNotPresent "parent_id"))
+      `shouldThrow` (== PIFieldNotPresent "parent_id")
   where
     handleCase =
       handle
@@ -159,7 +159,7 @@ failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
     runHandler handleCase "1" "1" "otp"
-      `shouldThrow` (== (PIFieldNotPresent "udf4"))
+      `shouldThrow` (== PIFieldNotPresent "udf4")
   where
     handleCase =
       handle

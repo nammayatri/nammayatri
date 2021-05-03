@@ -110,7 +110,7 @@ failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
   testCase "Fail cancellation if ride has no driver and requested by driver" $ do
     runHandler handleCase "1" "1"
-      `shouldThrow` (== (PIFieldNotPresent "person"))
+      `shouldThrow` (== PIFieldNotPresent "person")
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance._personId = Nothing}

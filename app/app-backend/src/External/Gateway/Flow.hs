@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module External.Gateway.Flow where
 
 import App.Types
