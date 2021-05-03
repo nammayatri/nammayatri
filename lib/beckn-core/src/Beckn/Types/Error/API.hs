@@ -291,7 +291,7 @@ instance IsAPIError ExternalAPICallError where
   toErrorCode = \case
     ExternalAPICallError _ _ -> "EXTERNAL_API_CALL_ERROR"
     ExternalAPICallErrorWithCode code _ _ -> code
-    ExternalAPIResponseError _ _ -> "EXTERNAL_ANSWER_ERROR"
+    ExternalAPIResponseError _ _ -> "EXTERNAL_API_RESPONSE_ERROR"
   toMessage = \case
     ExternalAPICallError url err -> externalAPICallErrorMessage url err
     ExternalAPICallErrorWithCode _ url err -> externalAPICallErrorMessage url err
