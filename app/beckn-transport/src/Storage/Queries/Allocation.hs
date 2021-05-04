@@ -2,7 +2,7 @@
 
 module Storage.Queries.Allocation where
 
-import qualified Beckn.Storage.DB.Types as DB
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as SPI

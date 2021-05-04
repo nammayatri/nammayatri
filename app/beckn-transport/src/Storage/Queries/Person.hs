@@ -9,7 +9,6 @@ import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -63,7 +62,7 @@ findPersonByIdAndRoleAndOrgId id role orgId = do
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
     >>= decrypt
   where
     orderByDesc Storage.Person {..} = B.desc_ _createdAt
@@ -81,7 +80,7 @@ findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -96,7 +95,7 @@ findAllByRoles ::
   [Storage.Role] -> Flow [Storage.Person]
 findAllByRoles roles = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
@@ -108,7 +107,7 @@ findAllByRoles roles = do
 findAllActiveDrivers :: Flow [Storage.Person]
 findAllActiveDrivers = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =

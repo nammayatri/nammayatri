@@ -2,8 +2,8 @@ module Storage.Queries.Rating where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Person (Person)
@@ -14,7 +14,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as PI
 import qualified Types.Storage.DB as DB
-import Beckn.Types.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
 getDbTable =
@@ -50,8 +49,8 @@ findAllRatingsForPerson :: Id Person -> Flow [Storage.Rating]
 findAllRatingsForPerson personId = do
   ratingTable <- getDbTable
   productInstanceTable <- PI.getDbTable
-  DB.findAllByJoinWithoutLimits
-    orderBy
+  DB.findAllByJoin
+    (B.orderBy_ orderBy)
     (joinPredicate ratingTable productInstanceTable)
   where
     orderBy Storage.Rating {..} = B.desc_ _createdAt

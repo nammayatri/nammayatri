@@ -4,7 +4,7 @@ module Product.Search where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
-import qualified Beckn.Storage.DB.Types as DB
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack

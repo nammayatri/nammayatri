@@ -2,7 +2,7 @@ module Storage.Queries.Issues (insertIssue) where
 
 import qualified App.Types as App
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Issue as Issue
 import qualified Database.Beam as B

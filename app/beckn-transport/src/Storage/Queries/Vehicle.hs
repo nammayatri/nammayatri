@@ -4,7 +4,6 @@ module Storage.Queries.Vehicle where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -45,7 +44,7 @@ findByIdAndOrgId id orgId = do
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> Flow [Storage.Vehicle]
 findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
     limit = fromMaybe 100 mlimit
@@ -59,7 +58,7 @@ findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
 findAllByOrgIds :: [Text] -> Flow [Storage.Vehicle]
 findAllByOrgIds orgIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Vehicle {..} =
       foldl
@@ -111,7 +110,7 @@ findByAnyOf registrationNoM vehicleIdM = do
 findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> Maybe Storage.EnergyType -> Integer -> Integer -> Text -> Flow [Storage.Vehicle]
 findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.Vehicle {..} = B.desc_ _createdAt
     predicate Storage.Vehicle {..} =
@@ -123,7 +122,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
 findByIds :: [Id Storage.Vehicle] -> Flow [Storage.Vehicle]
 findByIds ids = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Vehicle {..} = B.in_ _id (B.val_ <$> ids)
 

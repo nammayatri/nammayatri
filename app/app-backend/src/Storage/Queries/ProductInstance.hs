@@ -2,7 +2,6 @@ module Storage.Queries.ProductInstance where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -11,6 +10,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
+import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -27,7 +27,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.ProductInstance -> DB.SqlDB ()
 create productInstance = do
   dbTable <- getDbTable
-  void $ DB.createOne' dbTable (Storage.insertExpression productInstance)
+  DB.createOne' dbTable (Storage.insertExpression productInstance)
 
 findById :: Id Storage.ProductInstance -> Flow (Maybe Storage.ProductInstance)
 findById pid = do
@@ -39,7 +39,7 @@ findById pid = do
 findAllByCaseId :: Id Case.Case -> Flow [Storage.ProductInstance]
 findAllByCaseId caseId = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
       _caseId ==. B.val_ caseId
@@ -55,7 +55,7 @@ findByProductId pId = do
 findAllByPerson :: Id Person.Person -> Flow [Storage.ProductInstance]
 findAllByPerson perId = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} = _personId ==. B.val_ (Just perId)
 
@@ -116,7 +116,7 @@ updateAllProductInstancesByCaseId caseId status = do
 listAllProductInstanceWithOffset :: Integer -> Integer -> Storage.ListById -> [Storage.ProductInstanceStatus] -> [Case.CaseType] -> Flow [Storage.ProductInstance]
 listAllProductInstanceWithOffset limit offset id stats csTypes = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable (predicate id stats) limit offset orderBy
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) (predicate id stats)
   where
     predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} =
       _caseId ==. B.val_ i
@@ -135,7 +135,7 @@ listAllProductInstanceWithOffset limit offset id stats csTypes = do
 listAllProductInstance :: Storage.ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
 listAllProductInstance id status = do
   dbTable <- getDbTable
-  DB.findAll dbTable (predicate id status)
+  DB.findAll dbTable identity (predicate id status)
   where
     predicate (Storage.ByApplicationId i) [] Storage.ProductInstance {..} = _caseId ==. B.val_ i
     predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} = _caseId ==. B.val_ i &&. B.in_ _status (B.val_ <$> s)
@@ -158,7 +158,7 @@ updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> DB.Sq
 updateMultiple id prdInst = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  void $ DB.update' dbTable (setClause currTime prdInst) (predicate id)
+  DB.update' dbTable (setClause currTime prdInst) (predicate id)
   where
     predicate piid Storage.ProductInstance {..} = _id ==. B.val_ piid
     setClause now prodInst Storage.ProductInstance {..} =
@@ -184,7 +184,7 @@ findByParentIdType mparentId csType = do
 findAllByParentId :: Id Storage.ProductInstance -> Flow [Storage.ProductInstance]
 findAllByParentId id = do
   dbTable <- getDbTable
-  DB.findAll dbTable (predicate id)
+  DB.findAll dbTable identity (predicate id)
   where
     predicate piid Storage.ProductInstance {..} = _parentId ==. B.val_ (Just piid)
 
@@ -196,7 +196,7 @@ complementVal l
 findAllExpiredByStatus :: [Storage.ProductInstanceStatus] -> UTCTime -> Flow [Storage.ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
       B.in_ _status (B.val_ <$> statuses)

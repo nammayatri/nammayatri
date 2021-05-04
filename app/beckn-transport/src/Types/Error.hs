@@ -39,3 +39,15 @@ instanceExceptionWithParent 'APIException ''DriverInformationError
 
 instance IsAPIError DriverInformationError where
   toErrorCode DriverInfoNotFound = "DRIVER_INFORMATON_NOT_FOUND"
+
+data ProductsError
+  = ProductsNotFound
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''ProductsError
+
+instance IsAPIError ProductsError where
+  toErrorCode = \case
+    ProductsNotFound -> "PRODUCTS_NOT_FOUND"
+  toHttpCode = \case
+    ProductsNotFound -> E500

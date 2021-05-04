@@ -6,13 +6,13 @@ import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Person as Storage
+import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -42,7 +42,7 @@ findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable (predicate roles orgIds)
+  DB.findAll dbTable identity (predicate roles orgIds)
     >>= decrypt
   where
     predicate pRoles pOrgIds Storage.Person {..} =
@@ -192,7 +192,7 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGen
 findAllWithLimitOffsetByRole :: Maybe Int -> Maybe Int -> [Storage.Role] -> Flow [Storage.Person]
 findAllWithLimitOffsetByRole mlimit moffset roles = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable (predicate roles) limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate roles)
     >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit
@@ -205,7 +205,7 @@ findAllWithLimitOffsetByRole mlimit moffset roles = do
 findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Organization] -> Flow [Storage.Person]
 findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable (predicate orgIds roles) limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate orgIds roles)
     >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit

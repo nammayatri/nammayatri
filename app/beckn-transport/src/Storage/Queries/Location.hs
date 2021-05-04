@@ -5,12 +5,12 @@ module Storage.Queries.Location where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Location as Storage
+import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -27,7 +27,7 @@ createFlow =
 create :: Storage.Location -> DB.SqlDB ()
 create location = do
   dbTable <- getDbTable
-  void $ DB.createOne' dbTable (Storage.insertExpression location)
+  DB.createOne' dbTable (Storage.insertExpression location)
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)
@@ -63,7 +63,7 @@ updateLocationRec locationId location = do
 findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
 findAllByLocIds fromIds toIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable (predicate (Id <$> fromIds) (Id <$> toIds))
+  DB.findAll dbTable identity (predicate (Id <$> fromIds) (Id <$> toIds))
   where
     predicate pFromIds pToIds Storage.Location {..} =
       B.in_ _id (B.val_ <$> pFromIds)

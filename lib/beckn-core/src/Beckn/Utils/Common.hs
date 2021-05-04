@@ -145,3 +145,6 @@ checkAckResponseError _ Ack = pure ()
 
 parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
 parseBaseUrl = S.parseBaseUrl . T.unpack
+
+identity :: p -> p
+identity a = a

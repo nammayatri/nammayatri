@@ -4,18 +4,19 @@ module Storage.Queries.FarePolicy where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
+import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
+import Beckn.Utils.Common
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
-import Beckn.Types.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =
@@ -39,7 +40,7 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
 findFarePoliciesByOrgId :: Id Organization.Organization -> Flow [Storage.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.FarePolicy {..} = _organizationId ==. B.val_ orgId
 

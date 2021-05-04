@@ -4,7 +4,6 @@ module Storage.Queries.DriverStats where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage.Common
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -35,7 +34,7 @@ createInitialDriverStats driverId = do
 getFirstDriverInTheQueue :: [Id Driver] -> Flow (Id Driver)
 getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate 1 0 order
+  DB.findAll dbTable (B.limit_ 1 . B.orderBy_ order) predicate
     >>= fromMaybeM EmptyDriverPool . listToMaybe . map (^. #_driverId)
   where
     predicate Storage.DriverStats {..} = _driverId `B.in_` (B.val_ <$> ids)
@@ -49,7 +48,7 @@ updateIdleTime :: Id Driver -> DB.SqlDB ()
 updateIdleTime driverId = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  void $ DB.update' dbTable (setClause now) (predicate driverId)
+  DB.update' dbTable (setClause now) (predicate driverId)
   where
     setClause now Storage.DriverStats {..} =
       mconcat
@@ -60,7 +59,7 @@ updateIdleTime driverId = do
 fetchAll :: Flow [Storage.DriverStats]
 fetchAll = do
   dbTable <- getDbTable
-  DB.findAllRows dbTable
+  DB.findAll dbTable identity (const (B.val_ True))
 
 deleteById :: Id Driver -> Flow ()
 deleteById driverId = do

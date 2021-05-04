@@ -4,7 +4,6 @@ module Storage.Queries.Organization where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -58,7 +57,7 @@ listOrganizations ::
   Flow [Storage.Organization]
 listOrganizations mlimit moffset oType status = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -76,7 +75,7 @@ listOrganizations mlimit moffset oType status = do
 loadAllProviders :: Flow [Storage.Organization]
 loadAllProviders = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Organization {..} =
       _status ==. B.val_ Storage.APPROVED

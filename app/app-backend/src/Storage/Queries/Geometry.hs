@@ -6,6 +6,7 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Geometry as Storage
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -37,7 +38,7 @@ findGeometriesContaining :: GPS -> Text -> Flow [Storage.Geometry]
 findGeometriesContaining gps region = do
   do
     dbTable <- getDbTable
-    DB.findAllOrErr dbTable predicate
+    DB.findAll dbTable identity predicate
   where
     predicate geometry@Geometry {..} =
       _region ==. B.val_ region &&. containsPredicate gps geometry

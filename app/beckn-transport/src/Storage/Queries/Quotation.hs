@@ -2,8 +2,8 @@ module Storage.Queries.Quotation where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Data.Time (UTCTime)
@@ -12,7 +12,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Quotation as Storage
-import Beckn.Types.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.QuotationT))
 getDbTable =
@@ -34,7 +33,7 @@ findQuotationById id = do
 listQuotations :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.Quotation]
 listQuotations mlimit moffset status = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

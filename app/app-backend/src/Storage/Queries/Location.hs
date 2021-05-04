@@ -2,11 +2,11 @@ module Storage.Queries.Location where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Location as Storage
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -23,7 +23,7 @@ createFlow = do
 create :: Storage.Location -> DB.SqlDB ()
 create Storage.Location {..} = do
   dbTable <- getDbTable
-  void $ DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
+  DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)
@@ -36,12 +36,10 @@ findLocationById id = do
 findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Location]
 findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere
+  DB.findAll
     dbTable
+    (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc)
     predicate
-    limit
-    offset
-    orderByDesc
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -65,7 +63,7 @@ complementVal l
 findAllByIds :: [Text] -> Flow [Storage.Location]
 findAllByIds locIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable (predicate (Id <$> locIds))
+  DB.findAll dbTable identity (predicate (Id <$> locIds))
   where
     predicate locationIds Storage.Location {..} =
       B.in_ _id (B.val_ <$> locationIds)

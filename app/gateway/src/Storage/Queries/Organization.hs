@@ -1,7 +1,6 @@
 module Storage.Queries.Organization where
 
 import App.Types
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
 import Beckn.Types.Id
@@ -50,7 +49,7 @@ listOrganizations ::
   Flow [Org.Organization]
 listOrganizations mlimit moffset oType oDomain = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset

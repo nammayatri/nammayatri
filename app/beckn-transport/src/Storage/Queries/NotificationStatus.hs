@@ -2,10 +2,10 @@ module Storage.Queries.NotificationStatus where
 
 import App.Types (AppEnv (dbCfg), Flow)
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
+import Beckn.Utils.Common
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -35,7 +35,7 @@ updateStatus rideId driverId status = do
 fetchRefusedNotificationsByRideId :: Id Ride -> Flow [NotificationStatus.NotificationStatus]
 fetchRefusedNotificationsByRideId rideId = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
       _rideId ==. B.val_ rideId
@@ -44,7 +44,7 @@ fetchRefusedNotificationsByRideId rideId = do
 fetchActiveNotifications :: Flow [NotificationStatus.NotificationStatus]
 fetchActiveNotifications = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
       _status ==. B.val_ NotificationStatus.NOTIFIED

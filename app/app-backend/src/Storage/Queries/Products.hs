@@ -2,10 +2,11 @@ module Storage.Queries.Products where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Products as Storage
+import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -22,7 +23,7 @@ createFlow =
 create :: Storage.Products -> DB.SqlDB ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
-  void $ DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
+  DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
 
 findById :: Id Storage.Products -> Flow (Maybe Storage.Products)
 findById pid = do
@@ -34,7 +35,7 @@ findById pid = do
 findAllByIds :: [Id Storage.Products] -> Flow [Storage.Products]
 findAllByIds pids = do
   dbTable <- getDbTable
-  DB.findAll dbTable (predicate pids)
+  DB.findAll dbTable identity (predicate pids)
   where
     predicate ids Storage.Products {..} =
       _id `B.in_` (B.val_ <$> ids)

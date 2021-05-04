@@ -5,12 +5,12 @@ module Storage.Queries.DriverInformation where
 import App.Types
 import Beckn.External.Encryption
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Common
 import Data.Bitraversable
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
@@ -44,7 +44,7 @@ complementVal l
 fetchAllAvailableByIds :: [Id Driver] -> Flow [DriverInformation.DriverInformation]
 fetchAllAvailableByIds driversIds = do
   dbTable <- getDbTable
-  DB.findAllOrErr dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     personsIds = cast <$> driversIds
     predicate DriverInformation.DriverInformation {..} =
@@ -81,7 +81,7 @@ updateOnRide ::
 updateOnRide driverId onRide = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  void $ DB.update' dbTable (setClause onRide now) (predicate personId)
+  DB.update' dbTable (setClause onRide now) (predicate personId)
   where
     personId = cast driverId
     setClause onR now' DriverInformation.DriverInformation {..} =
@@ -104,7 +104,7 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
   personDbTable <- QPerson.getDbTable
   driverInfoDbTable <- getDbTable
 
-  DB.findAllByJoin limit offset orderByDesc (joinQuery personDbTable driverInfoDbTable)
+  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (joinQuery personDbTable driverInfoDbTable)
     >>= traverse (bimapM decrypt return)
   where
     orderByDesc (Person.Person {..}, _) = B.desc_ _createdAt

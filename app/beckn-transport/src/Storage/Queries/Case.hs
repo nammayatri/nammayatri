@@ -2,12 +2,12 @@ module Storage.Queries.Case where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
+import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
@@ -24,12 +24,12 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Case -> DB.SqlDB ()
 create case_ = do
   dbTable <- getDbTable
-  void $ DB.createOne' dbTable (Storage.insertExpression case_)
+  DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByIds :: [Id Storage.Case] -> Flow [Storage.Case]
 findAllByIds ids = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Case {..} =
       B.in_ _id (B.val_ <$> ids)
@@ -70,11 +70,10 @@ updateStatus ::
 updateStatus id newStatus = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  void $
-    DB.update'
-      dbTable
-      (setClause newStatus currTime)
-      (predicate id)
+  DB.update'
+    dbTable
+    (setClause newStatus currTime)
+    (predicate id)
   where
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
     setClause status currTime Storage.Case {..} =
@@ -109,11 +108,10 @@ updateStatusByIds ::
 updateStatusByIds ids newStatus = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  void $
-    DB.update'
-      dbTable
-      (setClause newStatus currTime)
-      (predicate ids)
+  DB.update'
+    dbTable
+    (setClause newStatus currTime)
+    (predicate ids)
   where
     predicate cids Storage.Case {..} = B.in_ _id (B.val_ <$> cids)
     setClause status currTime Storage.Case {..} =
@@ -134,7 +132,7 @@ findByIdType ids type_ = do
 findAllByIdType :: [Id Storage.Case] -> Storage.CaseType -> Flow [Storage.Case]
 findAllByIdType ids type_ = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Case {..} =
       _type ==. B.val_ type_
@@ -143,7 +141,7 @@ findAllByIdType ids type_ = do
 findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Text -> UTCTime -> Flow [Storage.Case]
 findAllByTypeStatuses limit offset csType statuses orgId now = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate Storage.Case {..} =
@@ -155,7 +153,7 @@ findAllByTypeStatuses limit offset csType statuses orgId now = do
 findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Text -> UTCTime -> UTCTime -> Flow [Storage.Case]
 findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate Storage.Case {..} =
@@ -169,7 +167,7 @@ findAllExpiredByStatus :: [Storage.CaseStatus] -> Storage.CaseType -> UTCTime ->
 findAllExpiredByStatus statuses csType from to = do
   dbTable <- getDbTable
   (now :: UTCTime) <- getCurrentTime
-  DB.findAll dbTable (predicate now)
+  DB.findAll dbTable identity (predicate now)
   where
     predicate now Storage.Case {..} =
       _type ==. B.val_ csType

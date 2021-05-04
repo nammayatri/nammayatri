@@ -4,13 +4,13 @@ module Storage.Queries.Case where
 
 import App.Types
 import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.DB.Types as DB
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
 import qualified Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -27,7 +27,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Case -> DB.SqlDB ()
 create case_ = do
   dbTable <- getDbTable
-  void $ DB.createOne' dbTable (Storage.insertExpression case_)
+  DB.createOne' dbTable (Storage.insertExpression case_)
 
 findAllByTypeAndStatuses ::
   Id Person.Person ->
@@ -40,7 +40,7 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
   dbTable <- getDbTable
   let limit = fromMaybe 100 mlimit
       offset = fromMaybe 0 moffset
-  DB.findAllWithLimitOffsetWhere dbTable predicate limit offset orderByDesc
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.Case {..} = B.desc_ _createdAt
     predicate Storage.Case {..} =
@@ -80,14 +80,14 @@ findIdByPerson person caseId = do
 findAllByIds :: [Id Storage.Case] -> Flow [Storage.Case]
 findAllByIds caseIds = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Case {..} = _id `B.in_` (B.val_ <$> caseIds)
 
 findAllByParentIdsAndCaseType :: [Id Storage.Case] -> Storage.CaseType -> Flow [Storage.Case]
 findAllByParentIdsAndCaseType caseIds caseType = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Case {..} = _parentCaseId `B.in_` (B.val_ . Just <$> caseIds) &&. (_type ==. B.val_ caseType)
 
@@ -101,7 +101,7 @@ findOneByParentIdAndCaseType caseId caseType = do
 findAllByPerson :: Text -> Flow [Storage.Case]
 findAllByPerson perId = do
   dbTable <- getDbTable
-  DB.findAll dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
 
@@ -109,7 +109,7 @@ findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe UTCTime -> Maybe UTCTime
 findAllExpiredByStatus statuses maybeFrom maybeTo = do
   dbTable <- getDbTable
   (now :: UTCTime) <- getCurrentTime
-  DB.findAll dbTable (predicate now)
+  DB.findAll dbTable identity (predicate now)
   where
     predicate now Storage.Case {..} =
       foldl
@@ -129,11 +129,10 @@ updateValidTill :: Id Storage.Case -> UTCTime -> DB.SqlDB ()
 updateValidTill id validTill = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- asks DB.currentTime
-  void $
-    DB.update'
-      dbTable
-      (setClause validTill currTime)
-      (predicate id)
+  DB.update'
+    dbTable
+    (setClause validTill currTime)
+    (predicate id)
   where
     setClause scValidTill currTime Storage.Case {..} =
       mconcat
@@ -149,11 +148,10 @@ updateStatus :: Id Storage.Case -> Storage.CaseStatus -> DB.SqlDB ()
 updateStatus id status = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  void $
-    DB.update'
-      dbTable
-      (setClause status currTime)
-      (predicate id)
+  DB.update'
+    dbTable
+    (setClause status currTime)
+    (predicate id)
   where
     setClause pStatus currTime Storage.Case {..} =
       mconcat
@@ -165,12 +163,10 @@ updateStatus id status = do
 findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Case]
 findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
   dbTable <- getDbTable
-  DB.findAllWithLimitOffsetWhere
+  DB.findAll
     dbTable
+    (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc)
     predicate
-    limit
-    offset
-    orderByDesc
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
@@ -199,7 +195,7 @@ updateInfo :: Id Storage.Case -> Text -> DB.SqlDB ()
 updateInfo caseId csInfo = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
-  void $ DB.update' dbTable (setClause csInfo currTime) (predicate caseId)
+  DB.update' dbTable (setClause csInfo currTime) (predicate caseId)
   where
     setClause cInfo currTime' Storage.Case {..} =
       mconcat
