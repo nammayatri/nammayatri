@@ -30,11 +30,11 @@ spec = do
       -- Do an App Search
       transactionId <- UUID.nextUUID
       sreq <- buildSearchReq $ UUID.toText $ fromJust transactionId
-      ackResult <- runClient appClientEnv (searchServices appRegistrationToken sreq)
-      ackResult `shouldSatisfy` isRight
+      searchResult <- runClient appClientEnv (searchServices appRegistrationToken sreq)
+      searchResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
-      let Right ackResponse = ackResult
-          appCaseid = ackResponse ^. #caseId
+      let Right searchResponse = searchResult
+          appCaseid = searchResponse ^. #caseId
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride
