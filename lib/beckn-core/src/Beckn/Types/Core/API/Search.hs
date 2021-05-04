@@ -1,6 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.Core.API.Search where
+module Beckn.Types.Core.API.Search
+  ( module Beckn.Types.Core.API.Search,
+    module Beckn.Types.Core.API.Callback,
+  )
+where
 
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack (AckResponse (..))

@@ -38,7 +38,7 @@ import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
 confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
-confirm transporterId bapOrg req = withFlowHandlerBecknAPI $ do
+confirm transporterId bapOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   logTagInfo "confirm API Flow" "Reached"
   let context = req ^. #context
   BP.validateContext "confirm" $ req ^. #context

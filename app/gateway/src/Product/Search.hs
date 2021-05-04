@@ -24,11 +24,11 @@ import qualified Product.ProviderRegistry as BP
 import Product.Validation
 import Servant.Client (showBaseUrl)
 import qualified Types.API.Gateway.Search as GatewayAPI
-import Types.API.Search (OnSearchReq, SearchReq)
+import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Error
 
 search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckResponse
-search proxySign org req = withFlowHandlerBecknAPI $ do
+search proxySign org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "search" (req ^. #context)
   unless (isJust (req ^. #context . #_bap_uri)) $
     throwError $ InvalidRequest "No bap URI in context."
@@ -63,7 +63,7 @@ search proxySign org req = withFlowHandlerBecknAPI $ do
       return $ AckResponse context (ack ACK) Nothing
 
 searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI $ do
+searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "on_search" context
   let gatewayOnSearchSignAuth = ET.client $ withClientTracing GatewayAPI.onSearchAPI
       messageId = req ^. #context . #_transaction_id

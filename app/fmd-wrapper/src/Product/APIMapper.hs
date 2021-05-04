@@ -6,14 +6,14 @@ import App.Types
 import Beckn.Product.Validation.Context
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Types.FMD.API.Cancel (CancelReq, CancelRes)
-import Beckn.Types.FMD.API.Confirm (ConfirmReq, ConfirmRes)
-import Beckn.Types.FMD.API.Init (InitReq, InitRes)
-import Beckn.Types.FMD.API.Search (SearchReq, SearchRes)
-import Beckn.Types.FMD.API.Select (SelectReq, SelectRes)
-import Beckn.Types.FMD.API.Status (StatusReq, StatusRes)
-import Beckn.Types.FMD.API.Track (TrackReq, TrackRes)
-import Beckn.Types.FMD.API.Update (UpdateReq, UpdateRes)
+import Beckn.Types.FMD.API.Cancel (CancelReq (..), CancelRes)
+import Beckn.Types.FMD.API.Confirm (ConfirmReq (..), ConfirmRes)
+import Beckn.Types.FMD.API.Init (InitReq (..), InitRes)
+import Beckn.Types.FMD.API.Search (SearchReq (..), SearchRes)
+import Beckn.Types.FMD.API.Select (SelectReq (..), SelectRes)
+import Beckn.Types.FMD.API.Status (StatusReq (..), StatusRes)
+import Beckn.Types.FMD.API.Track (TrackReq (..), TrackRes)
+import Beckn.Types.FMD.API.Update (UpdateReq (..), UpdateRes)
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common
 import EulerHS.Prelude
@@ -22,48 +22,48 @@ import Types.Error
 
 -- TODO: add switching logic to figure out the client instance
 search :: Organization -> SearchReq -> FlowHandler SearchRes
-search org req = withFlowHandlerBecknAPI $ do
+search org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "search" $ req ^. #context
   DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
-select org req = withFlowHandlerBecknAPI $ do
+select org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "select" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
-init org req = withFlowHandlerBecknAPI $ do
+init org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "init" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
-confirm org req = withFlowHandlerBecknAPI $ do
+confirm org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "confirm" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
-track org req = withFlowHandlerBecknAPI $ do
+track org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "track" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
-status org req = withFlowHandlerBecknAPI $ do
+status org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "status" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
-cancel org req = withFlowHandlerBecknAPI $ do
+cancel org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "cancel" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.cancel org req
 
 update :: Organization -> UpdateReq -> FlowHandler UpdateRes
-update org req = withFlowHandlerBecknAPI $ do
+update org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "update" $ req ^. #context
   validateBapUrl org $ req ^. #context
   DZ.update org req

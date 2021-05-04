@@ -24,7 +24,7 @@ import qualified Storage.Queries.Rating as Rating
 import Types.Error
 
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
-feedback _transporterId _organization request = withFlowHandlerBecknAPI $ do
+feedback _transporterId _organization request = withFlowHandlerBecknAPI . withTransactionIdLogTag request $ do
   logTagInfo "FeedbackAPI" "Received feedback API call."
   let context = request ^. #context
   BP.validateContext "feedback" context

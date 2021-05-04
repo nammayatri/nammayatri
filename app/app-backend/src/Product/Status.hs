@@ -40,7 +40,7 @@ status person StatusReq {..} = withFlowHandlerBecknAPI $ do
   return Success
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
-onStatus _org req = withFlowHandlerBecknAPI $ do
+onStatus _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   let context = req ^. #context
   case req ^. #contents of
     Right msg -> do

@@ -80,7 +80,7 @@ isCaseCancellable case_ =
     _ -> False
 
 onCancel :: Organization.Organization -> API.OnCancelReq -> FlowHandler API.OnCancelRes
-onCancel _org req = withFlowHandlerBecknAPI $ do
+onCancel _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "on_cancel" $ req ^. #context
   let context = req ^. #context
   case req ^. #contents of

@@ -44,7 +44,7 @@ import qualified Types.API.Case as APICase
 import Types.Error
 
 search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
-search transporterId bapOrg req = withFlowHandlerBecknAPI $ do
+search transporterId bapOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   let context = req ^. #context
   BP.validateContext "search" context
   uuid <- L.generateGUID

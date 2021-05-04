@@ -49,7 +49,7 @@ track person req = withFlowHandlerBecknAPI $ do
   return Success
 
 trackCb :: Organization.Organization -> API.OnTrackTripReq -> FlowHandler API.OnTrackTripRes
-trackCb _org req = withFlowHandlerBecknAPI $ do
+trackCb _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "on_track" $ req ^. #context
   let context = req ^. #context
   case req ^. #contents of

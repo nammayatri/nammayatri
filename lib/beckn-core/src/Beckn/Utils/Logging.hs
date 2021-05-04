@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Utils.Logging
   ( Log (..),
     LogLevel (..),
@@ -12,9 +14,11 @@ module Beckn.Utils.Logging
     logWarning,
     logError,
     appendLogContext,
+    withTransactionIdLogTag,
   )
 where
 
+import Beckn.Types.Core.Context (Context (_transaction_id))
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -24,6 +28,7 @@ import EulerHS.Prelude
 import EulerHS.Runtime
 import EulerHS.Types (LogContext)
 import qualified EulerHS.Types as T
+import GHC.Records
 
 logTagDebug :: Log m => Text -> Text -> m ()
 logTagDebug tag = withLogTag tag . logOutput DEBUG
@@ -117,3 +122,9 @@ appendLogContext val lc =
 
 logContextKey :: Text
 logContextKey = "log_context"
+
+withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> m a
+withTransactionIdLogTag req = do
+  let context = getField @"context" req
+      transaction_id = _transaction_id context
+  withLogTag ("txnId-" <> transaction_id)

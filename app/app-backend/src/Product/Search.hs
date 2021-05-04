@@ -89,7 +89,7 @@ search person req = withFlowHandlerBecknAPI $ do
         throwError $ ProductNotServiceable "due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCb _bppOrg req = withFlowHandlerBecknAPI $ do
+searchCb _bppOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext "on_search" $ req ^. #context
   case req ^. #contents of
     Right msg -> do

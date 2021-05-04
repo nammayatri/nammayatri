@@ -75,7 +75,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
           }
 
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
-onConfirm _org req = withFlowHandlerBecknAPI $ do
+onConfirm _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   -- TODO: Verify api key here
   logTagInfo "on_confirm req" (show req)
   validateContext "on_confirm" $ req ^. #context

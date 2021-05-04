@@ -55,7 +55,7 @@ import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
 cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
-cancel _transporterId _bapOrg req = withFlowHandlerBecknAPI $ do
+cancel _transporterId _bapOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   let context = req ^. #context
   validateContext "cancel" context
   let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
@@ -183,7 +183,7 @@ mkOnServiceStatusPayload piId trackerPi = do
           }
 
 trackTrip :: Id Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
-trackTrip transporterId org req = withFlowHandlerBecknAPI $ do
+trackTrip transporterId org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   logTagInfo "track trip API Flow" $ show req
   let context = req ^. #context
   validateContext "track" context

@@ -19,7 +19,7 @@ import qualified Types.ProductInfo as ProdInfo
 import Utils.Common (validateContext)
 
 onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
-onUpdate _org req = withFlowHandlerBecknAPI $ do
+onUpdate _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   -- TODO: Verify api key here
   logTagInfo "on_update req" (show req)
   validateContext "on_update" $ req ^. #context
