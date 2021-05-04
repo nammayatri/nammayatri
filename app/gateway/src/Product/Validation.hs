@@ -2,10 +2,10 @@ module Product.Validation where
 
 import App.Types
 import Beckn.Product.Validation.Context (validateAction, validateCity, validateCountry)
-import Beckn.Types.Core.Context
-import Beckn.Types.Core.Domain
 import Beckn.Utils.Common
 import EulerHS.Prelude
+import Types.Beckn.Context
+import Types.Beckn.Domain
 import Types.Error
 
 validateContext :: Text -> Context -> Flow ()

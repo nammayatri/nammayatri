@@ -7,7 +7,6 @@ where
 
 import App.Types
 import Beckn.Types.App (FlowServerR)
-import Beckn.Types.Core.API.Log
 import Beckn.Types.Error
 import Beckn.Utils.Error
 import Beckn.Utils.Servant.SignatureAuth (lookupRegistryAction)
@@ -19,6 +18,7 @@ import Servant hiding (throwError)
 import Storage.Queries.Organization
 import System.Exit (ExitCode)
 import Types.API.Search
+import Types.Beckn.API.Log
 import Utils.Auth (VerifyAPIKey)
 import qualified Utils.Servant.SignatureAuth as HttpSig
 

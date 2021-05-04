@@ -7,8 +7,6 @@ module Product.Search
 where
 
 import App.Types
-import Beckn.Types.Core.API.Callback
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Common
@@ -25,6 +23,8 @@ import Product.Validation
 import Servant.Client (showBaseUrl)
 import qualified Types.API.Gateway.Search as GatewayAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
+import Types.Beckn.API.Callback
+import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
 import Types.Error
 
 search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckResponse

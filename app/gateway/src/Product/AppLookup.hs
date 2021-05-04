@@ -3,8 +3,8 @@ module Product.AppLookup where
 import App.Types
 import Beckn.Storage.Redis.Queries
 import Beckn.Types.App
-import Beckn.Types.Core.Context
 import EulerHS.Prelude
+import Types.Beckn.Context
 
 data GwSession = GwSession
   { cbUrl :: BaseUrl,
