@@ -19,24 +19,25 @@ import qualified Types.ProductInfo as ProdInfo
 import Utils.Common (validateContext)
 
 onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
-onUpdate _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  -- TODO: Verify api key here
-  logTagInfo "on_update req" (show req)
-  validateContext "on_update" $ req ^. #context
-  case req ^. #contents of
-    Right msg -> do
-      let trip = msg ^. #order . #_trip
-          pid = Id $ msg ^. #order . #_id
-      orderPi <- MPI.findByParentIdType pid Case.RIDEORDER
-      let mprdInfo = decodeFromText =<< (orderPi ^. #_info)
-          uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
-          uPrd =
-            orderPi
-              { SPI._info = encodeToText <$> uInfo
-              }
-      MPI.updateMultiple (orderPi ^. #_id) uPrd
-    Left err -> logTagError "on_update req" $ "on_update error: " <> show err
-  return $ AckResponse (req ^. #context) (ack ACK) Nothing
+onUpdate _org req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    -- TODO: Verify api key here
+    logTagInfo "on_update req" (show req)
+    validateContext "on_update" $ req ^. #context
+    case req ^. #contents of
+      Right msg -> do
+        let trip = msg ^. #order . #_trip
+            pid = Id $ msg ^. #order . #_id
+        orderPi <- MPI.findByParentIdType pid Case.RIDEORDER
+        let mprdInfo = decodeFromText =<< (orderPi ^. #_info)
+            uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
+            uPrd =
+              orderPi
+                { SPI._info = encodeToText <$> uInfo
+                }
+        MPI.updateMultiple (orderPi ^. #_id) uPrd
+      Left err -> logTagError "on_update req" $ "on_update error: " <> show err
+    return $ AckResponse (req ^. #context) (ack ACK) Nothing
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo
     getUpdatedProdInfo (Just trip) (Just prdInfo) mtracking =

@@ -55,15 +55,16 @@ import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Utils.Notifications as Notify
 
 cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
-cancel _transporterId _bapOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  let context = req ^. #context
-  validateContext "cancel" context
-  let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
-  prodInst <- ProductInstance.findById (Id prodInstId)
-  piList <- ProductInstance.findAllByParentId (prodInst ^. #_id)
-  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
-  RideRequest.createFlow =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
-  return $ AckResponse context (ack ACK) Nothing
+cancel _transporterId _bapOrg req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    let context = req ^. #context
+    validateContext "cancel" context
+    let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
+    prodInst <- ProductInstance.findById (Id prodInstId)
+    piList <- ProductInstance.findAllByParentId (prodInst ^. #_id)
+    orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
+    RideRequest.createFlow =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
+    return $ AckResponse context (ack ACK) Nothing
 
 cancelRide :: Id Ride -> Bool -> Flow ()
 cancelRide rideId requestedByDriver = do
@@ -183,22 +184,23 @@ mkOnServiceStatusPayload piId trackerPi = do
           }
 
 trackTrip :: Id Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
-trackTrip transporterId org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  logTagInfo "track trip API Flow" $ show req
-  let context = req ^. #context
-  validateContext "track" context
-  let tripId = req ^. #message . #order_id
-  case_ <- Case.findById $ Id tripId
-  case case_ ^. #_parentCaseId of
-    Just parentCaseId -> do
-      parentCase <- Case.findById parentCaseId
-      --TODO : use forkFlow to notify gateway
-      callbackUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      transporter <- Organization.findOrganizationById transporterId
-      let bppShortId = getShortId $ transporter ^. #_shortId
-      notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId
-      return $ AckResponse context (ack ACK) Nothing
-    Nothing -> throwError (CaseFieldNotPresent "parent_case_id")
+trackTrip transporterId org req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    logTagInfo "track trip API Flow" $ show req
+    let context = req ^. #context
+    validateContext "track" context
+    let tripId = req ^. #message . #order_id
+    case_ <- Case.findById $ Id tripId
+    case case_ ^. #_parentCaseId of
+      Just parentCaseId -> do
+        parentCase <- Case.findById parentCaseId
+        --TODO : use forkFlow to notify gateway
+        callbackUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+        transporter <- Organization.findOrganizationById transporterId
+        let bppShortId = getShortId $ transporter ^. #_shortId
+        notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId
+        return $ AckResponse context (ack ACK) Nothing
+      Nothing -> throwError (CaseFieldNotPresent "parent_case_id")
 
 notifyTripUrlToGateway :: Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ parentCase callbackUrl bppShortId = do

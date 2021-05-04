@@ -49,32 +49,33 @@ track person req = withFlowHandlerBecknAPI $ do
   return Success
 
 trackCb :: Organization.Organization -> API.OnTrackTripReq -> FlowHandler API.OnTrackTripRes
-trackCb _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  validateContext "on_track" $ req ^. #context
-  let context = req ^. #context
-  case req ^. #contents of
-    Right msg -> do
-      let tracking = msg ^. #tracking
-          caseId = Id $ context ^. #_transaction_id
-      case_ <- MC.findById caseId
-      prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
-      let confirmedProducts = prodInst
-      res <-
-        case length confirmedProducts of
-          0 -> return $ Right ()
-          1 -> do
-            let productInst = head confirmedProducts
-                personId = Case._requestor case_
-            orderPi <- MPI.findByParentIdType (productInst ^. #_id) Case.RIDEORDER
-            mtracker <- updateTracker orderPi tracking
-            whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
-            return $ Right ()
-          _ -> return $ Left "Multiple products confirmed, ambiguous selection"
-      res & fromEitherM InvalidRequest
-      return $ AckResponse context (ack ACK) Nothing
-    Left err -> do
-      logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
-      return $ AckResponse context (ack ACK) Nothing
+trackCb _org req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    validateContext "on_track" $ req ^. #context
+    let context = req ^. #context
+    case req ^. #contents of
+      Right msg -> do
+        let tracking = msg ^. #tracking
+            caseId = Id $ context ^. #_transaction_id
+        case_ <- MC.findById caseId
+        prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
+        let confirmedProducts = prodInst
+        res <-
+          case length confirmedProducts of
+            0 -> return $ Right ()
+            1 -> do
+              let productInst = head confirmedProducts
+                  personId = Case._requestor case_
+              orderPi <- MPI.findByParentIdType (productInst ^. #_id) Case.RIDEORDER
+              mtracker <- updateTracker orderPi tracking
+              whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
+              return $ Right ()
+            _ -> return $ Left "Multiple products confirmed, ambiguous selection"
+        res & fromEitherM InvalidRequest
+        return $ AckResponse context (ack ACK) Nothing
+      Left err -> do
+        logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
+        return $ AckResponse context (ack ACK) Nothing
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do

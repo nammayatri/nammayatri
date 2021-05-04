@@ -89,15 +89,16 @@ search person req = withFlowHandlerBecknAPI $ do
         throwError $ ProductNotServiceable "due to georestrictions"
 
 searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCb _bppOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  validateContext "on_search" $ req ^. #context
-  case req ^. #contents of
-    Right msg -> do
-      let catalog = msg ^. #catalog
-      _ <- searchCbService req catalog
-      return ()
-    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
-  return $ AckResponse (req ^. #context) (ack ACK) Nothing
+searchCb _bppOrg req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    validateContext "on_search" $ req ^. #context
+    case req ^. #contents of
+      Right msg -> do
+        let catalog = msg ^. #catalog
+        _ <- searchCbService req catalog
+        return ()
+      Left err -> logTagError "on_search req" $ "on_search error: " <> show err
+    return $ AckResponse (req ^. #context) (ack ACK) Nothing
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do

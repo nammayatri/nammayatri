@@ -40,15 +40,16 @@ status person StatusReq {..} = withFlowHandlerBecknAPI $ do
   return Success
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
-onStatus _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  let context = req ^. #context
-  case req ^. #contents of
-    Right msg -> do
-      let prodInstId = Id $ msg ^. #order . #_id
-          orderState = fromBeckn $ msg ^. #order . #_state
-      updateProductInstanceStatus prodInstId orderState
-    Left err -> logTagError "on_status req" $ "on_status error: " <> show err
-  return $ AckResponse context (ack ACK) Nothing
+onStatus _org req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    let context = req ^. #context
+    case req ^. #contents of
+      Right msg -> do
+        let prodInstId = Id $ msg ^. #order . #_id
+            orderState = fromBeckn $ msg ^. #order . #_state
+        updateProductInstanceStatus prodInstId orderState
+      Left err -> logTagError "on_status req" $ "on_status error: " <> show err
+    return $ AckResponse context (ack ACK) Nothing
   where
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER

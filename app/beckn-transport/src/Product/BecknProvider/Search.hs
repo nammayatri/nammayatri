@@ -44,29 +44,30 @@ import qualified Types.API.Case as APICase
 import Types.Error
 
 search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
-search transporterId bapOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  let context = req ^. #context
-  BP.validateContext "search" context
-  uuid <- L.generateGUID
-  transporter <- Org.findOrganizationById transporterId
-  when (transporter ^. #_enabled) $ do
-    let intent = req ^. #message . #intent
-    now <- getCurrentTime
-    let pickup = head $ intent ^. #_pickups
-    let dropOff = head $ intent ^. #_drops
-    let startTime = pickup ^. #_departure_time . #_est
-    validity <- getValidTime now startTime
-    fromLocation <- mkFromStop now pickup
-    toLocation <- mkFromStop now dropOff
-    let bapOrgId = bapOrg ^. #_id
-    deadDistance <- calculateDeadDistance transporter fromLocation
-    let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
-    DB.runSqlDBTransaction $ do
-      Loc.create fromLocation
-      Loc.create toLocation
-      QCase.create productCase
-    fork "OnSearchCallback" $ onSearchCallback productCase transporter fromLocation toLocation
-  return $ AckResponse context (ack ACK) Nothing
+search transporterId bapOrg req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    let context = req ^. #context
+    BP.validateContext "search" context
+    uuid <- L.generateGUID
+    transporter <- Org.findOrganizationById transporterId
+    when (transporter ^. #_enabled) $ do
+      let intent = req ^. #message . #intent
+      now <- getCurrentTime
+      let pickup = head $ intent ^. #_pickups
+      let dropOff = head $ intent ^. #_drops
+      let startTime = pickup ^. #_departure_time . #_est
+      validity <- getValidTime now startTime
+      fromLocation <- mkFromStop now pickup
+      toLocation <- mkFromStop now dropOff
+      let bapOrgId = bapOrg ^. #_id
+      deadDistance <- calculateDeadDistance transporter fromLocation
+      let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
+      DB.runSqlDBTransaction $ do
+        Loc.create fromLocation
+        Loc.create toLocation
+        QCase.create productCase
+      fork "OnSearchCallback" $ onSearchCallback productCase transporter fromLocation toLocation
+    return $ AckResponse context (ack ACK) Nothing
 
 mkFromStop :: UTCTime -> Stop.Stop -> Flow Location.Location
 mkFromStop now stop = do

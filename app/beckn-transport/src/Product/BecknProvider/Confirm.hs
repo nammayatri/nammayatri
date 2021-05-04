@@ -38,46 +38,47 @@ import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
 confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
-confirm transporterId bapOrg req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  logTagInfo "confirm API Flow" "Reached"
-  let context = req ^. #context
-  BP.validateContext "confirm" $ req ^. #context
-  let prodInstId = Id $ req ^. #message . #order . #_id
-  productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
-  let transporterId' = Id $ productInstance ^. #_organizationId
-  unless (productInstance ^. #_status == ProductInstance.INSTOCK) $
-    throwError $ PIInvalidStatus "This ride cannot be confirmed"
-  transporterOrg <- Organization.findOrganizationById transporterId'
-  unless (transporterId' == transporterId) $ throwError AccessDenied
-  let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
-  searchCase <- Case.findBySid caseShortId
-  bapOrgId <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
-  unless (bapOrg ^. #_id == Id bapOrgId) $ throwError AccessDenied
-  orderCase <- mkOrderCase searchCase
-  orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
-  rideRequest <- BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
-  let newOrderCaseStatus = Case.INPROGRESS
-  let newSearchCaseStatus = Case.COMPLETED
-  let newProductInstanceStatus = ProductInstance.CONFIRMED
-  Case.validateStatusChange newOrderCaseStatus orderCase
-  Case.validateStatusChange newSearchCaseStatus searchCase
-  ProductInstance.validateStatusChange newProductInstanceStatus productInstance
-  (currTime, uuid, shortId) <- BP.getIdShortIdAndTime
-  let trackerCase = mkTrackerCase searchCase uuid currTime shortId
-  trackerProductInstance <- mkTrackerProductInstance (trackerCase ^. #_id) productInstance currTime
+confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    logTagInfo "confirm API Flow" "Reached"
+    let context = req ^. #context
+    BP.validateContext "confirm" $ req ^. #context
+    let prodInstId = Id $ req ^. #message . #order . #_id
+    productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
+    let transporterId' = Id $ productInstance ^. #_organizationId
+    unless (productInstance ^. #_status == ProductInstance.INSTOCK) $
+      throwError $ PIInvalidStatus "This ride cannot be confirmed"
+    transporterOrg <- Organization.findOrganizationById transporterId'
+    unless (transporterId' == transporterId) $ throwError AccessDenied
+    let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
+    searchCase <- Case.findBySid caseShortId
+    bapOrgId <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
+    unless (bapOrg ^. #_id == Id bapOrgId) $ throwError AccessDenied
+    orderCase <- mkOrderCase searchCase
+    orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
+    rideRequest <- BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
+    let newOrderCaseStatus = Case.INPROGRESS
+    let newSearchCaseStatus = Case.COMPLETED
+    let newProductInstanceStatus = ProductInstance.CONFIRMED
+    Case.validateStatusChange newOrderCaseStatus orderCase
+    Case.validateStatusChange newSearchCaseStatus searchCase
+    ProductInstance.validateStatusChange newProductInstanceStatus productInstance
+    (currTime, uuid, shortId) <- BP.getIdShortIdAndTime
+    let trackerCase = mkTrackerCase searchCase uuid currTime shortId
+    trackerProductInstance <- mkTrackerProductInstance (trackerCase ^. #_id) productInstance currTime
 
-  DB.runSqlDBTransaction $ do
-    QCase.create orderCase
-    QProductInstance.create orderProductInstance
-    RideRequest.create rideRequest
-    QCase.updateStatus (orderCase ^. #_id) newOrderCaseStatus
-    QCase.updateStatus (searchCase ^. #_id) newSearchCaseStatus
-    QProductInstance.updateStatus (productInstance ^. #_id) newProductInstanceStatus
-    QCase.create trackerCase
-    QProductInstance.create trackerProductInstance
+    DB.runSqlDBTransaction $ do
+      QCase.create orderCase
+      QProductInstance.create orderProductInstance
+      RideRequest.create rideRequest
+      QCase.updateStatus (orderCase ^. #_id) newOrderCaseStatus
+      QCase.updateStatus (searchCase ^. #_id) newSearchCaseStatus
+      QProductInstance.updateStatus (productInstance ^. #_id) newProductInstanceStatus
+      QCase.create trackerCase
+      QProductInstance.create trackerProductInstance
 
-  fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
-  return $ AckResponse context (ack ACK) Nothing
+    fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
+    return $ AckResponse context (ack ACK) Nothing
 
 onConfirmCallback ::
   Organization.Organization ->

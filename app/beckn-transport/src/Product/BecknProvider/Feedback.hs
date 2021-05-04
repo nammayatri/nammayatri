@@ -24,33 +24,34 @@ import qualified Storage.Queries.Rating as Rating
 import Types.Error
 
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
-feedback _transporterId _organization request = withFlowHandlerBecknAPI . withTransactionIdLogTag request $ do
-  logTagInfo "FeedbackAPI" "Received feedback API call."
-  let context = request ^. #context
-  BP.validateContext "feedback" context
-  let productInstanceId = Id $ request ^. #message . #order_id
-  productInstances <- ProductInstance.findAllByParentId productInstanceId
-  personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
-  orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
-  unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
-    throwError $ PIInvalidStatus "Order is not ready for rating."
-  ratingValue :: Int <-
-    decodeFromText (request ^. #message . #rating . #_value)
-      & fromMaybeM (InvalidRequest "Invalid rating type.")
-  let orderId = orderPi ^. #_id
-  mbRating <- Rating.findByProductInstanceId orderId
-  case mbRating of
-    Nothing -> do
-      logTagInfo "FeedbackAPI" $
-        "Creating a new record for " +|| orderId ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- mkRating orderId ratingValue
-      Rating.create newRating
-    Just rating -> do
-      logTagInfo "FeedbackAPI" $
-        "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
-      Rating.updateRatingValue (rating ^. #_id) ratingValue
-  Person.calculateAverageRating personId
-  return $ AckResponse context (ack ACK) Nothing
+feedback _transporterId _organization req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    logTagInfo "FeedbackAPI" "Received feedback API call."
+    let context = req ^. #context
+    BP.validateContext "feedback" context
+    let productInstanceId = Id $ req ^. #message . #order_id
+    productInstances <- ProductInstance.findAllByParentId productInstanceId
+    personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
+    orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
+    unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
+      throwError $ PIInvalidStatus "Order is not ready for rating."
+    ratingValue :: Int <-
+      decodeFromText (req ^. #message . #rating . #_value)
+        & fromMaybeM (InvalidRequest "Invalid rating type.")
+    let orderId = orderPi ^. #_id
+    mbRating <- Rating.findByProductInstanceId orderId
+    case mbRating of
+      Nothing -> do
+        logTagInfo "FeedbackAPI" $
+          "Creating a new record for " +|| orderId ||+ " with rating " +|| ratingValue ||+ "."
+        newRating <- mkRating orderId ratingValue
+        Rating.create newRating
+      Just rating -> do
+        logTagInfo "FeedbackAPI" $
+          "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
+        Rating.updateRatingValue (rating ^. #_id) ratingValue
+    Person.calculateAverageRating personId
+    return $ AckResponse context (ack ACK) Nothing
   where
     getPersonId (productI : _) = productI ^. #_personId
     getPersonId _ = Nothing

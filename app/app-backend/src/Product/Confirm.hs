@@ -75,35 +75,36 @@ confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
           }
 
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
-onConfirm _org req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  -- TODO: Verify api key here
-  logTagInfo "on_confirm req" (show req)
-  validateContext "on_confirm" $ req ^. #context
-  case req ^. #contents of
-    Right msg -> do
-      let trip = fromBeckn <$> msg ^. #order . #_trip
-          pid = Id $ msg ^. #order . #_id
-          tracker = flip Products.Tracker Nothing <$> trip
-      prdInst <- MPI.findById pid
-      -- TODO: update tracking prodInfo in .info
-      let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
-      let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
-      let uPrd =
-            prdInst
-              { SPI._info = encodeToText <$> uInfo,
-                SPI._udf4 = (^. #id) <$> trip,
-                SPI._status = SPI.CONFIRMED
-              }
-      productInstance <- MPI.findById pid
-      Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
-      let newCaseStatus = Case.COMPLETED
-      MCase.validateStatusChange newCaseStatus (productInstance ^. #_caseId)
-      MPI.validatePIStatusChange SPI.CONFIRMED pid
-      DB.runSqlDBTransaction $ do
-        QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
-        QPI.updateMultiple pid uPrd
-    Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
-  return $ AckResponse (req ^. #context) (ack ACK) Nothing
+onConfirm _org req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    -- TODO: Verify api key here
+    logTagInfo "on_confirm req" (show req)
+    validateContext "on_confirm" $ req ^. #context
+    case req ^. #contents of
+      Right msg -> do
+        let trip = fromBeckn <$> msg ^. #order . #_trip
+            pid = Id $ msg ^. #order . #_id
+            tracker = flip Products.Tracker Nothing <$> trip
+        prdInst <- MPI.findById pid
+        -- TODO: update tracking prodInfo in .info
+        let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
+        let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
+        let uPrd =
+              prdInst
+                { SPI._info = encodeToText <$> uInfo,
+                  SPI._udf4 = (^. #id) <$> trip,
+                  SPI._status = SPI.CONFIRMED
+                }
+        productInstance <- MPI.findById pid
+        Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
+        let newCaseStatus = Case.COMPLETED
+        MCase.validateStatusChange newCaseStatus (productInstance ^. #_caseId)
+        MPI.validatePIStatusChange SPI.CONFIRMED pid
+        DB.runSqlDBTransaction $ do
+          QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
+          QPI.updateMultiple pid uPrd
+      Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
+    return $ AckResponse (req ^. #context) (ack ACK) Nothing
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
