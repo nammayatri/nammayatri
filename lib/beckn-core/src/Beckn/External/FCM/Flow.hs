@@ -139,36 +139,6 @@ getTokenText = do
     Left err -> Left $ fromString err
     Right t -> Right $ JWT._jwtTokenType t <> " " <> JWT._jwtAccessToken t
 
--- | check FCM token and refresh if it is invalid
-checkAndGetToken ::
-  (L.MonadFlow m, Log m) =>
-  JWT.ServiceAccount ->
-  m (Either String JWT.JWToken)
-checkAndGetToken fcmAcc = do
-  token <- Redis.getKeyRedis "beckn:fcm_token"
-  case token of
-    Nothing -> refreshToken fcmAcc
-    Just t -> do
-      validityStatus <- L.runIO $ JWT.isValid t
-      case validityStatus of
-        JWT.JWTValid x ->
-          if x > 300
-            then pure $ Right t -- do nothing, token is ok
-            else do
-              -- close to expiration, start trying to refresh token
-              logTagInfo fcm "Token is about to be expired, trying to refresh it"
-              refreshToken fcmAcc
-        JWT.JWTExpired x -> do
-          -- token expired
-          logTagInfo fcm $ "Token expired " <> show x <> " seconds ago, trying to refresh it"
-          refreshToken fcmAcc
-        JWT.JWTInvalid -> do
-          -- token is invalid
-          logTagInfo fcm "Token is invalid, trying to refresh it"
-          refreshToken fcmAcc
-  where
-    fcm = "FCM"
-
 -- | Get token (refresh token if expired / invalid)
 getToken ::
   ( HasField "fcmJsonPath" r (Maybe Text)
