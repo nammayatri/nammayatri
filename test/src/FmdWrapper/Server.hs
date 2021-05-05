@@ -2,13 +2,13 @@
 
 module FmdWrapper.Server where
 
-import Beckn.Types.Core.Ack
-import Beckn.Types.FMD.API.Search (OnSearchReq)
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import FmdWrapper.Common
 import Runner
 import Servant
+import "fmd-wrapper" Types.Beckn.Ack
+import "fmd-wrapper" Types.Beckn.Domain.API.Search (OnSearchReq)
 
 newtype CallbackData = CallbackData
   { onSearchTVar :: TVar [CallbackResult OnSearchReq]

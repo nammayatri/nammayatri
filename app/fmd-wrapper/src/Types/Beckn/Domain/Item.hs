@@ -1,11 +1,11 @@
-module Beckn.Types.FMD.Item where
+module Types.Beckn.Domain.Item where
 
-import Beckn.Types.Core.Descriptor
-import Beckn.Types.Core.Duration
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Tag
 import Beckn.Utils.Example
 import EulerHS.Prelude
+import Types.Beckn.Descriptor
+import Types.Beckn.Duration
+import Types.Beckn.Price
+import Types.Beckn.Tag
 
 data Item = Item
   { _id :: Maybe Text,

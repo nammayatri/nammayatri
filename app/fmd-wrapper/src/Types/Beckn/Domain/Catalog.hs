@@ -1,14 +1,14 @@
-module Beckn.Types.FMD.Catalog where
+module Types.Beckn.Domain.Catalog where
 
-import Beckn.Types.Core.Brand
-import Beckn.Types.Core.Category
-import Beckn.Types.Core.Item
-import Beckn.Types.Core.Model
-import Beckn.Types.Core.Offer
 import Beckn.Utils.Example
 import Data.Text
 import Data.Time (UTCTime)
 import EulerHS.Prelude
+import Types.Beckn.Brand
+import Types.Beckn.Category
+import Types.Beckn.Item
+import Types.Beckn.Model
+import Types.Beckn.Offer
 
 data Catalog = Catalog
   { _id :: Text,

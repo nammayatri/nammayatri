@@ -2,18 +2,6 @@
 
 module FmdWrapper.Search where
 
-import Beckn.Types.Core.API.Callback
-import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Category
-import Beckn.Types.Core.Context
-import Beckn.Types.Core.Descriptor
-import qualified Beckn.Types.Core.Domain as Domain
-import qualified Beckn.Types.Core.Error as Error
-import Beckn.Types.Core.Item
-import qualified Beckn.Types.Core.Location as Location
-import Beckn.Types.Core.Price
-import qualified Beckn.Types.FMD.API.Search as Search
-import Beckn.Types.FMD.Catalog
 import Beckn.Utils.Example
 import Common
 import Control.Lens (Setter', _Just)
@@ -29,6 +17,18 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant (Header, type (:>))
 import Servant.Client
 import Test.Hspec hiding (context, example)
+import "fmd-wrapper" Types.Beckn.API.Callback
+import "fmd-wrapper" Types.Beckn.Ack
+import "fmd-wrapper" Types.Beckn.Category
+import "fmd-wrapper" Types.Beckn.Context
+import "fmd-wrapper" Types.Beckn.Descriptor
+import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
+import qualified "fmd-wrapper" Types.Beckn.Domain.API.Search as Search
+import "fmd-wrapper" Types.Beckn.Domain.Catalog
+import qualified "fmd-wrapper" Types.Beckn.Error as Error
+import "fmd-wrapper" Types.Beckn.Item
+import qualified "fmd-wrapper" Types.Beckn.Location as Location
+import "fmd-wrapper" Types.Beckn.Price
 import Utils
 
 setPickupGps :: Setter' Search.SearchReq Location.GPS

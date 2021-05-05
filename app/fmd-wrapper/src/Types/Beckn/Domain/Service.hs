@@ -1,16 +1,16 @@
-module Beckn.Types.FMD.Service where
+module Types.Beckn.Domain.Service where
 
-import Beckn.Types.Core.Brand
-import Beckn.Types.Core.Category
-import Beckn.Types.Core.Item
-import Beckn.Types.Core.Model
-import Beckn.Types.Core.Offer
-import Beckn.Types.Core.Policy
-import Beckn.Types.Core.Provider
-import Beckn.Types.FMD.Paradigm
 import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
+import Types.Beckn.Brand
+import Types.Beckn.Category
+import Types.Beckn.Domain.Paradigm
+import Types.Beckn.Item
+import Types.Beckn.Model
+import Types.Beckn.Offer
+import Types.Beckn.Policy
+import Types.Beckn.Provider
 
 data Service = Service
   { _id :: Text,

@@ -6,19 +6,6 @@ import App.Types
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.FMD.API.Cancel
-import Beckn.Types.FMD.API.Confirm
-import Beckn.Types.FMD.API.Init
-import Beckn.Types.FMD.API.Search
-import Beckn.Types.FMD.API.Select
-import Beckn.Types.FMD.API.Status
-import Beckn.Types.FMD.API.Track
-import Beckn.Types.FMD.API.Update
-import Beckn.Types.FMD.Catalog
-import Beckn.Types.FMD.Order
-import Beckn.Types.FMD.Package
-import Beckn.Types.FMD.Task hiding (TaskState)
-import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
@@ -32,6 +19,19 @@ import Types.Beckn.Category
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
+import Types.Beckn.Domain.API.Cancel
+import Types.Beckn.Domain.API.Confirm
+import Types.Beckn.Domain.API.Init
+import Types.Beckn.Domain.API.Search
+import Types.Beckn.Domain.API.Select
+import Types.Beckn.Domain.API.Status
+import Types.Beckn.Domain.API.Track
+import Types.Beckn.Domain.API.Update
+import Types.Beckn.Domain.Catalog
+import Types.Beckn.Domain.Order
+import Types.Beckn.Domain.Package
+import Types.Beckn.Domain.Task hiding (TaskState)
+import qualified Types.Beckn.Domain.Task as Beckn (TaskState (..))
 import qualified Types.Beckn.Error as Err
 import Types.Beckn.Item
 import qualified Types.Beckn.Location as CoreLoc

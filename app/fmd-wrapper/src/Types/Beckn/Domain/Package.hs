@@ -1,12 +1,12 @@
-module Beckn.Types.FMD.Package where
+module Types.Beckn.Domain.Package where
 
-import Beckn.Types.Core.Descriptor
-import Beckn.Types.Core.Dimensions
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Scalar
-import Beckn.Types.FMD.Item
 import Beckn.Utils.Example
 import EulerHS.Prelude
+import Types.Beckn.Descriptor
+import Types.Beckn.Dimensions
+import Types.Beckn.Domain.Item
+import Types.Beckn.Price
+import Types.Beckn.Scalar
 
 data Package = Package
   { _id :: Maybe Text,

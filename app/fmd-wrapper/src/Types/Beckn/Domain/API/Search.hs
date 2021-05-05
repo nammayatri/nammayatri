@@ -1,15 +1,15 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Beckn.Types.FMD.API.Search where
+module Types.Beckn.Domain.API.Search where
 
-import Beckn.Types.Core.API.Callback
-import Beckn.Types.Core.Ack (AckResponse (..))
-import Beckn.Types.Core.Context
-import Beckn.Types.FMD.Catalog
-import Beckn.Types.FMD.Intent
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
+import Types.Beckn.API.Callback
+import Types.Beckn.Ack (AckResponse (..))
+import Types.Beckn.Context
+import Types.Beckn.Domain.Catalog
+import Types.Beckn.Domain.Intent
 
 type SearchAPI =
   "search"

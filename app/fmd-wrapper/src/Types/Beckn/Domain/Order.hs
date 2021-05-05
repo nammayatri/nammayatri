@@ -1,15 +1,15 @@
-module Beckn.Types.FMD.Order where
+module Types.Beckn.Domain.Order where
 
-import Beckn.Types.Core.Billing
-import Beckn.Types.Core.Option (Option)
-import Beckn.Types.Core.Payment
-import Beckn.Types.Core.Quotation
-import Beckn.Types.Core.State
-import Beckn.Types.FMD.Item (Item)
-import Beckn.Types.FMD.Task (Task)
 import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude hiding (State)
+import Types.Beckn.Billing
+import Types.Beckn.Domain.Item (Item)
+import Types.Beckn.Domain.Task (Task)
+import Types.Beckn.Option (Option)
+import Types.Beckn.Payment
+import Types.Beckn.Quotation
+import Types.Beckn.State
 
 data Order = Order
   { _id :: Maybe Text,

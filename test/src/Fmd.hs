@@ -3,16 +3,16 @@ module Fmd where
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Core.Quotation
-import Beckn.Types.FMD.API.Confirm
-import Beckn.Types.FMD.API.Init
-import Beckn.Types.FMD.API.Search
-import Beckn.Types.FMD.API.Select
-import Beckn.Types.FMD.API.Update
-import Beckn.Types.FMD.Order
 import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 import Servant.Client
+import "fmd-wrapper" Types.Beckn.Domain.API.Confirm
+import "fmd-wrapper" Types.Beckn.Domain.API.Init
+import "fmd-wrapper" Types.Beckn.Domain.API.Search
+import "fmd-wrapper" Types.Beckn.Domain.API.Select
+import "fmd-wrapper" Types.Beckn.Domain.API.Update
+import "fmd-wrapper" Types.Beckn.Domain.Order
 
 fmdWrapperBaseUrl :: BaseUrl
 fmdWrapperBaseUrl =

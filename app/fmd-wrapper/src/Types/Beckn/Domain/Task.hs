@@ -1,17 +1,17 @@
-module Beckn.Types.FMD.Task where
+module Types.Beckn.Domain.Task where
 
-import Beckn.Types.Core.Descriptor
-import Beckn.Types.Core.Location
-import Beckn.Types.Core.Person
-import Beckn.Types.Core.State
-import Beckn.Types.FMD.Agent
-import Beckn.Types.FMD.Package
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson hiding (Error)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State)
+import Types.Beckn.Descriptor
+import Types.Beckn.Domain.Agent
+import Types.Beckn.Domain.Package
+import Types.Beckn.Location
+import Types.Beckn.Person
+import Types.Beckn.State
 
 data PickupOrDrop = PickupOrDrop
   { _location :: Location,

@@ -6,16 +6,6 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common
-import qualified Beckn.Types.FMD.API.Cancel as API
-import qualified Beckn.Types.FMD.API.Confirm as API
-import qualified Beckn.Types.FMD.API.Init as API
-import qualified Beckn.Types.FMD.API.Search as API
-import qualified Beckn.Types.FMD.API.Select as API
-import qualified Beckn.Types.FMD.API.Status as API
-import qualified Beckn.Types.FMD.API.Track as API
-import qualified Beckn.Types.FMD.API.Update as API
-import qualified Beckn.Types.FMD.Item as Item
-import Beckn.Types.FMD.Order
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
@@ -38,6 +28,16 @@ import qualified Storage.Queries.Quote as Storage
 import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
+import qualified Types.Beckn.Domain.API.Cancel as API
+import qualified Types.Beckn.Domain.API.Confirm as API
+import qualified Types.Beckn.Domain.API.Init as API
+import qualified Types.Beckn.Domain.API.Search as API
+import qualified Types.Beckn.Domain.API.Select as API
+import qualified Types.Beckn.Domain.API.Status as API
+import qualified Types.Beckn.Domain.API.Track as API
+import qualified Types.Beckn.Domain.API.Update as API
+import qualified Types.Beckn.Domain.Item as Item
+import Types.Beckn.Domain.Order
 import Types.Common
 import Types.Error
 import Types.Wrapper

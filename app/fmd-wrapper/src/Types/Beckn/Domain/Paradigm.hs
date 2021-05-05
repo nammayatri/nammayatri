@@ -1,8 +1,8 @@
-module Beckn.Types.FMD.Paradigm where
+module Types.Beckn.Domain.Paradigm where
 
-import Beckn.Types.Core.Image
 import Beckn.Utils.Example
 import EulerHS.Prelude
+import Types.Beckn.Image
 
 data Paradigm = Paradigm
   { _id :: Text,

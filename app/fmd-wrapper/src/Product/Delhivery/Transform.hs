@@ -6,14 +6,6 @@ import App.Types
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.FMD.API.Confirm
-import Beckn.Types.FMD.API.Init
-import Beckn.Types.FMD.API.Search
-import Beckn.Types.FMD.API.Select
-import Beckn.Types.FMD.Catalog
-import qualified Beckn.Types.FMD.Item as FMD
-import Beckn.Types.FMD.Order
-import Beckn.Types.FMD.Task
 import Beckn.Types.Storage.Organization (Organization)
 import Control.Lens ((?~))
 import Control.Lens.Prism (_Just)
@@ -26,6 +18,14 @@ import qualified Types.Beckn.Address as CoreAddr
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
+import Types.Beckn.Domain.API.Confirm
+import Types.Beckn.Domain.API.Init
+import Types.Beckn.Domain.API.Search
+import Types.Beckn.Domain.API.Select
+import Types.Beckn.Domain.Catalog
+import qualified Types.Beckn.Domain.Item as FMD
+import Types.Beckn.Domain.Order
+import Types.Beckn.Domain.Task
 import qualified Types.Beckn.Error as CoreErr
 import qualified Types.Beckn.Item as Core
 import qualified Types.Beckn.Location as CoreLoc

@@ -1,18 +1,18 @@
 module App.Handlers where
 
 import App.Types
-import Beckn.Types.FMD.API.Cancel (CancelAPI)
-import Beckn.Types.FMD.API.Confirm (ConfirmAPI)
-import Beckn.Types.FMD.API.Init (InitAPI)
-import Beckn.Types.FMD.API.Search (SearchAPI)
-import Beckn.Types.FMD.API.Select (SelectAPI)
-import Beckn.Types.FMD.API.Status (StatusAPI)
-import Beckn.Types.FMD.API.Track (TrackAPI)
-import Beckn.Types.FMD.API.Update (UpdateAPI)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.APIMapper as API
 import Servant
+import Types.Beckn.Domain.API.Cancel (CancelAPI)
+import Types.Beckn.Domain.API.Confirm (ConfirmAPI)
+import Types.Beckn.Domain.API.Init (InitAPI)
+import Types.Beckn.Domain.API.Search (SearchAPI)
+import Types.Beckn.Domain.API.Select (SelectAPI)
+import Types.Beckn.Domain.API.Status (StatusAPI)
+import Types.Beckn.Domain.API.Track (TrackAPI)
+import Types.Beckn.Domain.API.Update (UpdateAPI)
 import Utils.Auth
 
 type WrapperAPI =

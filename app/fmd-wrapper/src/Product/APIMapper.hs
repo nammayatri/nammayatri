@@ -4,19 +4,19 @@ module Product.APIMapper where
 
 import App.Types
 import Beckn.Product.Validation.Context
-import Beckn.Types.FMD.API.Cancel (CancelReq (..), CancelRes)
-import Beckn.Types.FMD.API.Confirm (ConfirmReq (..), ConfirmRes)
-import Beckn.Types.FMD.API.Init (InitReq (..), InitRes)
-import Beckn.Types.FMD.API.Search (SearchReq (..), SearchRes)
-import Beckn.Types.FMD.API.Select (SelectReq (..), SelectRes)
-import Beckn.Types.FMD.API.Status (StatusReq (..), StatusRes)
-import Beckn.Types.FMD.API.Track (TrackReq (..), TrackRes)
-import Beckn.Types.FMD.API.Update (UpdateReq (..), UpdateRes)
 import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
 import Types.Beckn.Context
 import Types.Beckn.Domain
+import Types.Beckn.Domain.API.Cancel (CancelReq (..), CancelRes)
+import Types.Beckn.Domain.API.Confirm (ConfirmReq (..), ConfirmRes)
+import Types.Beckn.Domain.API.Init (InitReq (..), InitRes)
+import Types.Beckn.Domain.API.Search (SearchReq (..), SearchRes)
+import Types.Beckn.Domain.API.Select (SelectReq (..), SelectRes)
+import Types.Beckn.Domain.API.Status (StatusReq (..), StatusRes)
+import Types.Beckn.Domain.API.Track (TrackReq (..), TrackRes)
+import Types.Beckn.Domain.API.Update (UpdateReq (..), UpdateRes)
 import Types.Error
 import Utils.Common
 

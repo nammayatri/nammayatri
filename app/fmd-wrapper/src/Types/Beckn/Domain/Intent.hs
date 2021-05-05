@@ -1,11 +1,11 @@
-module Beckn.Types.FMD.Intent where
+module Types.Beckn.Domain.Intent where
 
-import Beckn.Types.Core.Location
-import Beckn.Types.Core.Tag
-import Beckn.Types.FMD.Package
 import Beckn.Utils.Example
 import Data.Time (UTCTime)
 import EulerHS.Prelude
+import Types.Beckn.Domain.Package
+import Types.Beckn.Location
+import Types.Beckn.Tag
 
 data Intent = Intent
   { _query_string :: Maybe Text,
