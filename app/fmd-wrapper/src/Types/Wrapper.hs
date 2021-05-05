@@ -1,10 +1,10 @@
 module Types.Wrapper where
 
 import Beckn.Types.App
-import Beckn.Types.Core.Quotation
 import Beckn.Types.FMD.Order
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
+import Types.Beckn.Quotation
 import Types.Common
 
 -- BAP with Dunzo account will have these details

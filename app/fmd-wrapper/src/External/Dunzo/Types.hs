@@ -5,11 +5,11 @@
 module External.Dunzo.Types where
 
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Error as Beckn
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude
 import Servant (FromHttpApiData, ToHttpApiData)
+import qualified Types.Beckn.Error as Beckn
 import Types.Common
 
 newtype TaskId = TaskId {getTaskId :: Text}

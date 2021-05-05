@@ -4,8 +4,6 @@ module Product.APIMapper where
 
 import App.Types
 import Beckn.Product.Validation.Context
-import Beckn.Types.Core.Context
-import Beckn.Types.Core.Domain
 import Beckn.Types.FMD.API.Cancel (CancelReq (..), CancelRes)
 import Beckn.Types.FMD.API.Confirm (ConfirmReq (..), ConfirmRes)
 import Beckn.Types.FMD.API.Init (InitReq (..), InitRes)
@@ -17,6 +15,8 @@ import Beckn.Types.FMD.API.Update (UpdateReq (..), UpdateRes)
 import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
+import Types.Beckn.Context
+import Types.Beckn.Domain
 import Types.Error
 import Utils.Common
 

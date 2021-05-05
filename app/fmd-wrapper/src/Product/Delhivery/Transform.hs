@@ -6,21 +6,6 @@ import App.Types
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.API.Callback
-import qualified Beckn.Types.Core.Address as CoreAddr
-import Beckn.Types.Core.Context
-import Beckn.Types.Core.DecimalValue
-import Beckn.Types.Core.Descriptor
-import qualified Beckn.Types.Core.Error as CoreErr
-import qualified Beckn.Types.Core.Item as Core
-import qualified Beckn.Types.Core.Location as CoreLoc
-import Beckn.Types.Core.MonetaryValue
-import Beckn.Types.Core.Payment
-import Beckn.Types.Core.PaymentEndpoint
-import Beckn.Types.Core.Person
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Quotation
-import Beckn.Types.Core.Tag
 import Beckn.Types.FMD.API.Confirm
 import Beckn.Types.FMD.API.Init
 import Beckn.Types.FMD.API.Search
@@ -36,6 +21,21 @@ import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import External.Delhivery.Types
+import Types.Beckn.API.Callback
+import qualified Types.Beckn.Address as CoreAddr
+import Types.Beckn.Context
+import Types.Beckn.DecimalValue
+import Types.Beckn.Descriptor
+import qualified Types.Beckn.Error as CoreErr
+import qualified Types.Beckn.Item as Core
+import qualified Types.Beckn.Location as CoreLoc
+import Types.Beckn.MonetaryValue
+import Types.Beckn.Payment
+import Types.Beckn.PaymentEndpoint
+import Types.Beckn.Person
+import Types.Beckn.Price
+import Types.Beckn.Quotation
+import Types.Beckn.Tag
 import Types.Error
 import Types.Wrapper
 import Utils.Common
