@@ -105,6 +105,9 @@ type PersonAPI =
     :> ( AdminTokenAuth
            :> ReqBody '[JSON] CreatePersonReq
            :> Post '[JSON] UpdatePersonRes
+           :<|> "getDetails"
+             :> TokenAuth
+             :> Get '[JSON] GetPersonDetailsRes
            :<|> "list"
              :> AdminTokenAuth
              :> QueryParams "roles" SP.Role
@@ -137,6 +140,7 @@ type PersonAPI =
 personFlow :: FlowServer PersonAPI
 personFlow =
   Person.createPerson
+    :<|> Person.getPersonDetails
     :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.getPerson

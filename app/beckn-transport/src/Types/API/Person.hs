@@ -291,3 +291,15 @@ instance FromJSON PersonEntityRes where
 
 instance ToJSON PersonEntityRes where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+data GetPersonDetailsRes = GetPersonDetailsRes
+  { id :: Id SP.Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    fullName :: Maybe Text,
+    role :: SP.Role,
+    gender :: SP.Gender,
+    email :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON)

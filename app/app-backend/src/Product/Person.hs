@@ -14,7 +14,8 @@ getPersonDetails :: Person.Person -> FlowHandler Person.GetPersonDetailsRes
 getPersonDetails auth =
   pure $
     Person.GetPersonDetailsRes
-      { firstName = auth ^. #firstName,
+      { id = auth ^. #id,
+        firstName = auth ^. #firstName,
         middleName = auth ^. #middleName,
         lastName = auth ^. #lastName,
         fullName = auth ^. #fullName,

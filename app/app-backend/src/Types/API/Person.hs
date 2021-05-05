@@ -1,11 +1,13 @@
 module Types.API.Person where
 
 import Beckn.External.FCM.Types as FCM
+import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SPerson
 import EulerHS.Prelude
 
 data GetPersonDetailsRes = GetPersonDetailsRes
-  { firstName :: Maybe Text,
+  { id :: Id SPerson.Person,
+    firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     fullName :: Maybe Text,

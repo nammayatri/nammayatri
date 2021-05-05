@@ -13,6 +13,7 @@ module Product.Person
     getDriverPool,
     setDriverPool,
     calculateDriverPool,
+    getPersonDetails,
   )
 where
 
@@ -108,6 +109,12 @@ createDriverDetails personId = do
   QDriverInformation.create driverInfo
   where
     driverId = cast personId
+
+getPersonDetails :: SR.RegistrationToken -> FlowHandler GetPersonDetailsRes
+getPersonDetails regToken = withFlowHandlerAPI $ do
+  SP.Person {..} <- QP.findPersonById (Id $ regToken ^. #entityId)
+  pure $
+    GetPersonDetailsRes {..}
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do

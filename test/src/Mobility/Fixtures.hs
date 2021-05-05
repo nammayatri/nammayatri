@@ -234,6 +234,7 @@ getPerson :: Text -> Maybe (Id Person.Person) -> Maybe Text -> Maybe Text -> May
 deletePerson :: Text -> Id Person.Person -> ClientM TbePerson.DeletePersonRes
 linkEntity :: Text -> Id Person.Person -> TbePerson.LinkReq -> ClientM TbePerson.PersonEntityRes
 createPerson
+  :<|> _
   :<|> listPerson
   :<|> updatePerson
   :<|> getPerson
