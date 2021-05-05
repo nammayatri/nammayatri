@@ -129,8 +129,8 @@ mkPrice prodInst =
           _maximum_value = amt
         }
 
-mkOrder :: Case -> ProductInstance -> Maybe Trip -> Flow Mobility.Order
-mkOrder _c pri trip = do
+mkOrder :: ProductInstance -> Maybe Trip -> Flow Mobility.Order
+mkOrder pri trip = do
   now <- getCurrentTime
   searchPiId <- pri ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   return

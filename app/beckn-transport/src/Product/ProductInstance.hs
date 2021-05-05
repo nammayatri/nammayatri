@@ -14,8 +14,10 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
 import Beckn.Utils.Common
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Models.Case as CQ
+import qualified Models.Case as Case
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Allocation as AQ
 import qualified Storage.Queries.Case as QCase
@@ -198,22 +200,24 @@ notifyStatusUpdateReq :: PI.ProductInstance -> PI.ProductInstanceStatus -> BaseU
 notifyStatusUpdateReq searchPi status callbackUrl = do
   transporterOrg <- findOrganization
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
+  searchCase <- Case.findById $ searchPi ^. #_caseId
+  let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
   case status of
     PI.CANCELLED -> do
       admins <- getAdmins transporterOrg
-      BP.notifyCancelToGateway (getId $ searchPi ^. #_id) callbackUrl bppShortId
+      BP.notifyCancelToGateway (searchPi ^. #_id) callbackUrl bppShortId txnId
       Notify.notifyCancelReqByBP searchPi admins
     PI.TRIP_REASSIGNMENT -> do
       admins <- getAdmins transporterOrg
       Notify.notifyDriverCancelledRideRequest searchPi admins
-      notifyStatusToGateway bppShortId
-    _ -> notifyStatusToGateway bppShortId
+      notifyStatusToGateway bppShortId txnId
+    _ -> notifyStatusToGateway bppShortId txnId
   where
     findOrganization = OQ.findOrganizationById $ Id $ searchPi ^. #_organizationId
     getAdmins transporterOrg = do
       if transporterOrg ^. #_enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI._organizationId searchPi]
         else pure []
-    notifyStatusToGateway bppShortId = do
+    notifyStatusToGateway bppShortId txnId = do
       trackerPi <- PIQ.findByParentIdType (searchPi ^. #_id) Case.LOCATIONTRACKER
-      BP.notifyServiceStatusToGateway (getId $ searchPi ^. #_id) trackerPi callbackUrl bppShortId
+      BP.notifyServiceStatusToGateway (searchPi ^. #_id) trackerPi callbackUrl bppShortId txnId

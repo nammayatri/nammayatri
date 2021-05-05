@@ -12,7 +12,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
@@ -21,15 +20,13 @@ import qualified Storage.Queries.Organization as OQ
 import Types.API.Status
 import Types.Error
 import qualified Utils.Notifications as Notify
-import Utils.Routes
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandlerBecknAPI $ do
   prodInst <- QPI.findById (Id productInstanceId)
   case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
   let caseId = getId $ case_ ^. #_id
-  msgId <- L.generateGUID
-  context <- buildContext "status" caseId msgId
+  context <- buildContext "status" caseId Nothing Nothing
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM OrgNotFound

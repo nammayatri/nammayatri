@@ -10,12 +10,12 @@ import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
-  ( checkAckResponseError,
+  ( buildContext,
+    checkAckResponseError,
     fromMaybeM,
     throwError,
     withFlowHandlerBecknAPI,
   )
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (product)
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
@@ -23,7 +23,6 @@ import qualified Models.ProductInstance as ProductInstance
 import qualified Storage.Queries.Organization as Organization
 import qualified Types.API.Feedback as API
 import Types.Error
-import Utils.Routes (buildContext)
 
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback person request = withFlowHandlerBecknAPI $ do
@@ -32,9 +31,8 @@ feedback person request = withFlowHandlerBecknAPI $ do
   let prodInstId = request ^. #productInstanceId
   product <- ProductInstance.findById $ Id prodInstId
   order <- Case.findIdByPerson person $ product ^. #_caseId
-  messageId <- L.generateGUID
   let txnId = getId $ order ^. #_id
-  context <- buildContext "feedback" txnId messageId
+  context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
     Organization.findOrganizationById (Id $ product ^. #_organizationId)
       >>= fromMaybeM OrgNotFound

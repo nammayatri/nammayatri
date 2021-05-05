@@ -31,7 +31,6 @@ import Types.Error
 import qualified Types.ProductInfo as Products
 import Utils.Common (generateShortId, validateContext)
 import qualified Utils.Metrics as Metrics
-import Utils.Routes
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
 confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
@@ -49,8 +48,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
   DB.runSqlDBTransaction $ do
     QCase.create orderCase_
     QPI.create orderProductInstance
-  msgId <- L.generateGUID
-  context <- buildContext "confirm" caseId msgId
+  context <- buildContext "confirm" caseId Nothing Nothing
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   Gateway.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)

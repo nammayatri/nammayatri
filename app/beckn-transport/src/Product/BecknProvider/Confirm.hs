@@ -256,10 +256,11 @@ mkTrackerProductInstance caseId prodInst currTime = do
       }
 
 mkOnConfirmPayload :: Case.Case -> [ProductInstance.ProductInstance] -> [ProductInstance.ProductInstance] -> Case.Case -> Flow API.OnConfirmReq
-mkOnConfirmPayload c pis _allPis trackerCase = do
-  context <- BP.mkContext "on_confirm" $ c ^. #_shortId -- TODO : What should be the txnId
+mkOnConfirmPayload searchCase pis _allPis trackerCase = do
+  let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
+  context <- buildContext "on_confirm" txnId Nothing Nothing -- FIXME: BAP and BPP uri here??
   trip <- BP.mkTrip trackerCase (head pis)
-  order <- GT.mkOrder c (head pis) (Just trip)
+  order <- GT.mkOrder (head pis) (Just trip)
   return
     API.CallbackReq
       { context,

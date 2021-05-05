@@ -14,7 +14,6 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
@@ -25,16 +24,14 @@ import Types.Error
 import Types.ProductInfo as ProductInfo
 import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
-import Utils.Routes (buildContext)
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandlerBecknAPI $ do
   let prodInstId = req ^. #rideId
   prodInst <- MPI.findById prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
-  msgId <- L.generateGUID
   let txnId = getId $ case_ ^. #_id
-  context <- buildContext "feedback" txnId msgId
+  context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
     OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
       >>= fromMaybeM OrgNotFound
