@@ -4,7 +4,6 @@ module Product.Cancel (cancel, onCancel) where
 
 import App.Types
 import Beckn.Types.APISuccess (APISuccess (Success))
-import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
 import Beckn.Types.Id
@@ -13,7 +12,6 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
@@ -21,7 +19,7 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Cancel as Cancel
 import Types.Error
-import Utils.Common (mkContext, validateContext)
+import Utils.Common (validateContext)
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
@@ -45,10 +43,8 @@ cancelProductInstance person req = do
     sendCancelReq prodInst cs = do
       let txnId = getId $ cs ^. #_id
       let prodInstId = getId $ prodInst ^. #_id
-      currTime <- getCurrentTime
-      msgId <- L.generateGUID
       let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
-          context = mkContext "cancel" txnId msgId currTime Nothing Nothing
+      context <- buildContext "cancel" txnId Nothing Nothing
       organization <-
         OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
           >>= fromMaybeM OrgNotFound

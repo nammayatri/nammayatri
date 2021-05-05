@@ -19,7 +19,6 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Text as DT
 import qualified Data.Text as T
-import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -70,23 +69,6 @@ validateToken sr@SR.RegistrationToken {..} = do
 
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
-
-mkContext :: Text -> Text -> Text -> UTCTime -> Maybe BaseUrl -> Maybe BaseUrl -> Context
-mkContext action txnId msgId utcTime bapUri bppUri =
-  Context
-    { _domain = MOBILITY,
-      _country = Just "IND",
-      _city = Nothing,
-      _action = action,
-      _core_version = Just "0.8.2",
-      _domain_version = Just "0.8.2",
-      _bap_uri = bapUri,
-      _bpp_uri = bppUri,
-      _transaction_id = txnId,
-      _message_id = msgId,
-      _timestamp = utcTime,
-      _ttl = Nothing
-    }
 
 mkIntent :: API.SearchReq -> Intent
 mkIntent req =

@@ -1,20 +1,16 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
-
 module Beckn.Utils.Context where
 
 import Beckn.Types.App
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.MonadGuid
 import Beckn.Types.Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-buildContext :: (L.MonadFlow m, MonadTime m) => Text -> Text -> Maybe BaseUrl -> Maybe BaseUrl -> m Context
+buildContext :: (MonadTime m, MonadGuid m) => Text -> Text -> Maybe BaseUrl -> Maybe BaseUrl -> m Context
 buildContext action txnId bapUri bppUri = do
   currTime <- getCurrentTime
-  msgId <- L.generateGUID
+  msgId <- generateGUIDText
   return $
     Context
       { _domain = MOBILITY,
@@ -31,10 +27,10 @@ buildContext action txnId bapUri bppUri = do
         _ttl = Nothing
       }
 
-updateContext :: (L.MonadFlow m, MonadTime m) => Text -> Context -> m Context
+updateContext :: (MonadTime m, MonadGuid m) => Text -> Context -> m Context
 updateContext action context = do
   currTime <- getCurrentTime
-  msgId <- L.generateGUID
+  msgId <- generateGUIDText
   return $
     context & #_timestamp .~ currTime
       & #_message_id .~ msgId

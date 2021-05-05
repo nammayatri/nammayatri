@@ -28,7 +28,6 @@ import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
@@ -45,7 +44,7 @@ import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.Error
 import Types.ProductInfo
-import Utils.Common (generateShortId, mkContext, mkIntent, validateContext)
+import Utils.Common (generateShortId, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 
 search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
@@ -56,8 +55,6 @@ search person req = withFlowHandlerBecknAPI $ do
   toLocation <- mkLocation $ toBeckn $ req ^. #destination
   case_ <- mkCase req (getId $ person ^. #_id) fromLocation toLocation
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
-  now <- getCurrentTime
-  msgId <- L.generateGUID
   DB.runSqlDBTransaction $ do
     Location.create fromLocation
     Location.create toLocation
@@ -65,8 +62,8 @@ search person req = withFlowHandlerBecknAPI $ do
   env <- ask
   let txnId = getId (case_ ^. #_id)
       bapNwAddr = env ^. #bapNwAddress
-      context = mkContext "search" txnId msgId now (Just bapNwAddr) Nothing
-      intent = mkIntent req
+  context <- buildContext "search" txnId (Just bapNwAddr) Nothing
+  let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
   Gateway.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags))
     >>= checkAckResponseError (ExternalAPIResponseError "search")

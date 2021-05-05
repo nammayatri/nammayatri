@@ -130,13 +130,13 @@ mkPrice prodInst =
         }
 
 mkOrder :: ProductInstance -> Maybe Trip -> Flow Mobility.Order
-mkOrder pri trip = do
+mkOrder orderPI trip = do
   now <- getCurrentTime
-  searchPiId <- pri ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  searchPiId <- orderPI ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   return
     Mobility.Order
       { _id = getId searchPiId,
-        _items = [OrderItem (getId $ pri ^. #_productId) Nothing],
+        _items = [OrderItem (getId $ orderPI ^. #_productId) Nothing],
         _created_at = now,
         _updated_at = now,
         _state = Nothing,

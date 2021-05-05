@@ -109,8 +109,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
       notifyErrorGateway err callbackUrl bppShortId
   where
     notifySuccessGateway callbackUrl bppShortId = do
-      allPis <- ProductInstance.findAllByCaseId (searchCase ^. #_id)
-      onConfirmPayload <- mkOnConfirmPayload searchCase [orderProductInstance] allPis trackerCase
+      onConfirmPayload <- mkOnConfirmPayload searchCase orderProductInstance trackerCase
       logTagInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| callbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
       _ <- Gateway.onConfirm callbackUrl onConfirmPayload bppShortId
       pure ()
@@ -255,12 +254,12 @@ mkTrackerProductInstance caseId prodInst currTime = do
         _udf5 = prodInst ^. #_udf5
       }
 
-mkOnConfirmPayload :: Case.Case -> [ProductInstance.ProductInstance] -> [ProductInstance.ProductInstance] -> Case.Case -> Flow API.OnConfirmReq
-mkOnConfirmPayload searchCase pis _allPis trackerCase = do
+mkOnConfirmPayload :: Case.Case -> ProductInstance.ProductInstance -> Case.Case -> Flow API.OnConfirmReq
+mkOnConfirmPayload searchCase orderPI trackerCase = do
   let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
   context <- buildContext "on_confirm" txnId Nothing Nothing -- FIXME: BAP and BPP uri here??
-  trip <- BP.mkTrip trackerCase (head pis)
-  order <- GT.mkOrder (head pis) (Just trip)
+  trip <- BP.mkTrip trackerCase orderPI
+  order <- GT.mkOrder orderPI (Just trip)
   return
     API.CallbackReq
       { context,
