@@ -56,23 +56,24 @@ fromMaybe400Log msg errCode ctx Nothing = do
   whenJust mGatewayApiKey $ \gatewayApiKey ->
     fork "Log" $ do
       L.runIO $ threadDelay 0.5e6
-      void $
-        callClient "log-fmd-wrapper" ctx gatewayBaseUrl $
-          client
-            logAPI
-            gatewayApiKey
-            LogReq
-              { _context = logCtx,
-                _message =
-                  Log
-                    { _type = "ERROR",
-                      _message = msg,
-                      _errorCode = maybe "" show errCode,
-                      _debug = Nothing,
-                      _trace = Nothing,
-                      _context = ctx
-                    }
-              }
+      let eClient =
+            client
+              logAPI
+              gatewayApiKey
+              LogReq
+                { _context = logCtx,
+                  _message =
+                    Log
+                      { _type = "ERROR",
+                        _message = msg,
+                        _errorCode = maybe "" show errCode,
+                        _debug = Nothing,
+                        _trace = Nothing,
+                        _context = ctx
+                      }
+                }
+      void $ callAPIWithMetrics gatewayBaseUrl eClient "log-fmd-wrapper"
+
   throwError $
     ErrorCodeWithMessage
       msg
