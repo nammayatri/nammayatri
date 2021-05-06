@@ -7,8 +7,8 @@ import EulerHS.Prelude
 import FmdWrapper.Common
 import Runner
 import Servant
+import "fmd-wrapper" Types.Beckn.API.Search (OnSearchReq)
 import "fmd-wrapper" Types.Beckn.Ack
-import "fmd-wrapper" Types.Beckn.Domain.API.Search (OnSearchReq)
 
 newtype CallbackData = CallbackData
   { onSearchTVar :: TVar [CallbackResult OnSearchReq]

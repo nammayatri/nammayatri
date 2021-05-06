@@ -1,10 +1,10 @@
-module Types.Beckn.Domain.Intent where
+module Types.Beckn.Intent where
 
 import Beckn.Utils.Example
 import Data.Time (UTCTime)
 import EulerHS.Prelude
-import Types.Beckn.Domain.Package
 import Types.Beckn.Location
+import Types.Beckn.Package
 import Types.Beckn.Tag
 
 data Intent = Intent

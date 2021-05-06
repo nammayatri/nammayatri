@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Types.Beckn.Domain.API.Status where
+module Types.Beckn.API.Status where
 
 import Data.Generics.Labels ()
 import EulerHS.Prelude
@@ -8,7 +8,7 @@ import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.API.Callback
 import Types.Beckn.Ack (AckResponse (..))
 import Types.Beckn.Context
-import Types.Beckn.Domain.Order
+import Types.Beckn.FmdOrder
 
 type StatusAPI =
   "status"

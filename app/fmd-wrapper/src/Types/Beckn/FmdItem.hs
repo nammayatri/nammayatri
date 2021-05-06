@@ -1,4 +1,4 @@
-module Types.Beckn.Domain.Item where
+module Types.Beckn.FmdItem where
 
 import Beckn.Utils.Example
 import EulerHS.Prelude

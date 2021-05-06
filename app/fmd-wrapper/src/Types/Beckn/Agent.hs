@@ -1,4 +1,4 @@
-module Types.Beckn.Domain.Agent where
+module Types.Beckn.Agent where
 
 import Types.Beckn.Operator
 

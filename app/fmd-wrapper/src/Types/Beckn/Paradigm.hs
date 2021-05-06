@@ -1,4 +1,4 @@
-module Types.Beckn.Domain.Paradigm where
+module Types.Beckn.Paradigm where
 
 import Beckn.Utils.Example
 import EulerHS.Prelude

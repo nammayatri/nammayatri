@@ -7,12 +7,12 @@ import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 import Servant.Client
-import "fmd-wrapper" Types.Beckn.Domain.API.Confirm
-import "fmd-wrapper" Types.Beckn.Domain.API.Init
-import "fmd-wrapper" Types.Beckn.Domain.API.Search
-import "fmd-wrapper" Types.Beckn.Domain.API.Select
-import "fmd-wrapper" Types.Beckn.Domain.API.Update
-import "fmd-wrapper" Types.Beckn.Domain.Order
+import "fmd-wrapper" Types.Beckn.API.Confirm
+import "fmd-wrapper" Types.Beckn.API.Init
+import "fmd-wrapper" Types.Beckn.API.Search
+import "fmd-wrapper" Types.Beckn.API.Select
+import "fmd-wrapper" Types.Beckn.API.Update
+import "fmd-wrapper" Types.Beckn.FmdOrder
 
 fmdWrapperBaseUrl :: BaseUrl
 fmdWrapperBaseUrl =

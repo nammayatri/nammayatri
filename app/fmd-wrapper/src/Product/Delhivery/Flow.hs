@@ -20,13 +20,13 @@ import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as Storage
+import qualified Types.Beckn.API.Confirm as API
+import qualified Types.Beckn.API.Init as API
+import qualified Types.Beckn.API.Search as API
+import qualified Types.Beckn.API.Select as API
 import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
 import Types.Beckn.Context
-import qualified Types.Beckn.Domain.API.Confirm as API
-import qualified Types.Beckn.Domain.API.Init as API
-import qualified Types.Beckn.Domain.API.Search as API
-import qualified Types.Beckn.Domain.API.Select as API
-import Types.Beckn.Domain.Order
+import Types.Beckn.FmdOrder
 import Types.Common
 import Types.Error
 import Types.Wrapper

@@ -14,36 +14,36 @@ import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude hiding (State, drop)
 import External.Dunzo.Types
 import Types.Beckn.API.Callback
+import Types.Beckn.API.Cancel
+import Types.Beckn.API.Confirm
+import Types.Beckn.API.Init
+import Types.Beckn.API.Search
+import Types.Beckn.API.Select
+import Types.Beckn.API.Status
+import Types.Beckn.API.Track
+import Types.Beckn.API.Update
 import qualified Types.Beckn.Address as CoreAddr
+import Types.Beckn.Catalog
 import Types.Beckn.Category
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
-import Types.Beckn.Domain.API.Cancel
-import Types.Beckn.Domain.API.Confirm
-import Types.Beckn.Domain.API.Init
-import Types.Beckn.Domain.API.Search
-import Types.Beckn.Domain.API.Select
-import Types.Beckn.Domain.API.Status
-import Types.Beckn.Domain.API.Track
-import Types.Beckn.Domain.API.Update
-import Types.Beckn.Domain.Catalog
-import Types.Beckn.Domain.Order
-import Types.Beckn.Domain.Package
-import Types.Beckn.Domain.Task hiding (TaskState)
-import qualified Types.Beckn.Domain.Task as Beckn (TaskState (..))
 import qualified Types.Beckn.Error as Err
+import Types.Beckn.FmdOrder
 import Types.Beckn.Item
 import qualified Types.Beckn.Location as CoreLoc
 import Types.Beckn.MonetaryValue
 import Types.Beckn.Operator
 import Types.Beckn.Option
+import Types.Beckn.Package
 import Types.Beckn.Payment
 import Types.Beckn.PaymentEndpoint
 import Types.Beckn.Person
 import Types.Beckn.Price
 import Types.Beckn.Quotation
 import Types.Beckn.State
+import Types.Beckn.Task hiding (TaskState)
+import qualified Types.Beckn.Task as Beckn (TaskState (..))
 import Types.Beckn.Tracking
 import Types.Error
 import Types.Wrapper

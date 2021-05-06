@@ -18,13 +18,13 @@ import Servant (Header, type (:>))
 import Servant.Client
 import Test.Hspec hiding (context, example)
 import "fmd-wrapper" Types.Beckn.API.Callback
+import qualified "fmd-wrapper" Types.Beckn.API.Search as Search
 import "fmd-wrapper" Types.Beckn.Ack
+import "fmd-wrapper" Types.Beckn.Catalog
 import "fmd-wrapper" Types.Beckn.Category
 import "fmd-wrapper" Types.Beckn.Context
 import "fmd-wrapper" Types.Beckn.Descriptor
 import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
-import qualified "fmd-wrapper" Types.Beckn.Domain.API.Search as Search
-import "fmd-wrapper" Types.Beckn.Domain.Catalog
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
 import "fmd-wrapper" Types.Beckn.Item
 import qualified "fmd-wrapper" Types.Beckn.Location as Location

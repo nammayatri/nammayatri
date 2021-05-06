@@ -1,4 +1,4 @@
-module Types.Beckn.Domain.Catalog where
+module Types.Beckn.Catalog where
 
 import Beckn.Utils.Example
 import Data.Text

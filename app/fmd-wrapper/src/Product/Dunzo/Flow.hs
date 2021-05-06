@@ -25,19 +25,19 @@ import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as Storage
+import qualified Types.Beckn.API.Cancel as API
+import qualified Types.Beckn.API.Confirm as API
+import qualified Types.Beckn.API.Init as API
+import qualified Types.Beckn.API.Search as API
+import qualified Types.Beckn.API.Select as API
+import qualified Types.Beckn.API.Status as API
+import qualified Types.Beckn.API.Track as API
+import qualified Types.Beckn.API.Update as API
 import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
-import qualified Types.Beckn.Domain.API.Cancel as API
-import qualified Types.Beckn.Domain.API.Confirm as API
-import qualified Types.Beckn.Domain.API.Init as API
-import qualified Types.Beckn.Domain.API.Search as API
-import qualified Types.Beckn.Domain.API.Select as API
-import qualified Types.Beckn.Domain.API.Status as API
-import qualified Types.Beckn.Domain.API.Track as API
-import qualified Types.Beckn.Domain.API.Update as API
-import qualified Types.Beckn.Domain.Item as Item
-import Types.Beckn.Domain.Order
+import qualified Types.Beckn.FmdItem as Item
+import Types.Beckn.FmdOrder
 import Types.Common
 import Types.Error
 import Types.Wrapper

@@ -1,4 +1,4 @@
-module Types.Beckn.Domain.Task where
+module Types.Beckn.Task where
 
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
@@ -6,10 +6,10 @@ import Beckn.Utils.JSON
 import Data.Aeson hiding (Error)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State)
+import Types.Beckn.Agent
 import Types.Beckn.Descriptor
-import Types.Beckn.Domain.Agent
-import Types.Beckn.Domain.Package
 import Types.Beckn.Location
+import Types.Beckn.Package
 import Types.Beckn.Person
 import Types.Beckn.State
 

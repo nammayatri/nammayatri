@@ -1,14 +1,14 @@
-module Types.Beckn.Domain.Service where
+module Types.Beckn.Service where
 
 import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 import Types.Beckn.Brand
 import Types.Beckn.Category
-import Types.Beckn.Domain.Paradigm
 import Types.Beckn.Item
 import Types.Beckn.Model
 import Types.Beckn.Offer
+import Types.Beckn.Paradigm
 import Types.Beckn.Policy
 import Types.Beckn.Provider
 

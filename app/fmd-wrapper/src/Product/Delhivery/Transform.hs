@@ -14,19 +14,18 @@ import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import External.Delhivery.Types
 import Types.Beckn.API.Callback
+import Types.Beckn.API.Confirm
+import Types.Beckn.API.Init
+import Types.Beckn.API.Search
+import Types.Beckn.API.Select
 import qualified Types.Beckn.Address as CoreAddr
+import Types.Beckn.Catalog
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
-import Types.Beckn.Domain.API.Confirm
-import Types.Beckn.Domain.API.Init
-import Types.Beckn.Domain.API.Search
-import Types.Beckn.Domain.API.Select
-import Types.Beckn.Domain.Catalog
-import qualified Types.Beckn.Domain.Item as FMD
-import Types.Beckn.Domain.Order
-import Types.Beckn.Domain.Task
 import qualified Types.Beckn.Error as CoreErr
+import qualified Types.Beckn.FmdItem as FMD
+import Types.Beckn.FmdOrder
 import qualified Types.Beckn.Item as Core
 import qualified Types.Beckn.Location as CoreLoc
 import Types.Beckn.MonetaryValue
@@ -36,6 +35,7 @@ import Types.Beckn.Person
 import Types.Beckn.Price
 import Types.Beckn.Quotation
 import Types.Beckn.Tag
+import Types.Beckn.Task
 import Types.Error
 import Types.Wrapper
 import Utils.Common

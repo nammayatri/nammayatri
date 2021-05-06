@@ -3,7 +3,7 @@ module Types.Wrapper where
 import Beckn.Types.App
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
-import Types.Beckn.Domain.Order
+import Types.Beckn.FmdOrder
 import Types.Beckn.Quotation
 import Types.Common
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Types.Beckn.Domain.API.Track where
+module Types.Beckn.API.Track where
 
 import Data.Generics.Labels ()
 import EulerHS.Prelude

@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Types.Beckn.Domain.API.Confirm where
+module Types.Beckn.API.Confirm where
 
 import Data.Generics.Labels ()
 import EulerHS.Prelude
@@ -8,7 +8,7 @@ import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.API.Callback
 import Types.Beckn.Ack (AckResponse (..))
 import Types.Beckn.Context
-import qualified Types.Beckn.Domain.Order as FMD
+import qualified Types.Beckn.FmdOrder as FMD
 
 type ConfirmAPI =
   "confirm"

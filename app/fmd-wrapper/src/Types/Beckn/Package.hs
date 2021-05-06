@@ -1,10 +1,10 @@
-module Types.Beckn.Domain.Package where
+module Types.Beckn.Package where
 
 import Beckn.Utils.Example
 import EulerHS.Prelude
 import Types.Beckn.Descriptor
 import Types.Beckn.Dimensions
-import Types.Beckn.Domain.Item
+import Types.Beckn.FmdItem
 import Types.Beckn.Price
 import Types.Beckn.Scalar
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Types.Beckn.Domain.API.Update where
+module Types.Beckn.API.Update where
 
 import Data.Generics.Labels ()
 import EulerHS.Prelude
@@ -8,7 +8,7 @@ import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.API.Callback
 import Types.Beckn.Ack (AckResponse (..))
 import Types.Beckn.Context
-import Types.Beckn.Domain.Order
+import Types.Beckn.FmdOrder
 import qualified Types.Beckn.Order as Core
 
 type UpdateAPI =

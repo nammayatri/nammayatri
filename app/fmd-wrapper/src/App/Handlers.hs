@@ -5,14 +5,14 @@ import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.APIMapper as API
 import Servant
-import Types.Beckn.Domain.API.Cancel (CancelAPI)
-import Types.Beckn.Domain.API.Confirm (ConfirmAPI)
-import Types.Beckn.Domain.API.Init (InitAPI)
-import Types.Beckn.Domain.API.Search (SearchAPI)
-import Types.Beckn.Domain.API.Select (SelectAPI)
-import Types.Beckn.Domain.API.Status (StatusAPI)
-import Types.Beckn.Domain.API.Track (TrackAPI)
-import Types.Beckn.Domain.API.Update (UpdateAPI)
+import Types.Beckn.API.Cancel (CancelAPI)
+import Types.Beckn.API.Confirm (ConfirmAPI)
+import Types.Beckn.API.Init (InitAPI)
+import Types.Beckn.API.Search (SearchAPI)
+import Types.Beckn.API.Select (SelectAPI)
+import Types.Beckn.API.Status (StatusAPI)
+import Types.Beckn.API.Track (TrackAPI)
+import Types.Beckn.API.Update (UpdateAPI)
 import Utils.Auth
 
 type WrapperAPI =
