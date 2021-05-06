@@ -21,7 +21,9 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import qualified Prometheus as P
 import Types.Geofencing
+import Utils.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -88,15 +90,20 @@ data AppEnv = AppEnv
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
-    graphhopperUrl :: BaseUrl
+    graphhopperUrl :: BaseUrl,
+    metricsCaseCounter :: P.Vector P.Label2 P.Counter,
+    metricsSearchDurationHistogram :: P.Histogram
   }
   deriving (Generic)
 
-mkAppEnv :: AppCfg -> AppEnv
-mkAppEnv AppCfg {..} =
-  AppEnv
-    { ..
-    }
+mkAppEnv :: AppCfg -> IO AppEnv
+mkAppEnv AppCfg {..} = do
+  metricsCaseCounter <- registerCaseCounter
+  metricsSearchDurationHistogram <- registerSearchDurationHistogram
+  return $
+    AppEnv
+      { ..
+      }
 
 type Env = EnvR AppEnv
 
@@ -112,3 +119,7 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasMetrics AppEnv where
+  getCaseCounter = metricsCaseCounter <$> ask
+  getSearchDurationHistogram = metricsSearchDurationHistogram <$> ask
