@@ -1,5 +1,5 @@
 module Utils.Metrics
-  ( HasMetrics (..),
+  ( HasBAPMetrics (..),
     incrementCaseCount,
     startSearchMetrics,
     finishSearchMetrics,
@@ -18,14 +18,14 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Prometheus as P
 
-class HasMetrics e where
-  getCaseCounter :: FlowR e (P.Vector P.Label2 P.Counter)
-  getSearchDurationHistogram :: FlowR e P.Histogram
+class HasBAPMetrics m where
+  getCaseCounter :: m (P.Vector P.Label2 P.Counter)
+  getSearchDurationHistogram :: m P.Histogram
 
 registerCaseCounter :: IO (P.Vector P.Label2 P.Counter)
 registerCaseCounter = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "case_count" ""
 
-incrementCaseCount :: HasMetrics e => Case.CaseStatus -> Case.CaseType -> FlowR e ()
+incrementCaseCount :: HasBAPMetrics (FlowR e) => Case.CaseStatus -> Case.CaseType -> FlowR e ()
 incrementCaseCount caseStatus caseType = do
   caseCounter <- getCaseCounter
   L.runIO $ P.withLabel caseCounter (show caseStatus, show caseType) P.incCounter
@@ -33,7 +33,7 @@ incrementCaseCount caseStatus caseType = do
 registerSearchDurationHistogram :: IO P.Histogram
 registerSearchDurationHistogram = P.register . P.histogram (P.Info "beckn_search_round_trip" "") $ P.linearBuckets 0 0.5 32
 
-putSearchDuration :: HasMetrics e => Double -> FlowR e ()
+putSearchDuration :: HasBAPMetrics (FlowR e) => Double -> FlowR e ()
 putSearchDuration duration = do
   searchDurationHistogram <- getSearchDurationHistogram
   L.runIO $ P.observe searchDurationHistogram duration
@@ -47,7 +47,7 @@ searchDurationLockKey txnId = txnId <> ":on_search"
 searchRedisExTime :: (Num a) => a
 searchRedisExTime = 15
 
-startSearchMetrics :: HasMetrics e => Text -> FlowR e ()
+startSearchMetrics :: HasBAPMetrics (FlowR e) => Text -> FlowR e ()
 startSearchMetrics txnId = do
   startTime <- getCurrentTime
   Redis.setExRedis (searchDurationKey txnId) startTime searchRedisExTime
@@ -55,12 +55,12 @@ startSearchMetrics txnId = do
     L.runIO $ threadDelay $ searchRedisExTime * 1000000
     tryToPutSearchDuration txnId (const searchRedisExTime)
 
-finishSearchMetrics :: HasMetrics e => Text -> FlowR e ()
+finishSearchMetrics :: HasBAPMetrics (FlowR e) => Text -> FlowR e ()
 finishSearchMetrics txnId = do
   endTime <- getCurrentTime
   tryToPutSearchDuration txnId (realToFrac . diffUTCTime endTime)
 
-tryToPutSearchDuration :: HasMetrics e => Text -> (UTCTime -> Double) -> FlowR e ()
+tryToPutSearchDuration :: HasBAPMetrics (FlowR e) => Text -> (UTCTime -> Double) -> FlowR e ()
 tryToPutSearchDuration txnId countDurr =
   whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
     Redis.getKeyRedis (searchDurationKey txnId) >>= \case

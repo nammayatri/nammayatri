@@ -89,6 +89,7 @@ library:
     - wai
     - wai-extra
     - warp
+    - prometheus-client
 
 executables:
   beckn-gateway-exe:

@@ -7,6 +7,7 @@ import Beckn.Types.App (TraceFlag)
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Utils.Common
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail)
 import EulerHS.Prelude
 import GHC.Records (HasField)
@@ -14,7 +15,8 @@ import Servant.Client.Core (BaseUrl, ClientError)
 
 autoComplete ::
   ( HasField "dbCfg" r DBConfig,
-    HasField "traceFlag" r TraceFlag
+    HasField "traceFlag" r TraceFlag,
+    HasCoreMetrics (FlowR r)
   ) =>
   BaseUrl ->
   Text ->
@@ -29,7 +31,8 @@ autoComplete url apiKey input location radius components = do
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
-    HasField "traceFlag" r TraceFlag
+    HasField "traceFlag" r TraceFlag,
+    HasCoreMetrics (FlowR r)
   ) =>
   BaseUrl ->
   Text ->
@@ -42,7 +45,8 @@ placeDetails url apiKey placeId fields = do
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
-    HasField "traceFlag" r TraceFlag
+    HasField "traceFlag" r TraceFlag,
+    HasCoreMetrics (FlowR r)
   ) =>
   BaseUrl ->
   Text ->

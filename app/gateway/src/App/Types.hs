@@ -5,11 +5,13 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import qualified Prometheus as P
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -45,18 +47,21 @@ data AppEnv = AppEnv
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
     fmdDomainVersion :: Text,
-    signatureExpiry :: NominalDiffTime
+    signatureExpiry :: NominalDiffTime,
+    metricsRequestLatencyHistogram :: P.Vector P.Label3 P.Histogram
   }
   deriving (Generic)
 
-mkAppEnv :: AppCfg -> C.Cache Text Text -> AppEnv
-mkAppEnv AppCfg {..} c =
-  AppEnv
-    { gwId = selfId,
-      gwNwAddress = nwAddress,
-      cache = c,
-      ..
-    }
+mkAppEnv :: AppCfg -> C.Cache Text Text -> IO AppEnv
+mkAppEnv AppCfg {..} c = do
+  metricsRequestLatencyHistogram <- registerRequestLatencyHistogram
+  return $
+    AppEnv
+      { gwId = selfId,
+        gwNwAddress = nwAddress,
+        cache = c,
+        ..
+      }
 
 type Flow = FlowR AppEnv
 
@@ -70,3 +75,6 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasCoreMetrics Flow where
+  getRequestLatencyHistogram = metricsRequestLatencyHistogram <$> ask

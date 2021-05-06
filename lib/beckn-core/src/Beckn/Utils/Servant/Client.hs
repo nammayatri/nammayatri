@@ -13,7 +13,7 @@ import qualified Servant.Client as S
 import Servant.Client.Core
 
 callClient ::
-  (ET.JSONEx a, L.MonadFlow m, Log m) =>
+  (ET.JSONEx a, L.MonadFlow m, HasCoreMetrics m, Log m) =>
   Text ->
   Context ->
   S.BaseUrl ->
@@ -23,7 +23,7 @@ callClient = callClient' Nothing
 
 -- TODO: the @desc@ argument should become part of monadic context
 callClient' ::
-  (ET.JSONEx a, L.MonadFlow m, Log m) =>
+  (ET.JSONEx a, L.MonadFlow m, HasCoreMetrics m, Log m) =>
   Maybe String ->
   Text ->
   context ->
@@ -31,9 +31,9 @@ callClient' ::
   ET.EulerClient a ->
   m a
 callClient' mbManager desc _ baseUrl cli = do
-  endTracking <- L.runIO $ Metrics.startTracking (T.pack $ showBaseUrl baseUrl) desc
+  endTracking <- Metrics.startTracking (T.pack $ showBaseUrl baseUrl) desc
   res <- L.callAPI' mbManager baseUrl cli
-  _ <- L.runIO $ endTracking $ getResponseCode res
+  _ <- endTracking $ getResponseCode res
   res & fromEitherM (ExternalAPICallError baseUrl)
   where
     getResponseCode res =

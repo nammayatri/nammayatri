@@ -34,7 +34,7 @@ runFMDWrapper configModifier = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
   let settings = setPort (appCfg ^. #port) defaultSettings
-      appEnv = mkAppEnv appCfg
+  appEnv <- mkAppEnv appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

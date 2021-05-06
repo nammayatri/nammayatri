@@ -17,6 +17,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
@@ -92,7 +93,8 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     metricsCaseCounter :: P.Vector P.Label2 P.Counter,
-    metricsSearchDurationHistogram :: P.Histogram
+    metricsSearchDurationHistogram :: P.Histogram,
+    metricsRequestLatencyHistogram :: P.Vector P.Label3 P.Histogram
   }
   deriving (Generic)
 
@@ -100,6 +102,7 @@ mkAppEnv :: AppCfg -> IO AppEnv
 mkAppEnv AppCfg {..} = do
   metricsCaseCounter <- registerCaseCounter
   metricsSearchDurationHistogram <- registerSearchDurationHistogram
+  metricsRequestLatencyHistogram <- registerRequestLatencyHistogram
   return $
     AppEnv
       { ..
@@ -120,6 +123,9 @@ instance AuthenticatingEntity AppEnv where
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
 
-instance HasMetrics AppEnv where
+instance HasBAPMetrics Flow where
   getCaseCounter = metricsCaseCounter <$> ask
   getSearchDurationHistogram = metricsSearchDurationHistogram <$> ask
+
+instance HasCoreMetrics Flow where
+  getRequestLatencyHistogram = metricsRequestLatencyHistogram <$> ask

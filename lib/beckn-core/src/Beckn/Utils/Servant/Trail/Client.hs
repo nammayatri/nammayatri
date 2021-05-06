@@ -120,14 +120,14 @@ saveClientTrailFlow (TrailInfo res req) = do
 
 -- TODO: merge with lib/beckn-core/src/Beckn/Utils/Error/Throwing.hs callCLient'
 callAPIWithTrail' ::
-  (JSONEx a, ToJSON a) =>
+  (JSONEx a, ToJSON a, HasCoreMetrics (FlowR r)) =>
   Maybe String ->
   BaseUrl ->
   (RequestInfo, EulerClient a) ->
   Text ->
   FlowWithTraceFlag r (Either ClientError a)
 callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
-  endTracking <- L.runIO $ Metrics.startTracking (T.pack $ showBaseUrl baseUrl) serviceName
+  endTracking <- Metrics.startTracking (T.pack $ showBaseUrl baseUrl) serviceName
   res <- L.callAPI' mbManager baseUrl req
   let status = case res of
         Right _ -> "200"
@@ -136,7 +136,7 @@ callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
         Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
-  _ <- L.runIO $ endTracking status
+  _ <- endTracking status
   case res of
     Right r -> logTagInfo serviceName $ "Ok response: " <> decodeUtf8 (A.encode r)
     Left err -> logTagInfo serviceName $ "Error occured during client call: " <> show err
@@ -152,7 +152,7 @@ callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
       return res'
 
 callAPIWithTrail ::
-  (JSONEx a, ToJSON a) =>
+  (JSONEx a, ToJSON a, HasCoreMetrics (FlowR r)) =>
   BaseUrl ->
   (RequestInfo, EulerClient a) ->
   Text ->

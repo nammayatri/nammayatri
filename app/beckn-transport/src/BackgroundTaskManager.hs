@@ -35,7 +35,7 @@ runBackgroundTaskManager configModifier = do
   let redisCfg = appCfg ^. #redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appCfg ^. #bgtmPort
-  let appEnv = mkAppEnv appCfg
+  appEnv <- mkAppEnv appCfg
   putStrLn @Text $ "Starting Background Task Manager on port " <> show port
 
   shutdown <- newEmptyTMVarIO
