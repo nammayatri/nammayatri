@@ -4,7 +4,6 @@ module Utils.Notifications where
 
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationReason (..))
@@ -16,10 +15,12 @@ import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
+import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.ProductInstance as PI
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
-import Utils.Common 
+import Utils.Common
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is
@@ -256,20 +257,55 @@ notifyOnTrackCb personId tracker c =
         _ -> pure ()
     else pure ()
 
-notifyOnCancel :: (CoreMetrics m, FCMFlow m r) => Case -> Person -> CancellationReason -> m ()
-notifyOnCancel c person reason =
-  notifyPerson notificationData person
+notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => Case -> Person -> CancellationReason -> m ()
+notifyOnCancel c person reason = do
+  piList <- PI.findAllByCaseId c.id
+  prodInst <- if null piList then throwError PINotFound else return $ head piList
+  org <- QOrg.findOrganizationById (prodInst.organizationId) >>= fromMaybeM OrgNotFound
+  notifyPerson (notificationData $ org.name) person
   where
-    caseId = c.id
-    notificationData =
+    notificationData orgName =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId caseId,
-          fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
+          fcmEntityIds = show $ getId c.id,
+          fcmNotificationJSON = createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-    body =
-      FCMNotificationBody reasonMsg
-    reasonMsg = encodeToText reason
+    body orgName =
+      FCMNotificationBody $ getCancellationText orgName
+    -- reasonMsg = encodeToText reason
+    getCancellationText orgName = case reason of
+      ByUser ->
+        unwords
+          [ "You have cancelled your ride for",
+            showTimeIst (c.startTime) <> ".",
+            "Check the app for details."
+          ]
+      ByOrganization ->
+        unwords
+          [ "\"" <> orgName <> "\" agency had to cancel the ride for",
+            showTimeIst (c.startTime) <> ".",
+            "Please book again to get another ride."
+          ]
+      ByDriver ->
+        unwords
+          [ "The driver had to cancel the ride for",
+            showTimeIst (c.startTime) <> ".",
+            "Please book again to get another ride."
+          ]
+      AllocationTimeExpired ->
+        unwords
+          [ "Ride for",
+            showTimeIst (c.startTime),
+            "has expired as we could not find a driver.",
+            "Please book again to get a ride."
+          ]
+      NoDriversInRange ->
+        unwords
+          [ "Ride for",
+            showTimeIst (c.startTime),
+            "has been cancelled as there are no drivers nearby.",
+            "Please try again in sometime."
+          ]

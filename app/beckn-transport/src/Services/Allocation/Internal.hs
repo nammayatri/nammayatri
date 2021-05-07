@@ -3,8 +3,8 @@ module Services.Allocation.Internal where
 import App.BackgroundTaskManager.Types (DriverAllocationConfig)
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Storage.Organization
 import Beckn.Types.Mobility.Order (CancellationReason (..))
+import Beckn.Types.Storage.Organization
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude hiding (id)
@@ -19,7 +19,6 @@ import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
-import Types.API.Ride (DriverResponse (..))
 import Types.App
 import Types.Error
 import Types.Metrics (CoreMetrics)

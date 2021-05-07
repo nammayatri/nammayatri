@@ -2,9 +2,10 @@ module Utils.Notifications where
 
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
+import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Types.Mobility.Order (CancellationReason (..))
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -22,22 +23,45 @@ notifyOnCancel ::
   Person ->
   CancellationReason ->
   m ()
-notifyOnCancel c person reason =
-  notifyPerson notificationData person
+notifyOnCancel c person reason = do
+  cancellationText <- getCancellationText
+  notifyPerson (notificationData cancellationText) person
   where
     caseId = Case.id c
-    notificationData =
+    notificationData cancellationText =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = show $ getId caseId,
-          fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
+          fcmNotificationJSON = createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-    body =
-      FCMNotificationBody reasonMsg
-    reasonMsg = encodeToText reason 
+    body text =
+      FCMNotificationBody text
+    getCancellationText = case reason of
+      ByUser ->
+        return $
+          unwords
+            [ "Customer had to cancel your ride for",
+              showTimeIst (c.startTime) <> ".",
+              "Check the app for more details."
+            ]
+      ByOrganization ->
+        return $
+          unwords
+            [ "Your agency had to cancel the ride for",
+              showTimeIst (c.startTime) <> ".",
+              "Check the app for more details."
+            ]
+      ByDriver ->
+        return $
+          unwords
+            [ "You have cancelled the ride for",
+              showTimeIst (c.startTime) <> ".",
+              "Check the app for more details."
+            ]
+      _ -> throwError (InternalError "Unexpected cancellation reason.")
 
 notifyOnRegistration ::
   ( FCMFlow m r,

@@ -5,10 +5,10 @@ import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.Option (Option)
 import Beckn.Types.Core.Order (OrderItem)
 import Beckn.Types.Core.Payment
-import Data.Aeson.Types
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.Aeson.Types
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
 
@@ -63,22 +63,25 @@ data CancellationReason
   | ByOrganization
   | AllocationTimeExpired
   | NoDriversInRange
-  | UnknownReason
   deriving (Show, Eq, Ord, Read, Generic)
 
 instance ToJSON CancellationReason where
-  toJSON ByUser = "CANCELLED_BY_USER"
-  toJSON ByDriver = "CANCELLED_BY_DRIVER"
-  toJSON ByOrganization = "CANCELLED_BY_ORGANIZATION"
-  toJSON AllocationTimeExpired = "ALLOCATION_TIME_EXPIRED"
-  toJSON NoDriversInRange = "NO_DRIVERS_IN_RANGE"
-  toJSON _ = "UNKNOWN_REASON"
+  toJSON = \case
+    ByUser -> "CANCELLED_BY_USER"
+    ByDriver -> "CANCELLED_BY_DRIVER"
+    ByOrganization -> "CANCELLED_BY_ORGANIZATION"
+    AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
+    NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
 
 instance FromJSON CancellationReason where
-  parseJSON = withText "CancellationReason" ( \case
-    "CANCELLED_BY_USER" -> return ByUser
-    "CANCELLED_BY_DRIVER" -> return ByDriver
-    "CANCELLED_BY_ORGANIZATION" -> return ByOrganization
-    "ALLOCATION_TIME_EXPIRED" -> return AllocationTimeExpired
-    "NO_DRIVERS_IN_RANGE" -> return NoDriversInRange
-    _ -> return UnknownReason)
+  parseJSON =
+    withText
+      "CancellationReason"
+      ( \case
+          "CANCELLED_BY_USER" -> return ByUser
+          "CANCELLED_BY_DRIVER" -> return ByDriver
+          "CANCELLED_BY_ORGANIZATION" -> return ByOrganization
+          "ALLOCATION_TIME_EXPIRED" -> return AllocationTimeExpired
+          "NO_DRIVERS_IN_RANGE" -> return NoDriversInRange
+          _ -> fail "CancellationReason parsing error"
+      )

@@ -5,7 +5,6 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
@@ -112,7 +111,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
         whenJust (cs.requestor) $ \personId -> do
           mbPerson <- Person.findById $ Id personId
           whenJust mbPerson $ \person -> do
-            let reason = fromMaybe UnknownReason $ msg.order.cancellation_reason_id
+            reason <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation reason.")
             Notify.notifyOnCancel cs person reason
         --
         arrPICase <- MPI.findAllByCaseId caseId

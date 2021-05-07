@@ -228,7 +228,7 @@ notifyCancelToGateway ::
   ) =>
   ProductInstance.ProductInstance ->
   Organization.Organization ->
-  CancellationReason -> 
+  CancellationReason ->
   m ()
 notifyCancelToGateway searchPi transporter reason = do
   trip <- mkCancelTripObj searchPi
