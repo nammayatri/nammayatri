@@ -88,16 +88,16 @@ pipeline {
                     --from-file=globalCommon.dhall=dhall-configs/generic/common.dhall \
                     -n atlas -o yaml --dry-run | \
                     grep -v 'creationTimestamp' \
-                  ) > deployment-configs/beckn-dhall-config.yaml
+                  ) > deployment-configs/sandbox/beckn-dhall-config.yaml
                 '''
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/beckn-dhall-config.yaml',
+                      configs: 'deployment-configs/sandbox/beckn-dhall-config.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/*deploy.yaml',
+                      configs: 'deployment-configs/sandbox/*deploy.yaml',
                       enableConfigSubstitution: true
                     )
               }
@@ -108,7 +108,7 @@ pipeline {
               steps {
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/*deploy.yaml',
+                      configs: 'deployment-configs/sandbox/*deploy.yaml',
                       enableConfigSubstitution: true
                     )
               }
@@ -119,22 +119,22 @@ pipeline {
               steps {
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/app-backend-deploy.yaml',
+                      configs: 'deployment-configs/sandbox/app-backend-deploy.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/beckn-gateway-deploy.yaml',
+                      configs: 'deployment-configs/sandbox/beckn-gateway-deploy.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/beckn-transport-deploy.yaml',
+                      configs: 'deployment-configs/sandbox/beckn-transport-deploy.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
                       kubeconfigId: 'eks-user-staging',
-                      configs: 'deployment-configs/beckn-transport-allocation-service-deploy.yaml',
+                      configs: 'deployment-configs/sandbox/beckn-transport-allocation-service-deploy.yaml',
                       enableConfigSubstitution: true
                     )
               }

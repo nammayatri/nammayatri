@@ -1,0 +1,106 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-app-backend-production
+  name: beckn-app-backend-production
+  namespace: monitoring
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: http-prom
+      scheme: http
+      scrapeTimeout: 15s
+      tlsConfig:
+        insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+      - atlas
+  selector:
+    matchLabels:
+      app: beckn-app-backend-production
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-gateway-production
+  name: beckn-gateway-production
+  namespace: monitoring
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: http-prom
+      scheme: http
+      scrapeTimeout: 15s
+      tlsConfig:
+        insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+      - atlas
+  selector:
+    matchLabels:
+      app: beckn-gateway-production
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-transport-production
+  name: beckn-transport-production
+  namespace: monitoring
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: http-prom
+      scheme: http
+      scrapeTimeout: 15s
+      tlsConfig:
+        insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+      - atlas
+  selector:
+    matchLabels:
+      app: beckn-transport-production
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-transport-allocation-service-production
+  name: beckn-transport-allocation-service-production
+  namespace: monitoring
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: http-prom
+      scheme: http
+      scrapeTimeout: 15s
+      tlsConfig:
+        insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+      - atlas
+  selector:
+    matchLabels:
+      app: beckn-transport-allocation-service-production
