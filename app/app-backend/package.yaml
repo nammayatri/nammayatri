@@ -82,7 +82,6 @@ dependencies:
   - warp
   - time
   - random-strings
-  - prometheus-client
 
 ghc-options:
   - -fwrite-ide-info

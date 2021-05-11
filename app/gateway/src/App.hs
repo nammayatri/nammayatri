@@ -57,7 +57,7 @@ runGateway configModifier = do
   let dbCfg = appCfg ^. #dbCfg
   let autoMigrate = appCfg ^. #autoMigrate
   cache <- C.newCache Nothing
-  appEnv <- mkAppEnv appCfg cache
+  appEnv <- buildAppEnv appCfg cache
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

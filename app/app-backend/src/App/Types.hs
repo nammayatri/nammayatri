@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module App.Types
   ( Env,
     Flow,
@@ -5,7 +7,7 @@ module App.Types
     FlowServer,
     AppCfg (),
     AppEnv (..),
-    mkAppEnv,
+    buildAppEnv,
   )
 where
 
@@ -22,7 +24,6 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Prometheus as P
 import Types.Geofencing
 import Utils.Metrics
 
@@ -60,7 +61,8 @@ data AppCfg = AppCfg
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
-    graphhopperUrl :: BaseUrl
+    graphhopperUrl :: BaseUrl,
+    metricsSearchDurationTimeout :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -92,17 +94,18 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    metricsCaseCounter :: P.Vector P.Label2 P.Counter,
-    metricsSearchDurationHistogram :: P.Histogram,
-    metricsRequestLatencyHistogram :: P.Vector P.Label3 P.Histogram
+    metricsCaseCounter :: CaseCounterMetric,
+    metricsSearchDurationTimeout :: Int,
+    metricsSearchDuration :: SearchDurationMetric,
+    metricsRequestLatency :: RequestLatencyMetric
   }
   deriving (Generic)
 
-mkAppEnv :: AppCfg -> IO AppEnv
-mkAppEnv AppCfg {..} = do
+buildAppEnv :: AppCfg -> IO AppEnv
+buildAppEnv AppCfg {..} = do
   metricsCaseCounter <- registerCaseCounter
-  metricsSearchDurationHistogram <- registerSearchDurationHistogram
-  metricsRequestLatencyHistogram <- registerRequestLatencyHistogram
+  metricsSearchDuration <- registerSearchDurationMetric metricsSearchDurationTimeout
+  metricsRequestLatency <- registerRequestLatencyMetric
   return $
     AppEnv
       { ..
@@ -124,8 +127,9 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance HasBAPMetrics Flow where
-  getCaseCounter = metricsCaseCounter <$> ask
-  getSearchDurationHistogram = metricsSearchDurationHistogram <$> ask
+  getCaseCounterMetric = metricsCaseCounter <$> ask
+  getSearchDurationTimeout = (^. #metricsSearchDurationTimeout) <$> ask
+  getSearchDurationMetric = metricsSearchDuration <$> ask
 
 instance HasCoreMetrics Flow where
-  getRequestLatencyHistogram = metricsRequestLatencyHistogram <$> ask
+  getRequestLatencyMetric = metricsRequestLatency <$> ask

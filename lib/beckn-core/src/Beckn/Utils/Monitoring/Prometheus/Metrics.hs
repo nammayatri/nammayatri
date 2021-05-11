@@ -18,8 +18,10 @@ import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
 import System.Clock (Clock (..), TimeSpec, diffTimeSpec, getTime, toNanoSecs)
 
+type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
+
 class HasCoreMetrics m where
-  getRequestLatencyHistogram :: m (P.Vector P.Label3 P.Histogram)
+  getRequestLatencyMetric :: m RequestLatencyMetric
 
 serve :: Int -> IO ()
 serve port = do
@@ -44,8 +46,8 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-registerRequestLatencyHistogram :: IO (P.Vector P.Label3 P.Histogram)
-registerRequestLatencyHistogram =
+registerRequestLatencyMetric :: IO RequestLatencyMetric
+registerRequestLatencyMetric =
   P.register $
     P.vector ("host", "service", "status") $
       P.histogram info P.defaultBuckets
@@ -60,7 +62,7 @@ startTracking host serviceName = do
 logRequestLatency :: (L.MonadFlow m, HasCoreMetrics m) => Text -> Text -> TimeSpec -> Text -> m ()
 logRequestLatency host serviceName start status = do
   end <- L.runIO $ getTime Monotonic
-  requestLatency <- getRequestLatencyHistogram
+  requestLatency <- getRequestLatencyMetric
   let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
   L.runIO $
     P.withLabel

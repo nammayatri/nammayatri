@@ -11,7 +11,6 @@ import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Prometheus as P
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -48,13 +47,13 @@ data AppEnv = AppEnv
     fmdCoreVersion :: Text,
     fmdDomainVersion :: Text,
     signatureExpiry :: NominalDiffTime,
-    metricsRequestLatencyHistogram :: P.Vector P.Label3 P.Histogram
+    metricsRequestLatency :: RequestLatencyMetric
   }
   deriving (Generic)
 
-mkAppEnv :: AppCfg -> C.Cache Text Text -> IO AppEnv
-mkAppEnv AppCfg {..} c = do
-  metricsRequestLatencyHistogram <- registerRequestLatencyHistogram
+buildAppEnv :: AppCfg -> C.Cache Text Text -> IO AppEnv
+buildAppEnv AppCfg {..} c = do
+  metricsRequestLatency <- registerRequestLatencyMetric
   return $
     AppEnv
       { gwId = selfId,
@@ -77,4 +76,4 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance HasCoreMetrics Flow where
-  getRequestLatencyHistogram = metricsRequestLatencyHistogram <$> ask
+  getRequestLatencyMetric = metricsRequestLatency <$> ask

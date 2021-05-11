@@ -95,4 +95,5 @@ in
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
+, metricsSearchDurationTimeout = +45
 }

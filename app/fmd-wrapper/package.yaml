@@ -73,7 +73,6 @@ dependencies:
   - wai-extra
   - warp
   - time
-  - prometheus-client
 
 ghc-options:
   - -fwrite-ide-info

@@ -39,7 +39,7 @@ runAppBackend' :: AppCfg -> Settings -> IO ()
 runAppBackend' appCfg settings = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
-  appEnv <- mkAppEnv appCfg
+  appEnv <- buildAppEnv appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

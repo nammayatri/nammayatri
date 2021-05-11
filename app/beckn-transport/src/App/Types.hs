@@ -7,7 +7,7 @@ module App.Types
     FlowHandler,
     FlowServer,
     Log (..),
-    mkAppEnv,
+    buildAppEnv,
   )
 where
 
@@ -23,7 +23,6 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Prometheus as P
 import Types.App (SortMode)
 
 data AppCfg = AppCfg
@@ -88,7 +87,7 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    metricsRequestLatencyHistogram :: P.Vector P.Label3 P.Histogram
+    metricsRequestLatency :: RequestLatencyMetric
   }
   deriving (Generic)
 
@@ -102,9 +101,9 @@ data DriverAllocationConfig = DriverAllocationConfig
   }
   deriving (Generic, FromDhall)
 
-mkAppEnv :: AppCfg -> IO AppEnv
-mkAppEnv AppCfg {..} = do
-  metricsRequestLatencyHistogram <- registerRequestLatencyHistogram
+buildAppEnv :: AppCfg -> IO AppEnv
+buildAppEnv AppCfg {..} = do
+  metricsRequestLatency <- registerRequestLatencyMetric
   return $
     AppEnv
       { ..
@@ -126,4 +125,4 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance HasCoreMetrics Flow where
-  getRequestLatencyHistogram = metricsRequestLatencyHistogram <$> ask
+  getRequestLatencyMetric = metricsRequestLatency <$> ask

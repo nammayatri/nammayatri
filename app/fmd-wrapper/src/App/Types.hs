@@ -5,7 +5,7 @@ module App.Types
     Flow,
     FlowHandler,
     FlowServer,
-    mkAppEnv,
+    buildAppEnv,
   )
 where
 
@@ -16,10 +16,11 @@ import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Servant.SignatureAuth
+  ( AuthenticatingEntity (..),
+  )
 import Data.Time
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Prometheus as P
 import Types.Wrapper (DelhiveryConfig, DunzoConfig)
 
 data AppCfg = AppCfg
@@ -54,13 +55,13 @@ data AppEnv = AppEnv
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,
-    metricsRequestLatencyHistogram :: P.Vector P.Label3 P.Histogram
+    metricsRequestLatency :: RequestLatencyMetric
   }
   deriving (Generic)
 
-mkAppEnv :: AppCfg -> IO AppEnv
-mkAppEnv AppCfg {..} = do
-  metricsRequestLatencyHistogram <- registerRequestLatencyHistogram
+buildAppEnv :: AppCfg -> IO AppEnv
+buildAppEnv AppCfg {..} = do
+  metricsRequestLatency <- registerRequestLatencyMetric
   return $
     AppEnv
       { ..
@@ -82,4 +83,4 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance HasCoreMetrics Flow where
-  getRequestLatencyHistogram = metricsRequestLatencyHistogram <$> ask
+  getRequestLatencyMetric = metricsRequestLatency <$> ask
