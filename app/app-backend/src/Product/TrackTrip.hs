@@ -26,7 +26,7 @@ import Utils.Common (validateContext)
 import qualified Utils.Notifications as Notify
 
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
-track person req = withFlowHandlerBecknAPI $ do
+track person req = withFlowHandlerAPI $ do
   let prodInstId = req ^. #rideId
   prodInst <- MPI.findById prodInstId
   case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)

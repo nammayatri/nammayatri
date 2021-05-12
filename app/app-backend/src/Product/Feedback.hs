@@ -14,7 +14,7 @@ import Beckn.Utils.Common
     checkAckResponseError,
     fromMaybeM,
     throwError,
-    withFlowHandlerBecknAPI,
+    withFlowHandlerAPI,
   )
 import EulerHS.Prelude hiding (product)
 import qualified External.Gateway.Flow as Gateway
@@ -25,7 +25,7 @@ import qualified Types.API.Feedback as API
 import Types.Error
 
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
-feedback person request = withFlowHandlerBecknAPI $ do
+feedback person request = withFlowHandlerAPI $ do
   let ratingValue = request ^. #rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let prodInstId = request ^. #productInstanceId

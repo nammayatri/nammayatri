@@ -48,7 +48,7 @@ import Utils.Common (generateShortId, mkIntent, validateContext)
 import qualified Utils.Metrics as Metrics
 
 search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
-search person req = withFlowHandlerBecknAPI $ do
+search person req = withFlowHandlerAPI $ do
   validateDateTime req
   validateServiceability req
   fromLocation <- mkLocation $ toBeckn $ req ^. #origin

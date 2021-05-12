@@ -22,7 +22,7 @@ import Types.Error
 import qualified Utils.Notifications as Notify
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
-status person StatusReq {..} = withFlowHandlerBecknAPI $ do
+status person StatusReq {..} = withFlowHandlerAPI $ do
   prodInst <- QPI.findById (Id productInstanceId)
   case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
   let caseId = getId $ case_ ^. #_id

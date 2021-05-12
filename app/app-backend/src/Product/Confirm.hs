@@ -33,7 +33,7 @@ import Utils.Common (generateShortId, validateContext)
 import qualified Utils.Metrics as Metrics
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
-confirm person API.ConfirmReq {..} = withFlowHandlerBecknAPI $ do
+confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   lt <- getCurrentTime
   case_ <- MCase.findIdByPerson person $ Id caseId
   when ((case_ ^. #_validTill) < lt) $
