@@ -3,6 +3,7 @@ module SignatureAuth
   )
 where
 
+import qualified Beckn.Utils.Registry as Registry
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as Base64
@@ -147,6 +148,20 @@ verifyRequest =
           Left err -> assertFailure $ "Could not verify signature: " <> show err
           Right isVerified -> assertBool "Signature is valid" isVerified
 
+signAndVerifyWithGeneratedKeyPair :: TestTree
+signAndVerifyWithGeneratedKeyPair =
+  testCase "Sign and verify a request with generated key pair" $ do
+    (privateKeyB64, publicKeyB64) <- Registry.prepareSigningKeyPair
+    let (Right privateKey, Right publicKey') = (Base64.decode privateKeyB64, Base64.decode publicKeyB64)
+    let mSig =
+          HttpSig.sign privateKey exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders)
+    case mSig of
+      Nothing -> assertFailure "Could not sign request"
+      Just sig -> do
+        case HttpSig.verify publicKey' exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig of
+          Left err -> assertFailure $ "Could not verify signature: " <> show err
+          Right isVerified -> assertBool "Signature is valid" isVerified
+
 signatureAuthTests :: TestTree
 signatureAuthTests =
   testGroup
@@ -155,5 +170,6 @@ signatureAuthTests =
       simpleEncode,
       checkSignatureMessage,
       signRequest,
-      verifyRequest
+      verifyRequest,
+      signAndVerifyWithGeneratedKeyPair
     ]

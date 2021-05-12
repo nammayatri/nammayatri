@@ -15,6 +15,7 @@ module Beckn.Utils.SignatureAuth
     defaultHeaderFields,
     makeSignatureString,
     mkSignatureParams,
+    generateKeyPair,
   )
 where
 
@@ -241,3 +242,10 @@ mkSignatureRealm headerName host =
   ( CI.mk $ encodeUtf8 headerName,
     "Signature realm=\"" <> encodeUtf8 host <> "\",headers=\"" <> encodeUtf8 (unwords defaultHeaderFields) <> "\""
   )
+
+-- Generates random public/private key pair for Ed25519 alg
+generateKeyPair :: IO (PrivateKey, PublicKey)
+generateKeyPair = do
+  secretKey <- Ed25519.generateSecretKey
+  let publicKey = Ed25519.toPublic secretKey
+  pure (BS.pack . BA.unpack $ secretKey, BS.pack . BA.unpack $ publicKey)
