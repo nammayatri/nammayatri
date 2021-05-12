@@ -17,12 +17,17 @@ import EulerHS.Prelude
 -- | Send FCM "cancel" notification to driver
 notifyDriverOnCancel :: Case -> Person -> Flow ()
 notifyDriverOnCancel c =
-  notifyPerson title body notificationData
+  notifyPerson notificationData
   where
     caseId = Case._id c
     notificationData =
-      FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-        show (getId caseId)
+      FCM.FCMAndroidData
+        { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityType = FCM.Product,
+          _fcmEntityIds = show $ getId caseId,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
+        }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body =
       FCMNotificationBody $
@@ -34,12 +39,17 @@ notifyDriverOnCancel c =
 
 notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
 notifyOnRegistration regToken =
-  notifyPerson title body notificationData
+  notifyPerson notificationData
   where
     tokenId = RegToken._id regToken
     notificationData =
-      FCMData REGISTRATION_APPROVED SHOW FCM.Organization $
-        show tokenId
+      FCM.FCMAndroidData
+        { _fcmNotificationType = FCM.REGISTRATION_APPROVED,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityType = FCM.Organization,
+          _fcmEntityIds = show tokenId,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.REGISTRATION_APPROVED
+        }
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
     body =
       FCMNotificationBody $
@@ -50,11 +60,16 @@ notifyOnRegistration regToken =
 
 notifyTransporterOnExpiration :: Case -> [Person] -> Flow ()
 notifyTransporterOnExpiration c =
-  traverse_ (notifyPerson title body notificationData)
+  traverse_ (notifyPerson notificationData)
   where
     notificationData =
-      FCMData EXPIRED_CASE SHOW FCM.Case $
-        show (getId $ c ^. #_id)
+      FCM.FCMAndroidData
+        { _fcmNotificationType = FCM.EXPIRED_CASE,
+          _fcmShowNotification = FCM.SHOW,
+          _fcmEntityType = FCM.Case,
+          _fcmEntityIds = show . getId $ c ^. #_id,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.EXPIRED_CASE
+        }
     title = FCMNotificationTitle $ T.pack "Ride expired!"
     body =
       FCMNotificationBody $
@@ -67,14 +82,15 @@ notifyTransporterOnExpiration c =
 
 notifyCancelReqByBP :: ProductInstance -> [Person] -> Flow ()
 notifyCancelReqByBP p =
-  traverse_ (notifyPerson title body notificationData)
+  traverse_ (notifyPerson notificationData)
   where
     notificationData =
-      FCM.FCMData
+      FCM.FCMAndroidData
         { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityIds = show $ getId $ p ^. #_id,
-          _fcmEntityType = FCM.Organization
+          _fcmEntityType = FCM.Organization,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
         }
     title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
     body =
@@ -86,14 +102,15 @@ notifyCancelReqByBP p =
           ]
 
 notifyDriverCancelledRideRequest :: ProductInstance -> [Person] -> Flow ()
-notifyDriverCancelledRideRequest p = traverse_ (notifyPerson title body notificationData)
+notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
   where
     notificationData =
-      FCM.FCMData
+      FCM.FCMAndroidData
         { _fcmNotificationType = FCM.DRIVER_UNASSIGNED,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityIds = show $ getId $ p ^. #_id,
-          _fcmEntityType = FCM.Organization
+          _fcmEntityType = FCM.Organization,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.DRIVER_UNASSIGNED
         }
     title = FCM.FCMNotificationTitle $ T.pack "Driver has refused the ride!"
     body =
@@ -106,21 +123,22 @@ notifyDriverCancelledRideRequest p = traverse_ (notifyPerson title body notifica
 
 notifyDriver :: FCM.FCMNotificationType -> Text -> Text -> Person -> Flow ()
 notifyDriver notificationType notificationTitle message driver =
-  notifyPerson title body notificationData driver
+  notifyPerson notificationData driver
   where
     notificationData =
-      FCM.FCMData
+      FCM.FCMAndroidData
         { _fcmNotificationType = notificationType,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityIds = show . getId $ driver ^. #_id,
-          _fcmEntityType = FCM.Person
+          _fcmEntityType = FCM.Person,
+          _fcmNotificationJSON = createAndroidNotification title body notificationType
         }
     title = FCM.FCMNotificationTitle notificationTitle
     body =
       FCMNotificationBody message
 
 notifyDriverNewAllocation :: ProductInstance -> Person -> Flow ()
-notifyDriverNewAllocation productInstance = notifyPerson title body notificationData
+notifyDriverNewAllocation productInstance = notifyPerson notificationData
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
@@ -130,15 +148,16 @@ notifyDriverNewAllocation productInstance = notifyPerson title body notification
             "Check the app for more details."
           ]
     notificationData =
-      FCM.FCMData
+      FCM.FCMAndroidData
         { _fcmNotificationType = FCM.ALLOCATION_REQUEST,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityType = FCM.Product,
-          _fcmEntityIds = getId $ productInstance ^. #_id
+          _fcmEntityIds = getId $ productInstance ^. #_id,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
 notifyDriverUnassigned :: ProductInstance -> Person -> Flow ()
-notifyDriverUnassigned productInstance = notifyPerson title body notificationData
+notifyDriverUnassigned productInstance = notifyPerson notificationData
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."
     body =
@@ -148,9 +167,10 @@ notifyDriverUnassigned productInstance = notifyPerson title body notificationDat
             "Please wait for another request."
           ]
     notificationData =
-      FCM.FCMData
+      FCM.FCMAndroidData
         { _fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
           _fcmShowNotification = FCM.SHOW,
           _fcmEntityType = FCM.Product,
-          _fcmEntityIds = getId $ productInstance ^. #_id
+          _fcmEntityIds = getId $ productInstance ^. #_id,
+          _fcmNotificationJSON = createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }

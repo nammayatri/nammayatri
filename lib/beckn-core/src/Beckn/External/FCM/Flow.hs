@@ -40,21 +40,17 @@ import Servant.Client
 -- | Create FCM message
 -- Note that data should be formed as key-value pairs list
 -- recipientId::FCMToken is an app's registration token
-createMessage :: FCMNotificationTitle -> FCMNotificationBody -> FCMData -> FCMRecipientToken -> FCMMessage
-createMessage title body msgData recipientId =
+createMessage :: FCMAndroidData -> FCMRecipientToken -> FCMMessage
+createMessage msgData recipientId =
   def & fcmToken ?~ recipientId
-    & fcmData ?~ msgData
     & fcmAndroid ?~ androidCfg
   where
-    tag = msgData ^. fcmNotificationType
-    androidCfg = createAndroidConfig title body tag
+    androidCfg = createAndroidConfig msgData
 
 -- | Android Notification details
-createAndroidConfig :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidConfig
-createAndroidConfig title body tag =
-  def & fcmdNotification ?~ notification
-  where
-    notification = createAndroidNotification title body tag
+createAndroidConfig :: FCMAndroidData -> FCMAndroidConfig
+createAndroidConfig cfgData =
+  def & fcmdData ?~ cfgData
 
 createAndroidNotification :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidNotification
 createAndroidNotification title body notificationType =
@@ -78,12 +74,10 @@ notifyPerson ::
   ( HasField "fcmUrl" r BaseUrl,
     HasField "fcmJsonPath" r (Maybe Text)
   ) =>
-  FCMNotificationTitle ->
-  FCMNotificationBody ->
-  FCMData ->
+  FCMAndroidData ->
   Person ->
   FlowR r ()
-notifyPerson title body msgData person =
+notifyPerson msgData person =
   let pid = getId $ Person._id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
    in case Person._deviceToken person of
@@ -91,7 +85,7 @@ notifyPerson title body msgData person =
           logTagInfo "FCM" tokenNotFound
           pure ()
         Just token ->
-          sendMessage (FCMRequest (createMessage title body msgData token)) pid
+          sendMessage (FCMRequest (createMessage msgData token)) pid
 
 -- | Google API interface
 type FCMSendMessageAPI =

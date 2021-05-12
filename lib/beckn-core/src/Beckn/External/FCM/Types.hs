@@ -99,19 +99,6 @@ instance ToJSON FCMShowNotification where
   toJSON SHOW = "true"
   toJSON _ = "false"
 
--- | FCM payload
-data FCMData = FCMData
-  { _fcmNotificationType :: FCMNotificationType,
-    _fcmShowNotification :: FCMShowNotification,
-    _fcmEntityType :: FCMEntityType,
-    _fcmEntityIds :: Text
-  }
-  deriving (Eq, Show)
-
-$(makeLenses ''FCMData)
-
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMData)
-
 -- | HTTP request headers
 type FCMHeaders = Map Text Text
 
@@ -260,14 +247,27 @@ instance Default FCMAndroidNotification where
             _fcmdVibrateTimings = Nothing
           }
 
+-- | FCM payload
+data FCMAndroidData = FCMAndroidData
+  { _fcmNotificationType :: FCMNotificationType,
+    _fcmShowNotification :: FCMShowNotification,
+    _fcmEntityType :: FCMEntityType,
+    _fcmEntityIds :: Text,
+    _fcmNotificationJSON :: FCMAndroidNotification
+  }
+  deriving (Eq, Show)
+
+$(makeLenses ''FCMAndroidData)
+
+$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidData)
+
 -- | Android specific options for messages sent through FCM connection server
 data FCMAndroidConfig = FCMAndroidConfig
   { _fcmdCollapseKey :: !(Maybe Text),
     _fcmdPriority :: !(Maybe FCMAndroidMessagePriority),
     _fcmdTtl :: !(Maybe Text),
     _fcmdRestrictedPackageName :: !(Maybe Text),
-    _fcmdData :: !(Maybe FCMData),
-    _fcmdNotification :: !(Maybe FCMAndroidNotification),
+    _fcmdData :: !(Maybe FCMAndroidData),
     _fcmdOptions :: !(Maybe FCMAndroidOptions),
     _fcmdDirectBootOk :: !(Maybe Bool)
   }
@@ -280,7 +280,7 @@ $(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidCo
 instance Default FCMAndroidConfig where
   def =
     let z = Nothing
-     in FCMAndroidConfig z z z z z z z z
+     in FCMAndroidConfig z z z z z z z
 
 -- | Apple Push Notification Service specific options
 data FCMApnsConfig = FCMApnsConfig
@@ -300,7 +300,7 @@ instance Default FCMApnsConfig where
 -- | Webpush protocol specific options
 data FCMWebpushConfig = FCMWebpushConfig
   { _fcmwHeaders :: !(Maybe FCMHeaders),
-    _fcmwData :: !(Maybe FCMData),
+    _fcmwData :: !(Maybe FCMAndroidData),
     _fcmwNotification :: !(Maybe Value),
     _fcmwOptions :: !(Maybe FCMWebpushOptions)
   }
@@ -318,7 +318,6 @@ data FCMMessage = FCMMessage
   { _fcmToken :: !(Maybe FCMRecipientToken),
     _fcmTopic :: !(Maybe Text),
     _fcmCondition :: !(Maybe Text),
-    _fcmData :: !(Maybe FCMData),
     _fcmNotification :: !(Maybe FCMNotification),
     _fcmAndroid :: !(Maybe FCMAndroidConfig),
     _fcmWebpush :: !(Maybe FCMWebpushConfig),
@@ -334,7 +333,7 @@ $(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMMessage)
 instance Default FCMMessage where
   def =
     let z = Nothing
-     in FCMMessage z z z z z z z z z
+     in FCMMessage z z z z z z z z
 
 newtype FCMRequest = FCMRequest
   { _fcmeMessage :: FCMMessage

@@ -48,8 +48,13 @@ notifyOnStatusUpdate prodInst piStatus =
           Just p -> case piStatus of
             ProductInstance.CANCELLED -> do
               let notificationData =
-                    FCMData CANCELLED_PRODUCT SHOW FCM.Product $
-                      show (getId productInstanceId)
+                    FCM.FCMAndroidData
+                      { _fcmNotificationType = FCM.CANCELLED_PRODUCT,
+                        _fcmShowNotification = FCM.SHOW,
+                        _fcmEntityType = FCM.Product,
+                        _fcmEntityIds = show $ getId productInstanceId,
+                        _fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
+                      }
                   title = FCMNotificationTitle $ T.pack "Ride cancelled!"
                   providerName = info ^. #_provider . _Just . #name . _Just
                   body =
@@ -60,11 +65,16 @@ notifyOnStatusUpdate prodInst piStatus =
                           showTimeIst (Case._startTime c) <> ".",
                           "Check the app for more details."
                         ]
-              notifyPerson title body notificationData p
+              notifyPerson notificationData p
             ProductInstance.INPROGRESS -> do
               let notificationData =
-                    FCMData TRIP_STARTED SHOW FCM.Product $
-                      show (getId productInstanceId)
+                    FCM.FCMAndroidData
+                      { _fcmNotificationType = FCM.TRIP_STARTED,
+                        _fcmShowNotification = FCM.SHOW,
+                        _fcmEntityType = FCM.Product,
+                        _fcmEntityIds = show $ getId productInstanceId,
+                        _fcmNotificationJSON = createAndroidNotification title body FCM.TRIP_STARTED
+                      }
                   title = FCMNotificationTitle $ T.pack "Trip started!"
                   driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
                   body =
@@ -73,11 +83,16 @@ notifyOnStatusUpdate prodInst piStatus =
                         [ driverName,
                           "has started your trip. Please enjoy the ride!"
                         ]
-              notifyPerson title body notificationData p
+              notifyPerson notificationData p
             ProductInstance.COMPLETED -> do
               let notificationData =
-                    FCMData TRIP_FINISHED SHOW FCM.Product $
-                      show (getId productInstanceId)
+                    FCM.FCMAndroidData
+                      { _fcmNotificationType = FCM.TRIP_FINISHED,
+                        _fcmShowNotification = FCM.SHOW,
+                        _fcmEntityType = FCM.Product,
+                        _fcmEntityIds = show $ getId productInstanceId,
+                        _fcmNotificationJSON = createAndroidNotification title body FCM.TRIP_FINISHED
+                      }
                   title = FCMNotificationTitle $ T.pack "Trip finished!"
                   driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
                   body =
@@ -86,21 +101,31 @@ notifyOnStatusUpdate prodInst piStatus =
                         [ "Hope you enjoyed your trip with",
                           driverName
                         ]
-              notifyPerson title body notificationData p
+              notifyPerson notificationData p
             ProductInstance.TRIP_REASSIGNMENT -> do
               let notificationData =
-                    FCMData DRIVER_UNASSIGNED SHOW FCM.Product $
-                      show (getId productInstanceId)
+                    FCM.FCMAndroidData
+                      { _fcmNotificationType = FCM.DRIVER_UNASSIGNED,
+                        _fcmShowNotification = FCM.SHOW,
+                        _fcmEntityType = FCM.Product,
+                        _fcmEntityIds = show $ getId productInstanceId,
+                        _fcmNotificationJSON = createAndroidNotification title body FCM.DRIVER_UNASSIGNED
+                      }
                   title = FCMNotificationTitle $ T.pack "Assigning another driver for the ride!"
                   body =
                     FCMNotificationBody $
                       unwords
                         ["Current driver has cancelled the ride. Looking for other drivers..."]
-              notifyPerson title body notificationData p
+              notifyPerson notificationData p
             ProductInstance.TRIP_ASSIGNED -> do
               let notificationData =
-                    FCMData DRIVER_ASSIGNMENT SHOW FCM.Product $
-                      show (getId productInstanceId)
+                    FCM.FCMAndroidData
+                      { _fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
+                        _fcmShowNotification = FCM.SHOW,
+                        _fcmEntityType = FCM.Product,
+                        _fcmEntityIds = show $ getId productInstanceId,
+                        _fcmNotificationJSON = createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
+                      }
                   title = FCMNotificationTitle $ T.pack "Driver assigned!"
                   driverName = info ^. #_tracker . _Just . #_trip . #driver . _Just . #name
                   body =
@@ -109,7 +134,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         [ driverName,
                           "will be your driver for this trip."
                         ]
-              notifyPerson title body notificationData p
+              notifyPerson notificationData p
             _ -> pure ()
           _ -> pure ()
       _ -> pure ()
@@ -124,8 +149,13 @@ notifyOnExpiration caseObj = do
       case person of
         Just p -> do
           let notificationData =
-                FCMData EXPIRED_CASE SHOW FCM.Case $
-                  show (getId caseId)
+                FCM.FCMAndroidData
+                  { _fcmNotificationType = FCM.EXPIRED_CASE,
+                    _fcmShowNotification = FCM.SHOW,
+                    _fcmEntityType = FCM.Case,
+                    _fcmEntityIds = show $ getId caseId,
+                    _fcmNotificationJSON = createAndroidNotification title body FCM.EXPIRED_CASE
+                  }
               title = FCMNotificationTitle $ T.pack "Ride expired!"
               body =
                 FCMNotificationBody $
@@ -133,7 +163,7 @@ notifyOnExpiration caseObj = do
                     [ "Your ride has expired as you did not confirm any offer.",
                       "Please book again to continue."
                     ]
-          notifyPerson title body notificationData p
+          notifyPerson notificationData p
         _ -> pure ()
     else pure ()
 
@@ -141,8 +171,13 @@ notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
 notifyOnRegistration regToken person =
   let tokenId = RegToken._id regToken
       notificationData =
-        FCMData REGISTRATION_APPROVED SHOW FCM.Organization $
-          show tokenId
+        FCM.FCMAndroidData
+          { _fcmNotificationType = FCM.REGISTRATION_APPROVED,
+            _fcmShowNotification = FCM.SHOW,
+            _fcmEntityType = FCM.Organization,
+            _fcmEntityIds = show tokenId,
+            _fcmNotificationJSON = createAndroidNotification title body FCM.REGISTRATION_APPROVED
+          }
       title = FCMNotificationTitle $ T.pack "Registration Completed!"
       body =
         FCMNotificationBody $
@@ -150,7 +185,7 @@ notifyOnRegistration regToken person =
             [ "Welcome to Yatri.",
               "Click here to book your first ride with us."
             ]
-   in notifyPerson title body notificationData person
+   in notifyPerson notificationData person
 
 notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> Flow ()
 notifyOnTrackCb personId tracker c =
@@ -160,10 +195,7 @@ notifyOnTrackCb personId tracker c =
       mperson <- Person.findById $ Id (fromJust personId)
       case mperson of
         Just p -> do
-          let notificationData =
-                FCMData TRACKING_CALLBACK SHOW FCM.Case $
-                  show caseId
-              trip = tracker ^. #_trip
+          let trip = tracker ^. #_trip
               regNumber =
                 trip ^. #vehicle . _Just . #registrationNumber . _Just
               model =
@@ -182,6 +214,14 @@ notifyOnTrackCb personId tracker c =
                       showTimeIst (Case._startTime c) <> ".",
                       "You would be notified 15 mins before the scheduled pick up time."
                     ]
-          notifyPerson title body notificationData p
+              notificationData =
+                FCM.FCMAndroidData
+                  { _fcmNotificationType = FCM.TRACKING_CALLBACK,
+                    _fcmShowNotification = FCM.SHOW,
+                    _fcmEntityType = FCM.Case,
+                    _fcmEntityIds = show caseId,
+                    _fcmNotificationJSON = createAndroidNotification title body FCM.TRACKING_CALLBACK
+                  }
+          notifyPerson notificationData p
         _ -> pure ()
     else pure ()
