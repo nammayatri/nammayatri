@@ -10,6 +10,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import qualified Data.Time as Time
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Services.Allocation.Allocation
 import Test.Tasty
@@ -17,6 +18,7 @@ import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
 import Types.App
 import qualified Types.Storage.RideRequest as SRR
+import Utils.Metrics
 import Utils.SilentLogger ()
 
 numRequestsToProcess :: Integer
@@ -151,7 +153,13 @@ handle repository@Repository {..} =
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
-      logEvent = \_ _ -> pure ()
+      logEvent = \_ _ -> pure (),
+      metricsHandle =
+        MetricsHandle
+          { incrementTaskCounter = return (),
+            incrementFailedTaskCounter = return (),
+            putTaskDuration = \_ -> return ()
+          }
     }
 
 driverPool1 :: [Id Driver]

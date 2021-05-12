@@ -56,6 +56,12 @@ data RideInfo = RideInfo
   }
   deriving (Generic)
 
+data MetricsHandle m = MetricsHandle
+  { incrementTaskCounter :: m (),
+    incrementFailedTaskCounter :: m (),
+    putTaskDuration :: Double -> m ()
+  }
+
 type MonadHandler m = (MonadCatch m, MonadTime m, Log m)
 
 data ServiceHandle m = ServiceHandle
@@ -81,7 +87,8 @@ data ServiceHandle m = ServiceHandle
     addAllocationRequest :: Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
-    logEvent :: AllocationEventType -> Id Ride -> m ()
+    logEvent :: AllocationEventType -> Id Ride -> m (),
+    metricsHandle :: MetricsHandle m
   }
 
 process :: MonadHandler m => ServiceHandle m -> Integer -> m Int
@@ -105,6 +112,8 @@ process handle@ServiceHandle {..} requestsNum = do
 
 processRequest :: MonadHandler m => ServiceHandle m -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} rideRequest = do
+  incrementTaskCounter metricsHandle
+  processStartTime <- getCurrentTime
   let requestId = rideRequest ^. #requestId
   let rideId = rideRequest ^. #rideId
   rideInfo <- getRideInfo rideId
@@ -132,8 +141,11 @@ processRequest handle@ServiceHandle {..} rideRequest = do
     \(err :: SomeException) -> do
       let message = "Error processing request " <> show requestId <> ": " <> show err
       logError message
+      incrementFailedTaskCounter metricsHandle
 
   removeRequest requestId
+  processEndTime <- getCurrentTime
+  putTaskDuration metricsHandle $ realToFrac $ diffUTCTime processEndTime processStartTime
 
 processAllocation :: MonadHandler m => ServiceHandle m -> RideInfo -> m ()
 processAllocation handle@ServiceHandle {..} rideInfo = do

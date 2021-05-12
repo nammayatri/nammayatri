@@ -81,6 +81,7 @@ dependencies:
   - postgresql-simple
   - resource-pool
   - uuid
+  - prometheus-client
 
 ghc-options:
   - -fwrite-ide-info

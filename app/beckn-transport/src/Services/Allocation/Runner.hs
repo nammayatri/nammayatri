@@ -11,6 +11,7 @@ import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 
 handle :: Allocation.ServiceHandle Flow
 handle =
@@ -37,7 +38,19 @@ handle =
       getRideInfo = I.getRideInfo,
       cleanupNotifications = I.cleanupNotifications,
       removeRequest = I.removeRequest,
-      logEvent = I.logEvent
+      logEvent = I.logEvent,
+      metricsHandle =
+        Allocation.MetricsHandle
+          { incrementTaskCounter = do
+              metric <- asks metricsBTMTaskCounter
+              Metrics.incrementTaskCounter metric,
+            incrementFailedTaskCounter = do 
+              metric <- asks metricsBTMFailedTaskCounter
+              Metrics.incrementFailedTaskCounter metric,
+            putTaskDuration = \ dur -> do 
+              metric <- asks metricsBTMTaskDuration
+              Metrics.putTaskDuration metric dur
+          }
     }
 
 run :: Flow ()

@@ -24,6 +24,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.App (SortMode)
 import Types.Metrics
+import Utils.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -87,7 +88,10 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
-    metricsRequestLatency :: RequestLatencyMetric
+    metricsRequestLatency :: RequestLatencyMetric,
+    metricsBTMTaskCounter :: TaskCounterMetric,
+    metricsBTMTaskDuration :: TaskDurationMetric,
+    metricsBTMFailedTaskCounter :: FailedTaskCounterMetric
   }
   deriving (Generic)
 
@@ -105,6 +109,9 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   metricsRequestLatency <- registerRequestLatencyMetric
   isShuttingDown <- newEmptyTMVarIO
+  metricsBTMTaskCounter <- registerTaskCounter
+  metricsBTMTaskDuration <- registerTaskDurationMetric
+  metricsBTMFailedTaskCounter <- registerFailedTaskCounter
   return $
     AppEnv
       { ..
