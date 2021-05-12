@@ -294,37 +294,37 @@ ALTER TABLE atlas_transporter.inventory OWNER TO atlas;
 
 -- Gateway entries
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'juspay-gateway-bpp-key', 'http://localhost:8015/v1', 'mobility-provider-key', NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL);
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'juspay-gateway-bpp-key', 'http://localhost:8015/v1', 'mobility-provider-key', NULL, now(), now(), NULL);
 -- NSDL creds are fetched from config
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('0d7016d0-f9cd-4f9f-886f-bc4cbd6a86e5', 'NSDL Gateway', 'NSDL', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-bpp-key', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00', NULL);
+  ('0d7016d0-f9cd-4f9f-886f-bc4cbd6a86e5', 'NSDL Gateway', 'NSDL', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-bpp-key', NULL, NULL, NULL, now(), now(), NULL);
 
 -- Transporter entries. api_key, callback_url, callback_api_key are not needed to be populated. These are only looked up from id.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '[A] Transporter #1', 'JUSPAY.MOBILITY.PROVIDER.UAT.1', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+  ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '[A] Transporter #1', 'JUSPAY.MOBILITY.PROVIDER.UAT.1', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', false, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, NULL, NULL, now(), now(), NULL);
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('e1f37274-f0aa-4bb3-93a0-2476349487b7', 'Another Test Cabs', 'another-test-cabs', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9111111111', '+91', NULL, NULL, NULL, NULL, NULL, NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+  ('e1f37274-f0aa-4bb3-93a0-2476349487b7', 'Another Test Cabs', 'another-test-cabs', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, 'e95d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '9111111111', '+91', NULL, NULL, NULL, NULL, NULL, NULL, now(), now(), NULL);
 
 -- BAP app entry.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, '9777777777', '+91', NULL, NULL, 'bpp-1-key', 'http://localhost:8013/v1', 'bap-key-1', NULL, '2020-07-28 16:05:57.92753+00', '2020-07-28 16:05:57.92753+00', NULL);
+  ('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, '9777777777', '+91', NULL, NULL, 'bpp-1-key', 'http://localhost:8013/v1', 'bap-key-1', NULL, now(), now(), NULL);
 
 -- NSDL entry
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
-  ('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-key', 'https:// pilot-gateway-1.beckn.nsdl.co.in/v1', 'nsdl-app-key', NULL, NULL, '2020-09-28 16:05:57.92753+00', '2020-09-28 16:05:57.92753+00');
+  ('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-key', 'https:// pilot-gateway-1.beckn.nsdl.co.in/v1', 'nsdl-app-key', NULL, NULL, now(), now());
 
 --
 -- Data for Name: person; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('6bc4bc84-2c43-425d-8853-22f47bd06691', 'Suresh', 'aka', 'Dhinesh', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+91', NULL, NULL, false, '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '9db237f9-3061-4bad-a616-42e91f092407', NULL, '2020-07-28 16:06:47.042159+00', '2020-07-28 16:06:47.042159+00');
+  ('6bc4bc84-2c43-425d-8853-22f47bd06691', 'Suresh', 'aka', 'Dhinesh', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+91', NULL, NULL, false, '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '9db237f9-3061-4bad-a616-42e91f092407', NULL, now(), now());
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('3b2af603-c6a3-404e-9859-276085fc6e65', 'Thomas', 'aka', NULL, NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, NULL, '+91', NULL, NULL, false, 'f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', 'VEHICLE', 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, '0202b94d-dbf0-4e95-bbf9-25cafc888173', NULL, '2020-07-28 16:06:47.042159+00', '2020-07-28 16:06:47.042159+00');
+  ('3b2af603-c6a3-404e-9859-276085fc6e65', 'Thomas', 'aka', NULL, NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, NULL, '+91', NULL, NULL, false, 'f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', 'VEHICLE', 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, '0202b94d-dbf0-4e95-bbf9-25cafc888173', NULL, now(), now());
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw==', '\x0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', '91', '+919999999999', NULL, true, NULL, NULL, 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
+  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw==', '\x0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', '91', '+919999999999', NULL, true, NULL, NULL, 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL, NULL, now(), now());
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
+  ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, now(), now());
 
 INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id, udf1, udf2, identifier_type) VALUES
   ('001093df-4f7c-440f-b-furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'furthest_driver', '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
@@ -336,20 +336,20 @@ INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organi
 --
 
 INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
-  ('998af371-e726-422e-8356-d24085a1d586', 'AUTO', 'MOBILITY', 'RIDE', 'INSTOCK', 'Dney75jyIwsKoR7a', '0.0000000000', '2020-07-08 16:49:38.726748+00', '2020-07-08 16:49:38.726748+00');
+  ('998af371-e726-422e-8356-d24085a1d586', 'AUTO', 'MOBILITY', 'RIDE', 'INSTOCK', 'Dney75jyIwsKoR7a', '0.0000000000', now(), now());
 INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
-  ('5ad086dd-c5c1-49a6-b66d-245d13b70194', 'HATCHBACK', 'MOBILITY', 'RIDE', 'INSTOCK', 'EBL2GZPJAHvaxLRO', '0.0000000000', '2020-07-08 16:50:01.263198+00', '2020-07-08 16:50:01.263198+00');
+  ('5ad086dd-c5c1-49a6-b66d-245d13b70194', 'HATCHBACK', 'MOBILITY', 'RIDE', 'INSTOCK', 'EBL2GZPJAHvaxLRO', '0.0000000000', now(), now());
 INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
-  ('f726d2fa-2df1-42f0-a009-6795cfdc9b05', 'SUV', 'MOBILITY', 'RIDE', 'INSTOCK', 'SldbUk7Kplnz7B6X', '0.0000000000', '2020-07-08 16:50:05.31276+00', '2020-07-08 16:50:05.31276+00');
+  ('f726d2fa-2df1-42f0-a009-6795cfdc9b05', 'SUV', 'MOBILITY', 'RIDE', 'INSTOCK', 'SldbUk7Kplnz7B6X', '0.0000000000', now(), now());
 INSERT INTO atlas_transporter.product (id, name, industry, type, status, short_id, price, created_at, updated_at) values
-  ('ad044fd7-2b62-4f37-93da-e48fe0678de1', 'SEDAN', 'MOBILITY', 'RIDE', 'INSTOCK', 'UINnHxAgoQlqkRrD', '0.0000000000', '2020-07-08 16:50:09.231255+00', '2020-07-08 16:50:09.231255+00');
+  ('ad044fd7-2b62-4f37-93da-e48fe0678de1', 'SEDAN', 'MOBILITY', 'RIDE', 'INSTOCK', 'UINnHxAgoQlqkRrD', '0.0000000000', now(), now());
 
 --
 -- Data for Name: registration_token; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
 --
 
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
-  ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', '2020-06-08 18:37:00+00', '2020-06-08 18:37:00+00');
+  ('772453e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '3249', 'ea37f941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, 'ec34eede-5a3e-4a41-89d4-7290a0d7a629', 'USER', now(), now());
 
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('c38562c2-3d58-4b08-8496-1f33b8352fe0', 'SMS', 'OTP', '3249', 'ca05cf3c-c88b-4a2f-8874-191659397e0d', true, 3, 365, 3, '6bc4bc84-2c43-425d-8853-22f47bd06691', 'USER', now(), now());
@@ -359,10 +359,10 @@ INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, au
 --
 
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'Black', NULL, '4810', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'Black', NULL, '4810', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', NULL, NULL, NULL, NULL, NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', NULL, NULL, NULL, NULL, NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now());
 
 --
 -- Name: case idx_16386_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
@@ -740,29 +740,29 @@ CREATE TABLE atlas_transporter.allocation_event (
 
 -- Driver1
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
   ('001d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email,password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('001b93df-4f7c-440f-bada-4d46c396d7d0', 'Some', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+92', '001', NULL, true, '001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '001d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('001b93df-4f7c-440f-bada-4d46c396d7d0', 'Some', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+92', '001', NULL, true, '001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '001d2f36-a455-4625-bfb4-22807fefa1eb', NULL, now(), now());
 
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
-  ('001d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1233', '001df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '001b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('001d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1233', '001df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '001b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', now(), now());
 
 -- Driver2
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'GREEN', NULL, '3211', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'GREEN', NULL, '3211', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
   ('002d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('002b93df-4f7c-440f-bada-4d46c396d7d0', 'Another', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+93', '002', NULL, true, '002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '002d2f36-a455-4625-bfb4-22807fefa1eb', NULL, '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('002b93df-4f7c-440f-bada-4d46c396d7d0', 'Another', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+93', '002', NULL, true, '002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '002d2f36-a455-4625-bfb4-22807fefa1eb', NULL, now(), now());
 
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
-  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', '2020-07-28 16:07:04.203777+00', '2020-07-28 16:07:04.203777+00');
+  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', now(), now());
 
 INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where id ='001b93df-4f7c-440f-bada-4d46c396d7d0';
 INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where id ='002b93df-4f7c-440f-bada-4d46c396d7d0';
