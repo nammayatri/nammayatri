@@ -12,8 +12,23 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import GenerateKeyPair
+import GenerateKeyPair (generateKeyPair)
 import Options.Applicative
+  ( Parser,
+    auto,
+    execParser,
+    flag',
+    fullDesc,
+    help,
+    helper,
+    info,
+    long,
+    metavar,
+    option,
+    showDefault,
+    strOption,
+    value,
+  )
 import PrepareDataForLoadTest
   ( cleanupData,
     prepareDataForLoadTest,
