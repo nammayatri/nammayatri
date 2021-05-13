@@ -2,7 +2,8 @@
 
 module Services.Allocation.Internal where
 
-import App.Types
+import App.BackgroundTaskManager.Types
+import qualified App.Types as AppFlow
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -40,13 +41,13 @@ getConfiguredAllocationTime :: Flow NominalDiffTime
 getConfiguredAllocationTime = asks (rideAllocationExpiry . driverAllocationConfig)
 
 getDriverPool :: Id Ride -> Flow [Id Driver]
-getDriverPool rideId = Person.getDriverPool (cast rideId)
+getDriverPool rideId = withAppEnv $ Person.getDriverPool (cast rideId)
 
 getRequests :: Integer -> Flow [RideRequest]
-getRequests = fmap (map rideRequestToRideRequest) . QRR.fetchOldest
+getRequests = withAppEnv . fmap (map rideRequestToRideRequest) . QRR.fetchOldest
 
 assignDriver :: Id Ride -> Id Driver -> Flow ()
-assignDriver = PI.assignDriver . cast
+assignDriver rideId driverId = withAppEnv $ PI.assignDriver (cast rideId) driverId
 
 rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
 rideRequestToRideRequest SRR.RideRequest {..} =
@@ -62,7 +63,7 @@ getCurrentNotification ::
   Id Ride ->
   Flow (Maybe CurrentNotification)
 getCurrentNotification rideId = do
-  notificationStatus <- QNS.findActiveNotificationByRideId rideId
+  notificationStatus <- withAppEnv $ QNS.findActiveNotificationByRideId rideId
   pure $ buildCurrentNotification <$> notificationStatus
   where
     buildCurrentNotification notificationStatus =
@@ -72,36 +73,36 @@ getCurrentNotification rideId = do
 
 sendNewRideNotification :: Id Ride -> Id Driver -> Flow ()
 sendNewRideNotification (Id rideId) (Id driverId) = do
-  prodInst <- QPI.findById (Id rideId)
-  person <- QP.findPersonById (Id driverId)
-  notifyDriverNewAllocation prodInst person
+  prodInst <- withAppEnv $ QPI.findById (Id rideId)
+  person <- withAppEnv $ QP.findPersonById (Id driverId)
+  withAppEnv $ notifyDriverNewAllocation prodInst person
 
 sendRideNotAssignedNotification :: Id Ride -> Id Driver -> Flow ()
 sendRideNotAssignedNotification (Id rideId) (Id driverId) = do
-  prodInst <- QPI.findById (Id rideId)
-  person <- QP.findPersonById (Id driverId)
-  notifyDriverUnassigned prodInst person
+  prodInst <- withAppEnv $ QPI.findById (Id rideId)
+  person <- withAppEnv $ QP.findPersonById (Id driverId)
+  withAppEnv $ notifyDriverUnassigned prodInst person
 
 updateNotificationStatus :: Id Ride -> Id Driver -> NotificationStatus -> Flow ()
 updateNotificationStatus rideId driverId =
-  QNS.updateStatus rideId driverId . allocNotifStatusToStorageStatus
+  withAppEnv . QNS.updateStatus rideId driverId . allocNotifStatusToStorageStatus
 
 resetLastRejectionTime :: Id Driver -> Flow ()
-resetLastRejectionTime = QDS.updateIdleTimeFlow
+resetLastRejectionTime = withAppEnv . QDS.updateIdleTimeFlow
 
 getAttemptedDrivers :: Id Ride -> Flow [Id Driver]
 getAttemptedDrivers rideId =
-  QNS.fetchRefusedNotificationsByRideId rideId <&> map (^. #_driverId)
+  withAppEnv $ QNS.fetchRefusedNotificationsByRideId rideId <&> map (^. #_driverId)
 
 getDriversWithNotification :: Flow [Id Driver]
-getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (^. #_driverId)
+getDriversWithNotification = withAppEnv $ QNS.fetchActiveNotifications <&> fmap (^. #_driverId)
 
 getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> Flow (Id Driver)
-getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList
+getFirstDriverInTheQueue = withAppEnv . QDS.getFirstDriverInTheQueue . toList
 
 checkAvailability :: NonEmpty (Id Driver) -> Flow [Id Driver]
 checkAvailability driverIds = do
-  driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driverIds
+  driversInfo <- withAppEnv $ QDriverInfo.fetchAllAvailableByIds $ toList driverIds
   pure $ map (cast . SDriverInfo._driverId) driversInfo
 
 getDriverResponse :: Id Ride -> Id Driver -> Flow (Maybe DriverResponse)
@@ -109,13 +110,13 @@ getDriverResponse rideId driverId =
   Redis.getKeyRedis $ "beckn:" <> getId rideId <> ":" <> getId driverId <> ":response"
 
 cancelRide :: Id Ride -> Flow ()
-cancelRide = flip BP.cancelRide False
+cancelRide rideId = withAppEnv $ BP.cancelRide rideId False
 
 cleanupNotifications :: Id Ride -> Flow ()
-cleanupNotifications = QNS.cleanupNotifications
+cleanupNotifications = withAppEnv . QNS.cleanupNotifications
 
 removeRequest :: Id SRR.RideRequest -> Flow ()
-removeRequest = QRR.removeRequest
+removeRequest = withAppEnv . QRR.removeRequest
 
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->
@@ -136,7 +137,7 @@ addAllocationRequest rideId = do
             _createdAt = currTime,
             _type = SRR.ALLOCATION
           }
-  QRR.createFlow rideRequest
+  withAppEnv $ QRR.createFlow rideRequest
 
 addNotificationStatus ::
   Id Ride ->
@@ -145,14 +146,15 @@ addNotificationStatus ::
   Flow ()
 addNotificationStatus rideId driverId expiryTime = do
   uuid <- generateGUID
-  QNS.create
-    SNS.NotificationStatus
-      { _id = Id uuid,
-        _rideId = rideId,
-        _driverId = driverId,
-        _status = SNS.NOTIFIED,
-        _expiresAt = expiryTime
-      }
+  withAppEnv $
+    QNS.create
+      SNS.NotificationStatus
+        { _id = Id uuid,
+          _rideId = rideId,
+          _driverId = driverId,
+          _status = SNS.NOTIFIED,
+          _expiresAt = expiryTime
+        }
 
 addAvailableDriver :: SDriverInfo.DriverInformation -> [Id Driver] -> [Id Driver]
 addAvailableDriver driverInfo availableDriversIds =
@@ -161,11 +163,11 @@ addAvailableDriver driverInfo availableDriversIds =
     else availableDriversIds
 
 logEvent :: AllocationEventType -> Id Ride -> Flow ()
-logEvent = logAllocationEvent
+logEvent evType = withAppEnv . logAllocationEvent evType
 
 getRideInfo :: Id Ride -> Flow RideInfo
 getRideInfo rideId = do
-  productInstance <- QPI.findById $ cast rideId
+  productInstance <- withAppEnv . QPI.findById $ cast rideId
   rideStatus <- castToRideStatus $ productInstance ^. #_status
   pure
     RideInfo
@@ -181,3 +183,8 @@ getRideInfo rideId = do
       PI.COMPLETED -> pure Completed
       PI.CANCELLED -> pure Cancelled
       _ -> throwError $ InternalError "Unknown status to cast."
+
+withAppEnv :: AppFlow.Flow a -> Flow a
+withAppEnv a = do
+  BTMEnv {..} <- ask
+  lift $ runReaderT a appEnv

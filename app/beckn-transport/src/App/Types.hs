@@ -1,7 +1,6 @@
 module App.Types
   ( AppCfg (),
     AppEnv (..),
-    DriverAllocationConfig (..),
     Env,
     Flow,
     FlowHandler,
@@ -22,9 +21,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import Types.App (SortMode)
 import Types.Metrics
-import Utils.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -53,12 +50,12 @@ data AppCfg = AppCfg
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     signatureExpiry :: NominalDiffTime,
-    driverAllocationConfig :: DriverAllocationConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    graceTerminationPeriod :: Int
+    graceTerminationPeriod :: Int,
+    defaultRadiusOfSearch :: Integer
   }
   deriving (Generic, FromDhall)
 
@@ -82,36 +79,20 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     signatureExpiry :: NominalDiffTime,
-    driverAllocationConfig :: DriverAllocationConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     metricsRequestLatency :: RequestLatencyMetric,
-    metricsBTMTaskCounter :: TaskCounterMetric,
-    metricsBTMTaskDuration :: TaskDurationMetric,
-    metricsBTMFailedTaskCounter :: FailedTaskCounterMetric
+    defaultRadiusOfSearch :: Integer
   }
   deriving (Generic)
-
-data DriverAllocationConfig = DriverAllocationConfig
-  { driverNotificationExpiry :: NominalDiffTime,
-    rideAllocationExpiry :: NominalDiffTime,
-    defaultSortMode :: SortMode,
-    defaultRadiusOfSearch :: Integer,
-    requestsNumPerIteration :: Integer,
-    processDelay :: NominalDiffTime
-  }
-  deriving (Generic, FromDhall)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   metricsRequestLatency <- registerRequestLatencyMetric
   isShuttingDown <- newEmptyTMVarIO
-  metricsBTMTaskCounter <- registerTaskCounter
-  metricsBTMTaskDuration <- registerTaskDurationMetric
-  metricsBTMFailedTaskCounter <- registerFailedTaskCounter
   return $
     AppEnv
       { ..

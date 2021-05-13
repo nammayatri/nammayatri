@@ -1,9 +1,23 @@
 let becknTransport = ./beckn-transport.dhall
 
-in
+let SortMode = < ETA | IdleTime >
 
-becknTransport //
+let driverAllocationConfig =
+  { defaultSortMode = SortMode.ETA
+  , driverNotificationExpiry = +25 -- seconds
+  , rideAllocationExpiry = +180 -- seconds
+  , requestsNumPerIteration = +50
+  , processDelay = +1 -- seconds
+  }
+
+let appCfg = becknTransport //
   { loggerConfig = becknTransport.loggerConfig //
     { logFilePath = "/tmp/beckn-transport-btm.log"
     }
   }
+
+in
+
+{ appCfg = appCfg
+, driverAllocationConfig = driverAllocationConfig
+}

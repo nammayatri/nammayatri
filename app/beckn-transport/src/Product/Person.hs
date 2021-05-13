@@ -308,7 +308,7 @@ calculateDriverPool locId orgId variant = do
     getRadius =
       QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")
         >>= maybe
-          (asks (defaultRadiusOfSearch . driverAllocationConfig))
+          (asks defaultRadiusOfSearch)
           radiusFromTransporterConfig
     radiusFromTransporterConfig conf =
       fromMaybeM (InternalError "The radius is not a number.")

@@ -40,17 +40,6 @@ let smsConfig =
 
 let appUri = "http://localhost:8013/v1"
 
-let SortMode = < ETA | IdleTime >
-
-let driverAllocationConfig =
-  { defaultSortMode = SortMode.ETA
-  , driverNotificationExpiry = +25 -- seconds
-  , rideAllocationExpiry = +180 -- seconds
-  , defaultRadiusOfSearch = +5000 -- meters
-  , requestsNumPerIteration = +50
-  , processDelay = +1 -- seconds
-  }
-
 in
 
 { dbCfg = pgcfg
@@ -79,10 +68,10 @@ in
 , domainVersion = "0.8.2"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
-, driverAllocationConfig = driverAllocationConfig
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
+, defaultRadiusOfSearch = +5000 -- meters
 }

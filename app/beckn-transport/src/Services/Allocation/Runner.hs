@@ -1,6 +1,6 @@
 module Services.Allocation.Runner where
 
-import App.Types
+import App.BackgroundTaskManager.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import qualified Beckn.Utils.Logging as Log
@@ -70,7 +70,7 @@ run = do
       -- If process handling took less than processDelay we delay for remain to processDelay time
       processDelay <- asks (processDelay . driverAllocationConfig)
       L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
-  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks isShuttingDown
+  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (isShuttingDown . appEnv)
   when isRunning run
   where
     fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds

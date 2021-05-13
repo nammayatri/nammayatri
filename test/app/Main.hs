@@ -60,8 +60,8 @@ specs = do
   where
     allServers =
       [ TransporterBGTM.runBackgroundTaskManager $ \cfg ->
-          cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False
+          cfg & #appCfg . #loggerConfig . #logToConsole .~ False
+            & #appCfg . #loggerConfig . #logRawSql .~ False
             & #driverAllocationConfig . #driverNotificationExpiry .~ 18
             & #driverAllocationConfig . #rideAllocationExpiry .~ 18,
         Gateway.runGateway $ \cfg ->
