@@ -14,6 +14,7 @@ import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
 import Servant
 import Servant.Client
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 
 -- | Exotel API interface
 type ExotelConnectAPI =

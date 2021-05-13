@@ -11,6 +11,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
 import Servant.Client
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 
 type GrphrAPI =
   "route"
