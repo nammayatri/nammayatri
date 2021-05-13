@@ -39,7 +39,8 @@ data AppCfg = AppCfg
     dlConfig :: DelhiveryConfig,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    signatureExpiry :: NominalDiffTime
+    signatureExpiry :: NominalDiffTime,
+    graceTerminationPeriod :: Int
   }
   deriving (Generic, FromDhall)
 

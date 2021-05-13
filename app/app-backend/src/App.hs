@@ -41,9 +41,10 @@ runAppBackend' appCfg = do
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
   appEnv <- buildAppEnv appCfg
   let settings =
-        setGracefulShutdownTimeout (Just 120)
-          . setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
-          $ setPort (appCfg ^. #port) defaultSettings
+        defaultSettings
+          & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
+          & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
+          & setPort (appCfg ^. #port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

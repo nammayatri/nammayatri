@@ -59,7 +59,8 @@ data AppCfg = AppCfg
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    metricsSearchDurationTimeout :: Int
+    metricsSearchDurationTimeout :: Int,
+    graceTerminationPeriod :: Int
   }
   deriving (Generic, FromDhall)
 

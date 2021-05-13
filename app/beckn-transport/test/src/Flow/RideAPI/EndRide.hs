@@ -9,8 +9,8 @@ import Data.List (isSubsequenceOf)
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.EndRide as Handle
-import Test.Hspec
 import Servant.Server as Serv (ServerError)
+import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App

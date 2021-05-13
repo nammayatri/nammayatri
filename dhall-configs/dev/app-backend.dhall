@@ -96,4 +96,5 @@ in
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
+, graceTerminationPeriod = +90
 }

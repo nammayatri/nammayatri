@@ -8,8 +8,8 @@ import Control.Monad.Identity
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
-import Test.Hspec
 import Servant.Server as Serv (ServerError)
+import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App

@@ -65,4 +65,5 @@ in
 , signingKeys = common.signingKeys
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.FMD.UAT.1"
+, graceTerminationPeriod = +90
 }

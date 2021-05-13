@@ -44,9 +44,10 @@ runGateway configModifier = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
       settings =
-        setGracefulShutdownTimeout (Just 120)
-          . setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
-          $ setPort port defaultSettings
+        defaultSettings
+          & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
+          & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
+          & setPort port
   let redisCfg = appCfg ^. #redisCfg
   let migrationPath = appCfg ^. #migrationPath
   let dbCfg = appCfg ^. #dbCfg

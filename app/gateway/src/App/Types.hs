@@ -30,7 +30,8 @@ data AppCfg = AppCfg
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
     fmdDomainVersion :: Text,
-    signatureExpiry :: NominalDiffTime
+    signatureExpiry :: NominalDiffTime,
+    graceTerminationPeriod :: Int
   }
   deriving (Generic, FromDhall)
 

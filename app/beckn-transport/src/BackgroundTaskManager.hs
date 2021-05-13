@@ -56,8 +56,9 @@ runBackgroundTaskManager configModifier = do
         logInfo $ "Starting Background Task Manager on port " <> show port
         return $ flowRt {R._httpClientManagers = managerMap}
     let settings =
-          setGracefulShutdownTimeout (Just 120)
-            . setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
-            $ setPort port defaultSettings
+          defaultSettings
+            & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
+            & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
+            & setPort port
     void . forkIO . runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' appEnv)
     runFlowR flowRt' appEnv Runner.run

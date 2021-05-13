@@ -64,4 +64,5 @@ in
 , signingKeys = common.signingKeys
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.DUNZO.FMD.BPP.DEV"
+, graceTerminationPeriod = +90
 }

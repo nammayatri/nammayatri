@@ -47,7 +47,7 @@ mkOkResponse context = do
   currTime <- getCurrentTime
   let context' = context {_timestamp = currTime}
   return $ AckResponse context' (ack Ack.ACK) Nothing
-  
+
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 

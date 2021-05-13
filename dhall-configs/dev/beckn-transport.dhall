@@ -85,4 +85,5 @@ in
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
+, graceTerminationPeriod = +90
 }
