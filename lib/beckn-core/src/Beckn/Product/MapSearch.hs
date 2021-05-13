@@ -8,6 +8,7 @@ import Beckn.Types.Common
 import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Data.Geospatial
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
@@ -15,7 +16,9 @@ import Servant.Client (BaseUrl)
 import Prelude (atan2)
 
 getRouteMb ::
-  (HasField "graphhopperUrl" r BaseUrl) =>
+  ( HasField "graphhopperUrl" r BaseUrl,
+    HasCoreMetrics (FlowR r)
+  ) =>
   MapSearch.Request ->
   FlowR r (Maybe MapSearch.Route)
 getRouteMb request =
@@ -23,7 +26,9 @@ getRouteMb request =
     `catch` \(_ :: RouteError) -> pure Nothing
 
 getRoute ::
-  (HasField "graphhopperUrl" r BaseUrl) =>
+  ( HasField "graphhopperUrl" r BaseUrl,
+    HasCoreMetrics (FlowR r)
+  ) =>
   MapSearch.Request ->
   FlowR r MapSearch.Response
 getRoute MapSearch.Request {..} = do

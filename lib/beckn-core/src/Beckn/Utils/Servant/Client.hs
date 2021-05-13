@@ -11,46 +11,29 @@ import qualified EulerHS.Types as ET
 import Servant.Client.Core
 
 callAPI ::
-  (HasCallStack, L.MonadFlow m, Log m, ET.JSONEx a, ToJSON a) =>
+  (HasCallStack, L.MonadFlow m, Log m, HasCoreMetrics m, ET.JSONEx a, ToJSON a) =>
   BaseUrl ->
   ET.EulerClient a ->
+  Text ->
   m (Either ClientError a)
 callAPI = callAPI' Nothing
 
 callAPI' ::
-  (HasCallStack, L.MonadFlow m, Log m, ET.JSONEx a, ToJSON a) =>
+  (HasCallStack, L.MonadFlow m, Log m, HasCoreMetrics m, ET.JSONEx a, ToJSON a) =>
   Maybe ET.ManagerSelector ->
   BaseUrl ->
   ET.EulerClient a ->
+  Text ->
   m (Either ClientError a)
-callAPI' mbManagerSelector baseUrl eulerClient = do
+callAPI' mbManagerSelector baseUrl eulerClient desc = do
   withLogTag "callAPI" $ do
+    endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
     res <- L.callAPI' mbManagerSelector baseUrl eulerClient
     case res of
       Right r -> logInfo $ "Ok response: " <> decodeUtf8 (A.encode r)
       Left err -> logInfo $ "Error occured during client call: " <> show err
+    _ <- endTracking $ getResponseCode res
     return res
-
-callAPIWithMetrics ::
-  (HasCallStack, L.MonadFlow m, Log m, HasCoreMetrics m, ET.JSONEx a, ToJSON a) =>
-  BaseUrl ->
-  ET.EulerClient a ->
-  Text ->
-  m (Either ClientError a)
-callAPIWithMetrics = callAPIWithMetrics' Nothing
-
-callAPIWithMetrics' ::
-  (HasCallStack, L.MonadFlow m, Log m, HasCoreMetrics m, ET.JSONEx a, ToJSON a) =>
-  Maybe ET.ManagerSelector ->
-  BaseUrl ->
-  ET.EulerClient a ->
-  Text ->
-  m (Either ClientError a)
-callAPIWithMetrics' mbManagerSelector baseUrl eulerClient desc = do
-  endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
-  res <- callAPI' mbManagerSelector baseUrl eulerClient
-  _ <- endTracking $ getResponseCode res
-  return res
   where
     getResponseCode res =
       case res of

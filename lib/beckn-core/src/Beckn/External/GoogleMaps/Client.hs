@@ -23,7 +23,7 @@ autoComplete ::
   Text ->
   FlowR r GoogleMaps.SearchLocationResp
 autoComplete url apiKey input location radius components = do
-  callAPI url (API.autoComplete apiKey input location radius components)
+  callAPI url (API.autoComplete apiKey input location radius components) "autoComplete"
     >>= fromEitherM (googleMapsError url)
 
 placeDetails ::
@@ -36,7 +36,7 @@ placeDetails ::
   Text ->
   FlowR r GoogleMaps.PlaceDetailsResp
 placeDetails url apiKey placeId fields = do
-  callAPI url (API.placeDetails apiKey placeId fields)
+  callAPI url (API.placeDetails apiKey placeId fields) "placeDetails"
     >>= fromEitherM (googleMapsError url)
 
 getPlaceName ::
@@ -48,7 +48,7 @@ getPlaceName ::
   Text ->
   FlowR r GoogleMaps.GetPlaceNameResp
 getPlaceName url latLng apiKey = do
-  callAPI url (API.getPlaceName latLng apiKey) 
+  callAPI url (API.getPlaceName latLng apiKey) "getPlaceName"
     >>= fromEitherM (googleMapsError url)
 
 googleMapsError :: BaseUrl -> ClientError -> ExternalAPICallError

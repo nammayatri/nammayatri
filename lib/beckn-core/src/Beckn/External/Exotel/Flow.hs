@@ -5,6 +5,7 @@ module Beckn.External.Exotel.Flow where
 import Beckn.External.Exotel.Types
 import Beckn.Types.Common
 import Beckn.Utils.Common
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -37,7 +38,9 @@ defaultBaseUrl sid =
     }
 
 initiateCall ::
-  (HasField "exotelCfg" r (Maybe ExotelCfg)) =>
+  ( HasField "exotelCfg" r (Maybe ExotelCfg),
+    HasCoreMetrics (FlowR r)
+  ) =>
   T.Text ->
   T.Text ->
   FlowR r ()
@@ -55,8 +58,11 @@ initiateCall from to = do
                 (DT.encodeUtf8 $ getExotelApiKey apiKey_)
                 (DT.encodeUtf8 $ getExotelApiToken apiToken_)
         res <-
-          callAPI (defaultBaseUrl sid_) $
-            callExotel authData exoRequest
+          callAPI
+            (defaultBaseUrl sid_)
+            ( callExotel authData exoRequest
+            )
+            "initiateCall"
         logTagInfo exotel $ case res of
           Right _ -> "call initiated from " <> from <> " to " <> to
           Left x -> "error: " <> show x

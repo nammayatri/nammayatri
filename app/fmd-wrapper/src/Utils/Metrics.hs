@@ -1,6 +1,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Utils.Metrics () where
+module Utils.Metrics
+  ( HasCoreMetrics (..),
+  )
+where
 
 import App.Types
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics

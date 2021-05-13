@@ -24,6 +24,7 @@ import Beckn.Types.Id
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Control.Exception (IOException)
 import qualified Control.Exception as E (try)
 import Control.Lens
@@ -72,7 +73,8 @@ createAndroidNotification title body notificationType =
 -- | Send FCM message to a person
 notifyPerson ::
   ( HasField "fcmUrl" r BaseUrl,
-    HasField "fcmJsonPath" r (Maybe Text)
+    HasField "fcmJsonPath" r (Maybe Text),
+    HasCoreMetrics (FlowR r)
   ) =>
   FCMAndroidData ->
   Person ->
@@ -99,7 +101,8 @@ fcmSendMessageAPI = Proxy
 -- | Send FCM message to a registered device
 sendMessage ::
   ( HasField "fcmUrl" r BaseUrl,
-    HasField "fcmJsonPath" r (Maybe Text)
+    HasField "fcmJsonPath" r (Maybe Text),
+    HasCoreMetrics (FlowR r)
   ) =>
   FCMRequest ->
   Text ->
@@ -109,7 +112,7 @@ sendMessage fcmMsg toWhom = fork desc $ do
   case authToken of
     Right token -> do
       fcmUrl <- getField @"fcmUrl" <$> ask
-      res <- callAPI fcmUrl $ callFCM (Just $ FCMAuthToken token) fcmMsg
+      res <- callAPI fcmUrl (callFCM (Just $ FCMAuthToken token) fcmMsg) "sendMessage"
       logTagInfo fcm $ case res of
         Right _ -> "message sent successfully to a person with id = " <> toWhom
         Left x -> "error: " <> show x

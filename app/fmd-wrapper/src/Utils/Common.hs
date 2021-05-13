@@ -72,7 +72,7 @@ fromMaybe400Log msg errCode ctx Nothing = do
                         _context = ctx
                       }
                 }
-      void $ callAPIWithMetrics gatewayBaseUrl eClient "log-fmd-wrapper"
+      void $ callAPI gatewayBaseUrl eClient "log-fmd-wrapper"
 
   throwError $
     ErrorCodeWithMessage

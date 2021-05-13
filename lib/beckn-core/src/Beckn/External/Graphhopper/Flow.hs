@@ -4,6 +4,7 @@ import qualified Beckn.External.Graphhopper.Types as GrphrSearch
 import Beckn.Types.App (MandatoryQueryParam)
 import Beckn.Types.Common
 import Beckn.Utils.Common (callAPI)
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Data.Geospatial
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -24,9 +25,9 @@ type GrphrAPI =
 grphrAPI :: Proxy GrphrAPI
 grphrAPI = Proxy
 
-search :: BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
+search :: HasCoreMetrics (FlowR r) => BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
-  callAPI url clientM
+  callAPI url clientM "search"
   where
     encodePoint :: PointXY -> Text
     encodePoint point = show (_xyX point) <> "," <> show (_xyY point)

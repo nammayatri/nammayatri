@@ -51,6 +51,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
               (Just signatureAuthManagerKey)
               providerUrl
               (gatewaySearchSignAuth (Just proxySign) req)
+              "search"
           logTagDebug "gateway_transaction" $
             messageId
               <> ", search_req: "
@@ -74,6 +75,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI 
         (Just signatureAuthManagerKey)
         baseUrl
         (gatewayOnSearchSignAuth (Just proxySign) req)
+        "on_search"
     providerUrl <- provider ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
     logTagDebug "gateway_transaction" $
       messageId

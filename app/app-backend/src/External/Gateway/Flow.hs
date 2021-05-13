@@ -24,40 +24,40 @@ search url req = do
   case mGatewaySelector of
     Just "NSDL.BG.1" -> do
       nsdlBaseUrl <- ask <&> xGatewayNsdlUrl >>= fromMaybeM NSDLBaseUrlNotSet
-      callAPIWithMetrics' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlSearch req) "search"
+      callAPI' (Just signatureAuthManagerKey) nsdlBaseUrl (API.nsdlSearch req) "search"
         >>= fromEitherM (ExternalAPICallError nsdlBaseUrl)
     Just "JUSPAY.BG.1" ->
-      callAPIWithMetrics' (Just signatureAuthManagerKey) url (API.search req) "search"
+      callAPI' (Just signatureAuthManagerKey) url (API.search req) "search"
         >>= fromEitherM (ExternalAPICallError url)
     _ -> throwError GatewaySelectorNotSet
 
 confirm :: BaseUrl -> ConfirmReq -> Flow AckResponse
 confirm url req = do
-  callAPIWithMetrics' (Just signatureAuthManagerKey) url (API.confirm req) "confirm"
+  callAPI' (Just signatureAuthManagerKey) url (API.confirm req) "confirm"
     >>= fromEitherM (ExternalAPICallError url)
 
 location :: BaseUrl -> Text -> Flow GetLocationRes
 location url req = do
   -- TODO: fix authentication
-  callAPIWithMetrics' Nothing url (API.location req) "location"
+  callAPI' Nothing url (API.location req) "location"
     >>= fromEitherM (ExternalAPICallError url)
 
 track :: BaseUrl -> TrackTripReq -> Flow AckResponse
 track url req = do
-  callAPIWithMetrics' (Just signatureAuthManagerKey) url (API.trackTrip req) "track"
+  callAPI' (Just signatureAuthManagerKey) url (API.trackTrip req) "track"
     >>= fromEitherM (ExternalAPICallError url)
 
 cancel :: BaseUrl -> CancelReq -> Flow AckResponse
 cancel url req = do
-  callAPIWithMetrics' (Just signatureAuthManagerKey) url (API.cancel req) "cancel"
+  callAPI' (Just signatureAuthManagerKey) url (API.cancel req) "cancel"
     >>= fromEitherM (ExternalAPICallError url)
 
 status :: BaseUrl -> StatusReq -> Flow AckResponse
 status url req = do
-  callAPIWithMetrics' (Just signatureAuthManagerKey) url (API.status req) "status"
+  callAPI' (Just signatureAuthManagerKey) url (API.status req) "status"
     >>= fromEitherM (ExternalAPICallError url)
 
 feedback :: BaseUrl -> FeedbackReq -> Flow AckResponse
 feedback url req = do
-  callAPIWithMetrics' (Just signatureAuthManagerKey) url (API.feedback req) "feedback"
+  callAPI' (Just signatureAuthManagerKey) url (API.feedback req) "feedback"
     >>= fromEitherM (ExternalAPICallError url)

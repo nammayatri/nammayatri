@@ -10,6 +10,7 @@ import External.Dunzo.Types
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)
 import Types.Common
+import Utils.Metrics (HasCoreMetrics)
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"
@@ -20,8 +21,8 @@ type GetTokenAPI =
 getTokenAPI :: Proxy GetTokenAPI
 getTokenAPI = Proxy
 
-getToken :: BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
-getToken url req = callAPI url tokenReq
+getToken :: HasCoreMetrics (FlowR e) => BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
+getToken url req = callAPI url tokenReq "getToken"
   where
     clientId = Just $ getClientId $ req ^. #client_id
     clientSecret = Just $ getClientSecret $ req ^. #client_secret
@@ -41,8 +42,8 @@ type QuoteAPI =
 quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
-getQuote :: ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
-getQuote clientId token url req = callAPI url quoteReq
+getQuote :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
+getQuote clientId token url req = callAPI url quoteReq "getQuote"
   where
     quoteReq =
       T.client
@@ -66,8 +67,8 @@ type CreateTaskAPI =
 createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
-createTask :: ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
-createTask clientId token url isTestMode req = callAPI url task
+createTask :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
+createTask clientId token url isTestMode req = callAPI url task "createTask"
   where
     task =
       T.client
@@ -89,8 +90,8 @@ type TaskStatusAPI =
 taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
-taskStatus :: ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
-taskStatus clientId token url isTestMode taskId = callAPI url status
+taskStatus :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
+taskStatus clientId token url isTestMode taskId = callAPI url status "taskStatus"
   where
     status =
       T.client
@@ -113,8 +114,8 @@ type CancelTaskAPI =
 cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
-cancelTask :: ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
-cancelTask clientId token url isTestMode taskId cancellationReason = callAPI url cancel
+cancelTask :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
+cancelTask clientId token url isTestMode taskId cancellationReason = callAPI url cancel "cancelTask"
   where
     cancel =
       void $

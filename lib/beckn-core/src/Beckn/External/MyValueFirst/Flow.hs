@@ -6,13 +6,14 @@ import Beckn.Sms.Config (SmsConfig (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Utils.Common
+import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Servant.Client
 
-submitSms :: BaseUrl -> SubmitSms -> FlowR r ()
+submitSms :: HasCoreMetrics (FlowR r) => BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do
-  res <- callAPI url $ API.submitSms params
+  res <- callAPI url (API.submitSms params) "submitSms"
   whenRight res $ \_ ->
     logTagInfo "SMS" $ "Submitted sms successfully to " <> show (_to params)
   res & fromEitherM (ExternalAPICallErrorWithCode "UNABLE_TO_SEND_SMS" url)
@@ -32,7 +33,7 @@ type InviteTemplate = Text
 constructInviteSms :: OrgName -> InviteTemplate -> Text
 constructInviteSms = T.replace "{#org#}"
 
-sendOTP :: SmsConfig -> Text -> Text -> Text -> FlowR r ()
+sendOTP :: HasCoreMetrics (FlowR r) => SmsConfig -> Text -> Text -> Text -> FlowR r ()
 sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
   let smsCred = smsCfg ^. #credConfig
   let url = smsCfg ^. #url
