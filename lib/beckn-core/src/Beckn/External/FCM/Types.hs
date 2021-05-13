@@ -8,13 +8,14 @@
 
 module Beckn.External.FCM.Types where
 
+import Beckn.Utils.Common (encodeToText)
 import Beckn.Utils.TH
 import Control.Lens.TH
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Default.Class
-import EulerHS.Prelude
+import EulerHS.Prelude hiding ((.=))
 
 -- | Device token
 newtype FCMRecipientToken = FCMRecipientToken
@@ -259,7 +260,15 @@ data FCMAndroidData = FCMAndroidData
 
 $(makeLenses ''FCMAndroidData)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidData)
+instance ToJSON FCMAndroidData where
+  toJSON FCMAndroidData {..} =
+    object
+      [ "notification_type" .= _fcmNotificationType,
+        "show_notification" .= _fcmShowNotification,
+        "entity_type" .= _fcmEntityType,
+        "entity_ids" .= _fcmEntityIds,
+        "notification_json" .= encodeToText _fcmNotificationJSON
+      ]
 
 -- | Android specific options for messages sent through FCM connection server
 data FCMAndroidConfig = FCMAndroidConfig
