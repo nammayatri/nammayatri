@@ -7,25 +7,13 @@ import Beckn.Types.Logging
     LoggerConfig (..),
   )
 import Beckn.Utils.Logging (getEulerLoggerRuntime)
+import qualified Data.Aeson as J
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import GenerateKeyPair
 import Options.Applicative
-  ( Parser,
-    auto,
-    execParser,
-    fullDesc,
-    help,
-    helper,
-    info,
-    long,
-    metavar,
-    option,
-    showDefault,
-    strOption,
-    value,
-  )
 import PrepareDataForLoadTest
   ( cleanupData,
     prepareDataForLoadTest,
@@ -38,6 +26,7 @@ data Mode
       !Int
       !Text
       !Text
+  | GenerateKeyPair
   deriving (Show, Eq)
 
 main :: IO ()
@@ -51,6 +40,11 @@ main = do
         result <- runK6Script url filePath requests
         L.logInfo @Text "GenerateRequestsForLoadTest" $ fromString result
         cleanupData filePath
+    GenerateKeyPair ->
+      runWithFlowRuntime $ do
+        L.logInfo @Text "GenerateKeyPair" $ "Generating random key pair."
+        keyPairResponse <- generateKeyPair
+        L.runIO $ putStrLn @Text $ decodeUtf8 $ J.encode keyPairResponse
   exitSuccess
   where
     opts = info (mode <**> helper) fullDesc
@@ -62,6 +56,7 @@ mode =
       <*> option auto requests
       <*> strOption url
       <*> strOption filePath
+    <|> flag' GenerateKeyPair (long "generate-key-pair" <> help "Generate public/private key pair.")
   where
     privateKey =
       long "private-key"
