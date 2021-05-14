@@ -256,7 +256,9 @@ mkTrackerProductInstance caseId prodInst currTime = do
 mkOnConfirmPayload :: Case.Case -> ProductInstance.ProductInstance -> Case.Case -> Flow API.OnConfirmReq
 mkOnConfirmPayload searchCase orderPI trackerCase = do
   let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
-  context <- buildContext "on_confirm" txnId Nothing Nothing -- FIXME: BAP and BPP uri here??
+  bapUri <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4") >>= parseBaseUrl
+  bppUri <- asks xAppUri
+  context <- buildContext "on_confirm" txnId (Just bapUri) (Just bppUri)
   trip <- BP.mkTrip trackerCase orderPI
   order <- GT.mkOrder orderPI (Just trip)
   return

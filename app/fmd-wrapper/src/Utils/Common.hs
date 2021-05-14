@@ -11,11 +11,9 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common as CoreCommon
-import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
-import qualified Servant.Client as S (BaseUrl (..), parseBaseUrl)
 import Types.Beckn.API.Log
 import Types.Beckn.Context
 import Types.Beckn.Domain
@@ -25,11 +23,6 @@ getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =
   let mconfig = org ^. #_info >>= decodeFromText
    in fromMaybeM (InternalError "Client config decode error.") mconfig
-
-parseBaseUrl :: Text -> Flow S.BaseUrl
-parseBaseUrl url =
-  L.runIO $
-    S.parseBaseUrl $ T.unpack url
 
 fromMaybe400Log :: Text -> Maybe ErrorCode -> Context -> Maybe a -> Flow a
 fromMaybe400Log _ _ _ (Just a) = return a

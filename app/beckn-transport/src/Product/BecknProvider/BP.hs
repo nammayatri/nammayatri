@@ -84,7 +84,8 @@ cancelRide rideId requestedByDriver = do
   searchCaseId <- orderCase ^. #_parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
   searchCase <- Case.findById searchCaseId
   let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
-  notifyCancelToGateway searchPiId callbackUrl bppShortId txnId
+  bapUri <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4") >>= parseBaseUrl
+  notifyCancelToGateway searchPiId callbackUrl bppShortId txnId bapUri
 
   case piList of
     [] -> pure ()
@@ -195,9 +196,9 @@ notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl bppShortId =
   _ <- Gateway.onUpdate callbackUrl onUpdatePayload bppShortId
   return ()
 
-notifyCancelToGateway :: Id ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> Flow ()
-notifyCancelToGateway prodInstId callbackUrl bppShortId txnId = do
-  onCancelPayload <- mkCancelRidePayload prodInstId txnId -- search product instance id
+notifyCancelToGateway :: Id ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> BaseUrl -> Flow ()
+notifyCancelToGateway prodInstId callbackUrl bppShortId txnId bapUri = do
+  onCancelPayload <- mkCancelRidePayload prodInstId txnId bapUri -- search product instance id
   logTagInfo "notifyGateway Request" $ show onCancelPayload
   _ <- Gateway.onCancel callbackUrl onCancelPayload bppShortId
   return ()
@@ -235,7 +236,9 @@ mkTrip c orderPi = do
 mkOnUpdatePayload :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> Flow API.OnUpdateReq
 mkOnUpdatePayload prodInst case_ pCase = do
   let txnId = last . T.splitOn "_" $ pCase ^. #_shortId
-  context <- buildContext "on_update" txnId Nothing Nothing -- FIXME: BAP and BPP uri here??
+  bapUri <- pCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4") >>= parseBaseUrl
+  bppUri <- asks xAppUri
+  context <- buildContext "on_update" txnId (Just bapUri) (Just bppUri)
   trip <- mkTrip case_ prodInst
   order <- GT.mkOrder prodInst (Just trip)
   return
@@ -254,9 +257,10 @@ mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (Id vehicleId)
   return $ GT.mkVehicleObj <$> vehicle
 
-mkCancelRidePayload :: Id ProductInstance.ProductInstance -> Text -> Flow API.OnCancelReq
-mkCancelRidePayload prodInstId txnId = do
-  context <- buildContext "on_cancel" txnId Nothing Nothing -- FIXME: BAP and BPP uri here??
+mkCancelRidePayload :: Id ProductInstance.ProductInstance -> Text -> BaseUrl -> Flow API.OnCancelReq
+mkCancelRidePayload prodInstId txnId bapUri = do
+  bppUri <- asks xAppUri
+  context <- buildContext "on_cancel" txnId (Just bapUri) (Just bppUri)
   tripObj <- mkCancelTripObj prodInstId
   return
     API.CallbackReq

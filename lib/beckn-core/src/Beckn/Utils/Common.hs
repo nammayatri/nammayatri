@@ -38,6 +38,7 @@ import Data.Time.Units (TimeUnit, fromMicroseconds)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import GHC.Records (HasField (..))
+import qualified Servant.Client as S
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
@@ -147,3 +148,8 @@ foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) 
 
 checkAckResponseError :: (MonadThrow m, Log m, IsAPIException e) => (Error -> e) -> AckResponse -> m ()
 checkAckResponseError err ackResp = whenJust (ackResp ^. #_error) (throwError . err)
+
+parseBaseUrl :: L.MonadFlow m => Text -> m S.BaseUrl
+parseBaseUrl url =
+  L.runIO $
+    S.parseBaseUrl $ T.unpack url

@@ -205,7 +205,8 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
   case status of
     PI.CANCELLED -> do
       admins <- getAdmins transporterOrg
-      BP.notifyCancelToGateway (searchPi ^. #_id) callbackUrl bppShortId txnId
+      bapUri <- searchPi ^. #_udf4 & fromMaybeM (PIFieldNotPresent "udf4") >>= parseBaseUrl
+      BP.notifyCancelToGateway (searchPi ^. #_id) callbackUrl bppShortId txnId bapUri
       Notify.notifyCancelReqByBP searchPi admins
     PI.TRIP_REASSIGNMENT -> do
       admins <- getAdmins transporterOrg
