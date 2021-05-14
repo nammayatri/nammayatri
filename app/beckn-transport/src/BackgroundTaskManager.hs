@@ -12,7 +12,6 @@ import qualified Beckn.Types.App as App
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.App
-import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
@@ -26,6 +25,7 @@ import qualified Services.Allocation.Runner as Runner
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
 import System.Posix.Signals
+import Utils.Common
 
 runBackgroundTaskManager :: (AppCfg -> AppCfg) -> IO ()
 runBackgroundTaskManager configModifier = do

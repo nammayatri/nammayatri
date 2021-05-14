@@ -10,7 +10,6 @@ import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SVehicle
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy as QFarePolicy
@@ -20,6 +19,7 @@ import Types.API.Transporter
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
+import Utils.Common
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do

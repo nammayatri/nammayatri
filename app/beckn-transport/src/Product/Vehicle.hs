@@ -8,12 +8,12 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
 import Types.Error
+import Utils.Common
 import qualified Utils.Defaults as Default
 
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes

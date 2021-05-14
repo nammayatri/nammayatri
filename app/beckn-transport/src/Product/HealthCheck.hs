@@ -3,13 +3,13 @@ module Product.HealthCheck (healthCheck) where
 import qualified App.Types as App
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Data.Time (diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import System.Exit (ExitCode)
 import Types.Error
+import Utils.Common
 
 healthCheck :: TMVar ExitCode -> App.FlowHandler Text
 healthCheck shutdown = withFlowHandlerAPI $ do

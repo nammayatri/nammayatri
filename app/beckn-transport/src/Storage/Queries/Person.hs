@@ -16,7 +16,6 @@ import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -26,6 +25,7 @@ import Types.API.Location (LatLong (..))
 import Types.App
 import Types.Error
 import qualified Types.Storage.DB as DB
+import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))

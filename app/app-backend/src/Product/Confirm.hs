@@ -15,7 +15,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -29,7 +28,7 @@ import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import Types.Error
 import qualified Types.ProductInfo as Products
-import Utils.Common (generateShortId, validateContext)
+import Utils.Common
 import qualified Utils.Metrics as Metrics
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes

@@ -10,9 +10,9 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack (Ack (..), Status (..))
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import Types.API.Ride
+import Utils.Common
 
 setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
 setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandlerAPI $ do

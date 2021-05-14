@@ -10,7 +10,6 @@ import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
 import Data.Time
   ( LocalTime (localTimeOfDay),
     UTCTime,
@@ -21,6 +20,7 @@ import Data.Time
 import EulerHS.Prelude
 import Types.Domain.FarePolicy (FarePolicy)
 import Types.Error
+import Utils.Common
 
 newtype PickupLocation = PickupLocation {getPickupLocation :: Location.Location}
   deriving newtype (Show, Eq)

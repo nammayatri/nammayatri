@@ -6,11 +6,11 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products (Products)
-import Beckn.Utils.Common
 import Data.Time
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as Q
 import Types.Error
+import Utils.Common
 
 -- The layer between Storage.Queries and our business logic
 -- Here we should perform validations of all kinds

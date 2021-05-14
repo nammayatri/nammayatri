@@ -5,13 +5,13 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import Types.App (ConfigKey)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.TransporterConfig as TransporterConfig
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity TransporterConfig.TransporterConfigT))
 getDbTable =

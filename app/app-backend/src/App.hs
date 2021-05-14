@@ -10,7 +10,6 @@ import Beckn.Storage.Common (prepareDBConnections)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Utils.App
-import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
@@ -27,6 +26,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment
+import Utils.Common
 
 runAppBackend :: (AppCfg -> AppCfg) -> IO ()
 runAppBackend configModifier = do

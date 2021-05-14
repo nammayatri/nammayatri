@@ -11,7 +11,6 @@ import qualified Beckn.Types.App as App
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.App
-import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
@@ -28,6 +27,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
+import Utils.Common
 
 runTransporterBackendApp :: (AppCfg -> AppCfg) -> IO ()
 runTransporterBackendApp configModifier = do

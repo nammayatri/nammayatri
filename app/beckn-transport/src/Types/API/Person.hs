@@ -9,7 +9,6 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -19,6 +18,7 @@ import EulerHS.Prelude
 import Servant.API
 import qualified Storage.Queries.Location as QL
 import Types.Error
+import Utils.Common
 
 data EntityType = VEHICLE | PASS | TICKET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

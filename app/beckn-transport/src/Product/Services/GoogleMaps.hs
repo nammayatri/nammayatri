@@ -4,8 +4,8 @@ import App.Types (AppEnv (..), FlowHandler)
 import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import EulerHS.Prelude
+import Utils.Common (withFlowHandlerAPI)
 
 autoComplete :: RegToken.RegistrationToken -> Text -> Text -> Integer -> FlowHandler GoogleMaps.SearchLocationResp
 autoComplete _auth input location radius = withFlowHandlerAPI $ do

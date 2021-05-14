@@ -1,6 +1,10 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Utils.Common where
+module Utils.Common
+  ( module Utils.Common,
+    module CoreCommon,
+  )
+where
 
 import App.Types
 import Beckn.Types.Common
@@ -9,13 +13,14 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common
+import Beckn.Utils.Common as CoreCommon
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types (client)
 import qualified Servant.Client as S (BaseUrl (..), parseBaseUrl)
 import Types.Error
+import Utils.Metrics as Metrics ()
 
 getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =

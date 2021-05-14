@@ -8,7 +8,6 @@ import qualified Beckn.Utils.Servant.Trail.Server as Trail
 import EulerHS.Prelude
 import Servant
 import Utils.Auth
-import Utils.Common
 
 run :: Env -> Application
 run env =

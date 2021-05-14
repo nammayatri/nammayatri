@@ -5,7 +5,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (throwError)
 import Data.List (isSubsequenceOf)
 import EulerHS.Prelude
 import qualified Fixtures
@@ -16,6 +15,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 import Types.Error
+import Utils.Common (throwError)
 import Utils.SilentLogger ()
 
 endRideTests :: TestTree

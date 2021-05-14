@@ -5,10 +5,10 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as Queries
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Issue as Issue
-import Beckn.Utils.Common
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: App.Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Issue.IssueT))
 getDbTable =

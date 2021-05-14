@@ -39,7 +39,6 @@ import Beckn.Types.FMD.Package
 import Beckn.Types.FMD.Task hiding (TaskState)
 import qualified Beckn.Types.FMD.Task as Beckn (TaskState (..))
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.Common
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import qualified Data.Text as T
@@ -48,7 +47,7 @@ import EulerHS.Prelude hiding (State, drop)
 import External.Dunzo.Types
 import Types.Error
 import Types.Wrapper
-import Utils.Common (fromMaybe400Log, getClientConfig)
+import Utils.Common
 
 dunzoServiceCategoryId :: Text
 dunzoServiceCategoryId = "1"

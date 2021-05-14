@@ -31,7 +31,6 @@ import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
-import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
@@ -52,6 +51,7 @@ import Types.API.Person
 import Types.App (ConfigKey (..), Driver)
 import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInformation
+import Utils.Common
 
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ do

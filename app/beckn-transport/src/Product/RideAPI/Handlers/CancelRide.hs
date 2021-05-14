@@ -8,10 +8,10 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance (ProductInstance, ProductInstanceStatus (..))
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import Types.App (Ride)
 import Types.Error
+import Utils.Common
 
 type MonadHandler m = (MonadThrow m, Log m)
 

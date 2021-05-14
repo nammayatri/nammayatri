@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module App.Types
   ( Env,
     Flow,
@@ -19,13 +17,12 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Geofencing
-import Utils.Metrics
+import Types.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -125,11 +122,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasBAPMetrics Flow where
-  getCaseCounterMetric = metricsCaseCounter <$> ask
-  getSearchDurationTimeout = (^. #metricsSearchDurationTimeout) <$> ask
-  getSearchDurationMetric = metricsSearchDuration <$> ask
-
-instance HasCoreMetrics Flow where
-  getRequestLatencyMetric = metricsRequestLatency <$> ask

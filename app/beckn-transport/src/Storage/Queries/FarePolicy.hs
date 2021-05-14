@@ -10,13 +10,13 @@ import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =

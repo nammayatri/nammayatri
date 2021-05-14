@@ -12,11 +12,10 @@ import Beckn.Types.Mobility.Trip
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Models.ProductInstance as MPI
 import qualified Types.ProductInfo as ProdInfo
-import Utils.Common (validateContext)
+import Utils.Common
 
 onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
 onUpdate _org req = withFlowHandlerBecknAPI $

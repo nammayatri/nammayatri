@@ -6,11 +6,11 @@ import Beckn.Types.App as App
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
 getDbTable =

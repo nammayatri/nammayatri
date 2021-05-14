@@ -9,7 +9,6 @@ import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
-import Beckn.Utils.Common (fromMaybeM, withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Product.Location as Location
 import qualified Product.Person as Person
@@ -24,6 +23,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.App
 import Types.Error
+import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandlerAPI $ do

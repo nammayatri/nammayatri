@@ -127,7 +127,7 @@ callAPIWithTrail' ::
   Text ->
   FlowWithTraceFlag r (Either ClientError a)
 callAPIWithTrail' mbManager baseUrl (reqInfo, req) serviceName = do
-  endTracking <- Metrics.startTracking (T.pack $ showBaseUrl baseUrl) serviceName
+  endTracking <- startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) serviceName
   res <- L.callAPI' mbManager baseUrl req
   let status = case res of
         Right _ -> "200"

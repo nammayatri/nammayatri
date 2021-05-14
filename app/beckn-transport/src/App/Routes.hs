@@ -57,8 +57,7 @@ import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Types.App (Ride)
-import Utils.Auth (lookup)
-import Utils.Common (AdminTokenAuth, DriverTokenAuth, TokenAuth)
+import Utils.Auth (AdminTokenAuth, DriverTokenAuth, TokenAuth, lookup)
 
 type TransportAPI =
   "v1"

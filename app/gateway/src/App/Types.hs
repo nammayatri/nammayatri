@@ -5,12 +5,12 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Types.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -74,6 +74,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasCoreMetrics Flow where
-  getRequestLatencyMetric = metricsRequestLatency <$> ask

@@ -12,13 +12,13 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
 import qualified Storage.Queries.Issues as Queries
 import qualified Types.API.Common as API
 import Types.API.Support as Support
+import Utils.Common
 import qualified Utils.SES as SES
 
 sendIssue :: Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes

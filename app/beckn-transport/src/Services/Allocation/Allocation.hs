@@ -4,7 +4,6 @@ module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
@@ -13,6 +12,7 @@ import qualified Types.API.Ride as DriverResponse (DriverResponse (..), Notifica
 import Types.App
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.RideRequest as SRR
+import Utils.Common
 
 newtype OrderTime = OrderTime
   { utcTime :: UTCTime

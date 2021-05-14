@@ -4,9 +4,9 @@ import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Types.API.Location as Location
+import Utils.Common
 
 getRoute :: Person.Person -> Location.Request -> FlowHandler Location.Response
 getRoute _person Location.Request {..} =

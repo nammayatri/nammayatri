@@ -8,9 +8,9 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import Types.Error
+import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m Person.Person,

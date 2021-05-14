@@ -13,7 +13,6 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Models.Case as CQ
@@ -30,6 +29,7 @@ import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
 import Types.App
 import Types.Error
+import Utils.Common
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 

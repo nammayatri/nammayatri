@@ -26,11 +26,11 @@ import Beckn.Types.Storage.Organization as Organization
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common (fromMaybeM)
 import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
 import Types.Error
+import Utils.Common (fromMaybeM)
 
 mkCatalog :: Case -> [ProductInstance] -> ProviderInfo -> Flow Mobility.Catalog
 mkCatalog c prodInsts provider =

@@ -9,13 +9,14 @@ import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Error
-import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail')
 import EulerHS.Prelude
 import qualified External.Gateway.Types as API
 import Servant.Client
 import Types.API.Location
+import Utils.Common
+import Utils.Metrics ()
 
 search ::
   BaseUrl -> SearchReq -> Flow AckResponse

@@ -7,7 +7,6 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common (throwError)
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -28,6 +27,7 @@ import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
 import qualified Types.Storage.RideRequest as SRR
+import Utils.Common (throwError)
 import Utils.Notifications
 
 getDriverSortMode :: Flow SortMode

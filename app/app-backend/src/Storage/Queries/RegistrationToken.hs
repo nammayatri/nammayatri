@@ -8,12 +8,12 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
-import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Error
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable ::
   Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RegistrationTokenT))

@@ -4,12 +4,12 @@ module Product.Log where
 
 import App.Types
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Common
 import Data.Aeson (encode)
 import EulerHS.Prelude
 import Types.Beckn.API.Log (LogReq)
 import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
 import Types.Error
+import Utils.Common
 
 log :: Org.Organization -> LogReq -> FlowHandler AckResponse
 log _org req = withFlowHandlerAPI $ do

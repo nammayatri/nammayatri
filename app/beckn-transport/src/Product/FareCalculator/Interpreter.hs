@@ -6,7 +6,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude
@@ -21,6 +20,7 @@ import Product.FareCalculator.Flow
 import qualified Product.Location as Location
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import qualified Types.Storage.FarePolicy as FarePolicyS
+import Utils.Common
 
 calculateFare ::
   Id Organization ->

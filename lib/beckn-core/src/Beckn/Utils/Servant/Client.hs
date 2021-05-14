@@ -31,7 +31,7 @@ callClient' ::
   ET.EulerClient a ->
   m a
 callClient' mbManager desc _ baseUrl cli = do
-  endTracking <- Metrics.startTracking (T.pack $ showBaseUrl baseUrl) desc
+  endTracking <- startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
   res <- L.callAPI' mbManager baseUrl cli
   _ <- endTracking $ getResponseCode res
   res & fromEitherM (ExternalAPICallError baseUrl)

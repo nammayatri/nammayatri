@@ -10,7 +10,7 @@ import Types.API.FarePolicy
     UpdateFarePolicyResponse,
   )
 import Types.Domain.FarePolicy (FarePolicy)
-import Utils.Common
+import Utils.Auth
 
 type FarePolicyAPI =
   "farePolicy"

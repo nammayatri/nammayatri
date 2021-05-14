@@ -8,7 +8,6 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Storage
-import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -16,6 +15,7 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import Types.Error
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT))
 getDbTable =

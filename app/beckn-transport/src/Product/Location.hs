@@ -12,12 +12,12 @@ import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as QPI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.API.Location as Location
+import Utils.Common
 
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do

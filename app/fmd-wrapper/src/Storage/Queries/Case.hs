@@ -7,11 +7,11 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
-import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
 getDbTable =

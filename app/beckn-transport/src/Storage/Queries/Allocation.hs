@@ -7,11 +7,11 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Vehicle as SV
-import Beckn.Utils.Common (encodeToText)
 import EulerHS.Prelude
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.ProductInstance (DriverVehicleInfo (..))
+import Utils.Common (encodeToText)
 
 assignDriver ::
   Id SPI.ProductInstance ->

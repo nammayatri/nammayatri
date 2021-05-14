@@ -11,7 +11,6 @@ import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Storage.Queries.Case as Case
@@ -22,6 +21,7 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.CustomerSupport as T
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do

@@ -14,7 +14,6 @@ import Beckn.Types.Storage.Rating as Rating
   ( Rating,
     RatingT (..),
   )
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -22,6 +21,7 @@ import qualified Product.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 import Types.Error
+import Utils.Common
 
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
 feedback _transporterId _organization req = withFlowHandlerBecknAPI $

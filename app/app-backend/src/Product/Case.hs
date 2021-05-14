@@ -9,7 +9,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified Models.Case as Case
 import qualified Models.Product as Products
@@ -17,6 +16,7 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Location as Location
 import Types.API.Case as API
 import Types.Error
+import Utils.Common
 
 status ::
   Person.Person ->

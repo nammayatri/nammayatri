@@ -10,7 +10,6 @@ import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -18,6 +17,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.Registration
 import Types.Error
+import Utils.Common
 import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes

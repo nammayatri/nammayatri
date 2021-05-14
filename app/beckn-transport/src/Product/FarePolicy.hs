@@ -6,7 +6,6 @@ import App.Types (FlowHandler)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Utils.Common (fromMaybeM, withFlowHandlerAPI)
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as SPerson
@@ -19,6 +18,7 @@ import Types.API.FarePolicy
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
+import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
 listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandlerAPI $ do

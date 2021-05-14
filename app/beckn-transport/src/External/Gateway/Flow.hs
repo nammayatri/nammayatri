@@ -12,7 +12,6 @@ import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import Beckn.Utils.Servant.Trail.Client (callAPIWithTrail, callAPIWithTrail')
 import EulerHS.Prelude
 import qualified External.Gateway.API as API
@@ -20,6 +19,7 @@ import Servant.Client (BaseUrl)
 import Storage.Queries.Organization as Org
 import Types.Error
 import Utils.Auth
+import Utils.Common
 
 onSearch :: OnSearchReq -> Text -> Flow AckResponse
 onSearch req bppShortId = do

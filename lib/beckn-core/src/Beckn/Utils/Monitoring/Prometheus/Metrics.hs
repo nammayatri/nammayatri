@@ -4,6 +4,7 @@
 
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
+import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Ratio ((%))
 import Data.Text as DT
@@ -18,10 +19,8 @@ import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
 import System.Clock (Clock (..), TimeSpec, diffTimeSpec, getTime, toNanoSecs)
 
-type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
-
 class HasCoreMetrics m where
-  getRequestLatencyMetric :: m RequestLatencyMetric
+  startRequestLatencyTracking :: Text -> Text -> m (Text -> m ())
 
 serve :: Int -> IO ()
 serve port = do
@@ -46,26 +45,17 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-registerRequestLatencyMetric :: IO RequestLatencyMetric
-registerRequestLatencyMetric =
-  P.register $
-    P.vector ("host", "service", "status") $
-      P.histogram info P.defaultBuckets
-  where
-    info = P.Info "external_request_duration" ""
-
-startTracking :: (L.MonadFlow m, HasCoreMetrics m) => Text -> Text -> m (Text -> m ())
-startTracking host serviceName = do
+startRequestLatencyTracking' :: L.MonadFlow m => RequestLatencyMetric -> Text -> Text -> m (Text -> m ())
+startRequestLatencyTracking' requestLatencyMetric host serviceName = do
   start <- L.runIO $ getTime Monotonic
-  return $ logRequestLatency host serviceName start
+  return $ logRequestLatency requestLatencyMetric host serviceName start
 
-logRequestLatency :: (L.MonadFlow m, HasCoreMetrics m) => Text -> Text -> TimeSpec -> Text -> m ()
-logRequestLatency host serviceName start status = do
+logRequestLatency :: L.MonadFlow m => RequestLatencyMetric -> Text -> Text -> TimeSpec -> Text -> m ()
+logRequestLatency requestLatencyMetric host serviceName start status = do
   end <- L.runIO $ getTime Monotonic
-  requestLatency <- getRequestLatencyMetric
   let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
   L.runIO $
     P.withLabel
-      requestLatency
+      requestLatencyMetric
       (host, serviceName, status)
       (`P.observe` latency)

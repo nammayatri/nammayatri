@@ -17,7 +17,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L

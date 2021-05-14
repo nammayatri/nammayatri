@@ -4,11 +4,11 @@ module Product.Serviceability where
 
 import App.Types
 import Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
 import EulerHS.Prelude hiding (length)
 import Storage.Queries.Geometry (someGeometriesContain)
 import Types.API.Serviceability
 import Types.Geofencing
+import Utils.Common
 
 rideServiceable :: RideServiceabilityReq -> Flow Bool
 rideServiceable RideServiceabilityReq {..} = do

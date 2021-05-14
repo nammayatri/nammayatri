@@ -1,71 +1,27 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 
-module Utils.Common where
+module Utils.Common
+  ( module Utils.Common,
+    module CoreCommon,
+  )
+where
 
 import App.Types
 import Beckn.Product.Validation.Context
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
-import Beckn.Types.Id
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Utils.Common as Utils
-import Beckn.Utils.Monitoring.Prometheus.Servant
-import Beckn.Utils.Servant.HeaderAuth
+import Beckn.Utils.Common as CoreCommon
 import Data.Text as DT
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Servant hiding (Context)
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
-import Types.Error
-
--- | Performs simple token verification.
-type TokenAuth = HeaderAuth "token" VerifyToken
-
-data VerifyToken = VerifyToken
-
-instance
-  SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (TokenAuth :> sub)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
-
-instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = Person.Person
-  verificationDescription =
-    "Checks whether token is registered.\
-    \If you don't have a token, use registration endpoints."
-
-verifyPerson :: RegToken -> Flow Person.Person
-verifyPerson token = do
-  sr <- Utils.Common.verifyToken token
-  Person.findById (Id $ SR._EntityId sr)
-    >>= Utils.fromMaybeM PersonNotFound
-
-verifyPersonAction :: VerificationAction VerifyToken AppEnv
-verifyPersonAction = VerificationAction Utils.Common.verifyPerson
-
-verifyToken :: RegToken -> Flow SR.RegistrationToken
-verifyToken token =
-  RegistrationToken.findByToken token
-    >>= Utils.fromMaybeM InvalidToken
-    >>= validateToken
-
-validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
-validateToken sr@SR.RegistrationToken {..} = do
-  let nominal = realToFrac $ _tokenExpiry * 24 * 60 * 60
-  expired <- Utils.isExpired nominal _updatedAt
-  when expired $ Utils.throwError TokenExpired
-  return sr
+import Utils.Metrics ()
 
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)

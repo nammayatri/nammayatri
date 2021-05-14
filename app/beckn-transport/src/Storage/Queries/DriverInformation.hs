@@ -10,7 +10,6 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
 import Data.Bitraversable
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
@@ -19,6 +18,7 @@ import qualified Storage.Queries.Person as QPerson
 import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
+import Utils.Common
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
 getDbTable = DB._driverInformation . DB.transporterDb <$> getSchemaName

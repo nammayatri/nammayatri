@@ -10,9 +10,9 @@ import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.RegistrationToken as RegToken
-import Beckn.Utils.Common (showTimeIst)
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Utils.Common (showTimeIst)
 
 -- | Send FCM "cancel" notification to driver
 notifyDriverOnCancel :: Case -> Person -> Flow ()

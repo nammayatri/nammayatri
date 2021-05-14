@@ -11,7 +11,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
@@ -19,6 +18,7 @@ import qualified Models.ProductInstance as QPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Status
 import Types.Error
+import Utils.Common
 import qualified Utils.Notifications as Notify
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes

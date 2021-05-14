@@ -31,7 +31,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
@@ -52,6 +51,7 @@ import qualified Test.RandomStrings as RS
 import Types.App (Ride)
 import Types.Error
 import qualified Types.Storage.RideRequest as SRideRequest
+import Utils.Common
 import qualified Utils.Notifications as Notify
 
 cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse

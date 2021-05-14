@@ -7,7 +7,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as External
 import qualified Models.ProductInstance as MPI
@@ -15,6 +14,7 @@ import Types.API.Location
 import Types.API.Product
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import Utils.Common
 
 getProductInfo :: Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes
 getProductInfo _person prodInstId = withFlowHandlerAPI $ do

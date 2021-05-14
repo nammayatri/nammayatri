@@ -58,10 +58,7 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import qualified Types.API.Track as TrackTrip
 import Types.Geofencing
-import Utils.Auth
-  ( lookup,
-  )
-import Utils.Common (TokenAuth)
+import Utils.Auth (TokenAuth, lookup)
 
 type AppAPI =
   "v1"

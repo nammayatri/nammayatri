@@ -12,12 +12,12 @@ import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Person as Storage
-import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT))
 getDbTable =

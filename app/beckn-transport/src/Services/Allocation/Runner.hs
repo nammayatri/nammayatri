@@ -3,7 +3,6 @@ module Services.Allocation.Runner where
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Utils.Common
 import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
@@ -12,6 +11,7 @@ import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
 import System.Exit (ExitCode)
+import Utils.Common
 
 handle :: Allocation.ServiceHandle Flow
 handle =

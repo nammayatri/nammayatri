@@ -11,7 +11,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
-import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as MC
@@ -19,7 +18,7 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Cancel as Cancel
 import Types.Error
-import Utils.Common (validateContext)
+import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 

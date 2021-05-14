@@ -14,7 +14,6 @@ import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
 import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Types.Storage.Vehicle (Vehicle)
-import Beckn.Utils.Common
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -22,6 +21,7 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as T
 import Types.API.ProductInstance
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB._productInstance . DB.transporterDb <$> getSchemaName

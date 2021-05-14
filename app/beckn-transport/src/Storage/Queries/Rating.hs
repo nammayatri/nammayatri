@@ -9,12 +9,12 @@ import Beckn.Types.Schema
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Rating as Storage
-import Beckn.Utils.Common
 import Database.Beam (SqlEq ((==.)), (<-.))
 import qualified Database.Beam as B
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as PI
 import qualified Types.Storage.DB as DB
+import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
 getDbTable =

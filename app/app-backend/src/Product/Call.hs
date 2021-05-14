@@ -14,11 +14,6 @@ import Beckn.Types.Mobility.Driver as Driver
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Utils.Common
-  ( decodeFromText,
-    fromMaybeM,
-    withFlowHandlerAPI,
-  )
 import Data.Maybe
 import Data.Semigroup
 import EulerHS.Prelude hiding (id)
@@ -27,6 +22,11 @@ import Models.ProductInstance as ProductInstance
 import Storage.Queries.Person as Person
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import Utils.Common
+  ( decodeFromText,
+    fromMaybeM,
+    withFlowHandlerAPI,
+  )
 
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes

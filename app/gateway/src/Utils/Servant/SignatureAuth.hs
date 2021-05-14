@@ -1,10 +1,10 @@
 module Utils.Servant.SignatureAuth where
 
 import App.Types (AppEnv, FlowHandler)
-import Beckn.Utils.Common (withFlowHandlerBecknAPI)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import EulerHS.Prelude
+import Utils.Common (withFlowHandlerBecknAPI)
 
 withBecknAuthProxy ::
   ToJSON req =>

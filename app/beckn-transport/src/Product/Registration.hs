@@ -9,7 +9,6 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
-import Beckn.Utils.Common
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Product.Person as Person

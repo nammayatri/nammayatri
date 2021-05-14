@@ -14,13 +14,13 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Servant.SignatureAuth
   ( AuthenticatingEntity (..),
   )
 import Data.Time
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Types.Metrics
 import Types.Wrapper (DelhiveryConfig, DunzoConfig)
 
 data AppCfg = AppCfg
@@ -81,6 +81,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasCoreMetrics Flow where
-  getRequestLatencyMetric = metricsRequestLatency <$> ask

@@ -8,7 +8,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -16,6 +15,7 @@ import Types.App
 import Types.Error
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverStats as Storage
+import Utils.Common
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverStatsT))
 getDbTable = DB._driverStats . DB.transporterDb <$> getSchemaName
