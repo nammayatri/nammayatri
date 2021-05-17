@@ -1,9 +1,12 @@
 module Beckn.Types.Monitoring.Prometheus.Metrics where
 
 import EulerHS.Prelude as E
+import GHC.Records
 import Prometheus as P
 
 type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
+
+type HasCoreMetrics r = HasField "metricsRequestLatency" r RequestLatencyMetric
 
 registerRequestLatencyMetric :: IO RequestLatencyMetric
 registerRequestLatencyMetric =

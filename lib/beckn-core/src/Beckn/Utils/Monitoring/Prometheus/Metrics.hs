@@ -44,7 +44,7 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-startRequestLatencyTracking :: HasField "metricsRequestLatency" r RequestLatencyMetric => Text -> Text -> FlowR r (Text -> FlowR r ())
+startRequestLatencyTracking :: HasCoreMetrics r => Text -> Text -> FlowR r (Text -> FlowR r ())
 startRequestLatencyTracking host serviceName = do
   requestLatencyMetric <- getField @"metricsRequestLatency" <$> ask
   start <- L.runIO $ getTime Monotonic

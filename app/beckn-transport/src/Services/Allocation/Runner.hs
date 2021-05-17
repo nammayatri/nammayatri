@@ -41,15 +41,9 @@ handle =
       logEvent = I.logEvent,
       metricsHandle =
         Allocation.MetricsHandle
-          { incrementTaskCounter = do
-              metric <- asks metricsBTMTaskCounter
-              Metrics.incrementTaskCounter metric,
-            incrementFailedTaskCounter = do 
-              metric <- asks metricsBTMFailedTaskCounter
-              Metrics.incrementFailedTaskCounter metric,
-            putTaskDuration = \ dur -> do 
-              metric <- asks metricsBTMTaskDuration
-              Metrics.putTaskDuration metric dur
+          { incrementTaskCounter = Metrics.incrementTaskCounter,
+            incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter,
+            putTaskDuration = Metrics.putTaskDuration
           }
     }
 

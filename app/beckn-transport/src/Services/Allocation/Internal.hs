@@ -8,6 +8,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import Control.Monad.Reader (withReaderT)
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -185,6 +186,4 @@ getRideInfo rideId = do
       _ -> throwError $ InternalError "Unknown status to cast."
 
 withAppEnv :: AppFlow.Flow a -> Flow a
-withAppEnv a = do
-  BTMEnv {..} <- ask
-  lift $ runReaderT a appEnv
+withAppEnv = withReaderT appEnv

@@ -5,14 +5,13 @@ import Beckn.External.MyValueFirst.Types (SubmitSms (..))
 import Beckn.Sms.Config (SmsConfig (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
+import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
-import GHC.Records
 import Servant.Client
 
-submitSms :: HasField "metricsRequestLatency" r RequestLatencyMetric => BaseUrl -> SubmitSms -> FlowR r ()
+submitSms :: HasCoreMetrics r => BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do
   res <- callAPI url (API.submitSms params) "submitSms"
   whenRight res $ \_ ->
@@ -34,7 +33,7 @@ type InviteTemplate = Text
 constructInviteSms :: OrgName -> InviteTemplate -> Text
 constructInviteSms = T.replace "{#org#}"
 
-sendOTP :: HasField "metricsRequestLatency" r RequestLatencyMetric => SmsConfig -> Text -> Text -> Text -> FlowR r ()
+sendOTP :: HasCoreMetrics r => SmsConfig -> Text -> Text -> Text -> FlowR r ()
 sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
   let smsCred = smsCfg ^. #credConfig
   let url = smsCfg ^. #url

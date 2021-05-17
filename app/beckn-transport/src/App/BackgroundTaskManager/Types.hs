@@ -21,7 +21,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.App (SortMode)
-import Utils.Metrics
+import Types.Metrics
 
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,

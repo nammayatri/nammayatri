@@ -145,7 +145,7 @@ processRequest handle@ServiceHandle {..} rideRequest = do
 
   removeRequest requestId
   processEndTime <- getCurrentTime
-  putTaskDuration metricsHandle $ realToFrac $ diffUTCTime processEndTime processStartTime
+  putTaskDuration metricsHandle . realToFrac $ diffUTCTime processEndTime processStartTime
 
 processAllocation :: MonadHandler m => ServiceHandle m -> RideInfo -> m ()
 processAllocation handle@ServiceHandle {..} rideInfo = do
