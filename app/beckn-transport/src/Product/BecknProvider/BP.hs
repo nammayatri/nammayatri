@@ -142,7 +142,9 @@ notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId txnId = do
 
 mkOnServiceStatusPayload :: Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> Text -> Flow API.OnStatusReq
 mkOnServiceStatusPayload piId trackerPi txnId = do
-  context <- buildContext "on_status" txnId Nothing Nothing
+  bapUri <- fetchBapUri
+  bppUri <- asks xAppUri
+  context <- buildContext "on_status" txnId (Just bapUri) (Just bppUri)
   order <- mkOrderRes piId (getId $ trackerPi ^. #_productId) (show $ trackerPi ^. #_status)
   let onStatusMessage = API.OnStatusReqMessage order
   return $
@@ -151,6 +153,11 @@ mkOnServiceStatusPayload piId trackerPi txnId = do
         contents = Right onStatusMessage
       }
   where
+    fetchBapUri = do
+      searchPi <- ProductInstance.findById piId
+      searchCase <- Case.findById (searchPi ^. #_caseId)
+      (searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4"))
+        >>= parseBaseUrl
     mkOrderRes prodInstId productId status = do
       now <- getCurrentTime
       return $
