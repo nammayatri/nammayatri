@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module App.Types
   ( Env,
     Flow,
@@ -23,6 +25,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Geofencing
 import Types.Metrics
+import Utils.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -123,3 +126,21 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasBAPMetrics Flow where
+  incrementCaseCount caseStatus caseType = do
+    metric <- metricsCaseCounter <$> ask
+    incrementCaseCount' metric caseStatus caseType
+  startSearchMetrics txnId = do
+    timeout <- (^. #metricsSearchDurationTimeout) <$> ask
+    metric <- metricsSearchDuration <$> ask
+    startSearchMetrics' metric timeout txnId
+  finishSearchMetrics txnId = do
+    timeout <- (^. #metricsSearchDurationTimeout) <$> ask
+    metric <- metricsSearchDuration <$> ask
+    finishSearchMetrics' metric timeout txnId
+
+instance HasCoreMetrics Flow where
+  startRequestLatencyTracking host serviceName = do
+    appEnv <- ask
+    startRequestLatencyTracking' (metricsRequestLatency appEnv) host serviceName

@@ -14,6 +14,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import Beckn.Utils.Servant.SignatureAuth
   ( AuthenticatingEntity (..),
   )
@@ -84,3 +85,8 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance CoreMetrics.HasCoreMetrics Flow where
+  startRequestLatencyTracking host serviceName = do
+    appEnv <- ask
+    CoreMetrics.startRequestLatencyTracking' (metricsRequestLatency appEnv) host serviceName
