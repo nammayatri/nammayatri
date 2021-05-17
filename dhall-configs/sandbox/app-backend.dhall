@@ -50,8 +50,8 @@ let sesConfig =
     }
   }
 let geofencingConfig =
-{ origin = GeoRestriction.Region "Ernakulam"
-, destination = GeoRestriction.Region "Kerala"
+{ origin = GeoRestriction.Unrestricted
+, destination = GeoRestriction.Unrestricted
 }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
