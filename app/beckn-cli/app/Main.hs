@@ -57,7 +57,6 @@ main = do
         cleanupData filePath
     GenerateKeyPair ->
       runWithFlowRuntime $ do
-        L.logInfo @Text "GenerateKeyPair" $ "Generating random key pair."
         keyPairResponse <- generateKeyPair
         L.runIO $ putStrLn @Text $ decodeUtf8 $ J.encode keyPairResponse
   exitSuccess

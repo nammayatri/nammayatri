@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeApplications #-}
 
 module GenerateKeyPair where
 
@@ -15,6 +16,7 @@ data GenerateKeyPairResponse = GenerateKeyPairResponse
 
 generateKeyPair :: L.Flow GenerateKeyPairResponse
 generateKeyPair = do
+  L.logInfo @Text "GenerateKeyPair" "Generating random key pair."
   (privateKeyBS, publicKeyBS) <- L.runIO prepareSigningKeyPair
   pure $
     GenerateKeyPairResponse
