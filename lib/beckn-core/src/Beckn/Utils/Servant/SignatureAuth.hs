@@ -13,8 +13,9 @@ import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Server (HasEnvEntry (..))
+import Beckn.Utils.Servant.Server (HasEnvEntry (..), runFlowRDelayedIO)
 import qualified Beckn.Utils.SignatureAuth as HttpSig
+import Control.Arrow
 import Control.Lens ((?=))
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
@@ -39,13 +40,11 @@ import qualified Network.Wai as Wai
 import Servant
   ( FromHttpApiData (parseHeader),
     HasServer (..),
-    ServerError (errBody),
-    err401,
     type (:>),
   )
 import Servant.Client (BaseUrl (baseUrlHost), HasClient (..))
 import Servant.Server.Internal.Delayed (addAuthCheck)
-import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withRequest)
+import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 import qualified Servant.Swagger as S
 import qualified Servant.Swagger.Internal as S
 
@@ -137,34 +136,15 @@ instance
       subserver `addAuthCheck` withRequest authCheck
     where
       authCheck :: Wai.Request -> DelayedIO HttpSig.SignaturePayload
-      authCheck req = do
+      authCheck req = runFlowRDelayedIO env . becknApiHandler . withLogTag "authCheck" $ do
         let headers = Wai.requestHeaders req
         let headerName = fromString $ symbolVal (Proxy @header)
-        let mSignature = snd <$> find ((== headerName) . fst) headers
-        liftIO $ runFlowR flowRt (appEnv env) $ logTagDebug "authCheck" $ "Incoming headers: " +|| headers ||+ ""
-        headerBs <-
-          case mSignature of
-            Just s -> pure s
-            Nothing -> do
-              let msg = fromString $ "Signature header " +|| headerName ||+ " missing"
-              liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
-              delayedFailFatal err401 {errBody = msg}
-        sigBs <-
-          case fromString <$> parseHeader @String headerBs of
-            Right s -> pure s
-            Left err -> do
-              let msg = fromString $ "Invalid signature header. Error: " +|| err ||+ ""
-              liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
-              delayedFailFatal err401 {errBody = msg}
-        case HttpSig.decode sigBs of
-          Right res -> pure res
-          Left err -> do
-            let msg = fromString $ "Could not decode signature: " +|| err ||+ ""
-            liftIO $ runFlowR flowRt appConfig $ logTagError "authCheck" $ decodeUtf8 msg
-            delayedFailFatal err401 {errBody = msg}
+        logDebug $ "Incoming headers: " +|| headers ||+ ""
+        headers
+          & (lookup headerName >>> fromMaybeM (MissingHeader headerName))
+          >>= (parseHeader >>> fromEitherM (InvalidHeader headerName))
+          >>= (HttpSig.decode . fromString >>> fromEitherM CannotDecodeSignature)
       env = getEnvEntry ctx
-      flowRt = flowRuntime env
-      appConfig = appEnv env
 
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv

@@ -6,6 +6,7 @@ import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import EulerHS.Prelude
 import Network.HTTP.Types (Header)
+import Network.HTTP.Types.Header (HeaderName)
 import Servant.Client (BaseUrl, ClientError, showBaseUrl)
 
 -- TODO: sort out proper codes, namings and usages for Unauthorized and AccessDenied
@@ -17,7 +18,6 @@ data AuthError
   | AuthBlocked Text
   | IncorrectOTP
   | AccessDenied
-  | SignatureVerificationFailure [Header]
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''AuthError
@@ -31,7 +31,6 @@ instance IsAPIError AuthError where
     AuthBlocked _ -> "AUTH_BLOCKED"
     IncorrectOTP -> "INCORRECT_OTP"
     AccessDenied -> "ACCESS_DENIED"
-    SignatureVerificationFailure _ -> "SIGNATURE_VERIFICATION_FAILURE"
   toMessage = \case
     InvalidToken -> Just "Invalid registration token."
     AuthBlocked reason -> Just $ "Authentication process blocked: " <> reason
@@ -41,8 +40,39 @@ instance IsAPIError AuthError where
     Unauthorized -> E401
     InvalidToken -> E401
     AccessDenied -> E403
-    SignatureVerificationFailure _ -> E401
     _ -> E400
+
+data HeaderError
+  = MissingHeader HeaderName
+  | InvalidHeader HeaderName Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''HeaderError
+
+instance IsAPIError HeaderError where
+  toErrorCode = \case
+    MissingHeader _ -> "MISSING_HEADER"
+    InvalidHeader _ _ -> "INVALID_HEADER"
+  toMessage = \case
+    MissingHeader headerName -> Just $ "Header " +|| headerName ||+ " is missing"
+    InvalidHeader headerName err -> Just $ "Header " +|| headerName ||+ " is invalid: " +|| err ||+ ""
+  toHttpCode _ = E400
+
+data SignatureError
+  = SignatureVerificationFailure [Header]
+  | CannotDecodeSignature String
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''SignatureError
+
+instance IsAPIError SignatureError where
+  toErrorCode = \case
+    SignatureVerificationFailure _ -> "SIGNATURE_VERIFICATION_FAILURE"
+    CannotDecodeSignature _ -> "CANNOT_DECODE_SIGNATURE"
+  toMessage = \case
+    CannotDecodeSignature err -> Just (fromString err)
+    _ -> Nothing
+  toHttpCode _ = E401
   toCustomHeaders (SignatureVerificationFailure headers) = headers
   toCustomHeaders _ = []
 

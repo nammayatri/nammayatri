@@ -6,20 +6,23 @@ module Beckn.Utils.Servant.HeaderAuth where
 
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Error
+import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Server
+import Control.Arrow
 import Control.Lens ((?=))
+import Data.List (lookup)
 import qualified Data.Swagger as DS
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Network.Wai (Request (..))
-import Servant
+import Servant hiding (ResponseHeader (..))
 import Servant.Client
 import Servant.Server.Internal.Delayed (addAuthCheck)
-import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withRequest)
+import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 import qualified Servant.Swagger as S
 import qualified Servant.Swagger.Internal as S
 
@@ -69,21 +72,15 @@ instance
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
-      subserver `addAuthCheck` withRequest (authCheck (flowRuntime env))
+      subserver `addAuthCheck` withRequest authCheck
     where
-      authCheck :: R.FlowRuntime -> Request -> DelayedIO (VerificationResult verify)
-      authCheck flowRt req = do
+      authCheck :: Request -> DelayedIO (VerificationResult verify)
+      authCheck req = runFlowRDelayedIO env . apiHandler $ do
         let headerName = fromString $ symbolVal (Proxy @header)
-        let mHeader = snd <$> find ((== headerName) . fst) (requestHeaders req)
-        valBs <- maybe (formatErr $ "Header " <> show headerName <> " is required") pure mHeader
-        val <-
-          either (\_ -> formatErr "Invalid token header") pure $
-            parseHeader @Text valBs
-        -- If we don't use delayedFailFatal and just pass the exception,
-        -- it will be JSON-formatted
-
-        liftIO . runFlowR flowRt (appEnv env) $ verifyMethod val
-      formatErr msg = delayedFailFatal err401 {errBody = msg}
+        requestHeaders req
+          & (lookup headerName >>> fromMaybeM (MissingHeader headerName))
+          >>= (parseHeader >>> fromEitherM (InvalidHeader headerName))
+          >>= verifyMethod
       env = getEnvEntry ctx
       VerificationAction verifyMethod = getContextEntry ctx :: VerificationAction verify r
 

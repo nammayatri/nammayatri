@@ -4,8 +4,10 @@
 module Beckn.Utils.Servant.Server where
 
 import Beckn.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
+import Beckn.Types.Flow
 import EulerHS.Prelude
 import Servant
+import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal)
 
 class HasEnvEntry r (context :: [Type]) | context -> r where
   getEnvEntry :: Context context -> EnvR r
@@ -37,3 +39,8 @@ run apis server ctx env =
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
+
+runFlowRDelayedIO :: EnvR r -> FlowR r b -> DelayedIO b
+runFlowRDelayedIO env f =
+  liftIO (try . runFlowR (flowRuntime env) (appEnv env) $ f)
+    >>= either delayedFailFatal pure
