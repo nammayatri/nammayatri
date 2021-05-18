@@ -1,7 +1,8 @@
 ARG DEP_IMAGE=beckn
 ARG DEP_LABEL=master
+ARG NS=asia.gcr.io/jp-k8s-internal
 
-FROM asia.gcr.io/jp-k8s-internal/${DEP_IMAGE}:${DEP_LABEL} as build
+FROM ${NS}/${DEP_IMAGE}:${DEP_LABEL} as build
 COPY . /opt/build/
 
 WORKDIR /opt/build

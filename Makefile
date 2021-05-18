@@ -42,7 +42,7 @@ push-dep: Dockerfile.dep
 build: Dockerfile
 	$(info Building $(IMAGE_NAME):$(VERSION) / git-head: $(SOURCE_COMMIT))
 	rm -rf .ssh && cp -R ~/.ssh .
-	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE=$(DEP_IMAGE)" --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
+	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "NS=$(NS)" --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE=$(DEP_IMAGE)" --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
 
 push:
 	docker tag $(IMAGE_NAME):$(VERSION) $(NS)/$(IMAGE_NAME):$(VERSION)
