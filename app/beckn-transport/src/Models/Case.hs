@@ -53,15 +53,12 @@ findBySid sid = do
 -- | Validate and update Case status
 updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
-  validateCaseStatuseChange status cid
   result <- Q.updateStatusFlow cid status
   checkDBError result
 
 -- | Validate and update Cases statuses
 updateStatusByIds :: [Id Case] -> CaseStatus -> Flow ()
 updateStatusByIds ids status = do
-  cases <- findAllByIds ids
-  validateCasesStatusesChange' status cases
   result <- Q.updateStatusByIdsFlow ids status
   checkDBError result
 
@@ -109,26 +106,3 @@ findAllExpiredByStatus :: [CaseStatus] -> CaseType -> UTCTime -> UTCTime -> Flow
 findAllExpiredByStatus statuses csType from to = do
   result <- Q.findAllExpiredByStatus statuses csType from to
   checkDBError result
-
--- | Get Case and validate its status change
-validateCaseStatuseChange :: CaseStatus -> Id Case -> Flow ()
-validateCaseStatuseChange newStatus caseId = do
-  case_ <- findById caseId
-  validateStatusChange newStatus case_
-
--- | Bulk validation of Case statuses change
-validateCasesStatusesChange :: CaseStatus -> [Id Case] -> Flow ()
-validateCasesStatusesChange newStatus caseIds = do
-  cps <- findAllByIds caseIds
-  validateCasesStatusesChange' newStatus cps
-
--- | Bulk validation of Case statuses change
-validateCasesStatusesChange' :: CaseStatus -> [Case] -> Flow ()
-validateCasesStatusesChange' newStatus =
-  mapM_ (validateStatusChange newStatus)
-
--- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> Case -> Flow ()
-validateStatusChange newStatus case_ =
-  validateStatusTransition (_status case_) newStatus
-    & fromEitherM CaseInvalidStatus

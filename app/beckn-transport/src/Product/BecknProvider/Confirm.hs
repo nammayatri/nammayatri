@@ -24,7 +24,6 @@ import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import External.Gateway.Transform as GT
 import qualified Models.Case as Case
-import qualified Models.ProductInstance as ProductInstance
 import qualified Product.BecknProvider.BP as BP
 import Product.Person (calculateDriverPool, setDriverPool)
 import qualified Storage.Queries.Case as QCase
@@ -59,9 +58,10 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
     let newOrderCaseStatus = Case.INPROGRESS
     let newSearchCaseStatus = Case.COMPLETED
     let newProductInstanceStatus = ProductInstance.CONFIRMED
-    Case.validateStatusChange newOrderCaseStatus orderCase
-    Case.validateStatusChange newSearchCaseStatus searchCase
-    ProductInstance.validateStatusChange newProductInstanceStatus productInstance
+    Case.validateStatusTransition (orderCase ^. #_status) newOrderCaseStatus & fromEitherM CaseInvalidStatus
+    Case.validateStatusTransition (searchCase ^. #_status) newSearchCaseStatus & fromEitherM CaseInvalidStatus
+    ProductInstance.validateStatusTransition (ProductInstance._status productInstance) newProductInstanceStatus
+      & fromEitherM PIInvalidStatus
     (currTime, uuid, shortId) <- BP.getIdShortIdAndTime
     let trackerCase = mkTrackerCase searchCase uuid currTime shortId
     trackerProductInstance <- mkTrackerProductInstance (trackerCase ^. #_id) productInstance currTime

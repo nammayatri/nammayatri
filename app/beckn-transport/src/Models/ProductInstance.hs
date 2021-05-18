@@ -20,15 +20,12 @@ import Utils.Common
 -- | Validate and update ProductInstance status
 updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus prodInstId newStatus = do
-  validatePIStatusChange newStatus prodInstId
   result <- Q.updateStatusFlow prodInstId newStatus
   checkDBError result
 
 -- | Validate and update ProductInstances statusses
 updateStatusByIds :: [Id ProductInstance] -> ProductInstanceStatus -> Flow ()
 updateStatusByIds ids status = do
-  productInstances <- findAllByIds ids
-  validatePIStatusesChange' status productInstances
   result <- Q.updateStatusByIdsFlow ids status
   checkDBError result
 
@@ -49,23 +46,6 @@ findAllByIds :: [Id ProductInstance] -> Flow [ProductInstance]
 findAllByIds ids = do
   result <- Q.findAllByIds' ids
   checkDBError result
-
--- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> Id ProductInstance -> Flow ()
-validatePIStatusChange newStatus productInstanceId = do
-  cp <- findById productInstanceId
-  validateStatusChange newStatus cp
-
--- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> Flow ()
-validatePIStatusesChange' newStatus =
-  mapM_ (validateStatusChange newStatus)
-
--- | Validate status change and return appropriate DomainError
-validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
-validateStatusChange newStatus productInstance =
-  validateStatusTransition (_status productInstance) newStatus
-    & fromEitherM PIInvalidStatus
 
 findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
