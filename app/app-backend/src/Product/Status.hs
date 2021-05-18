@@ -11,6 +11,8 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as PI
+import Beckn.Utils.Error
 import EulerHS.Prelude
 import qualified External.Gateway.Flow as Gateway
 import qualified Models.Case as Case
@@ -50,6 +52,7 @@ onStatus _org req = withFlowHandlerBecknAPI $
   where
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER
+      PI.validateStatusTransition (PI._status orderPi) piStatus & fromEitherM PIInvalidStatus
       QPI.updateStatus (orderPi ^. #_id) piStatus
       Notify.notifyOnStatusUpdate orderPi piStatus
       return ()

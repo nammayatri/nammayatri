@@ -86,23 +86,7 @@ updateValidTill cid validTill = do
 -- | Validate and update Case status
 updateStatus :: Id Case -> CaseStatus -> Flow ()
 updateStatus cid status = do
-  validateStatusChange status cid
   result <- Q.updateStatusFlow cid status
-  checkDBError result
-
--- | Validate and update Case status and its udfs
-updateStatusAndUdfs ::
-  Id Case ->
-  CaseStatus ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Flow ()
-updateStatusAndUdfs cid status udf1 udf2 udf3 udf4 udf5 = do
-  validateStatusChange status cid
-  result <- Q.updateStatusAndUdfs cid status udf1 udf2 udf3 udf4 udf5
   checkDBError result
 
 -- | Find Cases by locations
@@ -118,13 +102,6 @@ findAllWithLimitOffsetWhere ::
 findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
   result <- Q.findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset
   checkDBError result
-
--- | Get Case and validate its status change
-validateStatusChange :: CaseStatus -> Id Case -> Flow ()
-validateStatusChange newStatus caseId = do
-  c <- findById caseId
-  validateStatusTransition (_status c) newStatus
-    & fromEitherM CaseInvalidStatus
 
 updateInfo :: Id Case -> Text -> Flow ()
 updateInfo cId info = do

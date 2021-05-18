@@ -60,6 +60,7 @@ searchCancel person req = do
   Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
   piList <- MPI.findAllByCaseId (case_ ^. #_id)
   traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI._id <$> filter isProductInstanceCancellable piList)
+  Case.validateStatusTransition (case_ ^. #_status) Case.CLOSED & fromEitherM CaseInvalidStatus
   MC.updateStatus (case_ ^. #_id) Case.CLOSED
   return Success
 
@@ -91,11 +92,14 @@ onCancel _org req = withFlowHandlerBecknAPI $
             let orderPi = s
             -- TODO what if we update several PI but then get an error?
             -- wrap everything in a transaction
-            -- or use updateMultiple
+            PI.validateStatusTransition (PI._status orderPi) PI.CANCELLED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI._id orderPi) PI.CANCELLED
+            case_ <- MC.findById $ PI._caseId orderPi
+            Case.validateStatusTransition (case_ ^. #_status) Case.CLOSED & fromEitherM CaseInvalidStatus
             MC.updateStatus (PI._caseId orderPi) Case.CLOSED
             return ()
         productInstance <- MPI.findById prodInstId
+        PI.validateStatusTransition (PI._status productInstance) PI.CANCELLED & fromEitherM PIInvalidStatus
         MPI.updateStatus prodInstId PI.CANCELLED
         let caseId = productInstance ^. #_caseId
         -- notify customer
@@ -116,6 +120,8 @@ onCancel _org req = withFlowHandlerBecknAPI $
           (length arrTerminalPI == length arrPICase)
           ( do
               Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
+              case_ <- MC.findById caseId
+              Case.validateStatusTransition (case_ ^. #_status) Case.CLOSED & fromEitherM CaseInvalidStatus
               MC.updateStatus caseId Case.CLOSED
           )
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err

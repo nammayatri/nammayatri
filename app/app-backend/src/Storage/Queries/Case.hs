@@ -160,27 +160,6 @@ updateStatus id status = do
         ]
     predicate cid Storage.Case {..} = _id ==. B.val_ cid
 
-updateStatusAndUdfs :: Id Storage.Case -> Storage.CaseStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow (T.DBResult ())
-updateStatusAndUdfs id status udf1 udf2 udf3 udf4 udf5 = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
-    dbTable
-    (setClause status udf1 udf2 udf3 udf4 udf5 currTime)
-    (predicate id)
-  where
-    setClause pStatus pudf1 pudf2 pudf3 pudf4 pudf5 currTime Storage.Case {..} =
-      mconcat
-        [ _status <-. B.val_ pStatus,
-          _updatedAt <-. B.val_ currTime,
-          _udf1 <-. B.val_ pudf1,
-          _udf2 <-. B.val_ pudf2,
-          _udf3 <-. B.val_ pudf3,
-          _udf4 <-. B.val_ pudf4,
-          _udf5 <-. B.val_ pudf5
-        ]
-    predicate cid Storage.Case {..} = _id ==. B.val_ cid
-
 findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> Flow (T.DBResult [Storage.Case])
 findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
   dbTable <- getDbTable

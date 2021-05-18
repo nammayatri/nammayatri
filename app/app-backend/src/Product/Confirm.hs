@@ -95,8 +95,9 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         productInstance <- MPI.findById pid
         Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
         let newCaseStatus = Case.COMPLETED
-        MCase.validateStatusChange newCaseStatus (productInstance ^. #_caseId)
-        MPI.validatePIStatusChange SPI.CONFIRMED pid
+        case_ <- MCase.findById $ productInstance ^. #_caseId
+        Case.validateStatusTransition (case_ ^. #_status) newCaseStatus & fromEitherM CaseInvalidStatus
+        SPI.validateStatusTransition (SPI._status productInstance) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
           QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
           QPI.updateMultiple pid uPrd

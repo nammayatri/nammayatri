@@ -27,20 +27,17 @@ create prdInst = do
 -- | Validate and update ProductInstance status
 updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
 updateStatus piid status = do
-  validatePIStatusChange status piid
   result <- Q.updateStatus piid status
   checkDBError result
 
 -- | Bulk validate and update Case's ProductInstances statuses
 updateAllProductInstancesByCaseId :: Id Case.Case -> ProductInstanceStatus -> Flow ()
 updateAllProductInstancesByCaseId caseId status = do
-  validatePIStatusesChange status caseId
   result <- Q.updateAllProductInstancesByCaseId caseId status
   checkDBError result
 
 updateMultiple :: Id ProductInstance -> ProductInstance -> Flow ()
 updateMultiple piid prdInst = do
-  validatePIStatusChange (_status prdInst) piid
   result <- Q.updateMultipleFlow piid prdInst
   checkDBError result
 
@@ -61,29 +58,6 @@ findByProductId :: Id Products -> Flow ProductInstance
 findByProductId pId = do
   result <- Q.findByProductId pId
   checkDBErrorOrEmpty result PINotFound
-
--- | Get ProductInstance and validate its status change
-validatePIStatusChange :: ProductInstanceStatus -> Id ProductInstance -> Flow ()
-validatePIStatusChange newStatus productInstanceId = do
-  cp <- findById productInstanceId
-  validateStatusChange newStatus cp
-
--- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange :: ProductInstanceStatus -> Id Case.Case -> Flow ()
-validatePIStatusesChange newStatus caseId = do
-  cps <- findAllByCaseId caseId
-  validatePIStatusesChange' newStatus cps
-
--- | Bulk validation of ProductInstance statuses change
-validatePIStatusesChange' :: ProductInstanceStatus -> [ProductInstance] -> Flow ()
-validatePIStatusesChange' newStatus =
-  mapM_ (validateStatusChange newStatus)
-
--- | Validate status change and return appropriate DomainError
-validateStatusChange :: ProductInstanceStatus -> ProductInstance -> Flow ()
-validateStatusChange newStatus caseProduct =
-  validateStatusTransition (_status caseProduct) newStatus
-    & fromEitherM PIInvalidStatus
 
 listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
 listAllProductInstanceWithOffset limit offset piid stats csTypes = do
