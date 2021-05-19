@@ -149,7 +149,5 @@ foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) 
 checkAckResponseError :: (MonadThrow m, Log m, IsAPIException e) => (Error -> e) -> AckResponse -> m ()
 checkAckResponseError err ackResp = whenJust (ackResp ^. #_error) (throwError . err)
 
-parseBaseUrl :: L.MonadFlow m => Text -> m S.BaseUrl
-parseBaseUrl url =
-  L.runIO $
-    S.parseBaseUrl $ T.unpack url
+parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
+parseBaseUrl = S.parseBaseUrl . T.unpack
