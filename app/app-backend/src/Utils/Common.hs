@@ -21,7 +21,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
-import Utils.Metrics ()
 
 generateShortId :: Flow Text
 generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)

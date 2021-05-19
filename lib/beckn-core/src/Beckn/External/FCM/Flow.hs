@@ -21,10 +21,10 @@ import Beckn.External.FCM.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
-import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Control.Exception (IOException)
 import qualified Control.Exception as E (try)
 import Control.Lens
@@ -74,7 +74,7 @@ createAndroidNotification title body notificationType =
 notifyPerson ::
   ( HasField "fcmUrl" r BaseUrl,
     HasField "fcmJsonPath" r (Maybe Text),
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   FCMAndroidData ->
   Person ->
@@ -102,7 +102,7 @@ fcmSendMessageAPI = Proxy
 sendMessage ::
   ( HasField "fcmUrl" r BaseUrl,
     HasField "fcmJsonPath" r (Maybe Text),
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   FCMRequest ->
   Text ->

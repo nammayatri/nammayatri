@@ -4,8 +4,8 @@ module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types
 import Beckn.Types.Common
+import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
 import Beckn.Utils.Common
-import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -39,7 +39,7 @@ defaultBaseUrl sid =
 
 initiateCall ::
   ( HasField "exotelCfg" r (Maybe ExotelCfg),
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   T.Text ->
   T.Text ->

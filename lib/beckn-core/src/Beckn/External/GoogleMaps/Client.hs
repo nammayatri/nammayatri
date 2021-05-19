@@ -5,15 +5,15 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.Common
 import Beckn.Types.Error
+import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
 import Beckn.Utils.Common
-import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import EulerHS.Prelude
 import GHC.Records (HasField)
 import Servant.Client.Core (BaseUrl, ClientError)
 
 autoComplete ::
   ( HasField "dbCfg" r DBConfig,
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   BaseUrl ->
   Text ->
@@ -28,7 +28,7 @@ autoComplete url apiKey input location radius components = do
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   BaseUrl ->
   Text ->
@@ -41,7 +41,7 @@ placeDetails url apiKey placeId fields = do
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   BaseUrl ->
   Text ->

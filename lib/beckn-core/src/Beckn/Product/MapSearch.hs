@@ -7,8 +7,8 @@ import qualified Beckn.External.Graphhopper.Types as Grphr
 import Beckn.Types.Common
 import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
 import Beckn.Utils.Common
-import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Data.Geospatial
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
@@ -17,7 +17,7 @@ import Prelude (atan2)
 
 getRouteMb ::
   ( HasField "graphhopperUrl" r BaseUrl,
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   MapSearch.Request ->
   FlowR r (Maybe MapSearch.Route)
@@ -27,7 +27,7 @@ getRouteMb request =
 
 getRoute ::
   ( HasField "graphhopperUrl" r BaseUrl,
-    HasCoreMetrics (FlowR r)
+    HasField "metricsRequestLatency" r RequestLatencyMetric
   ) =>
   MapSearch.Request ->
   FlowR r MapSearch.Response

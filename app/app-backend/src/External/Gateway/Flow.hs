@@ -15,7 +15,6 @@ import qualified External.Gateway.Types as API
 import Servant.Client
 import Types.API.Location
 import Utils.Common
-import Utils.Metrics ()
 
 search ::
   BaseUrl -> SearchReq -> Flow AckResponse

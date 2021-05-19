@@ -20,7 +20,6 @@ import Types.Beckn.API.Log
 import Types.Beckn.Context
 import Types.Beckn.Domain
 import Types.Error
-import Utils.Metrics as Metrics ()
 
 getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =

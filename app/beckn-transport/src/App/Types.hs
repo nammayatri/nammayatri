@@ -24,7 +24,6 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.App (SortMode)
 import Types.Metrics
-import Utils.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -125,8 +124,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasCoreMetrics Flow where
-  startRequestLatencyTracking host serviceName = do
-    appEnv <- ask
-    startRequestLatencyTracking' (metricsRequestLatency appEnv) host serviceName

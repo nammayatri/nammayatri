@@ -7,10 +7,11 @@ import Beckn.Utils.Common (callAPI)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import External.Dunzo.Types
+import GHC.Records
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)
 import Types.Common
-import Utils.Metrics (HasCoreMetrics)
+import Types.Metrics
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"
@@ -21,7 +22,7 @@ type GetTokenAPI =
 getTokenAPI :: Proxy GetTokenAPI
 getTokenAPI = Proxy
 
-getToken :: HasCoreMetrics (FlowR e) => BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
+getToken :: HasField "metricsRequestLatency" e RequestLatencyMetric => BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
 getToken url req = callAPI url tokenReq "getToken"
   where
     clientId = Just $ getClientId $ req ^. #client_id
@@ -42,7 +43,7 @@ type QuoteAPI =
 quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
-getQuote :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
+getQuote :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
 getQuote clientId token url req = callAPI url quoteReq "getQuote"
   where
     quoteReq =
@@ -67,7 +68,7 @@ type CreateTaskAPI =
 createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
-createTask :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
+createTask :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
 createTask clientId token url isTestMode req = callAPI url task "createTask"
   where
     task =
@@ -90,7 +91,7 @@ type TaskStatusAPI =
 taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
-taskStatus :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
+taskStatus :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
 taskStatus clientId token url isTestMode taskId = callAPI url status "taskStatus"
   where
     status =
@@ -114,7 +115,7 @@ type CancelTaskAPI =
 cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
-cancelTask :: HasCoreMetrics (FlowR e) => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
+cancelTask :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
 cancelTask clientId token url isTestMode taskId cancellationReason = callAPI url cancel "cancelTask"
   where
     cancel =

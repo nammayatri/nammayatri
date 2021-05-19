@@ -12,7 +12,6 @@ import qualified Crypto.Number.Generate as Cryptonite
 import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Utils.Metrics as Metrics ()
 
 generateOTPCode :: Flow Text
 generateOTPCode =

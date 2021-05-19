@@ -3,12 +3,13 @@ module Beckn.External.Graphhopper.Flow where
 import qualified Beckn.External.Graphhopper.Types as GrphrSearch
 import Beckn.Types.App (MandatoryQueryParam)
 import Beckn.Types.Common
+import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
 import Beckn.Utils.Common (callAPI)
-import Beckn.Utils.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Data.Geospatial
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
+import GHC.Records
 import Servant
 import Servant.Client
 
@@ -25,7 +26,7 @@ type GrphrAPI =
 grphrAPI :: Proxy GrphrAPI
 grphrAPI = Proxy
 
-search :: HasCoreMetrics (FlowR r) => BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
+search :: HasField "metricsRequestLatency" r RequestLatencyMetric => BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
   callAPI url clientM "search"
   where

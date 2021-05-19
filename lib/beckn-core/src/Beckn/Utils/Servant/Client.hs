@@ -1,6 +1,7 @@
 module Beckn.Utils.Servant.Client where
 
 import Beckn.Types.Common
+import Beckn.Types.Monitoring.Prometheus.Metrics (RequestLatencyMetric)
 import Beckn.Utils.Logging (logInfo)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as A
@@ -8,23 +9,24 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
+import GHC.Records
 import Servant.Client.Core
 
 callAPI ::
-  (HasCallStack, L.MonadFlow m, Log m, HasCoreMetrics m, ET.JSONEx a, ToJSON a) =>
+  (HasCallStack, Log (FlowR r), HasField "metricsRequestLatency" r RequestLatencyMetric, ET.JSONEx a, ToJSON a) =>
   BaseUrl ->
   ET.EulerClient a ->
   Text ->
-  m (Either ClientError a)
+  FlowR r (Either ClientError a)
 callAPI = callAPI' Nothing
 
 callAPI' ::
-  (HasCallStack, L.MonadFlow m, Log m, HasCoreMetrics m, ET.JSONEx a, ToJSON a) =>
+  (HasCallStack, Log (FlowR r), HasField "metricsRequestLatency" r RequestLatencyMetric, ET.JSONEx a, ToJSON a) =>
   Maybe ET.ManagerSelector ->
   BaseUrl ->
   ET.EulerClient a ->
   Text ->
-  m (Either ClientError a)
+  FlowR r (Either ClientError a)
 callAPI' mbManagerSelector baseUrl eulerClient desc = do
   withLogTag "callAPI" $ do
     endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc

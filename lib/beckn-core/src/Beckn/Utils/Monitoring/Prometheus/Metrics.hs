@@ -4,12 +4,14 @@
 
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
+import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Ratio ((%))
 import Data.Text as DT
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as E
+import GHC.Records
 import Network.Wai (Application, Request (..))
 import Network.Wai.Handler.Warp as W
 import Network.Wai.Internal (Response, ResponseReceived)
@@ -18,9 +20,6 @@ import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
 import System.Clock (Clock (..), TimeSpec, diffTimeSpec, getTime, toNanoSecs)
-
-class HasCoreMetrics m where
-  startRequestLatencyTracking :: Text -> Text -> m (Text -> m ())
 
 serve :: Int -> IO ()
 serve port = do
@@ -45,12 +44,13 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-startRequestLatencyTracking' :: L.MonadFlow m => RequestLatencyMetric -> Text -> Text -> m (Text -> m ())
-startRequestLatencyTracking' requestLatencyMetric host serviceName = do
+startRequestLatencyTracking :: HasField "metricsRequestLatency" r RequestLatencyMetric => Text -> Text -> FlowR r (Text -> FlowR r ())
+startRequestLatencyTracking host serviceName = do
+  requestLatencyMetric <- getField @"metricsRequestLatency" <$> ask
   start <- L.runIO $ getTime Monotonic
   return $ logRequestLatency requestLatencyMetric host serviceName start
 
-logRequestLatency :: L.MonadFlow m => RequestLatencyMetric -> Text -> Text -> TimeSpec -> Text -> m ()
+logRequestLatency :: RequestLatencyMetric -> Text -> Text -> TimeSpec -> Text -> FlowR r ()
 logRequestLatency requestLatencyMetric host serviceName start status = do
   end <- L.runIO $ getTime Monotonic
   let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
