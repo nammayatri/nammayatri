@@ -11,12 +11,7 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common as CoreCommon
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import EulerHS.Types (client)
-import Types.Beckn.API.Log
-import Types.Beckn.Context
-import Types.Beckn.Domain
 import Types.Error
 
 getClientConfig :: FromJSON a => Organization -> Flow a
@@ -24,48 +19,9 @@ getClientConfig org =
   let mconfig = org ^. #_info >>= decodeFromText
    in fromMaybeM (InternalError "Client config decode error.") mconfig
 
-fromMaybe400Log :: Text -> Maybe ErrorCode -> Context -> Maybe a -> Flow a
-fromMaybe400Log _ _ _ (Just a) = return a
-fromMaybe400Log msg errCode ctx Nothing = do
-  currTime <- getCurrentTime
-  let logCtx =
-        Context
-          { _domain = FINAL_MILE_DELIVERY,
-            _country = Just "IND",
-            _city = Nothing,
-            _action = "log",
-            _core_version = Just "0.8.0",
-            _domain_version = Just "0.8.0",
-            _bap_uri = Nothing,
-            _bpp_uri = Nothing,
-            _transaction_id = ctx ^. #_transaction_id,
-            _message_id = ctx ^. #_message_id,
-            _timestamp = currTime,
-            _ttl = Nothing
-          }
-  gatewayBaseUrl <- xGatewayUri <$> ask
-  mGatewayApiKey <- xGatewayApiKey <$> ask
-  whenJust mGatewayApiKey $ \gatewayApiKey ->
-    fork "Log" $ do
-      L.runIO $ threadDelay 0.5e6
-      let eClient =
-            client
-              logAPI
-              gatewayApiKey
-              LogReq
-                { _context = logCtx,
-                  _message =
-                    Log
-                      { _type = "ERROR",
-                        _message = msg,
-                        _errorCode = maybe "" show errCode,
-                        _debug = Nothing,
-                        _trace = Nothing,
-                        _context = ctx
-                      }
-                }
-      void $ callAPI gatewayBaseUrl eClient "log-fmd-wrapper"
-
+fromMaybe400 :: Text -> Maybe ErrorCode -> Maybe a -> Flow a
+fromMaybe400 _ _ (Just a) = return a
+fromMaybe400 msg errCode Nothing = do
   throwError $
     ErrorCodeWithMessage
       msg

@@ -7,15 +7,12 @@ where
 
 import App.Types
 import Beckn.Types.App (FlowServerR)
-import Beckn.Types.Core.API.Log
 import Beckn.Utils.Servant.SignatureAuth (lookupRegistryAction)
 import EulerHS.Prelude
-import qualified Product.Log as P
 import qualified Product.Search as P
 import Servant hiding (throwError)
 import Storage.Queries.Organization
 import Types.API.Search
-import Utils.Auth (VerifyAPIKey)
 import qualified Utils.Servant.SignatureAuth as HttpSig
 
 type HealthAPI =
@@ -26,7 +23,6 @@ type GatewayAPI' =
     :> ( Get '[JSON] Text
            :<|> SearchAPI
            :<|> OnSearchAPI
-           :<|> LogAPI VerifyAPIKey
        )
 
 type GatewayAPI = HealthAPI :<|> GatewayAPI'
@@ -46,6 +42,5 @@ gatewayHandler = do
   pure "Gateway is UP"
     :<|> HttpSig.withBecknAuthProxy P.search lookup
     :<|> HttpSig.withBecknAuthProxy P.searchCb lookup
-    :<|> P.log
   where
     lookup = lookupRegistryAction findOrgByShortId

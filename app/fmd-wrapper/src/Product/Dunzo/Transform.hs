@@ -378,9 +378,9 @@ mkOnCancelErrReq context err =
       contents = Left $ toBeckn err
     }
 
-mkCreateTaskReq :: Context -> Order -> Flow CreateTaskReq
-mkCreateTaskReq context order = do
-  orderId <- order ^. #_id & fromMaybe400Log "ORDER_ID_MISSING" (Just CORE003) context
+mkCreateTaskReq :: Order -> Flow CreateTaskReq
+mkCreateTaskReq order = do
+  orderId <- order ^. #_id & fromMaybe400 "ORDER_ID_MISSING" (Just CORE003)
   let [task] = order ^. #_tasks
   let pickup = task ^. #_pickup
   let drop = task ^. #_drop
@@ -393,10 +393,10 @@ mkCreateTaskReq context order = do
   let dropIntructions = formatInstructions "drop" =<< drop ^. #_instructions
   let mTotalValue = (\(Amount a) -> fromRational a) <$> getPackageValue package
   packageContent <- do
-    (categoryId :: Int) <- fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context ((readMaybe . T.unpack) =<< package ^. #_package_category_id)
+    (categoryId :: Int) <- fromMaybe400 "INVALID_CATEGORY_ID" (Just CORE003) ((readMaybe . T.unpack) =<< package ^. #_package_category_id)
     -- Category id is the index value of dzPackageContentList
     dzPackageContentList ^? element (categoryId - 1)
-      & fromMaybe400Log "INVALID_CATEGORY_ID" (Just CORE003) context
+      & fromMaybe400 "INVALID_CATEGORY_ID" (Just CORE003)
   return $
     CreateTaskReq
       { request_id = orderId,
@@ -412,10 +412,10 @@ mkCreateTaskReq context order = do
   where
     mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
     mkLocationDetails PickupOrDrop {..} = do
-      (CoreLoc.GPS lat lon) <- CoreLoc._gps _location & fromMaybe400Log "LAT_LON_NOT_FOUND" (Just CORE003) context
+      (CoreLoc.GPS lat lon) <- CoreLoc._gps _location & fromMaybe400 "LAT_LON_NOT_FOUND" (Just CORE003)
       lat' <- readCoord lat
       lon' <- readCoord lon
-      address <- CoreLoc._address _location & fromMaybe400Log "ADDRESS_NOT_FOUND" (Just CORE003) context
+      address <- CoreLoc._address _location & fromMaybe400 "ADDRESS_NOT_FOUND" (Just CORE003)
       return $
         LocationDetails
           { lat = lat',
@@ -435,7 +435,7 @@ mkCreateTaskReq context order = do
 
     mkPersonDetails :: PickupOrDrop -> Flow PersonDetails
     mkPersonDetails PickupOrDrop {..} = do
-      phone <- headMaybe (_poc ^. #phones) & fromMaybe400Log "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003) context
+      phone <- headMaybe (_poc ^. #phones) & fromMaybe400 "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
       return $
         PersonDetails
           { name = getName (_poc ^. #name),

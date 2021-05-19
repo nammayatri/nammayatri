@@ -18,7 +18,7 @@ mkTestTree = do
   hcSpec <- testSpec "HealthCheck" HC.spec
   clSpec <- testSpec "AppCaseList" CL.spec
   sfSpec <- testSpec "SuccessFlow" SF.spec
-  dirSpec <- testSpec "DriversIgnoreRIde" DIR.spec
+  dirSpec <- testSpec "DriversIgnoreRide" DIR.spec
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   srvSpec <- testSpec "Serviceability" SRV.spec

@@ -136,10 +136,10 @@ init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  quote <- req ^. (#message . #order . #_quotation) & fromMaybe400Log "INVALID_QUOTATION" (Just CORE003) context
+  quote <- req ^. (#message . #order . #_quotation) & fromMaybe400 "INVALID_QUOTATION" (Just CORE003)
   let quoteId = quote ^. #_id
   payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
-  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400Log "INVALID_QUOTATION_ID" (Just CORE003) context
+  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400 "INVALID_QUOTATION_ID" (Just CORE003)
   let order = orderDetails ^. #order
   validateReturn order
   dzBACreds <- getDzBAPCreds org
@@ -220,9 +220,9 @@ confirm org req = do
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req ^. (#message . #order)
-  orderId <- fromMaybe400Log "INVALID_ORDER_ID" (Just CORE003) context $ reqOrder ^. #_id
-  case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
-  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  orderId <- fromMaybe400 "INVALID_ORDER_ID" (Just CORE003) $ reqOrder ^. #_id
+  case_ <- Storage.findById (Id orderId) >>= fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
   let order = orderDetails ^. #order
   validateDelayFromInit dzQuotationTTLinMin case_
   verifyPayment reqOrder order
@@ -230,12 +230,12 @@ confirm org req = do
   payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   txnId <-
     reqOrder ^? #_payment . _Just . #_transaction_id
-      & fromMaybe400Log "TXN_ID_NOT_PRESENT" Nothing context
+      & fromMaybe400 "TXN_ID_NOT_PRESENT" Nothing
   let updatedOrderDetailsWTxn =
         orderDetails & ((#order . #_payment . _Just . #_transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
   fork "confirm" do
-    createTaskReq <- mkCreateTaskReq context order
+    createTaskReq <- mkCreateTaskReq order
     logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createTaskReq)
     eres <- createTaskAPI dzBACreds dconf createTaskReq
     logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
@@ -244,13 +244,12 @@ confirm org req = do
   where
     verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
-      let context = req ^. #context
       confirmAmount <-
         reqOrder ^? #_payment . _Just . #_amount . #_value
-          & fromMaybe400Log "INVALID_PAYMENT_AMOUNT" (Just CORE003) context
+          & fromMaybe400 "INVALID_PAYMENT_AMOUNT" (Just CORE003)
       orderAmount <-
         order ^? #_payment . _Just . #_amount . #_value
-          & fromMaybe400Log "ORDER_AMOUNT_NOT_FOUND" (Just CORE003) context
+          & fromMaybe400 "ORDER_AMOUNT_NOT_FOUND" (Just CORE003)
       if confirmAmount == orderAmount
         then pass
         else throwError (InvalidRequest "Invalid order amount.")
@@ -314,7 +313,7 @@ track org req = do
   let orderId = req ^. (#message . #order_id)
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  case_ <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  case_ <- Storage.findById (Id orderId) >>= fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
   fork "track" do
     let taskId = case_ ^. #_shortId
     dzBACreds <- getDzBAPCreds org
@@ -340,7 +339,7 @@ status org req = do
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   let orderId = req ^. (#message . #order_id)
-  c <- Storage.findById (Id orderId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  c <- Storage.findById (Id orderId) >>= fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = c ^. #_shortId
   (orderDetails :: OrderDetails) <-
     c ^. #_udf1 >>= decodeFromText
@@ -386,9 +385,9 @@ cancel org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  case_ <- Storage.findById (Id oId) >>= fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  case_ <- Storage.findById (Id oId) >>= fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = case_ ^. #_shortId
-  orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400Log "ORDER_NOT_FOUND" (Just CORE003) context
+  orderDetails <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
   fork "cancel" do
     eres <- callCancelAPI dzBACreds conf (TaskId taskId)
