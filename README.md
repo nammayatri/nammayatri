@@ -1,53 +1,16 @@
-# beckn
-Beckn is an open protocol that enables location-aware, local commerce across industries.
+# Developer documentation
+## Project information
 
-More about beckn:
+[About Beckn](./doc/beckn.md)
 
-* [whitepaper](https://beckn.org/wp-content/uploads/2020/04/WhatIsBeckn.pdf)
-* [mobility](https://beckn.org/wp-content/uploads/2020/04/ImaginingMobilityWithBeckn.pdf)
-* [spec](https://github.com/beckn/protocol-specifications/)
-* [website](https://beckn.org/)
+[Project documentation](https://docs.google.com/document/d/1gzM0-D9BYDdYNVWjN3nWD84zrQ6eWZgd5g6hMPu1Nbg/edit?usp=sharing)
 
-FMD module and related types conform to beckn spec [fmd-0.8.3](https://github.com/beckn/protocol-specifications/tree/fmd-0.8.3)
-Mobility module and related types conform to beckn spec [mobility-0.8.2](https://github.com/beckn/protocol-specifications/tree/mobility-v0.8.2)
+[Project structure](./doc/structure.md)
 
-## This project contains three modules
-* `app-backend` - frontend facing APIs (BA), has more end-user specific implementations
-* `beckn-transport` - beckn provider (BP), implmenting mobility spec
+[Building and running](./doc/build.md)
 
-## Shared libraries
-* `beckn-core` - is the common library where the API types, unified data models will be there
+## Data model
+[Beckn data mapping](https://docs.google.com/spreadsheets/d/1qaOaS01lBtSr2LTnCgehOWX64aQHXe2X5ztR5UmY2HE/edit?usp=sharing)
+## Developer guidelines
 
-## How to run Beckn backends in a dev environment:
-
-### Setup
-
-Set up your development environment, from project root run:
-
-```
-./dev/setup.sh
-```
-
-### Compile the project with
-
-```
-stack build
-```
-
-### Run the databases and redis inside Docker
-
-```
-cd dev && docker-compose up
-```
-
-### Start the app-backend server
-
-```
-stack exec app-backend-exe
-```
-
-### Start the transporter server
-
-```
-stack exec beckn-transport-exe
-```
+[PR reviews](./doc/reviews.md)
