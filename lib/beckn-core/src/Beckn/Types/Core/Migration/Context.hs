@@ -3,6 +3,7 @@ module Beckn.Types.Core.Migration.Context (Context (..)) where
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Core.Migration.Duration (Duration)
 import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Data.Aeson
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
@@ -53,7 +54,7 @@ instance FromJSON Context where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
 instance ToJSON Context where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON $ stripAllLensPrefixOptions {omitNothingFields = True}
 
 instance FromJSON Action where
   parseJSON = genericParseJSON constructorsToLowerOptions

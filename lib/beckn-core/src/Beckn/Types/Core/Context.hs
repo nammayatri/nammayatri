@@ -47,4 +47,4 @@ instance FromJSON Context where
   parseJSON = genericParseJSON stripLensPrefixOptions
 
 instance ToJSON Context where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON $ stripAllLensPrefixOptions {omitNothingFields = True}

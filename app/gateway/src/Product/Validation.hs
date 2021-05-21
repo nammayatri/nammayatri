@@ -1,8 +1,8 @@
 module Product.Validation where
 
 import App.Types
-import Beckn.Product.Validation.Context (validateAction, validateCity, validateCountry)
 import EulerHS.Prelude
+import Temporary.Validation (validateAction, validateCity, validateCountry)
 import Types.Beckn.Context
 import Types.Beckn.Domain
 import Types.Error
