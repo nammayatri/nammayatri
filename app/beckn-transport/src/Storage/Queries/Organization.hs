@@ -29,10 +29,9 @@ create Storage.Organization {..} = do
 
 verifyToken :: RegToken -> Flow Storage.Organization
 verifyToken regToken = do
+  logInfo "Verifying Token"
   dbTable <- getDbTable
-  logTagInfo "verifying token" $ show regToken
-  DB.findOne dbTable (predicate regToken)
-    >>= fromMaybeM Unauthorized
+  DB.findOne dbTable (predicate regToken) >>= fromMaybeM (InvalidToken regToken)
   where
     predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
 

@@ -67,7 +67,7 @@ verifyPersonAction = VerificationAction verifyPerson
 verifyToken :: RegToken -> Flow SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
-    >>= Utils.fromMaybeM InvalidToken
+    >>= Utils.fromMaybeM (InvalidToken token)
     >>= validateToken
 
 validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken

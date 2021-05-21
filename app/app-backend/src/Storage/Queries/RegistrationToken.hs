@@ -44,7 +44,7 @@ updateAttempts attemps id = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause attemps now) (predicate id)
-  findById id >>= fromMaybeM InvalidToken
+  findById id >>= fromMaybeM (TokenNotFound id)
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =

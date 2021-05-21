@@ -14,7 +14,8 @@ data AuthError
   = Unauthorized
   | InvalidAuthData
   | TokenExpired
-  | InvalidToken
+  | TokenNotFound Text
+  | InvalidToken Text
   | AuthBlocked Text
   | IncorrectOTP
   | AccessDenied
@@ -27,18 +28,20 @@ instance IsAPIError AuthError where
     Unauthorized -> "UNAUTHORIZED"
     InvalidAuthData -> "INVALID_AUTH_DATA"
     TokenExpired -> "TOKEN_EXPIRED"
-    InvalidToken -> "INVALID_TOKEN"
+    TokenNotFound _ -> "TOKEN_NOT_FOUND"
+    InvalidToken _ -> "INVALID_TOKEN"
     AuthBlocked _ -> "AUTH_BLOCKED"
     IncorrectOTP -> "INCORRECT_OTP"
     AccessDenied -> "ACCESS_DENIED"
   toMessage = \case
-    InvalidToken -> Just "Invalid registration token."
+    TokenNotFound tokenId -> Just $ "Token with tokenId \"" <> show tokenId <> "\" not found."
+    InvalidToken token -> Just $ "Invalid token: " <> token
     AuthBlocked reason -> Just $ "Authentication process blocked: " <> reason
     AccessDenied -> Just "You have no access to this operation."
     _ -> Nothing
   toHttpCode = \case
     Unauthorized -> E401
-    InvalidToken -> E401
+    InvalidToken _ -> E401
     AccessDenied -> E403
     _ -> E400
 

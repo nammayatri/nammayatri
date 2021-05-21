@@ -48,14 +48,13 @@ updateVerified id verified = do
 
 verifyToken :: RegToken -> Flow Storage.RegistrationToken
 verifyToken regToken = do
-  logTagInfo "verifying token" $ show regToken
-  findRegistrationTokenByToken regToken
+  logInfo "Verifying Token"
+  findRegistrationTokenByToken regToken >>= fromMaybeM (InvalidToken regToken)
 
-findRegistrationTokenByToken :: RegToken -> Flow Storage.RegistrationToken
+findRegistrationTokenByToken :: RegToken -> Flow (Maybe Storage.RegistrationToken)
 findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
-    >>= fromMaybeM InvalidToken
   where
     predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
 
@@ -64,7 +63,7 @@ updateAttempts attemps id = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause attemps now) (predicate id)
-  findRegistrationToken id >>= fromMaybeM InvalidToken
+  findRegistrationToken id >>= fromMaybeM (TokenNotFound id)
   where
     predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =
