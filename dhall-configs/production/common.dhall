@@ -33,14 +33,12 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig
-   , TraceFlag = globalCommon.TraceFlag
    , LogLevel = globalCommon.LogLevel
    , ExotelCfg = globalCommon.ExotelCfg
    , exotelCfg = sec.exotelCfg
    , signatureExpiry = globalCommon.signatureExpiry
    , mkCredential = globalCommon.mkCredential
    , mkSigningKey = globalCommon.mkSigningKey
-
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , branchName = branchName
