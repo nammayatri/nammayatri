@@ -107,10 +107,10 @@ init org req = do
   conf@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  quote <- req ^. (#message . #order . #_quotation) & fromMaybe400 "INVALID_QUOTATION" (Just CORE003)
+  quote <- req ^. (#message . #order . #_quotation) & fromMaybeErr "INVALID_QUOTATION" (Just CORE003)
   let quoteId = quote ^. #_id
   payeeDetails <- dlPayee & decodeFromText & fromMaybeM (InternalError "Decode error.")
-  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybe400 "INVALID_QUOTATION_ID" (Just CORE003)
+  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeErr "INVALID_QUOTATION_ID" (Just CORE003)
   dlBACreds <- getDlBAPCreds org
   fork "init" $ do
     quoteReq <- mkQuoteReqFromSelect $ API.SelectReq context (API.SelectOrder (orderDetails ^. #order))
@@ -188,9 +188,9 @@ confirm org req = do
   let ctx = updateBppUri (req ^. #context) dlBPNwAddress
   cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req ^. (#message . #order)
-  orderId <- fromMaybe400 "INVALID_ORDER_ID" (Just CORE003) $ reqOrder ^. #_id
-  case_ <- Storage.findById (Id orderId) >>= fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
-  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybe400 "ORDER_NOT_FOUND" (Just CORE003)
+  orderId <- fromMaybeErr "INVALID_ORDER_ID" (Just CORE003) $ reqOrder ^. #_id
+  case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let order = orderDetails ^. #order
   verifyPayment reqOrder order
   dlBACreds <- getDlBAPCreds org
@@ -210,10 +210,10 @@ confirm org req = do
     verifyPayment reqOrder order = do
       confirmAmount <-
         reqOrder ^? #_payment . _Just . #_amount . #_value
-          & fromMaybe400 "INVALID_PAYMENT_AMOUNT" (Just CORE003)
+          & fromMaybeErr "INVALID_PAYMENT_AMOUNT" (Just CORE003)
       orderAmount <-
         order ^? #_payment . _Just . #_amount . #_value
-          & fromMaybe400 "ORDER_AMOUNT_NOT_FOUND" (Just CORE003)
+          & fromMaybeErr "ORDER_AMOUNT_NOT_FOUND" (Just CORE003)
       if confirmAmount == orderAmount
         then pass
         else throwError $ InvalidRequest "Invalid order amount."

@@ -19,10 +19,6 @@ getClientConfig org =
   let mconfig = org ^. #_info >>= decodeFromText
    in fromMaybeM (InternalError "Client config decode error.") mconfig
 
-fromMaybe400 :: Text -> Maybe ErrorCode -> Maybe a -> Flow a
-fromMaybe400 _ _ (Just a) = return a
-fromMaybe400 msg errCode Nothing = do
-  throwError $
-    ErrorCodeWithMessage
-      msg
-      (fromMaybe CORE001 errCode) -- FIXME
+fromMaybeErr :: Text -> Maybe ErrorCode -> Maybe a -> Flow a
+fromMaybeErr msg errCode =
+  fromMaybeM $ ErrorCodeWithMessage msg (fromMaybe CORE001 errCode)
