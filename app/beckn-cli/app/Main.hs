@@ -48,7 +48,7 @@ main = do
       runWithFlowRuntime $ do
         prepareDataForLoadTest privateKey requests filePath
         L.logInfo @Text "GenerateRequestsForLoadTest" "Start K6 script..."
-        result <- runK6Script url filePath
+        result <- runK6Script url filePath requests
         L.logInfo @Text "GenerateRequestsForLoadTest" $ fromString result
         cleanupData filePath
   exitSuccess
@@ -89,7 +89,7 @@ mode =
 runWithFlowRuntime :: L.Flow a -> IO a
 runWithFlowRuntime flow = do
   let logRuntime =
-        getEulerLoggerRuntime $
+        getEulerLoggerRuntime (Just "cli") $
           LoggerConfig
             { isAsync = False,
               level = DEBUG,

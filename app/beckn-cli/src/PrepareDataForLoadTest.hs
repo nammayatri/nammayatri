@@ -47,14 +47,16 @@ prepareDataForLoadTest privateKey nmbOfReq filePath = do
 cleanupData :: Text -> L.Flow ()
 cleanupData = L.runIO . removeFile . T.unpack
 
-runK6Script :: Text -> Text -> L.Flow String
-runK6Script url filePath =
+runK6Script :: Text -> Text -> Int -> L.Flow String
+runK6Script url filePath nmbOfReq =
   L.runSysCmd $
     "k6 run -e LOAD_TEST_URL="
       <> T.unpack url
       <> " -e FILE_PATH="
       <> T.unpack filePath
       <> " ./dev/load-test/script.js"
+      <> " -e N_REQ="
+      <> show nmbOfReq
 
 generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
