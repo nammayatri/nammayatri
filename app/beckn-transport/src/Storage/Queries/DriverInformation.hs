@@ -91,10 +91,10 @@ updateOnRide driverId_ onRide_ = do
         ]
     predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
 
-deleteById :: Id Driver -> Flow ()
+deleteById :: Id Driver -> DB.SqlDB ()
 deleteById driverId_ = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate personId_)
+  DB.delete' dbTable (predicate personId_)
   where
     personId_ = cast driverId_
     predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid

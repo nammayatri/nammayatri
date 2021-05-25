@@ -91,6 +91,9 @@ type RegistrationAPI =
              :> "resend"
              :> ReqBody '[JSON] ReInitiateLoginReq
              :> Post '[JSON] InitiateLoginRes
+           :<|> "logout"
+             :> TokenAuth
+             :> Post '[JSON] APISuccess
        )
 
 registrationFlow :: FlowServer RegistrationAPI
@@ -98,6 +101,7 @@ registrationFlow =
   Registration.initiateLogin
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
+    :<|> Registration.logout
 
 -- Following is person flow
 type PersonAPI =

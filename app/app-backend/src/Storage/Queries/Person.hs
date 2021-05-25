@@ -19,7 +19,9 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT))
+getDbTable ::
+  (Functor m, HasSchemaName m) =>
+  m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT))
 getDbTable =
   DB.person . DB.appDb <$> getSchemaName
 
@@ -91,11 +93,11 @@ findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
       role ==. B.val_ role_
         &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
-updateMultiple :: Id Storage.Person -> Storage.Person -> Flow ()
+updateMultiple :: Id Storage.Person -> Storage.Person -> DB.SqlDB ()
 updateMultiple personId person = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause now person) (predicate personId)
+  DB.update' dbTable (setClause now person) (predicate personId)
   where
     setClause now (sPerson :: Storage.Person) Storage.Person {..} =
       mconcat

@@ -61,9 +61,9 @@ fetchAll = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (const (B.val_ True))
 
-deleteById :: Id Driver -> Flow ()
+deleteById :: Id Driver -> DB.SqlDB ()
 deleteById driverId_ = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate driverId_)
+  DB.delete' dbTable (predicate driverId_)
   where
     predicate dId Storage.DriverStats {..} = driverId ==. B.val_ dId

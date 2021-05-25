@@ -286,7 +286,12 @@ testDriverId = "6bc4bc84-2c43-425d-8853-22f47bd06691"
 appInitiateLogin :: Reg.InitiateLoginReq -> ClientM Reg.InitiateLoginRes
 appVerifyLogin :: Text -> Reg.LoginReq -> ClientM Reg.LoginRes
 appReInitiateLogin :: Text -> Reg.ReInitiateLoginReq -> ClientM Reg.InitiateLoginRes
-appInitiateLogin :<|> appVerifyLogin :<|> appReInitiateLogin = client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
+logout :: RegToken -> ClientM APISuccess
+appInitiateLogin
+  :<|> appVerifyLogin
+  :<|> appReInitiateLogin
+  :<|> logout =
+    client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
 
 buildInitiateLoginReq :: Reg.InitiateLoginReq
 buildInitiateLoginReq =

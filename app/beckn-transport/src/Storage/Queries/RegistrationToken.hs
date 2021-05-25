@@ -17,7 +17,8 @@ import qualified Types.Storage.DB as DB
 import Utils.Common
 
 getDbTable ::
-  Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT))
+  (Functor m, HasSchemaName m) =>
+  m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT))
 getDbTable =
   DB.registrationToken . DB.transporterDb <$> getSchemaName
 
@@ -69,9 +70,9 @@ updateAttempts attemps rtId = do
     setClause a n Storage.RegistrationToken {..} =
       mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
 
-deleteByEntitiyId :: Text -> Flow ()
-deleteByEntitiyId rtId = do
+deleteByEntitiyId :: Text -> DB.SqlDB ()
+deleteByEntitiyId id_ = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate rtId)
+  DB.delete' dbTable (predicate id_)
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid

@@ -17,9 +17,11 @@ module Product.Person
 where
 
 import App.Types
+import Beckn.External.Encryption
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
+import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common hiding (id)
@@ -59,7 +61,8 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
   person <- QP.findPersonById (Id entityId)
   isValidUpdate person
   updatedPerson <- modifyTransform req person
-  QP.updatePersonRec (Id entityId) updatedPerson
+  encryptedPerson <- encrypt updatedPerson
+  DB.runSqlDB (QP.updatePersonRec (Id entityId) encryptedPerson)
   return $ UpdatePersonRes updatedPerson
   where
     verifyPerson entityId_ =
@@ -124,14 +127,13 @@ listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id personId)
-  if person ^. #organizationId == Just orgId
-    then do
-      QP.deleteById (Id personId)
-      QDriverStats.deleteById $ Id personId
-      QDriverInformation.deleteById $ Id personId
-      QR.deleteByEntitiyId personId
-      return $ DeletePersonRes personId
-    else throwError Unauthorized
+  unless (person ^. #organizationId == Just orgId) $ throwError Unauthorized
+  DB.runSqlDBTransaction $ do
+    QP.deleteById (Id personId)
+    QDriverStats.deleteById $ Id personId
+    QDriverInformation.deleteById $ Id personId
+    QR.deleteByEntitiyId personId
+  return $ DeletePersonRes personId
 
 linkEntity :: Text -> Id SP.Person -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do

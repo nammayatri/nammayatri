@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Product.Registration (checkPersonExists, initiateLogin, login, reInitiateLogin) where
+module Product.Registration (checkPersonExists, initiateLogin, login, reInitiateLogin, logout) where
 
 import App.Types
+import Beckn.External.Encryption
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
+import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
@@ -168,5 +171,14 @@ reInitiateLogin tokenId req =
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do
-  QR.deleteByEntitiyId $ getId $ person ^. #id
+  DB.runSqlDB (QR.deleteByEntitiyId $ getId $ person ^. #id)
   pure person
+
+logout :: SR.RegistrationToken -> FlowHandler APISuccess
+logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do
+  uperson <- QP.findPersonById (Id entityId)
+  eperson <- encrypt uperson
+  DB.runSqlDBTransaction $ do
+    QP.updatePersonRec (uperson ^. #id) eperson {SP.deviceToken = Nothing}
+    QR.deleteByEntitiyId entityId
+  pure Success

@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Product.Registration (initiateLogin, login, reInitiateLogin) where
+module Product.Registration (initiateLogin, login, reInitiateLogin, logout) where
 
 import App.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
+import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
@@ -40,11 +42,11 @@ initiateFlow req smsCfg = do
   regToken <- case useFakeOtpM of
     Just _ -> do
       token <- makeSession scfg req entityId (show <$> useFakeOtpM)
-      RegistrationToken.create token
+      DB.runSqlDB (RegistrationToken.create token)
       return token
     Nothing -> do
       token <- makeSession scfg req entityId Nothing
-      RegistrationToken.create token
+      DB.runSqlDB (RegistrationToken.create token)
       otpSmsTemplate <- otpSmsTemplate <$> ask
       SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
       return token
@@ -135,7 +137,7 @@ login tokenId req =
                   SP.deviceToken =
                     (req ^. #deviceToken) <|> (person ^. #deviceToken)
                 }
-        Person.updateMultiple personId updatedPerson
+        DB.runSqlDB (Person.updateMultiple personId updatedPerson)
         LoginRes token . SP.maskPerson
           <$> ( Person.findById personId
                   >>= fromMaybeM PersonNotFound
@@ -178,5 +180,12 @@ reInitiateLogin tokenId req =
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do
-  RegistrationToken.deleteByPersonId $ getId $ person ^. #id
+  DB.runSqlDB (RegistrationToken.deleteByPersonId $ getId $ person ^. #id)
   pure person
+
+logout :: SP.Person -> FlowHandler APISuccess
+logout person = withFlowHandlerAPI $ do
+  DB.runSqlDBTransaction $ do
+    Person.updateMultiple (person ^. #id) person {SP.deviceToken = Nothing}
+    RegistrationToken.deleteByPersonId $ getId $ person ^. #id
+  pure Success

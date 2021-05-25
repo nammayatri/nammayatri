@@ -5,6 +5,7 @@
 module Product.CustomerSupport where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as C
@@ -40,8 +41,9 @@ generateToken SP.Person {..} = do
   let personId = getId id
   regToken <- createSupportRegToken personId
   -- Clean Old Login Session
-  RegistrationToken.deleteByPersonId personId
-  RegistrationToken.create regToken
+  DB.runSqlDBTransaction $ do
+    RegistrationToken.deleteByPersonId personId
+    RegistrationToken.create regToken
   pure $ regToken ^. #token
 
 logout :: SP.Person -> FlowHandler T.LogoutRes
@@ -50,7 +52,7 @@ logout person =
     if person ^. #role /= SP.CUSTOMER_SUPPORT
       then throwError Unauthorized -- Do we need this Check?
       else do
-        RegistrationToken.deleteByPersonId (getId $ person ^. #id)
+        DB.runSqlDB (RegistrationToken.deleteByPersonId (getId $ person ^. #id))
         pure $ T.LogoutRes "Logged out successfully"
 
 createSupportRegToken :: Text -> Flow SR.RegistrationToken

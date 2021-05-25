@@ -16,14 +16,15 @@ import qualified Types.Storage.DB as DB
 import Utils.Common
 
 getDbTable ::
-  Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RegistrationTokenT))
+  (Functor m, HasSchemaName m) =>
+  m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RegistrationTokenT))
 getDbTable =
   DB.registrationToken . DB.appDb <$> getSchemaName
 
-create :: Storage.RegistrationToken -> Flow ()
+create :: Storage.RegistrationToken -> DB.SqlDB ()
 create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
+  DB.createOne' dbTable (Storage.insertExpression Storage.RegistrationToken {..})
 
 findById :: Text -> Flow (Maybe Storage.RegistrationToken)
 findById rtId = do
@@ -50,9 +51,9 @@ updateAttempts attemps rtId = do
     setClause a n Storage.RegistrationToken {..} =
       mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
 
-deleteByPersonId :: Text -> Flow ()
+deleteByPersonId :: Text -> DB.SqlDB ()
 deleteByPersonId rtId = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate rtId)
+  DB.delete' dbTable (predicate rtId)
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid

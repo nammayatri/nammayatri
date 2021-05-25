@@ -5,7 +5,7 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
 import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
@@ -123,6 +123,9 @@ type RegistrationAPI =
              :> "resend"
              :> ReqBody '[JSON] ReInitiateLoginReq
              :> Post '[JSON] InitiateLoginRes
+           :<|> "logout"
+             :> TokenAuth
+             :> Post '[JSON] APISuccess
        )
 
 registrationFlow :: FlowServer RegistrationAPI
@@ -130,6 +133,7 @@ registrationFlow =
   Registration.initiateLogin
     :<|> Registration.login
     :<|> Registration.reInitiateLogin
+    :<|> Registration.logout
 
 -------- Search Flow --------
 type SearchAPI =
@@ -422,7 +426,7 @@ type PersonAPI =
            :<|> "update"
              :> TokenAuth
              :> ReqBody '[JSON] Person.UpdateReq
-             :> Post '[JSON] APISuccess.APISuccess
+             :> Post '[JSON] APISuccess
        )
 
 personFlow :: FlowServer PersonAPI

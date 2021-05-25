@@ -28,7 +28,9 @@ import qualified Types.Storage.DB as DB
 import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
+getDbTable ::
+  (Functor m, HasSchemaName m) =>
+  m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
 getDbTable =
   DB.person . DB.transporterDb <$> getSchemaName
 
@@ -141,12 +143,11 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-updatePersonRec :: Id Storage.Person -> Storage.Person -> Flow ()
-updatePersonRec personId uperson = do
+updatePersonRec :: Id Storage.Person -> Storage.PersonT Identity -> DB.SqlDB ()
+updatePersonRec personId person' = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  person <- encrypt uperson
-  DB.update dbTable (setClause person now) (predicate personId)
+  DB.update' dbTable (setClause person' now) (predicate personId)
   where
     setClause person n Storage.Person {..} =
       mconcat
@@ -212,10 +213,10 @@ update personId status_ verified_ deviceTokenM = do
         ]
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-deleteById :: Id Storage.Person -> Flow ()
+deleteById :: Id Storage.Person -> DB.SqlDB ()
 deleteById personId = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate personId)
+  DB.delete' dbTable (predicate personId)
   where
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
