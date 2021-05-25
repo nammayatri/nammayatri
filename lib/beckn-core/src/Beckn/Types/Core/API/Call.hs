@@ -2,7 +2,7 @@
 
 module Beckn.Types.Core.API.Call where
 
-import Beckn.Types.Core.Ack (Ack (..))
+import Beckn.Types.Core.Ack
 import EulerHS.Prelude
 
 newtype CallReq = CallReq
@@ -10,4 +10,4 @@ newtype CallReq = CallReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-type CallRes = Ack
+type CallRes = AckResponse

@@ -9,7 +9,7 @@ import qualified Beckn.Types.Core.API.Feedback as Feedback
 import qualified Beckn.Types.Core.API.Search as Search
 import qualified Beckn.Types.Core.API.Status as Status
 import qualified Beckn.Types.Core.API.Track as Track
-import Beckn.Types.Core.Ack (AckResponse (..))
+import Beckn.Types.Core.Ack
 import EulerHS.Prelude
 import EulerHS.Types (EulerClient, client)
 import qualified EulerHS.Types as ET

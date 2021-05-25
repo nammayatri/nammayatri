@@ -15,8 +15,7 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack as Ack
-import Beckn.Types.Core.Context
+import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Error
 import Beckn.Types.Error
 import Beckn.Types.Error.APIError
@@ -42,12 +41,6 @@ import qualified Servant.Client as S
 
 roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
 roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
-
-mkOkResponse :: MonadTime m => Context -> m AckResponse
-mkOkResponse context = do
-  currTime <- getCurrentTime
-  let context' = context {_timestamp = currTime}
-  return $ AckResponse context' (ack Ack.ACK) Nothing
 
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
@@ -146,8 +139,9 @@ type HasFlowEnv m r fields =
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
 foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
 
+-- TODO: fix
 checkAckResponseError :: (MonadThrow m, Log m, IsAPIException e) => (Error -> e) -> AckResponse -> m ()
-checkAckResponseError err ackResp = whenJust (ackResp ^. #_error) (throwError . err)
+checkAckResponseError _ Ack = pure ()
 
 parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
 parseBaseUrl = S.parseBaseUrl . T.unpack

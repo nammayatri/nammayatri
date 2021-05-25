@@ -7,6 +7,7 @@ module Product.Search
 where
 
 import App.Types
+import Beckn.Types.Core.Ack
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
@@ -23,7 +24,6 @@ import qualified Temporary.Utils as TempUtils
 import qualified Types.API.Gateway.Search as GatewayAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Beckn.API.Callback
-import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
 import Types.Error
 import Utils.Common
 
@@ -61,7 +61,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
               <> decodeUtf8 (encode req)
               <> ", resp: "
               <> show eRes
-        return $ AckResponse context (ack ACK) Nothing
+        return Ack
 
 searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler AckResponse
 searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI $
@@ -87,5 +87,5 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI 
         <> ", resp: "
         <> show eRes
     eRes & fromEitherM (ExternalAPICallError providerUrl)
-      >>= TempUtils.checkAckResponseError (ExternalAPIResponseError "on_search")
-    TempUtils.mkOkResponse (req ^. #context)
+      >>= checkAckResponseError (ExternalAPIResponseError "on_search")
+    return Ack

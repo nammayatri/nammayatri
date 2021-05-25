@@ -14,8 +14,7 @@ import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
-import qualified Beckn.Types.Core.Ack as Ack
+import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context (Context (..))
 import qualified Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Core.Order
@@ -54,7 +53,7 @@ import qualified Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
-cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler Ack.AckResponse
+cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler AckResponse
 cancel _transporterId _bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req ^. #context
@@ -64,7 +63,7 @@ cancel _transporterId _bapOrg req = withFlowHandlerBecknAPI $
     piList <- ProductInstance.findAllByParentId (prodInst ^. #_id)
     orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> piList) Case.RIDEORDER
     RideRequest.createFlow =<< mkRideReq (orderPi ^. #_id) SRideRequest.CANCELLATION
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack
 
 cancelRide :: Id Ride -> Bool -> Flow ()
 cancelRide rideId requestedByDriver = do
@@ -131,7 +130,7 @@ serviceStatus transporterId bapOrg req = withFlowHandlerAPI $ do
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
   notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId $ context ^. #_transaction_id
-  return $ AckResponse context (ack ACK) Nothing
+  return Ack
 
 notifyServiceStatusToGateway :: Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> Flow ()
 notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId txnId = do
@@ -187,7 +186,7 @@ trackTrip transporterId org req = withFlowHandlerBecknAPI $
     let bppShortId = getShortId $ transporter ^. #_shortId
     onTrackContext <- updateContext "on_track" context
     notifyTripUrlToGateway case_ onTrackContext callbackUrl bppShortId
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack
 
 notifyTripUrlToGateway :: Case.Case -> Context -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ context callbackUrl bppShortId = do

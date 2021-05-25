@@ -96,7 +96,7 @@ searchCb _bppOrg req = withFlowHandlerBecknAPI $
         _ <- searchCbService req catalog
         return ()
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
-    return $ AckResponse (req ^. #context) (ack ACK) Nothing
+    return Ack
 
 searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
 searchCbService req catalog = do
@@ -138,7 +138,7 @@ searchCbService req catalog = do
       whenJust mCaseInfo $ \info -> do
         let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
         QCase.updateInfo (case_ ^. #_id) (encodeToText uInfo)
-  return $ AckResponse (req ^. #context) (ack ACK) Nothing
+  return Ack
 
 mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do

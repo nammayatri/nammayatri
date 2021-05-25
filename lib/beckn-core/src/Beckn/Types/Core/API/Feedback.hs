@@ -6,7 +6,7 @@ module Beckn.Types.Core.API.Feedback
   )
 where
 
-import Beckn.Types.Core.Ack (AckResponse (..))
+import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Core
 import qualified Beckn.Types.Core.Description as Core
 import qualified Beckn.Types.Core.Rating as Core

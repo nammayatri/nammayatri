@@ -8,12 +8,12 @@ module Types.API.Search
   )
 where
 
+import Beckn.Types.Core.Ack
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Aeson (Value)
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Types.Beckn.API.Callback
-import Types.Beckn.Ack (AckResponse (..))
 import Types.Beckn.Context
 
 data SearchReq = SearchReq

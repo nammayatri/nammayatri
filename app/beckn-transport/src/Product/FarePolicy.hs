@@ -3,7 +3,7 @@
 module Product.FarePolicy where
 
 import App.Types
-import Beckn.Types.Core.Ack
+import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import EulerHS.Prelude
@@ -52,4 +52,4 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
             SFarePolicy._nightShiftRate = req ^. #nightShiftRate
           }
   _ <- SFarePolicy.updateFarePolicy updatedFarePolicy
-  pure $ Ack {_status = ACK}
+  pure Success

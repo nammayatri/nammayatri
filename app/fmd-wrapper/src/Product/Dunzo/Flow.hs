@@ -6,6 +6,7 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
@@ -33,8 +34,6 @@ import qualified Types.Beckn.API.Select as API
 import qualified Types.Beckn.API.Status as API
 import qualified Types.Beckn.API.Track as API
 import qualified Types.Beckn.API.Update as API
-import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
-import Types.Beckn.Context
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
 import qualified Types.Beckn.FmdItem as Item
 import Types.Beckn.FmdOrder
@@ -55,7 +54,7 @@ search org req = do
     eres <- getQuote dzBACreds config quoteReq
     logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCb context eres
-  returnAck context
+  return Ack
   where
     sendCb context res = do
       cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
@@ -88,7 +87,7 @@ select org req = do
     eres <- getQuote dzBACreds conf quoteReq
     logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCallback ctx dzQuotationTTLinMin cbUrl eres
-  returnAck ctx
+  return Ack
   where
     sendCallback context quotationTTLinMin cbUrl res =
       case res of
@@ -148,7 +147,7 @@ init org req = do
     eres <- getQuote dzBACreds conf quoteReq
     logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCb orderDetails context cbUrl payeeDetails quoteId dzQuotationTTLinMin eres
-  returnAck context
+  return Ack
   where
     sendCb orderDetails context cbUrl payeeDetails quoteId quotationTTLinMin (Right res) = do
       -- quoteId will be used as orderId
@@ -240,7 +239,7 @@ confirm org req = do
     eres <- createTaskAPI dzBACreds dconf createTaskReq
     logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
     sendCb case_ updatedOrderDetailsWTxn context cbUrl payeeDetails eres
-  returnAck context
+  return Ack
   where
     verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
@@ -330,7 +329,7 @@ track org req = do
         logTagInfo (req ^. #context . #_transaction_id <> "_on_track req") $ encodeToText onTrackReq
         eres <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onTrackAPI onTrackReq) "track"
         logTagInfo (req ^. #context . #_transaction_id <> "_on_track res") $ show eres
-  returnAck context
+  return Ack
 
 status :: Org.Organization -> API.StatusReq -> Flow API.StatusRes
 status org req = do
@@ -349,7 +348,7 @@ status org req = do
     eres <- getStatus dzBACreds conf (TaskId taskId)
     logTagInfo (req ^. #context . #_transaction_id <> "_StatusRes") $ show eres
     sendCb c orderDetails context cbUrl payeeDetails eres
-  returnAck context
+  return Ack
   where
     updateCase caseId orderDetails taskStatus case_ = do
       let updatedCase = case_ {_udf1 = Just $ encodeToText orderDetails, _udf2 = Just $ encodeToText taskStatus}
@@ -393,7 +392,7 @@ cancel org req = do
     eres <- callCancelAPI dzBACreds conf (TaskId taskId)
     logTagInfo (req ^. #context . #_transaction_id <> "_CancelRes") $ show eres
     sendCb case_ orderDetails context cbUrl eres
-  returnAck context
+  return Ack
   where
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
       token <- fetchToken dzBACreds conf
@@ -436,7 +435,7 @@ update org req = do
     logTagInfo (req ^. #context . #_transaction_id <> "_on_update err req") $ encodeToText onUpdateReq
     eres <- callAPI cbUrl (ET.client API.onUpdateAPI onUpdateReq) "update"
     logTagInfo (req ^. #context . #_transaction_id <> "_on_update err res") $ show eres
-  returnAck context
+  return Ack
 
 -- Helpers
 getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow (Either ClientError QuoteRes)
@@ -460,9 +459,6 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
       Dz.insertToken dzClientId token
       return token
     Just token -> return token
-
-returnAck :: Context -> Flow AckResponse
-returnAck context = return $ AckResponse context (ack ACK) Nothing
 
 validateReturn :: Order -> Flow ()
 validateReturn currOrder =

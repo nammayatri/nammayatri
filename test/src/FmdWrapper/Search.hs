@@ -2,6 +2,7 @@
 
 module FmdWrapper.Search where
 
+import Beckn.Types.Core.Ack
 import Beckn.Utils.Example
 import Common
 import Control.Lens (Setter', _Just)
@@ -19,7 +20,6 @@ import Servant.Client
 import Test.Hspec hiding (context, example)
 import "fmd-wrapper" Types.Beckn.API.Callback
 import qualified "fmd-wrapper" Types.Beckn.API.Search as Search
-import "fmd-wrapper" Types.Beckn.Ack
 import "fmd-wrapper" Types.Beckn.Catalog
 import "fmd-wrapper" Types.Beckn.Category
 import "fmd-wrapper" Types.Beckn.Context

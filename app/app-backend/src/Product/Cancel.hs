@@ -5,7 +5,7 @@ module Product.Cancel (cancel, onCancel) where
 import App.Types
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.API.Cancel as API
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
+import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -79,7 +79,6 @@ onCancel :: Organization.Organization -> API.OnCancelReq -> FlowHandler API.OnCa
 onCancel _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "on_cancel" $ req ^. #context
-    let context = req ^. #context
     case req ^. #contents of
       Right msg -> do
         let prodInstId = Id $ msg ^. #id
@@ -125,4 +124,4 @@ onCancel _org req = withFlowHandlerBecknAPI $
               MC.updateStatus caseId Case.CLOSED
           )
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack

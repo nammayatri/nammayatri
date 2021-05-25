@@ -2,13 +2,13 @@
 
 module FmdWrapper.Server where
 
+import Beckn.Types.Core.Ack
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import FmdWrapper.Common
 import Runner
 import Servant
 import "fmd-wrapper" Types.Beckn.API.Search (OnSearchReq)
-import "fmd-wrapper" Types.Beckn.Ack
 
 newtype CallbackData = CallbackData
   { onSearchTVar :: TVar [CallbackResult OnSearchReq]
@@ -38,7 +38,7 @@ callbackServer = onSearch
 onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> OnSearchReq -> Handler AckResponse
 onSearch callbackData sPayload req = do
   atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (^. #params . #keyId . #subscriberId)) req :)
-  pure $ AckResponse (req ^. #context) (ack ACK) Nothing
+  pure Ack
 
 mkCallbackData :: IO CallbackData
 mkCallbackData = do

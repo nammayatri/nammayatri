@@ -67,7 +67,7 @@ onStatus url req bppShortId = do
   callAPI' (Just authKey) url (API.onStatus req) "on_status"
     >>= fromEitherM (ExternalAPICallError url)
 
-initiateCall :: CallReq -> Flow Ack
+initiateCall :: CallReq -> Flow AckResponse
 initiateCall req = do
   url <- xAppUri <$> ask
   callAPI url (API.initiateCall req) "initiateCall"

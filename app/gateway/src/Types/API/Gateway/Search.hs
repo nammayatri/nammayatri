@@ -1,10 +1,10 @@
 module Types.API.Gateway.Search where
 
+import Beckn.Types.Core.Ack
 import Beckn.Utils.SignatureAuth
 import EulerHS.Prelude
 import Servant
 import Types.API.Search (OnSearchReq, SearchReq)
-import Types.Beckn.Ack (AckResponse (..))
 
 type SearchAPI =
   "search"

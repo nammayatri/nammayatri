@@ -4,6 +4,7 @@ module Product.Delhivery.Flow where
 
 import App.Types
 import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
@@ -24,8 +25,6 @@ import qualified Types.Beckn.API.Confirm as API
 import qualified Types.Beckn.API.Init as API
 import qualified Types.Beckn.API.Search as API
 import qualified Types.Beckn.API.Select as API
-import Types.Beckn.Ack (AckResponse (..), Status (..), ack)
-import Types.Beckn.Context
 import Types.Beckn.FmdOrder
 import Types.Common
 import Types.Error
@@ -43,7 +42,7 @@ search org req = do
   fork "Search" $ do
     eres <- getQuote dlBACreds config quoteReq
     sendCb context eres
-  returnAck context
+  return Ack
   where
     sendCb context res = do
       cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
@@ -75,7 +74,7 @@ select org req = do
     eres <- getQuote dlBACreds config quoteReq
     logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCallback context cbUrl eres
-  returnAck context
+  return Ack
   where
     sendCallback context cbUrl res =
       case res of
@@ -117,7 +116,7 @@ init org req = do
     eres <- getQuote dlBACreds conf quoteReq
     logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
     sendCb orderDetails context cbUrl payeeDetails quoteId eres
-  returnAck context
+  return Ack
   where
     sendCb orderDetails context cbUrl payeeDetails quoteId (Right res) = do
       -- quoteId will be used as orderId
@@ -200,7 +199,7 @@ confirm org req = do
     eres <- createOrderAPI dlBACreds dconf createOrderReq
     logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
     sendCb order ctx cbUrl eres
-  returnAck ctx
+  return Ack
   where
     createOrderAPI dlBACreds@DlBAConfig {..} conf@DelhiveryConfig {..} req' = do
       token <- getBearerToken <$> fetchToken dlBACreds conf
@@ -245,9 +244,6 @@ getQuote :: DlBAConfig -> DelhiveryConfig -> QuoteReq -> Flow (Either ClientErro
 getQuote ba@DlBAConfig {..} conf@DelhiveryConfig {..} quoteReq = do
   token <- getBearerToken <$> fetchToken ba conf
   API.getQuote token dlUrl quoteReq
-
-returnAck :: Context -> Flow AckResponse
-returnAck context = return $ AckResponse context (ack ACK) Nothing
 
 getBearerToken :: Token -> Token
 getBearerToken a = Token (T.pack "Bearer " <> getToken a)

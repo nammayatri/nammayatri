@@ -8,8 +8,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as Callback
 import qualified Beckn.Types.Core.API.Search as API
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
-import qualified Beckn.Types.Core.Ack as Ack
+import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Core
@@ -43,7 +42,7 @@ import qualified Types.API.Case as APICase
 import Types.Error
 import Utils.Common
 
-search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler Ack.AckResponse
+search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler AckResponse
 search transporterId bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req ^. #context
@@ -67,7 +66,7 @@ search transporterId bapOrg req = withFlowHandlerBecknAPI $
         Loc.create toLocation
         QCase.create productCase
       fork "OnSearchCallback" $ onSearchCallback productCase transporter fromLocation toLocation
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack
 
 mkFromStop :: UTCTime -> Stop.Stop -> Flow Location.Location
 mkFromStop now stop = do
@@ -225,7 +224,7 @@ mkProductInstance productCase price status transporterId = do
           }
   pure productInstance
 
-sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow Ack.AckResponse
+sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow AckResponse
 sendOnSearchFailed productCase transporterOrg err = do
   appEnv <- ask
   currTime <- getCurrentTime
@@ -259,7 +258,7 @@ sendOnSearchFailed productCase transporterOrg err = do
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   Gateway.onSearch payload bppShortId
 
-sendOnSearchSuccess :: Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow Ack.AckResponse
+sendOnSearchSuccess :: Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow AckResponse
 sendOnSearchSuccess productCase transporterOrg productInstance = do
   let piStatus = productInstance ^. #_status
   let productInstances =

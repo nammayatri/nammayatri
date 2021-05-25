@@ -1,6 +1,6 @@
 module Types.API.Ride where
 
-import Beckn.Types.Core.Ack (Ack (..))
+import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Data.Time
@@ -18,7 +18,7 @@ instance FromJSON SetDriverAcceptanceReq where
 instance ToJSON SetDriverAcceptanceReq where
   toJSON = genericToJSON stripLensPrefixOptions
 
-type SetDriverAcceptanceRes = Ack
+type SetDriverAcceptanceRes = APISuccess
 
 data NotificationStatus
   = ACCEPT

@@ -7,8 +7,8 @@ where
 
 import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Types.APISuccess
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack (Ack (..), Status (..))
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude
 import Types.API.Ride
@@ -18,7 +18,7 @@ setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHan
 setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandlerAPI $ do
   now <- getCurrentTime
   Redis.setExRedis redisKey (driverResponse now) 600
-  pure $ Ack {_status = ACK}
+  pure Success
   where
     driverId = _EntityId
     productInstanceId = _productInstanceId ^. #getId

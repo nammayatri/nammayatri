@@ -6,7 +6,7 @@ import App.Types
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common hiding (status)
 import qualified Beckn.Types.Core.API.Status as API
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
+import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -41,14 +41,13 @@ status person StatusReq {..} = withFlowHandlerAPI $ do
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
 onStatus _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    let context = req ^. #context
     case req ^. #contents of
       Right msg -> do
         let prodInstId = Id $ msg ^. #order . #_id
             orderState = fromBeckn $ msg ^. #order . #_state
         updateProductInstanceStatus prodInstId orderState
       Left err -> logTagError "on_status req" $ "on_status error: " <> show err
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack
   where
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER

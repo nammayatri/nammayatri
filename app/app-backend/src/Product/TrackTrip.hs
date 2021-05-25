@@ -68,10 +68,10 @@ trackCb _org req = withFlowHandlerBecknAPI $
               return $ Right ()
             _ -> return $ Left "Multiple products confirmed, ambiguous selection"
         res & fromEitherM InvalidRequest
-        return $ AckResponse context (ack ACK) Nothing
+        return Ack
       Left err -> do
         logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
-        return $ AckResponse context (ack ACK) Nothing
+        return Ack
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do

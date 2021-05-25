@@ -2,11 +2,11 @@
 
 module Types.Beckn.API.Init where
 
+import Beckn.Types.Core.Ack
 import Data.Generics.Labels ()
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.API.Callback
-import Types.Beckn.Ack (AckResponse (..))
 import Types.Beckn.Context
 import Types.Beckn.FmdOrder
 

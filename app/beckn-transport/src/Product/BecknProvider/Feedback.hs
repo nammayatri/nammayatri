@@ -5,7 +5,7 @@ module Product.BecknProvider.Feedback where
 import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Feedback as API
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
+import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Organization (Organization)
@@ -51,7 +51,7 @@ feedback _transporterId _organization req = withFlowHandlerBecknAPI $
           "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
         Rating.updateRatingValue (rating ^. #_id) ratingValue
     Person.calculateAverageRating personId
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack
   where
     getPersonId (productI : _) = productI ^. #_personId
     getPersonId _ = Nothing

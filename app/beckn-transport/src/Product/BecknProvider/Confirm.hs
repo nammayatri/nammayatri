@@ -7,8 +7,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
-import Beckn.Types.Core.Ack (AckResponse (..), Status (..), ack)
-import qualified Beckn.Types.Core.Ack as Ack
+import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Domain as Domain
 import qualified Beckn.Types.Core.Error as Error
@@ -35,11 +34,10 @@ import Types.Error
 import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
-confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler Ack.AckResponse
+confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler AckResponse
 confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
-    let context = req ^. #context
     BP.validateContext "confirm" $ req ^. #context
     let prodInstId = Id $ req ^. #message . #order . #_id
     productInstance <- QProductInstance.findById' prodInstId >>= (`checkDBErrorOrEmpty` PIDoesNotExist)
@@ -77,7 +75,7 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
       QProductInstance.create trackerProductInstance
 
     fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
-    return $ AckResponse context (ack ACK) Nothing
+    return Ack
 
 onConfirmCallback ::
   Organization.Organization ->

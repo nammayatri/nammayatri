@@ -34,7 +34,7 @@ initiateCallToProvider _ req = withFlowHandlerAPI $ do
   let piId = req ^. #productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall customerPhone providerPhone
-  mkAckResponse
+  return Ack
 
 -- | Try to initiate a call provider -> customer
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
@@ -42,7 +42,7 @@ initiateCallToCustomer req = withFlowHandlerAPI $ do
   let piId = req ^. #productInstanceId -- RIDESEARCH PI
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall providerPhone customerPhone
-  mkAckResponse
+  return Ack
 
 getDriver :: ProductInstance -> Flow Driver.Driver
 getDriver rideSearchPI = do
@@ -80,6 +80,3 @@ getProductAndCustomerPhones rideSearchPid = do
   customerPhone <- getPersonPhone person
   driverPhone <- getDriverPhone driver
   return (customerPhone, driverPhone)
-
-mkAckResponse :: Flow CallRes
-mkAckResponse = return $ Ack {_status = ACK}

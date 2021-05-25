@@ -6,7 +6,7 @@ module Types.API.FarePolicy
   )
 where
 
-import Beckn.Types.Core.Ack (Ack (..))
+import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
@@ -40,4 +40,4 @@ data UpdateFarePolicyRequest = UpdateFarePolicyRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-type UpdateFarePolicyResponse = Ack
+type UpdateFarePolicyResponse = APISuccess

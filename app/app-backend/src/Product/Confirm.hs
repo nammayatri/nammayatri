@@ -102,7 +102,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
           QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
-    return $ AckResponse (req ^. #context) (ack ACK) Nothing
+    return Ack
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do

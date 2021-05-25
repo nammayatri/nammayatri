@@ -7,7 +7,7 @@ import Beckn.Types.Core.API.Feedback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
-import Beckn.Types.Core.Ack (AckResponse (..))
+import Beckn.Types.Core.Ack
 import Beckn.Types.Error
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import EulerHS.Prelude
