@@ -7,16 +7,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Beckn.External.Exotel.Types where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.JSON
 import Beckn.Utils.TH
 import Control.Lens.TH
+import Data.Aeson (encode)
 import Data.Aeson.Casing
 import Data.Aeson.TH
+import Data.OpenApi (ToSchema)
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import Servant.Client
 import Web.FormUrlEncoded (ToForm, toForm)
 import Web.Internal.HttpApiData
 
@@ -70,26 +77,42 @@ newtype ExotelCallSID = ExotelCallSID
 
 deriveIdentifierInstances ''ExotelCallSID
 
+data ExotelAttachments = ExotelAttachments
+  { callId :: Text,
+    rideId :: Text
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+
 -- | Exotel response body
 data ExotelRequest = ExotelRequest
   { -- String; The phone number that will be called first.
     -- Preferably in E.164 format. If not set, our system will try to
     -- match it with a country and make a call.
     -- If landline number, prefix it with STD code; Ex: 080XXXX2400
-    from :: !Text,
+    from :: Text,
     -- String; Your customer's phone number.
     -- If landline number, prefix it with STD code; Ex: 080XXXX2400
-    to :: !Text,
+    to :: Text,
     -- String; This is your ExoPhone/Exotel Virtual Number
-    callerId :: !Text
+    callerId :: Text,
+    -- 	String; An HTTP POST request will be made to this URL depending
+    --  on what events are subscribed using ‘StatusCallbackEvents’.
+    --  Refer here for complete list of parameters which will be sent to your endpoint.
+    statusCallbackUrl :: BaseUrl,
+    -- Any application specific value like order id that will be passed back
+    -- as a parameter in StatusCallback (only via 'terminal' StatusCallbackEvent)
+    customField :: ExotelAttachments
   }
-  deriving (Eq, Show)
+  deriving (Generic, Eq, Show)
 
 instance ToForm ExotelRequest where
   toForm ExotelRequest {..} =
     [ ("From", toQueryParam from),
       ("To", toQueryParam to),
-      ("CallerId", toQueryParam callerId)
+      ("CallerId", toQueryParam callerId),
+      ("StatusCallback", decodeUtf8 $ encode statusCallbackUrl),
+      ("StatusCallbackEvents", "terminal"),
+      ("CustomField", decodeUtf8 $ encode customField)
     ]
 
 -- | Overall call status
@@ -107,9 +130,15 @@ data ExotelCallStatus
     BUSY
   | -- The call ended without being answered
     NO_ANSWER
-  deriving (Show, Eq, Read, Generic)
+  deriving (Show, Eq, Read, Generic, ToSchema)
 
 $(deriveJSON constructorsWithHyphensToLowerOptions ''ExotelCallStatus)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExotelCallStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow Postgres ExotelCallStatus where
+  fromBackendRow = fromBackendRowEnum "ExotelCallStatus"
 
 -- | Call direction
 data ExotelDirection
@@ -178,3 +207,17 @@ newtype ExotelResponse = ExotelResponse
 $(makeLenses ''ExotelResponse)
 
 $(deriveFromJSON (aesonPrefix pascalCase) ''ExotelResponse)
+
+data ExotelCallCallback = ExotelCallCallback
+  { -- string; an alpha-numeric unique identifier of the call
+    callSid :: Text,
+    -- The phone number that was attempted to be called first.
+    from :: Text,
+    -- Your customer's phone number as set in the API request. This number will be connected after `From`.
+    to :: Text,
+    -- Overall call status, which could be one of: 'completed', 'failed', 'busy' or 'no-answer'
+    status :: ExotelCallStatus,
+    -- 	The value that was passed in the CustomField (attachments here) parameter of the API (if set during the request) will be populated here.
+    customField :: ExotelAttachments
+  }
+  deriving (Generic, Show, FromJSON, ToSchema)

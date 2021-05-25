@@ -5,6 +5,7 @@ module Types.Storage.DB where
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.CallStatus as CallStatus
 import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
@@ -30,7 +31,8 @@ data AppDb f = AppDb
     geometry :: f (B.TableEntity Geometry.GeometryT),
     cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
     rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT),
-    onSearchEvent :: f (B.TableEntity OnSearchEvent.OnSearchEventT)
+    onSearchEvent :: f (B.TableEntity OnSearchEvent.OnSearchEventT),
+    callStatus :: f (B.TableEntity CallStatus.CallStatusT)
   }
   deriving (Generic, B.Database be)
 
@@ -49,7 +51,8 @@ appDb dbSchemaName =
         geometry = setSchema dbSchemaName <> Geometry.fieldEMod,
         cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
         rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod,
-        onSearchEvent = setSchema dbSchemaName <> OnSearchEvent.fieldEMod
+        onSearchEvent = setSchema dbSchemaName <> OnSearchEvent.fieldEMod,
+        callStatus = setSchema dbSchemaName <> CallStatus.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

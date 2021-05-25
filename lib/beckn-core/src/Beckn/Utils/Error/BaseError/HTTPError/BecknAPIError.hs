@@ -61,6 +61,19 @@ callBecknAPI' mbManagerSelector errorCodeMb baseUrl eulerClient name =
     eulerClient
     name
 
+callPseudoBecknAPI ::
+  Maybe ET.ManagerSelector ->
+  Maybe Text ->
+  CallAPI env a
+callPseudoBecknAPI mbManagerSelector errorCodeMb baseUrl eulerClient name =
+  callApiUnwrappingApiError
+    (becknAPIErrorToException name)
+    mbManagerSelector
+    errorCodeMb
+    baseUrl
+    eulerClient
+    name
+
 becknAPIErrorToException :: Text -> BecknAPIError -> BecknAPICallError
 becknAPIErrorToException name (BecknAPIError becknErr) = BecknAPICallError name becknErr
 

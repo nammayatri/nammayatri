@@ -2,6 +2,7 @@
 
 module Types.Storage.CancellationReason where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
@@ -20,7 +21,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationStage w
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres CancellationStage where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = fromBackendRowEnum "CancellationStage"
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationStage
 

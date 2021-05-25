@@ -41,11 +41,13 @@ initiateCall ::
   ) =>
   T.Text ->
   T.Text ->
+  BaseUrl ->
+  ExotelAttachments ->
   m ()
-initiateCall from to = do
+initiateCall from to callbackUrl attachments = do
   withLogTag "Exotel" $ do
     ExotelCfg {..} <- asks (.exotelCfg) >>= fromMaybeM ExotelNotConfigured
-    let exoRequest = ExotelRequest from to $ getExotelCallerId callerId
+    let exoRequest = ExotelRequest from to (getExotelCallerId callerId) callbackUrl attachments
         authData =
           BasicAuthData
             (DT.encodeUtf8 $ getExotelApiKey apiKey)

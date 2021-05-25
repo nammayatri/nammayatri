@@ -5,7 +5,6 @@ import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Taxi.API.Call as Call
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Rating as API
@@ -33,6 +32,7 @@ import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
+import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
@@ -42,6 +42,7 @@ import qualified Types.API.Ride as RideAPI
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
 import Types.API.Vehicle
+import qualified Types.Storage.CallStatus as SCS
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SRT
@@ -332,13 +333,23 @@ type CallAPIs =
   "driver" :> "ride"
     :> Capture "rideId" (Id SRide.Ride)
     :> "call"
-    :> "rider"
-    :> TokenAuth
-    :> Post '[JSON] Call.CallRes
+    :> ( "rider"
+           :> TokenAuth
+           :> Post '[JSON] API.CallRes
+           :<|> "statusCallback"
+           :> ReqBody '[JSON] API.CallCallbackReq
+           :> Post '[JSON] API.CallCallbackRes
+           :<|> Capture "callId" (Id SCS.CallStatus)
+           :> "status"
+           :> TokenAuth
+           :> Get '[JSON] API.GetCallStatusRes
+       )
 
 callFlow :: FlowServer CallAPIs
-callFlow =
-  Call.initiateCallToCustomer
+callFlow rideId =
+  Call.initiateCallToCustomer rideId
+    :<|> Call.callStatusCallback rideId
+    :<|> Call.getCallStatus rideId
 
 type RouteAPI =
   "route"

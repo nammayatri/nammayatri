@@ -8,7 +8,6 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Taxi.API.Call as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
@@ -37,6 +36,7 @@ import qualified Product.Support as Support
 import qualified Product.Update as Update
 import Servant hiding (throwError)
 import Servant.OpenApi
+import qualified Types.API.Call as API
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Confirm as ConfirmAPI
@@ -52,6 +52,7 @@ import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Types.Geofencing
+import qualified Types.Storage.CallStatus as SCS
 import qualified Types.Storage.CancellationReason as SCancellationReason
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as SRT
@@ -276,11 +277,20 @@ type CallAPIs =
     :> ( "driver"
            :> TokenAuth
            :> Post '[JSON] API.CallRes
+           :<|> "statusCallback"
+           :> ReqBody '[JSON] API.CallCallbackReq
+           :> Post '[JSON] API.CallCallbackRes
+           :<|> Capture "callId" (Id SCS.CallStatus)
+           :> "status"
+           :> TokenAuth
+           :> Get '[JSON] API.GetCallStatusRes
        )
 
 callFlow :: FlowServer CallAPIs
-callFlow =
-  Call.initiateCallToDriver
+callFlow rideId =
+  Call.initiateCallToDriver rideId
+    :<|> Call.callStatusCallback rideId
+    :<|> Call.getCallStatus rideId
 
 -------- Support Flow----------
 type SupportAPI =

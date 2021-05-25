@@ -6,6 +6,7 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.AllocationEvent as AllocationEvent
+import qualified Types.Storage.CallStatus as CallStatus
 import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.DiscountTransaction as DiscountTransaction
 import qualified Types.Storage.DriverInformation as DriverInformation
@@ -56,7 +57,8 @@ data TransporterDb f = TransporterDb
     notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
     allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT),
     cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
-    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT)
+    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT),
+    callStatus :: f (B.TableEntity CallStatus.CallStatusT)
   }
   deriving (Generic, B.Database be)
 
@@ -88,7 +90,8 @@ transporterDb dbSchemaName =
         notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod,
         allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod,
         cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
-        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod
+        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod,
+        callStatus = setSchema dbSchemaName <> CallStatus.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

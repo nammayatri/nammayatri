@@ -750,3 +750,18 @@ instance IsHTTPError KafkaError where
     KafkaTopicIsEmptyString -> "KAFKA_TOPIC_IS_EMPTY_STRING"
 
 instance IsAPIError KafkaError
+
+data CallStatusError
+  = CallStatusDoesNotExist
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CallStatusError
+
+instance IsBaseError CallStatusError where
+  toMessage CallStatusDoesNotExist = Just "No call callback received yet."
+
+instance IsHTTPError CallStatusError where
+  toErrorCode CallStatusDoesNotExist = "CALL_DOES_NOT_EXIST"
+  toHttpCode CallStatusDoesNotExist = E400
+
+instance IsAPIError CallStatusError
