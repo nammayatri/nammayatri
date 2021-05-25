@@ -54,4 +54,3 @@ onStatus _org req = withFlowHandlerBecknAPI $
       PI.validateStatusTransition (PI._status orderPi) piStatus & fromEitherM PIInvalidStatus
       QPI.updateStatus (orderPi ^. #_id) piStatus
       Notify.notifyOnStatusUpdate orderPi piStatus
-      return ()

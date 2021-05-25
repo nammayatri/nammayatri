@@ -120,7 +120,7 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver 
       when requestedByDriver $ QDriverStats.updateIdleTime driverId
 
 serviceStatus :: Id Organization.Organization -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
-serviceStatus transporterId bapOrg req = withFlowHandlerAPI $ do
+serviceStatus transporterId bapOrg req = withFlowHandlerBecknAPI $ do
   logTagInfo "serviceStatus API Flow" $ show req
   let context = req ^. #context
   let piId = Id $ req ^. #message . #order . #id -- transporter search product instance id

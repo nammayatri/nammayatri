@@ -93,12 +93,11 @@ searchCb _bppOrg req = withFlowHandlerBecknAPI $
     case req ^. #contents of
       Right msg -> do
         let catalog = msg ^. #catalog
-        _ <- searchCbService req catalog
-        return ()
+        searchCbService req catalog
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
     return Ack
 
-searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow Search.OnSearchRes
+searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow ()
 searchCbService req catalog = do
   let caseId = Id $ req ^. #context . #_transaction_id --CaseId $ service ^. #_id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
@@ -138,7 +137,6 @@ searchCbService req catalog = do
       whenJust mCaseInfo $ \info -> do
         let uInfo = info & #_accepted .~ accepted & #_declined .~ declined
         QCase.updateInfo (case_ ^. #_id) (encodeToText uInfo)
-  return Ack
 
 mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
 mkCase req userId from to = do

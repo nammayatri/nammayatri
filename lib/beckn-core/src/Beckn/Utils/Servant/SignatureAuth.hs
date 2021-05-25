@@ -276,8 +276,8 @@ withBecknAuthProxy ::
   req ->
   FlowHandlerR r b
 withBecknAuthProxy handler lookupAction sign proxySign req = do
-  lookupResult <- withFlowHandlerAPI $ verifySignature "Authorization" lookupAction sign req
-  _ <- withFlowHandlerAPI $ verifySignature "Proxy-Authorization" lookupAction proxySign req
+  lookupResult <- withFlowHandlerBecknAPI' $ verifySignature "Authorization" lookupAction sign req
+  _ <- withFlowHandlerBecknAPI' $ verifySignature "Proxy-Authorization" lookupAction proxySign req
   handler lookupResult req
 
 prepareAuthManager ::

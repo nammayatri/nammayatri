@@ -4,7 +4,7 @@ import App.Types (AppEnv (..), FlowHandler)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import EulerHS.Prelude
-import Utils.Common (withFlowHandlerBecknAPI)
+import Utils.Common (withFlowHandlerBecknAPI')
 
 withBecknAuthProxy ::
   ToJSON req =>
@@ -14,5 +14,5 @@ withBecknAuthProxy ::
   req ->
   FlowHandler b
 withBecknAuthProxy handler lookupAction sign req = do
-  lookupResult <- withFlowHandlerBecknAPI $ HttpSig.verifySignature "Authorization" lookupAction sign req
+  lookupResult <- withFlowHandlerBecknAPI' $ HttpSig.verifySignature "Authorization" lookupAction sign req
   handler sign lookupResult req

@@ -3,6 +3,7 @@
 module Beckn.Utils.Error.FlowHandling
   ( withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
+    withFlowHandlerBecknAPI',
     apiHandler,
     becknApiHandler,
   )
@@ -10,6 +11,7 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.Ack
 import Beckn.Types.Error.API as Err
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
@@ -33,8 +35,11 @@ withFlowHandler flow = do
 withFlowHandlerAPI :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
 withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
 
-withFlowHandlerBecknAPI :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
-withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler . handleIfUp
+withFlowHandlerBecknAPI :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r AckResponse -> FlowHandlerR r AckResponse
+withFlowHandlerBecknAPI = withFlowHandlerBecknAPI'
+
+withFlowHandlerBecknAPI' :: (HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
+withFlowHandlerBecknAPI' = withFlowHandler . becknApiHandler . handleIfUp
 
 handleIfUp ::
   (HasField "isShuttingDown" r (TMVar ())) =>

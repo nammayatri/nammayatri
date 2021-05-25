@@ -132,7 +132,6 @@ init org req = do
       logTagInfo (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
       onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onInitAPI onInitReq) "init"
       logTagInfo (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
-      return ()
     sendCb _ context cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) =
       case decode body of
         Just err -> do
@@ -140,7 +139,6 @@ init org req = do
           logTagInfo (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
           onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onInitAPI onInitReq) "init"
           logTagInfo (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
-          return ()
         Nothing -> return ()
     sendCb _ _ _ _ _ _ = return ()
 
