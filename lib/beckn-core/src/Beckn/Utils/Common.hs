@@ -33,14 +33,10 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (NominalDiffTime, UTCTime)
 import qualified Data.Time as Time
-import Data.Time.Units (TimeUnit, fromMicroseconds)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import GHC.Records (HasField (..))
 import qualified Servant.Client as S
-
-roundDiffTimeToUnit :: TimeUnit u => NominalDiffTime -> u
-roundDiffTimeToUnit = fromMicroseconds . round . (* 1e6)
 
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
@@ -105,10 +101,6 @@ runSafeFlow :: (FromJSON a, ToJSON a) => FlowR r a -> FlowR r (Either Text a)
 runSafeFlow flow = do
   env <- ask
   lift $ L.runSafeFlow $ runReaderT flow env
-
-addIfPresent :: [a] -> Maybe a -> [a]
-addIfPresent xs (Just x) = x : xs
-addIfPresent xs _ = xs
 
 isExpired :: MonadTime m => NominalDiffTime -> UTCTime -> m Bool
 isExpired nominal time = do
