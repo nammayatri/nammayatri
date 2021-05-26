@@ -26,10 +26,12 @@ import qualified Services.Allocation.Runner as Runner
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 
 runBackgroundTaskManager :: (BTMCfg -> BTMCfg) -> IO ()
 runBackgroundTaskManager configModifier = do
   btmCfg <- configModifier <$> readDhallConfigDefault "beckn-transport-btm"
+  Metrics.serve (btmCfg ^. #metricsPort)
   let appCfg = btmCfg ^. #appCfg
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig

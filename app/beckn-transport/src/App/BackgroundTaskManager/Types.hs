@@ -25,6 +25,7 @@ import Types.Metrics
 
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
+    metricsPort :: Int,
     driverAllocationConfig :: DriverAllocationConfig
   }
   deriving (Generic, FromDhall)
