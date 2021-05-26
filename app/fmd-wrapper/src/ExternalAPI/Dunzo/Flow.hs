@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module External.Dunzo.Flow where
+module ExternalAPI.Dunzo.Flow where
 
 import Beckn.Types.Common (FlowR)
 import Beckn.Utils.Common (callAPI)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import External.Dunzo.Types
+import ExternalAPI.Dunzo.Types
 import GHC.Records
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)

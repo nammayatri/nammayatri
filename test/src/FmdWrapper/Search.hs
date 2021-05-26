@@ -9,7 +9,7 @@ import Control.Lens (Setter', _Just)
 import Control.Lens.At
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
-import External.Dunzo.Types
+import ExternalAPI.Dunzo.Types
 import Fmd
 import FmdWrapper.Common
 import FmdWrapper.Server

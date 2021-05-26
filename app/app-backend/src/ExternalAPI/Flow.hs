@@ -1,4 +1,4 @@
-module External.Gateway.Flow where
+module ExternalAPI.Flow where
 
 import App.Types
 import Beckn.Types.Core.API.Cancel
@@ -11,7 +11,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Error
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import EulerHS.Prelude
-import qualified External.Gateway.Types as API
+import qualified ExternalAPI.Types as API
 import Servant.Client
 import Types.API.Location
 import Utils.Common

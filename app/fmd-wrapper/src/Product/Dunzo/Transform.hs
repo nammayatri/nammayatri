@@ -12,7 +12,7 @@ import Control.Lens (element, (?~))
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude hiding (State, drop)
-import External.Dunzo.Types
+import ExternalAPI.Dunzo.Types
 import Types.Beckn.API.Callback
 import Types.Beckn.API.Cancel
 import Types.Beckn.API.Confirm

@@ -8,7 +8,7 @@ import qualified Beckn.Types.Storage.Case as SC
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as External
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.ProductInstance as MPI
 import Types.API.Location
 import Types.API.Product
@@ -45,4 +45,4 @@ getLocation person caseId = withFlowHandlerAPI $ do
   productInstances <- MPI.listAllProductInstanceByPerson person (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError PIDoesNotExist
   let pI = head productInstances
-  External.location baseUrl (getId $ pI ^. #_id)
+  ExternalAPI.location baseUrl (getId $ pI ^. #_id)

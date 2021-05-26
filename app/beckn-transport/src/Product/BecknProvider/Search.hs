@@ -25,8 +25,8 @@ import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
-import qualified External.Gateway.Transform as GT
+import qualified ExternalAPI.Flow as ExternalAPI
+import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Models.ProductInstance as MPI
 import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
@@ -258,7 +258,7 @@ sendOnSearchFailed bapUri productCase transporterOrg err = do
                   }
           }
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
-  Gateway.onSearch payload bppShortId
+  ExternalAPI.onSearch payload bppShortId
 
 sendOnSearchSuccess :: BaseUrl -> Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow AckResponse
 sendOnSearchSuccess bapUri productCase transporterOrg productInstance = do
@@ -269,7 +269,7 @@ sendOnSearchSuccess bapUri productCase transporterOrg productInstance = do
           _ -> [productInstance]
   onSearchPayload <- mkOnSearchPayload bapUri productCase productInstances transporterOrg
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
-  Gateway.onSearch onSearchPayload bppShortId
+  ExternalAPI.onSearch onSearchPayload bppShortId
 
 mkOnSearchPayload :: BaseUrl -> Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq
 mkOnSearchPayload bapUri productCase productInstances transporterOrg = do
@@ -293,7 +293,7 @@ mkOnSearchPayload bapUri productCase productInstances transporterOrg = do
   piCount <- MPI.getCountByStatus (getId $ transporterOrg ^. #_id) Case.RIDEORDER
   let stats = mkProviderStats piCount
   let provider = mkProviderInfo transporterOrg stats
-  catalog <- GT.mkCatalog productCase productInstances provider
+  catalog <- ExternalAPITransform.mkCatalog productCase productInstances provider
   return
     Callback.CallbackReq
       { context,

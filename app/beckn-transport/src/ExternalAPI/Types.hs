@@ -1,4 +1,4 @@
-module External.Gateway.API where
+module ExternalAPI.Types where
 
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.API.Cancel

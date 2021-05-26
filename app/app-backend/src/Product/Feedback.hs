@@ -10,7 +10,7 @@ import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude hiding (product)
-import qualified External.Gateway.Flow as Gateway
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as ProductInstance
 import qualified Storage.Queries.Organization as Organization
@@ -59,6 +59,6 @@ feedback person request = withFlowHandlerAPI $ do
                 }
           }
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  Gateway.feedback gatewayUrl (Beckn.FeedbackReq context feedbackMsg)
+  ExternalAPI.feedback gatewayUrl (Beckn.FeedbackReq context feedbackMsg)
     >>= checkAckResponseError (ExternalAPIResponseError "feedback")
   return Success

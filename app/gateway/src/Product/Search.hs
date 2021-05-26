@@ -21,7 +21,7 @@ import qualified Product.ProviderRegistry as BP
 import Product.Validation
 import Servant.Client (showBaseUrl)
 import qualified Temporary.Utils as TempUtils
-import qualified Types.API.Gateway.Search as GatewayAPI
+import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Beckn.API.Callback
 import Types.Error
@@ -33,7 +33,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
     validateContext "search" (req ^. #context)
     unless (isJust (req ^. #context . #_bap_uri)) $
       throwError $ InvalidRequest "No bap URI in context."
-    let gatewaySearchSignAuth = ET.client GatewayAPI.searchAPI
+    let gatewaySearchSignAuth = ET.client ExternalAPI.searchAPI
         context = req ^. #context
         messageId = context ^. #_transaction_id
     case (Org._callbackUrl org, Org._callbackApiKey org) of
@@ -67,7 +67,7 @@ searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler A
 searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI $
   TempUtils.withTransactionIdLogTag req $ do
     validateContext "on_search" context
-    let gatewayOnSearchSignAuth = ET.client GatewayAPI.onSearchAPI
+    let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
         messageId = req ^. #context . #_transaction_id
     bgSession <- BA.lookup messageId >>= fromMaybeM (InvalidRequest "Message not found.")
     let baseUrl = bgSession ^. #cbUrl

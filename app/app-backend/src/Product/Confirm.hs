@@ -18,7 +18,7 @@ import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as MCase
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as QCase
@@ -50,7 +50,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   context <- buildContext "confirm" caseId Nothing Nothing
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
-  Gateway.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
+  ExternalAPI.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
     >>= checkAckResponseError (ExternalAPIResponseError "confirm")
   return Success
   where

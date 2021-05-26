@@ -12,7 +12,7 @@ import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
-import External.Delhivery.Types
+import ExternalAPI.Delhivery.Types
 import Types.Beckn.API.Callback
 import Types.Beckn.API.Confirm
 import Types.Beckn.API.Init

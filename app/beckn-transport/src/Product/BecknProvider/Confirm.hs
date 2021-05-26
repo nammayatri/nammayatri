@@ -20,8 +20,8 @@ import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
-import External.Gateway.Transform as GT
+import qualified ExternalAPI.Flow as ExternalAPI
+import ExternalAPI.Transform as ExternalAPITransform
 import qualified Models.Case as Case
 import qualified Product.BecknProvider.BP as BP
 import Product.Person (calculateDriverPool, setDriverPool)
@@ -109,7 +109,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
     notifySuccessGateway bapCallbackUrl bppShortId = do
       onConfirmPayload <- mkOnConfirmPayload bapCallbackUrl searchCase orderProductInstance trackerCase
       logTagInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| bapCallbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
-      _ <- Gateway.onConfirm bapCallbackUrl onConfirmPayload bppShortId
+      _ <- ExternalAPI.onConfirm bapCallbackUrl onConfirmPayload bppShortId
       pure ()
     notifyErrorGateway err bapCallbackUrl bppShortId = do
       currTime <- getCurrentTime
@@ -141,7 +141,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
                         _message = Nothing
                       }
               }
-      _ <- Gateway.onConfirm bapCallbackUrl payload bppShortId
+      _ <- ExternalAPI.onConfirm bapCallbackUrl payload bppShortId
       pure ()
 
 mkOrderCase :: Case.Case -> Flow Case.Case
@@ -258,7 +258,7 @@ mkOnConfirmPayload bapUri searchCase orderPI trackerCase = do
   bppUri <- asks xAppUri
   context <- buildContext "on_confirm" txnId (Just bapUri) (Just bppUri)
   trip <- BP.mkTrip trackerCase orderPI
-  order <- GT.mkOrder orderPI (Just trip)
+  order <- ExternalAPITransform.mkOrder orderPI (Just trip)
   return
     API.CallbackReq
       { context,

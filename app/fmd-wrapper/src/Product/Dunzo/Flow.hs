@@ -18,8 +18,8 @@ import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import qualified EulerHS.Types as ET
-import qualified External.Dunzo.Flow as API
-import External.Dunzo.Types
+import qualified ExternalAPI.Dunzo.Flow as API
+import ExternalAPI.Dunzo.Types
 import Product.Dunzo.Transform
 import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Case as Storage

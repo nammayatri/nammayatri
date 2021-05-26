@@ -14,7 +14,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
@@ -40,7 +40,7 @@ track person req = withFlowHandlerAPI $ do
   tracker <- info ^. #_tracker & fromMaybeM (InternalError "PI.info has no tracker field")
   let gTripId = tracker ^. #_trip . #id
   gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  Gateway.track gatewayUrl (API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing)
+  ExternalAPI.track gatewayUrl (API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing)
     >>= checkAckResponseError (ExternalAPIResponseError "track")
   return Success
 

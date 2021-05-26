@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module External.Delhivery.Types where
+module ExternalAPI.Delhivery.Types where
 
 import Data.Aeson
 import EulerHS.Prelude

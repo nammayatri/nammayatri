@@ -12,7 +12,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
@@ -48,7 +48,7 @@ cancelProductInstance person req = do
         OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
           >>= fromMaybeM OrgNotFound
       baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      Gateway.cancel baseUrl (API.CancelReq context cancelReqMessage)
+      ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
         >>= checkAckResponseError (ExternalAPIResponseError "cancel")
       return Success
 

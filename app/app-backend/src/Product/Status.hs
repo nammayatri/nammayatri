@@ -14,7 +14,7 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Error
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
 import qualified Storage.Queries.Organization as OQ
@@ -34,7 +34,7 @@ status person StatusReq {..} = withFlowHandlerAPI $ do
       >>= fromMaybeM OrgNotFound
   baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
-  Gateway.status baseUrl (API.StatusReq context statusMessage)
+  ExternalAPI.status baseUrl (API.StatusReq context statusMessage)
     >>= checkAckResponseError (ExternalAPIResponseError "status")
   return Success
 

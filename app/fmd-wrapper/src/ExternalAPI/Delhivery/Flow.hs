@@ -1,12 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module External.Delhivery.Flow where
+module ExternalAPI.Delhivery.Flow where
 
 import Beckn.Types.Common (FlowR)
 import Beckn.Utils.Common (callAPI)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import External.Delhivery.Types
+import ExternalAPI.Delhivery.Types
 import Servant (FormUrlEncoded, Header, JSON, Post, ReqBody, (:>))
 import Servant.Client (BaseUrl, ClientError)
 import Types.Common

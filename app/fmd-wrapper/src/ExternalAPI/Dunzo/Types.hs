@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module External.Dunzo.Types where
+module ExternalAPI.Dunzo.Types where
 
 import Beckn.Types.Common
 import Data.Aeson hiding (Error)

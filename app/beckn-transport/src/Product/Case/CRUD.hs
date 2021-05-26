@@ -21,8 +21,8 @@ import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import External.Gateway.Flow as Gateway
-import External.Gateway.Transform as GT
+import ExternalAPI.Flow as ExternalAPI
+import ExternalAPI.Transform as ExternalAPITransform
 import Models.Case as Case
 import Models.ProductInstance as MPI
 import Servant.Client (BaseUrl (..))
@@ -116,7 +116,7 @@ notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg
   logTagInfo "notifyGateway Request" $ show onSearchPayload
-  _ <- Gateway.onSearch onSearchPayload bppShortId
+  _ <- ExternalAPI.onSearch onSearchPayload bppShortId
   return ()
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
@@ -141,7 +141,7 @@ mkOnSearchPayload c pis orgInfo = do
   piCount <- MPI.getCountByStatus (getId $ orgInfo ^. #_id) Case.RIDEORDER
   let stats = mkProviderStats piCount
       provider = mkProviderInfo orgInfo stats
-  catalog <- GT.mkCatalog c pis provider
+  catalog <- ExternalAPITransform.mkCatalog c pis provider
   return
     CallbackReq
       { context,

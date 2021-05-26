@@ -14,8 +14,8 @@ import Data.Aeson
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import qualified External.Delhivery.Flow as API
-import External.Delhivery.Types
+import qualified ExternalAPI.Delhivery.Flow as API
+import ExternalAPI.Delhivery.Types
 import Product.Delhivery.Transform
 import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Storage.Queries.Case as Storage

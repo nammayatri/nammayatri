@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module External.Gateway.Transform where
+module ExternalAPI.Transform where
 
 import App.Types
 import Beckn.Types.Common

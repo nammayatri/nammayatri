@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module External.Gateway.Types where
+module ExternalAPI.Types where
 
 import qualified Beckn.Types.Core.API.Cancel as Cancel
 import qualified Beckn.Types.Core.API.Confirm as Confirm

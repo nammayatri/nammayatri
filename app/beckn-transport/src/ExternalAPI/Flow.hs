@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module External.Gateway.Flow where
+module ExternalAPI.Flow where
 
 import App.Types
 import Beckn.Types.Core.API.Call
@@ -13,7 +13,7 @@ import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import EulerHS.Prelude
-import qualified External.Gateway.API as API
+import qualified ExternalAPI.Types as API
 import Servant.Client (BaseUrl)
 import Storage.Queries.Organization as Org
 import Types.Error

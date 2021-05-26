@@ -28,7 +28,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as MPI
 import Product.Serviceability
@@ -65,7 +65,7 @@ search person req = withFlowHandlerAPI $ do
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #_udf5)]
-  Gateway.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags))
+  ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #_tags .~ tags))
     >>= checkAckResponseError (ExternalAPIResponseError "search")
   return $ API.SearchRes txnId
   where

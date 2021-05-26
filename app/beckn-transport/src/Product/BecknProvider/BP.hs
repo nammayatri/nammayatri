@@ -34,8 +34,8 @@ import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import qualified External.Gateway.Flow as Gateway
-import qualified External.Gateway.Transform as GT
+import qualified ExternalAPI.Flow as ExternalAPI
+import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Models.Case as Case
 import Servant.Client (BaseUrl (baseUrlPath))
 import qualified Storage.Queries.Case as QCase
@@ -135,7 +135,7 @@ notifyServiceStatusToGateway :: Id ProductInstance.ProductInstance -> ProductIns
 notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId txnId = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi txnId
   logTagInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
-  _ <- Gateway.onStatus callbackUrl onServiceStatusPayload bppShortId
+  _ <- ExternalAPI.onStatus callbackUrl onServiceStatusPayload bppShortId
   return ()
 
 mkOnServiceStatusPayload :: Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> Text -> Flow API.OnStatusReq
@@ -192,27 +192,27 @@ notifyTripUrlToGateway :: Case.Case -> Context -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ context callbackUrl bppShortId = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ context
   logTagInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
-  _ <- Gateway.onTrackTrip callbackUrl onTrackTripPayload bppShortId
+  _ <- ExternalAPI.onTrackTrip callbackUrl onTrackTripPayload bppShortId
   return ()
 
 notifyTripInfoToGateway :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripInfoToGateway prodInst trackerCase parentCase bapCallbackUrl bppShortId = do
   onUpdatePayload <- mkOnUpdatePayload bapCallbackUrl prodInst trackerCase parentCase
   logTagInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  _ <- Gateway.onUpdate bapCallbackUrl onUpdatePayload bppShortId
+  _ <- ExternalAPI.onUpdate bapCallbackUrl onUpdatePayload bppShortId
   return ()
 
 notifyCancelToGateway :: Id ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> Flow ()
 notifyCancelToGateway prodInstId bapCallbackUrl bppShortId txnId = do
   onCancelPayload <- mkCancelRidePayload prodInstId txnId bapCallbackUrl -- search product instance id
   logTagInfo "notifyGateway Request" $ show onCancelPayload
-  _ <- Gateway.onCancel bapCallbackUrl onCancelPayload bppShortId
+  _ <- ExternalAPI.onCancel bapCallbackUrl onCancelPayload bppShortId
   return ()
 
 mkOnTrackTripPayload :: Case.Case -> Context -> Flow API.OnTrackTripReq
 mkOnTrackTripPayload trackerCase context = do
-  let data_url = GT.baseTrackingUrl <> "/" <> getId (trackerCase ^. #_id)
-  let tracking = GT.mkTracking "PULL" data_url
+  let data_url = ExternalAPITransform.baseTrackingUrl <> "/" <> getId (trackerCase ^. #_id)
+  let tracking = ExternalAPITransform.mkTracking "PULL" data_url
   return
     API.CallbackReq
       { context,
@@ -245,7 +245,7 @@ mkOnUpdatePayload bapUri prodInst case_ pCase = do
   bppUri <- asks xAppUri
   context <- buildContext "on_update" txnId (Just bapUri) (Just bppUri)
   trip <- mkTrip case_ prodInst
-  order <- GT.mkOrder prodInst (Just trip)
+  order <- ExternalAPITransform.mkOrder prodInst (Just trip)
   return
     API.CallbackReq
       { context,
@@ -255,12 +255,12 @@ mkOnUpdatePayload bapUri prodInst case_ pCase = do
 mkDriverInfo :: Id Person.Person -> Flow Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
-  return $ GT.mkDriverObj person
+  return $ ExternalAPITransform.mkDriverObj person
 
 mkVehicleInfo :: Text -> Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (Id vehicleId)
-  return $ GT.mkVehicleObj <$> vehicle
+  return $ ExternalAPITransform.mkVehicleObj <$> vehicle
 
 mkCancelRidePayload :: Id ProductInstance.ProductInstance -> Text -> BaseUrl -> Flow API.OnCancelReq
 mkCancelRidePayload prodInstId txnId bapUri = do
@@ -287,7 +287,7 @@ mkCancelTripObj prodInstId = do
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = Just $ GT.mkPrice productInstance,
+        fare = Just $ ExternalAPITransform.mkPrice productInstance,
         route = Nothing
       }
 
