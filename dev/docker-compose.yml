@@ -6,7 +6,8 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/app-backend-seed.sql:Z
+      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/1-app-backend-seed.sql:Z
+      - ./local-testing-data/app-backend.sql:/docker-entrypoint-initdb.d/2-app-backend-testing-data.sql:Z
     environment:
       - POSTGRES_DB=atlas_app
       - POSTGRES_USER=atlas
@@ -19,7 +20,8 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/transporter-backend-seed.sql:Z
+      - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/1-transporter-backend-seed.sql:Z
+      - ./local-testing-data/beckn-transport.sql:/docker-entrypoint-initdb.d/2-beckn-transport-testing-data.sql:Z
     environment:
       - POSTGRES_DB=atlas_transporter
       - POSTGRES_USER=atlas
@@ -32,7 +34,8 @@ services:
     ports:
       - "5435:5432"
     volumes:
-      - ./sql-seed/gateway-backend-seed.sql:/docker-entrypoint-initdb.d/gateway-backend-seed.sql:Z
+      - ./sql-seed/gateway-backend-seed.sql:/docker-entrypoint-initdb.d/1-gateway-backend-seed.sql:Z
+      - ./local-testing-data/gateway.sql:/docker-entrypoint-initdb.d/2-gateway-testing-data.sql:Z
     environment:
       - POSTGRES_DB=atlas_gateway
       - POSTGRES_USER=atlas
@@ -45,7 +48,8 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - ./sql-seed/fmd-wrapper-backend-seed.sql:/docker-entrypoint-initdb.d/fmd-wrapper-backend-seed.sql:Z
+      - ./sql-seed/fmd-wrapper-backend-seed.sql:/docker-entrypoint-initdb.d/1-fmd-wrapper-backend-seed.sql:Z
+      - ./local-testing-data/fmd-wrapper.sql:/docker-entrypoint-initdb.d/2-fmd-wrapper-testing-data.sql:Z
     environment:
       - POSTGRES_DB=atlas_fmd_wrapper
       - POSTGRES_USER=atlas
