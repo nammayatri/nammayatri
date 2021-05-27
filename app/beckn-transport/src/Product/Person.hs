@@ -1,6 +1,5 @@
 module Product.Person
-  ( listPerson,
-    updatePerson,
+  ( updatePerson,
     deletePerson,
     calculateAverageRating,
     mkPersonRes,
@@ -69,12 +68,6 @@ getPersonDetails personId = withFlowHandlerAPI $ do
       >>= fromMaybeM PersonNotFound
   pure $
     GetPersonDetailsRes {..}
-
-listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
-  personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [Id orgId]
-  respList <- mapM mkPersonRes personList
-  return $ ListPersonRes respList
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do

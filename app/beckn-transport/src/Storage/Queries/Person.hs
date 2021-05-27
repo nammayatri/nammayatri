@@ -61,28 +61,6 @@ findPersonByIdAndRoleAndOrgId pid role_ orgId = do
         &&. role ==. B.val_ role_
         &&. organizationId ==. B.val_ (Just orgId)
 
-findAllWithLimitOffsetByOrgIds ::
-  DBFlow m r =>
-  Maybe Integer ->
-  Maybe Integer ->
-  [Storage.Role] ->
-  [Id Org.Organization] ->
-  m [Storage.Person]
-findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
-  where
-    orderByDesc Storage.Person {..} = B.desc_ createdAt
-    limit = fromMaybe 100 mlimit
-    offset = fromMaybe 0 moffset
-    predicate Storage.Person {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [ role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
-        ]
-
 findAllByOrgIds ::
   DBFlow m r =>
   [Storage.Role] ->

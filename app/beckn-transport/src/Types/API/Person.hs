@@ -243,10 +243,6 @@ createLocationT req = do
 createLocationRec :: DBFlow m r => PersonReqEntity -> m SL.Location
 createLocationRec PersonReqEntity {..} = createLocation UpdatePersonReq {..}
 
-newtype ListPersonRes = ListPersonRes
-  {users :: [PersonEntityRes]}
-  deriving (Generic, ToJSON, FromJSON)
-
 newtype PersonRes = PersonRes
   {user :: UserInfoRes}
   deriving (Generic, ToJSON, FromJSON)

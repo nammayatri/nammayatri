@@ -6,7 +6,7 @@ module Product.DriverInformation
     linkVehicle,
     enableDriver,
     disableDriver,
-    createDriver
+    createDriver,
   )
 where
 
@@ -40,11 +40,11 @@ import Types.API.Registration (makeUserInfoRes)
 import Types.API.Vehicle (createVehicle)
 import Types.App
 import Types.Error
+import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
 import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
-import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
 
 createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
 createDriver orgId req = withFlowHandlerAPI $ do

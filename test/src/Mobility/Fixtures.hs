@@ -238,11 +238,9 @@ listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
 buildListPIs :: BPI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
 buildListPIs status = listPIs appRegistrationToken [status] [BCase.RIDEORDER] (Just 50) Nothing
 
-listPerson :: Text -> [TPerson.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
 updatePerson :: Text -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
 deletePerson :: Text -> Id TPerson.Person -> ClientM TbePerson.DeletePersonRes
 _
-  :<|> listPerson
   :<|> updatePerson
   :<|> deletePerson = client (Proxy :: Proxy TbeRoutes.PersonAPI)
 

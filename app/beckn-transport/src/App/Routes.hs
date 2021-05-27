@@ -106,12 +106,6 @@ type PersonAPI =
   "person"
     :> ( TokenAuth
            :> Get '[JSON] GetPersonDetailsRes
-           :<|> "list"
-             :> AdminTokenAuth
-             :> QueryParams "roles" SP.Role
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> Get '[JSON] ListPersonRes
            :<|> TokenAuth
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
@@ -124,7 +118,6 @@ type PersonAPI =
 personFlow :: FlowServer PersonAPI
 personFlow =
   Person.getPersonDetails
-    :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.deletePerson
 
