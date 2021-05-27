@@ -5,7 +5,6 @@ module Product.Person
     createDriverDetails,
     listPerson,
     updatePerson,
-    getPerson,
     deletePerson,
     linkEntity,
     calculateAverageRating,
@@ -121,47 +120,6 @@ listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
   personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
   respList <- traverse mkPersonRes personList
   return $ ListPersonRes respList
-
-getPerson ::
-  SR.RegistrationToken ->
-  Maybe (Id SP.Person) ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe SP.IdentifierType ->
-  FlowHandler PersonEntityRes
-getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM identifierTypeM =
-  withFlowHandlerAPI $ do
-    user <- QP.findPersonById (Id entityId)
-    -- TODO: fix this to match based on identifierType
-    -- And maybe have a way to handle the case when Id is
-    -- passed and identifierType is null. Throw validation errors
-    person <- case identifierTypeM of
-      Nothing -> QP.findPersonById (fromJust idM)
-      Just SP.MOBILENUMBER -> do
-        countryCode <- countryCodeM & fromMaybeM (InvalidRequest "You should pass country code.")
-        mobile <- mobileM & fromMaybeM (InvalidRequest "You should pass mobile number.")
-        QP.findByMobileNumber countryCode mobile
-          >>= fromMaybeM PersonDoesNotExist
-      Just SP.EMAIL ->
-        emailM & fromMaybeM (InvalidRequest "You should pass email.")
-          >>= QP.findByEmail
-          >>= fromMaybeM PersonDoesNotExist
-      Just SP.AADHAAR ->
-        identifierM & fromMaybeM (InvalidRequest "You should pass identifier.")
-          >>= QP.findByIdentifier
-          >>= fromMaybeM PersonDoesNotExist
-    hasAccess user person
-    mkPersonRes person
-  where
-    hasAccess :: SP.Person -> SP.Person -> Flow ()
-    hasAccess user person =
-      when
-        ( (user ^. #role) /= SP.ADMIN && (user ^. #id) /= (person ^. #id)
-            || (user ^. #organizationId) /= (person ^. #organizationId)
-        )
-        $ throwError Unauthorized
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do

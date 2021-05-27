@@ -140,9 +140,10 @@ rideEnd :: Text -> Id PI.ProductInstance -> ClientM APISuccess
 rideCancel :: Text -> Id PI.ProductInstance -> ClientM APISuccess
 rideRespond :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
+getDriverInfo :: Text -> ClientM DriverInformationAPI.DriverInformationResponse
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
-_ :<|> setDriverOnline :<|> getNotificationInfo :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
+getDriverInfo :<|> setDriverOnline :<|> getNotificationInfo :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> CancelAPI.Entity -> CancelAPI.CancelReq
 buildAppCancelReq entityId entityType =
@@ -230,27 +231,14 @@ buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Ju
 createPerson :: Text -> TbePerson.CreatePersonReq -> ClientM TbePerson.UpdatePersonRes
 listPerson :: Text -> [Person.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
 updatePerson :: Text -> Id Person.Person -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
-getPerson :: Text -> Maybe (Id Person.Person) -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Person.IdentifierType -> ClientM TbePerson.PersonEntityRes
 deletePerson :: Text -> Id Person.Person -> ClientM TbePerson.DeletePersonRes
 linkEntity :: Text -> Id Person.Person -> TbePerson.LinkReq -> ClientM TbePerson.PersonEntityRes
 createPerson
   :<|> _
   :<|> listPerson
   :<|> updatePerson
-  :<|> getPerson
   :<|> deletePerson
   :<|> linkEntity = client (Proxy :: Proxy TbeRoutes.PersonAPI)
-
-callGetPerson :: Id Person.Person -> ClientM TbePerson.PersonEntityRes
-callGetPerson personId =
-  getPerson
-    appRegistrationToken
-    (Just personId)
-    Nothing
-    Nothing
-    Nothing
-    Nothing
-    Nothing
 
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =

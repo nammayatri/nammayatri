@@ -122,8 +122,8 @@ spec = do
       appFeedbackResult `shouldSatisfy` isRight
 
       driverInfoResult <-
-        runClient transporterClient $ F.callGetPerson (Id F.testDriverId)
-      driverInfoResult `shouldSatisfy` isRight
+        runClient transporterClient $ F.getDriverInfo F.driverToken
+      (driverInfoResult >> return ("" :: Text)) `shouldSatisfy` isRight
       let Right driverInfoResponse = driverInfoResult
-      let driverRating = driverInfoResponse ^. #rating
+      let driverRating = driverInfoResponse ^. #person . #rating
       driverRating `shouldSatisfy` isJust

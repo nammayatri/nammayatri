@@ -105,8 +105,7 @@ type PersonAPI =
     :> ( AdminTokenAuth
            :> ReqBody '[JSON] CreatePersonReq
            :> Post '[JSON] UpdatePersonRes
-           :<|> "getDetails"
-             :> TokenAuth
+           :<|> TokenAuth
              :> Get '[JSON] GetPersonDetailsRes
            :<|> "list"
              :> AdminTokenAuth
@@ -119,14 +118,6 @@ type PersonAPI =
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes
-           :<|> TokenAuth
-             :> QueryParam "personId" (Id Person)
-             :> QueryParam "mobileNumber" Text
-             :> QueryParam "mobileCountryCode" Text
-             :> QueryParam "email" Text
-             :> QueryParam "identifier" Text
-             :> QueryParam "identifierType" SP.IdentifierType
-             :> Get '[JSON] PersonEntityRes
            :<|> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> Delete '[JSON] DeletePersonRes
@@ -143,7 +134,6 @@ personFlow =
     :<|> Person.getPersonDetails
     :<|> Person.listPerson
     :<|> Person.updatePerson
-    :<|> Person.getPerson
     :<|> Person.deletePerson
     :<|> Person.linkEntity
 
