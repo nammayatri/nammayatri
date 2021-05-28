@@ -10,7 +10,7 @@ Please add enough information to the PR description so that others can easier un
 ## Review
 All developers on the team are encouraged to review PRs (but it is also okay not to if you do not have much to say about a PR or are busy with other tasks). 
 
-Try to focus on the PRs with less than 3 approvals.
+Try to focus on the PRs with less than 2 approvals.
 
 In addition to adding any improvement points, feel free to ask questions, for example if you don’t understand how a certain part of code works, or if you have no experience with a language feature, etc.
 
@@ -20,7 +20,7 @@ It is okay to spend some time on looking at a certain PR without necessarily app
 Before approving a PR, please make sure to look at it thoroughly. You need to understand what the PR is doing well and check all the changes. You should be reasonably sure that the PR is good to merge and is not going to break anything. Also, please check that the PR leaves the code in at least as good shape as it was before, preferably better.
 
 ## Merge
-The PR can be merged when it has 3 or more approvals.
+The PR can be merged when it has 2 or more approvals.
 
 Usually try to merge your own PRs as you understand them better and know when they can be merged. Test that the changes work after the rebase. If you are merging someone else’s PR, check that the code builds and the tests are passing.
 

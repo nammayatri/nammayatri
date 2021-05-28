@@ -9,8 +9,17 @@
 
 [Building and running](./doc/build.md)
 
-## Data model
+## Databases
+
+[Databases and Redis](./doc/databases.md)
+
 [Beckn data mapping](https://docs.google.com/spreadsheets/d/1qaOaS01lBtSr2LTnCgehOWX64aQHXe2X5ztR5UmY2HE/edit?usp=sharing)
+
+## Authentication
+[Endpoint authentication](./doc/authentication.md)
+
+[Signature authentication](./doc/signatures.md)
+
 ## Developer guidelines
 
 [PR reviews](./doc/reviews.md)

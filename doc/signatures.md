@@ -1,6 +1,10 @@
-This document describes the process of signing and verifying HTTP Messages. The spec is described here: https://tools.ietf.org/id/draft-cavage-http-signatures-12.html
+# Signature authentication
+This document describes the process of signing and verifying HTTP messages based on the following documents:
 
-BECKN project involves 3 entities that use HTTP Messages: BAP, BPP, BG.
+https://sites.google.com/beckn.org/signing-beckn-apis-draft03/
+https://tools.ietf.org/id/draft-cavage-http-signatures-12.html
+
+Beckn project involves 3 entities that use HTTP Messages: BAP, BPP, BG.
 
 ## Common info
 
